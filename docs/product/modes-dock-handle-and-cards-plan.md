@@ -85,9 +85,11 @@ The steer: **"if Apple and Sony designed it together."**
 5. **In Cards, the dock's dynamic section is the compact stage selector.** The spine becomes
    optional; static dock icons **launch** their app (muscle memory), long-press offers "Show
    stage". "All" and "Now" get permanent entries.
-6. **Cards always has something in it**: a pinned **Now** stage (glance), a **Recents** stage, RSS
+6. **Cards opens on Index**, a text-first contents page (Niagara-like) that leads into the stacks; on
+   a large screen, Index and the selected stack form a two-page book spread. See #1229.
+7. **Cards always has something in it**: a pinned **Now** stage (glance), a **Recents** stage, RSS
    feed stages, and widgets as cards, alongside notification/media stages.
-7. **No visual PR merges without rendered evidence**: JVM screenshot tests for the surfaces it
+8. **No visual PR merges without rendered evidence**: JVM screenshot tests for the surfaces it
    touches, plus device screenshots for motion.
 
 ## Design language: Apple × Sony
@@ -105,7 +107,7 @@ The steer: **"if Apple and Sony designed it together."**
 system handle — the closest ancestor of this plan), iOS (Smart Stack, App Library, jiggle-mode
 editing, Spotlight), macOS (Stage Manager, Dock), GNOME (Activities overview, 1:1 workspace
 swipes), KDE Plasma (Activities as whole-setup modes), Windows Timeline (chronology), BlackBerry
-Hub (unified inbox → "All"), Pixel Launcher (At a Glance, predictive back), Niagara (list-first
+Hub (unified inbox → "All"), Olauncher and other minimalist launchers (text-first Index), Pixel Launcher (At a Glance, predictive back), Niagara (list-first
 drawer, alphabet scrubber), Sony Xperia (TimeScape, Side Sense).
 
 ## Workstreams
@@ -147,6 +149,12 @@ Phases are ordered by what makes Cards usable soonest; #1196 holds the phase che
 2. #1217 Recents/frequent apps stage.
 3. #1218 RSS feed stages.
 4. #1219 Widgets as cards.
+5. #1226 Card source integration framework — one provider interface so integrations don't special-case the stage planner.
+6. #1227 Media integration: now-playing card with queue and full controls.
+7. #1228 Todoist integration: today's tasks, complete, quick-add (personal token; no shipped secrets).
+8. #1229 **Index** — a minimalist, book-style default screen for Cards (Niagara-inspired text-first
+   list with inline snippets; on unfolded it is the left page of a two-page spread whose right page
+   is the selected stack, with the hinge as the spine).
 
 ### W6 — Home, Library and shell polish (Phase 4)
 1. #1220 Library mode: App-Library-style categories, alphabet scrubber, cheaper relayout.
