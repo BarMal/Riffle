@@ -52,6 +52,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -395,6 +396,10 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectAppDrawerIconGridColumns",
                     LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
+                ),
+                settings(
+                    "SelectLibraryReturnTarget",
+                    LauncherShellAction.SelectLibraryReturnTarget(LibraryReturnTarget.LIBRARY),
                 ),
                 settings(
                     "AddRssFeed",
