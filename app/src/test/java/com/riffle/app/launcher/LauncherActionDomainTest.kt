@@ -32,6 +32,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -255,6 +256,7 @@ class LauncherActionDomainTest {
                     "SelectHomeLayoutDeviceClass",
                     LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.TABLET),
                 ),
+                activity("LeaveLibrary", LauncherShellAction.LeaveLibrary(LibraryExitTrigger.BACK)),
                 settings(
                     "SelectSettingsLayoutDeviceClass",
                     LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
