@@ -8,27 +8,22 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
 import com.riffle.core.domain.launcher.gestures.GestureThresholdsPx
 import com.riffle.core.domain.launcher.gestures.dockSwipeUpTriggered
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 
 /**
  * Maps the Dock's swipe-up gesture action to a shell action. Restricted to the three actions the
- * Dock physically supports: staying put, returning to Standard Home from Cards mode, and opening
- * the app drawer. Distinct from [dockShelfGestureInput], which only expands/collapses the
- * notification overflow shelf and never navigates.
+ * Dock physically supports: staying put, moving to the previous mode in the device's mode ring
+ * (#1225), and opening the app drawer. Distinct from [dockShelfGestureInput], which only
+ * expands/collapses the notification overflow shelf and never navigates.
  *
- * [viewMode] is what the launcher is showing now, because one of those three only means anything
- * from one mode.
+ * The previous mode means something from every mode: leaving Cards is no longer a special case,
+ * just the step back along the ring -- and which mode that is, is the layout set's call. The dock
+ * is shared by every mode (#1205), so the dock swiped on stays put while the mode changes.
  */
-internal fun LauncherGestureAction.toDockSwipeUpShellAction(viewMode: LauncherViewMode): LauncherShellAction? =
+internal fun LauncherGestureAction.toDockSwipeUpShellAction(): LauncherShellAction? =
     when (this) {
         LauncherGestureAction.NONE -> null
-        // Only from Cards, where there is something to exit. Firing it everywhere turned a swipe on
-        // the Library dock into a jump to Standard -- a mode the user had not asked for, and one
-        // whose layout has a dock of its own, so the dock they had swiped on was replaced too.
-        // Where it returns to is the layout set's call, not this mapper's -- see ExitAdaptiveStage.
-        LauncherGestureAction.EXIT_ADAPTIVE_STAGE ->
-            LauncherShellAction.ExitAdaptiveStage.takeIf { viewMode == LauncherViewMode.CARD_INTERFACE }
+        LauncherGestureAction.PREVIOUS_MODE -> LauncherShellAction.SelectPreviousLauncherViewMode
         LauncherGestureAction.OPEN_APP_DRAWER -> LauncherShellAction.OpenAppDrawer
         // The Dock swipe-up binding only persists one of the three actions above; any other value
         // (e.g. from a future migration) is treated as a no-op rather than crashing.
@@ -48,10 +43,9 @@ internal fun LauncherGestureAction.toDockSwipeUpShellAction(viewMode: LauncherVi
 internal fun Modifier.dockSwipeUpGestureInput(
     enabled: Boolean,
     action: LauncherGestureAction,
-    viewMode: LauncherViewMode,
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier {
-    val shellAction = action.toDockSwipeUpShellAction(viewMode)
+    val shellAction = action.toDockSwipeUpShellAction()
     if (!enabled || shellAction == null) {
         return this
     }

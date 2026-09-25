@@ -153,5 +153,5 @@ private fun JSONObject.optGestureAction(
     name: String,
     default: LauncherGestureAction,
 ): LauncherGestureAction =
-    runCatching { LauncherGestureAction.valueOf(optString(name)) }
-        .getOrDefault(default)
+    // fromStoredName also reads the pre-mode-ring names (Enter/Exit Cards) as next/previous mode.
+    LauncherGestureAction.fromStoredName(optString(name)) ?: default

@@ -28,7 +28,10 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
         is LauncherShellAction.SelectHomeLabelMaxLines,
         is LauncherShellAction.SelectHomeLabelSizing,
         is LauncherShellAction.SelectLauncherViewMode,
-        LauncherShellAction.ExitAdaptiveStage,
+        LauncherShellAction.SelectNextLauncherViewMode,
+        LauncherShellAction.SelectPreviousLauncherViewMode,
+        is LauncherShellAction.SelectModeRingModeEnabled,
+        is LauncherShellAction.MoveModeRingMode,
         is LauncherShellAction.SelectLauncherTemplate,
         is LauncherShellAction.SelectHomeLayoutDeviceClass,
         -> true

@@ -19,7 +19,7 @@ internal fun HomeViewModeSetting(
     )
 }
 
-private val LauncherViewMode.label: String
+internal val LauncherViewMode.label: String
     get() =
         when (this) {
             LauncherViewMode.STANDARD_APP_DRAWER -> "Standard"

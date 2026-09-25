@@ -165,12 +165,27 @@ sealed interface LauncherShellAction {
     data class SelectLauncherViewMode(val mode: LauncherViewMode) : LauncherShellAction
 
     /**
-     * Leaves Cards for the non-Cards mode it was entered from, or Standard if none is recorded.
+     * Moves to the next mode in the held device's mode ring (#1225).
      *
-     * Not a [SelectLauncherViewMode] with a fixed mode, because where to return to is a decision
-     * only the layout set can make -- it is the one holding which mode Cards was entered from.
+     * Not a [SelectLauncherViewMode] with a fixed mode, because which mode is next is a decision
+     * only the layout set can make -- it holds the ring and the active mode.
      */
-    data object ExitAdaptiveStage : LauncherShellAction
+    data object SelectNextLauncherViewMode : LauncherShellAction
+
+    /** Moves to the previous mode in the held device's mode ring. Leaving Cards is this. */
+    data object SelectPreviousLauncherViewMode : LauncherShellAction
+
+    /** Adds [mode] to, or removes it from, the mode ring of the device class Settings is editing. */
+    data class SelectModeRingModeEnabled(
+        val mode: LauncherViewMode,
+        val enabled: Boolean,
+    ) : LauncherShellAction
+
+    /** Moves [mode] [offset] places in the mode ring of the device class Settings is editing. */
+    data class MoveModeRingMode(
+        val mode: LauncherViewMode,
+        val offset: Int,
+    ) : LauncherShellAction
 
     data class SelectLauncherTemplate(
         val templateId: LauncherTemplateId,

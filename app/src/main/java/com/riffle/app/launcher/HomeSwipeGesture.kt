@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -131,9 +130,8 @@ class HomeSwipeGestureActionMapper {
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> LauncherShellAction.SelectFullscreenHomeEnabled(true)
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> LauncherShellAction.SelectNextHomePage
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> LauncherShellAction.SelectPreviousHomePage
-            LauncherGestureAction.ENTER_ADAPTIVE_STAGE ->
-                LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE)
-            LauncherGestureAction.EXIT_ADAPTIVE_STAGE -> LauncherShellAction.ExitAdaptiveStage
+            LauncherGestureAction.NEXT_MODE -> LauncherShellAction.SelectNextLauncherViewMode
+            LauncherGestureAction.PREVIOUS_MODE -> LauncherShellAction.SelectPreviousLauncherViewMode
             LauncherGestureAction.SELECT_NEXT_APP_STAGE -> LauncherShellAction.SelectNextAppStage
             LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE -> LauncherShellAction.SelectPreviousAppStage
             LauncherGestureAction.LAUNCH_APP -> launchTarget.launchAppAction()
