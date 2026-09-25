@@ -38,6 +38,23 @@ Honor rows are required for `home-role-lifecycle`, `notification-access`, and `w
 Use phone plus a large/foldable target when shared layout primitives are affected, and record the
 actual form factor and window mode on every run.
 
+### Known limitation: Honor/Magic OS gesture nav after an update
+
+On Honor (Magic OS), the system's gesture-navigation Home swipe can stop reaching Riffle right
+after installing an update over the running app, even though Riffle stays correctly registered as
+the default Home app (`RoleManager`/`PackageManager` both still resolve it). This reproduces on the
+"app update" leg of `home-role-lifecycle` (#972). Confirmed app-side: no `systemGestureExclusion`
+rect is registered anywhere in the app (the dock's own exclusion path is hardcoded to claim zero
+space, `HomeDockPolicies.kt`), the manifest and Home-intent handling are standard, and the signing
+key/`applicationId` are stable across alpha builds. This points to Magic OS's gesture-navigation
+service not re-binding to the app's process after the update, which no public Android API lets a
+Home app trigger a fix for.
+
+Workaround, fastest first: turn the screen off and back on; if that doesn't clear it, toggle
+navigation mode (3-button → gesture) in system settings. Record `home-role-lifecycle`'s "app
+update" leg with this `knownLimitation` on Honor candidates rather than marking it `blocked`, since
+the app itself is not at fault and the workaround reliably clears it.
+
 ## Evidence rules
 
 Each artifact has one exact 40-character candidate SHA, build identity, and UTC generation time.
