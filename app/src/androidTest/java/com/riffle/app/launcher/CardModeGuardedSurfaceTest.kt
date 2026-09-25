@@ -216,82 +216,85 @@ class CardModeGuardedSurfaceTest {
         }
     }
 
+    // Shelf expansion is switched off launcher-wide for now (DockShelfExpansion); this test covers
+    // the dormant shelf, so it switches it on around itself.
     @Test
-    fun cardModeExpandedDockShelfWithBottomMarginReceivesPhysicalTapWithAnActiveAdaptiveStageStage() {
-        val primary = cardsHomeApp(packageName = "com.example.camera")
-        val overflow = cardsHomeApp(packageName = "com.example.photos")
-        val primaryShortcut =
-            AppShortcutItem(
-                id = LauncherItemId("app:camera"),
-                appIdentity = primary.identity,
-                label = primary.label,
-            )
-        val overflowShortcut =
-            AppShortcutItem(
-                id = LauncherItemId("app:photos"),
-                appIdentity = overflow.identity,
-                label = overflow.label,
-            )
-        val layout =
-            HomeLayoutDefaults.standard().let { standard ->
-                standard.copy(
-                    viewMode = LauncherViewMode.CARD_INTERFACE,
-                    settings =
-                        standard.settings.copy(
-                            grid =
-                                standard.settings.grid.copy(
-                                    margin = standard.settings.grid.margin.copy(bottom = 48),
-                                ),
-                        ),
-                    // Both shortcuts stay visible in the dock's own row: capacity caps how many
-                    // are shown at once and no longer diverts the rest to a separate shelf row, so
-                    // a capacity of 1 would leave the second one scrolled out of reach here.
-                    dock =
-                        standard.dock.copy(
-                            capacity = 2,
-                            items = listOf(primaryShortcut, overflowShortcut),
-                            showNotificationCards = true,
-                        ),
+    fun cardModeExpandedDockShelfWithBottomMarginReceivesPhysicalTapWithAnActiveAdaptiveStageStage() =
+        withShelfExpansionEnabled {
+            val primary = cardsHomeApp(packageName = "com.example.camera")
+            val overflow = cardsHomeApp(packageName = "com.example.photos")
+            val primaryShortcut =
+                AppShortcutItem(
+                    id = LauncherItemId("app:camera"),
+                    appIdentity = primary.identity,
+                    label = primary.label,
+                )
+            val overflowShortcut =
+                AppShortcutItem(
+                    id = LauncherItemId("app:photos"),
+                    appIdentity = overflow.identity,
+                    label = overflow.label,
+                )
+            val layout =
+                HomeLayoutDefaults.standard().let { standard ->
+                    standard.copy(
+                        viewMode = LauncherViewMode.CARD_INTERFACE,
+                        settings =
+                            standard.settings.copy(
+                                grid =
+                                    standard.settings.grid.copy(
+                                        margin = standard.settings.grid.margin.copy(bottom = 48),
+                                    ),
+                            ),
+                        // Both shortcuts stay visible in the dock's own row: capacity caps how many
+                        // are shown at once and no longer diverts the rest to a separate shelf row, so
+                        // a capacity of 1 would leave the second one scrolled out of reach here.
+                        dock =
+                            standard.dock.copy(
+                                capacity = 2,
+                                items = listOf(primaryShortcut, overflowShortcut),
+                                showNotificationCards = true,
+                            ),
+                    )
+                }
+            val actions = mutableListOf<LauncherShellAction>()
+            val stageState = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup()))
+            val state =
+                stageState.copy(
+                    homeLayout = layout,
+                    homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                    installedApps = stageState.installedApps + listOf(primary, overflow),
+                    profileContentVisibility =
+                        stageState.profileContentVisibility +
+                            (primary.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                )
+
+            composeRule.setContent {
+                LauncherShellContent(
+                    state = state,
+                    appIconLoader = EmptyAppIconLoader,
+                    adaptiveStageWindowLayout = AdaptiveStageWindowLayout(widthDp = 360, heightDp = 640),
+                    onAction = actions::add,
                 )
             }
-        val actions = mutableListOf<LauncherShellAction>()
-        val stageState = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup()))
-        val state =
-            stageState.copy(
-                homeLayout = layout,
-                homeLayoutSet = HomeLayoutSet.fromLayout(layout),
-                installedApps = stageState.installedApps + listOf(primary, overflow),
-                profileContentVisibility =
-                    stageState.profileContentVisibility +
-                        (primary.identity.profile.id to AppProfileContentVisibility.VISIBLE),
-            )
 
-        composeRule.setContent {
-            LauncherShellContent(
-                state = state,
-                appIconLoader = EmptyAppIconLoader,
-                adaptiveStageWindowLayout = AdaptiveStageWindowLayout(widthDp = 360, heightDp = 640),
-                onAction = actions::add,
-            )
-        }
+            composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
+            composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
+                down(center)
+                moveBy(Offset(0f, -24f))
+                updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
+                up()
+            }
+            composeRule.waitForIdle()
 
-        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
-            down(center)
-            moveBy(Offset(0f, -24f))
-            updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
-            up()
-        }
-        composeRule.waitForIdle()
+            composeRule.onNodeWithTag(dockItemTestTag(overflowShortcut.id)).performTouchInput {
+                click(Offset(width / 2f, 1f))
+            }
 
-        composeRule.onNodeWithTag(dockItemTestTag(overflowShortcut.id)).performTouchInput {
-            click(Offset(width / 2f, 1f))
+            composeRule.runOnIdle {
+                assertEquals(listOf(LauncherShellAction.LaunchApp(overflow.identity)), actions)
+            }
         }
-
-        composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.LaunchApp(overflow.identity)), actions)
-        }
-    }
 
     @Test
     fun cardModeRendersOneDockAndOpensDockFolders() {
@@ -461,4 +464,13 @@ class CardModeGuardedSurfaceTest {
                 ),
             label = packageName.substringAfterLast('.').replaceFirstChar(Char::uppercase),
         )
+
+    private fun withShelfExpansionEnabled(block: () -> Unit) {
+        DockShelfExpansion.enabled = true
+        try {
+            block()
+        } finally {
+            DockShelfExpansion.enabled = false
+        }
+    }
 }
