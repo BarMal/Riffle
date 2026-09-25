@@ -8,7 +8,7 @@ dock as a sibling of the Adaptive Stage surface rather than inside it.
 This page describes the behaviour after #1210. The code it describes:
 
 > **Superseded in part (plan revision 2026-09-25).** The dock pull becomes the only mode-transition
-> trigger (Decisions 3, 9, 11 in `modes-dock-handle-and-cards-plan.md`). When #TBD-a and #1207
+> trigger (Decisions 3, 9, 11 in `modes-dock-handle-and-cards-plan.md`). When #1241 and #1207
 > land: the app-drawer swipe (`OPEN_APP_DRAWER` home binding), the three-finger mode gestures
 > (`NEXT_MODE` / `PREVIOUS_MODE`) and the dock swipe-up (`DockSwipeUpGesture`, its setting and
 > threshold) are deleted; dock shelf expansion is disabled behind a flag; and a one-finger drag

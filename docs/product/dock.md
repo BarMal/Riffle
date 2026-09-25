@@ -31,7 +31,7 @@ exist.
 The dock is available in every view mode, and its content is the **same** in each: the same pinned
 items, size, appearance and dynamic-section budgets (#1205). `HomeLayoutSet.docks` holds one
 `DockModel` per device class. The one thing stored per mode is the dock's **edge**: Home and
-Library each have their own (Decision 2), and they may be the same (#TBD-b; today a single edge is
+Library each have their own (Decision 2), and they may be the same (#1242; today a single edge is
 still shared). Pinning, reordering or
 moving an item to or from home, and every dock setting, edits that one dock whatever mode it was
 made in, so a pin made in Library shows in Cards and Standard at once.
@@ -54,7 +54,7 @@ Grid modes use its defaults; Cards builds its own in `CardsDockInterpreter.kt`
 (`rememberCardsDockInterpreter`), and nothing in the dock knows what a stage is.
 
 Today the edge is shared, so the dock is offered only the edges every mode can draw it on — left,
-right and bottom. Once the edge is per mode (#TBD-b), each mode offers the edges its own surface can
+right and bottom. Once the edge is per mode (#1242), each mode offers the edges its own surface can
 draw, so the top edge returns for a Cards Home.
 
 ### The dock is the handle
@@ -188,9 +188,9 @@ section does that job, so the rail is gone (#1159).
 | Target | State |
 | --- | --- |
 | One dock per device class, shared by every mode | Done (#1205): one `DockModel` per device class, per-mode docks migrated, and one `HomeDockHost` drawn outside the mode surface in `HomeDestination`, so a mode switch keeps the same dock instance in the same place. Each mode reads the dock through a `HomeDockInterpreter` (Cards: the stage selector and "Show stage"/"Pin stage" menu extras, #1212); the grid and Cards lay out in the room the host reserves. The dock's thickness and edge hold across a switch; its run follows what the mode puts on the dynamic side |
-| Per-mode dock edge, content still shared | **Not started** (#TBD-b) — one edge is shared today |
+| Per-mode dock edge, content still shared | **Not started** (#1242) — one edge is shared today |
 | Dock pull switches Home ↔ Library, dock re-orients to the target edge | **Not started** (#1206, #1207) |
-| Alternative triggers deleted (drawer swipe, three-finger mode gestures, dock swipe-up) | **Not started** (#TBD-a) |
+| Alternative triggers deleted (drawer swipe, three-finger mode gestures, dock swipe-up) | **Not started** (#1241) |
 | Panel expansion disabled behind a flag | **Not started** (#1207) |
 | Anchors to any edge, space reserved | Done for grid modes (#1148–#1152, #1165) and for Cards — both resolve through `resolveDockPosition`, and `dockInteractionRegionExtentDp` reserves a width for a side edge, a height for top/bottom |
 | Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards follows the same resolution now |

@@ -182,14 +182,14 @@ arbitration overhaul (#1235). Superseded by the revision: #1208 (shared dock →
 choreography; the layout slide now lives in W2-c/d) and #1209 (mode overview on long-press; two
 surfaces need no overview).
 
-- a. #TBD-a Delete the alternative mode triggers and collapse the mode ring to the fixed Home ↔
+- a. #1241 Delete the alternative mode triggers and collapse the mode ring to the fixed Home ↔
   Library pair; stored settings with removed names decode safely. (Decisions 1, 9)
-- b. #TBD-b Per-mode dock edge model (migration from the shared edge) and the pull-direction /
+- b. #1242 Per-mode dock edge model (migration from the shared edge) and the pull-direction /
   commit domain logic. (Decisions 2, 3)
 - c. #1206 Interactive mode-transition controller (progress, commit/cancel, interruption). (M1)
 - d. #1207 Dock pull handle + dock re-orientation choreography. (Decisions 3, 4, 11, 12, 13)
-- e. #TBD-e Library-as-drawer return setting. (Decision 10)
-- f. #TBD-f Cards absorbs Standard: widgets and standard app pages in Cards, then Standard
+- e. #1243 Library-as-drawer return setting. (Decision 10)
+- f. #1244 Cards absorbs Standard: widgets and standard app pages in Cards, then Standard
   retirement with migration. (Decision 1)
 
 ### W3 — Cards, compact/folded (Phase 1)
