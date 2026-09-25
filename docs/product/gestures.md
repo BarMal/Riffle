@@ -67,8 +67,18 @@ A one-finger drag that starts on the dock body (`HomeDockHost`'s dock, wrapped b
   commits (a fling back toward the edge cancels; under 8dp of movement a fling does not count). A
   commit moves the dock to the destination's edge and orientation, displaced in by as far as it was
   pulled, and settles it there with its background fading back in; the shell is asked for the
-  switch (`SelectLauncherViewMode` with `dockPullCounterpartMode`) when the settle finishes. A
+  switch (`SelectLauncherViewMode` with `dockPullCounterpartMode`) when the settle finishes (commit
+  happens under cover of the settle, well before it visually resolves -- see the reorient below). A
   cancel springs back. A finger landing on a settling dock catches it and tracks from there.
+- **Reorient (dock-reorient decisions, follow-up to #1278).** The dock's own re-orientation on
+  COMMIT is drawn, not cut: a darken-and-blur frost (`Modifier.dockReorientFrost`, blur on API 31+,
+  darken alone below it) ramps with the same background-fade progress and clears as the dock
+  settles; the dock tilts a few degrees on its own `graphicsLayer` (`cameraDistance`,
+  `rotationX`/`rotationY`) proportional to that same frost strength, easing back to flat on settle;
+  the dock area's own cross-axis extent eases (`animateContentSize`) instead of snapping to the
+  destination edge's size; and the freshly-committed dock content holds at low alpha for a short
+  reveal beat (`DOCK_PULL_REORIENT_REVEAL_HOLD_MILLIS`, `DockPullState.revealAlpha`) before
+  resolving, so it doesn't pop in under the frost.
 - **Reduced motion.** Nothing slides; the two surfaces crossfade with progress and the settle is a
   short tween to the same end state.
 - **Equivalents** (Decision 12): the dock's accessibility action "Switch to Library" / "Switch to

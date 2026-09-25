@@ -66,9 +66,12 @@ The dock pull is the only way to move between Home and Library (Decisions 3, 4, 
   dock pulls up, a top dock down, a left dock right, a right dock left.
 - The pull starts on the dock body, never in the system-gesture inset; it tracks 1:1 and commits
   past a dp distance or velocity threshold, otherwise springs back. It is interruptible.
-- During the pull the dock background fades with progress and its icons re-orient to the target
-  mode's orientation; on settle the dock sits at the target mode's edge and its background fades
-  back in. Reduced motion: a short crossfade.
+- During the pull the dock background fades with progress; on commit the dock's re-orientation
+  itself animates (dock-reorient decisions, follow-up to #1278) -- a darken-and-blur frost (real
+  blur on API 31+, darken alone below it) and a subtle perspective tilt while it swaps edge, its
+  own cross-axis extent easing rather than snapping, and its freshly-shown content held at low
+  alpha for a short reveal beat before resolving -- rather than the earlier hard cut to the
+  destination edge under a flat alpha fade. Reduced motion: a short crossfade, no tilt or hold.
 - Drags along the run still scroll the sections; long-press + drag still reorders or drags out.
 - Accessibility: a dock custom action ("Switch to Library" / "Switch to Home") and a keyboard
   shortcut (Ctrl + the arrow of the pull direction) perform the same switch.

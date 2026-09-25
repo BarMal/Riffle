@@ -66,7 +66,7 @@ and Library benefit directly.
 | # | Finding |
 |---|---|
 | D1 | No spacing/elevation/motion token layer: ~341 raw `dp` literals, seven differently-tuned `spring()`s, shapes bypass `MaterialTheme.shapes`. |
-| D2 | "Glass" is translucency only; `Modifier.blur` blurs the content, not what's behind, and is a no-op below API 31 (minSdk 28). |
+| D2 | "Glass" is translucency only; `Modifier.blur` blurs the content, not what's behind, and was a no-op below API 31 while minSdk was 28. minSdk is now 31 (Android 12), so this no longer applies. |
 | D3 | Reduced motion ignores the system animator scale / "remove animations". |
 | D4 | Legacy `android:Theme.Material` XML parent, no SplashScreen, no predictive back. |
 | D5 | Zero string resources — blocks localisation and a real RTL review. |

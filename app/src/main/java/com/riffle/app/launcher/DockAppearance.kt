@@ -11,8 +11,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawOutline
@@ -126,3 +128,38 @@ internal fun Modifier.dockDropHighlight(
 
 private const val DOCK_DROP_HIGHLIGHT_WIDTH_DP = 2
 private const val DOCK_DROP_HIGHLIGHT_ANIMATION_MILLIS = 120
+
+/**
+ * The dock re-orientation's "iPhone Duo" frost (dock-reorient decisions, follow-up to #1278): a
+ * darken scrim over the dock, continuously proportional to [strengthProvider] (0 at rest, 1 at the
+ * frost's strongest -- see [com.riffle.core.domain.launcher.dockpull.dockPullReorientFrostStrength]),
+ * read inside a draw block so it animates without recomposing, exactly like [dockSurfaceAppearance]'s
+ * own pull branch. [strengthProvider] is only called while [isActive] -- pass the dock pull's
+ * `transitioning` flag, which changes just at a pull's start and end, not [strengthProvider]'s value.
+ *
+ * The blur itself is a real, [RenderEffect][android.graphics.RenderEffect]-backed [Modifier.blur];
+ * minSdk is 31 (Android 12), so it is always available here, with no pre-31 darken-only fallback.
+ * Its radius is fixed at [isActive]'s composition-level max rather than also riding
+ * [strengthProvider] frame to frame:
+ * [Modifier.blur]'s radius is set once when the modifier chain is built, not read lazily like a draw
+ * block, so animating it continuously would mean rebuilding the modifier (and recomposing the dock)
+ * every frame of the pull -- the one thing this binding is built to avoid. The darken scrim still
+ * ramps continuously; only the blur's own strength is a step rather than a ramp.
+ */
+internal fun Modifier.dockReorientFrost(
+    isActive: Boolean,
+    strengthProvider: () -> Float,
+): Modifier {
+    if (!isActive) return this
+    // minSdk 31 (Android 12): Modifier.blur always renders here, no pre-31 darken-only fallback.
+    return blur(radius = DOCK_REORIENT_MAX_BLUR_DP.dp).drawWithContent {
+        drawContent()
+        val strength = strengthProvider().coerceIn(0f, 1f)
+        if (strength > 0f) {
+            drawRect(color = Color.Black.copy(alpha = DOCK_REORIENT_MAX_DARKEN_ALPHA * strength))
+        }
+    }
+}
+
+private const val DOCK_REORIENT_MAX_BLUR_DP = 12
+private const val DOCK_REORIENT_MAX_DARKEN_ALPHA = 0.35f

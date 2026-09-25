@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -142,6 +143,12 @@ internal fun HomeDockHost(
     dockModifier: Modifier = Modifier,
     /** The dock background's alpha multiplier, read at draw time; the dock pull fades it. */
     dockBackgroundAlpha: () -> Float = OpaqueDockBackground,
+    /**
+     * The dock's own content alpha, read at draw time (dock-reorient decisions, follow-up to
+     * #1278): 1 outside a dock pull, snapped low and held there for a beat right after a COMMIT
+     * swaps the shown mode, so the freshly re-oriented dock doesn't pop into view under the frost.
+     */
+    dockContentRevealAlpha: () -> Float = FullyRevealedDockContent,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
     val dockOnAction = interpreter.onAction ?: onAction
@@ -186,7 +193,7 @@ internal fun HomeDockHost(
                 .windowInsetsPadding(presentation.homeInsetPolicy.safeDrawingInsets()),
         contentAlignment = position.dockHostAlignment(LocalLayoutDirection.current),
     ) {
-        Box(modifier = dockModifier) {
+        Box(modifier = dockModifier.graphicsLayer { alpha = dockContentRevealAlpha() }) {
             CompositionLocalProvider(LocalDockBackgroundAlpha provides dockBackgroundAlpha) {
                 StandardHomeDockArea(
                     layout = visibleLayout,
@@ -288,6 +295,9 @@ private data class DockShelfController(
     val dismiss: () -> Unit,
     val onExpandedChange: (Boolean) -> Unit,
 )
+
+/** The dock content's alpha at rest, or whenever nothing holds it back: every dock outside a reveal hold. */
+private val FullyRevealedDockContent: () -> Float = { 1f }
 
 private const val UNMEASURED_DOCK_EXTENT_PX = -1
 

@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,6 +24,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.designsystem.RiffleMotionTokens
+import com.riffle.core.domain.launcher.dockpull.DOCK_PULL_REORIENT_REVEAL_HOLD_MILLIS
 import com.riffle.core.domain.launcher.dockpull.DockPullClaim
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.DockPullTransitionController
@@ -35,6 +37,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.ModeSurface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -60,6 +63,7 @@ internal class DockPullState(
 ) {
     private val controller = DockPullTransitionController()
     private var settleJob: Job? = null
+    private var revealJob: Job? = null
 
     /** Where the transition is. Read it in draw or layout blocks, not in composition, while it tracks. */
     var transition: DockPullTransitionState by mutableStateOf(DockPullTransitionState.Idle(ModeSurface.HOME))
@@ -72,12 +76,23 @@ internal class DockPullState(
     var onCommitted: (ModeSurface) -> Unit = {}
 
     /**
+     * The freshly-committed dock's reveal hold (dock-reorient decisions, follow-up to #1278): 1 at
+     * rest and whenever no commit is holding it back; snapped to 0 the instant a COMMIT settle
+     * starts and held there for [DOCK_PULL_REORIENT_REVEAL_HOLD_MILLIS] before easing back to 1, so
+     * the incoming dock content doesn't pop in under the frost the moment it swaps. A finger that
+     * catches the dock mid-reveal (or a fresh pull) cancels the hold and snaps straight back to 1.
+     */
+    var revealAlpha: Float by mutableFloatStateOf(1f)
+        private set
+
+    /**
      * A finger landed on the dock while it was settling: catch it where it is and track from there.
      * Returns whether there was a settle to catch.
      */
     fun catchSettle(reducedMotion: Boolean): Boolean {
         val settling = transition as? DockPullTransitionState.Settling ?: return false
         settleJob?.cancel()
+        cancelRevealHold()
         transition =
             controller.start(
                 state = settling,
@@ -96,6 +111,7 @@ internal class DockPullState(
         reducedMotion: Boolean,
     ) {
         settleJob?.cancel()
+        cancelRevealHold()
         transition =
             controller.start(
                 state = DockPullTransitionState.Idle(surface = surface, reducedMotion = reducedMotion),
@@ -149,6 +165,7 @@ internal class DockPullState(
     private fun settle() {
         val settling = transition as? DockPullTransitionState.Settling ?: return
         settleJob?.cancel()
+        if (settling.outcome == SettleOutcome.COMMIT) startRevealHold(settling.reducedMotion)
         settleJob =
             scope.launch {
                 Animatable(settling.progress).animateTo(
@@ -163,6 +180,31 @@ internal class DockPullState(
                 }
                 transition = controller.finish(finished)
             }
+    }
+
+    /** Snaps [revealAlpha] to 0, holds it for the reveal hold, then eases it back to 1. */
+    private fun startRevealHold(reducedMotion: Boolean) {
+        revealJob?.cancel()
+        if (reducedMotion) {
+            // Reduced motion (Decision: reduced motion) skips the hold entirely: the crossfade
+            // reaches its end state without a low-alpha beat first.
+            revealAlpha = 1f
+            return
+        }
+        revealAlpha = 0f
+        revealJob =
+            scope.launch {
+                delay(DOCK_PULL_REORIENT_REVEAL_HOLD_MILLIS.toLong())
+                Animatable(0f).animateTo(1f, animationSpec = RiffleMotion.standard(reducedMotion = false)) {
+                    revealAlpha = value
+                }
+            }
+    }
+
+    /** Cancels any in-flight reveal hold and snaps content back to fully visible. */
+    private fun cancelRevealHold() {
+        revealJob?.cancel()
+        revealAlpha = 1f
     }
 }
 

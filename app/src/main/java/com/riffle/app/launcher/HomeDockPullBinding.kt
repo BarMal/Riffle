@@ -25,6 +25,8 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.DockPullFrame
 import com.riffle.core.domain.launcher.dockpull.DockPullTransitionState
+import com.riffle.core.domain.launcher.dockpull.dockPullReorientFrostStrength
+import com.riffle.core.domain.launcher.dockpull.dockPullReorientTiltDegrees
 import com.riffle.core.domain.launcher.dockpull.frame
 import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -50,6 +52,7 @@ internal class HomeDockPullPlan(
  * recomposing; composition only reads what changes at a pull's start, release and end ([dockEdge],
  * [isTransitioning]).
  */
+@Suppress("LongParameterList")
 internal class HomeDockPullBinding(
     /** The edge the dock is drawn on now: the shown surface's at rest, the frame's during a pull. */
     val dockEdge: DockPosition,
@@ -58,6 +61,12 @@ internal class HomeDockPullBinding(
     /** For the dock body: the pull gesture, the accessibility action and the dock's translation. */
     val dockModifier: Modifier,
     val dockBackgroundAlpha: () -> Float,
+    /**
+     * The freshly-committed dock's reveal hold (dock-reorient decisions, follow-up to #1278): 1 at
+     * rest, snapped low then eased back to 1 once a COMMIT swaps the shown mode, read at draw time
+     * like [dockBackgroundAlpha] so it animates without recomposing the dock's content.
+     */
+    val dockContentRevealAlpha: () -> Float,
     private val frame: State<DockPullFrame>,
     private val transitioning: State<Boolean>,
     private val pullDirection: DockPullDirection,
@@ -134,7 +143,20 @@ internal fun rememberHomeDockPullBinding(
                 val window = rootSize.value
                 translationX = direction.unitX * current.dockOffsetFraction * window.width
                 translationY = direction.unitY * current.dockOffsetFraction * window.height
+                // Perspective tilt (dock-reorient decisions): a fold-around-a-corner read rather than
+                // a flat translate, proportional to the same frost strength and easing back to flat as
+                // it clears. Skipped entirely under reduced motion.
+                if (!reducedMotion) {
+                    val tiltDegrees = dockPullReorientTiltDegrees(current.dockBackgroundAlpha)
+                    cameraDistance = DOCK_REORIENT_CAMERA_DISTANCE * density
+                    rotationX = direction.unitY * tiltDegrees
+                    rotationY = -direction.unitX * tiltDegrees
+                }
             }
+            .dockReorientFrost(
+                isActive = transitioning.value && !reducedMotion,
+                strengthProvider = { dockPullReorientFrostStrength(frameState.value.dockBackgroundAlpha) },
+            )
     val rootModifier =
         Modifier
             .onSizeChanged { size -> rootSize.value = size }
@@ -146,16 +168,25 @@ internal fun rememberHomeDockPullBinding(
                 canPull && isShortcut && switchNow()
             }
     val dockBackgroundAlpha = remember(frameState) { { frameState.value.dockBackgroundAlpha } }
+    val dockContentRevealAlpha = remember(dockPull) { { dockPull.revealAlpha } }
     return HomeDockPullBinding(
         dockEdge = runningEdge.value ?: edges.edgeFor(plan.shownMode.modeSurface),
         rootModifier = rootModifier,
         dockModifier = dockModifier,
         dockBackgroundAlpha = dockBackgroundAlpha,
+        dockContentRevealAlpha = dockContentRevealAlpha,
         frame = frameState,
         transitioning = transitioning,
         pullDirection = pullDirection,
     )
 }
+
+/**
+ * How far the dock's own [androidx.compose.ui.graphics.GraphicsLayerScope.cameraDistance] is pushed
+ * out while it tilts (dock-reorient decisions): large enough that the small rotation reads as
+ * perspective rather than a pure shear, scaled by density like the platform default.
+ */
+private const val DOCK_REORIENT_CAMERA_DISTANCE = 12f
 
 @Composable
 private fun rememberDockPullGestureHost(

@@ -18,7 +18,11 @@ import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -115,6 +119,45 @@ class DockPullInteractionTest {
         assertTrue("the dock run did not scroll ($before -> $after)", after < before)
     }
 
+    /**
+     * The dock's own re-orientation (dock-reorient decisions, follow-up to #1278): a right dock
+     * pulled left onto Library's default bottom edge ends up materially repositioned, not left
+     * where it started or crashed mid-frost/tilt/reveal-hold.
+     */
+    @Test
+    fun aCommitAcrossDifferentEdgesLeavesTheDockOnTheDestinationEdge() {
+        setContent(DockPosition.RIGHT)
+        val restingBounds = dockBounds()
+
+        pull(dyFraction = 0f, dxFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
+
+        assertNotEquals(
+            "the dock did not move onto Library's own (bottom) edge",
+            restingBounds,
+            dockBounds(),
+        )
+    }
+
+    /**
+     * Reduced motion (dock-reorient decisions): the same edge-changing commit settles to its final
+     * bounds within reduced motion's short crossfade window, without the longer default settle or
+     * its reveal hold ever coming into play.
+     */
+    @Test
+    fun underReducedMotionTheDockAcrossDifferentEdgesStillReachesItsFinalBounds() {
+        val reduced = LauncherSettings(motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON))
+        setContent(DockPosition.RIGHT, launcherSettings = reduced)
+        val restingBounds = dockBounds()
+
+        pull(dyFraction = 0f, dxFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
+        val afterSettle = dockBounds()
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+        composeRule.waitForIdle()
+
+        assertNotEquals("the dock did not move under reduced motion", restingBounds, afterSettle)
+        assertEquals("reduced motion kept moving the dock after its crossfade", afterSettle, dockBounds())
+    }
+
     @Test
     fun theDockOffersTheSwitchAsAnAccessibilityAction() {
         val actions = setContent()
@@ -155,7 +198,10 @@ class DockPullInteractionTest {
 
     private fun dockBounds() = composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).fetchSemanticsNode().boundsInRoot
 
-    private fun setContent(position: DockPosition = DockPosition.BOTTOM): MutableList<LauncherShellAction> {
+    private fun setContent(
+        position: DockPosition = DockPosition.BOTTOM,
+        launcherSettings: LauncherSettings = LauncherSettings(),
+    ): MutableList<LauncherShellAction> {
         val actions = mutableListOf<LauncherShellAction>()
         val layout =
             HomeLayoutDefaults.standard().let { standard ->
@@ -168,6 +214,7 @@ class DockPullInteractionTest {
             LauncherShellState(
                 homeLayout = layout,
                 installedApps = docked.map { item -> InstalledApp(identity = item.appIdentity, label = item.label) },
+                launcherSettings = launcherSettings,
             )
         composeRule.setContent {
             MaterialTheme {
