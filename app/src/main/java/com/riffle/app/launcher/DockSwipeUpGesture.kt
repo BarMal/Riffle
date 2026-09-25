@@ -6,6 +6,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
+import com.riffle.core.domain.launcher.gestures.GestureThresholdsPx
+import com.riffle.core.domain.launcher.gestures.dockSwipeUpTriggered
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 
@@ -57,6 +59,7 @@ internal fun Modifier.dockSwipeUpGestureInput(
         val currentOnAction by rememberUpdatedState(onAction)
         val currentShellAction by rememberUpdatedState(shellAction)
         pointerInput(action) {
+            val thresholdPx = GestureThresholdsPx.resolve(density = density).dockSwipeUpPx
             var accumulatedVerticalDragPx = 0f
             var triggered = false
             detectVerticalDragGestures(
@@ -67,7 +70,7 @@ internal fun Modifier.dockSwipeUpGestureInput(
                 onVerticalDrag = { change, dragAmount ->
                     if (triggered) return@detectVerticalDragGestures
                     accumulatedVerticalDragPx += dragAmount
-                    if (accumulatedVerticalDragPx <= -DOCK_SWIPE_UP_GESTURE_THRESHOLD_PX) {
+                    if (dockSwipeUpTriggered(accumulatedVerticalDragPx, thresholdPx)) {
                         change.consume()
                         triggered = true
                         currentOnAction(currentShellAction)
@@ -77,5 +80,3 @@ internal fun Modifier.dockSwipeUpGestureInput(
         }
     }
 }
-
-private const val DOCK_SWIPE_UP_GESTURE_THRESHOLD_PX = 80f

@@ -18,11 +18,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.gestures.GestureThresholds
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -51,6 +53,8 @@ class DockShelfGestureInteractionTest {
                             awaitEachGesture {
                                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final)
                                 val start = down.position
+                                val claimPx = shelfClaimPx()
+                                val homeThresholdPx = homeSwipePx()
                                 while (true) {
                                     val change =
                                         awaitPointerEvent(PointerEventPass.Final)
@@ -59,8 +63,8 @@ class DockShelfGestureInteractionTest {
                                             ?: break
                                     val drag = change.position - start
                                     if (
-                                        drag.y <= -24f &&
-                                        drag.y > -80f &&
+                                        drag.y <= -claimPx &&
+                                        drag.y > -homeThresholdPx &&
                                         change.isConsumed
                                     ) {
                                         openingDragWasConsumedBeforeHomeThreshold = true
@@ -93,8 +97,8 @@ class DockShelfGestureInteractionTest {
 
         composeRule.onNodeWithTag("dock-shelf").performTouchInput {
             down(Offset(width / 2f, height - 1f))
-            moveBy(Offset(0f, -24f))
-            updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
+            moveBy(Offset(0f, -shelfClaimPx()))
+            updatePointerBy(pointerId = 0, delta = Offset(0f, -shelfOpeningRemainderPx()))
             up()
         }
 
@@ -132,8 +136,8 @@ class DockShelfGestureInteractionTest {
 
         composeRule.onNodeWithTag(dockItemTestTag(primary.id)).performTouchInput {
             down(center)
-            moveBy(Offset(0f, -24f))
-            updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
+            moveBy(Offset(0f, -shelfClaimPx()))
+            updatePointerBy(pointerId = 0, delta = Offset(0f, -shelfOpeningRemainderPx()))
             up()
         }
 
@@ -171,10 +175,10 @@ class DockShelfGestureInteractionTest {
 
         composeRule.onNodeWithTag(dockItemTestTag(primary.id)).performTouchInput {
             down(center)
-            moveBy(Offset(0f, -24f))
+            moveBy(Offset(0f, -shelfClaimPx()))
             // This crosses the expansion threshold while the pointer remains pressed. StandardHome
             // replaces the collapsed Dock with ExpandedDockSurface before the same pointer releases.
-            moveBy(Offset(0f, -64f))
+            moveBy(Offset(0f, -shelfOpeningRemainderPx()))
             advanceEventTime(100)
             // A rebound must not be interpreted as a new expanded-shelf collapse gesture by the
             // restarted production pointer handler. The second movement reaches the collapse
@@ -182,7 +186,7 @@ class DockShelfGestureInteractionTest {
             // handler incorrectly adopted after the collapsed Dock was replaced.
             moveBy(Offset(0f, 1f))
             advanceEventTime(100)
-            moveBy(Offset(0f, 100f))
+            moveBy(Offset(0f, GestureThresholds.DOCK_SHELF_TOGGLE_DP.dp.toPx() + 7.dp.toPx()))
             up()
         }
 
@@ -246,8 +250,8 @@ class DockShelfGestureInteractionTest {
 
         composeRule.onNodeWithTag(dockItemTestTag(primary.id)).performTouchInput {
             down(center)
-            moveBy(Offset(0f, -24f))
-            updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
+            moveBy(Offset(0f, -shelfClaimPx()))
+            updatePointerBy(pointerId = 0, delta = Offset(0f, -shelfOpeningRemainderPx()))
             up()
         }
 
@@ -271,3 +275,13 @@ class DockShelfGestureInteractionTest {
             label = label,
         )
 }
+
+// Every threshold is dp (GestureThresholds); these drags are too, so they mean the same physical
+// gesture on whatever density the test device runs at.
+private fun Density.shelfClaimPx(): Float = GestureThresholds.DOCK_SHELF_CLAIM_DP.dp.toPx()
+
+/** What is left, past the claim, to go a few dp beyond the shelf's toggle threshold. */
+private fun Density.shelfOpeningRemainderPx(): Float =
+    (GestureThresholds.DOCK_SHELF_TOGGLE_DP - GestureThresholds.DOCK_SHELF_CLAIM_DP + 3f).dp.toPx()
+
+private fun Density.homeSwipePx(): Float = GestureThresholds.HOME_SWIPE_DP.dp.toPx()

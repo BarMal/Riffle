@@ -71,7 +71,9 @@ import com.riffle.core.domain.launcher.cards.CardStackMagnet
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackTravel
 import com.riffle.core.domain.launcher.cards.MAX_FLING_STEP_COUNT
+import com.riffle.core.domain.launcher.cards.cardStackOwnsDrag
 import com.riffle.core.domain.launcher.cards.cardStackProjectedSettleIndex
+import com.riffle.core.domain.launcher.cards.cardStackScrollStep
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -289,6 +291,12 @@ internal data class CardStackInteraction(
      * second time at commit.
      */
     val onSettleHaptic: () -> Unit = {},
+    /**
+     * One haptic tick when a drag first pushes against the first or last card (and so starts
+     * handing its travel on to the home gesture layer). Once per push: it re-arms only after the
+     * drag moves off the boundary or a new drag starts. Requires [scroll]; null keeps it silent.
+     */
+    val onBoundaryHaptic: (() -> Unit)? = null,
     /** Alternate-input navigation commits one focused-card change without emulating a drag. */
     val onNavigate: ((CardStackNavigationDirection) -> Boolean)? = null,
     /** Opens the focused card's detail surface for keyboard, D-pad, rotary and switch users. */
@@ -429,9 +437,12 @@ internal fun CardStack(
     // finger, the fling and the magnetize make, so one continuous motion never re-ticks a card it
     // is already resting on. Mirrors the reference "Calm" launcher's own `lastHapticIndex`.
     val lastHapticIndex = remember { mutableIntStateOf(0) }
+    // Whether the last drag step pushed against the first/last card -- so the boundary haptic ticks
+    // once when the stack runs out of cards, not on every frame the finger keeps pushing.
+    val pinnedAtBoundary = remember { mutableStateOf(false) }
     val scrollableState =
         rememberScrollableState { delta ->
-            var next = scrollPx.floatValue
+            var slopCredit = 0f
             if (!isScrolling.value) {
                 // Modifier.scrollable consumes touchSlop's worth of movement internally while
                 // deciding this is a drag -- its own gesture utilities call this the "overSlop"
@@ -442,7 +453,8 @@ internal fun CardStack(
                 // convention. Restoring the slop here keeps a fling/drag committing at the same
                 // physical finger travel it always did, instead of silently requiring extra
                 // travel -- past the already-crossed slop -- to reach those same thresholds.
-                next += if (delta >= 0f) touchSlop else -touchSlop
+                slopCredit = if (delta >= 0f) touchSlop else -touchSlop
+                pinnedAtBoundary.value = false
                 // A fresh motion starts resting on the anchor card, so that is the card the first
                 // crossing is measured against. A finger landing mid-fling does not come through
                 // here (isScrolling stays true across that hand-off), which is exactly right: that
@@ -454,21 +466,36 @@ internal fun CardStack(
             // cancels it to start this drag) and simply carries on from the position it had
             // reached -- the same catch-the-moving-content behavior a real ScrollView has -- since
             // nothing resets the position between the two.
-            next += delta
+            //
             // Held to the first and last card, so the position a release starts flinging from is
             // already a reachable one. Rendering has always clamped the *index* it derives from
             // this (see cardStackLiveActiveCardIndex), so a drag past either end looked stopped
             // either way; clamping the position itself is what stops the fling that follows from
             // having to travel back through the slack first.
             val scroll = currentInteraction?.scroll
+            val step =
+                cardStackScrollStep(
+                    position = scrollPx.floatValue,
+                    delta = delta,
+                    range = scroll?.let(::cardStackScrollPxRange),
+                    slopCredit = slopCredit,
+                )
             publishCardStackScrollPosition(
-                position = scroll?.let { next.coerceIn(cardStackScrollPxRange(it)) } ?: next,
+                position = step.position,
                 scroll = scroll,
                 scrollPx = scrollPx,
                 lastHapticIndex = lastHapticIndex,
                 interaction = currentInteraction,
             )
-            delta
+            if (step.pinned && !pinnedAtBoundary.value) {
+                currentInteraction?.onBoundaryHaptic?.invoke()
+            }
+            pinnedAtBoundary.value = step.pinned
+            // Only what actually moved the stack is consumed. The rest -- a drag past the first or
+            // last card -- goes up the nested-scroll chain, which is how a swipe that runs off the
+            // end of the stack still reaches the home gesture layer (homeGestureInput's
+            // overscrollHandOff; see docs/product/gestures.md).
+            step.consumedDelta
         }
     // The same spline curve android.widget.OverScroller (and so every platform ScrollView) flings
     // with, which is the physics the reference "Calm" launcher's own card scroll inherits for free
@@ -526,7 +553,11 @@ internal fun CardStack(
                         } else {
                             Orientation.Vertical
                         },
-                    enabled = interaction != null,
+                    // A stack with one card has nowhere to go: it leaves the touch entirely to its
+                    // ancestors, so a swipe over it is an ordinary home swipe.
+                    enabled =
+                        interaction != null &&
+                            interaction.scroll?.let { scroll -> cardStackOwnsDrag(scroll.cardCount) } != false,
                     flingBehavior = flingBehavior,
                 )
                 .semantics {

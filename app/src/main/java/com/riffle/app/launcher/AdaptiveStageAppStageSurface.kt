@@ -323,12 +323,14 @@ internal fun AdaptiveStageAppStageSurface(
             modifier
                 .fillMaxSize()
                 // Reuse the persisted gesture bindings, but only claim mode exit and stage
-                // navigation here. Focused cards consume their one-finger vertical drags first.
+                // navigation here. Focused cards consume their one-finger vertical drags first;
+                // a drag past the stack's first/last card is handed back (docs/product/gestures.md).
                 .homeGestureInput(
                     enabled = detailOrigin == null,
                     settings = state.launcherSettings.gestures.homeGestures,
                     onAction = onAction,
                     actionFilter = ::adaptiveStageAppStageActionFilter,
+                    overscrollHandOff = true,
                 ),
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -1758,6 +1760,9 @@ private fun AdaptiveStageNotificationStack(
                                     onSettleHaptic = {
                                         haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
                                     },
+                                    onBoundaryHaptic = {
+                                        haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
+                                    },
                                     onNavigate = ::navigate,
                                     onExpand = { detailState.expand(activeCard.content.id) },
                                     onLiveDrag = { dragPx -> liveDragPx = dragPx },
@@ -2196,6 +2201,9 @@ private fun AdaptiveStageAllNotificationsStack(
                                         }
                                 },
                                 onSettleHaptic = {
+                                    haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
+                                },
+                                onBoundaryHaptic = {
                                     haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
                                 },
                                 onNavigate = ::navigate,
