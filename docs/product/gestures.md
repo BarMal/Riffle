@@ -7,6 +7,15 @@ dock as a sibling of the Adaptive Stage surface rather than inside it.
 
 This page describes the behaviour after #1210. The code it describes:
 
+> **Superseded in part (plan revision 2026-09-25).** The dock pull becomes the only mode-transition
+> trigger (Decisions 3, 9, 11 in `modes-dock-handle-and-cards-plan.md`). When #TBD-a and #1207
+> land: the app-drawer swipe (`OPEN_APP_DRAWER` home binding), the three-finger mode gestures
+> (`NEXT_MODE` / `PREVIOUS_MODE`) and the dock swipe-up (`DockSwipeUpGesture`, its setting and
+> threshold) are deleted; dock shelf expansion is disabled behind a flag; and a one-finger drag
+> starting on the dock body in its natural pull direction (away from the dock edge) is owned by
+> the dock pull. Rows and rules below that mention those paths describe today's code, not the
+> target.
+
 | Recognizer | File | Primitive |
 | --- | --- | --- |
 | Home gestures (1/2/3-finger swipe, pinch) | `HomeGestureInput.kt`, `HomeSwipeGesture.kt` | Custom pointer loop (ADR 0002: no N-finger Foundation equivalent) + `nestedScroll` hand-off |
@@ -44,7 +53,7 @@ end in Cards). "Home" means the home gesture layer with the user's binding.
 
 | Region | Input | Std / Lib | Cards |
 | --- | --- | --- | --- |
-| Dock pill / handle | any | Reserved for #1207 | Reserved for #1207 |
+| Dock body | 1-finger in the natural pull direction (away from the edge) | Target: dock pull, Home ↔ Library (#1207; no pill) | same |
 | Dock sections (dynamic, notification row) | 1-finger along the dock run | Section scrolls (owns) | Section scrolls (owns) |
 | Dock sections | 1-finger away from edge | Shelf gesture, if shelf affordance is GESTURE | same |
 | Dock background / icons | 1-finger away from edge | Shelf expand (GESTURE affordance) → otherwise dock swipe-up action if it maps to one → otherwise Home (default: app drawer) | Shelf expand (GESTURE) → otherwise dock swipe-up (default: exit Cards) |
@@ -92,7 +101,9 @@ end in Cards). "Home" means the home gesture layer with the user's binding.
 6. **The dock swipe-up yields to the shelf.** It is attached only when the shelf does not claim
    swipe-up (`claimsSwipeUp`) and no widget-picker drag is active, and only when its binding maps to
    an action in the current mode.
-7. **Platform edges win.** The dock never requests system-gesture exclusion.
+7. **Platform edges win.** The dock never requests system-gesture exclusion. The dock pull starts on
+   the dock body, which is already inset from the screen edge; exclusion over the dock is added
+   only if device testing shows side-dock conflicts with Back (Decision 13).
 
 Boundary feel: when a drag first pushes against the first or last card the stack ticks one haptic
 (`CardStackInteraction.onBoundaryHaptic`, the Cards settle haptic strength). There is no rubber-band
@@ -108,7 +119,8 @@ no longer be available for the hand-off.
   finger crosses touch slop. Raising the claim to two fingers would steal pinch/zoom from hosted
   widgets.
 - **Side docks:** along-run vertical drags scroll the dock run when it has overflow, which takes
-  precedence over the dock swipe-up. Revisit with the #1207 pill.
+  precedence over the dock swipe-up. The dock pull (#1207) removes the conflict: a side dock's
+  pull is horizontal, perpendicular to its run, so run scrolling and the pull do not compete.
 - **Primitive migration (ADR 0002):** `HomeGestureInput` and `DockShelfGesture` stay custom pointer
   loops for the reasons recorded in the ADR (N-finger swipes with one pinch/swipe decision;
   direction-selective claiming that `detectVerticalDragGestures`/`AnchoredDraggable` cannot
