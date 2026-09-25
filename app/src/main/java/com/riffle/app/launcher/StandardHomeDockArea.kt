@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
@@ -91,6 +94,14 @@ internal fun StandardHomeDockArea(
                     isShelfOpen = showDockShelf,
                     dock = layout.dock,
                     margins = margins,
+                )
+                // The container itself as one animated shape (dock-reorient decisions, follow-up to
+                // #1278): a dock pull's COMMIT can swap this area's cross-axis extent (a bottom dock's
+                // height for a side dock's width, or the shelf's own open/close) between one frame and
+                // the next: this eases the resize instead of a hard snap. Reduced motion (Decision:
+                // reduced motion) keeps the snap -- the crossfade it already gets is the whole effect.
+                .animateContentSize(
+                    animationSpec = if (presentation.reducedMotion) snap() else RiffleMotion.smooth(),
                 )
                 .onSizeChanged { size ->
                     actions.onDockInteractionExtentChanged(if (runsAlongASide) size.width else size.height)

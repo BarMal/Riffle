@@ -91,6 +91,7 @@ fun HomeDestination(
             haptics = haptics,
             dockModifier = pull.dockModifier,
             dockBackgroundAlpha = pull.dockBackgroundAlpha,
+            dockContentRevealAlpha = pull.dockContentRevealAlpha,
         )
         plan.composedModes.forEach { mode ->
             // Keyed by mode, so the surface a pull brings in is the very composition shown once the

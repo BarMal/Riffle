@@ -13,6 +13,7 @@ import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
@@ -67,6 +68,43 @@ class DockPullScreenshotTest {
         composeRule.captureScreen()
     }
 
+    /**
+     * The dock's own re-orientation (dock-reorient decisions, follow-up to #1278), for a dock that
+     * actually changes edge on the switch: Home on the right (Decision: right dock pulls left),
+     * Library on its default bottom edge. Captured through the COMMIT settle at roughly its start,
+     * ~40%, ~80% and its end, so a regression in the frost/tilt/reveal-hold ramp shows up as a
+     * screenshot diff at the point it appears rather than only once everything has finished.
+     */
+    @Test
+    fun rightToBottomReorientStart() {
+        render(ScreenshotFixtures.homeState(dockPosition = DockPosition.RIGHT))
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun rightToBottomReorientEarlyInTheSettle() {
+        render(ScreenshotFixtures.homeState(dockPosition = DockPosition.RIGHT))
+        pullLeft(fractionOfWidth = 0.6f, release = true)
+        composeRule.mainClock.advanceTimeBy((SETTLE_MILLIS * REORIENT_EARLY_FRACTION).toLong())
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun rightToBottomReorientLateInTheSettle() {
+        render(ScreenshotFixtures.homeState(dockPosition = DockPosition.RIGHT))
+        pullLeft(fractionOfWidth = 0.6f, release = true)
+        composeRule.mainClock.advanceTimeBy((SETTLE_MILLIS * REORIENT_LATE_FRACTION).toLong())
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun rightToBottomReorientEnd() {
+        render(ScreenshotFixtures.homeState(dockPosition = DockPosition.RIGHT))
+        pullLeft(fractionOfWidth = 0.6f, release = true)
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+        composeRule.captureScreen()
+    }
+
     private fun render(initial: LauncherShellState) {
         val iconLoader = SolidColorAppIconLoader()
         var state by mutableStateOf(initial)
@@ -103,8 +141,27 @@ class DockPullScreenshotTest {
         composeRule.waitForIdle()
     }
 
+    /**
+     * A steady leftward pull from the middle of the dock, by a fraction of the window width -- a
+     * right-edge dock's natural pull direction.
+     */
+    private fun pullLeft(
+        fractionOfWidth: Float,
+        release: Boolean,
+    ) {
+        val total = composeRule.onRoot().fetchSemanticsNode().size.width * fractionOfWidth
+        composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).performTouchInput {
+            down(center)
+            repeat(PULL_STEPS) { moveBy(Offset(-total / PULL_STEPS, 0f)) }
+            if (release) up()
+        }
+        composeRule.waitForIdle()
+    }
+
     private companion object {
         const val PULL_STEPS = 12
         const val SETTLE_MILLIS = 2_000L
+        const val REORIENT_EARLY_FRACTION = 0.4f
+        const val REORIENT_LATE_FRACTION = 0.8f
     }
 }
