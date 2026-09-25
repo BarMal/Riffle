@@ -93,35 +93,40 @@ fun HomeDestination(
             dockBackgroundAlpha = pull.dockBackgroundAlpha,
             dockContentRevealAlpha = pull.dockContentRevealAlpha,
         )
-        // Wraps both surfaces (never the dock) so the screen-wide reorient frost -- see
-        // [HomeDockPullBinding.screenFrostModifier] -- blurs and darkens what's actually drawn
-        // inside it. `Modifier.blur` only affects a composable's own content, so this has to be a
-        // container around the surfaces, not a separate overlay sibling drawn on top of them.
-        Box(modifier = Modifier.fillMaxSize().then(pull.screenFrostModifier)) {
-            plan.composedModes.forEach { mode ->
-                // Keyed by mode, so the surface a pull brings in is the very composition shown once
-                // the switch lands, and a cancelled pull leaves the outgoing one untouched.
-                key(mode) {
-                    ModeSurfaceContent(
-                        mode = mode,
-                        state = plan.stateFor(mode),
-                        dockEdge = plan.edges.edgeFor(mode.modeSurface),
-                        surfaceModifier = pull.surfaceModifier(isOutgoing = mode == plan.currentMode),
-                        cardsShellState = cardsShellState,
-                        dockHost = dockHost,
-                        presentation = presentation,
-                        appIconLoader = appIconLoader,
-                        widgetRenderers = widgetRenderers,
-                        haptics = haptics,
-                        cards =
-                            CardsSurfaceInputs(
-                                windowLayout = adaptiveStageWindowLayout,
-                                context = adaptiveStageContext,
-                                onContextChanged = onAdaptiveStageContextChanged,
-                            ),
-                        onAction = onAction,
-                    )
-                }
+        // The screen-wide reorient frost -- see [HomeDockPullBinding.screenFrostModifier] -- is
+        // composed onto each surface's own modifier chain below, not a wrapping Box around them:
+        // an intervening Box here would put every mode surface one layout level deeper than
+        // [HomeDockHost], so StandardHome's `Modifier.zIndex(HOME_CONTENT_Z_INDEX)` -- which yields
+        // hit-test priority to the dock by ranking below it among *its own* siblings -- would no
+        // longer be comparing against the dock at all: it would rank inside the wrapping Box, which
+        // would itself tie the dock's zIndex and win hit-testing on placement order, swallowing the
+        // dock-pull gesture (see DockPullInteractionTest regressions). Composed per-surface instead,
+        // every mode surface stays a direct sibling of [HomeDockHost] exactly as before this frost
+        // was added, so that precedence still holds.
+        plan.composedModes.forEach { mode ->
+            // Keyed by mode, so the surface a pull brings in is the very composition shown once
+            // the switch lands, and a cancelled pull leaves the outgoing one untouched.
+            key(mode) {
+                ModeSurfaceContent(
+                    mode = mode,
+                    state = plan.stateFor(mode),
+                    dockEdge = plan.edges.edgeFor(mode.modeSurface),
+                    surfaceModifier =
+                        pull.surfaceModifier(isOutgoing = mode == plan.currentMode).then(pull.screenFrostModifier),
+                    cardsShellState = cardsShellState,
+                    dockHost = dockHost,
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                    widgetRenderers = widgetRenderers,
+                    haptics = haptics,
+                    cards =
+                        CardsSurfaceInputs(
+                            windowLayout = adaptiveStageWindowLayout,
+                            context = adaptiveStageContext,
+                            onContextChanged = onAdaptiveStageContextChanged,
+                        ),
+                    onAction = onAction,
+                )
             }
         }
     }
