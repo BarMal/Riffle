@@ -13,7 +13,6 @@ class GestureThresholdsTest {
         assertEquals(80f, reference.homeSwipePx, TOLERANCE_PX)
         assertEquals(80f, reference.dockShelfTogglePx, TOLERANCE_PX)
         assertEquals(24f, reference.dockShelfClaimPx, TOLERANCE_PX)
-        assertEquals(80f, reference.dockSwipeUpPx, TOLERANCE_PX)
     }
 
     @Test

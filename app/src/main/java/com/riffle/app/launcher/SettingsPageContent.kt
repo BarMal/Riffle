@@ -319,10 +319,6 @@ private fun SettingsGesturesPageContent(
             appShortcutsByApp = state.appShortcutsByApp,
             onAction = onAction,
         )
-        DockSwipeUpGestureSetting(
-            settings = state.settings.gestures,
-            onAction = onAction,
-        )
     }
 }
 

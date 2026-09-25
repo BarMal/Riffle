@@ -1130,7 +1130,7 @@ private fun Modifier.cardStackTapToFocus(
     interaction: CardStackInteraction?,
 ): Modifier {
     if (interaction == null || isFocused) return this
-    // composed + rememberUpdatedState (mirroring dockSwipeUpGestureInput's identical need) rather
+    // composed + rememberUpdatedState (the same need dockShelfGestureInput has) rather
     // than keying pointerInput on `interaction`/`entry` directly: both are fresh instances every
     // recomposition, and keying on them would restart this gesture's coroutine mid-tap. Keying on
     // entry.cardIndex instead -- stable for a given card across recompositions -- avoids that while

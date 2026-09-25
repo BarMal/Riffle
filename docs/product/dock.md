@@ -138,6 +138,12 @@ A gesture opens the dock into a panel — a single home screen using standard co
 widgets and shortcuts are placed arbitrarily on a grid rather than into bespoke slots. It is
 configurable for **rendered size**, **grid dimensions**, and **padding**.
 
+**Expansion is switched off for now** (dock-pull revision, Decision 7): `DockShelfExpansion.enabled`
+defaults to false, so no dock opens its shelf -- by swipe or by button -- and the expansion settings
+(expandable, "Open the shelf with", dock panel) are hidden. A swipe away from the dock edge does
+nothing until the dock pull claims it as the mode switch. The shelf and panel code stays in place to
+be revisited.
+
 It is deliberately not where items past the visible-before-overflow count go; those scroll in the
 dock's own strip. The panel is for things you consult or act on without leaving where you are.
 
@@ -176,6 +182,8 @@ section does that job, so the rail is gone (#1159).
 | Multiple rows | **Not started** — no notion of rows exists |
 | Panel exists, standard conventions | Done — a real `LauncherPage` on the same grid machinery as a home page |
 | Cards expanded shelf is panel-only | Done (#1166) — the notification card row is dropped there, the panel stays |
+| Shelf expansion | **Switched off** (Decision 7) behind `DockShelfExpansion.enabled`; code kept |
+| Dock swipe-up gesture action | **Removed** (Decision 5) — the dock pull will be the only mode-transition trigger |
 | Panel configurable: size, grid, padding | **Not started** |
 | Panel editing: drag in from the picker | **Not started** — needs a non-fullscreen picker so the dock stays visible |
 | Dock floats over other apps | **Not started** — a separate overlay dock subsystem exists and is to be replaced |

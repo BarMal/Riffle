@@ -11,7 +11,7 @@ val HomeLayoutSet.activeModeIndex: Int
 /** The mode after the active one in the active device class's ring. */
 fun HomeLayoutSet.nextMode(): LauncherViewMode = activeModeRing.next(activeKey.viewMode)
 
-/** The mode before the active one in the active device class's ring; also how Cards is left. */
+/** The mode before the active one in the active device class's ring. */
 fun HomeLayoutSet.previousMode(): LauncherViewMode = activeModeRing.previous(activeKey.viewMode)
 
 /**

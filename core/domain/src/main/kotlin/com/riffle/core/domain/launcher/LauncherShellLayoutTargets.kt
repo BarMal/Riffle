@@ -6,7 +6,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
  * The device class a mode switch applies to.
  *
  * A mode chosen in Settings applies to whichever device class Settings is configuring, which can be
- * another device's layout. Every other mode switch -- a home gesture, the dock, leaving Cards --
+ * another device's layout. Every other mode switch (the dock pull, once it lands)
  * acts on what is on screen, so it targets the device class being held, wherever Settings was last
  * pointed.
  */

@@ -16,12 +16,6 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
-    fun allowsMovingAlongTheModeRingWhichIsHowCardsIsLeft() {
-        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.SelectPreviousLauncherViewMode))
-        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.SelectNextLauncherViewMode))
-    }
-
-    @Test
     fun doesNotAllowEnteringCardsModeFromWithinCardsMode() {
         assertFalse(
             adaptiveStageAppStageActionFilter(

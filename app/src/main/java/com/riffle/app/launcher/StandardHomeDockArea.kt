@@ -42,7 +42,6 @@ internal fun StandardHomeDockArea(
     actions: HomeWorkspaceActions,
     position: DockPosition = DockPosition.BOTTOM,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
-    isWidgetPickerInteractionActive: Boolean = false,
     dynamicEntries: List<DockDynamicEntry> = notificationShelfState.dynamicEntries(),
     onDynamicEntryDelegated: (String) -> Unit = {},
     staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
@@ -57,10 +56,14 @@ internal fun StandardHomeDockArea(
             hasPanel = layout.dock.panel != null,
             notificationShelfState = notificationShelfState,
         )
-    // Expandability is the user's per-layout choice; content and edit mode are still what decide
-    // whether there is anything to expand into right now.
+    // Expandability is the user's per-layout choice, under the launcher-wide switch that currently
+    // keeps every shelf closed; content and edit mode are still what decide whether there is
+    // anything to expand into right now.
     val canExpand =
-        layout.dock.isExpandable && hasExpandedContent && layout.editMode == HomeEditMode.Browsing
+        DockShelfExpansion.enabled &&
+            layout.dock.isExpandable &&
+            hasExpandedContent &&
+            layout.editMode == HomeEditMode.Browsing
     val showDockShelf = isDockShelfExpanded && canExpand
     val dockInteractions =
         DockInteractions(
@@ -102,18 +105,7 @@ internal fun StandardHomeDockArea(
                     bottom = if (runsAlongASide || position == DockPosition.BOTTOM) margins.bottom.dp else 0.dp,
                 )
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
-                .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps)
-                // Only claim the swipe-up gesture when the shelf-expand gesture is inactive and no
-                // widget-picker drag/tile interaction is in play: this Column draws on top of
-                // WidgetPickerSurface in the overlapping dock region, so it must yield the region's
-                // touches to the picker's own drag detector whenever it is active.
-                // The shelf only claims swipe-up when its affordance is the gesture, so a
-                // button-expanded (or non-expandable) dock hands the swipe back to this.
-                .dockSwipeUpGestureInput(
-                    enabled = !dockInteractions.claimsSwipeUp() && !isWidgetPickerInteractionActive,
-                    action = presentation.dockGestures.swipeUp,
-                    onAction = actions.onAction,
-                ),
+                .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),
         verticalArrangement = if (runsAlongASide) Arrangement.Center else Arrangement.Top,
     ) {
@@ -209,10 +201,6 @@ private fun Modifier.dockAreaExtent(
         isShelfOpen -> fillMaxHeight().fillMaxWidth(SIDE_DOCK_SHELF_WIDTH_FRACTION)
         else -> fillMaxHeight().width((dockCrossAxisDp(dock.iconSizeDp) + margins.start + margins.end).dp)
     }
-
-/** True while the shelf's own expand gesture is attached, and so owns swipe-up on the dock. */
-private fun DockInteractions.claimsSwipeUp(): Boolean =
-    onShelfExpandedChange != null && shelfExpandAffordance == DockExpandAffordance.GESTURE
 
 /**
  * The visible way into the expanded shelf, for a dock whose affordance is not the swipe.

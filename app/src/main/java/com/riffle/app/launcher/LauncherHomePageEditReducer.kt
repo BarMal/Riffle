@@ -48,16 +48,6 @@ internal class LauncherHomePageEditReducer(
                     )
                     .withHomeScreenLibraryApps(homeLayoutRepository)
 
-            action is LauncherShellAction.SelectNextLauncherViewMode ||
-                action is LauncherShellAction.SelectPreviousLauncherViewMode ->
-                state
-                    .withModeRingStep(
-                        forward = action is LauncherShellAction.SelectNextLauncherViewMode,
-                        homeLayoutRepository = homeLayoutRepository,
-                        viewModeAvailability = viewModeAvailability,
-                    )
-                    .withHomeScreenLibraryApps(homeLayoutRepository)
-
             action is LauncherShellAction.SelectModeRingModeEnabled ->
                 state
                     .withSettingsModeRingEdit(homeLayoutRepository) { ring ->

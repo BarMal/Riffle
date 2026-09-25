@@ -84,16 +84,9 @@ class HomeGestureConflictDetectorTest {
     }
 
     @Test
-    fun defaultSettingsReportCurrentOpenAppDrawerConflict() {
-        val conflict =
-            HomeGestureConflictDetector.conflictsIn(HomeGestureSettings()).single {
-                it.action == LauncherGestureAction.OPEN_APP_DRAWER
-            }
-
-        assertEquals(
-            listOf(HomeGesture.ONE_FINGER_UP, HomeGesture.PINCH_OUT),
-            conflict.gestures,
-        )
+    fun defaultSettingsHaveNoConflicts() {
+        // Swipe up and pinch out both used to open the app drawer by default; neither does now.
+        assertTrue(HomeGestureConflictDetector.conflictsIn(HomeGestureSettings()).isEmpty())
     }
 
     @Test
@@ -103,15 +96,15 @@ class HomeGestureConflictDetectorTest {
                 HomeGestureSettings(
                     actions =
                         mapOf(
-                            HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
+                            HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_NOTIFICATIONS,
                         ),
                 ),
             ).single {
-                it.action == LauncherGestureAction.OPEN_APP_DRAWER
+                it.action == LauncherGestureAction.OPEN_NOTIFICATIONS
             }
 
         assertEquals(
-            listOf(HomeGesture.ONE_FINGER_UP, HomeGesture.PINCH_OUT),
+            listOf(HomeGesture.ONE_FINGER_DOWN, HomeGesture.TWO_FINGER_LEFT),
             conflict.gestures,
         )
     }

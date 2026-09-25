@@ -757,7 +757,7 @@ class LauncherSettingsJsonCodecTest {
     fun defaultsMissingGestureSettings() {
         val decodedSettings = decodeLauncherSettings("{}")
 
-        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decodedSettings.gestures.homeSwipe.up)
+        assertEquals(LauncherGestureAction.NONE, decodedSettings.gestures.homeSwipe.up)
         assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decodedSettings.gestures.homeSwipe.down)
         assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, decodedSettings.gestures.homeSwipe.left)
         assertEquals(LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE, decodedSettings.gestures.homeSwipe.right)
@@ -1100,21 +1100,51 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun defaultsUnknownGestureAction() {
+    fun decodesAnUnknownGestureActionAsNoAction() {
+        // An unknown stored name leaves the gesture unbound rather than reviving its default.
         val decodedSettings =
             decodeLauncherSettings(
                 """
                 {
                   "gestures": {
                     "homeSwipe": {
-                      "up": "UNKNOWN"
+                      "left": "UNKNOWN"
                     }
                   }
                 }
                 """.trimIndent(),
             )
 
-        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decodedSettings.gestures.homeSwipe.up)
+        assertEquals(LauncherGestureAction.NONE, decodedSettings.gestures.homeSwipe.left)
+        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decodedSettings.gestures.homeSwipe.down)
+    }
+
+    @Test
+    fun decodesAWholeSettingsFileCarryingRemovedGestureNames() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "gestures": {
+                    "homeGestures": {
+                      "THREE_FINGER_UP": "NEXT_MODE",
+                      "THREE_FINGER_DOWN": "PREVIOUS_MODE",
+                      "TWO_FINGER_LEFT": "ENTER_ADAPTIVE_STAGE",
+                      "TWO_FINGER_RIGHT": "EXIT_ADAPTIVE_STAGE"
+                    },
+                    "dockGestures": {
+                      "swipeUp": "PREVIOUS_MODE"
+                    }
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        val gestures = decodedSettings.gestures.homeGestures
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.TWO_FINGER_LEFT))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.TWO_FINGER_RIGHT))
     }
 
     @Test

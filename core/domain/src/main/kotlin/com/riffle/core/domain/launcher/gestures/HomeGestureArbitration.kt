@@ -13,7 +13,7 @@ enum class HomeGestureDisposition {
 
     /**
      * A child (card stack, pager, dock shelf) consumed a pointer, so it owns this touch. Keep
-     * watching only in case the touch grows into a multi-finger mode gesture; never fire otherwise.
+     * watching only in case the touch grows into a multi-finger home gesture; never fire otherwise.
      */
     YIELDED,
 }
@@ -27,7 +27,7 @@ enum class HomeGestureDisposition {
  * 2. As soon as [claimPointerCount] fingers are down, the home layer claims the touch -- it
  *    consumes the pointers ahead of its children (Initial pass), which cancels a card-stack or
  *    pager drag already in progress -- and may fire even though it had yielded, because a
- *    three-finger swipe is a mode gesture wherever it starts.
+ *    three-finger swipe is a home-page gesture wherever it starts.
  * 3. Once claimed, pointers the home layer consumed itself never count as a child's claim.
  *
  * One instance per touch (one `awaitEachGesture` iteration).

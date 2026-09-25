@@ -28,7 +28,9 @@ import com.riffle.core.domain.launcher.cards.CardStackKey
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -305,8 +307,8 @@ class CardStackGestureTest {
     @Test
     fun aSwipePastTheLastCardIsHandedToTheHomeGesture() {
         // Clamped at its last card the stack has nothing left to consume, so the drag goes up the
-        // nested-scroll chain and the home layer reads it as a one-finger swipe up (app drawer by
-        // default) -- it used to die inside the stack.
+        // nested-scroll chain and the home layer reads it as a one-finger swipe up (bound to the app
+        // drawer here) -- it used to die inside the stack.
         val stack = ScrollingCardStackHarness(cardCount = 3).apply { focusedCard = 2 }
         val actions = mutableStateListOf<LauncherShellAction>()
         composeRule.setContent { HomeGesturesOverScrollingCardStack(stack, actions) }
@@ -361,7 +363,7 @@ class CardStackGestureTest {
     @Test
     fun aThreeFingerSwipeStartedOverTheStackReachesTheHomeGesture() {
         // The first finger starts dragging the stack before the others land; the third finger
-        // makes it a mode gesture, which the home layer claims ahead of the stack.
+        // makes it a home-page gesture, which the home layer claims ahead of the stack.
         val stack = ScrollingCardStackHarness(cardCount = 8)
         val actions = mutableStateListOf<LauncherShellAction>()
         composeRule.setContent { HomeGesturesOverScrollingCardStack(stack, actions) }
@@ -386,7 +388,7 @@ class CardStackGestureTest {
         }
 
         composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.SelectPreviousLauncherViewMode), actions.toList())
+            assertEquals(listOf(LauncherShellAction.OpenSettings), actions.toList())
         }
     }
 }
@@ -464,7 +466,7 @@ private fun HomeGesturesOverScrollingCardStack(
                 .fillMaxSize()
                 .homeGestureInput(
                     enabled = true,
-                    settings = HomeGestureSettings(),
+                    settings = handOffGestureSettings,
                     onAction = { action -> actions += action },
                     overscrollHandOff = true,
                 ),
@@ -472,6 +474,15 @@ private fun HomeGesturesOverScrollingCardStack(
         ScrollingCardStack(harness)
     }
 }
+
+/**
+ * Explicit bindings, because no default gesture opens the app drawer or switches mode any more (the
+ * dock pull does): what these tests exercise is the hand-off, not the defaults.
+ */
+private val handOffGestureSettings =
+    HomeGestureSettings()
+        .withAction(gesture = HomeGesture.ONE_FINGER_UP, action = LauncherGestureAction.OPEN_APP_DRAWER)
+        .withAction(gesture = HomeGesture.THREE_FINGER_DOWN, action = LauncherGestureAction.OPEN_SETTINGS)
 
 /** Comfortably past CardStackMagnet.settleDelayMillis (<= 130ms) plus the magnetize spring. */
 private const val SLOW_SETTLE_WAIT_MILLIS = 1_000L

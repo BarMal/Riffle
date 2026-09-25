@@ -84,7 +84,6 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectHomeSwipeGestureAction,
         is LauncherShellAction.SelectHomeGestureAction,
         LauncherShellAction.ResetHomeSwipeGestureActions,
-        is LauncherShellAction.SelectDockGestureAction,
         is LauncherShellAction.SelectHapticFeedbackStrength,
         is LauncherShellAction.SelectReducedMotionPreference,
         is LauncherShellAction.SelectMotionPerformanceTargetFps,

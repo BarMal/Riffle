@@ -98,17 +98,17 @@ class LauncherGestureMappingsTest {
             HomeGestureSettings(
                 actions =
                     mapOf(
-                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
+                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_NOTIFICATIONS,
                     ),
             ).toLauncherGestureMappings()
 
         assertEquals(
-            LauncherGestureAction.OPEN_APP_DRAWER,
-            mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.ONE_FINGER_UP),
+            LauncherGestureAction.OPEN_NOTIFICATIONS,
+            mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.ONE_FINGER_DOWN),
         )
         assertEquals(
             LauncherGestureAction.NONE,
-            mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.TWO_FINGER_LEFT),
+            mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.ONE_FINGER_UP),
         )
         assertEquals(
             LauncherGestureAction.NONE,
@@ -118,13 +118,11 @@ class LauncherGestureMappingsTest {
             listOf(
                 LauncherGestureConflict(
                     surface = LauncherGestureSurface.HOME_PAGE,
-                    action = LauncherGestureAction.OPEN_APP_DRAWER,
-                    gestures = listOf(LauncherGesture.ONE_FINGER_UP, LauncherGesture.PINCH_OUT),
+                    action = LauncherGestureAction.OPEN_NOTIFICATIONS,
+                    gestures = listOf(LauncherGesture.ONE_FINGER_DOWN, LauncherGesture.TWO_FINGER_LEFT),
                 ),
             ),
-            LauncherGestureConflictDetector.conflictsIn(mappings).filter {
-                it.action == LauncherGestureAction.OPEN_APP_DRAWER
-            },
+            LauncherGestureConflictDetector.conflictsIn(mappings),
         )
     }
 }

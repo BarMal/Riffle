@@ -267,10 +267,9 @@ enum class LauncherThemeTypography {
 
 data class GestureSettings(
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),
-    val dockGestures: DockGestureSettings = DockGestureSettings(),
 ) {
     val mappings: LauncherGestureMappings
-        get() = dockGestures.toLauncherGestureMappings(homeGestures.toLauncherGestureMappings())
+        get() = homeGestures.toLauncherGestureMappings()
 
     val conflicts: List<LauncherGestureConflict>
         get() =
@@ -282,10 +281,7 @@ data class GestureSettings(
                         action = conflict.action,
                         gestures = conflict.gestures.map(HomeGesture::toLauncherGesture),
                     )
-                } +
-                LauncherGestureConflictDetector
-                    .conflictsIn(mappings)
-                    .filter { conflict -> conflict.surface == LauncherGestureSurface.DOCK }
+                }
 
     val homeSwipe: HomeSwipeGestureSettings
         get() =
@@ -319,27 +315,6 @@ data class HomeGestureSettings(
     fun launchTargetFor(gesture: HomeGesture): LauncherGestureLaunchTarget? = launchTargets[gesture]
 }
 
-/**
- * Durable binding for the Dock swipe-up gesture. Restricted to the actions the Dock physically
- * supports: staying put, moving to the previous mode in the device's mode ring (#1225), or opening
- * the app drawer. Unlike [HomeGestureSettings], the Dock currently exposes a single gesture.
- */
-data class DockGestureSettings(
-    val swipeUp: LauncherGestureAction = LauncherGestureAction.PREVIOUS_MODE,
-) {
-    companion object {
-        val ALLOWED_SWIPE_UP_ACTIONS: Set<LauncherGestureAction> =
-            setOf(
-                LauncherGestureAction.NONE,
-                LauncherGestureAction.PREVIOUS_MODE,
-                LauncherGestureAction.OPEN_APP_DRAWER,
-            )
-    }
-}
-
-val LauncherGestureAction.isValidDockSwipeUpAction: Boolean
-    get() = this in DockGestureSettings.ALLOWED_SWIPE_UP_ACTIONS
-
 sealed interface LauncherGestureLaunchTarget {
     data class App(
         val identity: AppIdentity,
@@ -367,9 +342,14 @@ enum class HomeGesture {
     PINCH_OUT,
 }
 
+/**
+ * Defaults for the bindable home gestures. None of them switches mode or opens the app drawer: the
+ * dock pull is the only mode-transition trigger (docs/product/gestures.md). [LauncherGestureAction.OPEN_APP_DRAWER]
+ * stays bindable for users who opt in.
+ */
 val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
     mapOf(
-        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER,
+        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.NONE,
         HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_NOTIFICATIONS,
         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
@@ -377,13 +357,12 @@ val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
         HomeGesture.TWO_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
-        // Three fingers avoid the platform back/home edges and the one-finger card stack.
-        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.NEXT_MODE,
-        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.PREVIOUS_MODE,
+        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.NONE,
+        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.NONE,
         HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.THREE_FINGER_RIGHT to LauncherGestureAction.NONE,
         HomeGesture.PINCH_IN to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
-        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_APP_DRAWER,
+        HomeGesture.PINCH_OUT to LauncherGestureAction.NONE,
     )
 
 fun HomeSwipeGestureSettings.toHomeGestureSettings(): HomeGestureSettings =
@@ -492,7 +471,7 @@ const val MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP = 40
 const val MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP = 80
 
 data class HomeSwipeGestureSettings(
-    val up: LauncherGestureAction = LauncherGestureAction.OPEN_APP_DRAWER,
+    val up: LauncherGestureAction = LauncherGestureAction.NONE,
     val down: LauncherGestureAction = LauncherGestureAction.OPEN_NOTIFICATIONS,
     val left: LauncherGestureAction = LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
     val right: LauncherGestureAction = LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
@@ -516,12 +495,6 @@ enum class LauncherGestureAction {
     ENTER_FULLSCREEN_HOME,
     SELECT_NEXT_HOME_PAGE,
     SELECT_PREVIOUS_HOME_PAGE,
-
-    /** The next mode in the device's mode ring (#1225). Stored before rings as ENTER_ADAPTIVE_STAGE. */
-    NEXT_MODE,
-
-    /** The previous mode in the device's mode ring; how Cards is left. Stored before as EXIT_ADAPTIVE_STAGE. */
-    PREVIOUS_MODE,
     SELECT_NEXT_APP_STAGE,
     SELECT_PREVIOUS_APP_STAGE,
     LAUNCH_APP,
@@ -530,18 +503,12 @@ enum class LauncherGestureAction {
 
     companion object {
         /**
-         * The action a stored [name] means, or null when it names none. Names written before the
-         * mode ring (#1225) still decode: entering Cards is now "next mode" and leaving it
-         * "previous mode", which is where the default Library -> Cards ring takes each.
+         * The action a stored [name] means, or null when it names none. Mode-switching bindings
+         * (NEXT_MODE / PREVIOUS_MODE, and their older ENTER_ / EXIT_ADAPTIVE_STAGE names) were removed
+         * when the dock pull became the only mode-transition trigger; like any other unknown name
+         * they decode to null, which callers treat as "no action".
          */
-        fun fromStoredName(name: String): LauncherGestureAction? =
-            LEGACY_NAMES[name] ?: entries.firstOrNull { action -> action.name == name }
-
-        private val LEGACY_NAMES: Map<String, LauncherGestureAction> =
-            mapOf(
-                "ENTER_ADAPTIVE_STAGE" to NEXT_MODE,
-                "EXIT_ADAPTIVE_STAGE" to PREVIOUS_MODE,
-            )
+        fun fromStoredName(name: String): LauncherGestureAction? = entries.firstOrNull { action -> action.name == name }
     }
 }
 

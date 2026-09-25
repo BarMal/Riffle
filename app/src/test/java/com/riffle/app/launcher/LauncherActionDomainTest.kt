@@ -236,8 +236,6 @@ class LauncherActionDomainTest {
                     "SelectLauncherViewMode",
                     LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
                 ),
-                activity("SelectNextLauncherViewMode", LauncherShellAction.SelectNextLauncherViewMode),
-                activity("SelectPreviousLauncherViewMode", LauncherShellAction.SelectPreviousLauncherViewMode),
                 activity(
                     "SelectModeRingModeEnabled",
                     LauncherShellAction.SelectModeRingModeEnabled(LauncherViewMode.STANDARD_APP_DRAWER, enabled = true),
@@ -484,10 +482,6 @@ class LauncherActionDomainTest {
                     ),
                 ),
                 settings("ResetHomeSwipeGestureActions", LauncherShellAction.ResetHomeSwipeGestureActions),
-                settings(
-                    "SelectDockGestureAction",
-                    LauncherShellAction.SelectDockGestureAction(LauncherGestureAction.OPEN_APP_DRAWER),
-                ),
                 settings(
                     "SelectHapticFeedbackStrength",
                     LauncherShellAction.SelectHapticFeedbackStrength(HapticFeedbackStrength.LIGHT),

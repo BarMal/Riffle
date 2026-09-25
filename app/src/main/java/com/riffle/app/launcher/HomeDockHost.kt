@@ -49,7 +49,7 @@ internal class HomeDockHostState {
     /** Where a widget dragged out of the picker would land in the dock, if it is over it. */
     val widgetDropPreview: MutableState<WidgetPickerDockPlacementPreview?> = mutableStateOf(null)
 
-    /** Whether a widget is being dragged out of the picker, which the dock yields its swipe-up to. */
+    /** Whether a widget is being dragged out of the picker. */
     val isWidgetDragInProgress: MutableState<Boolean> = mutableStateOf(false)
 
     /** Whether the dock's shelf is open; the content's background tap closes it. */
@@ -180,8 +180,6 @@ internal fun HomeDockHost(
             actions = actions,
             position = position,
             widgetPickerDockPreview = hostState.widgetDropPreview.value,
-            isWidgetPickerInteractionActive =
-                presentation.widgetPicker.isOpen || hostState.isWidgetDragInProgress.value,
             dynamicEntries = interpreter.dynamicEntries ?: notificationShelfState.dynamicEntries(),
             onDynamicEntryDelegated = interpreter.onDynamicEntryDelegated,
             staticItemMenuExtras = interpreter.staticItemMenuExtras,

@@ -81,8 +81,7 @@ internal fun Modifier.dockShelfGestureInput(interactions: DockInteractions): Mod
         .dockShelfGestureInput(
             isExpanded = interactions.isShelfExpanded,
             position = interactions.position,
-            // A dock whose shelf is reached by button never claims the drag, which is what hands
-            // swipe-up back to the dock's own gesture action.
+            // A dock whose shelf is reached by button never claims the drag.
             onExpandedChange =
                 interactions.onShelfExpandedChange
                     ?.takeIf { interactions.shelfExpandAffordance == DockExpandAffordance.GESTURE },
