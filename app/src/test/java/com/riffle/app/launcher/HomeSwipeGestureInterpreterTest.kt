@@ -5,7 +5,6 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
@@ -248,24 +247,24 @@ class HomeSwipeGestureInterpreterTest {
     }
 
     @Test
-    fun mapsAdaptiveStageEntryExitAndStageActions() {
+    fun mapsModeRingAndStageActions() {
         val settings =
             HomeGestureSettings(
                 actions =
                     mapOf(
-                        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_ADAPTIVE_STAGE,
-                        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
+                        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.NEXT_MODE,
+                        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.PREVIOUS_MODE,
                         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_APP_STAGE,
                         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE,
                     ),
             )
 
         assertEquals(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE),
+            LauncherShellAction.SelectNextLauncherViewMode,
             actionMapper.actionFor(HomeGesture.THREE_FINGER_UP, settings),
         )
         assertEquals(
-            LauncherShellAction.ExitAdaptiveStage,
+            LauncherShellAction.SelectPreviousLauncherViewMode,
             actionMapper.actionFor(HomeGesture.THREE_FINGER_DOWN, settings),
         )
         assertEquals(

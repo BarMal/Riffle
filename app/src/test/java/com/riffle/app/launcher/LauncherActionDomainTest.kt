@@ -235,7 +235,16 @@ class LauncherActionDomainTest {
                     "SelectLauncherViewMode",
                     LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
                 ),
-                activity("ExitAdaptiveStage", LauncherShellAction.ExitAdaptiveStage),
+                activity("SelectNextLauncherViewMode", LauncherShellAction.SelectNextLauncherViewMode),
+                activity("SelectPreviousLauncherViewMode", LauncherShellAction.SelectPreviousLauncherViewMode),
+                activity(
+                    "SelectModeRingModeEnabled",
+                    LauncherShellAction.SelectModeRingModeEnabled(LauncherViewMode.STANDARD_APP_DRAWER, enabled = true),
+                ),
+                activity(
+                    "MoveModeRingMode",
+                    LauncherShellAction.MoveModeRingMode(LauncherViewMode.CARD_INTERFACE, offset = -1),
+                ),
                 activity(
                     "SelectLauncherTemplate",
                     LauncherShellAction.SelectLauncherTemplate(

@@ -123,14 +123,16 @@ import kotlin.math.abs
 
 /**
  * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
- * through: stage navigation, leaving Cards, and reaching the app drawer/search so Cards mode stays
+ * through: stage navigation, moving along the mode ring (next/previous mode -- previous is how
+ * Cards is left), and reaching the app drawer/search so Cards mode stays
  * a normal, discoverable overlay rather than an isolated static surface.
  */
 internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boolean =
     when (action) {
         LauncherShellAction.SelectNextAppStage,
         LauncherShellAction.SelectPreviousAppStage,
-        LauncherShellAction.ExitAdaptiveStage,
+        LauncherShellAction.SelectNextLauncherViewMode,
+        LauncherShellAction.SelectPreviousLauncherViewMode,
         LauncherShellAction.OpenAppDrawer,
         LauncherShellAction.OpenSearch,
         -> true

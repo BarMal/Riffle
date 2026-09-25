@@ -48,13 +48,27 @@ internal class LauncherHomePageEditReducer(
                     )
                     .withHomeScreenLibraryApps(homeLayoutRepository)
 
-            action is LauncherShellAction.ExitAdaptiveStage ->
+            action is LauncherShellAction.SelectNextLauncherViewMode ||
+                action is LauncherShellAction.SelectPreviousLauncherViewMode ->
                 state
-                    .withExitedAdaptiveStage(
+                    .withModeRingStep(
+                        forward = action is LauncherShellAction.SelectNextLauncherViewMode,
                         homeLayoutRepository = homeLayoutRepository,
                         viewModeAvailability = viewModeAvailability,
                     )
                     .withHomeScreenLibraryApps(homeLayoutRepository)
+
+            action is LauncherShellAction.SelectModeRingModeEnabled ->
+                state
+                    .withSettingsModeRingEdit(homeLayoutRepository) { ring ->
+                        ring.withModeEnabled(mode = action.mode, enabled = action.enabled)
+                    }
+                    .withHomeScreenLibraryApps(homeLayoutRepository)
+
+            action is LauncherShellAction.MoveModeRingMode ->
+                state.withSettingsModeRingEdit(homeLayoutRepository) { ring ->
+                    ring.withModeMoved(mode = action.mode, offset = action.offset)
+                }
 
             action is LauncherShellAction.SelectHomeLayoutDeviceClass ->
                 state

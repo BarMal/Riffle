@@ -207,6 +207,13 @@ private fun SettingsLayoutPageContent(
             onAction = onAction,
         )
     }
+    SettingsSection(title = "Modes") {
+        ModeRingSetting(
+            ring = state.modeRing,
+            availableViewModes = state.availableLauncherViewModes,
+            onAction = onAction,
+        )
+    }
     SettingsSection(title = "Labels") {
         HomeLabelSetting(
             settings = state.homeLayout.settings.labels,

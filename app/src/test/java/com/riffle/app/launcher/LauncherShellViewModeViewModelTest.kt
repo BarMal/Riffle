@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.home.activeModeRing
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
@@ -159,13 +160,13 @@ class LauncherShellViewModeViewModelTest {
         viewModel.onHomePageEdited(
             LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE),
         )
-        viewModel.onHomePageEdited(LauncherShellAction.ExitAdaptiveStage)
+        viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousLauncherViewMode)
 
         assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
     }
 
     @Test
-    fun leavingCardsWithNothingRememberedLandsOnStandard() {
+    fun leavingCardsWithNoRingConfiguredStepsBackToLibraryInTheDefaultRing() {
         val camera = app(label = "Camera")
         val repository =
             FakeHomeLayoutRepository(
@@ -181,9 +182,41 @@ class LauncherShellViewModeViewModelTest {
             )
 
         runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(LauncherShellAction.ExitAdaptiveStage)
+        viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousLauncherViewMode)
 
-        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, viewModel.state.value.homeLayout.viewMode)
+        // Before the mode ring (#1225) this landed on Standard; the default ring is Library -> Cards.
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
+    }
+
+    @Test
+    fun removingTheActiveModeFromTheRingInSettingsMovesToItsNeighbour() {
+        val camera = app(label = "Camera")
+        val repository =
+            FakeHomeLayoutRepository(
+                savedLayout =
+                    HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+                platformDependencies = libraryAndCardsViewModePlatformDependencies,
+            )
+
+        runBlocking { viewModel.refreshInstalledApps().join() }
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectModeRingModeEnabled(LauncherViewMode.STANDARD_APP_DRAWER, enabled = true),
+        )
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectModeRingModeEnabled(LauncherViewMode.HOME_SCREEN_LIBRARY, enabled = false),
+        )
+
+        assertEquals(LauncherViewMode.CARD_INTERFACE, viewModel.state.value.homeLayout.viewMode)
+        assertEquals(
+            listOf(LauncherViewMode.CARD_INTERFACE, LauncherViewMode.STANDARD_APP_DRAWER),
+            viewModel.state.value.homeLayoutSet.activeModeRing.modes,
+        )
     }
 
     @Test

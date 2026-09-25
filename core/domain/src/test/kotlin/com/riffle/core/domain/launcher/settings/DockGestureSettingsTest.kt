@@ -7,8 +7,8 @@ import kotlin.test.assertTrue
 
 class DockGestureSettingsTest {
     @Test
-    fun defaultsToExitingAdaptiveStageOnSwipeUp() {
-        assertEquals(LauncherGestureAction.EXIT_ADAPTIVE_STAGE, DockGestureSettings().swipeUp)
+    fun defaultsToThePreviousModeOnSwipeUp() {
+        assertEquals(LauncherGestureAction.PREVIOUS_MODE, DockGestureSettings().swipeUp)
     }
 
     @Test
@@ -16,7 +16,7 @@ class DockGestureSettingsTest {
         assertEquals(
             setOf(
                 LauncherGestureAction.NONE,
-                LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
+                LauncherGestureAction.PREVIOUS_MODE,
                 LauncherGestureAction.OPEN_APP_DRAWER,
             ),
             DockGestureSettings.ALLOWED_SWIPE_UP_ACTIONS,
