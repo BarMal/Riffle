@@ -93,29 +93,35 @@ fun HomeDestination(
             dockBackgroundAlpha = pull.dockBackgroundAlpha,
             dockContentRevealAlpha = pull.dockContentRevealAlpha,
         )
-        plan.composedModes.forEach { mode ->
-            // Keyed by mode, so the surface a pull brings in is the very composition shown once the
-            // switch lands, and a cancelled pull leaves the outgoing one untouched.
-            key(mode) {
-                ModeSurfaceContent(
-                    mode = mode,
-                    state = plan.stateFor(mode),
-                    dockEdge = plan.edges.edgeFor(mode.modeSurface),
-                    surfaceModifier = pull.surfaceModifier(isOutgoing = mode == plan.currentMode),
-                    cardsShellState = cardsShellState,
-                    dockHost = dockHost,
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                    widgetRenderers = widgetRenderers,
-                    haptics = haptics,
-                    cards =
-                        CardsSurfaceInputs(
-                            windowLayout = adaptiveStageWindowLayout,
-                            context = adaptiveStageContext,
-                            onContextChanged = onAdaptiveStageContextChanged,
-                        ),
-                    onAction = onAction,
-                )
+        // Wraps both surfaces (never the dock) so the screen-wide reorient frost -- see
+        // [HomeDockPullBinding.screenFrostModifier] -- blurs and darkens what's actually drawn
+        // inside it. `Modifier.blur` only affects a composable's own content, so this has to be a
+        // container around the surfaces, not a separate overlay sibling drawn on top of them.
+        Box(modifier = Modifier.fillMaxSize().then(pull.screenFrostModifier)) {
+            plan.composedModes.forEach { mode ->
+                // Keyed by mode, so the surface a pull brings in is the very composition shown once
+                // the switch lands, and a cancelled pull leaves the outgoing one untouched.
+                key(mode) {
+                    ModeSurfaceContent(
+                        mode = mode,
+                        state = plan.stateFor(mode),
+                        dockEdge = plan.edges.edgeFor(mode.modeSurface),
+                        surfaceModifier = pull.surfaceModifier(isOutgoing = mode == plan.currentMode),
+                        cardsShellState = cardsShellState,
+                        dockHost = dockHost,
+                        presentation = presentation,
+                        appIconLoader = appIconLoader,
+                        widgetRenderers = widgetRenderers,
+                        haptics = haptics,
+                        cards =
+                            CardsSurfaceInputs(
+                                windowLayout = adaptiveStageWindowLayout,
+                                context = adaptiveStageContext,
+                                onContextChanged = onAdaptiveStageContextChanged,
+                            ),
+                        onAction = onAction,
+                    )
+                }
             }
         }
     }

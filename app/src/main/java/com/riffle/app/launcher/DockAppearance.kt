@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -163,3 +164,51 @@ internal fun Modifier.dockReorientFrost(
 
 private const val DOCK_REORIENT_MAX_BLUR_DP = 12
 private const val DOCK_REORIENT_MAX_DARKEN_ALPHA = 0.35f
+
+/**
+ * The whole-screen version of [dockReorientFrost] (extension to the "iPhone Duo" reference, follow-up
+ * to #1279): instead of darkening the dock's own chrome, two edge bands -- fully dark right at the
+ * edge, fading to transparent -- grow in from the two screen edges perpendicular to the pull as
+ * [edgeBandFractionProvider] deepens (see
+ * [dockPullReorientEdgeBandFraction][com.riffle.core.domain.launcher.dockpull.dockPullReorientEdgeBandFraction]),
+ * and recede back out as the pull settles -- like curtains closing in around the fold and opening
+ * back out. Capped well short of meeting in the middle, so the centre of the screen always stays
+ * legible even at a full pull. [isVerticalPull] picks which pair of edges: top/bottom for a
+ * bottom/top dock's vertical pull, left/right for a side dock's horizontal one.
+ *
+ * Applied to the Box that wraps *both* mode surfaces, never the dock itself -- the dock is the
+ * handle you're holding, so it stays sharp throughout while the screen around it recedes. Read
+ * inside a draw block exactly like [dockReorientFrost], so it animates without recomposing; the
+ * same on/off blur-radius caveat documented there applies here too.
+ */
+internal fun Modifier.screenReorientFrost(
+    isActive: Boolean,
+    isVerticalPull: Boolean,
+    edgeBandFractionProvider: () -> Float,
+): Modifier {
+    if (!isActive) return this
+    return blur(radius = SCREEN_REORIENT_MAX_BLUR_DP.dp).drawWithContent {
+        drawContent()
+        val bandFraction = edgeBandFractionProvider().coerceIn(0f, 0.5f)
+        if (bandFraction > 0f) {
+            val edgeColor = Color.Black.copy(alpha = SCREEN_REORIENT_EDGE_DARKEN_ALPHA)
+            val stops =
+                arrayOf(
+                    0f to edgeColor,
+                    bandFraction to Color.Transparent,
+                    (1f - bandFraction) to Color.Transparent,
+                    1f to edgeColor,
+                )
+            val brush =
+                if (isVerticalPull) {
+                    Brush.verticalGradient(colorStops = stops, startY = 0f, endY = size.height)
+                } else {
+                    Brush.horizontalGradient(colorStops = stops, startX = 0f, endX = size.width)
+                }
+            drawRect(brush = brush)
+        }
+    }
+}
+
+private const val SCREEN_REORIENT_MAX_BLUR_DP = 12
+private const val SCREEN_REORIENT_EDGE_DARKEN_ALPHA = 0.55f

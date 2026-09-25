@@ -49,4 +49,16 @@ class DockPullReorientTest {
         assertFalse(dockPullItemFitsDestination(index = 3, destinationCapacity = 3))
         assertFalse(dockPullItemFitsDestination(index = 0, destinationCapacity = 0))
     }
+
+    @Test
+    fun edgeBandFractionIsZeroAtRestAndMaxFullyPulled() {
+        assertEquals(0f, dockPullReorientEdgeBandFraction(dockBackgroundAlpha = 1f, maxFraction = 0.32f))
+        assertEquals(0.32f, dockPullReorientEdgeBandFraction(dockBackgroundAlpha = 0f, maxFraction = 0.32f))
+        assertEquals(0.16f, dockPullReorientEdgeBandFraction(dockBackgroundAlpha = 0.5f, maxFraction = 0.32f))
+    }
+
+    @Test
+    fun edgeBandFractionNeverReachesMaxFractionForAnInRangeAlpha() {
+        assertTrue(dockPullReorientEdgeBandFraction(dockBackgroundAlpha = 0.01f, maxFraction = 0.32f) < 0.32f)
+    }
 }

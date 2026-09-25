@@ -25,6 +25,7 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.DockPullFrame
 import com.riffle.core.domain.launcher.dockpull.DockPullTransitionState
+import com.riffle.core.domain.launcher.dockpull.dockPullReorientEdgeBandFraction
 import com.riffle.core.domain.launcher.dockpull.dockPullReorientFrostStrength
 import com.riffle.core.domain.launcher.dockpull.dockPullReorientTiltDegrees
 import com.riffle.core.domain.launcher.dockpull.frame
@@ -60,6 +61,13 @@ internal class HomeDockPullBinding(
     val rootModifier: Modifier,
     /** For the dock body: the pull gesture, the accessibility action and the dock's translation. */
     val dockModifier: Modifier,
+    /**
+     * For the Box wrapping both mode surfaces (never the dock itself): the screen-wide reorient
+     * frost (extension to the "iPhone Duo" reference, follow-up to #1279) -- edge bands that grow in
+     * from the two screen edges perpendicular to the pull, proportional to the same progress the
+     * dock's own frost uses. See [screenReorientFrost].
+     */
+    val screenFrostModifier: Modifier,
     val dockBackgroundAlpha: () -> Float,
     /**
      * The freshly-committed dock's reveal hold (dock-reorient decisions, follow-up to #1278): 1 at
@@ -157,6 +165,7 @@ internal fun rememberHomeDockPullBinding(
                 isActive = transitioning.value && !reducedMotion,
                 strengthProvider = { dockPullReorientFrostStrength(frameState.value.dockBackgroundAlpha) },
             )
+    val screenFrostModifier = screenFrostModifier(transitioning.value && !reducedMotion, pullDirection, frameState)
     val rootModifier =
         Modifier
             .onSizeChanged { size -> rootSize.value = size }
@@ -173,6 +182,7 @@ internal fun rememberHomeDockPullBinding(
         dockEdge = runningEdge.value ?: edges.edgeFor(plan.shownMode.modeSurface),
         rootModifier = rootModifier,
         dockModifier = dockModifier,
+        screenFrostModifier = screenFrostModifier,
         dockBackgroundAlpha = dockBackgroundAlpha,
         dockContentRevealAlpha = dockContentRevealAlpha,
         frame = frameState,
@@ -187,6 +197,23 @@ internal fun rememberHomeDockPullBinding(
  * perspective rather than a pure shear, scaled by density like the platform default.
  */
 private const val DOCK_REORIENT_CAMERA_DISTANCE = 12f
+
+/**
+ * [Modifier.screenReorientFrost] for the two mode surfaces, given the same progress and direction
+ * [dockModifier]'s own [Modifier.dockReorientFrost] already reads -- kept a separate small function
+ * rather than inlined into [rememberHomeDockPullBinding] to keep that composable under the repo's
+ * length limit; not itself `@Composable`, exactly like [Modifier.screenReorientFrost].
+ */
+private fun screenFrostModifier(
+    isActive: Boolean,
+    pullDirection: DockPullDirection,
+    frame: State<DockPullFrame>,
+): Modifier =
+    Modifier.screenReorientFrost(
+        isActive = isActive,
+        isVerticalPull = pullDirection.unitY != 0f,
+        edgeBandFractionProvider = { dockPullReorientEdgeBandFraction(frame.value.dockBackgroundAlpha) },
+    )
 
 @Composable
 private fun rememberDockPullGestureHost(
