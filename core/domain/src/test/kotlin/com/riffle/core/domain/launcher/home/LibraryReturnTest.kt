@@ -79,32 +79,10 @@ class LibraryReturnTest {
     }
 
     @Test
-    fun homeIsTheFirstNonLibraryModeTheDeviceClassMovesBetween() {
-        assertEquals(
-            LauncherViewMode.CARD_INTERFACE,
-            homeModeAmong(listOf(LauncherViewMode.HOME_SCREEN_LIBRARY, LauncherViewMode.CARD_INTERFACE)),
-        )
-        assertEquals(
-            LauncherViewMode.STANDARD_APP_DRAWER,
-            homeModeAmong(
-                listOf(
-                    LauncherViewMode.HOME_SCREEN_LIBRARY,
-                    LauncherViewMode.STANDARD_APP_DRAWER,
-                    LauncherViewMode.CARD_INTERFACE,
-                ),
-            ),
-        )
-        assertEquals(DEFAULT_HOME_MODE, homeModeAmong(listOf(LauncherViewMode.HOME_SCREEN_LIBRARY)))
-    }
-
-    @Test
     fun leavingLibraryGoesToTheDeviceClassesOwnHomeMode() {
         val standardHome =
             layoutSet(active = LauncherViewMode.HOME_SCREEN_LIBRARY)
-                .withModeRing(
-                    deviceClass = phone,
-                    ring = ModeRing(listOf(LauncherViewMode.STANDARD_APP_DRAWER, LauncherViewMode.HOME_SCREEN_LIBRARY)),
-                )
+                .withHomeMode(deviceClass = phone, mode = LauncherViewMode.STANDARD_APP_DRAWER)
 
         assertEquals(
             LauncherViewMode.STANDARD_APP_DRAWER,

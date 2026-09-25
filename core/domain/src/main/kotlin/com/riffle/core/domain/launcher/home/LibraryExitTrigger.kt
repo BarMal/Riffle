@@ -34,21 +34,8 @@ fun LibraryExitTrigger.returnsHome(
     returnTarget: LibraryReturnTarget,
 ): Boolean = current == ModeSurface.LIBRARY && returnTarget == LibraryReturnTarget.HOME
 
-/** The mode Home falls back to when nothing names one. */
-val DEFAULT_HOME_MODE: LauncherViewMode = LauncherViewMode.CARD_INTERFACE
-
-/**
- * Which of [modes] is Home: the first one shown as [ModeSurface.HOME], else [DEFAULT_HOME_MODE].
- *
- * Kept deliberately small: it is the one place "the user's Home mode" is resolved, so it can follow
- * the Home <-> Library pair (#1241) without touching its callers.
- */
-fun homeModeAmong(modes: List<LauncherViewMode>): LauncherViewMode =
-    modes.firstOrNull { mode -> mode.modeSurface == ModeSurface.HOME } ?: DEFAULT_HOME_MODE
-
-/** [deviceClass]'s Home mode, resolved from the modes it moves between (see [homeModeAmong]). */
-fun HomeLayoutSet.homeModeFor(deviceClass: HomeLayoutDeviceClass): LauncherViewMode =
-    homeModeAmong(modeRingFor(deviceClass).modes)
+/** [deviceClass]'s Home mode: the Home side of its Home <-> Library pair (#1241). */
+fun HomeLayoutSet.homeModeFor(deviceClass: HomeLayoutDeviceClass): LauncherViewMode = modePairFor(deviceClass).home
 
 /**
  * The mode the active device class switches to when [trigger] happens under [returnTarget], or null
