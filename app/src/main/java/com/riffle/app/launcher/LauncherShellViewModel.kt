@@ -35,6 +35,7 @@ import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
+import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WidgetEditResult
 import com.riffle.core.domain.launcher.home.WidgetEngine
@@ -308,6 +309,11 @@ class LauncherShellViewModel(
             removedHostedWidgetId = removedHostedWidgetId,
             deleteHostedWidgetId = platformDependencies.deleteHostedWidgetId,
         )
+    }
+
+    /** Applies the "After leaving Library" setting for [trigger]; a no-op outside Library (#1243). */
+    fun leaveLibrary(trigger: LibraryExitTrigger) {
+        onHomePageEdited(LauncherShellAction.LeaveLibrary(trigger))
     }
 
     fun onHomePageEdited(action: LauncherShellAction) {

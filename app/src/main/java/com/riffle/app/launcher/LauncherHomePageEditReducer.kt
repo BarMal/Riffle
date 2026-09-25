@@ -23,6 +23,13 @@ internal class LauncherHomePageEditReducer(
             action is LauncherShellAction.OpenDefaultHome ->
                 state.withDefaultHomeOpened(homeLayoutRepository).withHomeScreenLibraryApps(homeLayoutRepository)
 
+            action is LauncherShellAction.LeaveLibrary ->
+                state.withLibraryLeft(
+                    trigger = action.trigger,
+                    homeLayoutRepository = homeLayoutRepository,
+                    viewModeAvailability = viewModeAvailability,
+                )
+
             action is LauncherShellAction.SelectLauncherTemplate ->
                 state.withSelectedHomeLayoutTemplate(
                     templateId = action.templateId,

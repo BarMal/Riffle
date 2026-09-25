@@ -31,6 +31,7 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
         is LauncherShellAction.SelectHomeSurfaceMode,
         is LauncherShellAction.SelectLauncherTemplate,
         is LauncherShellAction.SelectHomeLayoutDeviceClass,
+        is LauncherShellAction.LeaveLibrary,
         -> true
 
         else -> false

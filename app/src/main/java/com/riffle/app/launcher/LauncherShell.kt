@@ -51,6 +51,7 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
+import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import kotlinx.coroutines.delay
@@ -224,6 +225,11 @@ private fun LauncherShellBackHandling(
 ) {
     BackHandler(enabled = state.destination != ShellDestination.HOME) {
         onAction(LauncherShellAction.OpenHome)
+    }
+    // Back from Library returns to Home when the "After leaving Library" setting says so (#1243).
+    // Anything Library itself has open composes later and unwinds first.
+    BackHandler(enabled = state.backLeavesLibrary) {
+        onAction(LauncherShellAction.LeaveLibrary(LibraryExitTrigger.BACK))
     }
 }
 
