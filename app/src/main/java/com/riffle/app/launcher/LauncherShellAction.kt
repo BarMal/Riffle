@@ -56,6 +56,7 @@ import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
@@ -459,7 +460,9 @@ sealed interface LauncherShellAction {
         val strength: HapticFeedbackStrength,
     ) : LauncherShellAction
 
-    data class SelectReducedMotionEnabled(val enabled: Boolean) : LauncherShellAction
+    data class SelectReducedMotionPreference(
+        val preference: ReducedMotionPreference,
+    ) : LauncherShellAction
 
     data class SelectMotionPerformanceTargetFps(
         val targetFps: MotionPerformanceTargetFps,

@@ -65,7 +65,14 @@ fun LauncherShell(
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val state by viewModel.state.collectAsState()
+    val storedState by viewModel.state.collectAsState()
+    // The one place the platform's animation state meets the stored preference; every surface below
+    // reads the resolved `launcherSettings.motion.reducedMotion`.
+    val systemReducedMotion = rememberSystemReducedMotion()
+    val state =
+        remember(storedState, systemReducedMotion) {
+            storedState.withSystemReducedMotion(systemReducedMotion)
+        }
     var adaptiveStageContext by rememberSaveable(stateSaver = AdaptiveStageInteractionContextSaver) {
         mutableStateOf(AdaptiveStageInteractionContext())
     }

@@ -3,5 +3,10 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:forceDarkAllowed">false</item>
+        <!-- Show the wallpaper from the first frame so a cold start never flashes the theme's
+             window colour; LauncherWallpaperController switches to a solid colour when chosen. -->
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
     </style>
 </resources>

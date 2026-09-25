@@ -211,10 +211,12 @@ class LauncherSettingsTest {
     }
 
     @Test
-    fun defaultsReducedMotionToOff() {
+    fun defaultsReducedMotionToFollowTheSystem() {
         val settings = LauncherSettings()
 
+        assertEquals(ReducedMotionPreference.SYSTEM, settings.motion.reducedMotionPreference)
         assertEquals(false, settings.motion.reducedMotion)
+        assertEquals(true, settings.withSystemReducedMotion(true).motion.reducedMotion)
     }
 
     @Test

@@ -63,8 +63,10 @@ Tokens: **exactly three springs**, plus two tweens for non-physical changes.
 | short | 150 ms | for micro-feedback |
 | reduced-motion fade | 80 ms | the only motion allowed when reduced motion is on, and only where a hard cut would disorient |
 
-Reduced motion is the launcher's own setting, threaded through composables as a `reducedMotion:
-Boolean`. Every `RiffleMotion` helper takes it and returns `snap()` when it is on, so the end state
+Reduced motion is a tri-state setting (System, the default; On; Off). System follows the platform
+animator duration scale, which the accessibility "Remove animations" switch sets to 0. `LauncherShell`
+resolves it once into `launcherSettings.motion.reducedMotion`, which is threaded through composables as
+a `reducedMotion: Boolean`. Every `RiffleMotion` helper takes it and returns `snap()` when it is on, so the end state
 is identical and only the travel is removed.
 
 Do

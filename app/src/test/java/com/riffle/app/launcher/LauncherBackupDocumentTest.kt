@@ -25,6 +25,7 @@ import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
@@ -46,7 +47,7 @@ class LauncherBackupDocumentTest {
                         hideNavigationBarOnHome = false,
                     ),
                 haptics = HapticSettings(feedbackStrength = HapticFeedbackStrength.STRONG),
-                motion = MotionSettings(reducedMotion = true),
+                motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
                 cards =
                     CardsSettings(
                         adaptiveStageAppearance =
@@ -166,7 +167,7 @@ class LauncherBackupDocumentTest {
                 launcherSettings =
                     LauncherSettings(
                         appearance = AppearanceSettings().withHomeSystemBars(homeSystemBars),
-                        motion = MotionSettings(reducedMotion = true),
+                        motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
                     ),
             )
 
@@ -178,6 +179,7 @@ class LauncherBackupDocumentTest {
         assertEquals(true, appearance.getBoolean("hideStatusBarOnHome"))
         assertEquals(false, appearance.getBoolean("hideNavigationBarOnHome"))
         assertEquals(true, motion.getBoolean("reducedMotion"))
+        assertEquals("ON", motion.getString("reducedMotionPreference"))
         assertEquals(homeSystemBars, document.launcherSettings.appearance.homeSystemBars)
     }
 

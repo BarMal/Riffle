@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -18,9 +19,13 @@ class LauncherShellMotionSettingsTest {
             )
 
         viewModel.onLauncherSettingsActionSelected(
-            LauncherShellAction.SelectReducedMotionEnabled(enabled = true),
+            LauncherShellAction.SelectReducedMotionPreference(ReducedMotionPreference.ON),
         )
 
+        assertEquals(
+            ReducedMotionPreference.ON,
+            viewModel.state.value.launcherSettings.motion.reducedMotionPreference,
+        )
         assertTrue(viewModel.state.value.launcherSettings.motion.reducedMotion)
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
