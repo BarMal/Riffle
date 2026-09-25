@@ -139,7 +139,7 @@ section does that job, so the rail is gone (#1159).
 
 | Target | State |
 | --- | --- |
-| One dock per device class, shared by every mode | Model done (#1205): one `DockModel` per device class, per-mode docks migrated. Rendering still draws it through two paths — the grid frame and Cards' `StandardHomeDockOnlySurface` — both reading that one model; a single dock host outside the mode surface is a follow-up |
+| One dock per device class, shared by every mode | Done (#1205): one `DockModel` per device class, per-mode docks migrated, and one `HomeDockHost` drawn outside the mode surface in `HomeDestination`, so a mode switch keeps the same dock instance in the same place. Each mode reads the dock through a `HomeDockInterpreter` (Cards: stage selection); the grid and Cards lay out in the room the host reserves |
 | Anchors to any edge, space reserved | Done for grid modes (#1148–#1152, #1165) and for Cards — both resolve through `resolveDockPosition`, and `dockInteractionRegionExtentDp` reserves a width for a side edge, a height for top/bottom |
 | Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards follows the same resolution now |
 | Sized by settings | Done |

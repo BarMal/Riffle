@@ -6,12 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.notifications.AppStageShellState
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneLayoutPolicy
@@ -31,27 +28,70 @@ fun HomeDestination(
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    when (state.homeLayout.viewMode.homeSurfaceKind()) {
-        HomeSurfaceKind.CARDS ->
+    val dockHost = rememberHomeDockHostState()
+    val presentation = standardHomePresentation(state, widgetRenderers)
+    // Single source of truth for where the one dock sits (#1205): the user's configured edge if any,
+    // else the device class's template default. Every mode's content and the dock agree on it.
+    val dockPosition =
+        resolveDockPosition(state.homeLayout.dock.position, state.settingsLayoutDeviceClass.templateDockPosition)
+    // Cards' stages feed both its surface and its reading of the dock, so they are reconciled here,
+    // once -- the reconciler carries the previous snapshot, so a second one would keep its own history.
+    val cardsShellState =
+        if (state.homeLayout.viewMode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
+            rememberAppStageShellState(state)
+        } else {
+            null
+        }
+    val dockInterpreter =
+        cardsShellState?.let { shellState ->
+            cardsDockInterpreter(
+                state = state,
+                shellState = shellState,
+                adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                adaptiveStageContext = adaptiveStageContext,
+                onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
+            )
+        } ?: HomeDockInterpreter()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // The one dock, outside the mode surface: composed at the same place whichever surface runs
+        // below, so a mode switch keeps this instance and its position (#1205, Decision 2). What
+        // differs by mode reaches it only through [dockInterpreter]. Composed first so the mode's
+        // overlays cover it; the grid's own frame sits beneath it (see HOME_CONTENT_Z_INDEX).
+        HomeDockHost(
+            layout = state.homeLayout,
+            installedApps = state.installedApps,
+            presentation = presentation,
+            position = dockPosition,
+            hostState = dockHost,
+            appIconLoader = appIconLoader,
+            onAction = onAction,
+            interpreter = dockInterpreter,
+            haptics = haptics,
+        )
+        if (cardsShellState != null) {
             CardsHomeSurface(
                 state = state,
+                shellState = cardsShellState,
+                dockHost = dockHost,
+                dockPosition = dockPosition,
                 appIconLoader = appIconLoader,
-                widgetRenderers = widgetRenderers,
-                haptics = haptics,
                 adaptiveStageWindowLayout = adaptiveStageWindowLayout,
                 adaptiveStageContext = adaptiveStageContext,
                 onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 onAction = onAction,
             )
-
-        HomeSurfaceKind.GRID ->
+        } else {
             StandardHomeSurface(
                 state = state,
+                presentation = presentation,
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
                 haptics = haptics,
+                dockHost = dockHost,
                 onAction = onAction,
             )
+        }
     }
 }
 
@@ -66,7 +106,7 @@ private fun AdaptiveStageWindowLayout?.showsUnfoldedCardsLayout(): Boolean {
 }
 
 /**
- * Keeps the stage clear of the standard Dock [StandardHomeDockOnlySurface] draws over it, on
+ * Keeps the stage clear of the shared dock [HomeDockHost] draws over it, on
  * whichever physical edge the dock sits on -- an absolute edge, so this uses [absolutePadding]
  * rather than [Modifier.padding]'s start/end, which would mirror in RTL.
  */
@@ -113,86 +153,56 @@ private fun cardsDockDynamicEntries(
         )
 }
 
+/**
+ * Cards' reading of the shared dock: the dynamic entries select a stage, and a pinned icon brings
+ * its app's stage forward when it has one (opening stays on the icon's long-press menu). Lives
+ * here, with the rest of Cards, so the dock itself never knows about stages.
+ */
+private fun cardsDockInterpreter(
+    state: LauncherShellState,
+    shellState: AppStageShellState,
+    adaptiveStageWindowLayout: AdaptiveStageWindowLayout?,
+    adaptiveStageContext: AdaptiveStageInteractionContext,
+    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
+): HomeDockInterpreter {
+    val selectedStageId =
+        shellState.snapshot.selectedStage?.id.takeUnless { adaptiveStageContext.allNotificationsSelected }
+    return HomeDockInterpreter(
+        dynamicEntries =
+            cardsDockDynamicEntries(state, adaptiveStageWindowLayout, adaptiveStageContext, selectedStageId),
+        // The merged page is not a stage, so there is no action to send: it is a choice about what
+        // this surface shows, which the interaction context holds.
+        onShowAllNotifications = {
+            onAdaptiveStageContextChanged(adaptiveStageContext.copy(allNotificationsSelected = true))
+        },
+        staticTapBehaviour =
+            DockStaticTapBehaviour.SelectStageIfBacked(
+                shellState.snapshot.stages.map { stage -> stage.id }.toSet(),
+            ),
+        // The stages already are the notifications, so the expanded shelf is a panel-only mini-home
+        // surface here -- the card row would just show them a second time.
+        showExpandedNotificationShelf = false,
+    )
+}
+
 @Composable
 private fun CardsHomeSurface(
     state: LauncherShellState,
+    shellState: AppStageShellState,
+    dockHost: HomeDockHostState,
+    dockPosition: DockPosition,
     appIconLoader: AppIconLoader,
-    widgetRenderers: LauncherWidgetRenderers,
-    haptics: LauncherHaptics,
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout?,
     adaptiveStageContext: AdaptiveStageInteractionContext,
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val dockInteractionExtentPx = remember { mutableIntStateOf(0) }
-    val density = LocalDensity.current
-    // state.homeLayout.dock is the device class's one shared dock (#1205) -- the same model the grid
-    // modes draw -- so only what the mode derives at render time differs here: the dynamic entries
-    // select a stage and the static icons bring a backed stage forward.
-    // Single source of truth for where the dock sits, mirroring StandardHome's own resolution --
-    // the dock and the stage must agree on the edge just as they agree on what exists below.
-    val dockPosition =
-        resolveDockPosition(state.homeLayout.dock.position, state.settingsLayoutDeviceClass.templateDockPosition)
-    // Reconciled once for the whole surface, so the dock and the stage agree on what exists -- the
-    // reconciler carries the previous snapshot, so a second one would quietly keep its own history.
-    val shellState = rememberAppStageShellState(state)
-    val selectedStageId =
-        shellState.snapshot.selectedStage?.id.takeUnless { adaptiveStageContext.allNotificationsSelected }
-    val dockDynamicEntries =
-        cardsDockDynamicEntries(state, adaptiveStageWindowLayout, adaptiveStageContext, selectedStageId)
-    val dockStaticTapBehaviour =
-        DockStaticTapBehaviour.SelectStageIfBacked(
-            shellState.snapshot.stages.map { stage -> stage.id }.toSet(),
-        )
+    // The shared dock is drawn by HomeDockHost over this surface; the stage lays out inside the
+    // room it reserves, on whichever edge it sits.
     val dockInteractionExtent =
-        maxOf(
-            state.homeLayout.dockInteractionRegionExtentDp(dockPosition).dp,
-            with(density) { dockInteractionExtentPx.intValue.toDp() },
-        )
+        dockHost.reservedExtent(state.homeLayout.visibleTo(state.installedApps), dockPosition)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Cards mode reuses the standard Dock but must not show the standard grid pages (and any
-        // icons placed on them) underneath TimeScape's own canvas -- see StandardHomeDockOnlySurface.
-        StandardHomeDockOnlySurface(
-            layout = state.homeLayout,
-            installedApps = state.installedApps,
-            interactions =
-                StandardHomeInteractions(
-                    haptics = haptics,
-                    onDockInteractionExtentChanged = { extentPx ->
-                        dockInteractionExtentPx.intValue = extentPx
-                    },
-                ),
-            position = dockPosition,
-            presentation =
-                StandardHomePresentation(
-                    notificationGroupsByApp = state.notificationGroupsByApp,
-                    notificationAccessStatus = state.notificationAccessStatus,
-                    installedApps = state.installedApps,
-                    appShortcutsByApp = state.appShortcutsByApp,
-                    homeGestures = state.launcherSettings.gestures.homeGestures,
-                    dockGestures = state.launcherSettings.gestures.dockGestures,
-                    reducedMotion = state.launcherSettings.motion.reducedMotion,
-                    motionPerformanceTargetFps = state.launcherSettings.motion.performanceTargetFps,
-                    widgetViewFactory = widgetRenderers.viewFactory,
-                    homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
-                    adaptiveStageAppearance = state.launcherSettings.cards.adaptiveStageAppearance,
-                ),
-            appIconLoader = appIconLoader,
-            onAction = onAction,
-            dynamicEntries = dockDynamicEntries,
-            // The merged page is not a stage, so there is no action to send: it is a choice about
-            // what this surface shows, which the interaction context holds.
-            onShowAllNotifications = {
-                onAdaptiveStageContextChanged(adaptiveStageContext.copy(allNotificationsSelected = true))
-            },
-            // In Cards a pinned app icon brings its stage forward rather than opening the app, when
-            // it has a stage; opening stays on the icon's long-press menu.
-            staticTapBehaviour = dockStaticTapBehaviour,
-            // The stages already are the notifications, so the expanded shelf is a panel-only
-            // mini-home surface here -- the card row would just show them a second time.
-            showExpandedNotificationShelf = false,
-        )
         AdaptiveStageAppStageSurface(
             state = state,
             shellState = shellState,
@@ -210,50 +220,52 @@ private fun CardsHomeSurface(
 @Composable
 private fun StandardHomeSurface(
     state: LauncherShellState,
+    presentation: StandardHomePresentation,
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
     haptics: LauncherHaptics,
-    onDockInteractionExtentChanged: (Int) -> Unit = {},
-    onBottomControlsHeightChanged: (Int) -> Unit = {},
+    dockHost: HomeDockHostState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     StandardHome(
         layout = state.homeLayout,
         installedApps = state.installedApps,
-        interactions =
-            StandardHomeInteractions(
-                haptics = haptics,
-                onDockInteractionExtentChanged = onDockInteractionExtentChanged,
-                onBottomControlsHeightChanged = onBottomControlsHeightChanged,
-            ),
-        presentation =
-            StandardHomePresentation(
-                notificationGroupsByApp = state.notificationGroupsByApp,
-                notificationAccessStatus = state.notificationAccessStatus,
-                installedApps = state.installedApps,
-                appShortcutsByApp = state.appShortcutsByApp,
-                homeGestures = state.launcherSettings.gestures.homeGestures,
-                dockGestures = state.launcherSettings.gestures.dockGestures,
-                reducedMotion = state.launcherSettings.motion.reducedMotion,
-                motionPerformanceTargetFps = state.launcherSettings.motion.performanceTargetFps,
-                widgetViewFactory = widgetRenderers.viewFactory,
-                widgetPicker =
-                    StandardHomeWidgetPickerState(
-                        providers = state.installedWidgetProviders,
-                        profileContentVisibility = state.profileContentVisibility,
-                        catalogStatus = state.widgetProviderCatalogStatus,
-                        isOpen = state.isWidgetPickerOpen,
-                        isTargetingDockPanel = state.isWidgetPickerTargetingDockPanel,
-                    ),
-                homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
-                adaptiveStageAppearance = state.launcherSettings.cards.adaptiveStageAppearance,
-            ),
+        interactions = StandardHomeInteractions(haptics = haptics),
+        presentation = presentation,
         appIconLoader = appIconLoader,
         widgetPreviewImageLoader = widgetRenderers.previewImageLoader,
         deviceClass = state.settingsLayoutDeviceClass,
+        dockHost = dockHost,
         onAction = onAction,
     )
 }
+
+/** What the home grid and the shared dock both render from, whichever mode is showing. */
+private fun standardHomePresentation(
+    state: LauncherShellState,
+    widgetRenderers: LauncherWidgetRenderers,
+): StandardHomePresentation =
+    StandardHomePresentation(
+        notificationGroupsByApp = state.notificationGroupsByApp,
+        notificationAccessStatus = state.notificationAccessStatus,
+        installedApps = state.installedApps,
+        appShortcutsByApp = state.appShortcutsByApp,
+        homeGestures = state.launcherSettings.gestures.homeGestures,
+        dockGestures = state.launcherSettings.gestures.dockGestures,
+        reducedMotion = state.launcherSettings.motion.reducedMotion,
+        motionPerformanceTargetFps = state.launcherSettings.motion.performanceTargetFps,
+        widgetViewFactory = widgetRenderers.viewFactory,
+        widgetPicker =
+            StandardHomeWidgetPickerState(
+                providers = state.installedWidgetProviders,
+                profileContentVisibility = state.profileContentVisibility,
+                catalogStatus = state.widgetProviderCatalogStatus,
+                isOpen = state.isWidgetPickerOpen,
+                isTargetingDockPanel = state.isWidgetPickerTargetingDockPanel,
+            ),
+        homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
+        adaptiveStageAppearance = state.launcherSettings.cards.adaptiveStageAppearance,
+    )
 
 internal fun cardsPanelInsetPolicy(state: LauncherShellState): HomeInsetPolicy {
     return homeInsetPolicy(state.launcherSettings.appearance)
