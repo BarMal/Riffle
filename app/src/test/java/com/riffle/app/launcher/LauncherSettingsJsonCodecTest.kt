@@ -62,6 +62,7 @@ import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
@@ -761,25 +762,70 @@ class LauncherSettingsJsonCodecTest {
 
     @Test
     fun roundTripsMotionSettings() {
-        val settings =
-            LauncherSettings(
-                motion =
-                    MotionSettings(
-                        reducedMotion = true,
-                        performanceTargetFps = MotionPerformanceTargetFps.FPS_90,
-                    ),
-            )
+        ReducedMotionPreference.entries.forEach { preference ->
+            val settings =
+                LauncherSettings(
+                    motion =
+                        MotionSettings(
+                            reducedMotionPreference = preference,
+                            performanceTargetFps = MotionPerformanceTargetFps.FPS_90,
+                        ),
+                )
+
+            val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+            assertEquals(preference, decodedSettings.motion.reducedMotionPreference)
+            assertEquals(MotionPerformanceTargetFps.FPS_90, decodedSettings.motion.performanceTargetFps)
+        }
+    }
+
+    @Test
+    fun neverPersistsTheRuntimeSystemReducedMotionState() {
+        val settings = LauncherSettings(motion = MotionSettings(systemReducedMotion = true))
 
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
+        assertEquals(false, decodedSettings.motion.systemReducedMotion)
+        assertEquals(MotionSettings(), decodedSettings.motion)
+    }
+
+    @Test
+    fun migratesLegacyReducedMotionTrueToOn() {
+        val decodedSettings = decodeLauncherSettings("""{ "motion": { "reducedMotion": true } }""")
+
+        assertEquals(ReducedMotionPreference.ON, decodedSettings.motion.reducedMotionPreference)
         assertEquals(true, decodedSettings.motion.reducedMotion)
-        assertEquals(MotionPerformanceTargetFps.FPS_90, decodedSettings.motion.performanceTargetFps)
+    }
+
+    @Test
+    fun migratesLegacyReducedMotionFalseToSystem() {
+        val decodedSettings = decodeLauncherSettings("""{ "motion": { "reducedMotion": false } }""")
+
+        assertEquals(ReducedMotionPreference.SYSTEM, decodedSettings.motion.reducedMotionPreference)
+    }
+
+    @Test
+    fun prefersTriStatePreferenceOverLegacyBoolean() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """{ "motion": { "reducedMotion": true, "reducedMotionPreference": "OFF" } }""",
+            )
+
+        assertEquals(ReducedMotionPreference.OFF, decodedSettings.motion.reducedMotionPreference)
+    }
+
+    @Test
+    fun defaultsMalformedReducedMotionPreferenceToSystem() {
+        val decodedSettings = decodeLauncherSettings("""{ "motion": { "reducedMotionPreference": "SOMETIMES" } }""")
+
+        assertEquals(ReducedMotionPreference.SYSTEM, decodedSettings.motion.reducedMotionPreference)
     }
 
     @Test
     fun defaultsMissingMotionSettings() {
         val decodedSettings = decodeLauncherSettings("{}")
 
+        assertEquals(ReducedMotionPreference.SYSTEM, decodedSettings.motion.reducedMotionPreference)
         assertEquals(false, decodedSettings.motion.reducedMotion)
         assertEquals(MotionPerformanceTargetFps.FPS_120, decodedSettings.motion.performanceTargetFps)
     }

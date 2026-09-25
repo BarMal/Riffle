@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import org.junit.Assert.assertEquals
@@ -25,7 +26,7 @@ class LauncherSettingsActionRouteTest {
     fun routesSettingsStateActions() {
         val actions =
             listOf(
-                LauncherShellAction.SelectReducedMotionEnabled(enabled = true),
+                LauncherShellAction.SelectReducedMotionPreference(ReducedMotionPreference.ON),
                 LauncherShellAction.SelectContextualEnabled(enabled = true),
                 LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING),
                 LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
