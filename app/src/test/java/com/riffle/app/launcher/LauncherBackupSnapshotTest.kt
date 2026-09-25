@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -92,6 +93,6 @@ class LauncherBackupSnapshotTest {
                     hideStatusBarOnHome = true,
                     hideNavigationBarOnHome = false,
                 ),
-            motion = MotionSettings(reducedMotion = true),
+            motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
         )
 }

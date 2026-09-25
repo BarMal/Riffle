@@ -32,6 +32,7 @@ import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -113,7 +114,15 @@ class StandardTemplateValidationTest {
                     shellState.copy(
                         launcherSettings =
                             shellState.launcherSettings.copy(
-                                motion = shellState.launcherSettings.motion.copy(reducedMotion = case.reducedMotion),
+                                motion =
+                                    shellState.launcherSettings.motion.copy(
+                                        reducedMotionPreference =
+                                            if (case.reducedMotion) {
+                                                ReducedMotionPreference.ON
+                                            } else {
+                                                ReducedMotionPreference.OFF
+                                            },
+                                    ),
                             ),
                     )
                 dispatch(LauncherShellAction.OpenHome)

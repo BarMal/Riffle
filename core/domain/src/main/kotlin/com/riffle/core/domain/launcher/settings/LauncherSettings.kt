@@ -402,10 +402,29 @@ data class HapticSettings(
     val feedbackStrength: HapticFeedbackStrength = HapticFeedbackStrength.MEDIUM,
 )
 
+/**
+ * Motion settings. [reducedMotionPreference] is the persisted user intent; [systemReducedMotion] is the
+ * platform's current animation state (for example "Remove animations" or an animator duration scale of 0).
+ *
+ * [systemReducedMotion] is runtime-only: it is never persisted and is projected onto the settings by the
+ * launcher shell from a platform source. [reducedMotion] is the single resolved value every surface reads.
+ */
 data class MotionSettings(
-    val reducedMotion: Boolean = false,
+    val reducedMotionPreference: ReducedMotionPreference = ReducedMotionPreference.SYSTEM,
     val performanceTargetFps: MotionPerformanceTargetFps = MotionPerformanceTargetFps.FPS_120,
-)
+    val systemReducedMotion: Boolean = false,
+) {
+    val reducedMotion: Boolean
+        get() = reducedMotionPreference.resolve(systemReducedMotion)
+}
+
+/** Projects the platform's current reduced-motion state onto these settings without changing stored intent. */
+fun LauncherSettings.withSystemReducedMotion(systemReducedMotion: Boolean): LauncherSettings =
+    if (motion.systemReducedMotion == systemReducedMotion) {
+        this
+    } else {
+        copy(motion = motion.copy(systemReducedMotion = systemReducedMotion))
+    }
 
 enum class MotionPerformanceTargetFps(
     val framesPerSecond: Int,
