@@ -174,8 +174,12 @@ class CardStackController {
         // moved the stack visibly during the drag itself (adaptiveStageLiveActiveCardIndex
         // renders a fractional preview from any nonzero drag) and then the release snapped the
         // whole thing back to the origin card -- reading as an unresponsive fling.
+        // A caller committing a magnetized scroll position hands in an exact multiple of the
+        // threshold, but at a non-integer px-per-card (dp-derived travel) the float division can
+        // land a hair under that multiple. The epsilon keeps "exactly N cards" meaning N cards.
+        val dragCards = abs(request.verticalDragPx) / request.distanceThresholdPx + SETTLE_CARD_EPSILON
         val commitEnergy =
-            abs(request.verticalDragPx) / request.distanceThresholdPx +
+            dragCards +
                 abs(request.verticalVelocityPxPerSecond) / request.flingVelocityThresholdPxPerSecond
         val steps =
             if (isFling) {
@@ -183,7 +187,7 @@ class CardStackController {
                     .toInt()
                     .coerceIn(1, MAX_FLING_STEP_COUNT)
             } else {
-                (abs(request.verticalDragPx) / request.distanceThresholdPx)
+                dragCards
                     .toInt()
                     .coerceAtLeast(1)
             }
@@ -310,3 +314,6 @@ class CardStackController {
  * user's expectation of how many cards the release will commit.
  */
 const val MAX_FLING_STEP_COUNT = 3
+
+/** See [CardStackController.settle]'s drag-to-cards conversion. */
+private const val SETTLE_CARD_EPSILON = 1e-3f

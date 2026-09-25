@@ -50,8 +50,17 @@ data class CardStackLayoutPolicy(
      * departing.
      */
     val aboveFocusDepth: Int? = null,
+    /**
+     * Extra depths composed beyond each side's visible reach, without changing any style
+     * calibration (which stays measured against [maxVisibleDepth]/[aboveFocusDepth]). A renderer
+     * tracking a live drag passes 1 so the card about to fade in is already composed -- at its
+     * fully faded edge pose -- rather than popping into existence mid-gesture. Zero by default,
+     * so every existing caller is unaffected.
+     */
+    val composedDepthMargin: Int = 0,
 ) {
     init {
+        require(composedDepthMargin >= 0) { "Composed depth margin must not be negative." }
         require(maxVisibleDepth >= 0) { "Maximum visible depth must not be negative." }
         require(aboveFocusDepth == null || aboveFocusDepth >= 0) {
             "Above-focus depth must not be negative."
@@ -98,11 +107,16 @@ data class CardStackLayoutPolicy(
         }
 
         val focusedIndex = activeIndex.coerceIn(0f, (cardCount - 1).toFloat())
+        // Only the window that can possibly be visible is examined, so a live drag over a long
+        // stack costs O(visible depth) per frame rather than O(card count).
+        val aboveReach = effectiveAboveFocusDepth + composedDepthMargin
+        val belowReach = maxVisibleDepth + composedDepthMargin
+        val firstCandidate = (focusedIndex - aboveReach).toInt().coerceAtLeast(0)
+        val lastCandidate = (focusedIndex + belowReach).toInt().plus(1).coerceAtMost(cardCount - 1)
         val visibleIndexes =
-            (0 until cardCount).filter { cardIndex ->
+            (firstCandidate..lastCandidate).filter { cardIndex ->
                 // How far the stack reaches depends on which side of focus this card falls.
-                val reach =
-                    if (cardIndex < focusedIndex) effectiveAboveFocusDepth else maxVisibleDepth
+                val reach = if (cardIndex < focusedIndex) aboveReach else belowReach
                 cardIndex.depthFrom(focusedIndex) <= reach
             }
         val orderedIndexes =
@@ -153,7 +167,13 @@ data class CardStackLayoutPolicy(
                                 curveStep * curveProgress(styleDepth) * signedDistance.sign
                         ),
                 rotationDegrees = if (reducedMotion) 0f else rotationStep * styleSignedDistance,
-                alpha = ((1f - alphaStep * styleDepth) * edgeFadeMultiplier(styleDepth)).coerceIn(0f, 1f),
+                alpha =
+                    if (depth > (if (signedDistance < 0f) effectiveAboveFocusDepth else maxVisibleDepth)) {
+                        // Composed only through composedDepthMargin: present, but not yet visible.
+                        0f
+                    } else {
+                        ((1f - alphaStep * styleDepth) * edgeFadeMultiplier(styleDepth)).coerceIn(0f, 1f)
+                    },
             )
         }
     }

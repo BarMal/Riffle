@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -83,6 +84,7 @@ import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
 import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageDynamicSlot
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
@@ -1636,8 +1638,6 @@ private fun AdaptiveStageNotificationStack(
     // reflows toward its neighbor as the drag progresses, the same way the reference "Calm"
     // launcher's card stack works, instead of only updating once the drag settles.
     var liveDragPx by remember(stage.id) { mutableStateOf<Float?>(null) }
-    val liveActiveCardIndex =
-        adaptiveStageLiveActiveCardIndex(activeCardIndex, cards.size, liveDragPx)
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
@@ -1649,6 +1649,25 @@ private fun AdaptiveStageNotificationStack(
                     globalReducedMotion = state.launcherSettings.motion.reducedMotion,
                 )
             }
+        // Per-card travel and fling threshold in dp, resolved for this display (#1211).
+        val travel = rememberCardStackTravel(renderedCardPitchDp = resolution.layoutPolicy.verticalOffsetStep)
+        // Only this derived read -- not the whole stack surface -- is invalidated by a live drag
+        // frame, and only the bounded visible window is laid out.
+        val stackEntries by remember(resolution, cards.size, activeCardIndex, travel) {
+            derivedStateOf {
+                adaptiveStageNotificationStackEntries(
+                    resolution = resolution,
+                    cardCount = cards.size,
+                    activeCardIndex =
+                        adaptiveStageLiveActiveCardIndex(
+                            activeCardIndex = activeCardIndex,
+                            cardCount = cards.size,
+                            liveDragPx = liveDragPx,
+                            distancePerCardPx = travel.distancePerCardPx,
+                        ),
+                )
+            }
+        }
         val isDetailVisible = detailState.expansionState.isVisible && showDetailInline
         // Siblings stay composed (and thus discoverable/re-focusable) but dimmed while a card's
         // detail is expanded, instead of being torn down entirely.
@@ -1688,12 +1707,7 @@ private fun AdaptiveStageNotificationStack(
                             // .clipToBounds() clips against the real allotted area instead of a
                             // single card's footprint.
                             modifier = Modifier.matchParentSize(),
-                            entries =
-                                adaptiveStageNotificationStackEntries(
-                                    resolution = resolution,
-                                    cardCount = cards.size,
-                                    activeCardIndex = liveActiveCardIndex,
-                                ),
+                            entries = stackEntries,
                             animationSpec = resolution.animation,
                             reducedMotion = resolution.reducedMotion,
                             stackPeakFraction = resolution.stackPeakFraction,
@@ -1723,9 +1737,9 @@ private fun AdaptiveStageNotificationStack(
                                                     focusedCardId = activeCard.content.id,
                                                     verticalDragPx = drag,
                                                     verticalVelocityPxPerSecond = velocity,
-                                                    distanceThresholdPx =
-                                                    ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
-                                                    flingVelocityThresholdPxPerSecond = 500f,
+                                                    distanceThresholdPx = travel.distancePerCardPx,
+                                                    flingVelocityThresholdPxPerSecond =
+                                                        travel.flingVelocityThresholdPxPerSecond,
                                                 ),
                                             ).let { result ->
                                                 if (result is CardStackFocusResult.Applied) {
@@ -1756,19 +1770,17 @@ private fun AdaptiveStageNotificationStack(
                                         CardStackScroll(
                                             cardCount = cards.size,
                                             activeCardIndex = activeCardIndex,
-                                            distancePerCardPx =
-                                            ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                            distancePerCardPx = travel.distancePerCardPx,
                                             magnet = resolution.magnet,
+                                            flingVelocityThresholdPxPerSecond =
+                                                travel.flingVelocityThresholdPxPerSecond,
+                                            maxFlingCards = travel.maxFlingCards,
                                         ),
                                 ),
                         ) { entry, cardModifier ->
                             val card = cards[entry.cardIndex]
                             val artwork =
-                                remember(card.artworkSourceKey, card.artworkBase64, artworkCache) {
-                                    card.artworkSourceKey?.let { sourceKey ->
-                                        artworkCache.getOrDecode(sourceKey, card.artworkBase64)
-                                    }
-                                }
+                                rememberAdaptiveStageArtwork(card.artworkSourceKey, card.artworkBase64, artworkCache)
                             val focusedCardSemantics =
                                 if (entry.cardIndex == activeCardIndex) {
                                     Modifier.semantics {
@@ -1970,6 +1982,10 @@ private fun AdaptiveStageThreadSurface(
 }
 
 /**
+ * The fallback per-card travel for callers without a density-aware [CardStackTravelPx]; the live
+ * notification stacks resolve theirs through [rememberCardStackTravel] (#1211) instead, and pass
+ * that same value to every use described below.
+ *
  * Shared by every notification card stack's own [CardStackSettleRequest.distanceThresholdPx] and,
  * separately, its live-drag-to-fractional-index conversion (dragPx / this) -- deliberately the
  * same number for both, so the point at which the stack visually reaches "the next card is now
@@ -1995,12 +2011,13 @@ internal fun adaptiveStageLiveActiveCardIndex(
     activeCardIndex: Int,
     cardCount: Int,
     liveDragPx: Float?,
+    distancePerCardPx: Float = ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
 ): Float =
     cardStackLiveActiveCardIndex(
         activeCardIndex = activeCardIndex,
         cardCount = cardCount,
         liveDragPx = liveDragPx,
-        distancePerCardPx = ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+        distancePerCardPx = distancePerCardPx,
     )
 
 /**
@@ -2082,8 +2099,6 @@ private fun AdaptiveStageAllNotificationsStack(
     // See AdaptiveStageNotificationStack's identical mechanism for why this exists and how it's
     // converted to a fractional activeIndex below.
     var liveDragPx by remember { mutableStateOf<Float?>(null) }
-    val liveActiveCardIndex =
-        adaptiveStageLiveActiveCardIndex(activeCardIndex, cards.size, liveDragPx)
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
@@ -2095,6 +2110,25 @@ private fun AdaptiveStageAllNotificationsStack(
                     globalReducedMotion = state.launcherSettings.motion.reducedMotion,
                 )
             }
+        // Per-card travel and fling threshold in dp, resolved for this display (#1211).
+        val travel = rememberCardStackTravel(renderedCardPitchDp = resolution.layoutPolicy.verticalOffsetStep)
+        // Only this derived read -- not the whole stack surface -- is invalidated by a live drag
+        // frame, and only the bounded visible window is laid out.
+        val stackEntries by remember(resolution, cards.size, activeCardIndex, travel) {
+            derivedStateOf {
+                adaptiveStageNotificationStackEntries(
+                    resolution = resolution,
+                    cardCount = cards.size,
+                    activeCardIndex =
+                        adaptiveStageLiveActiveCardIndex(
+                            activeCardIndex = activeCardIndex,
+                            cardCount = cards.size,
+                            liveDragPx = liveDragPx,
+                            distancePerCardPx = travel.distancePerCardPx,
+                        ),
+                )
+            }
+        }
         val isDetailVisible = detailState.expansionState.isVisible
         // Siblings stay composed (and thus discoverable/re-focusable) but dimmed while a card's
         // detail is expanded, instead of being torn down entirely -- same treatment as
@@ -2113,12 +2147,7 @@ private fun AdaptiveStageAllNotificationsStack(
                         // .clipToBounds() clips against the real allotted area instead of a
                         // single card's footprint.
                         modifier = Modifier.matchParentSize(),
-                        entries =
-                            adaptiveStageNotificationStackEntries(
-                                resolution = resolution,
-                                cardCount = cards.size,
-                                activeCardIndex = liveActiveCardIndex,
-                            ),
+                        entries = stackEntries,
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
                         stackPeakFraction = resolution.stackPeakFraction,
@@ -2148,9 +2177,9 @@ private fun AdaptiveStageAllNotificationsStack(
                                                 focusedCardId = activeCard.content.id,
                                                 verticalDragPx = drag,
                                                 verticalVelocityPxPerSecond = velocity,
-                                                distanceThresholdPx =
-                                                ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
-                                                flingVelocityThresholdPxPerSecond = 500f,
+                                                distanceThresholdPx = travel.distancePerCardPx,
+                                                flingVelocityThresholdPxPerSecond =
+                                                    travel.flingVelocityThresholdPxPerSecond,
                                             ),
                                         ).let { result ->
                                             if (result is CardStackFocusResult.Applied) {
@@ -2177,9 +2206,11 @@ private fun AdaptiveStageAllNotificationsStack(
                                     CardStackScroll(
                                         cardCount = cards.size,
                                         activeCardIndex = activeCardIndex,
-                                        distancePerCardPx =
-                                        ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                        distancePerCardPx = travel.distancePerCardPx,
                                         magnet = resolution.magnet,
+                                        flingVelocityThresholdPxPerSecond =
+                                            travel.flingVelocityThresholdPxPerSecond,
+                                        maxFlingCards = travel.maxFlingCards,
                                     ),
                             ),
                     ) { entry, cardModifier ->
@@ -2197,11 +2228,7 @@ private fun AdaptiveStageAllNotificationsStack(
                                 }
                         }
                         val artwork =
-                            remember(card.artworkSourceKey, card.artworkBase64, artworkCache) {
-                                card.artworkSourceKey?.let { sourceKey ->
-                                    artworkCache.getOrDecode(sourceKey, card.artworkBase64)
-                                }
-                            }
+                            rememberAdaptiveStageArtwork(card.artworkSourceKey, card.artworkBase64, artworkCache)
                         val focusedCardSemantics =
                             if (entry.cardIndex == activeCardIndex) {
                                 Modifier.semantics {
@@ -2307,7 +2334,13 @@ private fun AdaptiveStageAllNotificationsEmptyState(modifier: Modifier) {
     }
 }
 
-/** Keeps every active notification reachable even when the visual stack depth is smaller. */
+/**
+ * Only the appearance's configured visible depth is composed, plus one fully transparent card each
+ * side so the next card is already present when a drag starts revealing it (see
+ * [com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy.composedDepthMargin]). Cards beyond
+ * that stay reachable through drag/fling, keyboard arrows and the focused card's "Previous
+ * card"/"Next card" accessibility actions -- they are just not composed until they come near focus.
+ */
 internal fun adaptiveStageNotificationStackEntries(
     resolution: AdaptiveStageCardStackResolution,
     cardCount: Int,
@@ -2318,12 +2351,14 @@ internal fun adaptiveStageNotificationStackEntries(
     activeCardIndex: Float,
 ): List<CardStackLayoutEntry> =
     resolution.layoutPolicy
-        .copy(maxVisibleDepth = maxOf(resolution.layoutPolicy.maxVisibleDepth, cardCount - 1))
+        .copy(composedDepthMargin = ADAPTIVE_STAGE_COMPOSED_DEPTH_MARGIN)
         .entries(
             cardCount = cardCount,
             activeIndex = activeCardIndex,
             reducedMotion = resolution.reducedMotion,
         )
+
+private const val ADAPTIVE_STAGE_COMPOSED_DEPTH_MARGIN = 1
 
 @Composable
 private fun AdaptiveStageCardPositionIndicator(
@@ -2929,6 +2964,9 @@ private fun AdaptiveStageStageSpine(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     if (stages.isEmpty()) return
+    // id -> position, built once per stage list instead of an O(n) indexOf per chip per frame.
+    val stageIndexes =
+        remember(stages) { stages.withIndex().associate { (index, stage) -> stage.id to index } }
     // Previous/Next were removed as redundant with tapping a chip directly (or swiping, via
     // AdaptiveStageStagePager) -- AdaptiveStageStageHeader's customActions cover non-touch navigation.
     Row(
@@ -2945,7 +2983,7 @@ private fun AdaptiveStageStageSpine(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(stages, key = ::adaptiveStageStageSelectorItemKey) { stage ->
-                val index = stages.indexOf(stage)
+                val index = stageIndexes[stage.id] ?: 0
                 val proximity = 1f - abs(index - pagePosition).coerceIn(0f, 1f)
                 val itemAlpha = ADAPTIVE_STAGE_SPINE_MIN_ALPHA + (1f - ADAPTIVE_STAGE_SPINE_MIN_ALPHA) * proximity
                 val itemScale = ADAPTIVE_STAGE_SPINE_MIN_SCALE + (1f - ADAPTIVE_STAGE_SPINE_MIN_SCALE) * proximity
@@ -3014,8 +3052,34 @@ internal fun adaptiveStageStageSelectorItemKey(stage: AppStage): String {
  */
 @Composable
 internal fun rememberAppStageShellState(state: LauncherShellState): AppStageShellState {
-    val reconciler = remember { AppStageShellStateReconciler(AndroidNotificationStageActionGateway) }
+    val reconciler =
+        remember {
+            MemoizedAppStageShellStateReconciler(AppStageShellStateReconciler(AndroidNotificationStageActionGateway))
+        }
     return reconciler.reconcile(state)
+}
+
+/**
+ * Reconciles only when the input state is a different instance from the last one (#1211). The
+ * surface recomposes far more often than [LauncherShellState] is replaced -- every drag frame, pager
+ * offset and animation tick -- and reconciling rebuilds every stage and card. Identity rather than
+ * equality, because a structural comparison of the whole shell state would itself be a large
+ * per-frame cost, and the state holder always publishes a new instance on a real change.
+ */
+private class MemoizedAppStageShellStateReconciler(
+    private val reconciler: AppStageShellStateReconciler,
+) {
+    private var lastInput: LauncherShellState? = null
+    private var lastOutput: AppStageShellState? = null
+
+    fun reconcile(state: LauncherShellState): AppStageShellState {
+        val cached = lastOutput
+        if (cached != null && lastInput === state) return cached
+        return reconciler.reconcile(state).also { output ->
+            lastInput = state
+            lastOutput = output
+        }
+    }
 }
 
 /** An app's name for a stage, shared with the dock so both name a stage the same way. */
@@ -3023,9 +3087,7 @@ internal fun stageLabel(
     id: AppStageId,
     state: LauncherShellState,
 ): String =
-    state.installedApps.firstOrNull { app ->
-        app.identity.packageName == id.packageName && app.identity.profile.id == id.profileId
-    }?.let { app ->
+    stageInstalledApp(id, state)?.let { app ->
         app.identity.profile.profileDisplayLabel(app.label)
     } ?: "${id.packageName.value} (${id.profileId.value})"
 
@@ -3033,10 +3095,13 @@ internal fun stageLabel(
 internal fun stageAppIdentity(
     id: AppStageId,
     state: LauncherShellState,
-): AppIdentity? =
-    state.installedApps.firstOrNull { app ->
-        app.identity.packageName == id.packageName && app.identity.profile.id == id.profileId
-    }?.identity
+): AppIdentity? = stageInstalledApp(id, state)?.identity
+
+/** The first installed app matching [id], via the state's own stage-id index. */
+private fun stageInstalledApp(
+    id: AppStageId,
+    state: LauncherShellState,
+): InstalledApp? = state.installedAppsByStageId[id]
 
 private fun AppStage.adaptiveStageStageStateDescription(): String =
     buildList {

@@ -265,4 +265,35 @@ class CardStackLayoutPolicyTest {
             assertEquals(expectedValue, actualValue, absoluteTolerance = 0.0001f)
         }
     }
+
+    @Test
+    fun aComposedDepthMarginAddsOneInvisibleCardEachSideWithoutChangingVisibleStyle() {
+        val bounded = CardStackLayoutPolicy(maxVisibleDepth = 2)
+        val withMargin = bounded.copy(composedDepthMargin = 1)
+
+        val plain = bounded.entries(cardCount = 40, activeIndex = 20)
+        val margined = withMargin.entries(cardCount = 40, activeIndex = 20)
+
+        assertEquals((18..22).toSet(), plain.map { entry -> entry.cardIndex }.toSet())
+        assertEquals((17..23).toSet(), margined.map { entry -> entry.cardIndex }.toSet())
+        // Cards inside the configured reach keep exactly the same pose.
+        plain.forEach { entry ->
+            val twin = margined.single { candidate -> candidate.cardIndex == entry.cardIndex }
+            assertEquals(entry.copy(order = 0), twin.copy(order = 0))
+        }
+        // The margin cards are composed but fully transparent.
+        margined
+            .filter { entry -> entry.cardIndex == 17 || entry.cardIndex == 23 }
+            .forEach { entry -> assertEquals(0f, entry.alpha) }
+    }
+
+    @Test
+    fun aLongStackOnlyYieldsTheBoundedWindowDuringAFractionalDrag() {
+        val entries =
+            CardStackLayoutPolicy(maxVisibleDepth = 3, composedDepthMargin = 1)
+                .entries(cardCount = 500, activeIndex = 250.4f)
+
+        assertTrue(entries.size <= 2 * (3 + 1) + 2, "expected a bounded window, got ${entries.size}")
+        assertTrue(entries.all { entry -> entry.cardIndex in 246..255 })
+    }
 }

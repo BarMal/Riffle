@@ -78,6 +78,19 @@ data class LauncherShellState(
     /** The latest rejected Dock edit, retained until another Dock edit succeeds. */
     val dockEditRejectionReason: DockEditRejectionReason? = null,
 ) {
+    /**
+     * The first installed app per stage id, built at most once per state instance. Stage labels and
+     * identities are looked up per card and per chip on every frame, so a linear scan of every
+     * installed app each time added up (#1211); scoping the index to the state it is derived from
+     * keeps it consistent with [installedApps] without any shared mutable cache.
+     */
+    val installedAppsByStageId: Map<AppStageId, InstalledApp> by lazy {
+        val index = LinkedHashMap<AppStageId, InstalledApp>(installedApps.size)
+        // First match wins, matching the linear search this replaced.
+        installedApps.forEach { app -> index.putIfAbsent(app.toAppStageId(), app) }
+        index
+    }
+
     /** Profile content policy used by Cards surfaces; profiles without an app-state decision are redacted. */
     fun cardsProfileContentVisibility(): Map<AppProfileId, AppProfileContentVisibility> = profileContentVisibility
 

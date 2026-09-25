@@ -32,4 +32,24 @@ class AdaptiveStageArtworkCacheTest {
         assertEquals(5, decodeCalls)
         assertEquals(2, cache.sizeForTest())
     }
+
+    @Test
+    fun peekNeverDecodesAndDistinguishesAKnownFailureFromAMiss() {
+        var decodeCalls = 0
+        val cache =
+            AdaptiveStageArtworkCache<Int>(maxEntries = 4) {
+                decodeCalls += 1
+                if (it == "corrupt") null else it?.length
+            }
+
+        assertEquals(ArtworkPeek.Missing, cache.peek("a"))
+        assertEquals(0, decodeCalls)
+
+        cache.getOrDecode("a", "aaa")
+        cache.getOrDecode("corrupt-card", "corrupt")
+
+        assertEquals(ArtworkPeek.Cached(3), cache.peek("a"))
+        assertEquals(ArtworkPeek.Cached<Int>(null), cache.peek("corrupt-card"))
+        assertEquals(2, decodeCalls)
+    }
 }
