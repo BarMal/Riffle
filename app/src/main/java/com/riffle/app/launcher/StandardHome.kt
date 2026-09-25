@@ -99,6 +99,13 @@ internal fun StandardHome(
      * the mode surface (#1205). Null draws the same host here, for callers that show this alone.
      */
     dockHost: HomeDockHostState? = null,
+    /**
+     * The edge the dock sits on for this surface, when the caller resolves it (Library keeps its own
+     * edge, see ModeDockEdges.kt); null resolves the shared dock's configured or template edge here.
+     */
+    dockEdge: DockPosition? = null,
+    /** Applied to the grid frame; the dock pull slides the surface through it. */
+    surfaceModifier: Modifier = Modifier,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
@@ -106,7 +113,8 @@ internal fun StandardHome(
     // Single source of truth for where the dock sits: the user's configured edge if any, else the
     // device class's template default (bottom on phones, the leading rail on wide postures -- see
     // #1159). The widget-picker drop previews below and the rendered dock must agree on it.
-    val dockPosition = resolveDockPosition(visibleLayout.dock.position, deviceClass.templateDockPosition)
+    val dockPosition =
+        dockEdge ?: resolveDockPosition(visibleLayout.dock.position, deviceClass.templateDockPosition)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     // Read by the dock host as well as here, so they live in its state rather than this frame's.
@@ -247,6 +255,7 @@ internal fun StandardHome(
             ),
         appIconLoader = appIconLoader,
         actions = actions,
+        modifier = surfaceModifier,
     )
     if (dockHost == null) {
         HomeDockHost(
@@ -528,6 +537,7 @@ private fun StandardHomeColumn(
     state: StandardHomeContentState,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
+    modifier: Modifier = Modifier,
 ) {
     val pagerState =
         rememberImmediateHomePagerState(
@@ -578,6 +588,7 @@ private fun StandardHomeColumn(
                 // Below the dock HomeDockHost draws over this frame, so the dock keeps its touches.
                 .zIndex(HOME_CONTENT_Z_INDEX)
                 .fillMaxSize()
+                .then(modifier)
                 .homeGestureInput(
                     enabled = state.visibleLayout.editMode == HomeEditMode.Browsing,
                     settings = state.presentation.homeGestures,

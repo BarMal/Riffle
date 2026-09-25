@@ -31,8 +31,8 @@ exist.
 The dock is available in every view mode, and its content is the **same** in each: the same pinned
 items, size, appearance and dynamic-section budgets (#1205). `HomeLayoutSet.docks` holds one
 `DockModel` per device class. The one thing stored per mode is the dock's **edge**: Home and
-Library each have their own (Decision 2), and they may be the same (#1242; today a single edge is
-still shared). Pinning, reordering or
+Library each have their own (Decision 2), and they may be the same (#1242; Library draws its own stored
+edge, but there is still one edge setting, which sets both). Pinning, reordering or
 moving an item to or from home, and every dock setting, edits that one dock whatever mode it was
 made in, so a pin made in Library shows in Cards and Standard at once.
 
@@ -71,7 +71,7 @@ The dock pull is the only way to move between Home and Library (Decisions 3, 4, 
   back in. Reduced motion: a short crossfade.
 - Drags along the run still scroll the sections; long-press + drag still reorders or drags out.
 - Accessibility: a dock custom action ("Switch to Library" / "Switch to Home") and a keyboard
-  shortcut perform the same switch.
+  shortcut (Ctrl + the arrow of the pull direction) perform the same switch.
 
 #### Migrating per-mode docks
 
@@ -194,8 +194,8 @@ section does that job, so the rail is gone (#1159).
 | Target | State |
 | --- | --- |
 | One dock per device class, shared by every mode | Done (#1205): one `DockModel` per device class, per-mode docks migrated, and one `HomeDockHost` drawn outside the mode surface in `HomeDestination`, so a mode switch keeps the same dock instance in the same place. Each mode reads the dock through a `HomeDockInterpreter` (Cards: the stage selector and "Show stage"/"Pin stage" menu extras, #1212); the grid and Cards lay out in the room the host reserves. The dock's thickness and edge hold across a switch; its run follows what the mode puts on the dynamic side |
-| Per-mode dock edge, content still shared | **In progress** (#1242) — model, persistence and migration done (#1246); nothing renders the Library edge yet and the edge setting still edits Home's |
-| Dock pull switches Home ↔ Library, dock re-orients to the target edge | **Not started** (#1206, #1207) |
+| Per-mode dock edge, content still shared | **In progress** (#1242) — model, persistence and migration done (#1246); `HomeDestination` draws the dock on Library's own edge in Library and reserves room on that edge (#1207). There is still one edge setting: choosing an edge sets it for both surfaces until the setting is split |
+| Dock pull switches Home ↔ Library, dock re-orients to the target edge | Done (#1206, #1207) — `dockPullInput` on the dock body drives `DockPullTransitionController`; the dock and outgoing surface track the finger, the incoming surface follows, the background fades and returns, and a commit moves the dock to the destination's edge and orientation before the shell switches mode. Reduced motion crossfades. Accessibility action and Ctrl+arrow shortcut are equivalents. The target is `ModePair.counterpart`. See gestures.md |
 | Alternative triggers deleted (drawer swipe, three-finger mode gestures, dock swipe-up) | Done (#1241) |
 | Mode ring collapsed to a fixed Home ↔ Library pair per device class | Done (#1241) — `ModePair` (Home is Cards or Standard, Library the other side; `ModePair.counterpart` is where a pull leads), Settings > Layout > Modes > "Home screen: Cards / Standard"; stored `modeRings` and older `preferredModes`/`lastNonCardsModes` migrate on decode |
 | Panel expansion disabled behind a flag | Done (#1241) — `DockShelfExpansion.enabled` |

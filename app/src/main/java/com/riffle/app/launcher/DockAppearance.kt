@@ -9,10 +9,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
@@ -50,17 +55,52 @@ internal fun dockSurfaceColor(dock: DockModel): Color {
     return selectedColor.copy(alpha = selectedColor.alpha * dock.backgroundAlphaPercent / 100f)
 }
 
+/** A dock background at its own alpha: what every dock outside a dock pull draws. */
+internal val OpaqueDockBackground: () -> Float = { 1f }
+
+/**
+ * The multiplier the dock pull applies to the dock background's alpha (Decision 4), read at draw
+ * time so a pull animates the background without recomposing the dock.
+ */
+internal val LocalDockBackgroundAlpha = staticCompositionLocalOf { OpaqueDockBackground }
+
 @Composable
 internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
     val spec = dockAppearanceSpec(dock.visualEffect, dock.cornerRadiusDp)
     val shape = RoundedCornerShape(spec.cornerRadiusDp.dp)
-    var result = this
-    if (spec.elevationDp > 0) result = result.shadow(spec.elevationDp.dp, shape)
-    result = result.clip(shape).background(dockSurfaceColor(dock))
-    if (spec.outlineWidthDp > 0) {
-        result = result.border(spec.outlineWidthDp.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+    val backgroundAlpha = LocalDockBackgroundAlpha.current
+    if (backgroundAlpha === OpaqueDockBackground) {
+        var result = this
+        if (spec.elevationDp > 0) result = result.shadow(spec.elevationDp.dp, shape)
+        result = result.clip(shape).background(dockSurfaceColor(dock))
+        if (spec.outlineWidthDp > 0) {
+            result = result.border(spec.outlineWidthDp.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+        }
+        return result
     }
-    return result
+    // Under a dock pull: the same shadow, fill and outline, each faded by the pull at draw time.
+    val color = dockSurfaceColor(dock)
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant
+    val elevationDp = spec.elevationDp
+    val outlineWidthDp = spec.outlineWidthDp
+    return graphicsLayer {
+        shadowElevation = elevationDp.dp.toPx() * backgroundAlpha()
+        this.shape = shape
+        clip = true
+    }.drawBehind {
+        val alpha = backgroundAlpha().coerceIn(0f, 1f)
+        val outline = shape.createOutline(size, layoutDirection, this)
+        drawOutline(outline, color = color.copy(alpha = color.alpha * alpha))
+        if (outlineWidthDp > 0) {
+            drawOutline(
+                outline,
+                color = outlineColor.copy(alpha = outlineColor.alpha * alpha),
+                // Centred on the edge and clipped to the shape, so twice as wide draws the same
+                // inside-only width as Modifier.border.
+                style = Stroke(width = 2 * outlineWidthDp.dp.toPx()),
+            )
+        }
+    }
 }
 
 /**

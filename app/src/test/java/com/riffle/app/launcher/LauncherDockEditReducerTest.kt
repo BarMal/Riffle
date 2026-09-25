@@ -20,6 +20,8 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.ModeSurface
+import com.riffle.core.domain.launcher.home.dockEdgeFor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -231,6 +233,37 @@ class LauncherDockEditReducerTest {
         assertEquals(40, savedLayoutSet.layoutFor(foldableKey).dock.iconSizeDp)
         assertEquals(phoneKey, savedLayoutSet.activeKey)
         assertEquals(44, updatedState.homeLayout.dock.iconSizeDp)
+    }
+
+    @Test
+    fun choosingADockEdgeMovesTheLibraryEdgeWithIt() {
+        // One edge setting until #1242 splits it per surface: Library follows what was chosen.
+        val layout = HomeLayoutDefaults.standard()
+        val layoutSet = HomeLayoutSet.fromLayout(layout)
+        val repository = FakeHomeLayoutRepository(savedLayoutSet = layoutSet)
+        val state =
+            LauncherShellState(
+                destination = ShellDestination.SETTINGS,
+                homeLayout = layout,
+                homeLayoutSet = layoutSet,
+            )
+
+        val updatedState =
+            reducer(repository).reduce(
+                state = state,
+                action = LauncherShellAction.SelectDockPosition(DockPosition.RIGHT),
+            )
+
+        val deviceClass = layoutSet.activeKey.deviceClass
+        assertEquals(DockPosition.RIGHT, updatedState.homeLayout.dock.position)
+        assertEquals(
+            DockPosition.RIGHT,
+            updatedState.homeLayoutSet.dockEdgeFor(deviceClass, ModeSurface.LIBRARY),
+        )
+        assertEquals(
+            DockPosition.RIGHT,
+            checkNotNull(repository.savedLayoutSet).dockEdgeFor(deviceClass, ModeSurface.LIBRARY),
+        )
     }
 
     private fun reducer(repository: HomeLayoutRepository): LauncherDockEditReducer =
