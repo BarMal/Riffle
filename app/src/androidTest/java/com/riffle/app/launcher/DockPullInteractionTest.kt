@@ -70,6 +70,33 @@ class DockPullInteractionTest {
         composeRule.runOnIdle { assertTrue("a pull into the edge switched mode: $actions", actions.isEmpty()) }
     }
 
+    // A side dock's pull is perpendicular to it: a right-edge dock is pulled left, and a vertical
+    // swipe along it (the old dock swipe-up) must not switch mode.
+    @Test
+    fun aRightDockPulledLeftSwitchesToLibrary() {
+        val actions = setContent(DockPosition.RIGHT)
+
+        pull(dyFraction = 0f, dxFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(SWITCH_TO_LIBRARY), actions)
+        }
+    }
+
+    @Test
+    fun aVerticalSwipeAlongARightDockDoesNotSwitch() {
+        val actions = setContent(DockPosition.RIGHT)
+
+        pull(dyFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
+
+        composeRule.runOnIdle {
+            assertTrue(
+                "a swipe along a side dock switched mode: $actions",
+                actions.none { action -> action is LauncherShellAction.SelectLauncherViewMode },
+            )
+        }
+    }
+
     @Test
     fun aDragAlongTheRunStillScrollsTheDock() {
         val actions = setContent()
@@ -106,15 +133,20 @@ class DockPullInteractionTest {
         }
     }
 
-    /** A pull from the middle of the dock by a fraction of the window height (negative is up). */
+    /**
+     * A pull from the middle of the dock by fractions of the window's width and height (negative is
+     * left / up).
+     */
     private fun pull(
         dyFraction: Float,
         stepDelayMillis: Long,
+        dxFraction: Float = 0f,
     ) {
-        val total = composeRule.onRoot().fetchSemanticsNode().size.height * dyFraction
+        val root = composeRule.onRoot().fetchSemanticsNode().size
+        val total = Offset(root.width * dxFraction, root.height * dyFraction)
         composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).performTouchInput {
             down(center)
-            repeat(STEPS) { moveBy(Offset(0f, total / STEPS), delayMillis = stepDelayMillis) }
+            repeat(STEPS) { moveBy(total / STEPS.toFloat(), delayMillis = stepDelayMillis) }
             up()
         }
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
@@ -123,13 +155,13 @@ class DockPullInteractionTest {
 
     private fun dockBounds() = composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).fetchSemanticsNode().boundsInRoot
 
-    private fun setContent(): MutableList<LauncherShellAction> {
+    private fun setContent(position: DockPosition = DockPosition.BOTTOM): MutableList<LauncherShellAction> {
         val actions = mutableListOf<LauncherShellAction>()
         val layout =
             HomeLayoutDefaults.standard().let { standard ->
                 standard.copy(
                     viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
-                    dock = standard.dock.copy(position = DockPosition.BOTTOM, capacity = DOCK_CAPACITY, items = docked),
+                    dock = standard.dock.copy(position = position, capacity = DOCK_CAPACITY, items = docked),
                 )
             }
         val state =
