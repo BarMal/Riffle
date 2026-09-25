@@ -77,11 +77,14 @@ internal fun DockSetting(
             placeablePositions = sharedDockPositions,
             onAction = onAction,
         )
-        DockExpandableSetting(
-            expandable = dock.isExpandable,
-            onAction = onAction,
-        )
-        if (dock.isExpandable) {
+        // Hidden while shelf expansion is switched off launcher-wide: the settings would do nothing.
+        if (DockShelfExpansion.enabled) {
+            DockExpandableSetting(
+                expandable = dock.isExpandable,
+                onAction = onAction,
+            )
+        }
+        if (DockShelfExpansion.enabled && dock.isExpandable) {
             DockExpandAffordanceSetting(
                 affordance = dock.expandAffordance,
                 onAction = onAction,
@@ -435,8 +438,8 @@ private fun DockExpandAffordanceSetting(
             title = "Open the shelf with",
             subtitle =
                 when (affordance) {
-                    DockExpandAffordance.GESTURE -> "Swipe up on the dock; the dock's swipe-up action is unused"
-                    DockExpandAffordance.BUTTON -> "A button on the dock; swipe up runs the dock's own action"
+                    DockExpandAffordance.GESTURE -> "Swipe up on the dock"
+                    DockExpandAffordance.BUTTON -> "A button on the dock; swiping it does nothing"
                 },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

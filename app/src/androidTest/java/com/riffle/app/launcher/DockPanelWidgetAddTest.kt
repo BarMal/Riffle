@@ -24,7 +24,9 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -37,6 +39,18 @@ import org.junit.Test
 class DockPanelWidgetAddTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    // Shelf expansion is switched off launcher-wide for now (DockShelfExpansion); these tests cover
+    // the dormant shelf, so they switch it on around themselves.
+    @Before
+    fun enableShelfExpansion() {
+        DockShelfExpansion.enabled = true
+    }
+
+    @After
+    fun restoreShelfExpansion() {
+        DockShelfExpansion.enabled = false
+    }
 
     private val docked = shortcut("docked")
 

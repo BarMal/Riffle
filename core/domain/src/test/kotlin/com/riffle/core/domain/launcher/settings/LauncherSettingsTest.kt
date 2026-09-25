@@ -62,19 +62,30 @@ class LauncherSettingsTest {
     }
 
     @Test
-    fun defaultsReserveThreeFingerSwipesForMovingAlongTheModeRing() {
+    fun theGesturesThatUsedToSwitchModeOrOpenTheAppDrawerDefaultToNoAction() {
+        // The dock pull is the only mode-transition trigger; Library is the app drawer.
         val gestures = LauncherSettings().gestures.homeGestures
 
-        assertEquals(LauncherGestureAction.NEXT_MODE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
-        assertEquals(LauncherGestureAction.PREVIOUS_MODE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.PINCH_OUT))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.NONE, HomeSwipeGestureSettings().up)
     }
 
     @Test
-    fun storedGestureNamesDecodeIncludingThoseWrittenBeforeTheModeRing() {
-        assertEquals(LauncherGestureAction.NEXT_MODE, LauncherGestureAction.fromStoredName("ENTER_ADAPTIVE_STAGE"))
-        assertEquals(LauncherGestureAction.PREVIOUS_MODE, LauncherGestureAction.fromStoredName("EXIT_ADAPTIVE_STAGE"))
+    fun storedGestureNamesDecodeAndRemovedModeActionsNameNothing() {
         LauncherGestureAction.entries.forEach { action ->
             assertEquals(action, LauncherGestureAction.fromStoredName(action.name))
+        }
+        listOf(
+            "NEXT_MODE",
+            "PREVIOUS_MODE",
+            "ENTER_ADAPTIVE_STAGE",
+            "EXIT_ADAPTIVE_STAGE",
+            "OPEN_APP_DRAWER",
+        ).forEach { removed ->
+            assertEquals(null, LauncherGestureAction.fromStoredName(removed), removed)
         }
         assertEquals(null, LauncherGestureAction.fromStoredName("NOT_AN_ACTION"))
         assertEquals(null, LauncherGestureAction.fromStoredName(""))
@@ -173,7 +184,7 @@ class LauncherSettingsTest {
     fun defaultsHomeSwipeGesturesToStandardLauncherActions() {
         val settings = LauncherSettings()
 
-        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, settings.gestures.homeSwipe.up)
+        assertEquals(LauncherGestureAction.NONE, settings.gestures.homeSwipe.up)
         assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, settings.gestures.homeSwipe.down)
         assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, settings.gestures.homeSwipe.left)
         assertEquals(LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE, settings.gestures.homeSwipe.right)
@@ -201,7 +212,7 @@ class LauncherSettingsTest {
                             HomeGestureSettings(
                                 actions =
                                     mapOf(
-                                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
+                                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_SEARCH,
                                     ),
                             ),
                     ),
@@ -211,11 +222,11 @@ class LauncherSettingsTest {
             listOf(
                 LauncherGestureConflict(
                     surface = LauncherGestureSurface.HOME_PAGE,
-                    action = LauncherGestureAction.OPEN_APP_DRAWER,
-                    gestures = listOf(LauncherGesture.ONE_FINGER_UP, LauncherGesture.PINCH_OUT),
+                    action = LauncherGestureAction.OPEN_SEARCH,
+                    gestures = listOf(LauncherGesture.TWO_FINGER_UP, LauncherGesture.TWO_FINGER_LEFT),
                 ),
             ),
-            settings.gestures.conflicts.filter { it.action == LauncherGestureAction.OPEN_APP_DRAWER },
+            settings.gestures.conflicts,
         )
     }
 

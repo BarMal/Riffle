@@ -16,12 +16,6 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
-    fun allowsMovingAlongTheModeRingWhichIsHowCardsIsLeft() {
-        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.SelectPreviousLauncherViewMode))
-        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.SelectNextLauncherViewMode))
-    }
-
-    @Test
     fun doesNotAllowEnteringCardsModeFromWithinCardsMode() {
         assertFalse(
             adaptiveStageAppStageActionFilter(
@@ -31,8 +25,9 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
-    fun allowsOpeningTheAppDrawerFromCardsMode() {
-        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenAppDrawer))
+    fun doesNotLetAGestureOpenTheAppDrawerFromCardsMode() {
+        // No gesture can be bound to the drawer any more; the dock pull reaches Library.
+        assertFalse(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenAppDrawer))
     }
 
     @Test

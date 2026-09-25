@@ -165,6 +165,12 @@ configurable for **rendered size**, **grid dimensions**, and **padding**. The ex
 disabled behind a feature flag until it is revisited after the dock pull ships, because both claim
 a drag away from the dock edge.
 
+**Expansion is switched off for now** (plan Decision 11): `DockShelfExpansion.enabled`
+defaults to false, so no dock opens its shelf -- by swipe or by button -- and the expansion settings
+(expandable, "Open the shelf with", dock panel) are hidden. A swipe away from the dock edge does
+nothing until the dock pull claims it as the mode switch. The shelf and panel code stays in place to
+be revisited.
+
 It is deliberately not where items past the visible-before-overflow count go; those scroll in the
 dock's own strip. The panel is for things you consult or act on without leaving where you are.
 
@@ -188,10 +194,10 @@ section does that job, so the rail is gone (#1159).
 | Target | State |
 | --- | --- |
 | One dock per device class, shared by every mode | Done (#1205): one `DockModel` per device class, per-mode docks migrated, and one `HomeDockHost` drawn outside the mode surface in `HomeDestination`, so a mode switch keeps the same dock instance in the same place. Each mode reads the dock through a `HomeDockInterpreter` (Cards: the stage selector and "Show stage"/"Pin stage" menu extras, #1212); the grid and Cards lay out in the room the host reserves. The dock's thickness and edge hold across a switch; its run follows what the mode puts on the dynamic side |
-| Per-mode dock edge, content still shared | **Not started** (#1242) — one edge is shared today |
+| Per-mode dock edge, content still shared | **In progress** (#1242) — model, persistence and migration done (#1246); nothing renders the Library edge yet and the edge setting still edits Home's |
 | Dock pull switches Home ↔ Library, dock re-orients to the target edge | **Not started** (#1206, #1207) |
-| Alternative triggers deleted (drawer swipe, three-finger mode gestures, dock swipe-up) | **Not started** (#1241) |
-| Panel expansion disabled behind a flag | **Not started** (#1207) |
+| Alternative triggers deleted (drawer swipe, three-finger mode gestures, dock swipe-up) | Done (#1241, first slice) — collapsing the mode ring to Home ↔ Library still pending |
+| Panel expansion disabled behind a flag | Done (#1241) — `DockShelfExpansion.enabled` |
 | Anchors to any edge, space reserved | Done for grid modes (#1148–#1152, #1165) and for Cards — both resolve through `resolveDockPosition`, and `dockInteractionRegionExtentDp` reserves a width for a side edge, a height for top/bottom |
 | Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards follows the same resolution now |
 | Sized by settings | Done |
@@ -207,6 +213,8 @@ section does that job, so the rail is gone (#1159).
 | Multiple rows | **Not started** — no notion of rows exists |
 | Panel exists, standard conventions | Done — a real `LauncherPage` on the same grid machinery as a home page |
 | Cards expanded shelf is panel-only | Done (#1166) — the notification card row is dropped there, the panel stays |
+| Shelf expansion | **Switched off** (plan Decision 11) behind `DockShelfExpansion.enabled`; code kept |
+| Dock swipe-up gesture action | **Removed** (plan Decision 9) — the dock pull will be the only mode-transition trigger |
 | Panel configurable: size, grid, padding | **Not started** |
 | Panel editing: drag in from the picker | **Not started** — needs a non-fullscreen picker so the dock stays visible |
 | Dock floats over other apps | **Not started** — a separate overlay dock subsystem exists and is to be replaced |

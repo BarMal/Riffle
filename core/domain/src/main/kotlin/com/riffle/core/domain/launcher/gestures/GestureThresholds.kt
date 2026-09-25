@@ -28,12 +28,9 @@ object GestureThresholds {
      */
     const val DOCK_SHELF_CLAIM_DP: Float = 9f
 
-    /** Upward travel, past the platform touch slop, that fires the dock swipe-up action (was 80px). */
-    const val DOCK_SWIPE_UP_DP: Float = 30.5f
-
     /**
      * Pointer count at which the home gesture layer claims the touch outright, ahead of any child
-     * (card stack, pager): a three-finger swipe is a mode gesture wherever it starts.
+     * (card stack, pager): a three-finger swipe is a home-page gesture wherever it starts.
      */
     const val MULTI_FINGER_CLAIM_POINTER_COUNT: Int = 3
 }
@@ -49,10 +46,9 @@ data class GestureThresholdsPx(
     val homeSwipePx: Float,
     val dockShelfTogglePx: Float,
     val dockShelfClaimPx: Float,
-    val dockSwipeUpPx: Float,
 ) {
     init {
-        require(homeSwipePx > 0f && dockShelfTogglePx > 0f && dockShelfClaimPx > 0f && dockSwipeUpPx > 0f) {
+        require(homeSwipePx > 0f && dockShelfTogglePx > 0f && dockShelfClaimPx > 0f) {
             "Gesture thresholds must be positive."
         }
     }
@@ -67,7 +63,6 @@ data class GestureThresholdsPx(
                 homeSwipePx = GestureThresholds.HOME_SWIPE_DP * density,
                 dockShelfTogglePx = GestureThresholds.DOCK_SHELF_TOGGLE_DP * density,
                 dockShelfClaimPx = maxOf(GestureThresholds.DOCK_SHELF_CLAIM_DP * density, touchSlopPx),
-                dockSwipeUpPx = GestureThresholds.DOCK_SWIPE_UP_DP * density,
             )
         }
 

@@ -51,9 +51,6 @@ internal class LauncherSettingsStateReducer(
                         repo = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectDockGestureAction ->
-                    state.withDockGestureAction(action.action, launcherSettingsRepository)
-
                 is LauncherShellAction.SelectHapticFeedbackStrength ->
                     state.withLauncherSettings(
                         settings =

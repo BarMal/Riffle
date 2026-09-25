@@ -164,17 +164,6 @@ sealed interface LauncherShellAction {
 
     data class SelectLauncherViewMode(val mode: LauncherViewMode) : LauncherShellAction
 
-    /**
-     * Moves to the next mode in the held device's mode ring (#1225).
-     *
-     * Not a [SelectLauncherViewMode] with a fixed mode, because which mode is next is a decision
-     * only the layout set can make -- it holds the ring and the active mode.
-     */
-    data object SelectNextLauncherViewMode : LauncherShellAction
-
-    /** Moves to the previous mode in the held device's mode ring. Leaving Cards is this. */
-    data object SelectPreviousLauncherViewMode : LauncherShellAction
-
     /** Adds [mode] to, or removes it from, the mode ring of the device class Settings is editing. */
     data class SelectModeRingModeEnabled(
         val mode: LauncherViewMode,
@@ -466,10 +455,6 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data object ResetHomeSwipeGestureActions : LauncherShellAction
-
-    data class SelectDockGestureAction(
-        val action: LauncherGestureAction,
-    ) : LauncherShellAction
 
     data class SelectHapticFeedbackStrength(
         val strength: HapticFeedbackStrength,

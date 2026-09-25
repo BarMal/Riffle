@@ -29,15 +29,31 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
 class DockShelfGestureInteractionTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    // Shelf expansion is switched off launcher-wide for now (DockShelfExpansion); these tests cover
+    // the dormant shelf, so they switch it on around themselves.
+    @Before
+    fun enableShelfExpansion() {
+        DockShelfExpansion.enabled = true
+    }
+
+    @After
+    fun restoreShelfExpansion() {
+        DockShelfExpansion.enabled = false
+    }
 
     @Test
     fun dockOpeningDragEndingOnReleaseExpandsBeforeTheHomeGestureThreshold() {
@@ -75,7 +91,13 @@ class DockShelfGestureInteractionTest {
                         }
                         .homeGestureInput(
                             enabled = true,
-                            settings = HomeGestureSettings(),
+                            // Swipe up is unbound by default, so bind it: the point is that the
+                            // home layer does not also act on the drag the shelf claimed.
+                            settings =
+                                HomeGestureSettings().withAction(
+                                    gesture = HomeGesture.ONE_FINGER_UP,
+                                    action = LauncherGestureAction.OPEN_SEARCH,
+                                ),
                             onAction = homeActions::add,
                         ),
             ) {

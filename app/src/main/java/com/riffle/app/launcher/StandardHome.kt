@@ -78,7 +78,6 @@ import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
-import com.riffle.core.domain.launcher.settings.DockGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.homeSystemBars
@@ -913,7 +912,6 @@ internal data class StandardHomePresentation(
     val installedApps: List<InstalledApp> = emptyList(),
     val appShortcutsByApp: AppShortcutsByApp,
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),
-    val dockGestures: DockGestureSettings = DockGestureSettings(),
     val reducedMotion: Boolean = false,
     val motionPerformanceTargetFps: MotionPerformanceTargetFps = MotionPerformanceTargetFps.FPS_120,
     val widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,

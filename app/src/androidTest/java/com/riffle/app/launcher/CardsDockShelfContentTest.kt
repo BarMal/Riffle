@@ -32,6 +32,8 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -48,6 +50,18 @@ import org.junit.Test
 class CardsDockShelfContentTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    // Shelf expansion is switched off launcher-wide for now (DockShelfExpansion); these tests cover
+    // the dormant shelf, so they switch it on around themselves.
+    @Before
+    fun enableShelfExpansion() {
+        DockShelfExpansion.enabled = true
+    }
+
+    @After
+    fun restoreShelfExpansion() {
+        DockShelfExpansion.enabled = false
+    }
 
     private val docked = shortcut("docked")
     private val panelled = shortcut("clock")

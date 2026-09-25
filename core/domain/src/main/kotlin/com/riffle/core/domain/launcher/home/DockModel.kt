@@ -70,7 +70,7 @@ enum class DockBackgroundSizing {
  * screen's edge is Android's own back gesture, so an edge dock has to offer [BUTTON] instead.
  *
  * [BUTTON] puts a visible control on the dock. It is discoverable rather than learned, and it hands
- * the swipe back to whatever the dock's own swipe-up gesture action is bound to.
+ * the swipe back: it then does nothing on the dock.
  */
 enum class DockExpandAffordance {
     GESTURE,

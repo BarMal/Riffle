@@ -13,8 +13,6 @@ import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.ModeRing
-import com.riffle.core.domain.launcher.home.nextMode
-import com.riffle.core.domain.launcher.home.previousMode
 import com.riffle.core.domain.launcher.home.seedHomeLayout
 import com.riffle.core.domain.launcher.home.withLayoutKeepingDock
 import com.riffle.core.domain.launcher.home.withModeRing
@@ -68,29 +66,6 @@ internal fun LauncherShellState.withSelectedHomeLayoutMode(
             .also(homeLayoutRepository::saveHomeLayoutSet)
 
     return copy(homeLayout = layoutSet.activeLayout, homeLayoutSet = layoutSet)
-}
-
-/**
- * Step along the held device's mode ring (#1225): to the next mode, or with [forward] false to the
- * previous one -- which is how Cards is left.
- *
- * The layout set picks the destination from its ring; [withSelectedHomeLayoutMode] then makes the
- * switch, so availability and per-mode layouts are handled exactly as any other mode change. A ring
- * step acts on what is on screen, so it always targets the device being held, wherever Settings was
- * last pointed.
- */
-internal fun LauncherShellState.withModeRingStep(
-    forward: Boolean,
-    homeLayoutRepository: HomeLayoutRepository,
-    viewModeAvailability: LauncherViewModeAvailability,
-): LauncherShellState {
-    val layoutSet = homeLayoutSet.withActiveLayout(homeLayout)
-    return withSelectedHomeLayoutMode(
-        mode = if (forward) layoutSet.nextMode() else layoutSet.previousMode(),
-        homeLayoutRepository = homeLayoutRepository,
-        viewModeAvailability = viewModeAvailability,
-        targetDeviceClass = layoutSet.activeKey.deviceClass,
-    )
 }
 
 /**

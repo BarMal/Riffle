@@ -142,53 +142,6 @@ class LauncherShellViewModeViewModelTest {
     }
 
     @Test
-    fun leavingCardsReturnsToTheModeYouCameFrom() {
-        val camera = app(label = "Camera")
-        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
-                homeLayoutRepository = repository,
-                platformDependencies = libraryAndCardsViewModePlatformDependencies,
-            )
-
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
-        )
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE),
-        )
-        viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousLauncherViewMode)
-
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
-    }
-
-    @Test
-    fun leavingCardsWithNoRingConfiguredStepsBackToLibraryInTheDefaultRing() {
-        val camera = app(label = "Camera")
-        val repository =
-            FakeHomeLayoutRepository(
-                savedLayout =
-                    HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE),
-            )
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
-                homeLayoutRepository = repository,
-                platformDependencies = libraryAndCardsViewModePlatformDependencies,
-            )
-
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousLauncherViewMode)
-
-        // Before the mode ring (#1225) this landed on Standard; the default ring is Library -> Cards.
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
-    }
-
-    @Test
     fun removingTheActiveModeFromTheRingInSettingsMovesToItsNeighbour() {
         val camera = app(label = "Camera")
         val repository =

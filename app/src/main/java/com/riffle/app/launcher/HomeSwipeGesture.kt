@@ -121,7 +121,6 @@ class HomeSwipeGestureActionMapper {
     private fun LauncherGestureAction.toShellAction(launchTarget: LauncherGestureLaunchTarget?): LauncherShellAction? =
         when (this) {
             LauncherGestureAction.NONE -> null
-            LauncherGestureAction.OPEN_APP_DRAWER -> LauncherShellAction.OpenAppDrawer
             LauncherGestureAction.OPEN_NOTIFICATIONS -> LauncherShellAction.OpenNotifications
             LauncherGestureAction.OPEN_SEARCH -> LauncherShellAction.OpenSearch
             LauncherGestureAction.OPEN_SETTINGS -> LauncherShellAction.OpenSettings
@@ -130,8 +129,6 @@ class HomeSwipeGestureActionMapper {
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> LauncherShellAction.SelectFullscreenHomeEnabled(true)
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> LauncherShellAction.SelectNextHomePage
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> LauncherShellAction.SelectPreviousHomePage
-            LauncherGestureAction.NEXT_MODE -> LauncherShellAction.SelectNextLauncherViewMode
-            LauncherGestureAction.PREVIOUS_MODE -> LauncherShellAction.SelectPreviousLauncherViewMode
             LauncherGestureAction.SELECT_NEXT_APP_STAGE -> LauncherShellAction.SelectNextAppStage
             LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE -> LauncherShellAction.SelectPreviousAppStage
             LauncherGestureAction.LAUNCH_APP -> launchTarget.launchAppAction()
