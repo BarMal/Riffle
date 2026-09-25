@@ -309,7 +309,9 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
         // Both the upper detail region and the lower stage pager/spine region must be present
         // simultaneously -- proving this is a genuine split, not one replacing the other.
         composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithText("Install an app to create your first stage.").assertIsDisplayed()
+        // The lower region's unavailable state shows exactly one call to action (#1212): without
+        // notification access that is "Allow access", not the "install an app" hint.
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
     }
 
     private fun setContent(

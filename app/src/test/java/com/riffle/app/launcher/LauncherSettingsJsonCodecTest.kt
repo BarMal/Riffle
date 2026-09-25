@@ -161,6 +161,31 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun roundTripsTheStageSpineToggle() {
+        val settings = LauncherSettings(cards = CardsSettings(showStageSpine = true))
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(true, decoded.cards.showStageSpine)
+    }
+
+    @Test
+    fun settingsSavedBeforeTheSpineToggleExistedDecodeWithTheSpineOff() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "foldedShowAllNotifications": true
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(false, decodedSettings.cards.showStageSpine)
+    }
+
+    @Test
     fun defaultsUnknownAdaptiveStagePaneArrangement() {
         val decodedSettings =
             decodeLauncherSettings(

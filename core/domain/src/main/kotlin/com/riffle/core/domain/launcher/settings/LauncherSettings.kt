@@ -83,12 +83,20 @@ data class CardsSettings(
     /** Whether a conversation's messages become one card each or one card between them. */
     val threadCardGrouping: ThreadCardGrouping = ThreadCardGrouping.PER_THREAD,
     /**
-     * Whether the merged "All notifications" view -- every stage's notifications at once -- is
-     * offered, per posture. Folded is the compact spine's trailing page; unfolded is the wide
-     * layout's dock entry. Off by default: it is an opt-in extra, not part of moving between stages.
+     * The merged "All notifications" view is always the Cards stage selector's first entry (#1212).
+     * [foldedShowAllNotifications] now only decides whether swiping between stages on the compact
+     * layout also passes through it (off by default). [unfoldedShowAllNotifications] is legacy: kept
+     * so saved settings and backups round-trip, but no longer read.
      */
     val foldedShowAllNotifications: Boolean = false,
     val unfoldedShowAllNotifications: Boolean = false,
+    /**
+     * Whether the stage spine -- the chip strip under the compact stack -- is drawn (#1212). Off by
+     * default, including for settings saved before it existed: in Cards the dock's dynamic section
+     * is the stage selector. The spine still shows whenever the dock cannot host that selector, so
+     * this never strands a stage (see `CardsStageSelector.showsSpine`).
+     */
+    val showStageSpine: Boolean = false,
 )
 
 /**

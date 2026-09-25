@@ -149,6 +149,20 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
+    fun persistsTheStageSpineToggle() {
+        val repository = FakeLauncherSettingsRepository()
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectCardsShowStageSpine(enabled = true),
+            )
+
+        assertEquals(true, updatedState.launcherSettings.cards.showStageSpine)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
     fun contextualSettingsDefaultOff() {
         val state = LauncherShellState()
 

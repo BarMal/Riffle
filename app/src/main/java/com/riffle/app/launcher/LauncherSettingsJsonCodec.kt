@@ -128,6 +128,7 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
         .put("threadCardGrouping", settings.threadCardGrouping.name)
         .put("foldedShowAllNotifications", settings.foldedShowAllNotifications)
         .put("unfoldedShowAllNotifications", settings.unfoldedShowAllNotifications)
+        .put("showStageSpine", settings.showStageSpine)
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
     JSONObject()
@@ -172,6 +173,8 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
         foldedShowAllNotifications = optBoolean("foldedShowAllNotifications", defaults.foldedShowAllNotifications),
         unfoldedShowAllNotifications =
             optBoolean("unfoldedShowAllNotifications", defaults.unfoldedShowAllNotifications),
+        // Absent from settings saved before #1212, which takes the default: off.
+        showStageSpine = optBoolean("showStageSpine", defaults.showStageSpine),
     )
 }
 

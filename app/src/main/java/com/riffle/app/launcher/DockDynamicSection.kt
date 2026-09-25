@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,9 +18,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -28,7 +31,8 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockModel
 
 /**
- * The dock's dynamic side: the apps it is not already showing that have something waiting.
+ * The dock's dynamic side: whatever the active mode lists there -- in grid mode the apps the dock is
+ * not already showing that have something waiting, in Cards the stage selector.
  *
  * Icons at dock size rather than the shelf's wide cards, because this runs *inside* the dock beside
  * the pinned items and has to read as the same strip. The shelf's card row is the same section with
@@ -48,7 +52,9 @@ internal fun DockDynamicSection(
     runsHorizontally: Boolean,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
-    onShowAllNotifications: () -> Unit = {},
+    /** Receives the key of an entry whose intent is [DockDynamicEntryIntent.Delegate]. */
+    onEntryDelegated: (String) -> Unit = {},
+    reducedMotion: Boolean = false,
     // The edge against the section divider is an internal seam, not the dock's real edge -- see the
     // matching suppressEndFade on DockSlotStrip (#1174).
     suppressStartFade: Boolean = false,
@@ -60,6 +66,12 @@ internal fun DockDynamicSection(
     val iconSizeDp = slotMetrics.iconSizeDp
     val spacingDp = slotMetrics.itemSpacingDp
     val scrollState = rememberScrollState()
+    ScrollSelectedEntryIntoView(
+        selectedIndex = entries.indexOfFirst(DockDynamicEntry::isSelected),
+        entryPitchDp = iconSizeDp + spacingDp,
+        reducedMotion = reducedMotion,
+        scrollState = scrollState,
+    )
     // No modifier parameter, against the usual convention: the section's extent is measured for it
     // by the dock and a caller-supplied one would only fight that.
     val runModifier =
@@ -81,7 +93,7 @@ internal fun DockDynamicSection(
                 onActivate = {
                     when (val intent = entry.intent) {
                         is DockDynamicEntryIntent.Dispatch -> onAction(intent.action)
-                        DockDynamicEntryIntent.ShowAllNotifications -> onShowAllNotifications()
+                        DockDynamicEntryIntent.Delegate -> onEntryDelegated(entry.key)
                         null -> Unit
                     }
                 },
@@ -115,6 +127,29 @@ internal fun DockDynamicSection(
         }
         if (overflowAffordance.showEnd) {
             DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
+        }
+    }
+}
+
+/**
+ * Keeps whichever entry is marked selected in view, so the destination showing is never hidden past
+ * the section's edge (#1212). Neutral: the dock does not know what "selected" means, only that the
+ * supplier marked one entry as the one showing.
+ */
+@Composable
+private fun ScrollSelectedEntryIntoView(
+    selectedIndex: Int,
+    entryPitchDp: Int,
+    reducedMotion: Boolean,
+    scrollState: ScrollState,
+) {
+    val selectedOffsetPx = with(LocalDensity.current) { (selectedIndex.coerceAtLeast(0) * entryPitchDp).dp.roundToPx() }
+    LaunchedEffect(selectedIndex, selectedOffsetPx, reducedMotion) {
+        if (selectedIndex < 0) return@LaunchedEffect
+        if (reducedMotion) {
+            scrollState.scrollTo(selectedOffsetPx)
+        } else {
+            scrollState.animateScrollTo(selectedOffsetPx)
         }
     }
 }
@@ -211,8 +246,7 @@ internal fun DockNotificationShelfState.dynamicEntries(): List<DockDynamicEntry>
 
 /**
  * The de-duplicated notification cards behind the dynamic section -- what an app pinned to the
- * static side is already excluded from. Cards mode builds stage-selecting entries from these rather
- * than the launch-opening ones [dynamicEntries] gives grid mode.
+ * static side is already excluded from.
  */
 internal fun DockNotificationShelfState.dockNotificationCards(): List<DockNotificationCardState> =
     (this as? DockNotificationShelfState.Content)?.cards.orEmpty()
