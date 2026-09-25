@@ -3,12 +3,22 @@
 Status: **accepted plan**, tracked by #1196. The workstream issues link back here. Where this
 document and an issue disagree, update this document in the same PR that settles the question.
 
+> **Revision 2026-09-25 — the dock is a literal handle.** Decisions 1–4 are rewritten and
+> Decisions 9–13 added. What changed: the configurable 2–3 mode ring becomes a fixed pair,
+> **Home ↔ Library**, with Library as the app drawer; the dock keeps one shared content model but
+> each mode has its own dock edge; the grabber pill is dropped, and **pulling the dock itself** away
+> from its edge is the one and only mode-transition trigger, with every alternative trigger
+> deleted. Why: a pill was a second, smaller control standing in for the handle the user already
+> holds. Making the whole dock the handle gives one gesture, one place and one direction rule, and
+> removes the overlapping drawer-swipe, three-finger and dock-swipe-up paths that made mode
+> switching unpredictable. W2 is re-cut accordingly (see Workstreams).
+
 ## Why
 
 Riffle is used daily, but Library mode is the default in practice because it is the least hassle.
 Cards mode — the part that makes Riffle Riffle — is clunky enough that it gets avoided. The goal
-of this plan is to make Cards good enough to live in, make moving between modes a single physical
-gesture, and bring every surface under one design language.
+of this plan is to make Cards good enough to live in, make moving between Home and Library a single
+physical gesture (pulling the dock), and bring every surface under one design language.
 
 The steer: **"if Apple and Sony designed it together."**
 
@@ -66,34 +76,40 @@ and Library benefit directly.
 
 ## Decisions
 
-1. **The mode ring is user-configured.** Standard, Library and Cards remain distinct modes. The
-   user enables two or three and orders them; the default ring is **Library → Cards**.
-2. **One unified dock.** Exactly one dock per device class, identical in every mode: same pinned
-   items, edge, size, appearance and dynamic-section budgets. No per-mode dock configuration is
-   stored; anything that must differ by mode (what a dynamic-entry tap does) is derived from the
-   active mode at render time. The dock is rendered once, outside the mode surface, so a mode
-   change never re-lays it out — it is the fixed point you hold while the world slides past.
-   *Boundary:* the shared dock is a mode-agnostic component. It renders a `DockModel` and emits
-   neutral intents (item tapped, dynamic entry tapped, item dragged out, handle dragged); each mode
-   supplies an interpreter for those intents. Cards-specific behaviour (stage selection, stage
+1. **Two surfaces, not a ring.** The launcher has exactly two mode surfaces, **Home** and
+   **Library**, as a fixed pair. Home is Cards; Standard stays selectable as the Home surface until
+   Cards hosts widgets and standard app pages, then Standard retires with a migration (W2-f).
+   Library *is* the app drawer: there is no separate drawer surface. The user-configured 2–3 mode
+   ring (#1225, shipped in #1239) collapses to this pair; there is nothing to enable or order.
+2. **Dock content is shared; dock edge is per mode.** One `DockModel` per device class holds the
+   dock's content and look (pinned items, size, appearance, dynamic-section budgets) as
+   #1205/#1236 store it, identical in both modes. Each mode (Home, Library) stores its own dock
+   **edge** (BOTTOM / LEFT / RIGHT / TOP, limited to the edges that mode's surface can draw); both
+   modes may use the same edge. What a dynamic entry does is still derived from the active mode at
+   render time. The dock is rendered once, outside the mode surface, and survives a mode change as
+   the same instance; only its position and orientation animate.
+   *Boundary:* the shared dock is a mode-agnostic component. It renders a `DockModel` at an edge and
+   emits neutral intents (item tapped, dynamic entry tapped, item dragged out, dock pulled); each
+   mode supplies an interpreter for those intents. Cards-specific behaviour (stage selection, stage
    previews) lives behind that interface in the Cards feature code, never in the dock or in
-   Standard/Library code. #1205 and #1225 implement against this boundary.
-
-3. **A grabber pill on the dock is the mode control.**
-   - *Placement*: centred on the dock's inner edge (top edge of a bottom dock; inner edge of a side
-     dock, rotated). 36 × 5 dp visual, ≥ 48 × 48 dp touch target.
-   - *Indicator*: the pill is segmented, one segment per mode in the ring, the active one lit —
-     a quiet position cue, like Sony's hairline indicators.
-   - *Drag along the dock axis*: interactive, 1:1-tracked transition to the adjacent mode;
-     velocity/distance (dp) decides commit or cancel; interruptible mid-flight.
-   - *Tap*: advance to the next mode. *Long-press*: mode overview (see W2-5).
-   - *Accessibility*: a button with a state description ("Library, 1 of 2") and custom actions
-     per mode; keyboard shortcut.
-   - The rest of the dock keeps its existing gestures; the pill owns only drags that start on it.
-4. **Transition choreography** (Library ↔ Cards): the grid recedes (scale ~0.94, dim), the card
-   stack rises out of the dock's dynamic section — dock notification entries are the shared
-   elements that become their stages. Reverse on the way back. Std ↔ Lib: lateral slide with
-   parallax. Reduced motion: a short crossfade, same end state.
+   Standard/Library code.
+3. **The pull is the trigger.** Every dock edge has a *natural pull direction*: away from the edge,
+   toward the screen interior. A bottom dock pulls up, a top dock down, a left dock right, a right
+   dock left.
+   - A pull starts on the **dock body** (background, icons, sections), never in the system-gesture
+     inset at the screen edge.
+   - It tracks the finger 1:1. On release, travel or velocity past the commit threshold (dp, from
+     `GestureThresholds`) commits the switch to the other mode; anything less cancels and springs
+     back. A pull is interruptible: catching the dock mid-flight resumes tracking from where it is.
+   - Only motion along the natural pull direction drives the transition. Drags along the dock run
+     still scroll its sections, and long-press + drag still reorders items or drags them out.
+   - After commit the dock animates to the edge and orientation the new mode expects, which may be
+     the edge it already has.
+4. **Choreography.** During the pull the dock's background loses alpha in proportion to progress;
+   its icons re-orient to the target orientation as they snap into their new positions; the
+   background fades back in on settle. The two layouts slide with pull progress: the outgoing
+   layout moves with the dock, and the incoming layout follows in from the side the dock came from.
+   Reduced motion: a short crossfade to the same end state.
 5. **In Cards, the dock's dynamic section is the compact stage selector.** The spine becomes
    optional; static dock icons **launch** their app (muscle memory), long-press offers "Show
    stage". "All" and "Now" get permanent entries.
@@ -103,6 +119,27 @@ and Library benefit directly.
    feed stages, and widgets as cards, alongside notification/media stages.
 8. **No visual PR merges without rendered evidence**: JVM screenshot tests for the surfaces it
    touches, plus device screenshots for motion.
+9. **The dock pull is the only mode-transition trigger.** The alternatives are **deleted**, not
+   migrated and not kept dormant: the app-drawer swipe (the `OPEN_APP_DRAWER` home-gesture binding
+   path, swipe-up-to-drawer), the three-finger `NEXT_MODE` / `PREVIOUS_MODE` bindings, the dock
+   swipe-up gesture setting and its input modifier (`DockSwipeUpGesture`), and the
+   `SelectNext/PreviousLauncherViewMode` shell actions if nothing else uses them. Stored settings
+   that name a removed action or setting still decode without crashing: unknown values map to no
+   action or are dropped. No user-facing notice.
+10. **Library-as-drawer return behaviour is a setting.** After launching an app from Library, a
+    Home press, or Back from Library, the launcher resets to **Home** (default) or stays on
+    **Library**, as the user chooses. Library is never the cold-start mode unless that setting says
+    so.
+11. **Dock expansion is disabled for now.** The shelf/panel expand gesture is switched off behind a
+    feature flag (not a user setting or button), which also removes its overlap with the pull.
+    Revisit after the pull has shipped.
+12. **Accessibility equivalents of the pull.** A dock custom action ("Switch to Library" / "Switch
+    to Home") and a keyboard shortcut perform the same commit. They are equivalents of the pull, not
+    separate visible UI.
+13. **Side docks and system Back.** A pull must start on the dock body, which is already inset from
+    the screen edge, so a side dock does not compete with the Back edge gesture by construction.
+    Add `systemGestureExclusion` over the dock only if device testing shows conflicts (the platform
+    caps the excluded height).
 
 ## Design language: Apple × Sony
 
@@ -138,14 +175,22 @@ Phases are ordered by what makes Cards usable soonest; #1196 holds the phase che
 3. #1203 Platform integration: system animation scale, M3 DayNight + SplashScreen, predictive back, modern haptics. (D3, D4)
 4. #1204 String resources and RTL pass. (D5)
 
-### W2 — Mode ring and dock handle (Phase 2)
-1. #1205 Unify the dock across modes: one dock per device class, rendered outside the mode surface, with migration. (M2) — **Phase 1**
-1b. #1225 Domain: user-configured mode ring. (M3)
-2. #1206 Interactive mode-transition controller (progress, commit/cancel, interruption). (M1)
-3. #1207 Dock grabber pill component. (Decision 3)
-4. #1208 Transition choreography with shared dock → stage elements. (Decision 4)
-5. #1209 Mode overview on long-press. (Phase 4)
-6. #1210 Gesture arbitration overhaul: dp thresholds, platform primitives, nested-scroll hand-off. (M6, C1)
+### W2 — Home ↔ Library and the dock pull (Phase 2)
+Shipped before the 2026-09-25 revision: #1205 one dock per device class, rendered outside the mode
+surface (#1236, #1238); #1225 user-configured mode ring (#1239, collapsed by W2-a); #1210 gesture
+arbitration overhaul (#1235). Superseded by the revision: #1208 (shared dock → stage
+choreography; the layout slide now lives in W2-c/d) and #1209 (mode overview on long-press; two
+surfaces need no overview).
+
+- a. #1241 Delete the alternative mode triggers and collapse the mode ring to the fixed Home ↔
+  Library pair; stored settings with removed names decode safely. (Decisions 1, 9)
+- b. #1242 Per-mode dock edge model (migration from the shared edge) and the pull-direction /
+  commit domain logic. (Decisions 2, 3)
+- c. #1206 Interactive mode-transition controller (progress, commit/cancel, interruption). (M1)
+- d. #1207 Dock pull handle + dock re-orientation choreography. (Decisions 3, 4, 11, 12, 13)
+- e. #1243 Library-as-drawer return setting. (Decision 10)
+- f. #1244 Cards absorbs Standard: widgets and standard app pages in Cards, then Standard
+  retirement with migration. (Decision 1)
 
 ### W3 — Cards, compact/folded (Phase 1)
 1. #1211 Stack feel and performance: dp thresholds, overscroll hand-off, depth-bounded composition, off-main artwork, memoised stage state. (C1–C5)
@@ -169,8 +214,8 @@ Phases are ordered by what makes Cards usable soonest; #1196 holds the phase che
    is the selected stack, with the hinge as the spine).
 
 ### W6 — Home, Library and shell polish (Phase 4)
-1. #1220 Library mode: App-Library-style categories, alphabet scrubber, cheaper relayout.
-2. #1221 Preview-first onboarding including mode ring and notification access. (D7)
+1. #1220 Library (the app drawer): App-Library-style categories, alphabet scrubber, cheaper relayout.
+2. #1221 Preview-first onboarding including the dock pull and notification access. (D7)
 3. #1222 Settings information architecture and search. (D6)
 
 ### W7 — Validation (every phase)

@@ -53,6 +53,15 @@ data class HomeLayoutSet(
      */
     val docks: Map<HomeLayoutDeviceClass, DockModel> =
         docksChosenFrom(activeKey, layouts, preferredModesByDeviceClass),
+    /**
+     * The edge each device class's shared dock takes in Library ([ModeSurface.LIBRARY]).
+     *
+     * The dock's content is shared, but its edge is per surface: Home's edge is the shared dock's
+     * own [DockModel.position], and Library's is stored here. A device class with no entry uses
+     * [DEFAULT_LIBRARY_DOCK_EDGE]. Read and write it through ModeDockEdges.kt ([dockEdgeFor],
+     * [withDockEdge]).
+     */
+    val libraryDockEdgesByDeviceClass: Map<HomeLayoutDeviceClass, DockPosition> = emptyMap(),
 ) {
     val activeLayout: HomeLayout = layoutFor(activeKey)
 

@@ -8,6 +8,12 @@ dock as a sibling of the Adaptive Stage surface rather than inside it.
 This page describes the behaviour after #1210, revised by the dock-pull decisions (see
 "Mode transitions" below). The code it describes:
 
+> **Plan revision 2026-09-25.** The dock pull becomes the only mode-transition trigger (Decisions
+> 3, 9, 11 in `modes-dock-handle-and-cards-plan.md`). The alternative triggers are deleted and
+> dock shelf expansion is switched off (#1241, below). The pull itself (#1206, #1207) is not built
+> yet: a one-finger drag starting on the dock body in its natural pull direction (away from the
+> dock edge) will be owned by it.
+
 | Recognizer | File | Primitive |
 | --- | --- | --- |
 | Home gestures (1/2/3-finger swipe, pinch) | `HomeGestureInput.kt`, `HomeSwipeGesture.kt` | Custom pointer loop (ADR 0002: no N-finger Foundation equivalent) + `nestedScroll` hand-off |
@@ -21,8 +27,8 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 
 ## Mode transitions
 
-**The dock pull is the only mode-transition trigger** (dock-pull revision, Decision 5; the pull
-itself is not built yet). Every alternative was deleted rather than kept dormant:
+**The dock pull is the only mode-transition trigger** (plan Decision 9; the pull itself is not
+built yet). Every alternative was deleted rather than kept dormant:
 
 - the dock swipe-up gesture, its setting ("Dock gestures" -> "Swipe up") and its stored
   `dockGestures.swipeUp` binding;
@@ -41,7 +47,7 @@ opened the drawer comes back with both unbound; no notice is shown.
 
 Until the dock pull lands, Settings is the only way to change mode.
 
-**Dock shelf expansion is switched off** (Decision 7) behind `DockShelfExpansion.enabled`, which
+**Dock shelf expansion is switched off** (plan Decision 11) behind `DockShelfExpansion.enabled`, which
 defaults to false. Off, no dock opens its shelf -- by swipe or by button -- and the expansion
 settings are hidden; the swipe away from the dock edge that the shelf used to claim does nothing.
 The shelf code and its tests stay (the tests switch the flag on around themselves).
@@ -70,7 +76,7 @@ means no default binding, so nothing happens unless the user binds the gesture.
 
 | Region | Input | Std / Lib | Cards |
 | --- | --- | --- | --- |
-| Dock pill / handle | any | Reserved for #1207 | Reserved for #1207 |
+| Dock body | 1-finger in the natural pull direction (away from the edge) | Target: dock pull, Home ↔ Library (#1207; no pill) | same |
 | Dock sections (dynamic, notification row) | 1-finger along the dock run | Section scrolls (owns) | Section scrolls (owns) |
 | Dock sections | 1-finger away from edge | Nothing while shelf expansion is off (reserved for the dock pull) | same |
 | Dock background / icons | 1-finger away from edge | Nothing while shelf expansion is off; falls through to Home in Std/Lib (unbound by default) (reserved for the dock pull) | Nothing (reserved for the dock pull) |
@@ -116,7 +122,9 @@ means no default binding, so nothing happens unless the user binds the gesture.
    away from (or toward, when expanded) the dock edge -- ahead of the 30.5dp home threshold -- and
    never consumes a wrong-direction drag, which then falls through to home. It only applies while
    shelf expansion is switched on.
-6. **Platform edges win.** The dock never requests system-gesture exclusion.
+6. **Platform edges win.** The dock never requests system-gesture exclusion. The dock pull starts on
+   the dock body, which is already inset from the screen edge; exclusion over the dock is added
+   only if device testing shows side-dock conflicts with Back (Decision 13).
 
 Boundary feel: when a drag first pushes against the first or last card the stack ticks one haptic
 (`CardStackInteraction.onBoundaryHaptic`, the Cards settle haptic strength). There is no rubber-band
@@ -133,8 +141,8 @@ no longer be available for the hand-off.
   widgets.
 - **No gesture changes mode until the dock pull lands.** Leaving Cards used to be the dock swipe-up
   or a three-finger swipe down; both were removed, so for now Settings is the only way to switch.
-- **Side docks:** along-run vertical drags scroll the dock run when it has overflow. Revisit with
-  the dock pull.
+- **Side docks:** along-run vertical drags scroll the dock run when it has overflow. The dock pull
+  (#1207) does not compete with that: a side dock's pull is horizontal, perpendicular to its run.
 - **Primitive migration (ADR 0002):** `HomeGestureInput` and `DockShelfGesture` stay custom pointer
   loops for the reasons recorded in the ADR (N-finger swipes with one pinch/swipe decision;
   direction-selective claiming that `detectVerticalDragGestures`/`AnchoredDraggable` cannot
