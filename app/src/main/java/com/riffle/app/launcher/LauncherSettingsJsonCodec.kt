@@ -39,6 +39,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -94,6 +95,7 @@ private fun encodeAppDrawerSettings(settings: AppDrawerSettings): JSONObject =
     JSONObject()
         .put("presentation", settings.presentation.name)
         .put("iconGridColumns", settings.iconGridColumns)
+        .put("afterLeavingLibrary", settings.afterLeavingLibrary.name)
 
 private fun JSONObject.toAppDrawerSettings(defaults: AppDrawerSettings): AppDrawerSettings =
     AppDrawerSettings(
@@ -103,6 +105,12 @@ private fun JSONObject.toAppDrawerSettings(defaults: AppDrawerSettings): AppDraw
                 ?.let { name -> AppDrawerPresentation.entries.firstOrNull { it.name == name } }
                 ?: defaults.presentation,
         iconGridColumns = optInt("iconGridColumns", defaults.iconGridColumns),
+        // Absent (settings saved before #1243) or unknown: the default, Home.
+        afterLeavingLibrary =
+            optString("afterLeavingLibrary")
+                .takeIf(String::isNotEmpty)
+                ?.let { name -> LibraryReturnTarget.entries.firstOrNull { it.name == name } }
+                ?: defaults.afterLeavingLibrary,
     ).coerced()
 
 private fun encodeSearchSettings(settings: SearchSettings): JSONObject =

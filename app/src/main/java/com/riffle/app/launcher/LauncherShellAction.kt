@@ -30,6 +30,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
@@ -52,6 +53,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -414,6 +416,19 @@ sealed interface LauncherShellAction {
 
     data class SelectAppDrawerIconGridColumns(
         val columns: Int,
+    ) : LauncherShellAction
+
+    /** Chooses where the launcher settles after leaving Library (#1243). */
+    data class SelectLibraryReturnTarget(
+        val target: LibraryReturnTarget,
+    ) : LauncherShellAction
+
+    /**
+     * Library may have been left by [trigger]: returns to Home when the user's setting says so, and
+     * does nothing on Home or when the setting keeps Library (#1243).
+     */
+    data class LeaveLibrary(
+        val trigger: LibraryExitTrigger,
     ) : LauncherShellAction
 
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction

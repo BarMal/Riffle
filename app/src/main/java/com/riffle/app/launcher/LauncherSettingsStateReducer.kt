@@ -259,6 +259,15 @@ private fun LauncherShellState.withAppDrawerSettingsAction(
                 launcherSettingsRepository = launcherSettingsRepository,
             )
 
+        is LauncherShellAction.SelectLibraryReturnTarget ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        appDrawer = launcherSettings.appDrawer.copy(afterLeavingLibrary = action.target),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
         else -> null
     }
 

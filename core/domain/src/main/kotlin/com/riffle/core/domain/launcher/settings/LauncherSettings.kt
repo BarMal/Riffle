@@ -30,7 +30,18 @@ data class LauncherSettings(
 data class AppDrawerSettings(
     val presentation: AppDrawerPresentation = AppDrawerPresentation.LIST,
     val iconGridColumns: Int = DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS,
+    /** Where the launcher settles after leaving Library, the app drawer (Decision 10, #1243). */
+    val afterLeavingLibrary: LibraryReturnTarget = LibraryReturnTarget.HOME,
 )
+
+/**
+ * Where the launcher settles after an app launch, a Home press or Back from Library, and on a cold
+ * start with Library stored: the user's Home (the default), or Library again.
+ */
+enum class LibraryReturnTarget {
+    HOME,
+    LIBRARY,
+}
 
 enum class AppDrawerPresentation {
     LIST,

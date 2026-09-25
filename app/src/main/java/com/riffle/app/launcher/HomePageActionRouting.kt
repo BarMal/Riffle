@@ -32,6 +32,7 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
         is LauncherShellAction.MoveModeRingMode,
         is LauncherShellAction.SelectLauncherTemplate,
         is LauncherShellAction.SelectHomeLayoutDeviceClass,
+        is LauncherShellAction.LeaveLibrary,
         -> true
 
         else -> false
