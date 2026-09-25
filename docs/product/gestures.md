@@ -10,9 +10,9 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 
 > **Plan revision 2026-09-25.** The dock pull becomes the only mode-transition trigger (Decisions
 > 3, 9, 11 in `modes-dock-handle-and-cards-plan.md`). The alternative triggers are deleted and
-> dock shelf expansion is switched off (#1241, below). The pull itself (#1206, #1207) is not built
-> yet: a one-finger drag starting on the dock body in its natural pull direction (away from the
-> dock edge) will be owned by it.
+> dock shelf expansion is switched off (#1241, below). The pull itself is built (#1206, #1207): a
+> one-finger drag starting on the dock body in its natural pull direction (away from the dock edge)
+> is owned by it.
 
 | Recognizer | File | Primitive |
 | --- | --- | --- |
@@ -20,6 +20,7 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 | Card stack scroll/fling | `CardStack.kt` | `Modifier.scrollable` + custom `FlingBehavior` |
 | Stage pager (Cards) | `AdaptiveStageAppStageSurface.kt` | `HorizontalPager` |
 | Home page pager (Std/Lib) | `ImmediateHomePager.kt` | `HorizontalPager` |
+| Dock pull (Home ↔ Library) | `DockPull.kt`, `HomeDockPullBinding.kt` | Custom pointer loop (ADR 0002: direction-selective claim), decisions in `core/domain/.../dockpull/` |
 | Dock shelf expand/collapse (switched off, see below) | `DockShelfGesture.kt` | Custom pointer loop (ADR 0002: direction-selective claim) |
 | Dock run / dock sections | `HomeDock.kt`, `DockDynamicSection.kt`, `DockNotificationCards.kt` | `horizontalScroll`/`verticalScroll` |
 | Page indicator scrub | `HomePageControls.kt` | `detectHorizontalDragGestures` |
@@ -27,8 +28,8 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 
 ## Mode transitions
 
-**The dock pull is the only mode-transition trigger** (plan Decision 9; the pull itself is not
-built yet). Every alternative was deleted rather than kept dormant:
+**The dock pull is the only mode-transition trigger** (plan Decision 9). Every alternative was
+deleted rather than kept dormant:
 
 - the dock swipe-up gesture, its setting ("Dock gestures" -> "Swipe up") and its stored
   `dockGestures.swipeUp` binding;
@@ -45,7 +46,31 @@ that no longer exists decodes as "no action", and a stored `dockGestures` object
 missing value still takes the default. So an existing install whose swipe up and pinch out still
 opened the drawer comes back with both unbound; no notice is shown.
 
-Until the dock pull lands, Settings is the only way to change mode.
+### The dock pull
+
+A one-finger drag that starts on the dock body (`HomeDockHost`'s dock, wrapped by
+`dockPullInput`) switches Home ↔ Library (#1206, #1207):
+
+- **Claim.** On the Main pass, after the dock's children. Nothing is decided inside touch slop.
+  Past it the drag is a pull only when its component along the edge's natural pull direction is
+  positive and larger than the component across it (`dockPullClaimFor`), and only before the
+  long-press timeout -- so a drag along the run still scrolls the sections, a held press is still a
+  long-press, and a drag into the edge does nothing. It is off while the layout is being edited
+  (long-press + drag moves dock items then) or the widget picker is open.
+- **Tracking.** The dock, and the outgoing surface with it, follow the finger 1:1; the pull's
+  travel is the window's extent along the pull axis. The incoming surface follows in from the side
+  the dock came from, and the dock background fades with progress (`DockPullFrame`).
+- **Release.** `DockPullThresholds`: 40% of the travel or a 600dp/s fling toward the interior
+  commits (a fling back toward the edge cancels; under 8dp of movement a fling does not count). A
+  commit moves the dock to the destination's edge and orientation, displaced in by as far as it was
+  pulled, and settles it there with its background fading back in; the shell is asked for the
+  switch (`SelectLauncherViewMode` with `dockPullCounterpartMode`) when the settle finishes. A
+  cancel springs back. A finger landing on a settling dock catches it and tracks from there.
+- **Reduced motion.** Nothing slides; the two surfaces crossfade with progress and the settle is a
+  short tween to the same end state.
+- **Equivalents** (Decision 12): the dock's accessibility action "Switch to Library" / "Switch to
+  Home", and **Ctrl + the arrow of the pull direction** (Ctrl+↑ for a bottom dock) whenever focus is
+  inside Home. Both run the same commit as a settle from rest.
 
 **Dock shelf expansion is switched off** (plan Decision 11) behind `DockShelfExpansion.enabled`, which
 defaults to false. Off, no dock opens its shelf -- by swipe or by button -- and the expansion
@@ -76,7 +101,7 @@ means no default binding, so nothing happens unless the user binds the gesture.
 
 | Region | Input | Std / Lib | Cards |
 | --- | --- | --- | --- |
-| Dock body | 1-finger in the natural pull direction (away from the edge) | Target: dock pull, Home ↔ Library (#1207; no pill) | same |
+| Dock body | 1-finger in the natural pull direction (away from the edge) | **Dock pull**, Home ↔ Library (claims past touch slop when the drag leads along the pull) | same |
 | Dock sections (dynamic, notification row) | 1-finger along the dock run | Section scrolls (owns) | Section scrolls (owns) |
 | Dock sections | 1-finger away from edge | Nothing while shelf expansion is off (reserved for the dock pull) | same |
 | Dock background / icons | 1-finger away from edge | Nothing while shelf expansion is off; falls through to Home in Std/Lib (unbound by default) (reserved for the dock pull) | Nothing (reserved for the dock pull) |
@@ -139,8 +164,10 @@ no longer be available for the hand-off.
 - **Two-finger gestures started over the stack or pager** still belong to the child once its first
   finger crosses touch slop. Raising the claim to two fingers would steal pinch/zoom from hosted
   widgets.
-- **No gesture changes mode until the dock pull lands.** Leaving Cards used to be the dock swipe-up
-  or a three-finger swipe down; both were removed, so for now Settings is the only way to switch.
+- **The dock pull's hit area is the dock's resting place.** A finger catching a settling dock has to
+  land where the dock rests (on the edge it is settling onto), not where it is drawn mid-flight.
+- **No dock, no pull.** With the dock switched off or hidden, the keyboard shortcut is the only
+  in-place way to switch; Settings still changes mode.
 - **Side docks:** along-run vertical drags scroll the dock run when it has overflow. The dock pull
   (#1207) does not compete with that: a side dock's pull is horizontal, perpendicular to its run.
 - **Primitive migration (ADR 0002):** `HomeGestureInput` and `DockShelfGesture` stay custom pointer

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
@@ -39,6 +40,13 @@ import com.riffle.core.domain.launcher.home.isHorizontalEdge
 internal class HomeDockHostState {
     /** The dock's measured thickness across its edge, in px; [UNMEASURED_DOCK_EXTENT_PX] until laid out. */
     val extentPx = mutableIntStateOf(UNMEASURED_DOCK_EXTENT_PX)
+
+    /**
+     * The edge the dock stood on when [extentPx] was measured. A surface that lays out beside the
+     * dock on another edge (the incoming side of a dock pull, whose dock is still on the outgoing
+     * edge) estimates the room instead of borrowing a thickness measured across the wrong axis.
+     */
+    val measuredEdge: MutableState<DockPosition?> = mutableStateOf(null)
 
     /** The dock's bounds in root coordinates -- the coordinate space the home grid's drop targets use. */
     val bounds: MutableState<Rect?> = mutableStateOf(null)
@@ -127,6 +135,13 @@ internal fun HomeDockHost(
     interpreter: HomeDockInterpreter = HomeDockInterpreter(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
     onExtentChanged: (Int) -> Unit = {},
+    /**
+     * Applied to the dock body itself (inside the edge alignment): the dock pull's gesture, its
+     * translation and its accessibility action (DockPull.kt).
+     */
+    dockModifier: Modifier = Modifier,
+    /** The dock background's alpha multiplier, read at draw time; the dock pull fades it. */
+    dockBackgroundAlpha: () -> Float = OpaqueDockBackground,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
     val dockOnAction = interpreter.onAction ?: onAction
@@ -156,6 +171,7 @@ internal fun HomeDockHost(
             haptics = haptics,
             onDockInteractionExtentChanged = { extentPx ->
                 hostState.extentPx.intValue = extentPx
+                hostState.measuredEdge.value = position
                 onExtentChanged(extentPx)
             },
             onDockBoundsChanged = { bounds -> hostState.bounds.value = bounds },
@@ -170,21 +186,25 @@ internal fun HomeDockHost(
                 .windowInsetsPadding(presentation.homeInsetPolicy.safeDrawingInsets()),
         contentAlignment = position.dockHostAlignment(LocalLayoutDirection.current),
     ) {
-        StandardHomeDockArea(
-            layout = visibleLayout,
-            presentation = presentation,
-            notificationShelfState = expandedShelfState,
-            isDockShelfExpanded = dockShelf.isExpanded,
-            onDockShelfExpandedChange = dockShelf.onExpandedChange,
-            appIconLoader = appIconLoader,
-            actions = actions,
-            position = position,
-            widgetPickerDockPreview = hostState.widgetDropPreview.value,
-            dynamicEntries = interpreter.dynamicEntries ?: notificationShelfState.dynamicEntries(),
-            onDynamicEntryDelegated = interpreter.onDynamicEntryDelegated,
-            staticItemMenuExtras = interpreter.staticItemMenuExtras,
-            isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,
-        )
+        Box(modifier = dockModifier) {
+            CompositionLocalProvider(LocalDockBackgroundAlpha provides dockBackgroundAlpha) {
+                StandardHomeDockArea(
+                    layout = visibleLayout,
+                    presentation = presentation,
+                    notificationShelfState = expandedShelfState,
+                    isDockShelfExpanded = dockShelf.isExpanded,
+                    onDockShelfExpandedChange = dockShelf.onExpandedChange,
+                    appIconLoader = appIconLoader,
+                    actions = actions,
+                    position = position,
+                    widgetPickerDockPreview = hostState.widgetDropPreview.value,
+                    dynamicEntries = interpreter.dynamicEntries ?: notificationShelfState.dynamicEntries(),
+                    onDynamicEntryDelegated = interpreter.onDynamicEntryDelegated,
+                    staticItemMenuExtras = interpreter.staticItemMenuExtras,
+                    isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,
+                )
+            }
+        }
     }
     visibleLayout.openedFolder(hostState.openedFolderId.value)?.let { folder ->
         // Over whatever the mode drew after the dock: a folder opened from it is the thing in focus.
@@ -212,7 +232,8 @@ internal fun HomeDockHostState.reservedExtent(
     position: DockPosition,
 ): Dp {
     val measuredPx = extentPx.intValue
-    return if (measuredPx == UNMEASURED_DOCK_EXTENT_PX) {
+    val measuredOnThisEdge = measuredEdge.value == null || measuredEdge.value == position
+    return if (measuredPx == UNMEASURED_DOCK_EXTENT_PX || !measuredOnThisEdge) {
         layout.dockInteractionRegionExtentDp(position).dp
     } else {
         with(LocalDensity.current) { measuredPx.toDp() }
