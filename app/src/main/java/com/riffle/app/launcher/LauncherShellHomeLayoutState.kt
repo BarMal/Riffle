@@ -12,10 +12,10 @@ import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
-import com.riffle.core.domain.launcher.home.ModeRing
+import com.riffle.core.domain.launcher.home.ModePair
 import com.riffle.core.domain.launcher.home.seedHomeLayout
+import com.riffle.core.domain.launcher.home.withHomeMode
 import com.riffle.core.domain.launcher.home.withLayoutKeepingDock
-import com.riffle.core.domain.launcher.home.withModeRing
 import com.riffle.core.domain.launcher.modeSwitchTargetDeviceClass
 
 /**
@@ -69,20 +69,25 @@ internal fun LauncherShellState.withSelectedHomeLayoutMode(
 }
 
 /**
- * Change the mode ring of the device class Settings is editing with [edit]. A ring edit that drops
- * the mode that device class shows moves it to a neighbour (see [HomeLayoutSet.withModeRing]).
+ * Make [mode] the Home of the Home ↔ Library pair of the device class Settings is editing (#1241).
+ * A device class showing its Home switches to [mode]; one showing Library stays there (see
+ * [withHomeMode]). Library, or a mode that device class cannot use, changes nothing.
  */
-internal fun LauncherShellState.withSettingsModeRingEdit(
+internal fun LauncherShellState.withSettingsHomeMode(
+    mode: LauncherViewMode,
     homeLayoutRepository: HomeLayoutRepository,
-    edit: (ModeRing) -> ModeRing,
+    viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState {
-    val layoutSet = homeLayoutSet.withActiveLayout(homeLayout)
-    val ring = layoutSet.modeRingFor(settingsLayoutDeviceClass)
-    val editedRing = edit(ring)
-    if (editedRing == ring) return this
+    val deviceClass = settingsLayoutDeviceClass
+    val canAdopt =
+        mode in ModePair.HOME_MODES &&
+            viewModeAvailability.isAvailable(deviceClass, mode) &&
+            homeLayoutSet.modePairFor(deviceClass).home != mode
+    if (!canAdopt) return this
 
-    return layoutSet
-        .withModeRing(deviceClass = settingsLayoutDeviceClass, ring = editedRing)
+    return homeLayoutSet
+        .withActiveLayout(homeLayout)
+        .withHomeMode(deviceClass = deviceClass, mode = mode)
         .also(homeLayoutRepository::saveHomeLayoutSet)
         .let { updated -> copy(homeLayout = updated.activeLayout, homeLayoutSet = updated) }
 }

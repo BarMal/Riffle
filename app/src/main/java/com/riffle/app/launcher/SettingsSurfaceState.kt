@@ -8,7 +8,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.home.ModeRing
+import com.riffle.core.domain.launcher.home.ModePair
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 
@@ -27,6 +27,6 @@ data class SettingsSurfaceState(
     val hiddenApps: List<InstalledApp>,
     val appVersionLabel: String,
     val appBuildIdentityLabel: String,
-    /** The mode ring of [selectedLayoutDeviceClass] (#1225). */
-    val modeRing: ModeRing = ModeRing.DEFAULT,
+    /** The Home ↔ Library pair of [selectedLayoutDeviceClass] (#1241). */
+    val modePair: ModePair = ModePair.DEFAULT,
 )
