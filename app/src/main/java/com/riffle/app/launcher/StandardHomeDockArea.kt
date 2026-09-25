@@ -44,8 +44,8 @@ internal fun StandardHomeDockArea(
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
     isWidgetPickerInteractionActive: Boolean = false,
     dynamicEntries: List<DockDynamicEntry> = notificationShelfState.dynamicEntries(),
-    onShowAllNotifications: () -> Unit = {},
-    staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
+    onDynamicEntryDelegated: (String) -> Unit = {},
+    staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     isDraggedItemOverDock: Boolean = false,
 ) {
     if (!layout.shouldShowDock()) {
@@ -73,7 +73,7 @@ internal fun StandardHomeDockArea(
             reducedMotion = presentation.reducedMotion,
             homeInsetPolicy = presentation.homeInsetPolicy,
             homeLayout = layout,
-            staticTapBehaviour = staticTapBehaviour,
+            staticItemMenuExtras = staticItemMenuExtras,
             isDropHighlighted = isDraggedItemOverDock,
             onAction = actions.onAction,
         )
@@ -130,7 +130,7 @@ internal fun StandardHomeDockArea(
                 interactions = dockInteractions,
                 widgetPickerDockPreview = widgetPickerDockPreview,
                 dynamicEntries = dynamicEntries,
-                onShowAllNotifications = onShowAllNotifications,
+                onDynamicEntryDelegated = onDynamicEntryDelegated,
             )
         }
     }
@@ -149,7 +149,7 @@ private fun DockOrShelf(
     interactions: DockInteractions,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
     dynamicEntries: List<DockDynamicEntry>,
-    onShowAllNotifications: () -> Unit,
+    onDynamicEntryDelegated: (String) -> Unit,
 ) {
     if (showDockShelf) {
         ExpandedDockSurface(
@@ -180,7 +180,7 @@ private fun DockOrShelf(
             // Only the collapsed dock carries the section. Expanded, the shelf's card row *is* the
             // same section with room to say more, so drawing both would show every entry twice.
             dynamicEntries = dynamicEntries,
-            onShowAllNotifications = onShowAllNotifications,
+            onDynamicEntryDelegated = onDynamicEntryDelegated,
         )
     }
 }

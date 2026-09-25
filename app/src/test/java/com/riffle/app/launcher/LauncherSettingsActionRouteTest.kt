@@ -38,6 +38,7 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
                 LauncherShellAction.SelectThreadMessageOrder(ThreadMessageOrder.RECENT_FIRST),
                 LauncherShellAction.SelectThreadCardGrouping(ThreadCardGrouping.PER_MESSAGE),
+                LauncherShellAction.SelectCardsShowStageSpine(enabled = true),
             )
 
         actions.forEach { action ->

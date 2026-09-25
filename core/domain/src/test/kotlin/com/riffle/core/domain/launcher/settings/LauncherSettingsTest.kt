@@ -10,6 +10,11 @@ import kotlin.test.assertEquals
 
 class LauncherSettingsTest {
     @Test
+    fun defaultsTheCardsStageSpineToOffBecauseTheDockIsTheSelector() {
+        assertEquals(false, LauncherSettings().cards.showStageSpine)
+    }
+
+    @Test
     fun defaultsThemeAccentToDefault() {
         assertEquals(LauncherThemeAccent.DEFAULT, LauncherSettings().appearance.themeAccent)
     }

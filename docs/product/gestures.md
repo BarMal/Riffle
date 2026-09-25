@@ -38,8 +38,9 @@ constants at the 2.625x reference density (420dpi) they were tuned on.
 
 Default bindings come from `defaultHomeGestureActions` (`LauncherSettings.kt`) and
 `DockGestureSettings` (swipe-up = `EXIT_ADAPTIVE_STAGE`); every home binding is user configurable.
-Cards filters home actions to stage navigation, exit, app drawer and search
-(`adaptiveStageAppStageActionFilter`). "Home" means the home gesture layer with the user's binding.
+Cards filters home actions to stage navigation, exit, app drawer, search and Settings
+(`adaptiveStageAppStageActionFilter`; Settings since #1212, so a gesture bound to it is never a dead
+end in Cards). "Home" means the home gesture layer with the user's binding.
 
 | Region | Input | Std / Lib | Cards |
 | --- | --- | --- | --- |

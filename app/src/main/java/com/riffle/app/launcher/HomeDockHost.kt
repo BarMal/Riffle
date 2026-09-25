@@ -74,18 +74,27 @@ internal class HomeDockHostState {
 internal fun rememberHomeDockHostState(): HomeDockHostState = remember { HomeDockHostState() }
 
 /**
- * How the active mode interprets the shared dock's intents (Decision 2). The dock renders the one
- * [com.riffle.core.domain.launcher.home.DockModel] the same way in every mode; the only things that
- * differ are derived from the mode at render time and supplied here, so mode-specific behaviour
- * (Cards' stage selection, for one) stays in that mode's own code and never in the dock.
+ * How the active mode interprets the shared dock's intents (Decision 2) -- the one interpreter
+ * contract every mode supplies to [HomeDockHost]. The dock renders the one
+ * [com.riffle.core.domain.launcher.home.DockModel] the same way in every mode and reports neutral
+ * intents: a pinned app tapped (it always opens), a dynamic entry activated by key, a long-press menu
+ * item chosen. Everything that differs by mode is derived from the mode at render time and supplied
+ * here, so mode-specific behaviour (Cards' stage selector, for one; see CardsDockInterpreter.kt)
+ * stays in that mode's own code and never in the dock. The default is the grid modes' reading.
  */
 internal data class HomeDockInterpreter(
     /** What the dynamic side shows; null leaves it to notifications, which is what grid modes want. */
     val dynamicEntries: List<DockDynamicEntry>? = null,
-    /** What tapping the merged "All notifications" dynamic entry does. */
-    val onShowAllNotifications: () -> Unit = {},
-    /** What tapping a pinned (static) item does. */
-    val staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
+    /** Receives the key of a dynamic entry whose intent is [DockDynamicEntryIntent.Delegate]. */
+    val onDynamicEntryDelegated: (String) -> Unit = {},
+    /** Items the mode adds to a pinned app's long-press menu; a tap on a pinned app always opens it. */
+    val staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
+    /**
+     * Where the actions the dock sends go before reaching the shell -- a mode that reads some of
+     * them in its own terms (Cards leaving "All" when a stage is selected) routes them here; null
+     * sends them straight on.
+     */
+    val onAction: ((LauncherShellAction) -> Unit)? = null,
     /**
      * Whether the expanded shelf shows its notification card row. A mode whose own content already
      * *is* the notifications turns it off, leaving a panel-only shelf; the collapsed strip's dynamic
@@ -120,6 +129,7 @@ internal fun HomeDockHost(
     onExtentChanged: (Int) -> Unit = {},
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
+    val dockOnAction = interpreter.onAction ?: onAction
     val notificationShelfState =
         dockNotificationShelfState(
             dock = visibleLayout.dock,
@@ -150,7 +160,7 @@ internal fun HomeDockHost(
             },
             onDockBoundsChanged = { bounds -> hostState.bounds.value = bounds },
             onBackgroundClick = dockShelf.dismiss,
-            onAction = onAction,
+            onAction = dockOnAction,
         )
 
     Box(
@@ -173,8 +183,8 @@ internal fun HomeDockHost(
             isWidgetPickerInteractionActive =
                 presentation.widgetPicker.isOpen || hostState.isWidgetDragInProgress.value,
             dynamicEntries = interpreter.dynamicEntries ?: notificationShelfState.dynamicEntries(),
-            onShowAllNotifications = interpreter.onShowAllNotifications,
-            staticTapBehaviour = interpreter.staticTapBehaviour,
+            onDynamicEntryDelegated = interpreter.onDynamicEntryDelegated,
+            staticItemMenuExtras = interpreter.staticItemMenuExtras,
             isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,
         )
     }
@@ -187,7 +197,7 @@ internal fun HomeDockHost(
                 installedApps = installedApps,
                 appIconLoader = appIconLoader,
                 onDismiss = { hostState.openedFolderId.value = null },
-                onAction = onAction,
+                onAction = dockOnAction,
             )
         }
     }

@@ -531,6 +531,7 @@ class LauncherActionDomainTest {
                     "SelectCardsUnfoldedShowAllNotifications",
                     LauncherShellAction.SelectCardsUnfoldedShowAllNotifications(enabled = true),
                 ),
+                settings("SelectCardsShowStageSpine", LauncherShellAction.SelectCardsShowStageSpine(enabled = true)),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),
                 settings(

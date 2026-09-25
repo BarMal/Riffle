@@ -9,7 +9,12 @@ import com.riffle.app.launcher.HomeDestination
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.junit.Rule
@@ -72,10 +77,64 @@ class CardsScreenshotTest {
             state =
                 ScreenshotFixtures.cardsState(
                     deviceClass = HomeLayoutDeviceClass.FOLDABLE,
-                    launcherSettings = LauncherSettings(cards = CardsSettings(unfoldedShowAllNotifications = true)),
                 ),
             posture = AdaptiveStagePosture.UNFOLDED,
             initialContext = AdaptiveStageInteractionContext(allNotificationsSelected = true),
+        )
+    }
+
+    @Test
+    fun allNotificationsCompact() {
+        // #1212: "All" is always the dock selector's first entry, so it is reachable on a compact
+        // window without switching anything on.
+        render(
+            state = ScreenshotFixtures.cardsState(),
+            posture = AdaptiveStagePosture.UNKNOWN,
+            initialContext = AdaptiveStageInteractionContext(allNotificationsSelected = true),
+        )
+    }
+
+    @Test
+    fun pinnedEmptyStageCompact() {
+        val mapsStage =
+            AppStageId(
+                ScreenshotFixtures.maps.identity.packageName,
+                ScreenshotFixtures.maps.identity.profile.id,
+            )
+        val phoneCards = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.PHONE)
+        val preferences = AppStagePreferences(pinnedStageIds = listOf(mapsStage), selectedStageId = mapsStage)
+        render(
+            state =
+                ScreenshotFixtures.cardsState(
+                    launcherSettings =
+                        LauncherSettings(
+                            cards = CardsSettings(stagePreferencesByLayout = mapOf(phoneCards to preferences)),
+                        ),
+                ),
+            posture = AdaptiveStagePosture.UNKNOWN,
+        )
+    }
+
+    @Test
+    fun noNotificationAccessCompact() {
+        render(
+            state =
+                ScreenshotFixtures.cardsState(
+                    notificationGroups = emptyList(),
+                    notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                ),
+            posture = AdaptiveStagePosture.UNKNOWN,
+        )
+    }
+
+    @Test
+    fun stageSpineEnabledCompact() {
+        render(
+            state =
+                ScreenshotFixtures.cardsState(
+                    launcherSettings = LauncherSettings(cards = CardsSettings(showStageSpine = true)),
+                ),
+            posture = AdaptiveStagePosture.UNKNOWN,
         )
     }
 

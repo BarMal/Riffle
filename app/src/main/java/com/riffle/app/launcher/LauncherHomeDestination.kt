@@ -11,10 +11,7 @@ import androidx.compose.ui.unit.Dp
 import com.riffle.app.launcher.notifications.AppStageShellState
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneLayoutPolicy
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneMode
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
-import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.DockPosition
 
 @Composable
@@ -42,16 +39,20 @@ fun HomeDestination(
         } else {
             null
         }
+    // The one interpreter contract (Decision 2): grid modes take the default reading, Cards supplies
+    // its own from CardsDockInterpreter.kt. The dock itself only ever sees neutral entries and intents.
     val dockInterpreter =
-        cardsShellState?.let { shellState ->
-            cardsDockInterpreter(
+        if (cardsShellState != null) {
+            rememberCardsDockInterpreter(
                 state = state,
-                shellState = shellState,
-                adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                shellState = cardsShellState,
                 adaptiveStageContext = adaptiveStageContext,
                 onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
+                onAction = onAction,
             )
-        } ?: HomeDockInterpreter()
+        } else {
+            HomeDockInterpreter()
+        }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // The one dock, outside the mode surface: composed at the same place whichever surface runs
@@ -96,16 +97,6 @@ fun HomeDestination(
 }
 
 /**
- * Whether this window resolves to a wide (unfolded) Cards layout -- the multi-pane one, where the
- * merged All-notifications view has no spine to live on. Null (unmeasured, or previews) reads as not
- * wide, so the entry stays off until a real wide window is known.
- */
-private fun AdaptiveStageWindowLayout?.showsUnfoldedCardsLayout(): Boolean {
-    val mode = this?.let { window -> AdaptiveStagePaneLayoutPolicy().layoutFor(window).mode } ?: return false
-    return mode == AdaptiveStagePaneMode.TWO_PANE || mode == AdaptiveStagePaneMode.THREE_PANE
-}
-
-/**
  * Keeps the stage clear of the shared dock [HomeDockHost] draws over it, on
  * whichever physical edge the dock sits on -- an absolute edge, so this uses [absolutePadding]
  * rather than [Modifier.padding]'s start/end, which would mirror in RTL.
@@ -121,70 +112,6 @@ private fun Modifier.dockInteractionPadding(
         DockPosition.RIGHT -> absolutePadding(right = extent)
     }
 
-/**
- * The dynamic side means "a notification arrived", the same de-duplicated list grid mode draws (a
- * pinned app is on the static side and excluded here), but a tap brings the app's stage forward
- * instead of opening it. A pinned app's own stage is reached from its static icon.
- *
- * The merged "All notifications" entry is offered only on a wide (unfolded) layout and only when
- * opted in -- on a compact layout that view lives on the spine instead. Kept last, as the rail
- * kept it.
- */
-private fun cardsDockDynamicEntries(
-    state: LauncherShellState,
-    adaptiveStageWindowLayout: AdaptiveStageWindowLayout?,
-    adaptiveStageContext: AdaptiveStageInteractionContext,
-    selectedStageId: AppStageId?,
-): List<DockDynamicEntry> {
-    val showUnfoldedAllNotifications =
-        adaptiveStageWindowLayout.showsUnfoldedCardsLayout() &&
-            state.launcherSettings.cards.unfoldedShowAllNotifications
-    return dockNotificationShelfState(
-        dock = state.homeLayout.visibleTo(state.installedApps).dock,
-        groups = state.notificationGroupsByApp,
-        notificationAccessStatus = state.notificationAccessStatus,
-        apps = state.installedApps,
-    ).dockNotificationCards().stageSelectingDockDynamicEntries(selectedStageId) +
-        listOfNotNull(
-            allNotificationsDockDynamicEntry(
-                isSelected = adaptiveStageContext.allNotificationsSelected,
-                badgeCount = state.notificationGroupsByApp.sumOf { group -> group.count },
-            ).takeIf { showUnfoldedAllNotifications },
-        )
-}
-
-/**
- * Cards' reading of the shared dock: the dynamic entries select a stage, and a pinned icon brings
- * its app's stage forward when it has one (opening stays on the icon's long-press menu). Lives
- * here, with the rest of Cards, so the dock itself never knows about stages.
- */
-private fun cardsDockInterpreter(
-    state: LauncherShellState,
-    shellState: AppStageShellState,
-    adaptiveStageWindowLayout: AdaptiveStageWindowLayout?,
-    adaptiveStageContext: AdaptiveStageInteractionContext,
-    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
-): HomeDockInterpreter {
-    val selectedStageId =
-        shellState.snapshot.selectedStage?.id.takeUnless { adaptiveStageContext.allNotificationsSelected }
-    return HomeDockInterpreter(
-        dynamicEntries =
-            cardsDockDynamicEntries(state, adaptiveStageWindowLayout, adaptiveStageContext, selectedStageId),
-        // The merged page is not a stage, so there is no action to send: it is a choice about what
-        // this surface shows, which the interaction context holds.
-        onShowAllNotifications = {
-            onAdaptiveStageContextChanged(adaptiveStageContext.copy(allNotificationsSelected = true))
-        },
-        staticTapBehaviour =
-            DockStaticTapBehaviour.SelectStageIfBacked(
-                shellState.snapshot.stages.map { stage -> stage.id }.toSet(),
-            ),
-        // The stages already are the notifications, so the expanded shelf is a panel-only mini-home
-        // surface here -- the card row would just show them a second time.
-        showExpandedNotificationShelf = false,
-    )
-}
-
 @Composable
 private fun CardsHomeSurface(
     state: LauncherShellState,
@@ -198,9 +125,17 @@ private fun CardsHomeSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     // The shared dock is drawn by HomeDockHost over this surface; the stage lays out inside the
-    // room it reserves, on whichever edge it sits.
-    val dockInteractionExtent =
-        dockHost.reservedExtent(state.homeLayout.visibleTo(state.installedApps), dockPosition)
+    // room it reserves, on whichever edge it sits. Cards' reading of that dock (the stage selector,
+    // "Show stage") is [rememberCardsDockInterpreter]'s, built beside this surface by HomeDestination.
+    // Selecting a stage from anywhere -- the selector, "Show stage", a spine chip -- leaves "All".
+    val cardsOnAction: (LauncherShellAction) -> Unit = { action ->
+        interpretCardsAction(action, adaptiveStageContext, onAdaptiveStageContextChanged, onAction)
+    }
+    val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
+    // When the dock is off or hidden it cannot host the selector, so the surface falls back to the
+    // spine rather than stranding a stage.
+    val dockHostsStageSelector = visibleLayout.shouldShowDock()
+    val dockInteractionExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
 
     Box(modifier = Modifier.fillMaxSize()) {
         AdaptiveStageAppStageSurface(
@@ -211,8 +146,9 @@ private fun CardsHomeSurface(
             windowLayout = adaptiveStageWindowLayout,
             context = adaptiveStageContext,
             onContextChanged = onAdaptiveStageContextChanged,
-            onAction = onAction,
+            onAction = cardsOnAction,
             appIconLoader = appIconLoader,
+            dockHostsStageSelector = dockHostsStageSelector,
         )
     }
 }

@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -23,7 +24,13 @@ import org.junit.runner.RunWith
 
 /**
  * The dock is drawn once, outside the mode surface (#1205, Decision 2), so switching mode keeps the
- * very same dock -- the same node, in the same place -- while the grid and Cards swap beneath it.
+ * very same dock -- the same node, on the same edge at the same thickness -- while the grid and Cards
+ * swap beneath it.
+ *
+ * Its run along the edge is not compared: that follows what the dynamic side holds, which is the
+ * mode's to supply through its interpreter. In Cards the section is the stage selector and always
+ * offers "All" (#1212), so the strip grows by that section there, exactly as it does in a grid mode
+ * when a notification arrives.
  */
 @RunWith(AndroidJUnit4::class)
 class HomeDockModeSwitchTest {
@@ -50,13 +57,23 @@ class HomeDockModeSwitchTest {
         val inCards = dockNode()
 
         assertEquals("the dock was rebuilt entering Cards", inLibrary.id, inCards.id)
-        assertEquals("the dock moved entering Cards", inLibrary.boundsInRoot, inCards.boundsInRoot)
+        assertSameEdgePlacement("entering Cards", inLibrary, inCards)
 
         composeRule.runOnIdle { state = shellState(LauncherViewMode.STANDARD_APP_DRAWER) }
         val inStandard = dockNode()
 
         assertEquals("the dock was rebuilt leaving Cards", inLibrary.id, inStandard.id)
         assertEquals("the dock moved leaving Cards", inLibrary.boundsInRoot, inStandard.boundsInRoot)
+    }
+
+    /** Same edge, same thickness: the bottom dock's bottom and height hold across the switch. */
+    private fun assertSameEdgePlacement(
+        transition: String,
+        before: SemanticsNode,
+        after: SemanticsNode,
+    ) {
+        assertEquals("the dock left its edge $transition", before.boundsInRoot.bottom, after.boundsInRoot.bottom)
+        assertEquals("the dock changed thickness $transition", before.boundsInRoot.height, after.boundsInRoot.height)
     }
 
     private fun dockNode() = composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).fetchSemanticsNode()
