@@ -114,6 +114,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectSearchResultPresentation,
         is LauncherShellAction.SelectAppDrawerPresentation,
         is LauncherShellAction.SelectAppDrawerIconGridColumns,
+        is LauncherShellAction.SelectLibraryReturnTarget,
         is LauncherShellAction.AddRssFeed,
         is LauncherShellAction.RemoveRssFeed,
         is LauncherShellAction.SetRssFeedEnabled,

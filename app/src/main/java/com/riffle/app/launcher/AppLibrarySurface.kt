@@ -28,6 +28,7 @@ import com.riffle.core.domain.launcher.home.containsHomeApp
 import com.riffle.core.domain.launcher.home.containsHomeAppShortcut
 import com.riffle.core.domain.launcher.home.dockShortcutIdFor
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
+import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MAX_APP_DRAWER_ICON_GRID_COLUMNS
 import com.riffle.core.domain.launcher.settings.MIN_APP_DRAWER_ICON_GRID_COLUMNS
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -122,6 +123,7 @@ private fun AppDrawerIcon(
 internal const val APP_DRAWER_ICON_GRID_TEST_TAG = "app-drawer-icon-grid"
 internal const val APP_DRAWER_PRESENTATION_TEST_TAG_PREFIX = "app-drawer-presentation-"
 internal const val APP_DRAWER_GRID_COLUMNS_TEST_TAG_PREFIX = "app-drawer-grid-columns-"
+internal const val LIBRARY_RETURN_TARGET_TEST_TAG_PREFIX = "library-return-target-"
 
 @Composable
 internal fun SettingsAppDrawerSection(
@@ -158,6 +160,20 @@ internal fun SettingsAppDrawerSection(
                             label = { Text("$columns") },
                         )
                     }
+                }
+            }
+            SettingsTextColumn(
+                title = "After leaving Library, return to",
+                subtitle = "Where the launcher settles after opening an app, pressing Home, or going Back from Library",
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LibraryReturnTarget.entries.forEach { target ->
+                    FilterChip(
+                        modifier = Modifier.testTag("$LIBRARY_RETURN_TARGET_TEST_TAG_PREFIX${target.name}"),
+                        selected = target == state.settings.appDrawer.afterLeavingLibrary,
+                        onClick = { onAction(LauncherShellAction.SelectLibraryReturnTarget(target)) },
+                        label = { Text(if (target == LibraryReturnTarget.HOME) "Home" else "Library") },
+                    )
                 }
             }
         }

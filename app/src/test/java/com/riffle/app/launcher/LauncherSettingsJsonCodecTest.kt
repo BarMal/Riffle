@@ -46,6 +46,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
@@ -93,6 +94,28 @@ class LauncherSettingsJsonCodecTest {
                 "{\"appDrawer\": {\"presentation\": \"UNKNOWN\", \"iconGridColumns\": 1}}",
             ).appDrawer,
         )
+    }
+
+    @Test
+    fun roundTripsTheLibraryReturnTargetAndDefaultsAbsentOrUnknownValuesToHome() {
+        val settings =
+            LauncherSettings(appDrawer = AppDrawerSettings(afterLeavingLibrary = LibraryReturnTarget.LIBRARY))
+
+        assertEquals(
+            LibraryReturnTarget.LIBRARY,
+            decodeLauncherSettings(encodeLauncherSettings(settings)).appDrawer.afterLeavingLibrary,
+        )
+        assertEquals(
+            LibraryReturnTarget.HOME,
+            decodeLauncherSettings("{\"appDrawer\": {\"presentation\": \"ICONS\"}}").appDrawer.afterLeavingLibrary,
+        )
+        assertEquals(
+            LibraryReturnTarget.HOME,
+            decodeLauncherSettings("{\"appDrawer\": {\"afterLeavingLibrary\": \"DRAWER\"}}")
+                .appDrawer
+                .afterLeavingLibrary,
+        )
+        assertEquals(LibraryReturnTarget.HOME, decodeLauncherSettings("{}").appDrawer.afterLeavingLibrary)
     }
 
     @Test
