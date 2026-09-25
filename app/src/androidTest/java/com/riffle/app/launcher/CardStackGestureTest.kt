@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -27,6 +28,7 @@ import com.riffle.core.domain.launcher.cards.CardStackKey
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -299,6 +301,92 @@ class CardStackGestureTest {
 
         composeRule.runOnIdle { assertTrue(horizontalDragWasUnconsumed) }
     }
+
+    @Test
+    fun aSwipePastTheLastCardIsHandedToTheHomeGesture() {
+        // Clamped at its last card the stack has nothing left to consume, so the drag goes up the
+        // nested-scroll chain and the home layer reads it as a one-finger swipe up (app drawer by
+        // default) -- it used to die inside the stack.
+        val stack = ScrollingCardStackHarness(cardCount = 3).apply { focusedCard = 2 }
+        val actions = mutableStateListOf<LauncherShellAction>()
+        composeRule.setContent { HomeGesturesOverScrollingCardStack(stack, actions) }
+
+        composeRule.onNodeWithTag("stack").performTouchInput { swipeUp() }
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.OpenAppDrawer), actions.toList())
+            assertEquals(2, stack.focusedCard)
+        }
+    }
+
+    @Test
+    fun aSingleCardStackLeavesTheSwipeToTheHomeGesture() {
+        val stack = ScrollingCardStackHarness(cardCount = 1)
+        val actions = mutableStateListOf<LauncherShellAction>()
+        composeRule.setContent { HomeGesturesOverScrollingCardStack(stack, actions) }
+
+        composeRule.onNodeWithTag("stack").performTouchInput { swipeUp() }
+
+        composeRule.runOnIdle { assertEquals(listOf(LauncherShellAction.OpenAppDrawer), actions.toList()) }
+    }
+
+    @Test
+    fun aSwipeTheStackCanStillAbsorbIsNotHandedOff() {
+        val stack = ScrollingCardStackHarness(cardCount = 8)
+        val actions = mutableStateListOf<LauncherShellAction>()
+        composeRule.setContent { HomeGesturesOverScrollingCardStack(stack, actions) }
+
+        composeRule.onNodeWithTag("stack").performTouchInput {
+            // Well inside the stack's 7 * 64px of travel.
+            swipe(
+                start = Offset(width / 2f, height / 2f),
+                end = Offset(width / 2f, height / 2f - 150f),
+                durationMillis = 400,
+            )
+        }
+        // A slow release (below the fling threshold) rests where it stopped for
+        // CardStackMagnet.settleDelayMillis before magnetizing and committing -- a plain coroutine
+        // delay() in runCardStackScrollFling. The test clock only auto-advances while frames are
+        // awaited, so waitForIdle/runOnIdle would otherwise assert while that delay is still
+        // pending (the stack mid-settle, nothing committed yet). Advance past it explicitly.
+        composeRule.mainClock.advanceTimeBy(SLOW_SETTLE_WAIT_MILLIS)
+
+        composeRule.runOnIdle {
+            assertEquals(emptyList<LauncherShellAction>(), actions.toList())
+            assertNull("the slow release has settled and committed", stack.liveScrollPx)
+            assertTrue(stack.focusedCard > 0)
+        }
+    }
+
+    @Test
+    fun aThreeFingerSwipeStartedOverTheStackReachesTheHomeGesture() {
+        // The first finger starts dragging the stack before the others land; the third finger
+        // makes it a mode gesture, which the home layer claims ahead of the stack.
+        val stack = ScrollingCardStackHarness(cardCount = 8)
+        val actions = mutableStateListOf<LauncherShellAction>()
+        composeRule.setContent { HomeGesturesOverScrollingCardStack(stack, actions) }
+
+        composeRule.onNodeWithTag("stack").performTouchInput {
+            down(0, Offset(width / 2f, height / 3f))
+            repeat(4) {
+                updatePointerBy(0, Offset(0f, -10f))
+                move()
+            }
+            down(1, Offset(width / 2f - 80f, height / 3f))
+            down(2, Offset(width / 2f + 80f, height / 3f))
+            repeat(10) {
+                updatePointerBy(0, Offset(0f, 20f))
+                updatePointerBy(1, Offset(0f, 20f))
+                updatePointerBy(2, Offset(0f, 20f))
+                move()
+            }
+            up(2)
+            up(1)
+            up(0)
+        }
+
+        composeRule.runOnIdle { assertEquals(listOf(LauncherShellAction.ExitAdaptiveStage), actions.toList()) }
+    }
 }
 
 /**
@@ -362,3 +450,26 @@ private fun ScrollingCardStack(harness: ScrollingCardStackHarness) {
         Box(modifier.fillMaxSize())
     }
 }
+
+@Composable
+private fun HomeGesturesOverScrollingCardStack(
+    harness: ScrollingCardStackHarness,
+    actions: MutableList<LauncherShellAction>,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .homeGestureInput(
+                    enabled = true,
+                    settings = HomeGestureSettings(),
+                    onAction = { action -> actions += action },
+                    overscrollHandOff = true,
+                ),
+    ) {
+        ScrollingCardStack(harness)
+    }
+}
+
+/** Comfortably past CardStackMagnet.settleDelayMillis (<= 130ms) plus the magnetize spring. */
+private const val SLOW_SETTLE_WAIT_MILLIS = 1_000L
