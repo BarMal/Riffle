@@ -28,7 +28,11 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 ## Mode transitions
 
 **The dock pull is the only mode-transition trigger** (plan Decision 9; the pull itself is not
-built yet). Every alternative was deleted rather than kept dormant:
+built yet). It moves between a device class's fixed Home ↔ Library pair (`ModePair`, #1241):
+Home is Cards or Standard, chosen in Settings > Layout > Modes > "Home screen", and Library is
+always the other side; `ModePair.counterpart` gives the mode a pull leads to. There is no
+configurable ring and nothing to order. Every alternative trigger was deleted rather than kept
+dormant:
 
 - the dock swipe-up gesture, its setting ("Dock gestures" -> "Swipe up") and its stored
   `dockGestures.swipeUp` binding;

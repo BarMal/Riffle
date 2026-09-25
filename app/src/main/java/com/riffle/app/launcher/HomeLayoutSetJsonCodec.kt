@@ -8,7 +8,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.withLegacyDocksUnified
 import com.riffle.core.domain.launcher.home.withLibraryDockEdgesMigrated
-import com.riffle.core.domain.launcher.home.withRestoredModeRings
+import com.riffle.core.domain.launcher.home.withRestoredModePairs
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -17,7 +17,7 @@ fun encodeHomeLayoutSet(layoutSet: HomeLayoutSet): String =
         .put("type", HOME_LAYOUT_SET_TYPE)
         .put("active", encodeLayoutKey(layoutSet.activeKey))
         .put("preferredModes", encodeDeviceClassModes(layoutSet.preferredModesByDeviceClass))
-        .put("modeRings", encodeModeRings(layoutSet.modeRingsByDeviceClass))
+        .put(MODE_PAIRS_KEY, encodeModePairs(layoutSet.modePairsByDeviceClass))
         .put("docks", encodeDocks(layoutSet))
         .put(LIBRARY_DOCK_EDGES_KEY, encodeLibraryDockEdges(layoutSet.libraryDockEdgesByDeviceClass))
         .put(
@@ -50,8 +50,10 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
             ?.toHomeLayoutEntries()
             .orEmpty()
     val preferredModes = optDeviceClassModes("preferredModes")
-    // "lastNonCardsModes" is only read to migrate a set written before mode rings (#1225).
-    val storedModeRings = optModeRings("modeRings")
+    // "modeRings" (#1225) and the older "lastNonCardsModes" are only read to migrate a set written
+    // before the fixed Home <-> Library pair (#1241).
+    val storedModePairs = optModePairs()
+    val legacyModeRings = optLegacyModeRings()
     val legacyLastNonCardsModes = optDeviceClassModes("lastNonCardsModes")
     val storedDocks = optJSONArray("docks")?.toDocks()
 
@@ -60,8 +62,9 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
         layouts = layouts.toMap(),
         preferredModesByDeviceClass =
             preferredModes.ifEmpty { mapOf(activeKey.deviceClass to activeKey.viewMode) },
-    ).withRestoredModeRings(
-        storedRings = storedModeRings,
+    ).withRestoredModePairs(
+        storedPairs = storedModePairs,
+        legacyRings = legacyModeRings,
         legacyLastNonCardsModes = legacyLastNonCardsModes,
     ).let { layoutSet ->
         // A set written before the dock was shared (#1205) has no "docks": each mode kept its own,

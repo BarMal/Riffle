@@ -208,8 +208,8 @@ private fun SettingsLayoutPageContent(
         )
     }
     SettingsSection(title = "Modes") {
-        ModeRingSetting(
-            ring = state.modeRing,
+        HomeSurfaceModeSetting(
+            pair = state.modePair,
             availableViewModes = state.availableLauncherViewModes,
             onAction = onAction,
         )

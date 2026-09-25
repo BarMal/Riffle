@@ -29,6 +29,6 @@ internal fun LauncherShellState.settingsSurfaceState(
         hiddenApps = hiddenApps,
         appVersionLabel = appVersionLabel,
         appBuildIdentityLabel = appBuildIdentityLabel,
-        modeRing = homeLayoutSet.modeRingFor(settingsLayoutDeviceClass),
+        modePair = homeLayoutSet.modePairFor(settingsLayoutDeviceClass),
     )
 }

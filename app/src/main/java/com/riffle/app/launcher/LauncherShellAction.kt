@@ -164,17 +164,11 @@ sealed interface LauncherShellAction {
 
     data class SelectLauncherViewMode(val mode: LauncherViewMode) : LauncherShellAction
 
-    /** Adds [mode] to, or removes it from, the mode ring of the device class Settings is editing. */
-    data class SelectModeRingModeEnabled(
-        val mode: LauncherViewMode,
-        val enabled: Boolean,
-    ) : LauncherShellAction
-
-    /** Moves [mode] [offset] places in the mode ring of the device class Settings is editing. */
-    data class MoveModeRingMode(
-        val mode: LauncherViewMode,
-        val offset: Int,
-    ) : LauncherShellAction
+    /**
+     * Makes [mode] the Home side of the Home <-> Library pair of the device class Settings is
+     * editing (#1241). Library is always the other side, so [mode] is Cards or Standard.
+     */
+    data class SelectHomeSurfaceMode(val mode: LauncherViewMode) : LauncherShellAction
 
     data class SelectLauncherTemplate(
         val templateId: LauncherTemplateId,
