@@ -95,7 +95,7 @@ internal fun Modifier.pageOverviewReflow(
         previousIndex = state.index
         reflowOffsetX.snapTo(startOffsetX)
         if (startOffsetX != 0f && !reducedMotion) {
-            reflowOffsetX.animateTo(targetValue = 0f, animationSpec = RiffleMotion.snappy())
+            reflowOffsetX.animateTo(targetValue = 0f, animationSpec = RiffleMotion.snappy(reducedMotion))
         }
     }
 

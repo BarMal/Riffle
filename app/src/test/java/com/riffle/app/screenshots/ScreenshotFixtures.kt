@@ -132,6 +132,16 @@ internal object ScreenshotFixtures {
             deviceClass = deviceClass,
         )
 
+    /**
+     * Library mode on the device class's template dock -- the same dock [cardsState] shows, so the two
+     * render as a before/after pair of a mode switch (#1205).
+     */
+    fun libraryState(deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE): LauncherShellState =
+        shellState(
+            layout = homeLayout(deviceClass, dockPosition = null, viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
+            deviceClass = deviceClass,
+        )
+
     /** Cards mode with the three notifying apps as stages; the chat stage is newest and selected. */
     fun cardsState(
         deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,

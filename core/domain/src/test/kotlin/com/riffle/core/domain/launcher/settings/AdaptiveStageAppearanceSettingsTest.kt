@@ -605,7 +605,7 @@ class AdaptiveStageAppearanceSettingsTest {
         val resolution =
             LauncherSettings(
                 cards = CardsSettings(adaptiveStageAppearance = storedAppearance),
-                motion = MotionSettings(reducedMotion = true),
+                motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
             ).resolveAdaptiveStageCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
         val entries =
             resolution.layoutPolicy.entries(

@@ -26,9 +26,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Cards draws the dock through [StandardHomeDockOnlySurface] rather than [StandardHome]'s shared
- * frame, so it needs its own coverage that a configured edge actually moves it -- mirroring
- * [StandardHomeSideDockLayoutTest], plus the top edge, which only Cards can place.
+ * The shared [HomeDockHost] pins the dock to its configured edge on its own, outside any mode's
+ * frame (#1205), so it needs its own coverage that a configured edge actually moves it -- mirroring
+ * [StandardHomeSideDockLayoutTest], plus the top edge, which older Cards layouts could still hold.
  */
 @RunWith(AndroidJUnit4::class)
 class CardsDockPositionLayoutTest {
@@ -99,18 +99,18 @@ class CardsDockPositionLayoutTest {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.size(420.dp).testTag(ROOT_TEST_TAG)) {
-                    StandardHomeDockOnlySurface(
+                    HomeDockHost(
                         layout = layout,
                         installedApps = installed,
-                        interactions = StandardHomeInteractions(),
                         presentation =
                             StandardHomePresentation(
                                 installedApps = installed,
                                 appShortcutsByApp = emptyMap(),
                             ),
+                        position = position,
+                        hostState = rememberHomeDockHostState(),
                         appIconLoader = EmptyAppIconLoader,
                         onAction = {},
-                        position = position,
                     )
                 }
             }

@@ -55,6 +55,7 @@ import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
@@ -491,7 +492,10 @@ class LauncherActionDomainTest {
                     "SelectHapticFeedbackStrength",
                     LauncherShellAction.SelectHapticFeedbackStrength(HapticFeedbackStrength.LIGHT),
                 ),
-                settings("SelectReducedMotionEnabled", LauncherShellAction.SelectReducedMotionEnabled(enabled = true)),
+                settings(
+                    "SelectReducedMotionPreference",
+                    LauncherShellAction.SelectReducedMotionPreference(ReducedMotionPreference.ON),
+                ),
                 settings(
                     "SelectMotionPerformanceTargetFps",
                     LauncherShellAction.SelectMotionPerformanceTargetFps(MotionPerformanceTargetFps.FPS_120),

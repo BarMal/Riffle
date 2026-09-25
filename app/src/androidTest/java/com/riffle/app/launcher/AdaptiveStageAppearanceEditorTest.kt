@@ -26,6 +26,7 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilitie
 import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -199,7 +200,10 @@ class AdaptiveStageAppearanceEditorTest {
                 AdaptiveStageAppearancePageContent(
                     state =
                         LauncherShellState(
-                            launcherSettings = LauncherSettings(motion = MotionSettings(reducedMotion = true)),
+                            launcherSettings =
+                                LauncherSettings(
+                                    motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
+                                ),
                         ).settingsSurfaceState(),
                     onAction = {},
                 )
