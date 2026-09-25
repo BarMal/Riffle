@@ -1,8 +1,9 @@
 # The dock
 
-The dock is Riffle's central shortcut and recents surface. There is **one dock per device class,
-shared by every mode**. This document is the target it is being built toward and the
-honest state of it today; where the two differ, the target wins.
+The dock is Riffle's central shortcut and recents surface, and the handle that moves between Home
+and Library. There is **one dock per device class: its content is shared by both modes, its edge
+is chosen per mode**. This document is the target it is being built toward and the honest state of
+it today; where the two differ, the target wins.
 
 ## What the dock is
 
@@ -11,8 +12,13 @@ A single strip, anchored to one edge of the screen, holding two sections:
 - a **static** section of items the user pinned, which always show; and
 - a **dynamic** section of items that appear because something arrived.
 
+Pulling it away from its edge switches between Home and Library (see
+[The dock is the handle](#the-dock-is-the-handle)).
+
 Swiping it open reveals a **panel**: a small home screen using standard conventions, for widgets
-and shortcuts the user wants within reach without leaving where they are.
+and shortcuts the user wants within reach without leaving where they are. Expansion is
+**disabled for now** behind a feature flag (Decision 11 in `modes-dock-handle-and-cards-plan.md`),
+so the pull is the only thing a drag away from the edge does.
 
 That is the whole surface. Anything that looks like a second dock — a rail beside the cards, a
 separate floating bar over other apps — is the same dock in a different posture, or it should not
@@ -20,11 +26,13 @@ exist.
 
 ## Target behaviour
 
-### One dock per device class, shared by every mode
+### One dock per device class: shared content, per-mode edge
 
-The dock is available in every view mode, and it is the **same** dock in each: the same pinned
-items, edge, size, appearance and dynamic-section budgets (#1205). `HomeLayoutSet.docks` holds one
-`DockModel` per device class; no dock configuration is stored per mode. Pinning, reordering or
+The dock is available in every view mode, and its content is the **same** in each: the same pinned
+items, size, appearance and dynamic-section budgets (#1205). `HomeLayoutSet.docks` holds one
+`DockModel` per device class. The one thing stored per mode is the dock's **edge**: Home and
+Library each have their own (Decision 2), and they may be the same (#1242; today a single edge is
+still shared). Pinning, reordering or
 moving an item to or from home, and every dock setting, edits that one dock whatever mode it was
 made in, so a pin made in Library shows in Cards and Standard at once.
 
@@ -45,8 +53,25 @@ how to route the actions the dock sends, and whether the expanded shelf keeps it
 Grid modes use its defaults; Cards builds its own in `CardsDockInterpreter.kt`
 (`rememberCardsDockInterpreter`), and nothing in the dock knows what a stage is.
 
-Because the edge is shared, the dock is offered only the edges every mode can draw it on — left,
-right and bottom. The top edge, which only Cards could draw, is no longer offered.
+Today the edge is shared, so the dock is offered only the edges every mode can draw it on — left,
+right and bottom. Once the edge is per mode (#1242), each mode offers the edges its own surface can
+draw, so the top edge returns for a Cards Home.
+
+### The dock is the handle
+
+The dock pull is the only way to move between Home and Library (Decisions 3, 4, 9 in
+`modes-dock-handle-and-cards-plan.md`; #1207):
+
+- **Natural pull direction**: away from the dock's edge, toward the screen interior — a bottom
+  dock pulls up, a top dock down, a left dock right, a right dock left.
+- The pull starts on the dock body, never in the system-gesture inset; it tracks 1:1 and commits
+  past a dp distance or velocity threshold, otherwise springs back. It is interruptible.
+- During the pull the dock background fades with progress and its icons re-orient to the target
+  mode's orientation; on settle the dock sits at the target mode's edge and its background fades
+  back in. Reduced motion: a short crossfade.
+- Drags along the run still scroll the sections; long-press + drag still reorders or drags out.
+- Accessibility: a dock custom action ("Switch to Library" / "Switch to Home") and a keyboard
+  shortcut perform the same switch.
 
 #### Migrating per-mode docks
 
@@ -136,7 +161,9 @@ single dock exists to remove.
 
 A gesture opens the dock into a panel — a single home screen using standard conventions, so
 widgets and shortcuts are placed arbitrarily on a grid rather than into bespoke slots. It is
-configurable for **rendered size**, **grid dimensions**, and **padding**.
+configurable for **rendered size**, **grid dimensions**, and **padding**. The expand gesture is
+disabled behind a feature flag until it is revisited after the dock pull ships, because both claim
+a drag away from the dock edge.
 
 It is deliberately not where items past the visible-before-overflow count go; those scroll in the
 dock's own strip. The panel is for things you consult or act on without leaving where you are.
@@ -161,6 +188,10 @@ section does that job, so the rail is gone (#1159).
 | Target | State |
 | --- | --- |
 | One dock per device class, shared by every mode | Done (#1205): one `DockModel` per device class, per-mode docks migrated, and one `HomeDockHost` drawn outside the mode surface in `HomeDestination`, so a mode switch keeps the same dock instance in the same place. Each mode reads the dock through a `HomeDockInterpreter` (Cards: the stage selector and "Show stage"/"Pin stage" menu extras, #1212); the grid and Cards lay out in the room the host reserves. The dock's thickness and edge hold across a switch; its run follows what the mode puts on the dynamic side |
+| Per-mode dock edge, content still shared | **Not started** (#1242) — one edge is shared today |
+| Dock pull switches Home ↔ Library, dock re-orients to the target edge | **Not started** (#1206, #1207) |
+| Alternative triggers deleted (drawer swipe, three-finger mode gestures, dock swipe-up) | **Not started** (#1241) |
+| Panel expansion disabled behind a flag | **Not started** (#1207) |
 | Anchors to any edge, space reserved | Done for grid modes (#1148–#1152, #1165) and for Cards — both resolve through `resolveDockPosition`, and `dockInteractionRegionExtentDp` reserves a width for a side edge, a height for top/bottom |
 | Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards follows the same resolution now |
 | Sized by settings | Done |
@@ -195,5 +226,5 @@ section does that job, so the rail is gone (#1159).
 
 When changing the dock, check that: the two sections still read as one strip; neither section's
 setting shrinks the other's; nothing shrinks below a pinned icon's size to fit; the behaviour still
-holds on every edge and in RTL; and a layout that has the dynamic section switched off is
-unaffected.
+holds on every edge and in RTL; the pull still works in its natural direction on every edge; and a
+layout that has the dynamic section switched off is unaffected.
