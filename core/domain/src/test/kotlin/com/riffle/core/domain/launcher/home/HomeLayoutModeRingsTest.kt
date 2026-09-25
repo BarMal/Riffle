@@ -22,13 +22,14 @@ class HomeLayoutModeRingsTest {
                 legacyLastNonCardsModes = mapOf(HomeLayoutDeviceClass.PHONE to STANDARD_APP_DRAWER),
             )
 
+        // The foldable's migrated ring is the fallback for its mode anyway, so it is not stored.
         assertEquals(
-            mapOf(
-                HomeLayoutDeviceClass.PHONE to ModeRing(listOf(STANDARD_APP_DRAWER, CARD_INTERFACE)),
-                HomeLayoutDeviceClass.FOLDABLE to
-                    ModeRing(listOf(STANDARD_APP_DRAWER, HOME_SCREEN_LIBRARY, CARD_INTERFACE)),
-            ),
+            mapOf(HomeLayoutDeviceClass.PHONE to ModeRing(listOf(STANDARD_APP_DRAWER, CARD_INTERFACE))),
             decoded.modeRingsByDeviceClass,
+        )
+        assertEquals(
+            ModeRing(listOf(STANDARD_APP_DRAWER, HOME_SCREEN_LIBRARY, CARD_INTERFACE)),
+            decoded.modeRingFor(HomeLayoutDeviceClass.FOLDABLE),
         )
         // Leaving Cards still goes where it went before the migration.
         assertEquals(STANDARD_APP_DRAWER, decoded.previousMode())
@@ -42,6 +43,20 @@ class HomeLayoutModeRingsTest {
 
         assertEquals(ModeRing.DEFAULT, decoded.activeModeRing)
         assertEquals(0, decoded.activeModeIndex)
+    }
+
+    @Test
+    fun restoringAddsNothingASetDidNotHold() {
+        // A set with no stored rings, or rings that already hold their modes, comes back equal:
+        // this is what keeps an encode/decode round trip (and a backup) lossless.
+        val fresh = HomeLayoutSet.standard()
+        val configured =
+            fresh
+                .selectMode(HOME_SCREEN_LIBRARY)
+                .withModeRing(HomeLayoutDeviceClass.FOLDABLE, ModeRing.DEFAULT)
+
+        assertEquals(fresh, fresh.withRestoredModeRings(storedRings = fresh.modeRingsByDeviceClass))
+        assertEquals(configured, configured.withRestoredModeRings(storedRings = configured.modeRingsByDeviceClass))
     }
 
     @Test

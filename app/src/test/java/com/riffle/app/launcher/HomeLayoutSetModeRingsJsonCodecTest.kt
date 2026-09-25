@@ -39,6 +39,15 @@ class HomeLayoutSetModeRingsJsonCodecTest {
     }
 
     @Test
+    fun roundTripsASetWithNoConfiguredRingsUnchanged() {
+        // Decoding must not materialise the fallback rings of an unconfigured set, or a backup of
+        // it would not come back equal.
+        val layoutSet = HomeLayoutSet.standard()
+
+        assertEquals(layoutSet, decodeHomeLayoutSet(encodeHomeLayoutSet(layoutSet)))
+    }
+
+    @Test
     fun migratesASetWrittenBeforeRingsFromItsReturnMode() {
         // In Cards, having entered it from Library: the pre-ring encoding of that state.
         val encoded =
@@ -62,7 +71,7 @@ class HomeLayoutSetModeRingsJsonCodecTest {
 
         val decoded = decodeHomeLayoutSet(encoded.toString())
 
-        assertEquals(mapOf(HomeLayoutDeviceClass.PHONE to ModeRing.DEFAULT), decoded.modeRingsByDeviceClass)
+        assertEquals(ModeRing.DEFAULT, decoded.activeModeRing)
         // Leaving Cards still returns where it did before the migration.
         assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, decoded.previousMode())
     }

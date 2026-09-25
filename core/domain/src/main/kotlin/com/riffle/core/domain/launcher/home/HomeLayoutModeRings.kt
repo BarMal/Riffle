@@ -41,6 +41,11 @@ fun HomeLayoutSet.withModeRing(
  *
  * Either way, every device class's current mode ends up in its ring, so stored data that disagrees
  * with itself (a ring edited by hand, a mode made unavailable) cannot break the invariant.
+ *
+ * Restoring adds nothing a set did not hold: a device class without a stored ring keeps none (its
+ * [ModeRing.fallbackFor] ring already holds its mode), a stored ring is only rewritten when it is
+ * missing its mode, and a migrated ring equal to the fallback is not stored. So encoding a set and
+ * decoding it gives back an equal set (#1225).
  */
 fun HomeLayoutSet.withRestoredModeRings(
     storedRings: Map<HomeLayoutDeviceClass, ModeRing>?,
@@ -52,15 +57,13 @@ fun HomeLayoutSet.withRestoredModeRings(
             ?: ModeRing.migratedByDeviceClass(
                 preferredModes = currentModes,
                 lastNonCardsModes = legacyLastNonCardsModes,
-            )
-    val restored = copy(modeRingsByDeviceClass = rings)
+            ).filter { (deviceClass, ring) -> ring != ModeRing.fallbackFor(currentModes[deviceClass]) }
 
-    return restored.copy(
+    return copy(
         modeRingsByDeviceClass =
-            rings +
-                currentModes.map { (deviceClass, mode) ->
-                    deviceClass to restored.modeRingFor(deviceClass).including(mode)
-                },
+            rings.mapValues { (deviceClass, ring) ->
+                currentModes[deviceClass]?.let { mode -> ring.including(mode) } ?: ring
+            },
     )
 }
 
