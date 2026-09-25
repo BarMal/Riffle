@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -138,11 +137,10 @@ private const val DOCK_DROP_HIGHLIGHT_ANIMATION_MILLIS = 120
  * own pull branch. [strengthProvider] is only called while [isActive] -- pass the dock pull's
  * `transitioning` flag, which changes just at a pull's start and end, not [strengthProvider]'s value.
  *
- * The blur itself is a real one on API 31+, where [RenderEffect][android.graphics.RenderEffect]-backed
- * [Modifier.blur] is available (gated with the codebase's established `Build.VERSION.SDK_INT` check,
- * e.g. [AndroidHomeRoleGateway][com.riffle.app.launcher.AndroidHomeRoleGateway]); below API 31 the
- * darken alone carries the effect -- it never silently no-ops and never crashes. Its radius is fixed
- * at [isActive]'s composition-level max rather than also riding [strengthProvider] frame to frame:
+ * The blur itself is a real, [RenderEffect][android.graphics.RenderEffect]-backed [Modifier.blur];
+ * minSdk is 31 (Android 12), so it is always available here, with no pre-31 darken-only fallback.
+ * Its radius is fixed at [isActive]'s composition-level max rather than also riding
+ * [strengthProvider] frame to frame:
  * [Modifier.blur]'s radius is set once when the modifier chain is built, not read lazily like a draw
  * block, so animating it continuously would mean rebuilding the modifier (and recomposing the dock)
  * every frame of the pull -- the one thing this binding is built to avoid. The darken scrim still
@@ -151,16 +149,10 @@ private const val DOCK_DROP_HIGHLIGHT_ANIMATION_MILLIS = 120
 internal fun Modifier.dockReorientFrost(
     isActive: Boolean,
     strengthProvider: () -> Float,
-    sdkInt: Int = Build.VERSION.SDK_INT,
 ): Modifier {
     if (!isActive) return this
-    val blurred =
-        if (sdkInt >= Build.VERSION_CODES.S) {
-            blur(radius = DOCK_REORIENT_MAX_BLUR_DP.dp)
-        } else {
-            this
-        }
-    return blurred.drawWithContent {
+    // minSdk 31 (Android 12): Modifier.blur always renders here, no pre-31 darken-only fallback.
+    return blur(radius = DOCK_REORIENT_MAX_BLUR_DP.dp).drawWithContent {
         drawContent()
         val strength = strengthProvider().coerceIn(0f, 1f)
         if (strength > 0f) {
