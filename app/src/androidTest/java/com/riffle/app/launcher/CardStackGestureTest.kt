@@ -385,7 +385,7 @@ class CardStackGestureTest {
             up(0)
         }
 
-        composeRule.runOnIdle { assertEquals(listOf(LauncherShellAction.ExitAdaptiveStage), actions.toList()) }
+        composeRule.runOnIdle { assertEquals(listOf(LauncherShellAction.SelectPreviousLauncherViewMode), actions.toList()) }
     }
 }
 
