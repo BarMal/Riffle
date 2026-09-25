@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.withLegacyDocksUnified
+import com.riffle.core.domain.launcher.home.withLibraryDockEdgesMigrated
 import com.riffle.core.domain.launcher.home.withRestoredModeRings
 import org.json.JSONArray
 import org.json.JSONObject
@@ -18,6 +19,7 @@ fun encodeHomeLayoutSet(layoutSet: HomeLayoutSet): String =
         .put("preferredModes", encodeDeviceClassModes(layoutSet.preferredModesByDeviceClass))
         .put("modeRings", encodeModeRings(layoutSet.modeRingsByDeviceClass))
         .put("docks", encodeDocks(layoutSet))
+        .put(LIBRARY_DOCK_EDGES_KEY, encodeLibraryDockEdges(layoutSet.libraryDockEdgesByDeviceClass))
         .put(
             "layouts",
             JSONArray(
@@ -37,7 +39,7 @@ fun decodeHomeLayoutSet(value: String): HomeLayoutSet =
     JSONObject(value).let { json ->
         when {
             json.isHomeLayoutSetJson -> json.toHomeLayoutSet()
-            else -> HomeLayoutSet.fromLayout(json.toHomeLayout())
+            else -> HomeLayoutSet.fromLayout(json.toHomeLayout()).withLibraryDockEdgesMigrated()
         }
     }
 
@@ -67,6 +69,10 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
         storedDocks
             ?.let { docks -> layoutSet.copy(docks = layoutSet.docks + docks) }
             ?: layoutSet.withLegacyDocksUnified()
+    }.let { layoutSet ->
+        // A set written before the dock edge was per surface has one edge for every mode: Library
+        // keeps it. Restored after the docks are settled, since that edge is the shared dock's.
+        restoreLibraryDockEdges(layoutSet)
     }.let { layoutSet ->
         layoutSet.takeIf { set -> set.activeKey in set.layouts }
             ?: layoutSet.copy(layouts = layoutSet.layouts + (activeKey to layoutSet.layoutFor(activeKey)))
