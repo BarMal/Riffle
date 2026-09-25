@@ -540,6 +540,31 @@ private fun AdaptiveStageAppStageSurfaceContent(
                         )
 
                     AdaptiveStagePaneMode.TWO_PANE, AdaptiveStagePaneMode.THREE_PANE -> {
+                        val stages = shellState.snapshot.stages
+                        val reducedMotion = state.launcherSettings.motion.reducedMotion
+                        // See AdaptiveStageCompactContent: "All" is a page whenever it is the one showing.
+                        val showAllNotifications =
+                            state.launcherSettings.cards.foldedShowAllNotifications || allNotificationsSelected
+                        val pages =
+                            remember(stages, showAllNotifications) {
+                                stages.withAllNotificationsPage(showAllNotifications)
+                            }
+                        val selectedPageIndex =
+                            adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
+                        val pagerState =
+                            rememberAdaptiveStageStagePagerState(
+                                pageCount = pages.size,
+                                selectedIndex = selectedPageIndex,
+                                reducedMotion = reducedMotion,
+                                onSettle = { index ->
+                                    adaptiveStageOnPageSettled(
+                                        pages,
+                                        index,
+                                        onAction,
+                                        onAllNotificationsSelectedChanged,
+                                    )
+                                },
+                            )
                         Row(
                             modifier =
                                 Modifier
@@ -551,18 +576,15 @@ private fun AdaptiveStageAppStageSurfaceContent(
                                 AdaptiveStageStageHeader(
                                     selectedStage = selectedStage,
                                     allNotificationsSelected = allNotificationsSelected,
-                                    stages = shellState.snapshot.stages,
+                                    stages = stages,
                                     state = state,
                                     appIconLoader = appIconLoader,
                                     onAction = onAction,
                                 )
-                                AdaptiveStagePageBody(
-                                    page =
-                                        if (allNotificationsSelected) {
-                                            AdaptiveStagePage.AllNotifications
-                                        } else {
-                                            selectedStage?.let(AdaptiveStagePage::Stage)
-                                        },
+                                AdaptiveStageCompactStagePager(
+                                    pages = pages,
+                                    selectedPageIndex = selectedPageIndex,
+                                    pagerState = pagerState,
                                     state = state,
                                     shellState = shellState,
                                     detailRecoveryMessage = detailRecoveryMessage,
@@ -580,14 +602,28 @@ private fun AdaptiveStageAppStageSurfaceContent(
                                         focusedCardIdValue = it?.value
                                         onContextChanged(context.copy(focusedCardKey = it?.value))
                                     },
-                                    showDetailInline = !paneLayout.showsDetailPane,
-                                    // TWO_PANE/THREE_PANE is the unfolded presentation, so the
-                                    // stack uses the unfolded appearance profile.
-                                    useUnfoldedAppearance = true,
                                     onAction = onAction,
                                     appIconLoader = appIconLoader,
                                     modifier = Modifier.weight(1f),
+                                    showDetailInline = !paneLayout.showsDetailPane,
+                                    // TWO_PANE/THREE_PANE is the unfolded (docked-rail) presentation,
+                                    // so the stack -- selected page and any neighbor mid-drag -- uses
+                                    // the unfolded appearance profile.
+                                    useUnfoldedAppearance = true,
                                 )
+                                if (showSpine) {
+                                    AdaptiveStageStageSpine(
+                                        pages = pages,
+                                        stages = stages,
+                                        selectedStageId = selectedStage?.id,
+                                        allNotificationsSelected = allNotificationsSelected,
+                                        pagePosition = pagerState.pagePosition,
+                                        state = state,
+                                        appIconLoader = appIconLoader,
+                                        onAction = onAction,
+                                        onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
+                                    )
+                                }
                             }
                             if (paneLayout.leadingRemainderDp > 0) {
                                 Spacer(modifier = Modifier.width(paneLayout.leadingRemainderDp.dp))
@@ -673,11 +709,11 @@ internal fun adaptiveStageOnPageSettled(
 
 /**
  * Compact (single-pane phone) content. Unlike the two-pane/rail layout, there's no persistent
- * rail to tap here, so this is where the continuous horizontal drag pager and its synced spine
- * carousel live. The wider-screen layout keeps its existing rail-based navigation unchanged; the
- * rail already gives equivalent discoverability there, and mirroring the graphicsLayer-offset
- * pager approach for a rail+content split isn't a trivial extension, so the drag pager stays
- * compact-only for now.
+ * rail to tap here, so a continuous horizontal drag pager and its synced spine carousel are the
+ * only way to move between stages. The TWO_PANE/THREE_PANE branch of
+ * [AdaptiveStageAppStageSurfaceContent] reuses the exact same [AdaptiveStageCompactStagePager] --
+ * so dragging works there too, in addition to the rail -- constrained to its own `stackWidthDp`
+ * column and rendered with the unfolded appearance profile instead of this one's folded profile.
  */
 @Composable
 private fun AdaptiveStageCompactContent(
@@ -886,6 +922,11 @@ private const val DEFAULT_SPLIT_UPPER_REGION_WEIGHT = 0.6f
  * lighter [AdaptiveStageNeighborPage] instead, so only one stage ever mounts the expensive
  * interactive detail/card-stack surface at a time. With zero or one stage there is nothing to page
  * between, so this falls back to rendering [AdaptiveStageStageBody] directly without a pager.
+ *
+ * Despite its name this pager is no longer compact-only: [AdaptiveStageCompactContent] and
+ * [AdaptiveStageSplitContent] use it (both folded), and the TWO_PANE/THREE_PANE branch of
+ * [AdaptiveStageAppStageSurfaceContent] reuses it too, constrained to the rail's own
+ * `stackWidthDp` column, for its unfolded presentation -- see [useUnfoldedAppearance].
  */
 @Composable
 @Suppress("LongParameterList")
@@ -909,6 +950,12 @@ private fun AdaptiveStageCompactStagePager(
     // Always true for the All-notifications page regardless -- SPLIT mode's upper pane doesn't (yet)
     // preview all-notifications cards, so its own inline overlay is the only detail surface it has.
     showDetailInline: Boolean = true,
+    // Which of CardsSettings' two appearance profiles every stage rendered by this pager should use
+    // -- the selected page and any neighbor mid-drag alike, so a drag never flashes between the two
+    // appearance profiles as it crosses from the selected page into a neighbor. Defaults to false
+    // (the folded profile), so COMPACT's and SPLIT's existing call sites keep today's behaviour
+    // unchanged; the TWO_PANE/THREE_PANE branch passes true for its unfolded presentation.
+    useUnfoldedAppearance: Boolean = false,
 ) {
     val selectedPage = pages.getOrNull(selectedPageIndex)
     if (selectedPage == null || pages.size <= 1) {
@@ -929,8 +976,7 @@ private fun AdaptiveStageCompactStagePager(
             // upper AdaptiveStageSupportingPane already renders the detail, so inline here would
             // duplicate it. COMPACT still passes the default (true), so it is unaffected.
             showDetailInline = showDetailInline,
-            // This pager is always the compact (folded) presentation -- see its own doc.
-            useUnfoldedAppearance = false,
+            useUnfoldedAppearance = useUnfoldedAppearance,
             onAction = onAction,
             appIconLoader = appIconLoader,
             modifier = modifier,
@@ -964,8 +1010,7 @@ private fun AdaptiveStageCompactStagePager(
                 onDetailVisibilityChanged = onDetailVisibilityChanged,
                 onFocusedCardChanged = onFocusedCardChanged,
                 showDetailInline = showDetailInline,
-                // This pager is always the compact (folded) presentation -- see its own doc.
-                useUnfoldedAppearance = false,
+                useUnfoldedAppearance = useUnfoldedAppearance,
                 onAction = onAction,
                 appIconLoader = appIconLoader,
                 modifier = stageModifier,
@@ -976,6 +1021,7 @@ private fun AdaptiveStageCompactStagePager(
                 selectedPageIsAllNotifications = selectedPage is AdaptiveStagePage.AllNotifications,
                 state = state,
                 shellState = shellState,
+                useUnfoldedAppearance = useUnfoldedAppearance,
                 onAction = onAction,
                 appIconLoader = appIconLoader,
                 modifier = stageModifier,
@@ -1008,12 +1054,12 @@ private fun AdaptiveStagePageBody(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     showDetailInline: Boolean = true,
     // Which of CardsSettings' two independently configurable appearance profiles the rendered
-    // card stack itself should use -- true in the TWO_PANE/THREE_PANE (docked-rail) branch, false
-    // everywhere else (the compact drag pager, used by both COMPACT and SPLIT). No default: every
-    // caller must decide deliberately rather than silently inherit one profile everywhere, which
-    // is exactly the bug this parameter fixes (every card stack rendering the folded profile
-    // regardless of pane mode, so the "Unfolded" appearance editor target had no visible effect
-    // outside the rail's own tiles).
+    // card stack itself should use -- true for TWO_PANE/THREE_PANE's (docked-rail) drag pager,
+    // false for COMPACT's and SPLIT's own (folded) drag pager. No default: every caller must
+    // decide deliberately rather than silently inherit one profile everywhere, which is exactly
+    // the bug this parameter fixes (every card stack rendering the folded profile regardless of
+    // pane mode, so the "Unfolded" appearance editor target had no visible effect outside the
+    // rail's own tiles).
     useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
@@ -1078,6 +1124,7 @@ private fun AdaptiveStageNeighborPage(
     selectedPageIsAllNotifications: Boolean,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
@@ -1090,6 +1137,7 @@ private fun AdaptiveStageNeighborPage(
         stage = (page as AdaptiveStagePage.Stage).stage,
         state = state,
         shellState = shellState,
+        useUnfoldedAppearance = useUnfoldedAppearance,
         onAction = onAction,
         appIconLoader = appIconLoader,
         modifier = modifier,
@@ -1101,12 +1149,16 @@ private fun AdaptiveStageNeighborPage(
  * It owns its own ephemeral detail/focus state rather than the durable, context-restorable state
  * the actually-selected stage uses -- that state is only meaningful once a settle commits this
  * stage as selected, at which point [AdaptiveStageCompactStagePager] switches it to the durable path.
+ * [useUnfoldedAppearance] mirrors the selected page's own choice (see
+ * [AdaptiveStageCompactStagePager]'s doc) so a stage doesn't visually change appearance profile
+ * the instant a drag makes it, or stops making it, the neighbor.
  */
 @Composable
 private fun AdaptiveStageNeighborStagePage(
     stage: AppStage,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
@@ -1127,8 +1179,7 @@ private fun AdaptiveStageNeighborStagePage(
         focusedCardId = focusedCardId,
         onDetailVisibilityChanged = {},
         onFocusedCardChanged = { focusedCardId = it },
-        // Neighbor pages only ever exist within the compact drag pager -- see its own doc.
-        useUnfoldedAppearance = false,
+        useUnfoldedAppearance = useUnfoldedAppearance,
         onAction = onAction,
         appIconLoader = appIconLoader,
         modifier = modifier,
