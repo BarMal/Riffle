@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.withLegacyDocksUnified
+import com.riffle.core.domain.launcher.home.withRestoredModeRings
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -15,7 +16,7 @@ fun encodeHomeLayoutSet(layoutSet: HomeLayoutSet): String =
         .put("type", HOME_LAYOUT_SET_TYPE)
         .put("active", encodeLayoutKey(layoutSet.activeKey))
         .put("preferredModes", encodeDeviceClassModes(layoutSet.preferredModesByDeviceClass))
-        .put("lastNonCardsModes", encodeDeviceClassModes(layoutSet.lastNonCardsModeByDeviceClass))
+        .put("modeRings", encodeModeRings(layoutSet.modeRingsByDeviceClass))
         .put("docks", encodeDocks(layoutSet))
         .put(
             "layouts",
@@ -47,7 +48,9 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
             ?.toHomeLayoutEntries()
             .orEmpty()
     val preferredModes = optDeviceClassModes("preferredModes")
-    val lastNonCardsModes = optDeviceClassModes("lastNonCardsModes")
+    // "lastNonCardsModes" is only read to migrate a set written before mode rings (#1225).
+    val storedModeRings = optModeRings("modeRings")
+    val legacyLastNonCardsModes = optDeviceClassModes("lastNonCardsModes")
     val storedDocks = optJSONArray("docks")?.toDocks()
 
     return HomeLayoutSet(
@@ -55,7 +58,9 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
         layouts = layouts.toMap(),
         preferredModesByDeviceClass =
             preferredModes.ifEmpty { mapOf(activeKey.deviceClass to activeKey.viewMode) },
-        lastNonCardsModeByDeviceClass = lastNonCardsModes,
+    ).withRestoredModeRings(
+        storedRings = storedModeRings,
+        legacyLastNonCardsModes = legacyLastNonCardsModes,
     ).let { layoutSet ->
         // A set written before the dock was shared (#1205) has no "docks": each mode kept its own,
         // and unifying them may have to rescue pins only another mode's dock held.

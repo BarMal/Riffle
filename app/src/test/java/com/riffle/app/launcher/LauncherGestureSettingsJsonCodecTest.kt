@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -74,6 +75,26 @@ class LauncherGestureSettingsJsonCodecTest {
     fun fallsBackToDefaultDockSwipeUpActionWhenMissing() {
         val decoded = encodeGestures(GestureSettings()).toGestures(GestureSettings())
 
-        assertEquals(LauncherGestureAction.EXIT_ADAPTIVE_STAGE, decoded.dockGestures.swipeUp)
+        assertEquals(LauncherGestureAction.PREVIOUS_MODE, decoded.dockGestures.swipeUp)
+    }
+
+    @Test
+    fun decodesGestureActionsStoredBeforeTheModeRingAsRingSteps() {
+        // Written by a build that still had Enter/Exit Cards (#1225).
+        val stored =
+            JSONObject()
+                .put(
+                    "homeGestures",
+                    JSONObject()
+                        .put(HomeGesture.THREE_FINGER_UP.name, "ENTER_ADAPTIVE_STAGE")
+                        .put(HomeGesture.THREE_FINGER_DOWN.name, "EXIT_ADAPTIVE_STAGE"),
+                )
+                .put("dockGestures", JSONObject().put("swipeUp", "EXIT_ADAPTIVE_STAGE"))
+
+        val decoded = stored.toGestures(GestureSettings())
+
+        assertEquals(LauncherGestureAction.NEXT_MODE, decoded.homeGestures.actionFor(HomeGesture.THREE_FINGER_UP))
+        assertEquals(LauncherGestureAction.PREVIOUS_MODE, decoded.homeGestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.PREVIOUS_MODE, decoded.dockGestures.swipeUp)
     }
 }

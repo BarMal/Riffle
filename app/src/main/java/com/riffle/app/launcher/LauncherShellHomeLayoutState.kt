@@ -12,8 +12,12 @@ import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
+import com.riffle.core.domain.launcher.home.ModeRing
+import com.riffle.core.domain.launcher.home.nextMode
+import com.riffle.core.domain.launcher.home.previousMode
 import com.riffle.core.domain.launcher.home.seedHomeLayout
 import com.riffle.core.domain.launcher.home.withLayoutKeepingDock
+import com.riffle.core.domain.launcher.home.withModeRing
 import com.riffle.core.domain.launcher.modeSwitchTargetDeviceClass
 
 /**
@@ -67,23 +71,46 @@ internal fun LauncherShellState.withSelectedHomeLayoutMode(
 }
 
 /**
- * Leave Cards for wherever it was entered from.
+ * Step along the held device's mode ring (#1225): to the next mode, or with [forward] false to the
+ * previous one -- which is how Cards is left.
  *
- * The destination is the active device's last non-Cards mode, which the layout set remembers;
- * [withSelectedHomeLayoutMode] then makes the switch, so availability and per-mode layouts are
- * handled exactly as any other mode change. Leaving Cards acts on what is on screen, so it always
- * targets the device being held, wherever Settings was last pointed.
+ * The layout set picks the destination from its ring; [withSelectedHomeLayoutMode] then makes the
+ * switch, so availability and per-mode layouts are handled exactly as any other mode change. A ring
+ * step acts on what is on screen, so it always targets the device being held, wherever Settings was
+ * last pointed.
  */
-internal fun LauncherShellState.withExitedAdaptiveStage(
+internal fun LauncherShellState.withModeRingStep(
+    forward: Boolean,
     homeLayoutRepository: HomeLayoutRepository,
     viewModeAvailability: LauncherViewModeAvailability,
-): LauncherShellState =
-    withSelectedHomeLayoutMode(
-        mode = homeLayoutSet.withActiveLayout(homeLayout).modeLeavingCards(),
+): LauncherShellState {
+    val layoutSet = homeLayoutSet.withActiveLayout(homeLayout)
+    return withSelectedHomeLayoutMode(
+        mode = if (forward) layoutSet.nextMode() else layoutSet.previousMode(),
         homeLayoutRepository = homeLayoutRepository,
         viewModeAvailability = viewModeAvailability,
-        targetDeviceClass = homeLayoutSet.activeKey.deviceClass,
+        targetDeviceClass = layoutSet.activeKey.deviceClass,
     )
+}
+
+/**
+ * Change the mode ring of the device class Settings is editing with [edit]. A ring edit that drops
+ * the mode that device class shows moves it to a neighbour (see [HomeLayoutSet.withModeRing]).
+ */
+internal fun LauncherShellState.withSettingsModeRingEdit(
+    homeLayoutRepository: HomeLayoutRepository,
+    edit: (ModeRing) -> ModeRing,
+): LauncherShellState {
+    val layoutSet = homeLayoutSet.withActiveLayout(homeLayout)
+    val ring = layoutSet.modeRingFor(settingsLayoutDeviceClass)
+    val editedRing = edit(ring)
+    if (editedRing == ring) return this
+
+    return layoutSet
+        .withModeRing(deviceClass = settingsLayoutDeviceClass, ring = editedRing)
+        .also(homeLayoutRepository::saveHomeLayoutSet)
+        .let { updated -> copy(homeLayout = updated.activeLayout, homeLayoutSet = updated) }
+}
 
 internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
     templateId: LauncherTemplateId,

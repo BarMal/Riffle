@@ -16,8 +16,9 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
-    fun allowsLeavingCards() {
-        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.ExitAdaptiveStage))
+    fun allowsMovingAlongTheModeRingWhichIsHowCardsIsLeft() {
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.SelectPreviousLauncherViewMode))
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.SelectNextLauncherViewMode))
     }
 
     @Test

@@ -250,35 +250,172 @@ class HomeLayoutSetTest {
     }
 
     @Test
-    fun leavingCardsReturnsToTheModeYouEnteredItFrom() {
+    fun leavingCardsIsThePreviousModeInTheDefaultRing() {
         val layoutSet =
-            HomeLayoutSet.standard()
-                .selectMode(LauncherViewMode.HOME_SCREEN_LIBRARY)
+            libraryPhone()
+                .withModeRing(HomeLayoutDeviceClass.PHONE, ModeRing.DEFAULT)
                 .selectMode(LauncherViewMode.CARD_INTERFACE)
 
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, layoutSet.modeLeavingCards())
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, layoutSet.previousMode())
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, layoutSet.nextMode())
+        assertEquals(1, layoutSet.activeModeIndex)
     }
 
     @Test
-    fun leavingCardsRemembersTheMostRecentNonCardsModeNotTheFirst() {
+    fun nextAndPreviousWalkTheActiveDeviceClassRingInOrder() {
+        val ring =
+            ModeRing(
+                listOf(
+                    LauncherViewMode.STANDARD_APP_DRAWER,
+                    LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    LauncherViewMode.CARD_INTERFACE,
+                ),
+            )
+        val layoutSet = HomeLayoutSet.standard().withModeRing(HomeLayoutDeviceClass.PHONE, ring)
+
+        assertEquals(0, layoutSet.activeModeIndex)
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, layoutSet.nextMode())
+        assertEquals(LauncherViewMode.CARD_INTERFACE, layoutSet.previousMode())
+    }
+
+    @Test
+    fun aFreshSetOnStandardHasARingHoldingStandard() {
+        val layoutSet = HomeLayoutSet.standard()
+
+        assertEquals(
+            listOf(
+                LauncherViewMode.STANDARD_APP_DRAWER,
+                LauncherViewMode.HOME_SCREEN_LIBRARY,
+                LauncherViewMode.CARD_INTERFACE,
+            ),
+            layoutSet.activeModeRing.modes,
+        )
+        assertEquals(ModeRing.DEFAULT, libraryPhone().activeModeRing)
+    }
+
+    @Test
+    fun selectingAModeOutsideTheRingAddsItNextToTheModeItWasChosenFrom() {
         val layoutSet =
-            HomeLayoutSet.standard()
-                .selectMode(LauncherViewMode.HOME_SCREEN_LIBRARY)
-                .selectMode(LauncherViewMode.CARD_INTERFACE)
+            libraryPhone()
+                .withModeRing(HomeLayoutDeviceClass.PHONE, ModeRing.DEFAULT)
                 .selectMode(LauncherViewMode.STANDARD_APP_DRAWER)
-                .selectMode(LauncherViewMode.CARD_INTERFACE)
 
-        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, layoutSet.modeLeavingCards())
+        assertEquals(
+            listOf(
+                LauncherViewMode.HOME_SCREEN_LIBRARY,
+                LauncherViewMode.STANDARD_APP_DRAWER,
+                LauncherViewMode.CARD_INTERFACE,
+            ),
+            layoutSet.activeModeRing.modes,
+        )
+        assertEquals(1, layoutSet.activeModeIndex)
     }
 
     @Test
-    fun leavingCardsFallsBackToStandardWhenNothingWasRecorded() {
-        // A layout that has only ever been in Cards -- or one decoded from before this was tracked
-        // -- has nowhere recorded to return to, and lands where leaving Cards always used to.
-        val layoutSet = HomeLayoutSet.standard().selectMode(LauncherViewMode.CARD_INTERFACE)
+    fun theActiveModeIsAlwaysInItsRingWhateverSelectsIt() {
+        val ring = ModeRing(listOf(LauncherViewMode.HOME_SCREEN_LIBRARY, LauncherViewMode.CARD_INTERFACE))
+        val start =
+            libraryPhone()
+                .withModeRing(HomeLayoutDeviceClass.PHONE, ring)
+                .withModeRing(HomeLayoutDeviceClass.FOLDABLE, ring)
+        val results =
+            listOf(
+                start.selectMode(LauncherViewMode.STANDARD_APP_DRAWER),
+                start.withModeChosenFor(HomeLayoutDeviceClass.FOLDABLE, LauncherViewMode.STANDARD_APP_DRAWER)
+                    .selectDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
+                start.selectDeviceClass(HomeLayoutDeviceClass.TABLET),
+            )
 
-        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, layoutSet.modeLeavingCards())
+        results.forEach { layoutSet ->
+            assertTrue(layoutSet.activeKey.viewMode in layoutSet.activeModeRing, layoutSet.toString())
+            layoutSet.preferredModesByDeviceClass.forEach { (deviceClass, mode) ->
+                assertTrue(mode in layoutSet.modeRingFor(deviceClass), "$deviceClass $mode")
+            }
+        }
     }
+
+    @Test
+    fun removingTheActiveModeFromTheRingMovesToItsNeighbour() {
+        val threeModes =
+            ModeRing(
+                listOf(
+                    LauncherViewMode.STANDARD_APP_DRAWER,
+                    LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    LauncherViewMode.CARD_INTERFACE,
+                ),
+            )
+        val layoutSet =
+            libraryPhone()
+                .withModeRing(HomeLayoutDeviceClass.PHONE, threeModes)
+                .withModeRing(
+                    HomeLayoutDeviceClass.PHONE,
+                    threeModes.withModeEnabled(LauncherViewMode.HOME_SCREEN_LIBRARY, enabled = false),
+                )
+
+        // Library was in the middle; Cards slides into its place.
+        assertEquals(LauncherViewMode.CARD_INTERFACE, layoutSet.activeKey.viewMode)
+        assertEquals(
+            LauncherViewMode.CARD_INTERFACE,
+            layoutSet.preferredModesByDeviceClass[HomeLayoutDeviceClass.PHONE],
+        )
+        assertEquals(
+            listOf(LauncherViewMode.STANDARD_APP_DRAWER, LauncherViewMode.CARD_INTERFACE),
+            layoutSet.activeModeRing.modes,
+        )
+    }
+
+    @Test
+    fun removingAnotherDeviceClassModeMovesOnlyItsPreference() {
+        val threeModes =
+            ModeRing(
+                listOf(
+                    LauncherViewMode.STANDARD_APP_DRAWER,
+                    LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    LauncherViewMode.CARD_INTERFACE,
+                ),
+            )
+        val layoutSet =
+            libraryPhone()
+                .withModeChosenFor(HomeLayoutDeviceClass.FOLDABLE, LauncherViewMode.CARD_INTERFACE)
+                .withModeRing(HomeLayoutDeviceClass.FOLDABLE, threeModes)
+                .withModeRing(
+                    HomeLayoutDeviceClass.FOLDABLE,
+                    threeModes.withModeEnabled(LauncherViewMode.CARD_INTERFACE, enabled = false),
+                )
+
+        // Cards was last, so the mode before it takes over.
+        assertEquals(
+            LauncherViewMode.HOME_SCREEN_LIBRARY,
+            layoutSet.preferredModesByDeviceClass[HomeLayoutDeviceClass.FOLDABLE],
+        )
+        assertEquals(HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY), layoutSet.activeKey)
+    }
+
+    @Test
+    fun reorderingTheRingKeepsTheActiveMode() {
+        val layoutSet =
+            libraryPhone()
+                .withModeRing(
+                    HomeLayoutDeviceClass.PHONE,
+                    ModeRing.DEFAULT.withModeMoved(LauncherViewMode.CARD_INTERFACE, -1),
+                )
+
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, layoutSet.activeKey.viewMode)
+        assertEquals(1, layoutSet.activeModeIndex)
+    }
+
+    private fun libraryPhone(): HomeLayoutSet =
+        HomeLayoutSet.standard().selectMode(LauncherViewMode.HOME_SCREEN_LIBRARY).let { set ->
+            // selectMode from a fresh Standard set adds Library to Standard's fallback ring; start
+            // these tests from the default ring instead.
+            set.copy(
+                modeRingsByDeviceClass = emptyMap(),
+                preferredModesByDeviceClass =
+                    mapOf(
+                        HomeLayoutDeviceClass.PHONE to LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    ),
+            )
+        }
 
     private val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
 

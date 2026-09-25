@@ -33,16 +33,15 @@ data class HomeLayoutSet(
     val preferredModesByDeviceClass: Map<HomeLayoutDeviceClass, LauncherViewMode> =
         mapOf(activeKey.deviceClass to activeKey.viewMode),
     /**
-     * The most recent non-Cards mode chosen on each device class -- where leaving Cards returns to.
+     * The mode ring each device class moves through (#1225): 2-3 distinct modes, in the user's order.
      *
-     * Distinct from [preferredModesByDeviceClass], which holds whatever is active *now* (Cards
-     * included) so a device-class switch restores what you were last looking at there. This one is
-     * only ever a non-Cards mode, so it survives entering Cards and can answer "where did I come
-     * from" when you leave. Absent an entry -- a first run, or a decode of a layout written before
-     * this was tracked -- leaving Cards falls back to [LauncherViewMode.STANDARD_APP_DRAWER], which
-     * is where it always went before.
+     * A device class with no entry uses [ModeRing.fallbackFor] its preferred mode until something
+     * configures it. Whichever mode a device class shows -- the active mode, or its entry in
+     * [preferredModesByDeviceClass] -- is always in its ring: every way of choosing a mode here adds
+     * the mode to the ring when it is missing, and removing a device class's current mode from its
+     * ring moves it to a neighbour. Read rings through [modeRingFor].
      */
-    val lastNonCardsModeByDeviceClass: Map<HomeLayoutDeviceClass, LauncherViewMode> = emptyMap(),
+    val modeRingsByDeviceClass: Map<HomeLayoutDeviceClass, ModeRing> = emptyMap(),
     /**
      * The one dock each device class has, shared by every mode on it.
      *
@@ -57,11 +56,10 @@ data class HomeLayoutSet(
 ) {
     val activeLayout: HomeLayout = layoutFor(activeKey)
 
-    /** The mode to restore when leaving Cards on the active device. */
-    fun modeLeavingCards(): LauncherViewMode {
-        return lastNonCardsModeByDeviceClass[activeKey.deviceClass]
-            ?: LauncherViewMode.STANDARD_APP_DRAWER
-    }
+    /** [deviceClass]'s mode ring. Ring navigation and editing are in HomeLayoutModeRings.kt. */
+    fun modeRingFor(deviceClass: HomeLayoutDeviceClass): ModeRing =
+        modeRingsByDeviceClass[deviceClass]
+            ?: ModeRing.fallbackFor(currentModeOf(deviceClass))
 
     /** [key]'s layout, carrying its device class's shared dock. */
     fun layoutFor(key: HomeLayoutKey): HomeLayout =
@@ -83,7 +81,12 @@ data class HomeLayoutSet(
     fun withPreferredMode(
         deviceClass: HomeLayoutDeviceClass,
         mode: LauncherViewMode,
-    ): HomeLayoutSet = copy(preferredModesByDeviceClass = preferredModesByDeviceClass + (deviceClass to mode))
+    ): HomeLayoutSet =
+        copy(
+            preferredModesByDeviceClass = preferredModesByDeviceClass + (deviceClass to mode),
+            modeRingsByDeviceClass =
+                modeRingsIncluding(deviceClass = deviceClass, mode = mode, after = currentModeOf(deviceClass)),
+        )
 
     fun selectMode(mode: LauncherViewMode): HomeLayoutSet =
         activeKey.copy(viewMode = mode)
@@ -95,14 +98,10 @@ data class HomeLayoutSet(
                     activeKey = key,
                     layouts = layouts + (key to layout),
                     preferredModesByDeviceClass = preferredModesByDeviceClass + (key.deviceClass to mode),
-                    // Entering Cards must not overwrite where leaving it returns to; every other
-                    // mode is itself a valid return, so it records where you now are.
-                    lastNonCardsModeByDeviceClass =
-                        if (mode == LauncherViewMode.CARD_INTERFACE) {
-                            lastNonCardsModeByDeviceClass
-                        } else {
-                            lastNonCardsModeByDeviceClass + (key.deviceClass to mode)
-                        },
+                    // The active mode is always in its ring: a mode chosen from outside it (Settings'
+                    // mode picker, a template) joins the ring next to the mode it was chosen from.
+                    modeRingsByDeviceClass =
+                        modeRingsIncluding(deviceClass = key.deviceClass, mode = mode, after = activeKey.viewMode),
                 )
             }
 
@@ -133,6 +132,8 @@ data class HomeLayoutSet(
                 activeKey = key,
                 layouts = layouts + (key to layoutFor(key)),
                 preferredModesByDeviceClass = preferredModesByDeviceClass + (key.deviceClass to key.viewMode),
+                modeRingsByDeviceClass =
+                    modeRingsIncluding(deviceClass = deviceClass, mode = key.viewMode, after = null),
             )
         }
 
@@ -157,6 +158,8 @@ data class HomeLayoutSet(
             activeKey = key,
             layouts = layouts + (key to layoutFor(key)),
             preferredModesByDeviceClass = preferredModes,
+            modeRingsByDeviceClass =
+                modeRingsIncluding(deviceClass = deviceClass, mode = key.viewMode, after = null),
         )
     }
 

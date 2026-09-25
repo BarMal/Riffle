@@ -62,11 +62,22 @@ class LauncherSettingsTest {
     }
 
     @Test
-    fun defaultsReserveThreeFingerSwipesForAdaptiveStageModeChanges() {
+    fun defaultsReserveThreeFingerSwipesForMovingAlongTheModeRing() {
         val gestures = LauncherSettings().gestures.homeGestures
 
-        assertEquals(LauncherGestureAction.ENTER_ADAPTIVE_STAGE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
-        assertEquals(LauncherGestureAction.EXIT_ADAPTIVE_STAGE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.NEXT_MODE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
+        assertEquals(LauncherGestureAction.PREVIOUS_MODE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
+    }
+
+    @Test
+    fun storedGestureNamesDecodeIncludingThoseWrittenBeforeTheModeRing() {
+        assertEquals(LauncherGestureAction.NEXT_MODE, LauncherGestureAction.fromStoredName("ENTER_ADAPTIVE_STAGE"))
+        assertEquals(LauncherGestureAction.PREVIOUS_MODE, LauncherGestureAction.fromStoredName("EXIT_ADAPTIVE_STAGE"))
+        LauncherGestureAction.entries.forEach { action ->
+            assertEquals(action, LauncherGestureAction.fromStoredName(action.name))
+        }
+        assertEquals(null, LauncherGestureAction.fromStoredName("NOT_AN_ACTION"))
+        assertEquals(null, LauncherGestureAction.fromStoredName(""))
     }
 
     @Test

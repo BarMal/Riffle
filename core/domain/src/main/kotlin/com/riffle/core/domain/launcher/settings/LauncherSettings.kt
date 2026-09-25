@@ -320,18 +320,18 @@ data class HomeGestureSettings(
 }
 
 /**
- * Durable binding for the Dock swipe-up gesture. Restricted to the mode-switch actions the Dock
- * physically supports: staying put, returning to Standard Home from Cards mode, or opening the
- * app drawer/search. Unlike [HomeGestureSettings], the Dock currently exposes a single gesture.
+ * Durable binding for the Dock swipe-up gesture. Restricted to the actions the Dock physically
+ * supports: staying put, moving to the previous mode in the device's mode ring (#1225), or opening
+ * the app drawer. Unlike [HomeGestureSettings], the Dock currently exposes a single gesture.
  */
 data class DockGestureSettings(
-    val swipeUp: LauncherGestureAction = LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
+    val swipeUp: LauncherGestureAction = LauncherGestureAction.PREVIOUS_MODE,
 ) {
     companion object {
         val ALLOWED_SWIPE_UP_ACTIONS: Set<LauncherGestureAction> =
             setOf(
                 LauncherGestureAction.NONE,
-                LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
+                LauncherGestureAction.PREVIOUS_MODE,
                 LauncherGestureAction.OPEN_APP_DRAWER,
             )
     }
@@ -378,8 +378,8 @@ val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
         // Three fingers avoid the platform back/home edges and the one-finger card stack.
-        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_ADAPTIVE_STAGE,
-        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
+        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.NEXT_MODE,
+        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.PREVIOUS_MODE,
         HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.THREE_FINGER_RIGHT to LauncherGestureAction.NONE,
         HomeGesture.PINCH_IN to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
@@ -516,12 +516,33 @@ enum class LauncherGestureAction {
     ENTER_FULLSCREEN_HOME,
     SELECT_NEXT_HOME_PAGE,
     SELECT_PREVIOUS_HOME_PAGE,
-    ENTER_ADAPTIVE_STAGE,
-    EXIT_ADAPTIVE_STAGE,
+
+    /** The next mode in the device's mode ring (#1225). Stored before rings as ENTER_ADAPTIVE_STAGE. */
+    NEXT_MODE,
+
+    /** The previous mode in the device's mode ring; how Cards is left. Stored before as EXIT_ADAPTIVE_STAGE. */
+    PREVIOUS_MODE,
     SELECT_NEXT_APP_STAGE,
     SELECT_PREVIOUS_APP_STAGE,
     LAUNCH_APP,
     LAUNCH_APP_SHORTCUT,
+    ;
+
+    companion object {
+        /**
+         * The action a stored [name] means, or null when it names none. Names written before the
+         * mode ring (#1225) still decode: entering Cards is now "next mode" and leaving it
+         * "previous mode", which is where the default Library -> Cards ring takes each.
+         */
+        fun fromStoredName(name: String): LauncherGestureAction? =
+            LEGACY_NAMES[name] ?: entries.firstOrNull { action -> action.name == name }
+
+        private val LEGACY_NAMES: Map<String, LauncherGestureAction> =
+            mapOf(
+                "ENTER_ADAPTIVE_STAGE" to NEXT_MODE,
+                "EXIT_ADAPTIVE_STAGE" to PREVIOUS_MODE,
+            )
+    }
 }
 
 enum class HapticFeedbackStrength {
