@@ -453,26 +453,6 @@ private fun AdaptiveStageAppStageSurfaceContent(
                         .width(paneLayout.contentWidthDp.dp)
                         .height(paneLayout.contentHeightDp.dp),
             ) {
-                // The Cards stage sits directly over the live wallpaper with nothing behind it to
-                // separate the two, so a busy wallpaper competes with card content for attention
-                // (hands-on testing feedback). A flat, subtle scrim for the whole stage area gives
-                // that separation without touching any individual card's own glass/blur/texture
-                // settings.
-                val backdropScrim =
-                    MaterialTheme.colorScheme.scrim.copy(alpha = ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA)
-                // Clipped to the same corner radius as the cards it sits behind (#1171): a sharp
-                // rectangle here shows through as a tinted "border" past the rounded card corners.
-                val backdropScrimShape =
-                    RoundedCornerShape(state.launcherSettings.cards.adaptiveStageAppearance.geometry.cornerRadiusDp.dp)
-                Box(
-                    modifier =
-                        Modifier
-                            .align(paneLayout.renderedGroupAlignment)
-                            .width(paneLayout.renderedGroupWidthDp.dp)
-                            .fillMaxHeight()
-                            .clip(backdropScrimShape)
-                            .background(backdropScrim),
-                )
                 AdaptiveStageTemplateStaticCanvas(
                     elements = visibleTemplateElements,
                     dynamicSlots = templateVariant?.dynamicSlots.orEmpty(),
