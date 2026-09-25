@@ -4,56 +4,38 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.home.ModeRing
+import com.riffle.core.domain.launcher.home.withHomeMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class DockPullCounterpartTest {
+    private val phone = HomeLayoutDeviceClass.PHONE
+
     @Test
     fun everyHomeModeSwitchesToLibrary() {
-        assertEquals(
-            LauncherViewMode.HOME_SCREEN_LIBRARY,
-            dockPullCounterpartMode(LauncherViewMode.CARD_INTERFACE, ModeRing.DEFAULT),
-        )
-        assertEquals(
-            LauncherViewMode.HOME_SCREEN_LIBRARY,
-            dockPullCounterpartMode(LauncherViewMode.STANDARD_APP_DRAWER, ModeRing.DEFAULT),
-        )
+        listOf(LauncherViewMode.CARD_INTERFACE, LauncherViewMode.STANDARD_APP_DRAWER).forEach { home ->
+            val set = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard().copy(viewMode = home))
+
+            assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, set.dockPullCounterpartMode(phone, home))
+        }
     }
 
     @Test
-    fun librarySwitchesToTheRingsFirstHomeMode() {
+    fun librarySwitchesToThePairsHomeMode() {
+        val onLibrary =
+            HomeLayoutSet.fromLayout(
+                HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
+            )
+
         assertEquals(
             LauncherViewMode.CARD_INTERFACE,
-            dockPullCounterpartMode(LauncherViewMode.HOME_SCREEN_LIBRARY, ModeRing.DEFAULT),
+            onLibrary.dockPullCounterpartMode(phone, LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
-        val standardFirst =
-            ModeRing(
-                listOf(
-                    LauncherViewMode.HOME_SCREEN_LIBRARY,
-                    LauncherViewMode.STANDARD_APP_DRAWER,
-                    LauncherViewMode.CARD_INTERFACE,
-                ),
-            )
         assertEquals(
             LauncherViewMode.STANDARD_APP_DRAWER,
-            dockPullCounterpartMode(LauncherViewMode.HOME_SCREEN_LIBRARY, standardFirst),
-        )
-    }
-
-    @Test
-    fun aLayoutSetUsesItsDeviceClassRing() {
-        val standard = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.STANDARD_APP_DRAWER)
-        // A device on Standard with no configured ring falls back to Standard, Library, Cards.
-        val set = HomeLayoutSet.fromLayout(standard).selectMode(LauncherViewMode.HOME_SCREEN_LIBRARY)
-
-        assertEquals(
-            LauncherViewMode.STANDARD_APP_DRAWER,
-            set.dockPullCounterpartMode(HomeLayoutDeviceClass.PHONE, LauncherViewMode.HOME_SCREEN_LIBRARY),
-        )
-        assertEquals(
-            LauncherViewMode.HOME_SCREEN_LIBRARY,
-            set.dockPullCounterpartMode(HomeLayoutDeviceClass.PHONE, LauncherViewMode.STANDARD_APP_DRAWER),
+            onLibrary
+                .withHomeMode(deviceClass = phone, mode = LauncherViewMode.STANDARD_APP_DRAWER)
+                .dockPullCounterpartMode(phone, LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
     }
 }
