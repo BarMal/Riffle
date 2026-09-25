@@ -32,8 +32,14 @@ It is per device class, not global, because an edge that suits a tablet wastes w
 portrait.
 
 Anything that must differ by mode is derived from the active mode when the dock is drawn, never
-stored. Today that is only what a tap does (see below): select a stage in Cards, open the app
-elsewhere.
+stored. Today that is what the dynamic section lists and what its entries do, plus the extra items
+on a pinned app's long-press menu (see below).
+
+The dock itself stays mode-agnostic (Decision 2 in `modes-dock-handle-and-cards-plan.md`): it
+renders neutral `DockDynamicEntry` values and reports neutral intents -- a pinned app tapped (always
+opens it), a dynamic entry activated (`DockDynamicEntryIntent.Delegate` hands its key back), a
+long-press menu item chosen (`DockItemMenuExtras`). The active mode interprets them; Cards does so in
+`CardsDockInterpreter.kt`, and nothing in the dock knows what a stage is.
 
 Because the edge is shared, the dock is offered only the edges every mode can draw it on — left,
 right and bottom. The top edge, which only Cards could draw, is no longer offered.
@@ -67,21 +73,26 @@ the dock's extent follows from them rather than being fixed.
 
 ### Static and dynamic sections
 
-The **static** section is what the user pinned. It always shows. A tap opens the item.
+The **static** section is what the user pinned. It always shows. **A tap opens the app, in every
+mode** -- muscle memory does not change with the mode (#1212). A long-press opens the item's menu;
+the active mode may add items to it. In Cards those are **Show stage** (when the app has a stage)
+and **Pin stage** (when its stage is not pinned yet), ahead of the app's own shortcuts.
 
-The **dynamic** section shows an entry when **a notification has arrived** for an app the dock is
-not already showing. It is opt-in, per device class. Its meaning is "this has something waiting", not
-"this is a list of things you can go to".
+The **dynamic** section's meaning depends on the mode:
 
-What a tap *does* depends on where the content lives, and this holds on both sides:
+- in grid modes it shows an entry when **a notification has arrived** for an app the dock is not
+  already showing, and a tap opens that app -- there is nowhere on the launcher for its content. It
+  is opt-in, per device class;
+- in Cards it is **the stage selector** (Decision 5): "All" is always the first entry, then every
+  stage in the planner's order -- pinned stages in pin order, then the rest newest first, including
+  a pinned stage with nothing in it. A tap brings that stage (or the merged view) forward. The entry
+  showing carries a selection ring and `selected` semantics, and is scrolled into view whenever the
+  selection changes. It shows whether or not the grid-mode notification switch is on, because in
+  Cards it is navigation rather than a notification list. A "Now" entry (#1216) will go ahead of
+  "All"; `CardsStageSelector.leadingEntries` is where it plugs in.
 
-- in grid modes there is nowhere on the launcher for an app's content, so a tap opens the app;
-- in Cards mode the content is already on the launcher, so a tap brings that stage forward.
-
-That applies to the static side too. In Cards, a tap on a pinned icon selects its stage when it has
-one and opens the app when it does not, so a quiet pinned app never gives a dead tap. **Open** stays
-on the icon's long-press menu either way. The badge is the tell: a badged pinned icon has a stage a
-tap will show, an unbadged one opens.
+Selecting a stage from anywhere -- the selector, **Show stage**, a spine chip -- leaves the merged
+view. Opening an app stays on the stage's header overflow as well as on the icon itself.
 
 The two sections are sized from two independent, per-layout settings rather than negotiating a
 shared run between them (both per device class, shared by every mode): **capacity** caps how many pinned icons show before the static side
@@ -98,11 +109,17 @@ width -- an entry is always exactly a pinned icon's size, never bigger or smalle
 
 ### The merged All-notifications view
 
-Cards can show a single view merging every stage's notifications. Where it is reached depends on the
-posture: on a compact window it rides the stage carousel's spine; on a wide window, which has no
-spine, it is offered as a dock entry kept last in the dynamic section, where the rail once kept it.
-Each posture has its own switch and both are off by default, so it is an opt-in extra rather than a
-step between stages (#1164).
+Cards can show a single view merging every stage's notifications. Since #1212 it is always the first
+entry of the Cards stage selector, on every posture. What remains a setting ("Swipe through All",
+off by default) is whether swiping between stages on a compact window also passes through it. The
+older per-posture "show on unfolded" switch is no longer read.
+
+### The spine
+
+The chip strip under the compact stack is optional and **off by default** (setting "Stage spine";
+settings saved before it existed decode as off). When on, it leads with an "All" chip and scrolls
+the selected chip into view. It is also drawn whatever the setting says whenever the dock cannot
+host the selector -- the dock is switched off or hidden -- so no stage is ever unreachable by touch.
 
 ### Overflow and rows
 
@@ -146,10 +163,11 @@ section does that job, so the rail is gone (#1159).
 | Static section | Done |
 | Dynamic section exists, opt-in per layout | Done (#1154), gated on the existing per-layout switch |
 | Dynamic section means "a notification arrived" | Done (#1162) — de-duplicated against the static side in every mode |
-| Tap opens the app / brings the stage forward | Done (#1155), and on the static side in Cards too (#1162) |
+| Static tap opens the app in every mode; Cards stage on long-press | Done (#1212) |
+| Cards dynamic section is the stage selector ("All" first, every stage, selection ring, auto-scroll) | Done (#1212) behind the neutral `Delegate` intent; "Now" entry pending #1216 |
 | Static and dynamic sections are sized independently | Done — separate per-layout settings (capacity, notification slot count), neither shrinks the other |
 | Settings summarise the total and its split | Done — one line at the top of the dock settings section |
-| Merged All-notifications view reachable | Done (#1164) — spine on a compact window, opt-in dock entry on a wide one, each posture switched separately and off by default |
+| Merged All-notifications view reachable | Done (#1212) — always the selector's first entry; optional in the compact swipe order |
 | Visible-before-overflow, scroll for the rest | Done — each section scrolls independently within its own setting |
 | Multiple rows | **Not started** — no notion of rows exists |
 | Panel exists, standard conventions | Done — a real `LauncherPage` on the same grid machinery as a home page |
@@ -161,13 +179,13 @@ section does that job, so the rail is gone (#1159).
 
 ## Unresolved
 
-- **A pinned app's tap action in Cards depends on whether something is waiting.** The badge makes it
-  legible, but it is a behaviour that changes without the user doing anything, and is open to veto.
+- **Resolved (#1212): a pinned app's tap no longer changes meaning in Cards.** It always opens the
+  app; its stage is on the long-press menu and in the selector.
 - **The rail's per-stage snippet.** The rail showed a line of the most recent card per stage. A dock
   entry is one icon wide and has nowhere to put it, so that is lost with no replacement.
-- **The merged All-notifications view on a wide window is a dock entry, unverified on a device.** It
-  now has an affordance (#1164), but whether it reads right at the end of the dynamic row — and
-  whether the wide-vs-compact posture check agrees with the surface's own — wants a real wide screen.
+- **The selector's width budget.** In Cards the dynamic section lists every stage but is still sized
+  by the notification slot count, so most stages are reached by scrolling it. Whether Cards should
+  get its own, larger budget wants hands-on time.
 
 ## Change checklist
 

@@ -11,9 +11,9 @@ import com.riffle.app.launcher.Dock
 import com.riffle.app.launcher.DockDynamicEntry
 import com.riffle.app.launcher.DockDynamicEntryIntent
 import com.riffle.app.launcher.DockInteractions
-import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.CardsStageSelector
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import org.junit.Rule
@@ -24,8 +24,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The dock on its own: pinned apps on the static side and the dynamic section (a waiting app's
- * stage plus the merged All-notifications entry) running on from it, on a bottom and a side edge.
+ * The dock on its own: pinned apps on the static side and the dynamic section (Cards' stage
+ * selector: the merged All-notifications entry, then two stages) running on from it, on a bottom
+ * and a side edge.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -84,11 +85,12 @@ class DockScreenshotTest {
                         appIconLoader = iconLoader,
                         position = position,
                         interactions = DockInteractions(position = position, onAction = {}),
+                        // Cards' stage selector: "All" first, then the stages (#1212).
                         dynamicEntries =
                             listOf(
+                                allNotificationsEntry,
                                 stageEntry(ScreenshotFixtures.calendar, badgeCount = 1, isSelected = true),
                                 stageEntry(ScreenshotFixtures.photos, badgeCount = 2, isSelected = false),
-                                allNotificationsEntry,
                             ),
                     )
                 }
@@ -112,24 +114,24 @@ class DockScreenshotTest {
     ): DockDynamicEntry {
         val stageId = AppStageId(packageName = app.identity.packageName, profileId = app.identity.profile.id)
         return DockDynamicEntry(
-            key = "stage:${app.identity.packageName.value}",
+            key = CardsStageSelector.stageEntryKey(stageId),
             label = app.label,
             identity = app.identity,
             badgeCount = badgeCount,
             isSelected = isSelected,
             contentDescription = "${app.label}, $badgeCount cards, Open stage",
-            intent = DockDynamicEntryIntent.Dispatch(LauncherShellAction.SelectAppStage(stageId)),
+            intent = DockDynamicEntryIntent.Delegate,
         )
     }
 
     private val allNotificationsEntry =
         DockDynamicEntry(
-            key = "all-notifications",
+            key = CardsStageSelector.ALL_ENTRY_KEY,
             label = "All notifications",
             identity = null,
             badgeCount = ScreenshotFixtures.notificationGroups.sumOf { group -> group.count },
             isSelected = false,
             contentDescription = "All notifications, Open stage",
-            intent = DockDynamicEntryIntent.ShowAllNotifications,
+            intent = DockDynamicEntryIntent.Delegate,
         )
 }

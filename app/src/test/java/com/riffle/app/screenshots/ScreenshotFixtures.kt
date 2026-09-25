@@ -137,12 +137,14 @@ internal object ScreenshotFixtures {
         deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
         launcherSettings: LauncherSettings = LauncherSettings(),
         notificationGroups: List<AppNotificationGroup> = this.notificationGroups,
+        notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.GRANTED,
     ): LauncherShellState =
         shellState(
             layout = homeLayout(deviceClass, dockPosition = null, viewMode = LauncherViewMode.CARD_INTERFACE),
             deviceClass = deviceClass,
             launcherSettings = launcherSettings,
             notificationGroups = notificationGroups,
+            notificationAccessStatus = notificationAccessStatus,
         )
 
     fun shortcut(
@@ -161,13 +163,14 @@ internal object ScreenshotFixtures {
         deviceClass: HomeLayoutDeviceClass,
         launcherSettings: LauncherSettings = LauncherSettings(),
         notificationGroups: List<AppNotificationGroup> = this.notificationGroups,
+        notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.GRANTED,
     ): LauncherShellState {
         val key = HomeLayoutKey(viewMode = layout.viewMode, deviceClass = deviceClass)
         return LauncherShellState(
             homeLayout = layout,
             homeLayoutSet = HomeLayoutSet(activeKey = key, layouts = mapOf(key to layout)),
             launcherSettings = launcherSettings,
-            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+            notificationAccessStatus = notificationAccessStatus,
             notificationGroupsByApp = notificationGroups,
             installedApps = installedApps,
             profileContentVisibility =

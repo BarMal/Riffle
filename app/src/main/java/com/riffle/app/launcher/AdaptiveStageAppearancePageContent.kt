@@ -389,21 +389,25 @@ private fun AdaptiveStageLayoutTabContent(
             onSelected = { order -> onAction(LauncherShellAction.SelectThreadMessageOrder(order)) },
         )
     }
-    SettingsSection(title = "All notifications") {
+    // The dock's dynamic section is the stage selector in Cards and always offers "All" first
+    // (#1212), so the merged view no longer needs a per-posture switch to be reachable. What stays a
+    // choice is whether swiping between stages also passes through it, and whether the chip spine is
+    // drawn under the stack.
+    SettingsSection(title = "Stage navigation") {
         SettingsSwitchRow(
-            title = "Show on folded",
-            subtitle = "A merged view of every notification, on the compact layout",
+            title = "Swipe through All",
+            subtitle = "Include the merged All view when swiping between stages on the compact layout",
             checked = state.settings.cards.foldedShowAllNotifications,
             onCheckedChange = { enabled ->
                 onAction(LauncherShellAction.SelectCardsFoldedShowAllNotifications(enabled))
             },
         )
         SettingsSwitchRow(
-            title = "Show on unfolded",
-            subtitle = "The same merged view on the wide layout",
-            checked = state.settings.cards.unfoldedShowAllNotifications,
+            title = "Stage spine",
+            subtitle = "Show stage chips under the stack. The dock always lists every stage",
+            checked = state.settings.cards.showStageSpine,
             onCheckedChange = { enabled ->
-                onAction(LauncherShellAction.SelectCardsUnfoldedShowAllNotifications(enabled))
+                onAction(LauncherShellAction.SelectCardsShowStageSpine(enabled))
             },
         )
     }

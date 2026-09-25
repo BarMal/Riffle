@@ -164,6 +164,15 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectCardsShowStageSpine ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                cards = state.launcherSettings.cards.copy(showStageSpine = action.enabled),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectSearchResultPresentation ->
                     state.withLauncherSettings(
                         settings =

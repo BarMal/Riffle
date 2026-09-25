@@ -4,12 +4,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
@@ -122,10 +128,10 @@ class DockDynamicSectionTest {
     }
 
     @Test
-    fun theMergedPageIsReachedWithoutAnActionToSend() {
-        // It is not a stage, so there is nothing to dispatch -- the section reports it upward and
-        // the Cards surface decides what showing it means.
-        var shown = false
+    fun aDelegatingEntryHandsItsKeyBackInsteadOfSendingAnAction() {
+        // The dock is mode-agnostic: it does not know what the entry means, so it reports the key
+        // upward and the active mode (Cards) decides what showing it means.
+        var delegatedKey: String? = null
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.size(420.dp)) {
@@ -139,7 +145,7 @@ class DockDynamicSectionTest {
                         position = DockPosition.BOTTOM,
                         interactions = DockInteractions(onAction = {}),
                         dynamicEntries = listOf(mergedPageEntry),
-                        onShowAllNotifications = { shown = true },
+                        onDynamicEntryDelegated = { key -> delegatedKey = key },
                     )
                 }
             }
@@ -147,8 +153,45 @@ class DockDynamicSectionTest {
 
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(ALL_NOTIFICATIONS_LABEL)).performClick()
 
-        composeRule.runOnIdle { assertTrue("expected the merged page to be asked for", shown) }
+        composeRule.runOnIdle { assertEquals(mergedPageEntry.key, delegatedKey) }
     }
+
+    @Test
+    fun aPinnedAppTapOpensItWhateverTheMode() {
+        // #1212: a pinned icon opens its app in Cards too; its stage is on the long-press menu.
+        val actions = mutableListOf<LauncherShellAction>()
+        setContent(DockPosition.BOTTOM, actions = actions)
+
+        composeRule.onNode(clickableWithin(dockItemTestTag(mail.id))).performClick()
+
+        composeRule.runOnIdle { assertEquals(listOf(mail.launchAction()), actions) }
+    }
+
+    @Test
+    fun itemsTheModeAddsLeadAPinnedAppsLongPressMenu() {
+        val actions = mutableListOf<LauncherShellAction>()
+        val mailStageId = AppStageId(mail.appIdentity.packageName, mail.appIdentity.profile.id)
+        val showStage = LauncherShellAction.SelectAppStage(mailStageId)
+        setContent(
+            DockPosition.BOTTOM,
+            actions = actions,
+            menuExtras =
+                DockItemMenuExtras(
+                    byApp = mapOf(mail.appIdentity to listOf(ShortcutContextMenuItem("Show stage", showStage))),
+                ),
+        )
+
+        composeRule
+            .onNode(clickableWithin(dockItemTestTag(mail.id)))
+            .performSemanticsAction(SemanticsActions.OnLongClick)
+        composeRule.onNodeWithText("Show stage").performClick()
+
+        composeRule.runOnIdle { assertEquals(listOf<LauncherShellAction>(showStage), actions) }
+    }
+
+    private fun clickableWithin(tag: String): SemanticsMatcher =
+        SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick)
+            .and(hasTestTag(tag).or(hasAnyAncestor(hasTestTag(tag))))
 
     @Test
     fun anEntryThatIsNotShowingSaysThatToo() {
@@ -163,6 +206,7 @@ class DockDynamicSectionTest {
         position: DockPosition,
         entries: List<DockDynamicEntry> = listOf(chatEntry),
         actions: MutableList<LauncherShellAction> = mutableListOf(),
+        menuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     ) {
         composeRule.setContent {
             MaterialTheme {
@@ -175,7 +219,7 @@ class DockDynamicSectionTest {
                         appIconLoader = EmptyAppIconLoader,
                         widgetViewFactory = EmptyHomeWidgetViewFactory,
                         position = position,
-                        interactions = DockInteractions(onAction = actions::add),
+                        interactions = DockInteractions(staticItemMenuExtras = menuExtras, onAction = actions::add),
                         dynamicEntries = entries,
                     )
                 }
@@ -221,7 +265,7 @@ class DockDynamicSectionTest {
                 badgeCount = 2,
                 isSelected = false,
                 contentDescription = "All notifications, 2 cards, Open stage",
-                intent = DockDynamicEntryIntent.ShowAllNotifications,
+                intent = DockDynamicEntryIntent.Delegate,
             )
 
         private val chatEntry =

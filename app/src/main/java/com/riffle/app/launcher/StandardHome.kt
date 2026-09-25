@@ -512,8 +512,9 @@ internal fun StandardHomeDockOnlySurface(
     position: DockPosition = DockPosition.BOTTOM,
     /** Null leaves the dock's dynamic side to notifications, which is what grid mode wants. */
     dynamicEntries: List<DockDynamicEntry>? = null,
-    onShowAllNotifications: () -> Unit = {},
-    staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
+    /** Receives the key of a dynamic entry that delegates its meaning back to the caller. */
+    onDynamicEntryDelegated: (String) -> Unit = {},
+    staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     /**
      * Whether the expanded shelf shows its notification card row. Cards mode passes false: the
      * stages already *are* the notifications, so the shelf becomes a panel-only mini-home surface
@@ -566,8 +567,8 @@ internal fun StandardHomeDockOnlySurface(
             actions = actions,
             position = position,
             dynamicEntries = dynamicEntries ?: notificationShelfState.dynamicEntries(),
-            onShowAllNotifications = onShowAllNotifications,
-            staticTapBehaviour = staticTapBehaviour,
+            onDynamicEntryDelegated = onDynamicEntryDelegated,
+            staticItemMenuExtras = staticItemMenuExtras,
         )
     }
     visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->

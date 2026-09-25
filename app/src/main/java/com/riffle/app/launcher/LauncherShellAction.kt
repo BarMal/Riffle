@@ -483,11 +483,20 @@ sealed interface LauncherShellAction {
 
     data class SelectThreadCardGrouping(val grouping: ThreadCardGrouping) : LauncherShellAction
 
-    /** Whether the merged "All notifications" view is offered on the folded (compact) Cards layout. */
+    /**
+     * Whether swiping between stages on the folded (compact) Cards layout passes through the merged
+     * "All notifications" view. The view itself is always the stage selector's first entry (#1212).
+     */
     data class SelectCardsFoldedShowAllNotifications(val enabled: Boolean) : LauncherShellAction
 
-    /** Whether the merged "All notifications" view is offered on the unfolded (wide) Cards layout. */
+    /**
+     * Legacy: whether the merged view was offered on the unfolded layout. Still persisted for
+     * backups, but no longer read or offered in settings -- "All" is always in the selector (#1212).
+     */
     data class SelectCardsUnfoldedShowAllNotifications(val enabled: Boolean) : LauncherShellAction
+
+    /** Whether the compact Cards layout draws the stage spine under the stack (off by default). */
+    data class SelectCardsShowStageSpine(val enabled: Boolean) : LauncherShellAction
 
     data class SelectDockPosition(val position: DockPosition) : LauncherShellAction
 
