@@ -343,9 +343,9 @@ enum class HomeGesture {
 }
 
 /**
- * Defaults for the bindable home gestures. None of them switches mode or opens the app drawer: the
- * dock pull is the only mode-transition trigger (docs/product/gestures.md). [LauncherGestureAction.OPEN_APP_DRAWER]
- * stays bindable for users who opt in.
+ * Defaults for the bindable home gestures. None of them switches mode or opens the app drawer, and
+ * neither can be bound: the dock pull is the only mode-transition trigger, and Library is the app
+ * drawer (docs/product/gestures.md).
  */
 val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
     mapOf(
@@ -486,7 +486,6 @@ enum class HomeSwipeGestureDirection {
 
 enum class LauncherGestureAction {
     NONE,
-    OPEN_APP_DRAWER,
     OPEN_NOTIFICATIONS,
     OPEN_SEARCH,
     OPEN_SETTINGS,
@@ -503,10 +502,10 @@ enum class LauncherGestureAction {
 
     companion object {
         /**
-         * The action a stored [name] means, or null when it names none. Mode-switching bindings
-         * (NEXT_MODE / PREVIOUS_MODE, and their older ENTER_ / EXIT_ADAPTIVE_STAGE names) were removed
-         * when the dock pull became the only mode-transition trigger; like any other unknown name
-         * they decode to null, which callers treat as "no action".
+         * The action a stored [name] means, or null when it names none. Mode-switching and app-drawer
+         * bindings (NEXT_MODE / PREVIOUS_MODE, their older ENTER_ / EXIT_ADAPTIVE_STAGE names, and
+         * OPEN_APP_DRAWER) were removed when the dock pull became the only mode-transition trigger;
+         * like any other unknown name they decode to null, which callers treat as "no action".
          */
         fun fromStoredName(name: String): LauncherGestureAction? = entries.firstOrNull { action -> action.name == name }
     }

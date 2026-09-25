@@ -697,7 +697,7 @@ class LauncherSettingsJsonCodecTest {
                                         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.OPEN_SETTINGS,
                                         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
                                         HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_NOTIFICATIONS,
-                                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_APP_DRAWER,
+                                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_APP_STAGE,
                                         HomeGesture.PINCH_OUT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                                         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.ENTER_FULLSCREEN_HOME,
                                     ),
@@ -716,7 +716,7 @@ class LauncherSettingsJsonCodecTest {
             decodedSettings.gestures.homeGestures.actionFor(HomeGesture.TWO_FINGER_UP),
         )
         assertEquals(
-            LauncherGestureAction.OPEN_APP_DRAWER,
+            LauncherGestureAction.SELECT_NEXT_APP_STAGE,
             decodedSettings.gestures.homeGestures.actionFor(HomeGesture.THREE_FINGER_LEFT),
         )
         assertEquals(
@@ -1130,7 +1130,9 @@ class LauncherSettingsJsonCodecTest {
                       "THREE_FINGER_UP": "NEXT_MODE",
                       "THREE_FINGER_DOWN": "PREVIOUS_MODE",
                       "TWO_FINGER_LEFT": "ENTER_ADAPTIVE_STAGE",
-                      "TWO_FINGER_RIGHT": "EXIT_ADAPTIVE_STAGE"
+                      "TWO_FINGER_RIGHT": "EXIT_ADAPTIVE_STAGE",
+                      "ONE_FINGER_UP": "OPEN_APP_DRAWER",
+                      "PINCH_OUT": "OPEN_APP_DRAWER"
                     },
                     "dockGestures": {
                       "swipeUp": "PREVIOUS_MODE"
@@ -1145,6 +1147,8 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
         assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.TWO_FINGER_LEFT))
         assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.TWO_FINGER_RIGHT))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.PINCH_OUT))
     }
 
     @Test

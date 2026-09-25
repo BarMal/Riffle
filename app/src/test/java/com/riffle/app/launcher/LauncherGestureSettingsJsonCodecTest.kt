@@ -113,6 +113,63 @@ class LauncherGestureSettingsJsonCodecTest {
     }
 
     @Test
+    fun clearsAnExistingUsersAppDrawerBindings() {
+        // What every install that kept the old defaults has stored: swipe up and pinch out both
+        // opened the app drawer. The binding was removed, so both come back unbound.
+        val stored =
+            JSONObject().put(
+                "homeGestures",
+                JSONObject()
+                    .put(HomeGesture.ONE_FINGER_UP.name, "OPEN_APP_DRAWER")
+                    .put(HomeGesture.PINCH_OUT.name, "OPEN_APP_DRAWER")
+                    .put(HomeGesture.ONE_FINGER_DOWN.name, LauncherGestureAction.OPEN_NOTIFICATIONS.name)
+                    .put(HomeGesture.PINCH_IN.name, LauncherGestureAction.ENTER_HOME_EDIT_MODE.name),
+            )
+
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
+
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.PINCH_OUT))
+        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.ENTER_HOME_EDIT_MODE, decoded.actionFor(HomeGesture.PINCH_IN))
+    }
+
+    @Test
+    fun decodesAnAppDrawerBindingOnAnyGestureAsNoAction() {
+        // Bound away from a default that is itself an action, so "no action" is the decode, not a fallback.
+        val stored =
+            JSONObject().put(
+                "homeGestures",
+                JSONObject()
+                    .put(HomeGesture.TWO_FINGER_UP.name, "OPEN_APP_DRAWER")
+                    .put(HomeGesture.THREE_FINGER_LEFT.name, "OPEN_APP_DRAWER"),
+            )
+
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
+
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.TWO_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.THREE_FINGER_LEFT))
+    }
+
+    @Test
+    fun decodesAnAppDrawerBindingInTheLegacyHomeSwipeShapeAsNoAction() {
+        val stored =
+            JSONObject().put(
+                "homeSwipe",
+                JSONObject()
+                    .put("up", "OPEN_APP_DRAWER")
+                    .put("left", "OPEN_APP_DRAWER")
+                    .put("down", LauncherGestureAction.OPEN_SETTINGS.name),
+            )
+
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
+
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_LEFT))
+        assertEquals(LauncherGestureAction.OPEN_SETTINGS, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
+    }
+
+    @Test
     fun missingOrBlankActionsStillFallBackToDefaults() {
         val stored =
             JSONObject().put(

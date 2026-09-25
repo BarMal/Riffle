@@ -140,8 +140,8 @@ private fun JSONObject.toHomeSwipeGestures(defaults: HomeSwipeGestureSettings): 
 
 /**
  * A missing or blank value falls back to [default]. A stored name that no longer names an action --
- * notably the removed mode-switching bindings NEXT_MODE / PREVIOUS_MODE and their older
- * ENTER_ / EXIT_ADAPTIVE_STAGE names -- decodes as [LauncherGestureAction.NONE], so the gesture stays
+ * notably the removed bindings NEXT_MODE / PREVIOUS_MODE, their older ENTER_ / EXIT_ADAPTIVE_STAGE
+ * names, and OPEN_APP_DRAWER -- decodes as [LauncherGestureAction.NONE], so the gesture stays
  * deliberately unbound rather than silently picking up a different default.
  */
 private fun JSONObject.optGestureAction(

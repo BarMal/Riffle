@@ -125,7 +125,7 @@ class HomeSwipeGestureInterpreterTest {
     fun ignoresFourFingerSwipes() {
         val settings =
             HomeGestureSettings(
-                actions = mapOf(HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_APP_DRAWER),
+                actions = mapOf(HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_SEARCH),
             )
 
         assertNull(
@@ -218,7 +218,7 @@ class HomeSwipeGestureInterpreterTest {
                         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                         HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
                         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.ENTER_FULLSCREEN_HOME,
-                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_APP_DRAWER,
+                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_APP_STAGE,
                     ),
             )
 
@@ -238,7 +238,7 @@ class HomeSwipeGestureInterpreterTest {
             actionMapper.actionFor(HomeGesture.TWO_FINGER_RIGHT, settings),
         )
         assertEquals(
-            LauncherShellAction.OpenAppDrawer,
+            LauncherShellAction.SelectNextAppStage,
             actionMapper.actionFor(HomeGesture.THREE_FINGER_LEFT, settings),
         )
     }
@@ -304,7 +304,7 @@ class HomeSwipeGestureInterpreterTest {
             HomeGestureSettings(
                 actions =
                     mapOf(
-                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER,
+                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                         HomeGesture.TWO_FINGER_UP to LauncherGestureAction.NONE,
                         HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_SEARCH,
                     ),
@@ -320,12 +320,12 @@ class HomeSwipeGestureInterpreterTest {
         )
 
     @Test
-    fun mapsConfiguredSwipeUpDragToAppDrawerAction() {
+    fun mapsConfiguredSwipeUpDragToItsAction() {
         val settings =
-            HomeGestureSettings(actions = mapOf(HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER))
+            HomeGestureSettings(actions = mapOf(HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_SEARCH))
 
         assertEquals(
-            LauncherShellAction.OpenAppDrawer,
+            LauncherShellAction.OpenSearch,
             homeSwipeActionForDrag(
                 horizontalDragPx = 0f,
                 verticalDragPx = -120f,

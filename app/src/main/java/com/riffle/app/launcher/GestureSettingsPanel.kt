@@ -174,7 +174,6 @@ internal val LauncherGestureAction.label: String
     get() =
         when (this) {
             LauncherGestureAction.NONE -> "Disabled"
-            LauncherGestureAction.OPEN_APP_DRAWER -> "Apps"
             LauncherGestureAction.OPEN_NOTIFICATIONS -> "Notifications"
             LauncherGestureAction.OPEN_SEARCH -> "Search"
             LauncherGestureAction.OPEN_SETTINGS -> "Settings"

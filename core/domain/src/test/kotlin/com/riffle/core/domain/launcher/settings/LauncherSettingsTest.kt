@@ -7,7 +7,6 @@ import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 
 class LauncherSettingsTest {
     @Test
@@ -63,13 +62,11 @@ class LauncherSettingsTest {
     }
 
     @Test
-    fun noDefaultHomeGestureSwitchesModeOrOpensTheAppDrawer() {
+    fun theGesturesThatUsedToSwitchModeOrOpenTheAppDrawerDefaultToNoAction() {
         // The dock pull is the only mode-transition trigger; Library is the app drawer.
         val gestures = LauncherSettings().gestures.homeGestures
 
-        HomeGesture.entries.forEach { gesture ->
-            assertNotEquals(LauncherGestureAction.OPEN_APP_DRAWER, gestures.actionFor(gesture), gesture.name)
-        }
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.PINCH_OUT))
         assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.ONE_FINGER_UP))
         assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
         assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
@@ -81,7 +78,13 @@ class LauncherSettingsTest {
         LauncherGestureAction.entries.forEach { action ->
             assertEquals(action, LauncherGestureAction.fromStoredName(action.name))
         }
-        listOf("NEXT_MODE", "PREVIOUS_MODE", "ENTER_ADAPTIVE_STAGE", "EXIT_ADAPTIVE_STAGE").forEach { removed ->
+        listOf(
+            "NEXT_MODE",
+            "PREVIOUS_MODE",
+            "ENTER_ADAPTIVE_STAGE",
+            "EXIT_ADAPTIVE_STAGE",
+            "OPEN_APP_DRAWER",
+        ).forEach { removed ->
             assertEquals(null, LauncherGestureAction.fromStoredName(removed), removed)
         }
         assertEquals(null, LauncherGestureAction.fromStoredName("NOT_AN_ACTION"))

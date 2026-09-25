@@ -307,8 +307,8 @@ class CardStackGestureTest {
     @Test
     fun aSwipePastTheLastCardIsHandedToTheHomeGesture() {
         // Clamped at its last card the stack has nothing left to consume, so the drag goes up the
-        // nested-scroll chain and the home layer reads it as a one-finger swipe up (bound to the app
-        // drawer here) -- it used to die inside the stack.
+        // nested-scroll chain and the home layer reads it as a one-finger swipe up (bound to search
+        // here) -- it used to die inside the stack.
         val stack = ScrollingCardStackHarness(cardCount = 3).apply { focusedCard = 2 }
         val actions = mutableStateListOf<LauncherShellAction>()
         composeRule.setContent { HomeGesturesOverScrollingCardStack(stack, actions) }
@@ -316,7 +316,7 @@ class CardStackGestureTest {
         composeRule.onNodeWithTag("stack").performTouchInput { swipeUp() }
 
         composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.OpenAppDrawer), actions.toList())
+            assertEquals(listOf(LauncherShellAction.OpenSearch), actions.toList())
             assertEquals(2, stack.focusedCard)
         }
     }
@@ -329,7 +329,7 @@ class CardStackGestureTest {
 
         composeRule.onNodeWithTag("stack").performTouchInput { swipeUp() }
 
-        composeRule.runOnIdle { assertEquals(listOf(LauncherShellAction.OpenAppDrawer), actions.toList()) }
+        composeRule.runOnIdle { assertEquals(listOf(LauncherShellAction.OpenSearch), actions.toList()) }
     }
 
     @Test
@@ -476,12 +476,12 @@ private fun HomeGesturesOverScrollingCardStack(
 }
 
 /**
- * Explicit bindings, because no default gesture opens the app drawer or switches mode any more (the
- * dock pull does): what these tests exercise is the hand-off, not the defaults.
+ * Explicit bindings, because swipe up and three-finger swipes are unbound by default (the dock pull
+ * switches mode, and the app drawer is not a gesture action): these tests exercise the hand-off.
  */
 private val handOffGestureSettings =
     HomeGestureSettings()
-        .withAction(gesture = HomeGesture.ONE_FINGER_UP, action = LauncherGestureAction.OPEN_APP_DRAWER)
+        .withAction(gesture = HomeGesture.ONE_FINGER_UP, action = LauncherGestureAction.OPEN_SEARCH)
         .withAction(gesture = HomeGesture.THREE_FINGER_DOWN, action = LauncherGestureAction.OPEN_SETTINGS)
 
 /** Comfortably past CardStackMagnet.settleDelayMillis (<= 130ms) plus the magnetize spring. */

@@ -12,7 +12,7 @@ class LauncherGestureMappingsTest {
                 .withAction(
                     surface = LauncherGestureSurface.HOME_PAGE,
                     gesture = LauncherGesture.ONE_FINGER_UP,
-                    action = LauncherGestureAction.OPEN_APP_DRAWER,
+                    action = LauncherGestureAction.OPEN_SETTINGS,
                 ).withAction(
                     surface = LauncherGestureSurface.DOCK,
                     gesture = LauncherGesture.ONE_FINGER_UP,
@@ -20,7 +20,7 @@ class LauncherGestureMappingsTest {
                 )
 
         assertEquals(
-            LauncherGestureAction.OPEN_APP_DRAWER,
+            LauncherGestureAction.OPEN_SETTINGS,
             mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.ONE_FINGER_UP),
         )
         assertEquals(

@@ -28,14 +28,16 @@ itself is not built yet). Every alternative was deleted rather than kept dormant
   `dockGestures.swipeUp` binding;
 - the NEXT_MODE / PREVIOUS_MODE gesture actions (and the three-finger defaults that used them), and
   the shell actions behind them;
-- swipe up as the default way to the app drawer. Library *is* the app drawer, so no home gesture
-  opens it by default any more -- neither swipe up nor pinch out. "Apps" stays a bindable action for
-  users who choose it, and the drawer stays reachable from its on-screen entry points.
+- the app drawer as a gesture action (OPEN_APP_DRAWER, "Apps" in the gesture settings). Library
+  *is* the app drawer, so no home gesture opens it -- swipe up and pinch out, which did by default,
+  are now unbound. The drawer itself stays: its on-screen entry points (the Apps button, search)
+  still open it through the shell's `OpenAppDrawer` action.
 
-Stored settings that name a removed action (NEXT_MODE, PREVIOUS_MODE, or their older names
-ENTER_ADAPTIVE_STAGE / EXIT_ADAPTIVE_STAGE) still decode: any stored action name that no longer
-exists decodes as "no action", and a stored `dockGestures` object is ignored. A missing value still
-takes the default.
+Stored settings that name a removed action (NEXT_MODE, PREVIOUS_MODE, their older names
+ENTER_ADAPTIVE_STAGE / EXIT_ADAPTIVE_STAGE, or OPEN_APP_DRAWER) still decode: any stored action name
+that no longer exists decodes as "no action", and a stored `dockGestures` object is ignored. A
+missing value still takes the default. So an existing install whose swipe up and pinch out still
+opened the drawer comes back with both unbound; no notice is shown.
 
 Until the dock pull lands, Settings is the only way to change mode.
 
@@ -61,7 +63,7 @@ constants at the 2.625x reference density (420dpi) they were tuned on.
 ## Arbitration table
 
 Default bindings come from `defaultHomeGestureActions` (`LauncherSettings.kt`); every home binding
-is user configurable. Cards filters home actions to stage navigation, app drawer, search and
+is user configurable. Cards filters home actions to stage navigation, search and
 Settings (`adaptiveStageAppStageActionFilter`; Settings since #1212, so a gesture bound to it is
 never a dead end in Cards). "Home" means the home gesture layer with the user's binding; "unbound"
 means no default binding, so nothing happens unless the user binds the gesture.

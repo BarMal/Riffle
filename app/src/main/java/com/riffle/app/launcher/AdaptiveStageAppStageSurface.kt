@@ -139,16 +139,15 @@ import kotlin.math.abs
 
 /**
  * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
- * through: stage navigation, and reaching the app drawer (when a user binds it), search and
- * Settings so Cards mode stays a normal, discoverable surface rather than an isolated one. Settings
- * is let through since #1212: a gesture bound to it must not silently die just because Cards is
- * showing. No gesture here switches mode -- the dock pull is the only mode-transition trigger.
+ * through: stage navigation, and reaching search and Settings so Cards mode stays a normal,
+ * discoverable surface rather than an isolated one. Settings is let through since #1212: a gesture
+ * bound to it must not silently die just because Cards is showing. No gesture switches mode or
+ * opens the app drawer -- the dock pull is the only mode-transition trigger.
  */
 internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boolean =
     when (action) {
         LauncherShellAction.SelectNextAppStage,
         LauncherShellAction.SelectPreviousAppStage,
-        LauncherShellAction.OpenAppDrawer,
         LauncherShellAction.OpenSearch,
         LauncherShellAction.OpenSettings,
         -> true
@@ -390,8 +389,8 @@ private fun AdaptiveStageAppStageSurfaceContent(
         modifier =
             modifier
                 .fillMaxSize()
-                // Reuse the persisted gesture bindings, but only claim mode exit and stage
-                // navigation here. Focused cards consume their one-finger vertical drags first;
+                // Reuse the persisted gesture bindings, but only claim stage navigation, search
+                // and Settings here. Focused cards consume their one-finger vertical drags first;
                 // a drag past the stack's first/last card is handed back (docs/product/gestures.md).
                 .homeGestureInput(
                     enabled = detailOrigin == null,
