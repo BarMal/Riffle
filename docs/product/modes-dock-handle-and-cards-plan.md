@@ -183,7 +183,10 @@ choreography; the layout slide now lives in W2-c/d) and #1209 (mode overview on 
 surfaces need no overview).
 
 - a. #1241 Delete the alternative mode triggers and collapse the mode ring to the fixed Home ↔
-  Library pair; stored settings with removed names decode safely. (Decisions 1, 9)
+  Library pair; stored settings with removed names decode safely. (Decisions 1, 9) *Done:*
+  triggers deleted in #1247; the ring became `ModePair` (one Home mode per device class, Library
+  fixed as the other side), chosen in Settings as "Home screen: Cards / Standard", with stored
+  rings and pre-ring return modes migrated on decode.
 - b. #1242 Per-mode dock edge model (migration from the shared edge) and the pull-direction /
   commit domain logic. (Decisions 2, 3)
 - c. #1206 Interactive mode-transition controller (progress, commit/cancel, interruption). (M1)
