@@ -17,3 +17,15 @@ fun HomeLayout.hostsWidget(hostedWidgetId: HostedWidgetId): Boolean =
     allItems()
         .filterIsInstance<WidgetItem>()
         .any { widget -> widget.appWidgetId == hostedWidgetId }
+
+/**
+ * Whether anything in the set hosts [hostedWidgetId]: any stored layout, or any device class's shared
+ * dock (#1205). Stored layouts are checked as stored, not through [HomeLayoutSet.layoutFor], so a
+ * widget is only reported unreferenced -- and its host id released -- when nothing holds it at all.
+ */
+fun HomeLayoutSet.hostsWidget(hostedWidgetId: HostedWidgetId): Boolean =
+    layouts.values.any { layout -> layout.hostsWidget(hostedWidgetId) } ||
+        docks.values.any { dock ->
+            (dock.items + dock.panel?.items.orEmpty())
+                .any { item -> item is WidgetItem && item.appWidgetId == hostedWidgetId }
+        }

@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.sharedDockPositions
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import org.junit.Rule
 import org.junit.Test
@@ -31,8 +31,9 @@ import org.junit.runner.RunWith
 /**
  * What the dock position control offers, which is what the layout can place.
  *
- * A Cards layout is offered all four, and (see `CardsHomeSurface`) the dock it draws now resolves
- * and follows the same edge.
+ * There is one dock per device class, shared by every mode (#1205), so it is offered only the edges
+ * every mode can draw it on. Cards used to be offered the top edge as well; that premise was removed
+ * deliberately, because a top dock would sit in a different place depending on the mode.
  */
 @RunWith(AndroidJUnit4::class)
 class DockPositionSettingOptionsTest {
@@ -40,8 +41,8 @@ class DockPositionSettingOptionsTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun aStandardLayoutIsNotOfferedTheTopEdge() {
-        setContent(LauncherViewMode.STANDARD_APP_DRAWER)
+    fun theSharedDockIsNotOfferedTheTopEdge() {
+        setContent()
 
         composeRule.onNodeWithTag(positionTag(DockPosition.BOTTOM)).performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithTag(positionTag(DockPosition.LEFT)).assertIsDisplayed()
@@ -50,25 +51,15 @@ class DockPositionSettingOptionsTest {
     }
 
     @Test
-    fun aCardsLayoutIsOfferedAllFourEdges() {
-        setContent(LauncherViewMode.CARD_INTERFACE)
-
-        DockPosition.entries.forEach { candidate ->
-            composeRule.onNodeWithTag(positionTag(candidate)).performScrollTo().assertIsDisplayed()
-        }
-    }
-
-    @Test
-    fun allFourEdgesStayReachableAtCompactWidthWithLargeFont() {
-        // Four of these do not fit across a phone. A plain row measured the last one to nothing,
-        // which is how a Cards layout ended up with an edge it could see named but never tap.
+    fun everyOfferedEdgeStaysReachableAtCompactWidthWithLargeFont() {
+        // A plain row measured the last edge to nothing at this width, which is how a layout ended
+        // up with an edge it could see named but never tap.
         composeRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 1.5f)) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(240.dp).verticalScroll(rememberScrollState())) {
                         DockSetting(
                             dock = DockModel(capacity = 4),
-                            viewMode = LauncherViewMode.CARD_INTERFACE,
                             notificationAccessStatus = NotificationAccessStatus.GRANTED,
                             onAction = {},
                         )
@@ -77,7 +68,7 @@ class DockPositionSettingOptionsTest {
             }
         }
 
-        DockPosition.entries.forEach { candidate ->
+        sharedDockPositions.forEach { candidate ->
             composeRule
                 .onNodeWithTag(positionTag(candidate))
                 .performScrollTo()
@@ -88,9 +79,9 @@ class DockPositionSettingOptionsTest {
 
     @Test
     fun anEdgeTheLayoutCannotPlaceSaysSoRatherThanClaimingIt() {
-        // A layout can still hold the top edge from before the two sets were separated. Saying
-        // "Top edge" while the dock sits at the bottom is the papercut; naming it is not.
-        setContent(LauncherViewMode.STANDARD_APP_DRAWER, position = DockPosition.TOP)
+        // A dock can still hold the top edge from before it was shared. Saying "Top edge" while the
+        // dock sits at the bottom is the papercut; naming it is not.
+        setContent(position = DockPosition.TOP)
 
         composeRule
             .onNodeWithText("Top edge is not available on this layout, so the dock is on the bottom edge")
@@ -100,16 +91,12 @@ class DockPositionSettingOptionsTest {
 
     private fun positionTag(position: DockPosition) = "dock-position-${position.name}"
 
-    private fun setContent(
-        viewMode: LauncherViewMode,
-        position: DockPosition? = null,
-    ) {
+    private fun setContent(position: DockPosition? = null) {
         composeRule.setContent {
             MaterialTheme {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     DockSetting(
                         dock = DockModel(capacity = 4, position = position),
-                        viewMode = viewMode,
                         notificationAccessStatus = NotificationAccessStatus.GRANTED,
                         onAction = {},
                     )

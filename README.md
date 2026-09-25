@@ -24,6 +24,8 @@ Pull requests should follow the project
 [`Definition of Done`](docs/development/definition-of-done.md).
 Performance-sensitive changes should also reference the
 [`Performance Budgets`](docs/development/performance-budgets.md).
+UI changes can be reviewed through the JVM screenshot tests described in
+[`Screenshot Testing`](docs/development/screenshot-testing.md).
 
 ## Release Signing
 

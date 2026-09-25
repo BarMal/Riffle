@@ -5,11 +5,9 @@ package com.riffle.app.launcher
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -69,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -905,8 +904,9 @@ private const val PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP = 44
 private const val PAGE_INDICATOR_HANDLE_LIFT_SCALE = 1.3f
 private const val PAGE_INDICATOR_HANDLE_LIFT_ELEVATION_DP = 6
 private const val PAGE_INDICATOR_HANDLE_LIFT_ANIMATION_MILLIS = 120
-private val PageIndicatorHandleSettleSpec: AnimationSpec<Float> =
-    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+
+// Riffle "snappy" spring; previously medium-bouncy, now critically damped (calm by default).
+private val PageIndicatorHandleSettleSpec: AnimationSpec<Float> = RiffleMotion.snappy()
 
 private fun pageOverviewLabel(index: Int): String = "Page ${index + 1}"
 

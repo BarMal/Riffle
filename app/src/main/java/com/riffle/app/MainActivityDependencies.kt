@@ -9,8 +9,8 @@ import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.AndroidWallpaperPickerGateway
 import com.riffle.app.launcher.AndroidWebSearchLauncher
 import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
-import com.riffle.app.launcher.DataStoreHomeLayoutRepository
 import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
+import com.riffle.app.launcher.HomeLayoutRepositories
 import com.riffle.app.launcher.HostedWidgetAddAction
 import com.riffle.app.launcher.HostedWidgetAddCompletionResult
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
@@ -51,7 +51,7 @@ import com.riffle.core.domain.launcher.home.hostsWidget
 internal class MainActivityDependencies(
     private val activity: Activity,
 ) {
-    val homeLayoutRepository by lazy { DataStoreHomeLayoutRepository(activity) }
+    val homeLayoutRepository by lazy { HomeLayoutRepositories.writeBehind(activity) }
     val launcherSettingsRepository by lazy { DataStoreLauncherSettingsRepository(activity) }
     val firstRunRepository by lazy { SharedPreferencesFirstRunRepository(activity) }
     val installedAppRepository by lazy {
@@ -149,9 +149,7 @@ internal class MainActivityDependencies(
 }
 
 private fun HomeLayoutSet.hostedWidgetIdReferenceState(hostedWidgetId: HostedWidgetId): HostedWidgetIdReferenceState =
-    layouts.values
-        .asSequence()
-        .any { layout -> layout.hostsWidget(hostedWidgetId) }
+    hostsWidget(hostedWidgetId)
         .let { referenced ->
             if (referenced) {
                 HostedWidgetIdReferenceState.Referenced

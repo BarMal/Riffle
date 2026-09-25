@@ -77,7 +77,7 @@ private fun JSONObject.optViewMode(default: LauncherViewMode): LauncherViewMode 
         ?.let { value -> runCatching { LauncherViewMode.valueOf(value) }.getOrNull() }
         ?: default
 
-private fun encodeDock(dock: DockModel): JSONObject =
+internal fun encodeDock(dock: DockModel): JSONObject =
     JSONObject()
         .put("isEnabled", dock.isEnabled)
         .put("showNotificationCards", dock.showNotificationCards)
@@ -97,7 +97,7 @@ private fun encodeDock(dock: DockModel): JSONObject =
         .put("capacity", dock.capacity)
         .put("items", JSONArray(dock.items.map(::encodeLauncherItem)))
 
-private fun JSONObject.toDock(
+internal fun JSONObject.toDock(
     defaults: DockModel,
     defaultGrid: GridDimensions,
 ): DockModel =

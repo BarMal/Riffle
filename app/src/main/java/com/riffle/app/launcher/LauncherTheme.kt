@@ -4,9 +4,9 @@ package com.riffle.app.launcher
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -20,7 +20,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
@@ -71,14 +75,15 @@ fun RiffleLauncherTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
+            shapes = launcherMaterialShapes(themePreset, themeCornerStyle),
             typography = launcherTypography(themePreset, themeTypography),
             content = content,
         )
     }
 }
 
-internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(24.dp) }
-internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(32.dp) }
+internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RiffleShapes.large }
+internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RiffleShapes.extraLarge }
 internal val LocalLauncherThemeSurfaceTokens =
     staticCompositionLocalOf { LauncherThemeSurfaceTokens() }
 internal val LocalLauncherThemeColorOverrides = staticCompositionLocalOf { LauncherThemeColorOverrides() }
@@ -205,47 +210,67 @@ private fun minimumScrimAlpha(
 private const val MINIMUM_TEXT_CONTRAST = 4.5f
 private const val SCRIM_ALPHA_SEARCH_STEPS = 24
 
+/**
+ * Card corner radius. Material/Custom sit on the Riffle radius scale; other presets and the user's
+ * corner-style override keep their own radii. Rendered with continuous corners.
+ */
+internal fun launcherCardCornerRadius(
+    themePreset: LauncherThemePreset,
+    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
+): Dp =
+    when (cornerStyle) {
+        LauncherThemeCornerStyle.COMPACT -> RiffleShapes.radiusS
+        LauncherThemeCornerStyle.ROUNDED -> 28.dp
+        LauncherThemeCornerStyle.PRESET ->
+            when (themePreset) {
+                LauncherThemePreset.MINIMAL -> RiffleShapes.radiusS
+                LauncherThemePreset.RETRO -> 12.dp
+                LauncherThemePreset.GLASS -> 28.dp
+                LauncherThemePreset.TERMINAL -> 0.dp
+                LauncherThemePreset.MATERIAL,
+                LauncherThemePreset.CUSTOM,
+                -> RiffleShapes.radiusL
+            }
+    }
+
+/** Panel corner radius; see [launcherCardCornerRadius]. */
+internal fun launcherPanelCornerRadius(
+    themePreset: LauncherThemePreset,
+    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
+): Dp =
+    when (cornerStyle) {
+        LauncherThemeCornerStyle.COMPACT -> 12.dp
+        LauncherThemeCornerStyle.ROUNDED -> 36.dp
+        LauncherThemeCornerStyle.PRESET ->
+            when (themePreset) {
+                LauncherThemePreset.MINIMAL -> 12.dp
+                LauncherThemePreset.RETRO -> 20.dp
+                LauncherThemePreset.GLASS -> 36.dp
+                LauncherThemePreset.TERMINAL -> 0.dp
+                LauncherThemePreset.MATERIAL,
+                LauncherThemePreset.CUSTOM,
+                -> RiffleShapes.radiusXl
+            }
+    }
+
 internal fun launcherCardShape(
     themePreset: LauncherThemePreset,
     cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
-): Shape =
-    RoundedCornerShape(
-        when (cornerStyle) {
-            LauncherThemeCornerStyle.COMPACT -> 8.dp
-            LauncherThemeCornerStyle.ROUNDED -> 28.dp
-            LauncherThemeCornerStyle.PRESET ->
-                when (themePreset) {
-                    LauncherThemePreset.MINIMAL -> 8.dp
-                    LauncherThemePreset.RETRO -> 12.dp
-                    LauncherThemePreset.GLASS -> 28.dp
-                    LauncherThemePreset.TERMINAL -> 0.dp
-                    LauncherThemePreset.MATERIAL,
-                    LauncherThemePreset.CUSTOM,
-                    -> 24.dp
-                }
-        },
-    )
+): Shape = RiffleShapes.continuous(launcherCardCornerRadius(themePreset, cornerStyle))
 
 internal fun launcherPanelShape(
     themePreset: LauncherThemePreset,
     cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
-): Shape =
-    RoundedCornerShape(
-        when (cornerStyle) {
-            LauncherThemeCornerStyle.COMPACT -> 12.dp
-            LauncherThemeCornerStyle.ROUNDED -> 36.dp
-            LauncherThemeCornerStyle.PRESET ->
-                when (themePreset) {
-                    LauncherThemePreset.MINIMAL -> 12.dp
-                    LauncherThemePreset.RETRO -> 20.dp
-                    LauncherThemePreset.GLASS -> 36.dp
-                    LauncherThemePreset.TERMINAL -> 0.dp
-                    LauncherThemePreset.MATERIAL,
-                    LauncherThemePreset.CUSTOM,
-                    -> 32.dp
-                }
-        },
-    )
+): Shape = RiffleShapes.continuous(launcherPanelCornerRadius(themePreset, cornerStyle))
+
+/**
+ * Material component shapes on the Riffle radius scale. When the resolved card corner is sharp
+ * (Terminal preset), Material components go sharp too, so the corner setting reads consistently.
+ */
+internal fun launcherMaterialShapes(
+    themePreset: LauncherThemePreset,
+    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
+): Shapes = RiffleShapes.materialShapes(square = launcherCardCornerRadius(themePreset, cornerStyle) == 0.dp)
 
 internal fun launcherTypography(
     themePreset: LauncherThemePreset,
@@ -261,7 +286,21 @@ internal fun launcherTypography(
             }
     }
 
-private val defaultLauncherTypography = Typography()
+private val defaultLauncherTypography = riffleTypography(Typography())
+
+/**
+ * Riffle's tuning of the M3 type scale: light display weights, medium labels with slightly wider
+ * tracking. Only weight and letter spacing change, so the font-family swap below still applies.
+ */
+internal fun riffleTypography(base: Typography): Typography =
+    base.copy(
+        displayLarge = base.displayLarge.copy(fontWeight = FontWeight.Light),
+        displayMedium = base.displayMedium.copy(fontWeight = FontWeight.Light),
+        displaySmall = base.displaySmall.copy(fontWeight = FontWeight.Light),
+        labelLarge = base.labelLarge.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.25.sp),
+        labelMedium = base.labelMedium.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.6.sp),
+        labelSmall = base.labelSmall.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.7.sp),
+    )
 
 private fun Typography.withFontFamily(fontFamily: FontFamily): Typography =
     copy(
