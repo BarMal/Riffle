@@ -11,13 +11,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RenderEffect
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -131,29 +133,46 @@ private const val DOCK_DROP_HIGHLIGHT_WIDTH_DP = 2
 private const val DOCK_DROP_HIGHLIGHT_ANIMATION_MILLIS = 120
 
 /**
+ * A [RenderEffect] blurring by [strength] (0..1) of [maxRadiusPx], or null once that scales to
+ * nothing -- [RenderEffect.createBlurEffect] (which [BlurEffect] wraps) rejects a zero/negative
+ * radius, and null is also cheaper than a same-as-no-op blur while the pull is at rest.
+ */
+private fun reorientBlurEffect(
+    strength: Float,
+    maxRadiusPx: Float,
+): RenderEffect? {
+    val radiusPx = maxRadiusPx * strength.coerceIn(0f, 1f)
+    return if (radiusPx > 0f) BlurEffect(radiusPx, radiusPx, TileMode.Clamp) else null
+}
+
+/**
  * The dock re-orientation's "iPhone Duo" frost (dock-reorient decisions, follow-up to #1278): a
- * darken scrim over the dock, continuously proportional to [strengthProvider] (0 at rest, 1 at the
- * frost's strongest -- see [com.riffle.core.domain.launcher.dockpull.dockPullReorientFrostStrength]),
- * read inside a draw block so it animates without recomposing, exactly like [dockSurfaceAppearance]'s
- * own pull branch. [strengthProvider] is only called while [isActive] -- pass the dock pull's
- * `transitioning` flag, which changes just at a pull's start and end, not [strengthProvider]'s value.
+ * blur and darken scrim over the dock, both continuously proportional to [strengthProvider] (0 at
+ * rest, 1 at the frost's strongest -- see
+ * [com.riffle.core.domain.launcher.dockpull.dockPullReorientFrostStrength]), read inside a
+ * [graphicsLayer]/draw block so both animate without recomposing, exactly like
+ * [dockSurfaceAppearance]'s own pull branch. [strengthProvider] is only called while [isActive] --
+ * pass the dock pull's `transitioning` flag, which changes just at a pull's start and end, not
+ * [strengthProvider]'s value.
  *
- * The blur itself is a real, [RenderEffect][android.graphics.RenderEffect]-backed [Modifier.blur];
- * minSdk is 31 (Android 12), so it is always available here, with no pre-31 darken-only fallback.
- * Its radius is fixed at [isActive]'s composition-level max rather than also riding
- * [strengthProvider] frame to frame:
- * [Modifier.blur]'s radius is set once when the modifier chain is built, not read lazily like a draw
- * block, so animating it continuously would mean rebuilding the modifier (and recomposing the dock)
- * every frame of the pull -- the one thing this binding is built to avoid. The darken scrim still
- * ramps continuously; only the blur's own strength is a step rather than a ramp.
+ * The blur is a real, [RenderEffect]-backed one set directly on
+ * [androidx.compose.ui.graphics.GraphicsLayerScope.renderEffect] rather than via
+ * [androidx.compose.ui.draw.blur] -- that modifier fixes its radius when the
+ * modifier chain is built, not read lazily like a draw block, so it could only step the blur on at
+ * full strength rather than ramp it in with the drag; a [graphicsLayer] block, like the darken
+ * scrim's own draw block, is invoked every frame the layer redraws, so the radius rides
+ * [strengthProvider] exactly like the darken alpha does. minSdk is 31 (Android 12), so
+ * [RenderEffect] is always available here, with no pre-31 darken-only fallback.
  */
 internal fun Modifier.dockReorientFrost(
     isActive: Boolean,
     strengthProvider: () -> Float,
 ): Modifier {
     if (!isActive) return this
-    // minSdk 31 (Android 12): Modifier.blur always renders here, no pre-31 darken-only fallback.
-    return blur(radius = DOCK_REORIENT_MAX_BLUR_DP.dp).drawWithContent {
+    return graphicsLayer {
+        renderEffect = reorientBlurEffect(strengthProvider(), DOCK_REORIENT_MAX_BLUR_DP.dp.toPx())
+        clip = true
+    }.drawWithContent {
         drawContent()
         val strength = strengthProvider().coerceIn(0f, 1f)
         if (strength > 0f) {
@@ -177,17 +196,25 @@ private const val DOCK_REORIENT_MAX_DARKEN_ALPHA = 0.35f
  * bottom/top dock's vertical pull, left/right for a side dock's horizontal one.
  *
  * Applied to the Box that wraps *both* mode surfaces, never the dock itself -- the dock is the
- * handle you're holding, so it stays sharp throughout while the screen around it recedes. Read
- * inside a draw block exactly like [dockReorientFrost], so it animates without recomposing; the
- * same on/off blur-radius caveat documented there applies here too.
+ * handle you're holding, so it stays sharp throughout while the screen around it recedes. The
+ * blur rides [strengthProvider] (0..1, the same progress [dockReorientFrost] reads) via a
+ * [graphicsLayer]'s [androidx.compose.ui.graphics.GraphicsLayerScope.renderEffect] rather than
+ * [androidx.compose.ui.draw.blur], for the same reason documented on [dockReorientFrost]: only
+ * that lets the radius ramp in with the drag instead of stepping straight to full strength. The
+ * darken bands keep their own [edgeBandFractionProvider], since that one also picks each band's
+ * width, not just an intensity.
  */
 internal fun Modifier.screenReorientFrost(
     isActive: Boolean,
     isVerticalPull: Boolean,
+    strengthProvider: () -> Float,
     edgeBandFractionProvider: () -> Float,
 ): Modifier {
     if (!isActive) return this
-    return blur(radius = SCREEN_REORIENT_MAX_BLUR_DP.dp).drawWithContent {
+    return graphicsLayer {
+        renderEffect = reorientBlurEffect(strengthProvider(), SCREEN_REORIENT_MAX_BLUR_DP.dp.toPx())
+        clip = true
+    }.drawWithContent {
         drawContent()
         val bandFraction = edgeBandFractionProvider().coerceIn(0f, 0.5f)
         if (bandFraction > 0f) {

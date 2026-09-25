@@ -212,6 +212,7 @@ private fun screenFrostModifier(
     Modifier.screenReorientFrost(
         isActive = isActive,
         isVerticalPull = pullDirection.unitY != 0f,
+        strengthProvider = { dockPullReorientFrostStrength(frame.value.dockBackgroundAlpha) },
         edgeBandFractionProvider = { dockPullReorientEdgeBandFraction(frame.value.dockBackgroundAlpha) },
     )
 
