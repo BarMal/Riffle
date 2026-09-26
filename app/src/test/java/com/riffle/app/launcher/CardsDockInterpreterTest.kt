@@ -27,7 +27,8 @@ import org.junit.Test
  * Cards' side of the dock boundary (#1212): the dock hands over neutral intents and this decides
  * what they mean. The dynamic section follows the same rule the dock already applies in grid mode
  * (#XXXX): pinned wins the static side and is excluded here, so this only ever lists an unpinned
- * stage with something new. A pinned icon's stage is one long-press away while a tap opens the app.
+ * stage with something new. A pinned icon that is also a stage navigates to it on a tap (#XXXX);
+ * a pinned icon with no stage still opens the app, same as any other mode.
  */
 class CardsDockInterpreterTest {
     private val state = LauncherShellState(installedApps = listOf(mailApp, notesApp))
@@ -148,6 +149,19 @@ class CardsDockInterpreterTest {
             listOf(LauncherShellAction.OpenSettings, LauncherShellAction.SelectAppStage(mailStageId)),
             actions,
         )
+    }
+
+    @Test
+    fun aTapOnAPinnedIconThatIsAlsoAStageNavigatesToIt() {
+        assertEquals(
+            LauncherShellAction.SelectAppStage(notesStageId),
+            cardsStaticItemTapOverride(notesApp.identity, stages),
+        )
+    }
+
+    @Test
+    fun aTapOnAPinnedIconWithNoStageFallsBackToLaunching() {
+        assertEquals(null, cardsStaticItemTapOverride(cameraApp.identity, stages))
     }
 
     @Test
