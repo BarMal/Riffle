@@ -624,6 +624,7 @@ private fun JSONObject?.optIntOrDefault(
  * single representative reference dimension ([legacyReferenceDp]) rather than the actual one. A
  * fresh install with neither key present gets [default] untouched.
  */
+@Suppress("ReturnCount")
 private fun JSONObject?.optPercentOrMigrateLegacyDp(
     percentKey: String,
     legacyDpKey: String,
