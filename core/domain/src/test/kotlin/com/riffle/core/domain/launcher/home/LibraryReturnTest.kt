@@ -12,8 +12,8 @@ class LibraryReturnTest {
     private val phone = HomeLayoutDeviceClass.PHONE
 
     @Test
-    fun returningHomeIsTheDefault() {
-        assertEquals(LibraryReturnTarget.HOME, AppDrawerSettings().afterLeavingLibrary)
+    fun stayingOnLastUsedIsTheDefault() {
+        assertEquals(LibraryReturnTarget.LIBRARY, AppDrawerSettings().afterLeavingLibrary)
     }
 
     @Test

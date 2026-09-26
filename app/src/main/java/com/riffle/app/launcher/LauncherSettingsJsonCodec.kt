@@ -105,7 +105,8 @@ private fun JSONObject.toAppDrawerSettings(defaults: AppDrawerSettings): AppDraw
                 ?.let { name -> AppDrawerPresentation.entries.firstOrNull { it.name == name } }
                 ?: defaults.presentation,
         iconGridColumns = optInt("iconGridColumns", defaults.iconGridColumns),
-        // Absent (settings saved before #1243) or unknown: the default, Home.
+        // Absent (settings saved before #1243) or unknown: the default, Library (never forces a
+        // switch off whatever mode was last showing).
         afterLeavingLibrary =
             optString("afterLeavingLibrary")
                 .takeIf(String::isNotEmpty)
