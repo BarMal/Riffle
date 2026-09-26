@@ -164,10 +164,6 @@ private fun DockOrShelf(
             widgetViewFactory = presentation.widgetViewFactory,
             position = position,
             interactions = interactions,
-            // The strip itself stays undrawn (see the comment on the collapsed Dock's own call
-            // below), but the static side still needs to reserve the same room for it that the
-            // collapsed dock does, or the pinned-icon strip's width jumps when the shelf opens.
-            dynamicEntryCount = dynamicEntries.size,
         )
     } else {
         Dock(

@@ -198,7 +198,9 @@ private fun DockCapacitySetting(
 
 /**
  * How many notification icons show at once before that section scrolls, independent of how many
- * pinned icons the dock has. Fewer notifications than this shrinks the section; more scrolls.
+ * pinned icons the dock has. This is the section's run whatever a mode currently has waiting there
+ * -- more scrolls, fewer just leaves the run's tail blank -- so the dock's whole width holds steady
+ * across every mode rather than following how busy each one happens to be.
  */
 @Composable
 private fun DockNotificationSlotCountSetting(

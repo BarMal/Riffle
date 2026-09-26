@@ -24,20 +24,20 @@ private fun testDockShortcut(id: String): AppShortcutItem =
  * How the dock's run is divided between its two sections.
  *
  * The dynamic section is sized from its own
- * [com.riffle.core.domain.launcher.home.DockModel.notificationSlotCount] cap, drawn in full
- * whenever the run has room, never padded out beyond how many entries actually exist. The static
- * side is sized from its own [com.riffle.core.domain.launcher.home.DockModel.capacity] cap
- * afterwards, from whatever room the dynamic section has left -- notifications go first, and the
- * static side scrolls the rest away rather than the other way around. These pin that arithmetic.
+ * [com.riffle.core.domain.launcher.home.DockModel.notificationSlotCount] cap alone -- a fixed
+ * budget, drawn in full whenever the run has room, regardless of how many entries a mode actually
+ * has to show there right now (see that property's own KDoc). The static side is sized from its
+ * own [com.riffle.core.domain.launcher.home.DockModel.capacity] cap afterwards, from whatever room
+ * the dynamic section has left -- notifications go first, and the static side scrolls the rest away
+ * rather than the other way around. These pin that arithmetic.
  */
 class DockDynamicSectionMetricsTest {
     @Test
-    fun dynamicSectionTakesWhatTheEntriesNeedWhenTheRunHasRoom() {
-        // Four entries at a 44dp icon and 12dp spacing: 4*44 + 3*12.
+    fun dynamicSectionAlwaysTakesTheFullSlotCountWhenTheRunHasRoom() {
+        // A slot count of five at a 44dp icon and 12dp spacing: 5*44 + 4*12.
         assertEquals(
-            212,
+            268,
             dockDynamicSectionMainAxisDp(
-                entryCount = 4,
                 notificationSlotCount = 5,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
@@ -47,27 +47,11 @@ class DockDynamicSectionMetricsTest {
     }
 
     @Test
-    fun dynamicSectionShrinksToFewerEntriesThanTheSlotCountAllows() {
-        // Only two entries even though the slot count allows five: 2*44 + 1*12.
+    fun dynamicSectionDoesNotShrinkForASmallerSlotCount() {
+        // A slot count of two: 2*44 + 1*12, whatever the run could otherwise fit.
         assertEquals(
             100,
             dockDynamicSectionMainAxisDp(
-                entryCount = 2,
-                notificationSlotCount = 5,
-                entryExtentDp = 44,
-                entrySpacingDp = 12,
-                maxRunMainAxisDp = 560,
-            ),
-        )
-    }
-
-    @Test
-    fun dynamicSectionNeverExceedsItsOwnSlotCountRegardlessOfHowManyEntriesThereAre() {
-        // Five entries but a slot count of two: 2*44 + 1*12, the rest scrolls (DockDynamicSection).
-        assertEquals(
-            100,
-            dockDynamicSectionMainAxisDp(
-                entryCount = 5,
                 notificationSlotCount = 2,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
@@ -83,7 +67,6 @@ class DockDynamicSectionMetricsTest {
         assertEquals(
             183,
             dockDynamicSectionMainAxisDp(
-                entryCount = 12,
                 notificationSlotCount = 12,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
@@ -93,25 +76,10 @@ class DockDynamicSectionMetricsTest {
     }
 
     @Test
-    fun noEntriesMeansNoSection() {
+    fun aZeroSlotCountMeansNoSection() {
         assertEquals(
             0,
             dockDynamicSectionMainAxisDp(
-                entryCount = 0,
-                notificationSlotCount = 3,
-                entryExtentDp = 44,
-                entrySpacingDp = 12,
-                maxRunMainAxisDp = 560,
-            ),
-        )
-    }
-
-    @Test
-    fun aZeroSlotCountMeansNoSectionEvenWithEntries() {
-        assertEquals(
-            0,
-            dockDynamicSectionMainAxisDp(
-                entryCount = 3,
                 notificationSlotCount = 0,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
@@ -122,10 +90,10 @@ class DockDynamicSectionMetricsTest {
 
     @Test
     fun theStaticSideIsCappedToWhatTheDynamicSectionLeaves() {
-        // A 560dp run, a dynamic section that draws in full at 212dp (4 entries, 44dp/12dp) plus the
-        // 17dp rule leaves 331dp for the static side -- less than capacity alone would draw for 10
-        // icons at this icon size (10*44 + 9*12 = 548dp), so the static side is capped, not the
-        // dynamic one.
+        // A 560dp run, a dynamic section that draws in full at 212dp (a 4-icon slot count, 44dp/12dp)
+        // plus the 17dp rule leaves 331dp for the static side -- less than capacity alone would draw
+        // for 10 icons at this icon size (10*44 + 9*12 = 548dp), so the static side is capped, not
+        // the dynamic one.
         val surfaceMetrics =
             dockSurfaceMetrics(
                 dock =
@@ -139,7 +107,6 @@ class DockDynamicSectionMetricsTest {
                 isEditing = false,
                 availableMainAxisDp = 560,
                 runsHorizontally = true,
-                dynamicEntryCount = 4,
             )
 
         assertEquals(212, surfaceMetrics?.dynamicSectionMainAxisDp)
@@ -148,8 +115,8 @@ class DockDynamicSectionMetricsTest {
 
     @Test
     fun theDynamicSectionNeverDisplacesTheStaticSideEntirely() {
-        // A 200dp run, one pinned icon, and a notification section demanding far more than fits
-        // (12 entries at 44dp/12dp wants 660dp). Without a floor the dynamic section would claim
+        // A 200dp run, one pinned icon, and a notification slot count demanding far more than fits
+        // (12 icons at 44dp/12dp wants 660dp). Without a floor the dynamic section would claim
         // everything past its own 17dp rule (183dp), leaving the static side 0dp -- not scrolled,
         // gone. The floor reserves one icon's worth (44 + 2*14 = 72dp) for the static side first, so
         // the dynamic section is capped to 111dp (200 - 72 - 17) instead, and the pinned icon still
@@ -167,49 +134,11 @@ class DockDynamicSectionMetricsTest {
                 isEditing = false,
                 availableMainAxisDp = 200,
                 runsHorizontally = true,
-                dynamicEntryCount = 12,
             )
 
         assertEquals(111, surfaceMetrics?.dynamicSectionMainAxisDp)
         assertEquals(72, surfaceMetrics?.containerMainAxisDp)
         assertEquals(true, (surfaceMetrics?.contentViewportMainAxisDp ?: 0) > 0)
-    }
-
-    @Test
-    fun aDockWithNoNotificationsSizesTheStaticSideAsIfTheDynamicSectionDidNotExist() {
-        val withNotifications =
-            dockSurfaceMetrics(
-                dock =
-                    DockModel(
-                        capacity = 10,
-                        items = List(10) { index -> testDockShortcut("app-$index") },
-                        notificationSlotCount = 4,
-                        iconSizeDp = 44,
-                        itemSpacingDp = 12,
-                    ),
-                isEditing = false,
-                availableMainAxisDp = 560,
-                runsHorizontally = true,
-                dynamicEntryCount = 0,
-            )
-        val withoutDynamicSection =
-            dockSurfaceMetrics(
-                dock =
-                    DockModel(
-                        capacity = 10,
-                        items = List(10) { index -> testDockShortcut("app-$index") },
-                        notificationSlotCount = 0,
-                        iconSizeDp = 44,
-                        itemSpacingDp = 12,
-                    ),
-                isEditing = false,
-                availableMainAxisDp = 560,
-                runsHorizontally = true,
-                dynamicEntryCount = 0,
-            )
-
-        assertEquals(0, withNotifications?.dynamicSectionMainAxisDp)
-        assertEquals(withoutDynamicSection?.containerMainAxisDp, withNotifications?.containerMainAxisDp)
     }
 
     @Test
@@ -233,7 +162,7 @@ class DockDynamicSectionMetricsTest {
     }
 
     @Test
-    fun stripWithNoEntriesDoesNotDrawTheDynamicSection() {
+    fun stripWithNoBudgetDoesNotDrawTheDynamicSection() {
         val metrics =
             DockSurfaceMetrics(
                 renderedSlotCount = 4,
@@ -249,12 +178,15 @@ class DockDynamicSectionMetricsTest {
                 dynamicSectionMainAxisDp = 0,
             )
 
-        assertEquals(false, dockSurfaceStripShowsDynamicSection(metrics, dynamicEntries = emptyList()))
+        assertEquals(false, dockSurfaceStripShowsDynamicSection(metrics))
         assertEquals(240, dockSurfaceStripMainAxisDp(metrics, showDynamicSection = false))
     }
 
     @Test
-    fun stripWithEntriesDrawsTheDynamicSectionAtTheFullSurfaceWidth() {
+    fun stripWithBudgetDrawsTheDynamicSectionAtTheFullSurfaceWidthWhetherOrNotEntriesExistRightNow() {
+        // The section is reserved from the budget alone -- no entries needed, and no entries taken
+        // away either -- so a mode with nothing waiting right now still draws (and anchors) the same
+        // full-width section a busy mode does.
         val metrics =
             DockSurfaceMetrics(
                 renderedSlotCount = 4,
@@ -269,24 +201,35 @@ class DockDynamicSectionMetricsTest {
                     ),
                 dynamicSectionMainAxisDp = 61,
             )
-        val entries =
-            listOf(
-                DockDynamicEntry(
-                    key = "app",
-                    label = "App",
-                    identity = null,
-                    badgeCount = 1,
-                    isSelected = false,
-                    contentDescription = "App, 1 notification",
-                    intent = null,
-                ),
-            )
 
-        assertEquals(true, dockSurfaceStripShowsDynamicSection(metrics, dynamicEntries = entries))
+        assertEquals(true, dockSurfaceStripShowsDynamicSection(metrics))
         assertEquals(
             metrics.surfaceMainAxisDp,
             dockSurfaceStripMainAxisDp(metrics, showDynamicSection = true),
         )
+    }
+
+    @Test
+    fun aCallerWithItsOwnShelfContentNeverDrawsTheStripsSection() {
+        // ExpandedDockSurface's own case: the shelf's card row already shows the entries, so its
+        // strip must not draw the section itself however wide the budget is -- only reserve room for
+        // it (via containerMainAxisDp, computed the same way whether or not the strip draws it).
+        val metrics =
+            DockSurfaceMetrics(
+                renderedSlotCount = 4,
+                containerMainAxisDp = 240,
+                contentViewportMainAxisDp = 212,
+                slotMetrics =
+                    dockSlotRenderMetrics(
+                        slotCount = 4,
+                        iconSizeDp = 44,
+                        itemSpacingDp = 12,
+                        availableContentMainAxisDp = 212,
+                    ),
+                dynamicSectionMainAxisDp = 61,
+            )
+
+        assertEquals(false, dockSurfaceStripShowsDynamicSection(metrics, drawsDynamicSection = false))
     }
 
     @Test

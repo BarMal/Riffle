@@ -104,7 +104,6 @@ internal fun Dock(
                     if (position.isHorizontalEdge) maxWidth.value.toInt() else maxHeight.value.toInt(),
                 previewSlotCount = if (widgetPickerDockPreview != null) 1 else 0,
                 runsHorizontally = position.isHorizontalEdge,
-                dynamicEntryCount = dynamicEntries.size,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -494,10 +493,13 @@ internal fun dockContainerMainAxisDp(
 /**
  * How much of the dock's run the dynamic section gets.
  *
- * Notifications go first: what actually shows is capped to [notificationSlotCount] tiles' worth
- * (fewer entries than that shrinks the section instead of padding it out; more scrolls, see
- * [DockDynamicSection]), drawn in full whenever the run has room for it -- the static side is what
- * gives way, sized afterwards from whatever this leaves (see [dockContainerMainAxisDp]'s
+ * A fixed budget, not a live measurement: this is always [notificationSlotCount] tiles' worth,
+ * whatever the actual number of entries a mode currently has to show there (see [DockModel]'s own
+ * KDoc). A mode with fewer entries than the budget just leaves that run's tail blank -- the section
+ * never shrinks to the moment's content -- so this result, and everything sized from it, is the
+ * same in every mode and at every moment a device's dock config does not itself change. Notifications
+ * still go first: this is drawn in full whenever the run has room for it, and the static side is
+ * what gives way, sized afterwards from whatever this leaves (see [dockContainerMainAxisDp]'s
  * `runMainAxisCapDp`), not the other way around. [maxRunMainAxisDp] only clamps this section's own
  * result so the whole strip never draws wider than the screen has.
  *
@@ -510,35 +512,33 @@ internal fun dockContainerMainAxisDp(
  * section can never be sized to leave the static side nothing at all.
  */
 internal fun dockDynamicSectionMainAxisDp(
-    entryCount: Int,
     notificationSlotCount: Int,
     entryExtentDp: Int,
     entrySpacingDp: Int,
     maxRunMainAxisDp: Int,
 ): Int {
-    val visibleCount = entryCount.coerceAtMost(notificationSlotCount.coerceAtLeast(0))
-    if (visibleCount <= 0 || entryExtentDp <= 0) {
+    val slotCount = notificationSlotCount.coerceAtLeast(0)
+    if (slotCount <= 0 || entryExtentDp <= 0) {
         return 0
     }
-    val wanted = (visibleCount * entryExtentDp) + ((visibleCount - 1) * entrySpacingDp.coerceAtLeast(0))
+    val wanted = (slotCount * entryExtentDp) + ((slotCount - 1) * entrySpacingDp.coerceAtLeast(0))
     val room = maxRunMainAxisDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
     return min(wanted, room).coerceAtLeast(0)
 }
 
 /**
- * Whether [DockSurfaceStrip] should actually draw a divider and dynamic section, rather than just
- * reserve room for one.
+ * Whether [DockSurfaceStrip] should reserve the run for a dynamic section at all.
  *
- * A caller can reserve room in [DockSurfaceMetrics.containerMainAxisDp] for a dynamic section
- * without asking this strip to draw one -- [ExpandedDockSurface] does exactly that, to keep the
- * static side's width steady across the collapsed/expanded transition, while the shelf's own card
- * row shows the entries instead. Drawing the section there anyway, with nothing in it, would tack a
- * dead gap and an orphaned divider onto the strip for content that was never going to be there.
+ * [drawsDynamicSection] is false for a caller whose own shelf content already shows these entries
+ * ([ExpandedDockSurface] passes it false so the shelf's card row is the only place they render), not
+ * for a mode that simply has nothing waiting right now -- the section's width is a fixed budget (see
+ * [dockDynamicSectionMainAxisDp]), so a momentarily empty section still reserves its run; only its
+ * divider hides then (see [DockSectionDivider]'s `visible`).
  */
 internal fun dockSurfaceStripShowsDynamicSection(
     surfaceMetrics: DockSurfaceMetrics,
-    dynamicEntries: List<DockDynamicEntry>,
-): Boolean = surfaceMetrics.dynamicSectionMainAxisDp > 0 && dynamicEntries.isNotEmpty()
+    drawsDynamicSection: Boolean = true,
+): Boolean = drawsDynamicSection && surfaceMetrics.dynamicSectionMainAxisDp > 0
 
 /** The strip's own run: the full [DockSurfaceMetrics.surfaceMainAxisDp] only when it is drawn. */
 internal fun dockSurfaceStripMainAxisDp(

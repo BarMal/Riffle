@@ -9,10 +9,13 @@ data class DockModel(
     /**
      * How many notification icons show at once before that section scrolls.
      *
-     * Notifications are drawn in full whenever the dock's run has room for it, ahead of the pinned
-     * icons: a busy notification section scrolls [capacity]'s icons out of the way rather than
-     * getting squeezed down itself. Fewer notifications than this shrinks the section rather than
-     * padding it out to the full count; more scrolls.
+     * This is a fixed budget, not a live count: the section always reserves this many icons' worth
+     * of room, ahead of the pinned icons (a busy notification section scrolls [capacity]'s icons out
+     * of the way rather than getting squeezed down itself), whatever the actual number of entries a
+     * mode currently has to show there. Fewer entries than this leaves the section's own run
+     * partly blank rather than shrinking it; more scrolls. This keeps the dock's whole geometry --
+     * this section's width and the pinned strip's -- identical across every mode and moment, rather
+     * than following how much each mode happens to have waiting right now.
      */
     val notificationSlotCount: Int = DEFAULT_DOCK_NOTIFICATION_SLOT_COUNT,
     val iconSizeDp: Int = DEFAULT_DOCK_ICON_SIZE_DP,

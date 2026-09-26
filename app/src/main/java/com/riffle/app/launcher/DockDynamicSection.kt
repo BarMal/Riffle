@@ -59,7 +59,20 @@ internal fun DockDynamicSection(
     // matching suppressEndFade on DockSlotStrip (#1174).
     suppressStartFade: Boolean = false,
 ) {
-    if (entries.isEmpty() || mainAxisDp <= 0) {
+    if (mainAxisDp <= 0) {
+        return
+    }
+    if (entries.isEmpty()) {
+        // mainAxisDp is a fixed budget (see dockDynamicSectionMainAxisDp), not a measurement of
+        // these entries, so a mode with nothing to show here still reserves the run rather than
+        // collapsing it -- the static side's own width must not shift depending on whether this
+        // mode's dynamic section happens to have anything in it right now.
+        Box(
+            modifier =
+                Modifier
+                    .testTag(DOCK_DYNAMIC_SECTION_TEST_TAG)
+                    .then(if (runsHorizontally) Modifier.width(mainAxisDp.dp) else Modifier.height(mainAxisDp.dp)),
+        )
         return
     }
     // The same numbers the static side is drawn from, so an entry is the size of a pinned icon.

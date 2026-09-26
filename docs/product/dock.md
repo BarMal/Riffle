@@ -130,20 +130,24 @@ The two sections are sized from two independent, per-layout settings (both per d
 by every mode): **capacity** caps how many pinned icons show before the static side scrolls, and
 **notification slot count** caps how many notification icons show before the dynamic section
 scrolls. The two settings are independent ceilings, but the run itself is one shared strip, and
-notifications go first when it is tight: the dynamic section always draws in full up to its slot
-count, and the static side is sized from whatever room that leaves, scrolling the rest rather than
-the other way around -- except that the static side always keeps room for at least one pinned icon,
+notifications go first when it is tight: the dynamic section always reserves its full slot count's
+worth of room -- a fixed budget, not a live count of what a mode actually has to show there right
+now -- and the static side is sized from whatever room that leaves, scrolling the rest rather than
+the other way around, except that the static side always keeps room for at least one pinned icon,
 so a busy notification section can scroll the rest of the pinned icons away but never make every
-pinned icon disappear. A dock with nothing waiting sizes the static side exactly as if the dynamic
-section did not exist. A settings-screen summary states the resulting total and its split in one
-line (for example, "Shows up to 10 icons: 7 pinned, 3 for notifications") so the two sliders read as
-one budget.
+pinned icon disappear. Because the budget never depends on how many entries a mode currently has,
+the whole strip's geometry -- both sections' widths -- is identical in every mode and at every
+moment: a mode with nothing waiting right now reserves the same run a busy one draws into, it just
+leaves that run's tail blank. A settings-screen summary states the resulting total and its split in
+one line (for example, "Shows up to 10 icons: 7 pinned, 3 for notifications") so the two sliders
+read as one budget.
 
 Each section scrolls on its own: the static side scrolls independently when pinned items exceed
 whatever capacity the dynamic section has left it, and the dynamic section scrolls independently
-when notifications exceed the slot count. Fewer notifications than the slot count shrinks the
-section instead of padding it out to a fixed width -- an entry is always exactly a pinned icon's
-size, never bigger or smaller to fit the space.
+when notifications exceed the slot count. An entry is always exactly a pinned icon's size, never
+bigger or smaller to fit the space. The section's divider only hides when there is nothing to
+divide -- an empty section reads as "nothing here," not as a visible empty box -- but the run itself
+never narrows for it, which is what keeps the strip anchored across a mode switch.
 
 ### The merged All-notifications view
 

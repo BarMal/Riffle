@@ -56,7 +56,6 @@ internal fun dockSurfaceMetrics(
     availableMainAxisDp: Int,
     previewSlotCount: Int = 0,
     runsHorizontally: Boolean = true,
-    dynamicEntryCount: Int = 0,
 ): DockSurfaceMetrics? {
     val renderedSlotCount =
         dockRenderedSlotCount(
@@ -101,7 +100,6 @@ internal fun dockSurfaceMetrics(
     // scrolls the pinned icons out of the way rather than getting squeezed itself.
     val dynamicSectionMainAxisDp =
         dockDynamicSectionMainAxisDp(
-            entryCount = dynamicEntryCount,
             notificationSlotCount = dock.notificationSlotCount,
             entryExtentDp = dock.iconSizeDp,
             entrySpacingDp = dock.itemSpacingDp,
@@ -158,7 +156,6 @@ internal fun ExpandedDockSurface(
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     position: DockPosition = DockPosition.BOTTOM,
     interactions: DockInteractions,
-    dynamicEntryCount: Int = 0,
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
     val runsHorizontally = position.isHorizontalEdge
@@ -177,12 +174,6 @@ internal fun ExpandedDockSurface(
                 isEditing = false,
                 availableMainAxisDp = availableMainAxisDp,
                 runsHorizontally = runsHorizontally,
-                // The strip's own dynamic section stays undrawn here (the shelf's card row already
-                // shows those entries -- see the comment where dynamicEntries is withheld in
-                // DockOrShelf), but the static side still needs to reserve the same room for it that
-                // the collapsed dock does, or the pinned-icon strip's width jumps when the shelf
-                // opens and closes.
-                dynamicEntryCount = dynamicEntryCount,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -207,6 +198,9 @@ internal fun ExpandedDockSurface(
                     appIconLoader = appIconLoader,
                     position = position,
                     renderBackground = false,
+                    // The shelf's own card row shows these entries; drawing them again here would
+                    // show every entry twice.
+                    drawsDynamicSection = false,
                 )
             },
             content = {
@@ -328,9 +322,10 @@ internal fun DockSurfaceStrip(
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
     dynamicEntries: List<DockDynamicEntry> = emptyList(),
     onDynamicEntryDelegated: (String) -> Unit = {},
+    drawsDynamicSection: Boolean = true,
 ) {
     val runsHorizontally = position.isHorizontalEdge
-    val showDynamicSection = dockSurfaceStripShowsDynamicSection(surfaceMetrics, dynamicEntries)
+    val showDynamicSection = dockSurfaceStripShowsDynamicSection(surfaceMetrics, drawsDynamicSection)
     val mainAxisDp = dockSurfaceStripMainAxisDp(surfaceMetrics, showDynamicSection).dp
     val crossAxisDp = dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp
     val staticSide: @Composable (suppressEndFade: Boolean) -> Unit = { suppressEndFade ->
@@ -373,14 +368,19 @@ internal fun DockSurfaceStrip(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        // Nothing dynamic to show is the common case and stays exactly as it was: one strip,
+        // No budget for a dynamic section at all (drawsDynamicSection = false, or the dock's
+        // notificationSlotCount is 0) is the one case with no reserved run to lay out: one strip,
         // centred, with no arrangement wrapped around it to shift it by a fraction of a pixel.
         if (!showDynamicSection) {
             staticSide(false)
         } else {
             DockSectionRun(runsHorizontally = runsHorizontally) {
                 staticSide(true)
-                DockSectionDivider(runsHorizontally = runsHorizontally)
+                // The divider marks a seam between two sections that both have something in them;
+                // hiding it when this mode has nothing waiting reads as "nothing here" instead of
+                // "an empty box is here" -- but the run stays the same width either way, so the
+                // static side's own width never moves as entries come and go.
+                DockSectionDivider(runsHorizontally = runsHorizontally, visible = dynamicEntries.isNotEmpty())
                 DockDynamicSection(
                     dock = dock,
                     entries = dynamicEntries,
@@ -414,12 +414,18 @@ private fun DockSectionRun(
 /**
  * The rule between the static side and the dynamic one.
  *
- * A visible seam on purpose. The two sides answer to different things -- one to what the user
- * pinned, one to what has just arrived -- and running them together would make the dock look like
- * it rearranges itself.
+ * A visible seam on purpose whenever both sides have something in them: they answer to different
+ * things -- one to what the user pinned, one to what has just arrived -- and running them together
+ * would make the dock look like it rearranges itself. [visible] takes only the rule away, not its
+ * thickness -- the dynamic section's run is a fixed budget (see [dockDynamicSectionMainAxisDp]), so
+ * this stays exactly as wide whether or not it draws, and the static side's own width never shifts
+ * because a mode's dynamic section happened to empty out.
  */
 @Composable
-private fun DockSectionDivider(runsHorizontally: Boolean) {
+private fun DockSectionDivider(
+    runsHorizontally: Boolean,
+    visible: Boolean,
+) {
     val thickness = DOCK_SECTION_DIVIDER_MAIN_AXIS_DP.dp
     Box(
         modifier =
@@ -430,18 +436,22 @@ private fun DockSectionDivider(runsHorizontally: Boolean) {
             },
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .then(
-                        if (runsHorizontally) {
-                            Modifier.width(DOCK_SECTION_DIVIDER_RULE_DP.dp).fillMaxHeight()
-                        } else {
-                            Modifier.height(DOCK_SECTION_DIVIDER_RULE_DP.dp).fillMaxWidth()
-                        },
-                    )
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DOCK_SECTION_DIVIDER_ALPHA)),
-        )
+        if (visible) {
+            Box(
+                modifier =
+                    Modifier
+                        .then(
+                            if (runsHorizontally) {
+                                Modifier.width(DOCK_SECTION_DIVIDER_RULE_DP.dp).fillMaxHeight()
+                            } else {
+                                Modifier.height(DOCK_SECTION_DIVIDER_RULE_DP.dp).fillMaxWidth()
+                            },
+                        )
+                        .background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DOCK_SECTION_DIVIDER_ALPHA),
+                        ),
+            )
+        }
     }
 }
 
