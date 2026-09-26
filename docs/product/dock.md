@@ -126,18 +126,24 @@ The **dynamic** section's meaning depends on the mode:
 Selecting a stage from anywhere -- the selector, **Show stage**, a spine chip -- leaves the merged
 view. Opening an app stays on the stage's header overflow as well as on the icon itself.
 
-The two sections are sized from two independent, per-layout settings rather than negotiating a
-shared run between them (both per device class, shared by every mode): **capacity** caps how many pinned icons show before the static side
-scrolls, and **notification slot count** caps how many notification icons show before the dynamic
-section scrolls. Neither setting shrinks the other -- a dock busy with pinned apps never squeezes
-notifications out, and a dock with several notifications never shoves the pinned icons along. A
-settings-screen summary states the resulting total and its split in one line (for example, "Shows
-up to 10 icons: 7 pinned, 3 for notifications") so the two sliders read as one budget.
+The two sections are sized from two independent, per-layout settings (both per device class, shared
+by every mode): **capacity** caps how many pinned icons show before the static side scrolls, and
+**notification slot count** caps how many notification icons show before the dynamic section
+scrolls. The two settings are independent ceilings, but the run itself is one shared strip, and
+notifications go first when it is tight: the dynamic section always draws in full up to its slot
+count, and the static side is sized from whatever room that leaves, scrolling the rest rather than
+the other way around -- except that the static side always keeps room for at least one pinned icon,
+so a busy notification section can scroll the rest of the pinned icons away but never make every
+pinned icon disappear. A dock with nothing waiting sizes the static side exactly as if the dynamic
+section did not exist. A settings-screen summary states the resulting total and its split in one
+line (for example, "Shows up to 10 icons: 7 pinned, 3 for notifications") so the two sliders read as
+one budget.
 
 Each section scrolls on its own: the static side scrolls independently when pinned items exceed
-capacity, and the dynamic section scrolls independently when notifications exceed the slot count.
-Fewer notifications than the slot count shrinks the section instead of padding it out to a fixed
-width -- an entry is always exactly a pinned icon's size, never bigger or smaller to fit the space.
+whatever capacity the dynamic section has left it, and the dynamic section scrolls independently
+when notifications exceed the slot count. Fewer notifications than the slot count shrinks the
+section instead of padding it out to a fixed width -- an entry is always exactly a pinned icon's
+size, never bigger or smaller to fit the space.
 
 ### The merged All-notifications view
 
@@ -211,7 +217,7 @@ section does that job, so the rail is gone (#1159).
 | Dynamic section means "a notification arrived" | Done (#1162) — de-duplicated against the static side in every mode |
 | Static tap opens the app in every mode; Cards stage on long-press | Done (#1212) |
 | Cards dynamic section is the stage selector ("All" first, every stage, selection ring, auto-scroll) | Done (#1212) behind the neutral `Delegate` intent; "Now" entry pending #1216 |
-| Static and dynamic sections are sized independently | Done — separate per-layout settings (capacity, notification slot count), neither shrinks the other |
+| Static and dynamic sections are sized independently | Done — separate per-layout settings (capacity, notification slot count); notifications draw in full first, the static side is sized from what is left |
 | Settings summarise the total and its split | Done — one line at the top of the dock settings section |
 | Merged All-notifications view reachable | Done (#1212) — always the selector's first entry; optional in the compact swipe order |
 | Visible-before-overflow, scroll for the rest | Done — each section scrolls independently within its own setting |
@@ -237,7 +243,7 @@ section does that job, so the rail is gone (#1159).
 
 ## Change checklist
 
-When changing the dock, check that: the two sections still read as one strip; neither section's
-setting shrinks the other's; nothing shrinks below a pinned icon's size to fit; the behaviour still
-holds on every edge and in RTL; the pull still works in its natural direction on every edge; and a
-layout that has the dynamic section switched off is unaffected.
+When changing the dock, check that: the two sections still read as one strip; the dynamic section
+still draws in full before the static side is sized; nothing shrinks below a pinned icon's size to
+fit; the behaviour still holds on every edge and in RTL; the pull still works in its natural
+direction on every edge; and a layout that has the dynamic section switched off is unaffected.

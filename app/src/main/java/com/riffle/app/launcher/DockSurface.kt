@@ -86,6 +86,34 @@ internal fun dockSurfaceMetrics(
         return null
     }
 
+    val maxRunMainAxisDp =
+        minOf(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally)).coerceAtLeast(0)
+
+    // Notifications going first still leaves the static side a floor: room for one pinned icon,
+    // whenever the dock actually has one to show. Without it, a busy enough notification section
+    // could claim the whole run and make every pinned icon disappear rather than merely scroll --
+    // the dynamic section is free to fill anything past that, but never that last icon's worth.
+    val minStaticMainAxisDp =
+        if (visibleSlotCount > 0) dock.iconSizeDp + (DOCK_MAIN_AXIS_PADDING_DP * 2) else 0
+
+    // Notifications claim their room first; the static side is sized from whatever is left (see
+    // dockDynamicSectionMainAxisDp), not the other way around -- a busy notification section
+    // scrolls the pinned icons out of the way rather than getting squeezed itself.
+    val dynamicSectionMainAxisDp =
+        dockDynamicSectionMainAxisDp(
+            entryCount = dynamicEntryCount,
+            notificationSlotCount = dock.notificationSlotCount,
+            entryExtentDp = dock.iconSizeDp,
+            entrySpacingDp = dock.itemSpacingDp,
+            maxRunMainAxisDp = (maxRunMainAxisDp - minStaticMainAxisDp).coerceAtLeast(0),
+        )
+    val staticMaxRunMainAxisDp =
+        if (dynamicSectionMainAxisDp > 0) {
+            (maxRunMainAxisDp - dynamicSectionMainAxisDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP).coerceAtLeast(0)
+        } else {
+            maxRunMainAxisDp
+        }
+
     val containerMainAxisDp =
         dockContainerMainAxisDp(
             availableMainAxisDp = availableMainAxisDp,
@@ -94,6 +122,7 @@ internal fun dockSurfaceMetrics(
             itemSpacingDp = dock.itemSpacingDp,
             backgroundSizing = dock.backgroundSizing,
             runsHorizontally = runsHorizontally,
+            runMainAxisCapDp = staticMaxRunMainAxisDp,
         )
     val contentViewportMainAxisDp =
         dockContentViewportMainAxisDp(
@@ -114,19 +143,7 @@ internal fun dockSurfaceMetrics(
                 itemSpacingDp = dock.itemSpacingDp,
                 availableContentMainAxisDp = contentViewportMainAxisDp,
             ),
-        dynamicSectionMainAxisDp =
-            dockDynamicSectionMainAxisDp(
-                entryCount = dynamicEntryCount,
-                notificationSlotCount = dock.notificationSlotCount,
-                entryExtentDp = dock.iconSizeDp,
-                entrySpacingDp = dock.itemSpacingDp,
-                staticContainerMainAxisDp = containerMainAxisDp,
-                maxRunMainAxisDp =
-                    minOf(
-                        availableMainAxisDp,
-                        dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally),
-                    ).coerceAtLeast(0),
-            ),
+        dynamicSectionMainAxisDp = dynamicSectionMainAxisDp,
     )
 }
 
