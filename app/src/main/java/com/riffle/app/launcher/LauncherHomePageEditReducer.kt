@@ -23,6 +23,13 @@ internal class LauncherHomePageEditReducer(
             action is LauncherShellAction.OpenDefaultHome ->
                 state.withDefaultHomeOpened(homeLayoutRepository).withHomeScreenLibraryApps(homeLayoutRepository)
 
+            action is LauncherShellAction.LeaveLibrary ->
+                state.withLibraryLeft(
+                    trigger = action.trigger,
+                    homeLayoutRepository = homeLayoutRepository,
+                    viewModeAvailability = viewModeAvailability,
+                )
+
             action is LauncherShellAction.SelectLauncherTemplate ->
                 state.withSelectedHomeLayoutTemplate(
                     templateId = action.templateId,
@@ -48,9 +55,10 @@ internal class LauncherHomePageEditReducer(
                     )
                     .withHomeScreenLibraryApps(homeLayoutRepository)
 
-            action is LauncherShellAction.ExitAdaptiveStage ->
+            action is LauncherShellAction.SelectHomeSurfaceMode ->
                 state
-                    .withExitedAdaptiveStage(
+                    .withSettingsHomeMode(
+                        mode = action.mode,
                         homeLayoutRepository = homeLayoutRepository,
                         viewModeAvailability = viewModeAvailability,
                     )
@@ -99,7 +107,7 @@ internal class LauncherHomePageEditReducer(
         homeLayoutRepository: HomeLayoutRepository,
     ): LauncherShellState =
         if (action is LauncherShellAction.SelectSelectedHomePageType) {
-            val settingsLayout = settingsTargetLayout(homeLayoutRepository)
+            val settingsLayout = settingsTargetLayout
             val refreshedLayout = refreshedGeneratedPages(settingsLayout)
             if (refreshedLayout == settingsLayout) {
                 this
@@ -115,13 +123,9 @@ internal class LauncherHomePageEditReducer(
  * Home always returns to the first page of whichever layout/view mode is already on screen --
  * never a mode switch. See #1176.
  *
- * Deliberately does not go through [withHomeLayout] (and its disk reload of the layout set):
- * that reload discards the in-memory `homeLayoutSet` for whatever is currently persisted, then
- * stamps the resulting layout with *that reloaded set's* active view mode -- so if the persisted
- * active key were ever a step behind the mode actually on screen (in memory), pressing Home would
- * silently fall back to whatever mode disk still remembers. Updating `homeLayoutSet` directly off
- * the state already held in memory keeps the layout that's rewritten in step with the mode that's
- * actually showing, no matter what disk has.
+ * Works directly off the in-memory `homeLayoutSet`, like every layout reducer since #1198: storage
+ * is written behind and never read back, so whatever disk still remembers cannot pull Home onto an
+ * older mode.
  */
 private fun LauncherShellState.withDefaultHomeOpened(homeLayoutRepository: HomeLayoutRepository): LauncherShellState {
     val resetLayout =

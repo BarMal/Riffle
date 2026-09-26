@@ -50,21 +50,6 @@ fun LauncherShellState.withHomeGestureAction(
         launcherSettingsRepository = launcherSettingsRepository,
     )
 
-fun LauncherShellState.withDockGestureAction(
-    action: LauncherGestureAction,
-    launcherSettingsRepository: LauncherSettingsRepository,
-): LauncherShellState =
-    withLauncherSettings(
-        settings =
-            launcherSettings.copy(
-                gestures =
-                    launcherSettings.gestures.copy(
-                        dockGestures = launcherSettings.gestures.dockGestures.copy(swipeUp = action),
-                    ),
-            ),
-        launcherSettingsRepository = launcherSettingsRepository,
-    )
-
 fun LauncherShellState.withDefaultHomeSwipes(repo: LauncherSettingsRepository): LauncherShellState =
     withLauncherSettings(
         settings =
@@ -82,13 +67,13 @@ internal fun LauncherShellState.withMotionSettingsAction(
     launcherSettingsRepository: LauncherSettingsRepository,
 ): LauncherShellState =
     when (action) {
-        is LauncherShellAction.SelectReducedMotionEnabled ->
+        is LauncherShellAction.SelectReducedMotionPreference ->
             withLauncherSettings(
                 settings =
                     launcherSettings.copy(
                         motion =
                             launcherSettings.motion.copy(
-                                reducedMotion = action.enabled,
+                                reducedMotionPreference = action.preference,
                             ),
                     ),
                 launcherSettingsRepository = launcherSettingsRepository,

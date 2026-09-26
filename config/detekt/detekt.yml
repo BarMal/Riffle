@@ -8,6 +8,12 @@ complexity:
     constructorThreshold: 8
 
 style:
+  ForbiddenImport:
+    active: true
+    imports:
+      - value: 'kotlinx.coroutines.runBlocking'
+        reason: 'Blocks the calling thread, usually main. Keep state in memory; persist from a background scope.'
+    excludes: ['**/test/**', '**/androidTest/**', '**/testFixtures/**']
   MagicNumber:
     active: false
   MaxLineLength:

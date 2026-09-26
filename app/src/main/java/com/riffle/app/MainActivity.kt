@@ -65,6 +65,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import kotlinx.coroutines.CancellationException
@@ -367,8 +368,16 @@ class MainActivity : ComponentActivity() {
                         LauncherAppActionCallbacks(
                             launch =
                                 LauncherAppLaunchCallbacks(
-                                    launchApp = { action -> appLauncher.launch(action.identity) },
-                                    launchAppShortcut = { action -> appLauncher.launchShortcut(action.shortcut) },
+                                    launchApp = { action ->
+                                        if (appLauncher.launch(action.identity)) {
+                                            shellViewModel.leaveLibrary(LibraryExitTrigger.APP_LAUNCH)
+                                        }
+                                    },
+                                    launchAppShortcut = { action ->
+                                        if (appLauncher.launchShortcut(action.shortcut)) {
+                                            shellViewModel.leaveLibrary(LibraryExitTrigger.APP_LAUNCH)
+                                        }
+                                    },
                                     searchWeb = { action -> webSearchLauncher.launch(action.query) },
                                     openAppInfo = { action -> appLauncher.openAppInfo(action.identity) },
                                     uninstallApp = { action -> appLauncher.uninstall(action.identity) },
@@ -429,6 +438,8 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(activeNotificationRefreshCoordinator)
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
+        // Writes the home layout behind on stop, so backgrounding never leaves an edit only in memory.
+        lifecycle.addObserver(homeLayoutRepository)
         refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)
@@ -457,6 +468,10 @@ class MainActivity : ComponentActivity() {
                 }
             },
         )
+        // A fresh start (not a recreation) opens Home unless the user keeps Library (#1243).
+        if (savedInstanceState == null) {
+            shellViewModel.leaveLibrary(LibraryExitTrigger.COLD_START)
+        }
         if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
         }
@@ -481,6 +496,8 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         refreshPlatformStatuses()
         if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
+            // A Home press: leave Library first (when the setting says so), then reset Home's page.
+            shellViewModel.leaveLibrary(LibraryExitTrigger.HOME_PRESS)
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
         }
     }

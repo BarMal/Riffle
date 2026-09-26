@@ -46,6 +46,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
@@ -62,6 +63,7 @@ import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
@@ -92,6 +94,28 @@ class LauncherSettingsJsonCodecTest {
                 "{\"appDrawer\": {\"presentation\": \"UNKNOWN\", \"iconGridColumns\": 1}}",
             ).appDrawer,
         )
+    }
+
+    @Test
+    fun roundTripsTheLibraryReturnTargetAndDefaultsAbsentOrUnknownValuesToLibrary() {
+        val settings =
+            LauncherSettings(appDrawer = AppDrawerSettings(afterLeavingLibrary = LibraryReturnTarget.HOME))
+
+        assertEquals(
+            LibraryReturnTarget.HOME,
+            decodeLauncherSettings(encodeLauncherSettings(settings)).appDrawer.afterLeavingLibrary,
+        )
+        assertEquals(
+            LibraryReturnTarget.LIBRARY,
+            decodeLauncherSettings("{\"appDrawer\": {\"presentation\": \"ICONS\"}}").appDrawer.afterLeavingLibrary,
+        )
+        assertEquals(
+            LibraryReturnTarget.LIBRARY,
+            decodeLauncherSettings("{\"appDrawer\": {\"afterLeavingLibrary\": \"DRAWER\"}}")
+                .appDrawer
+                .afterLeavingLibrary,
+        )
+        assertEquals(LibraryReturnTarget.LIBRARY, decodeLauncherSettings("{}").appDrawer.afterLeavingLibrary)
     }
 
     @Test
@@ -157,6 +181,31 @@ class LauncherSettingsJsonCodecTest {
 
         assertEquals(true, decoded.cards.foldedShowAllNotifications)
         assertEquals(true, decoded.cards.unfoldedShowAllNotifications)
+    }
+
+    @Test
+    fun roundTripsTheStageSpineToggle() {
+        val settings = LauncherSettings(cards = CardsSettings(showStageSpine = true))
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(true, decoded.cards.showStageSpine)
+    }
+
+    @Test
+    fun settingsSavedBeforeTheSpineToggleExistedDecodeWithTheSpineOff() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "foldedShowAllNotifications": true
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(false, decodedSettings.cards.showStageSpine)
     }
 
     @Test
@@ -671,7 +720,7 @@ class LauncherSettingsJsonCodecTest {
                                         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.OPEN_SETTINGS,
                                         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
                                         HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_NOTIFICATIONS,
-                                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_APP_DRAWER,
+                                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_APP_STAGE,
                                         HomeGesture.PINCH_OUT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                                         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.ENTER_FULLSCREEN_HOME,
                                     ),
@@ -690,7 +739,7 @@ class LauncherSettingsJsonCodecTest {
             decodedSettings.gestures.homeGestures.actionFor(HomeGesture.TWO_FINGER_UP),
         )
         assertEquals(
-            LauncherGestureAction.OPEN_APP_DRAWER,
+            LauncherGestureAction.SELECT_NEXT_APP_STAGE,
             decodedSettings.gestures.homeGestures.actionFor(HomeGesture.THREE_FINGER_LEFT),
         )
         assertEquals(
@@ -731,7 +780,7 @@ class LauncherSettingsJsonCodecTest {
     fun defaultsMissingGestureSettings() {
         val decodedSettings = decodeLauncherSettings("{}")
 
-        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decodedSettings.gestures.homeSwipe.up)
+        assertEquals(LauncherGestureAction.NONE, decodedSettings.gestures.homeSwipe.up)
         assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decodedSettings.gestures.homeSwipe.down)
         assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, decodedSettings.gestures.homeSwipe.left)
         assertEquals(LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE, decodedSettings.gestures.homeSwipe.right)
@@ -761,25 +810,70 @@ class LauncherSettingsJsonCodecTest {
 
     @Test
     fun roundTripsMotionSettings() {
-        val settings =
-            LauncherSettings(
-                motion =
-                    MotionSettings(
-                        reducedMotion = true,
-                        performanceTargetFps = MotionPerformanceTargetFps.FPS_90,
-                    ),
-            )
+        ReducedMotionPreference.entries.forEach { preference ->
+            val settings =
+                LauncherSettings(
+                    motion =
+                        MotionSettings(
+                            reducedMotionPreference = preference,
+                            performanceTargetFps = MotionPerformanceTargetFps.FPS_90,
+                        ),
+                )
+
+            val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+            assertEquals(preference, decodedSettings.motion.reducedMotionPreference)
+            assertEquals(MotionPerformanceTargetFps.FPS_90, decodedSettings.motion.performanceTargetFps)
+        }
+    }
+
+    @Test
+    fun neverPersistsTheRuntimeSystemReducedMotionState() {
+        val settings = LauncherSettings(motion = MotionSettings(systemReducedMotion = true))
 
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
+        assertEquals(false, decodedSettings.motion.systemReducedMotion)
+        assertEquals(MotionSettings(), decodedSettings.motion)
+    }
+
+    @Test
+    fun migratesLegacyReducedMotionTrueToOn() {
+        val decodedSettings = decodeLauncherSettings("""{ "motion": { "reducedMotion": true } }""")
+
+        assertEquals(ReducedMotionPreference.ON, decodedSettings.motion.reducedMotionPreference)
         assertEquals(true, decodedSettings.motion.reducedMotion)
-        assertEquals(MotionPerformanceTargetFps.FPS_90, decodedSettings.motion.performanceTargetFps)
+    }
+
+    @Test
+    fun migratesLegacyReducedMotionFalseToSystem() {
+        val decodedSettings = decodeLauncherSettings("""{ "motion": { "reducedMotion": false } }""")
+
+        assertEquals(ReducedMotionPreference.SYSTEM, decodedSettings.motion.reducedMotionPreference)
+    }
+
+    @Test
+    fun prefersTriStatePreferenceOverLegacyBoolean() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """{ "motion": { "reducedMotion": true, "reducedMotionPreference": "OFF" } }""",
+            )
+
+        assertEquals(ReducedMotionPreference.OFF, decodedSettings.motion.reducedMotionPreference)
+    }
+
+    @Test
+    fun defaultsMalformedReducedMotionPreferenceToSystem() {
+        val decodedSettings = decodeLauncherSettings("""{ "motion": { "reducedMotionPreference": "SOMETIMES" } }""")
+
+        assertEquals(ReducedMotionPreference.SYSTEM, decodedSettings.motion.reducedMotionPreference)
     }
 
     @Test
     fun defaultsMissingMotionSettings() {
         val decodedSettings = decodeLauncherSettings("{}")
 
+        assertEquals(ReducedMotionPreference.SYSTEM, decodedSettings.motion.reducedMotionPreference)
         assertEquals(false, decodedSettings.motion.reducedMotion)
         assertEquals(MotionPerformanceTargetFps.FPS_120, decodedSettings.motion.performanceTargetFps)
     }
@@ -1029,21 +1123,55 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun defaultsUnknownGestureAction() {
+    fun decodesAnUnknownGestureActionAsNoAction() {
+        // An unknown stored name leaves the gesture unbound rather than reviving its default.
         val decodedSettings =
             decodeLauncherSettings(
                 """
                 {
                   "gestures": {
                     "homeSwipe": {
-                      "up": "UNKNOWN"
+                      "left": "UNKNOWN"
                     }
                   }
                 }
                 """.trimIndent(),
             )
 
-        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decodedSettings.gestures.homeSwipe.up)
+        assertEquals(LauncherGestureAction.NONE, decodedSettings.gestures.homeSwipe.left)
+        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decodedSettings.gestures.homeSwipe.down)
+    }
+
+    @Test
+    fun decodesAWholeSettingsFileCarryingRemovedGestureNames() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "gestures": {
+                    "homeGestures": {
+                      "THREE_FINGER_UP": "NEXT_MODE",
+                      "THREE_FINGER_DOWN": "PREVIOUS_MODE",
+                      "TWO_FINGER_LEFT": "ENTER_ADAPTIVE_STAGE",
+                      "TWO_FINGER_RIGHT": "EXIT_ADAPTIVE_STAGE",
+                      "ONE_FINGER_UP": "OPEN_APP_DRAWER",
+                      "PINCH_OUT": "OPEN_APP_DRAWER"
+                    },
+                    "dockGestures": {
+                      "swipeUp": "PREVIOUS_MODE"
+                    }
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        val gestures = decodedSettings.gestures.homeGestures
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.TWO_FINGER_LEFT))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.TWO_FINGER_RIGHT))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.PINCH_OUT))
     }
 
     @Test

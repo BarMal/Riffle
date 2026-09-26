@@ -30,7 +30,23 @@ data class LauncherSettings(
 data class AppDrawerSettings(
     val presentation: AppDrawerPresentation = AppDrawerPresentation.LIST,
     val iconGridColumns: Int = DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS,
+    /** Where the launcher settles after leaving Library, the app drawer (Decision 10, #1243). */
+    val afterLeavingLibrary: LibraryReturnTarget = LibraryReturnTarget.LIBRARY,
 )
+
+/**
+ * Where the launcher settles after an app launch, a Home press or Back from Library, and on a cold
+ * start with Library stored: the user's Home, or [LIBRARY] (the default) -- which, despite its name,
+ * does not force Library open. It means never force a switch *away* from Library on these triggers,
+ * so whatever was actually last showing -- Library or otherwise, since every other trigger already
+ * leaves a non-Library mode alone -- is what the launcher settles on (see
+ * [com.riffle.core.domain.launcher.home.LibraryExitTrigger.returnsHome], which this value always
+ * answers false for). [HOME] is the one case that overrides that: it always leaves Library for Home.
+ */
+enum class LibraryReturnTarget {
+    HOME,
+    LIBRARY,
+}
 
 enum class AppDrawerPresentation {
     LIST,
@@ -83,12 +99,20 @@ data class CardsSettings(
     /** Whether a conversation's messages become one card each or one card between them. */
     val threadCardGrouping: ThreadCardGrouping = ThreadCardGrouping.PER_THREAD,
     /**
-     * Whether the merged "All notifications" view -- every stage's notifications at once -- is
-     * offered, per posture. Folded is the compact spine's trailing page; unfolded is the wide
-     * layout's dock entry. Off by default: it is an opt-in extra, not part of moving between stages.
+     * The merged "All notifications" view is always the Cards stage selector's first entry (#1212).
+     * [foldedShowAllNotifications] now only decides whether swiping between stages on the compact
+     * layout also passes through it (off by default). [unfoldedShowAllNotifications] is legacy: kept
+     * so saved settings and backups round-trip, but no longer read.
      */
     val foldedShowAllNotifications: Boolean = false,
     val unfoldedShowAllNotifications: Boolean = false,
+    /**
+     * Whether the stage spine -- the chip strip under the compact stack -- is drawn (#1212). Off by
+     * default, including for settings saved before it existed: in Cards the dock's dynamic section
+     * is the stage selector. The spine still shows whenever the dock cannot host that selector, so
+     * this never strands a stage (see `CardsStageSelector.showsSpine`).
+     */
+    val showStageSpine: Boolean = false,
 )
 
 /**
@@ -259,10 +283,9 @@ enum class LauncherThemeTypography {
 
 data class GestureSettings(
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),
-    val dockGestures: DockGestureSettings = DockGestureSettings(),
 ) {
     val mappings: LauncherGestureMappings
-        get() = dockGestures.toLauncherGestureMappings(homeGestures.toLauncherGestureMappings())
+        get() = homeGestures.toLauncherGestureMappings()
 
     val conflicts: List<LauncherGestureConflict>
         get() =
@@ -274,10 +297,7 @@ data class GestureSettings(
                         action = conflict.action,
                         gestures = conflict.gestures.map(HomeGesture::toLauncherGesture),
                     )
-                } +
-                LauncherGestureConflictDetector
-                    .conflictsIn(mappings)
-                    .filter { conflict -> conflict.surface == LauncherGestureSurface.DOCK }
+                }
 
     val homeSwipe: HomeSwipeGestureSettings
         get() =
@@ -311,27 +331,6 @@ data class HomeGestureSettings(
     fun launchTargetFor(gesture: HomeGesture): LauncherGestureLaunchTarget? = launchTargets[gesture]
 }
 
-/**
- * Durable binding for the Dock swipe-up gesture. Restricted to the mode-switch actions the Dock
- * physically supports: staying put, returning to Standard Home from Cards mode, or opening the
- * app drawer/search. Unlike [HomeGestureSettings], the Dock currently exposes a single gesture.
- */
-data class DockGestureSettings(
-    val swipeUp: LauncherGestureAction = LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
-) {
-    companion object {
-        val ALLOWED_SWIPE_UP_ACTIONS: Set<LauncherGestureAction> =
-            setOf(
-                LauncherGestureAction.NONE,
-                LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
-                LauncherGestureAction.OPEN_APP_DRAWER,
-            )
-    }
-}
-
-val LauncherGestureAction.isValidDockSwipeUpAction: Boolean
-    get() = this in DockGestureSettings.ALLOWED_SWIPE_UP_ACTIONS
-
 sealed interface LauncherGestureLaunchTarget {
     data class App(
         val identity: AppIdentity,
@@ -359,9 +358,14 @@ enum class HomeGesture {
     PINCH_OUT,
 }
 
+/**
+ * Defaults for the bindable home gestures. None of them switches mode or opens the app drawer, and
+ * neither can be bound: the dock pull is the only mode-transition trigger, and Library is the app
+ * drawer (docs/product/gestures.md).
+ */
 val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
     mapOf(
-        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER,
+        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.NONE,
         HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_NOTIFICATIONS,
         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
@@ -369,13 +373,12 @@ val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
         HomeGesture.TWO_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
-        // Three fingers avoid the platform back/home edges and the one-finger card stack.
-        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_ADAPTIVE_STAGE,
-        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
+        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.NONE,
+        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.NONE,
         HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.THREE_FINGER_RIGHT to LauncherGestureAction.NONE,
         HomeGesture.PINCH_IN to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
-        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_APP_DRAWER,
+        HomeGesture.PINCH_OUT to LauncherGestureAction.NONE,
     )
 
 fun HomeSwipeGestureSettings.toHomeGestureSettings(): HomeGestureSettings =
@@ -402,10 +405,29 @@ data class HapticSettings(
     val feedbackStrength: HapticFeedbackStrength = HapticFeedbackStrength.MEDIUM,
 )
 
+/**
+ * Motion settings. [reducedMotionPreference] is the persisted user intent; [systemReducedMotion] is the
+ * platform's current animation state (for example "Remove animations" or an animator duration scale of 0).
+ *
+ * [systemReducedMotion] is runtime-only: it is never persisted and is projected onto the settings by the
+ * launcher shell from a platform source. [reducedMotion] is the single resolved value every surface reads.
+ */
 data class MotionSettings(
-    val reducedMotion: Boolean = false,
+    val reducedMotionPreference: ReducedMotionPreference = ReducedMotionPreference.SYSTEM,
     val performanceTargetFps: MotionPerformanceTargetFps = MotionPerformanceTargetFps.FPS_120,
-)
+    val systemReducedMotion: Boolean = false,
+) {
+    val reducedMotion: Boolean
+        get() = reducedMotionPreference.resolve(systemReducedMotion)
+}
+
+/** Projects the platform's current reduced-motion state onto these settings without changing stored intent. */
+fun LauncherSettings.withSystemReducedMotion(systemReducedMotion: Boolean): LauncherSettings =
+    if (motion.systemReducedMotion == systemReducedMotion) {
+        this
+    } else {
+        copy(motion = motion.copy(systemReducedMotion = systemReducedMotion))
+    }
 
 enum class MotionPerformanceTargetFps(
     val framesPerSecond: Int,
@@ -465,7 +487,7 @@ const val MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP = 40
 const val MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP = 80
 
 data class HomeSwipeGestureSettings(
-    val up: LauncherGestureAction = LauncherGestureAction.OPEN_APP_DRAWER,
+    val up: LauncherGestureAction = LauncherGestureAction.NONE,
     val down: LauncherGestureAction = LauncherGestureAction.OPEN_NOTIFICATIONS,
     val left: LauncherGestureAction = LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
     val right: LauncherGestureAction = LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
@@ -480,7 +502,6 @@ enum class HomeSwipeGestureDirection {
 
 enum class LauncherGestureAction {
     NONE,
-    OPEN_APP_DRAWER,
     OPEN_NOTIFICATIONS,
     OPEN_SEARCH,
     OPEN_SETTINGS,
@@ -489,12 +510,21 @@ enum class LauncherGestureAction {
     ENTER_FULLSCREEN_HOME,
     SELECT_NEXT_HOME_PAGE,
     SELECT_PREVIOUS_HOME_PAGE,
-    ENTER_ADAPTIVE_STAGE,
-    EXIT_ADAPTIVE_STAGE,
     SELECT_NEXT_APP_STAGE,
     SELECT_PREVIOUS_APP_STAGE,
     LAUNCH_APP,
     LAUNCH_APP_SHORTCUT,
+    ;
+
+    companion object {
+        /**
+         * The action a stored [name] means, or null when it names none. Mode-switching and app-drawer
+         * bindings (NEXT_MODE / PREVIOUS_MODE, their older ENTER_ / EXIT_ADAPTIVE_STAGE names, and
+         * OPEN_APP_DRAWER) were removed when the dock pull became the only mode-transition trigger;
+         * like any other unknown name they decode to null, which callers treat as "no action".
+         */
+        fun fromStoredName(name: String): LauncherGestureAction? = entries.firstOrNull { action -> action.name == name }
+    }
 }
 
 enum class HapticFeedbackStrength {

@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -76,7 +77,7 @@ class LauncherBackupExportCoordinatorTest {
                         hideNavigationBarOnHome = false,
                     ),
                 haptics = HapticSettings(feedbackStrength = HapticFeedbackStrength.STRONG),
-                motion = MotionSettings(reducedMotion = true),
+                motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
             )
         val coordinator =
             LauncherBackupExportCoordinator(

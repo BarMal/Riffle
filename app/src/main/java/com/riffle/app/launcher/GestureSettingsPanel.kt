@@ -174,7 +174,6 @@ internal val LauncherGestureAction.label: String
     get() =
         when (this) {
             LauncherGestureAction.NONE -> "Disabled"
-            LauncherGestureAction.OPEN_APP_DRAWER -> "Apps"
             LauncherGestureAction.OPEN_NOTIFICATIONS -> "Notifications"
             LauncherGestureAction.OPEN_SEARCH -> "Search"
             LauncherGestureAction.OPEN_SETTINGS -> "Settings"
@@ -183,8 +182,6 @@ internal val LauncherGestureAction.label: String
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> "Fullscreen home"
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> "Next page"
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> "Previous page"
-            LauncherGestureAction.ENTER_ADAPTIVE_STAGE -> "Enter Cards"
-            LauncherGestureAction.EXIT_ADAPTIVE_STAGE -> "Exit Cards"
             LauncherGestureAction.SELECT_NEXT_APP_STAGE -> "Next stage"
             LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE -> "Previous stage"
             LauncherGestureAction.LAUNCH_APP -> "Launch app"

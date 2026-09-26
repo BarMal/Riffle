@@ -51,9 +51,6 @@ internal class LauncherSettingsStateReducer(
                         repo = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectDockGestureAction ->
-                    state.withDockGestureAction(action.action, launcherSettingsRepository)
-
                 is LauncherShellAction.SelectHapticFeedbackStrength ->
                     state.withLauncherSettings(
                         settings =
@@ -66,7 +63,7 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectReducedMotionEnabled,
+                is LauncherShellAction.SelectReducedMotionPreference,
                 is LauncherShellAction.SelectMotionPerformanceTargetFps,
                 ->
                     state.withMotionSettingsAction(
@@ -164,6 +161,15 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectCardsShowStageSpine ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                cards = state.launcherSettings.cards.copy(showStageSpine = action.enabled),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectSearchResultPresentation ->
                     state.withLauncherSettings(
                         settings =
@@ -249,6 +255,15 @@ private fun LauncherShellState.withAppDrawerSettingsAction(
                 settings =
                     launcherSettings.copy(
                         appDrawer = launcherSettings.appDrawer.copy(iconGridColumns = action.columns).coerced(),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        is LauncherShellAction.SelectLibraryReturnTarget ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        appDrawer = launcherSettings.appDrawer.copy(afterLeavingLibrary = action.target),
                     ),
                 launcherSettingsRepository = launcherSettingsRepository,
             )

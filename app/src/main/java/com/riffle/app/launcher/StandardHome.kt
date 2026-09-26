@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,8 +49,10 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
@@ -71,12 +74,10 @@ import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
-import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
-import com.riffle.core.domain.launcher.settings.DockGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.homeSystemBars
@@ -93,24 +94,39 @@ internal fun StandardHome(
     appIconLoader: AppIconLoader,
     widgetPreviewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
     deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
+    /**
+     * The shared dock host this frame lays out around, when the dock is drawn by the caller outside
+     * the mode surface (#1205). Null draws the same host here, for callers that show this alone.
+     */
+    dockHost: HomeDockHostState? = null,
+    /**
+     * The edge the dock sits on for this surface, when the caller resolves it (Library keeps its own
+     * edge, see ModeDockEdges.kt); null resolves the shared dock's configured or template edge here.
+     */
+    dockEdge: DockPosition? = null,
+    /** Applied to the grid frame; the dock pull slides the surface through it. */
+    surfaceModifier: Modifier = Modifier,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
+    val dockHostState = dockHost ?: rememberHomeDockHostState()
     // Single source of truth for where the dock sits: the user's configured edge if any, else the
     // device class's template default (bottom on phones, the leading rail on wide postures -- see
     // #1159). The widget-picker drop previews below and the rendered dock must agree on it.
-    val dockPosition = resolveDockPosition(visibleLayout.dock.position, deviceClass.templateDockPosition)
+    val dockPosition =
+        dockEdge ?: resolveDockPosition(visibleLayout.dock.position, deviceClass.templateDockPosition)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
-    val widgetPickerDragInProgress = remember { mutableStateOf(false) }
+    // Read by the dock host as well as here, so they live in its state rather than this frame's.
+    val widgetPickerDragInProgress = dockHostState.isWidgetDragInProgress
     val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
-    val widgetPickerDockPreview = remember { mutableStateOf<WidgetPickerDockPlacementPreview?>(null) }
+    val widgetPickerDockPreview = dockHostState.widgetDropPreview
     val latestWidgetPickerDrag = remember { mutableStateOf<WidgetPickerDragSnapshot?>(null) }
     val accessibleWidgetPlacement = remember { mutableStateOf<WidgetPickerAccessiblePlacement?>(null) }
     val activeWidgetPickerEdgeHoverSide = remember { mutableStateOf<WidgetPickerEdgeHoverSide?>(null) }
     val widgetPickerDragWorkspaceBounds = remember { mutableStateOf<Rect?>(null) }
     val workspaceGridBounds = remember { mutableStateOf<Rect?>(null) }
-    val dockBounds = remember { mutableStateOf<Rect?>(null) }
+    val dockBounds = dockHostState.bounds
     val density = LocalDensity.current.density
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val finishWidgetPickerDrag: (Boolean) -> Unit = { restorePicker ->
@@ -157,6 +173,10 @@ internal fun StandardHome(
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // A mode switch mid-drag takes this frame away; the dock it was talking to stays.
+    DisposableEffect(dockHostState) {
+        onDispose { dockHostState.clearContentFeedback() }
     }
     LaunchedEffect(workspaceGridBounds.value) {
         val startingBounds = widgetPickerDragWorkspaceBounds.value
@@ -205,7 +225,10 @@ internal fun StandardHome(
     val actions =
         HomeWorkspaceActions(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
-            onDragSessionChanged = { session -> homeDragSession.value = session },
+            onDragSessionChanged = { session ->
+                homeDragSession.value = session
+                dockHostState.isDropTargetHighlighted.value = session?.isOverDock == true
+            },
             currentDragSession = { homeDragSession.value },
             haptics = interactions.haptics,
             onDockInteractionExtentChanged = interactions.onDockInteractionExtentChanged,
@@ -215,8 +238,7 @@ internal fun StandardHome(
                     workspaceGridBounds.value = bounds
                 }
             },
-            onDockBoundsChanged = { bounds -> dockBounds.value = bounds },
-            onBackgroundClick = {},
+            onBackgroundClick = dockHostState::dismissShelf,
             onAction = onAction,
         )
 
@@ -228,13 +250,26 @@ internal fun StandardHome(
                 dockPosition = dockPosition,
                 dragSession = homeDragSession.value,
                 widgetPickerDragPreview = widgetPickerDragPreview.value,
-                widgetPickerDockPreview = widgetPickerDockPreview.value,
-                widgetPickerDragInProgress = widgetPickerDragInProgress.value,
                 presentation = presentation,
+                dockReservation = dockHostState.reservedExtent(visibleLayout, dockPosition),
             ),
         appIconLoader = appIconLoader,
         actions = actions,
+        modifier = surfaceModifier,
     )
+    if (dockHost == null) {
+        HomeDockHost(
+            layout = layout,
+            installedApps = installedApps,
+            presentation = presentation,
+            position = dockPosition,
+            hostState = dockHostState,
+            appIconLoader = appIconLoader,
+            onAction = onAction,
+            haptics = interactions.haptics,
+            onExtentChanged = interactions.onDockInteractionExtentChanged,
+        )
+    }
     if (presentation.widgetPicker.isOpen || widgetPickerDragInProgress.value) {
         WidgetPickerSurface(
             providers = presentation.widgetPicker.providers,
@@ -496,98 +531,13 @@ private fun LauncherPage.freeCellCandidates(
         }
     }
 
-/**
- * Renders only the standard Dock, on whichever edge it has been given. Cards mode reuses the
- * standard Dock but must not show the standard grid pages (and their icons) underneath its own
- * canvas -- unlike [StandardHome], this never composes [ImmediateWorkspacePager].
- */
-@Composable
-internal fun StandardHomeDockOnlySurface(
-    layout: HomeLayout,
-    installedApps: List<InstalledApp>,
-    interactions: StandardHomeInteractions,
-    presentation: StandardHomePresentation,
-    appIconLoader: AppIconLoader,
-    onAction: (LauncherShellAction) -> Unit,
-    position: DockPosition = DockPosition.BOTTOM,
-    /** Null leaves the dock's dynamic side to notifications, which is what grid mode wants. */
-    dynamicEntries: List<DockDynamicEntry>? = null,
-    onShowAllNotifications: () -> Unit = {},
-    staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
-    /**
-     * Whether the expanded shelf shows its notification card row. Cards mode passes false: the
-     * stages already *are* the notifications, so the shelf becomes a panel-only mini-home surface
-     * and the row would just duplicate them. The collapsed strip's dynamic chips are passed
-     * separately via [dynamicEntries] and stay either way.
-     */
-    showExpandedNotificationShelf: Boolean = true,
-) {
-    val visibleLayout = layout.visibleTo(installedApps)
-    val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
-    val notificationShelfState =
-        dockNotificationShelfState(
-            dock = visibleLayout.dock,
-            groups = presentation.notificationGroupsByApp,
-            notificationAccessStatus = presentation.notificationAccessStatus,
-            apps = presentation.installedApps,
-        )
-    // The expanded shelf's own notification section, suppressed to a panel-only shelf in Cards.
-    val expandedShelfState =
-        if (showExpandedNotificationShelf) notificationShelfState else DockNotificationShelfState.Hidden
-    val dockShelf =
-        rememberDockShelfController(
-            hasPanel = visibleLayout.dock.panel != null,
-            notificationShelfState = expandedShelfState,
-        )
-    val actions =
-        HomeWorkspaceActions(
-            onFolderOpen = { folder -> openedFolderId.value = folder.id },
-            onDragSessionChanged = {},
-            haptics = interactions.haptics,
-            onDockInteractionExtentChanged = interactions.onDockInteractionExtentChanged,
-            onBackgroundClick = dockShelf.dismiss,
-            onAction = onAction,
-        )
-
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(presentation.homeInsetPolicy.safeDrawingInsets()),
-        contentAlignment = position.dockOnlyBoxAlignment(LocalLayoutDirection.current),
-    ) {
-        StandardHomeDockArea(
-            layout = visibleLayout,
-            presentation = presentation,
-            notificationShelfState = expandedShelfState,
-            isDockShelfExpanded = dockShelf.isExpanded,
-            onDockShelfExpandedChange = dockShelf.onExpandedChange,
-            appIconLoader = appIconLoader,
-            actions = actions,
-            position = position,
-            dynamicEntries = dynamicEntries ?: notificationShelfState.dynamicEntries(),
-            onShowAllNotifications = onShowAllNotifications,
-            staticTapBehaviour = staticTapBehaviour,
-        )
-    }
-    visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->
-        FolderSurface(
-            folder = folder,
-            layout = visibleLayout,
-            installedApps = installedApps,
-            appIconLoader = appIconLoader,
-            onDismiss = { openedFolderId.value = null },
-            onAction = onAction,
-        )
-    }
-}
-
 @Suppress("LongMethod")
 @Composable
 private fun StandardHomeColumn(
     state: StandardHomeContentState,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
+    modifier: Modifier = Modifier,
 ) {
     val pagerState =
         rememberImmediateHomePagerState(
@@ -618,39 +568,16 @@ private fun StandardHomeColumn(
     // still-down finger. This keeps it counted as active for exactly as long as the drag itself is.
     val isIndicatorDragActive = remember { mutableStateOf(false) }
     val onIndicatorDragActiveChanged: (Boolean) -> Unit = { active -> isIndicatorDragActive.value = active }
-    val notificationShelfState =
-        dockNotificationShelfState(
-            dock = state.visibleLayout.dock,
-            groups = state.presentation.notificationGroupsByApp,
-            notificationAccessStatus = state.presentation.notificationAccessStatus,
-            apps = state.presentation.installedApps,
-        )
-    val dockShelf =
-        rememberDockShelfController(
-            hasPanel = state.visibleLayout.dock.panel != null,
-            notificationShelfState = notificationShelfState,
-        )
-    val homeActions =
-        actions.copy(
-            onBackgroundClick = dockShelf.dismiss,
-        )
     val margins = state.visibleLayout.settings.grid.margin.centered()
     val dockEdge = state.dockPosition
+    // The dock itself is drawn by HomeDockHost, over this frame and outside the mode surface
+    // (#1205); the frame only keeps its room, so the workspace lays out beside it rather than under.
     val dockArea: @Composable () -> Unit = {
-        StandardHomeDockArea(
-            layout = state.visibleLayout,
-            presentation = state.presentation,
-            notificationShelfState = notificationShelfState,
-            isDockShelfExpanded = dockShelf.isExpanded,
-            onDockShelfExpandedChange = dockShelf.onExpandedChange,
-            appIconLoader = appIconLoader,
-            actions = actions,
-            position = dockEdge,
-            widgetPickerDockPreview = state.widgetPickerDockPreview,
-            isWidgetPickerInteractionActive =
-                state.presentation.widgetPicker.isOpen || state.widgetPickerDragInProgress,
-            isDraggedItemOverDock = state.dragSession?.isOverDock == true,
-        )
+        if (dockEdge.isSideEdge) {
+            Spacer(modifier = Modifier.fillMaxHeight().width(state.dockReservation))
+        } else {
+            Spacer(modifier = Modifier.height(state.dockReservation))
+        }
     }
 
     StandardHomeFrame(
@@ -658,7 +585,10 @@ private fun StandardHomeColumn(
         dockArea = dockArea,
         modifier =
             Modifier
+                // Below the dock HomeDockHost draws over this frame, so the dock keeps its touches.
+                .zIndex(HOME_CONTENT_Z_INDEX)
                 .fillMaxSize()
+                .then(modifier)
                 .homeGestureInput(
                     enabled = state.visibleLayout.editMode == HomeEditMode.Browsing,
                     settings = state.presentation.homeGestures,
@@ -666,6 +596,7 @@ private fun StandardHomeColumn(
                 )
                 .windowInsetsPadding(state.presentation.homeInsetPolicy.safeDrawingInsets()),
     ) {
+        if (dockEdge == DockPosition.TOP) dockArea()
         ImmediateWorkspacePager(
             layout = state.visibleLayout,
             pagerState = pagerState,
@@ -679,7 +610,7 @@ private fun StandardHomeColumn(
                 ),
             presentation = state.homeGridPresentation(actions),
             appIconLoader = appIconLoader,
-            actions = homeActions,
+            actions = actions,
             activeDragSession = state.dragSession,
             onDragPageTargetChanged = { pageId ->
                 state.dragSession?.let { session ->
@@ -711,20 +642,21 @@ private fun StandardHomeColumn(
             onIndicatorDragActiveChanged = onIndicatorDragActiveChanged,
             appIconLoader = appIconLoader,
             widgetViewFactory = state.presentation.widgetViewFactory,
-            actions = homeActions,
+            actions = actions,
             modifier =
-                Modifier.onSizeChanged { size -> homeActions.onBottomControlsHeightChanged(size.height) },
+                Modifier.onSizeChanged { size -> actions.onBottomControlsHeightChanged(size.height) },
         )
-        if (!dockEdge.isSideEdge) dockArea()
+        if (!dockEdge.isSideEdge && dockEdge != DockPosition.TOP) dockArea()
     }
 }
 
 /**
- * The home screen's frame: the workspace, and the dock on whichever edge it has been given.
+ * The home screen's frame: the workspace, and the room for the dock on whichever edge it has been
+ * given. The dock itself is drawn by [HomeDockHost] over this frame; [dockArea] only reserves it.
  *
  * A dock on a side sits beside the whole workspace column, reserving its width -- which is the
- * width the grid has already given up a column for. Otherwise the workspace column draws the dock
- * itself, at the bottom, so it keeps its place under the page controls.
+ * width the grid has already given up a column for. Otherwise the workspace column reserves the
+ * dock's height itself, at the bottom (or the top), so it keeps its place beyond the page controls.
  */
 @Composable
 private fun StandardHomeFrame(
@@ -759,60 +691,13 @@ private fun StandardHomeFrame(
 }
 
 /**
- * Whether this edge puts the dock beside the workspace rather than under it.
+ * Whether this edge puts the dock beside the workspace rather than above or below it.
  *
- * The top edge is not one: nothing places the home dock there yet, so a layout set to it keeps the
- * bottom dock it has always had rather than rendering somewhere half-supported.
+ * The top edge is not one. The shared dock no longer offers it (see sharedDockPositions), but a
+ * layout that still holds it gets its room reserved at the top, where [HomeDockHost] draws it.
  */
 private val DockPosition.isSideEdge: Boolean
     get() = this == DockPosition.LEFT || this == DockPosition.RIGHT
-
-/**
- * The [Box] alignment that pins [StandardHomeDockOnlySurface]'s dock to this edge.
- *
- * Unlike [StandardHomeFrame], every edge is live here -- Cards allows all four -- so this reuses
- * [placedBeforeContent] rather than [isSideEdge]'s side-only split: a horizontal edge centers along
- * the top or bottom, a vertical one resolves to the physical left or right via the same
- * direction-aware mapping the Row ordering above uses.
- */
-private fun DockPosition.dockOnlyBoxAlignment(direction: LayoutDirection): Alignment =
-    if (isHorizontalEdge) {
-        if (this == DockPosition.TOP) Alignment.TopCenter else Alignment.BottomCenter
-    } else if (placedBeforeContent(direction)) {
-        Alignment.CenterStart
-    } else {
-        Alignment.CenterEnd
-    }
-
-@Composable
-private fun rememberDockShelfController(
-    hasPanel: Boolean,
-    notificationShelfState: DockNotificationShelfState,
-): DockShelfController {
-    val isExpanded = remember { mutableStateOf(false) }
-    val hasContent =
-        dockHasExpandedContent(
-            hasPanel = hasPanel,
-            notificationShelfState = notificationShelfState,
-        )
-
-    LaunchedEffect(hasContent) {
-        isExpanded.value =
-            dockShelfExpandedStateForContent(
-                isExpanded = isExpanded.value,
-                hasContent = hasContent,
-            )
-    }
-
-    return DockShelfController(
-        isExpanded = isExpanded.value,
-        dismiss = {
-            isExpanded.value =
-                dockShelfExpandedStateAfterBackgroundTap(isExpanded = isExpanded.value)
-        },
-        onExpandedChange = { expanded -> isExpanded.value = expanded },
-    )
-}
 
 @Composable
 private fun HomeBottomControls(
@@ -991,15 +876,9 @@ private data class StandardHomeContentState(
     val dockPosition: DockPosition,
     val dragSession: HomeDragSession?,
     val widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
-    val widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
-    val widgetPickerDragInProgress: Boolean,
     val presentation: StandardHomePresentation,
-)
-
-private data class DockShelfController(
-    val isExpanded: Boolean,
-    val dismiss: () -> Unit,
-    val onExpandedChange: (Boolean) -> Unit,
+    /** The room [HomeDockHost] takes along [dockPosition]'s edge, which the frame leaves empty. */
+    val dockReservation: Dp,
 )
 
 private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspaceActions): HomeGridPresentation =
@@ -1044,7 +923,6 @@ internal data class StandardHomePresentation(
     val installedApps: List<InstalledApp> = emptyList(),
     val appShortcutsByApp: AppShortcutsByApp,
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),
-    val dockGestures: DockGestureSettings = DockGestureSettings(),
     val reducedMotion: Boolean = false,
     val motionPerformanceTargetFps: MotionPerformanceTargetFps = MotionPerformanceTargetFps.FPS_120,
     val widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
@@ -1074,7 +952,7 @@ internal fun homeInsetPolicy(appearance: AppearanceSettings): HomeInsetPolicy =
     )
 
 @Composable
-private fun HomeInsetPolicy.safeDrawingInsets(): WindowInsets {
+internal fun HomeInsetPolicy.safeDrawingInsets(): WindowInsets {
     var insets = WindowInsets.safeDrawing
     if (!reserveStatusBar) {
         insets = insets.exclude(WindowInsets.statusBars)

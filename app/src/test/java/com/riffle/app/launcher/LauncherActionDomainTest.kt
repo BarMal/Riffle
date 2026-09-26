@@ -32,6 +32,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -51,10 +52,12 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
@@ -235,7 +238,10 @@ class LauncherActionDomainTest {
                     "SelectLauncherViewMode",
                     LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
                 ),
-                activity("ExitAdaptiveStage", LauncherShellAction.ExitAdaptiveStage),
+                activity(
+                    "SelectHomeSurfaceMode",
+                    LauncherShellAction.SelectHomeSurfaceMode(LauncherViewMode.STANDARD_APP_DRAWER),
+                ),
                 activity(
                     "SelectLauncherTemplate",
                     LauncherShellAction.SelectLauncherTemplate(
@@ -247,6 +253,7 @@ class LauncherActionDomainTest {
                     "SelectHomeLayoutDeviceClass",
                     LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.TABLET),
                 ),
+                activity("LeaveLibrary", LauncherShellAction.LeaveLibrary(LibraryExitTrigger.BACK)),
                 settings(
                     "SelectSettingsLayoutDeviceClass",
                     LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
@@ -387,6 +394,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
                 ),
                 settings(
+                    "SelectLibraryReturnTarget",
+                    LauncherShellAction.SelectLibraryReturnTarget(LibraryReturnTarget.LIBRARY),
+                ),
+                settings(
                     "AddRssFeed",
                     LauncherShellAction.AddRssFeed(FeedUrl.parse("https://example.com/feed.xml").getOrThrow()),
                 ),
@@ -475,14 +486,13 @@ class LauncherActionDomainTest {
                 ),
                 settings("ResetHomeSwipeGestureActions", LauncherShellAction.ResetHomeSwipeGestureActions),
                 settings(
-                    "SelectDockGestureAction",
-                    LauncherShellAction.SelectDockGestureAction(LauncherGestureAction.OPEN_APP_DRAWER),
-                ),
-                settings(
                     "SelectHapticFeedbackStrength",
                     LauncherShellAction.SelectHapticFeedbackStrength(HapticFeedbackStrength.LIGHT),
                 ),
-                settings("SelectReducedMotionEnabled", LauncherShellAction.SelectReducedMotionEnabled(enabled = true)),
+                settings(
+                    "SelectReducedMotionPreference",
+                    LauncherShellAction.SelectReducedMotionPreference(ReducedMotionPreference.ON),
+                ),
                 settings(
                     "SelectMotionPerformanceTargetFps",
                     LauncherShellAction.SelectMotionPerformanceTargetFps(MotionPerformanceTargetFps.FPS_120),
@@ -518,6 +528,7 @@ class LauncherActionDomainTest {
                     "SelectCardsUnfoldedShowAllNotifications",
                     LauncherShellAction.SelectCardsUnfoldedShowAllNotifications(enabled = true),
                 ),
+                settings("SelectCardsShowStageSpine", LauncherShellAction.SelectCardsShowStageSpine(enabled = true)),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),
                 settings(

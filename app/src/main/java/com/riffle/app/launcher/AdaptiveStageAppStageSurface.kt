@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,29 +21,44 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -83,6 +99,7 @@ import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
 import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageDynamicSlot
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
@@ -103,6 +120,7 @@ import com.riffle.core.domain.launcher.cards.CardStackKey
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
+import com.riffle.core.domain.launcher.cards.CardsStageSelector
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.mergedContentByRecency
 import com.riffle.core.domain.launcher.cards.variantFor
@@ -121,16 +139,17 @@ import kotlin.math.abs
 
 /**
  * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
- * through: stage navigation, leaving Cards, and reaching the app drawer/search so Cards mode stays
- * a normal, discoverable overlay rather than an isolated static surface.
+ * through: stage navigation, and reaching search and Settings so Cards mode stays a normal,
+ * discoverable surface rather than an isolated one. Settings is let through since #1212: a gesture
+ * bound to it must not silently die just because Cards is showing. No gesture switches mode or
+ * opens the app drawer -- the dock pull is the only mode-transition trigger.
  */
 internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boolean =
     when (action) {
         LauncherShellAction.SelectNextAppStage,
         LauncherShellAction.SelectPreviousAppStage,
-        LauncherShellAction.ExitAdaptiveStage,
-        LauncherShellAction.OpenAppDrawer,
         LauncherShellAction.OpenSearch,
+        LauncherShellAction.OpenSettings,
         -> true
 
         else -> false
@@ -210,6 +229,56 @@ internal fun AdaptiveStageAppStageSurface(
     onContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     shellState: AppStageShellState = rememberAppStageShellState(state),
+    /**
+     * Whether the dock beside this surface is drawing the Cards stage selector. When it cannot (it is
+     * off or hidden, or there is no dock at all, as for a caller rendering the surface alone) the
+     * compact spine is drawn whatever its setting, so no stage is ever unreachable by touch.
+     */
+    dockHostsStageSelector: Boolean = false,
+) {
+    val addStageSheetOpenState = rememberSaveable { mutableStateOf(false) }
+    val requestAddStage = remember(addStageSheetOpenState) { { addStageSheetOpenState.value = true } }
+    CompositionLocalProvider(LocalAdaptiveStageAddStageRequest provides requestAddStage) {
+        AdaptiveStageAppStageSurfaceContent(
+            state = state,
+            onAction = onAction,
+            modifier = modifier,
+            windowInsets = windowInsets,
+            windowLayout = windowLayout,
+            context = context,
+            onContextChanged = onContextChanged,
+            appIconLoader = appIconLoader,
+            shellState = shellState,
+            showSpine =
+                CardsStageSelector.showsSpine(
+                    spineEnabled = state.launcherSettings.cards.showStageSpine,
+                    dockHostsSelector = dockHostsStageSelector,
+                ),
+        )
+    }
+    if (addStageSheetOpenState.value) {
+        AdaptiveStageAddStageSheet(
+            state = state,
+            pinnedStageIds = shellState.snapshot.stages.filter(AppStage::isPinned).map(AppStage::id).toSet(),
+            appIconLoader = appIconLoader,
+            onAction = onAction,
+            onDismiss = { addStageSheetOpenState.value = false },
+        )
+    }
+}
+
+@Composable
+private fun AdaptiveStageAppStageSurfaceContent(
+    state: LauncherShellState,
+    onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier,
+    windowInsets: WindowInsets,
+    windowLayout: AdaptiveStageWindowLayout?,
+    context: AdaptiveStageInteractionContext,
+    onContextChanged: (AdaptiveStageInteractionContext) -> Unit,
+    appIconLoader: AppIconLoader,
+    shellState: AppStageShellState,
+    showSpine: Boolean,
 ) {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -320,13 +389,15 @@ internal fun AdaptiveStageAppStageSurface(
         modifier =
             modifier
                 .fillMaxSize()
-                // Reuse the persisted gesture bindings, but only claim mode exit and stage
-                // navigation here. Focused cards consume their one-finger vertical drags first.
+                // Reuse the persisted gesture bindings, but only claim stage navigation, search
+                // and Settings here. Focused cards consume their one-finger vertical drags first;
+                // a drag past the stack's first/last card is handed back (docs/product/gestures.md).
                 .homeGestureInput(
                     enabled = detailOrigin == null,
                     settings = state.launcherSettings.gestures.homeGestures,
                     onAction = onAction,
                     actionFilter = ::adaptiveStageAppStageActionFilter,
+                    overscrollHandOff = true,
                 ),
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -382,26 +453,6 @@ internal fun AdaptiveStageAppStageSurface(
                         .width(paneLayout.contentWidthDp.dp)
                         .height(paneLayout.contentHeightDp.dp),
             ) {
-                // The Cards stage sits directly over the live wallpaper with nothing behind it to
-                // separate the two, so a busy wallpaper competes with card content for attention
-                // (hands-on testing feedback). A flat, subtle scrim for the whole stage area gives
-                // that separation without touching any individual card's own glass/blur/texture
-                // settings.
-                val backdropScrim =
-                    MaterialTheme.colorScheme.scrim.copy(alpha = ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA)
-                // Clipped to the same corner radius as the cards it sits behind (#1171): a sharp
-                // rectangle here shows through as a tinted "border" past the rounded card corners.
-                val backdropScrimShape =
-                    RoundedCornerShape(state.launcherSettings.cards.adaptiveStageAppearance.geometry.cornerRadiusDp.dp)
-                Box(
-                    modifier =
-                        Modifier
-                            .align(paneLayout.renderedGroupAlignment)
-                            .width(paneLayout.renderedGroupWidthDp.dp)
-                            .fillMaxHeight()
-                            .clip(backdropScrimShape)
-                            .background(backdropScrim),
-                )
                 AdaptiveStageTemplateStaticCanvas(
                     elements = visibleTemplateElements,
                     dynamicSlots = templateVariant?.dynamicSlots.orEmpty(),
@@ -425,6 +476,7 @@ internal fun AdaptiveStageAppStageSurface(
                             focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
                             allNotificationsSelected = allNotificationsSelected,
                             onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
+                            showSpine = showSpine,
                             onFocusedCardChanged = {
                                 focusedCardIdValue = it?.value
                                 onContextChanged(context.copy(focusedCardKey = it?.value))
@@ -451,6 +503,7 @@ internal fun AdaptiveStageAppStageSurface(
                             selectedDetailCardId = detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
                             allNotificationsSelected = allNotificationsSelected,
                             onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
+                            showSpine = showSpine,
                             paneLayout = paneLayout,
                             onFocusedCardChanged = {
                                 focusedCardIdValue = it?.value
@@ -467,6 +520,31 @@ internal fun AdaptiveStageAppStageSurface(
                         )
 
                     AdaptiveStagePaneMode.TWO_PANE, AdaptiveStagePaneMode.THREE_PANE -> {
+                        val stages = shellState.snapshot.stages
+                        val reducedMotion = state.launcherSettings.motion.reducedMotion
+                        // See AdaptiveStageCompactContent: "All" is a page whenever it is the one showing.
+                        val showAllNotifications =
+                            state.launcherSettings.cards.foldedShowAllNotifications || allNotificationsSelected
+                        val pages =
+                            remember(stages, showAllNotifications) {
+                                stages.withAllNotificationsPage(showAllNotifications)
+                            }
+                        val selectedPageIndex =
+                            adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
+                        val pagerState =
+                            rememberAdaptiveStageStagePagerState(
+                                pageCount = pages.size,
+                                selectedIndex = selectedPageIndex,
+                                reducedMotion = reducedMotion,
+                                onSettle = { index ->
+                                    adaptiveStageOnPageSettled(
+                                        pages,
+                                        index,
+                                        onAction,
+                                        onAllNotificationsSelectedChanged,
+                                    )
+                                },
+                            )
                         Row(
                             modifier =
                                 Modifier
@@ -478,18 +556,15 @@ internal fun AdaptiveStageAppStageSurface(
                                 AdaptiveStageStageHeader(
                                     selectedStage = selectedStage,
                                     allNotificationsSelected = allNotificationsSelected,
-                                    stages = shellState.snapshot.stages,
+                                    stages = stages,
                                     state = state,
                                     appIconLoader = appIconLoader,
                                     onAction = onAction,
                                 )
-                                AdaptiveStagePageBody(
-                                    page =
-                                        if (allNotificationsSelected) {
-                                            AdaptiveStagePage.AllNotifications
-                                        } else {
-                                            selectedStage?.let(AdaptiveStagePage::Stage)
-                                        },
+                                AdaptiveStageCompactStagePager(
+                                    pages = pages,
+                                    selectedPageIndex = selectedPageIndex,
+                                    pagerState = pagerState,
                                     state = state,
                                     shellState = shellState,
                                     detailRecoveryMessage = detailRecoveryMessage,
@@ -507,14 +582,28 @@ internal fun AdaptiveStageAppStageSurface(
                                         focusedCardIdValue = it?.value
                                         onContextChanged(context.copy(focusedCardKey = it?.value))
                                     },
-                                    showDetailInline = !paneLayout.showsDetailPane,
-                                    // TWO_PANE/THREE_PANE is the unfolded presentation, so the
-                                    // stack uses the unfolded appearance profile.
-                                    useUnfoldedAppearance = true,
                                     onAction = onAction,
                                     appIconLoader = appIconLoader,
                                     modifier = Modifier.weight(1f),
+                                    showDetailInline = !paneLayout.showsDetailPane,
+                                    // TWO_PANE/THREE_PANE is the unfolded (docked-rail) presentation,
+                                    // so the stack -- selected page and any neighbor mid-drag -- uses
+                                    // the unfolded appearance profile.
+                                    useUnfoldedAppearance = true,
                                 )
+                                if (showSpine) {
+                                    AdaptiveStageStageSpine(
+                                        pages = pages,
+                                        stages = stages,
+                                        selectedStageId = selectedStage?.id,
+                                        allNotificationsSelected = allNotificationsSelected,
+                                        pagePosition = pagerState.pagePosition,
+                                        state = state,
+                                        appIconLoader = appIconLoader,
+                                        onAction = onAction,
+                                        onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
+                                    )
+                                }
                             }
                             if (paneLayout.leadingRemainderDp > 0) {
                                 Spacer(modifier = Modifier.width(paneLayout.leadingRemainderDp.dp))
@@ -600,11 +689,11 @@ internal fun adaptiveStageOnPageSettled(
 
 /**
  * Compact (single-pane phone) content. Unlike the two-pane/rail layout, there's no persistent
- * rail to tap here, so this is where the continuous horizontal drag pager and its synced spine
- * carousel live. The wider-screen layout keeps its existing rail-based navigation unchanged; the
- * rail already gives equivalent discoverability there, and mirroring the graphicsLayer-offset
- * pager approach for a rail+content split isn't a trivial extension, so the drag pager stays
- * compact-only for now.
+ * rail to tap here, so a continuous horizontal drag pager and its synced spine carousel are the
+ * only way to move between stages. The TWO_PANE/THREE_PANE branch of
+ * [AdaptiveStageAppStageSurfaceContent] reuses the exact same [AdaptiveStageCompactStagePager] --
+ * so dragging works there too, in addition to the rail -- constrained to its own `stackWidthDp`
+ * column and rendered with the unfolded appearance profile instead of this one's folded profile.
  */
 @Composable
 private fun AdaptiveStageCompactContent(
@@ -617,6 +706,7 @@ private fun AdaptiveStageCompactContent(
     focusedCardId: LauncherCardId?,
     allNotificationsSelected: Boolean,
     onAllNotificationsSelectedChanged: (Boolean) -> Unit,
+    showSpine: Boolean,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
@@ -624,7 +714,9 @@ private fun AdaptiveStageCompactContent(
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val showAllNotifications = state.launcherSettings.cards.foldedShowAllNotifications
+    // "All" is always reachable from the dock's selector (#1212); the setting only decides whether
+    // swiping between stages passes through it. While it is the page showing it has to be a page.
+    val showAllNotifications = state.launcherSettings.cards.foldedShowAllNotifications || allNotificationsSelected
     val pages = remember(stages, showAllNotifications) { stages.withAllNotificationsPage(showAllNotifications) }
     val selectedPageIndex =
         adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
@@ -662,14 +754,19 @@ private fun AdaptiveStageCompactContent(
             appIconLoader = appIconLoader,
             modifier = Modifier.weight(1f),
         )
-        AdaptiveStageStageSpine(
-            stages = stages,
-            selectedStageId = selectedStage?.id,
-            pagePosition = pagerState.pagePosition,
-            state = state,
-            appIconLoader = appIconLoader,
-            onAction = onAction,
-        )
+        if (showSpine) {
+            AdaptiveStageStageSpine(
+                pages = pages,
+                stages = stages,
+                selectedStageId = selectedStage?.id,
+                allNotificationsSelected = allNotificationsSelected,
+                pagePosition = pagerState.pagePosition,
+                state = state,
+                appIconLoader = appIconLoader,
+                onAction = onAction,
+                onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
+            )
+        }
     }
 }
 
@@ -696,6 +793,7 @@ private fun AdaptiveStageSplitContent(
     selectedDetailCardId: LauncherCardId?,
     allNotificationsSelected: Boolean,
     onAllNotificationsSelectedChanged: (Boolean) -> Unit,
+    showSpine: Boolean,
     paneLayout: AdaptiveStagePaneLayout,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
@@ -704,7 +802,8 @@ private fun AdaptiveStageSplitContent(
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val showAllNotifications = state.launcherSettings.cards.foldedShowAllNotifications
+    // See AdaptiveStageCompactContent: "All" is a page whenever it is the one showing.
+    val showAllNotifications = state.launcherSettings.cards.foldedShowAllNotifications || allNotificationsSelected
     val pages = remember(stages, showAllNotifications) { stages.withAllNotificationsPage(showAllNotifications) }
     val selectedPageIndex =
         adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
@@ -772,14 +871,19 @@ private fun AdaptiveStageSplitContent(
                 // showing it inline here too would duplicate it.
                 showDetailInline = false,
             )
-            AdaptiveStageStageSpine(
-                stages = stages,
-                selectedStageId = selectedStage?.id,
-                pagePosition = pagerState.pagePosition,
-                state = state,
-                appIconLoader = appIconLoader,
-                onAction = onAction,
-            )
+            if (showSpine) {
+                AdaptiveStageStageSpine(
+                    pages = pages,
+                    stages = stages,
+                    selectedStageId = selectedStage?.id,
+                    allNotificationsSelected = allNotificationsSelected,
+                    pagePosition = pagerState.pagePosition,
+                    state = state,
+                    appIconLoader = appIconLoader,
+                    onAction = onAction,
+                    onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
+                )
+            }
         }
     }
 }
@@ -798,6 +902,11 @@ private const val DEFAULT_SPLIT_UPPER_REGION_WEIGHT = 0.6f
  * lighter [AdaptiveStageNeighborPage] instead, so only one stage ever mounts the expensive
  * interactive detail/card-stack surface at a time. With zero or one stage there is nothing to page
  * between, so this falls back to rendering [AdaptiveStageStageBody] directly without a pager.
+ *
+ * Despite its name this pager is no longer compact-only: [AdaptiveStageCompactContent] and
+ * [AdaptiveStageSplitContent] use it (both folded), and the TWO_PANE/THREE_PANE branch of
+ * [AdaptiveStageAppStageSurfaceContent] reuses it too, constrained to the rail's own
+ * `stackWidthDp` column, for its unfolded presentation -- see [useUnfoldedAppearance].
  */
 @Composable
 @Suppress("LongParameterList")
@@ -821,6 +930,12 @@ private fun AdaptiveStageCompactStagePager(
     // Always true for the All-notifications page regardless -- SPLIT mode's upper pane doesn't (yet)
     // preview all-notifications cards, so its own inline overlay is the only detail surface it has.
     showDetailInline: Boolean = true,
+    // Which of CardsSettings' two appearance profiles every stage rendered by this pager should use
+    // -- the selected page and any neighbor mid-drag alike, so a drag never flashes between the two
+    // appearance profiles as it crosses from the selected page into a neighbor. Defaults to false
+    // (the folded profile), so COMPACT's and SPLIT's existing call sites keep today's behaviour
+    // unchanged; the TWO_PANE/THREE_PANE branch passes true for its unfolded presentation.
+    useUnfoldedAppearance: Boolean = false,
 ) {
     val selectedPage = pages.getOrNull(selectedPageIndex)
     if (selectedPage == null || pages.size <= 1) {
@@ -841,8 +956,7 @@ private fun AdaptiveStageCompactStagePager(
             // upper AdaptiveStageSupportingPane already renders the detail, so inline here would
             // duplicate it. COMPACT still passes the default (true), so it is unaffected.
             showDetailInline = showDetailInline,
-            // This pager is always the compact (folded) presentation -- see its own doc.
-            useUnfoldedAppearance = false,
+            useUnfoldedAppearance = useUnfoldedAppearance,
             onAction = onAction,
             appIconLoader = appIconLoader,
             modifier = modifier,
@@ -876,8 +990,7 @@ private fun AdaptiveStageCompactStagePager(
                 onDetailVisibilityChanged = onDetailVisibilityChanged,
                 onFocusedCardChanged = onFocusedCardChanged,
                 showDetailInline = showDetailInline,
-                // This pager is always the compact (folded) presentation -- see its own doc.
-                useUnfoldedAppearance = false,
+                useUnfoldedAppearance = useUnfoldedAppearance,
                 onAction = onAction,
                 appIconLoader = appIconLoader,
                 modifier = stageModifier,
@@ -888,6 +1001,7 @@ private fun AdaptiveStageCompactStagePager(
                 selectedPageIsAllNotifications = selectedPage is AdaptiveStagePage.AllNotifications,
                 state = state,
                 shellState = shellState,
+                useUnfoldedAppearance = useUnfoldedAppearance,
                 onAction = onAction,
                 appIconLoader = appIconLoader,
                 modifier = stageModifier,
@@ -920,12 +1034,12 @@ private fun AdaptiveStagePageBody(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     showDetailInline: Boolean = true,
     // Which of CardsSettings' two independently configurable appearance profiles the rendered
-    // card stack itself should use -- true in the TWO_PANE/THREE_PANE (docked-rail) branch, false
-    // everywhere else (the compact drag pager, used by both COMPACT and SPLIT). No default: every
-    // caller must decide deliberately rather than silently inherit one profile everywhere, which
-    // is exactly the bug this parameter fixes (every card stack rendering the folded profile
-    // regardless of pane mode, so the "Unfolded" appearance editor target had no visible effect
-    // outside the rail's own tiles).
+    // card stack itself should use -- true for TWO_PANE/THREE_PANE's (docked-rail) drag pager,
+    // false for COMPACT's and SPLIT's own (folded) drag pager. No default: every caller must
+    // decide deliberately rather than silently inherit one profile everywhere, which is exactly
+    // the bug this parameter fixes (every card stack rendering the folded profile regardless of
+    // pane mode, so the "Unfolded" appearance editor target had no visible effect outside the
+    // rail's own tiles).
     useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
@@ -990,6 +1104,7 @@ private fun AdaptiveStageNeighborPage(
     selectedPageIsAllNotifications: Boolean,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
@@ -1002,6 +1117,7 @@ private fun AdaptiveStageNeighborPage(
         stage = (page as AdaptiveStagePage.Stage).stage,
         state = state,
         shellState = shellState,
+        useUnfoldedAppearance = useUnfoldedAppearance,
         onAction = onAction,
         appIconLoader = appIconLoader,
         modifier = modifier,
@@ -1013,12 +1129,16 @@ private fun AdaptiveStageNeighborPage(
  * It owns its own ephemeral detail/focus state rather than the durable, context-restorable state
  * the actually-selected stage uses -- that state is only meaningful once a settle commits this
  * stage as selected, at which point [AdaptiveStageCompactStagePager] switches it to the durable path.
+ * [useUnfoldedAppearance] mirrors the selected page's own choice (see
+ * [AdaptiveStageCompactStagePager]'s doc) so a stage doesn't visually change appearance profile
+ * the instant a drag makes it, or stops making it, the neighbor.
  */
 @Composable
 private fun AdaptiveStageNeighborStagePage(
     stage: AppStage,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
@@ -1039,8 +1159,7 @@ private fun AdaptiveStageNeighborStagePage(
         focusedCardId = focusedCardId,
         onDetailVisibilityChanged = {},
         onFocusedCardChanged = { focusedCardId = it },
-        // Neighbor pages only ever exist within the compact drag pager -- see its own doc.
-        useUnfoldedAppearance = false,
+        useUnfoldedAppearance = useUnfoldedAppearance,
         onAction = onAction,
         appIconLoader = appIconLoader,
         modifier = modifier,
@@ -1285,49 +1404,28 @@ private fun AdaptiveStageStageHeader(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    // selectedStage stays the last real selection while the merged page is showing (so leaving
+    // "All" returns to it), so "a real stage is showing" needs its own explicit gate.
+    val shownStage = selectedStage?.takeUnless { allNotificationsSelected }
     val label =
         when {
-            allNotificationsSelected -> "All notifications"
-            selectedStage != null -> stageLabel(selectedStage.id, state)
+            allNotificationsSelected -> CARDS_ALL_ENTRY_LABEL
+            shownStage != null -> stageLabel(shownStage.id, state)
             else -> "Cards"
         }
-    // Per-stage actions (Add stage/Pin/overflow) only make sense for a real selected stage, and
-    // must stay hidden while the virtual All-notifications page is selected -- selectedStage
-    // itself isn't cleared in that state (it stays the last real selection so leaving All
-    // notifications returns to it), so this needs its own explicit gate.
-    val showStageActions = selectedStage != null && !allNotificationsSelected
-    var overflowExpanded by rememberSaveable(selectedStage?.let(::adaptiveStageStageSelectorItemKey)) {
-        mutableStateOf(false)
-    }
-    var addStageExpanded by rememberSaveable(selectedStage?.let(::adaptiveStageStageSelectorItemKey)) {
-        mutableStateOf(false)
-    }
-    val pinnedStageIds = stages.filter(AppStage::isPinned).map(AppStage::id).toSet()
-    val addableApps =
-        state.installedApps
-            .filterNot { app ->
-                AppStageId(app.identity.packageName, app.identity.profile.id) in pinnedStageIds
-            }
-            .distinctBy { app -> "${app.identity.profile.id.value}:${app.identity.packageName.value}" }
-            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { app -> app.label })
-    val selectedApp =
-        selectedStage?.let { stage ->
-            state.installedApps.firstOrNull { app ->
-                app.identity.packageName == stage.id.packageName &&
-                    app.identity.profile.id == stage.id.profileId
-            }
-        }
+    val summary = adaptiveStageHeaderSummary(shownStage, allNotificationsSelected, stages)
+    val shownApp = shownStage?.let { stage -> state.installedAppsByStageId[stage.id] }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(start = 20.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (selectedApp != null && !allNotificationsSelected) {
+        if (shownApp != null) {
             LauncherAppIcon(
-                identity = selectedApp.identity,
+                identity = shownApp.identity,
                 label = label,
                 iconLoader = appIconLoader,
                 modifier = Modifier.launcherIconSize().padding(end = 12.dp),
@@ -1340,15 +1438,13 @@ private fun AdaptiveStageStageHeader(
                     stateDescription =
                         when {
                             allNotificationsSelected -> "Showing every stage's notifications"
-                            selectedStage != null -> selectedStage.adaptiveStageStageStateDescription()
+                            shownStage != null -> shownStage.adaptiveStageStageStateDescription()
                             else -> "No stage selected"
                         }
                     liveRegion = LiveRegionMode.Polite
-                    // The rail/spine's visible Previous/Next buttons were removed as redundant
-                    // with tapping a stage directly (or swiping, in compact/split layouts) --
-                    // this keeps stage-to-stage navigation reachable for TalkBack/switch users,
-                    // mirroring the "Previous card"/"Next card" CustomAccessibilityAction
-                    // precedent used for intra-stack card navigation elsewhere in this file.
+                    // Stage-to-stage navigation for TalkBack/switch users, mirroring the "Previous
+                    // card"/"Next card" CustomAccessibilityAction precedent used for intra-stack card
+                    // navigation elsewhere in this file.
                     customActions =
                         listOf(
                             CustomAccessibilityAction("Previous stage") {
@@ -1368,98 +1464,219 @@ private fun AdaptiveStageStageHeader(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            // Only show the "Cards" eyebrow when it wouldn't just repeat the title above --
-            // label already falls back to "Cards" itself when no stage is selected.
-            if (label != "Cards") {
-                Text(text = "Cards", style = MaterialTheme.typography.labelMedium)
+            // The eyebrow says how much is here, never just "Cards" again under a "Cards" title.
+            summary?.let { text ->
+                Text(text = text, style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }
         }
-        if (showStageActions && selectedStage != null) {
-            if (addableApps.isNotEmpty()) {
-                Box {
-                    TextButton(onClick = { addStageExpanded = true }) { Text("Add stage") }
-                    RiffleContextMenu(
-                        expanded = addStageExpanded,
-                        onDismissRequest = { addStageExpanded = false },
-                    ) {
-                        addableApps.forEach { app ->
-                            DropdownMenuItem(
-                                text = { Text("Pin ${app.label}") },
-                                onClick = {
-                                    addStageExpanded = false
+        // Pin appears once, as a toggle, and only for a real stage -- "All" is not a stage.
+        if (shownStage != null) {
+            IconToggleButton(
+                checked = shownStage.isPinned,
+                onCheckedChange = { onAction(LauncherShellAction.ToggleAppStagePinned(shownStage.id)) },
+                modifier =
+                    Modifier.semantics {
+                        contentDescription = ADAPTIVE_STAGE_PIN_TOGGLE_LABEL
+                        stateDescription = if (shownStage.isPinned) "Pinned" else "Not pinned"
+                    },
+            ) {
+                Icon(
+                    imageVector = if (shownStage.isPinned) Icons.Filled.Star else Icons.Outlined.Star,
+                    contentDescription = null,
+                )
+            }
+        }
+        AdaptiveStageOverflowMenu(
+            shownApp = shownApp,
+            notificationAccessStatus = state.notificationAccessStatus,
+            onAction = onAction,
+        )
+    }
+}
+
+/**
+ * The header's overflow: always present, whatever is showing -- a stage, "All", or nothing yet --
+ * so Settings and the Cards controls are never a dead end (#1212). Before, it hid on "All" and when
+ * no stage was selected, which left Cards with no path to Settings at all on a full dock.
+ */
+@Composable
+private fun AdaptiveStageOverflowMenu(
+    shownApp: InstalledApp?,
+    notificationAccessStatus: NotificationAccessStatus,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val requestAddStage = LocalAdaptiveStageAddStageRequest.current
+    val choose: (() -> Unit) -> Unit = { choice ->
+        expanded = false
+        choice()
+    }
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.semantics { contentDescription = ADAPTIVE_STAGE_OVERFLOW_LABEL },
+        ) {
+            Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
+        }
+        RiffleContextMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            shownApp?.let { app ->
+                DropdownMenuItem(
+                    text = { Text("Open ${app.label}") },
+                    onClick = { choose { onAction(LauncherShellAction.LaunchApp(app.identity)) } },
+                )
+                DropdownMenuItem(
+                    text = { Text("App info") },
+                    onClick = { choose { onAction(LauncherShellAction.OpenAppInfo(app.identity)) } },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text("Add stage") },
+                onClick = { choose(requestAddStage) },
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (notificationAccessStatus == NotificationAccessStatus.GRANTED) {
+                            "Notification access"
+                        } else {
+                            "Allow notification access"
+                        },
+                    )
+                },
+                onClick = { choose { onAction(LauncherShellAction.RequestNotificationAccess) } },
+            )
+            DropdownMenuItem(
+                text = { Text("Cards appearance") },
+                onClick = {
+                    choose { onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.ADAPTIVE_STAGE_APPEARANCE)) }
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("Home mode") },
+                onClick = { choose { onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.LAYOUT)) } },
+            )
+            DropdownMenuItem(
+                text = { Text("Settings") },
+                onClick = { choose { onAction(LauncherShellAction.OpenSettings) } },
+            )
+        }
+    }
+}
+
+/** A short count for the header's eyebrow, or null when there is nothing to say. */
+private fun adaptiveStageHeaderSummary(
+    shownStage: AppStage?,
+    allNotificationsSelected: Boolean,
+    stages: List<AppStage>,
+): String? {
+    val count =
+        when {
+            allNotificationsSelected -> stages.sumOf { stage -> stage.content.size }
+            shownStage != null -> shownStage.content.size
+            else -> return null
+        }
+    return when {
+        count > 0 -> "$count ${if (count == 1) "card" else "cards"}"
+        shownStage?.isPinned == true -> "Pinned, nothing new"
+        else -> "Nothing new"
+    }
+}
+
+/**
+ * The "Add stage" picker: a searchable list of apps, matched by the drawer's own search index, in a
+ * bottom sheet. Replaces a dropdown of every installed app, which could not be searched and ran off
+ * the screen on any real phone.
+ */
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun AdaptiveStageAddStageSheet(
+    state: LauncherShellState,
+    pinnedStageIds: Set<AppStageId>,
+    appIconLoader: AppIconLoader,
+    onAction: (LauncherShellAction) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val apps =
+        remember(state.installedApps, state.appShortcutsByApp, pinnedStageIds, query) {
+            CardsStageSelector.addableApps(
+                apps = state.installedApps,
+                pinnedStageIds = pinnedStageIds,
+                query = query,
+                shortcutsByApp = state.appShortcutsByApp,
+            )
+        }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        modifier = Modifier.testTag(ADAPTIVE_STAGE_ADD_STAGE_SHEET_TEST_TAG),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Add stage", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "A stage keeps an app in Cards even when nothing is waiting.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            AppSearchField(
+                query = query,
+                onQueryChanged = { next -> query = next },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (apps.isEmpty()) {
+                Text("No apps to add", style = MaterialTheme.typography.bodyMedium)
+            }
+            LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = ADD_STAGE_LIST_MAX_HEIGHT_DP.dp)) {
+                items(
+                    items = apps,
+                    key = { app -> "${app.identity.profile.id.value}:${app.identity.packageName.value}" },
+                ) { app ->
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable(onClickLabel = "Add as a stage") {
                                     onAction(
                                         LauncherShellAction.ToggleAppStagePinned(
                                             AppStageId(app.identity.packageName, app.identity.profile.id),
                                         ),
                                     )
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-            TextButton(onClick = { onAction(LauncherShellAction.ToggleAppStagePinned(selectedStage.id)) }) {
-                Text(if (selectedStage.isPinned) "Unpin" else "Pin")
-            }
-            Box {
-                IconButton(
-                    onClick = { overflowExpanded = true },
-                    modifier = Modifier.semantics { contentDescription = "More stage options" },
-                ) {
-                    Text(text = "⋮")
-                }
-                RiffleContextMenu(
-                    expanded = overflowExpanded,
-                    onDismissRequest = { overflowExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(if (selectedStage.isPinned) "Unpin stage" else "Pin stage") },
-                        onClick = {
-                            overflowExpanded = false
-                            onAction(LauncherShellAction.ToggleAppStagePinned(selectedStage.id))
-                        },
-                    )
-                    selectedApp?.let { app ->
-                        DropdownMenuItem(
-                            text = { Text("Open ${app.label}") },
-                            onClick = {
-                                overflowExpanded = false
-                                onAction(LauncherShellAction.LaunchApp(app.identity))
-                            },
+                                    onDismiss()
+                                }
+                                .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        LauncherAppIcon(
+                            identity = app.identity,
+                            label = app.label,
+                            iconLoader = appIconLoader,
+                            modifier = Modifier.size(40.dp),
                         )
-                        DropdownMenuItem(
-                            text = { Text("App info") },
-                            onClick = {
-                                overflowExpanded = false
-                                onAction(LauncherShellAction.OpenAppInfo(app.identity))
-                            },
-                        )
+                        Text(app.label, style = MaterialTheme.typography.bodyLarge)
                     }
-                    // Cards mode's own card stack fills the whole touch area with its own
-                    // drag/tap gesture handling (see CardStack.kt's Modifier.scrollable +
-                    // cardStackTapToFocus), unlike Standard grid mode's HomeBackgroundContextMenu,
-                    // which sits behind genuinely empty
-                    // grid cells and is always reachable by a long-press there. Cards mode never
-                    // wires up an equivalent background handler, so without this entry the only
-                    // way to reach Settings from Cards mode is whatever empty space happens to
-                    // exist around the dock -- absent entirely on some layouts (reported: a full
-                    // folded-phone dock left no empty space to long-press, forcing a switch to
-                    // the roomier unfolded layout just to reach Settings). This overflow menu is
-                    // already reliably reachable whenever a stage is selected, so it's the
-                    // lowest-risk place to guarantee a path to Settings without touching
-                    // CardStack's own gesture handling.
-                    DropdownMenuItem(
-                        text = { Text("Settings") },
-                        onClick = {
-                            overflowExpanded = false
-                            onAction(LauncherShellAction.OpenSettings)
-                        },
-                    )
                 }
             }
         }
     }
 }
+
+/**
+ * Opens the "Add stage" picker from anywhere inside the surface -- the header's overflow and the
+ * empty state's call to action -- without threading a callback through every page composable.
+ */
+internal val LocalAdaptiveStageAddStageRequest = compositionLocalOf<() -> Unit> { {} }
+
+private const val ADD_STAGE_LIST_MAX_HEIGHT_DP = 420
+
+internal const val ADAPTIVE_STAGE_OVERFLOW_LABEL = "More options"
+internal const val ADAPTIVE_STAGE_PIN_TOGGLE_LABEL = "Pin stage"
+internal const val ADAPTIVE_STAGE_ADD_STAGE_SHEET_TEST_TAG = "adaptive-stage-add-stage-sheet"
 
 /** Only one [AdaptiveStageStageHeader] is ever composed at a time, so a single fixed tag is unambiguous. */
 internal const val ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG = "adaptive-stage-stage-header"
@@ -1636,8 +1853,6 @@ private fun AdaptiveStageNotificationStack(
     // reflows toward its neighbor as the drag progresses, the same way the reference "Calm"
     // launcher's card stack works, instead of only updating once the drag settles.
     var liveDragPx by remember(stage.id) { mutableStateOf<Float?>(null) }
-    val liveActiveCardIndex =
-        adaptiveStageLiveActiveCardIndex(activeCardIndex, cards.size, liveDragPx)
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
@@ -1649,6 +1864,25 @@ private fun AdaptiveStageNotificationStack(
                     globalReducedMotion = state.launcherSettings.motion.reducedMotion,
                 )
             }
+        // Per-card travel and fling threshold in dp, resolved for this display (#1211).
+        val travel = rememberCardStackTravel(renderedCardPitchDp = resolution.layoutPolicy.verticalOffsetStep)
+        // Only this derived read -- not the whole stack surface -- is invalidated by a live drag
+        // frame, and only the bounded visible window is laid out.
+        val stackEntries by remember(resolution, cards.size, activeCardIndex, travel) {
+            derivedStateOf {
+                adaptiveStageNotificationStackEntries(
+                    resolution = resolution,
+                    cardCount = cards.size,
+                    activeCardIndex =
+                        adaptiveStageLiveActiveCardIndex(
+                            activeCardIndex = activeCardIndex,
+                            cardCount = cards.size,
+                            liveDragPx = liveDragPx,
+                            distancePerCardPx = travel.distancePerCardPx,
+                        ),
+                )
+            }
+        }
         val isDetailVisible = detailState.expansionState.isVisible && showDetailInline
         // Siblings stay composed (and thus discoverable/re-focusable) but dimmed while a card's
         // detail is expanded, instead of being torn down entirely.
@@ -1661,11 +1895,13 @@ private fun AdaptiveStageNotificationStack(
             animateFloatAsState(
                 targetValue = if (isThreadVisible) ADAPTIVE_STAGE_THREAD_RECEDE_SCALE else 1f,
                 label = "adaptive-stage-thread-recede-scale",
+                animationSpec = com.riffle.app.launcher.designsystem.RiffleMotion.snappy(resolution.reducedMotion),
             )
         val threadRecedeAlpha by
             animateFloatAsState(
                 targetValue = if (isThreadVisible) ADAPTIVE_STAGE_THREAD_RECEDE_ALPHA else 1f,
                 label = "adaptive-stage-thread-recede-alpha",
+                animationSpec = com.riffle.app.launcher.designsystem.RiffleMotion.snappy(resolution.reducedMotion),
             )
         Box(
             modifier =
@@ -1688,12 +1924,7 @@ private fun AdaptiveStageNotificationStack(
                             // .clipToBounds() clips against the real allotted area instead of a
                             // single card's footprint.
                             modifier = Modifier.matchParentSize(),
-                            entries =
-                                adaptiveStageNotificationStackEntries(
-                                    resolution = resolution,
-                                    cardCount = cards.size,
-                                    activeCardIndex = liveActiveCardIndex,
-                                ),
+                            entries = stackEntries,
                             animationSpec = resolution.animation,
                             reducedMotion = resolution.reducedMotion,
                             stackPeakFraction = resolution.stackPeakFraction,
@@ -1723,9 +1954,9 @@ private fun AdaptiveStageNotificationStack(
                                                     focusedCardId = activeCard.content.id,
                                                     verticalDragPx = drag,
                                                     verticalVelocityPxPerSecond = velocity,
-                                                    distanceThresholdPx =
-                                                    ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
-                                                    flingVelocityThresholdPxPerSecond = 500f,
+                                                    distanceThresholdPx = travel.distancePerCardPx,
+                                                    flingVelocityThresholdPxPerSecond =
+                                                        travel.flingVelocityThresholdPxPerSecond,
                                                 ),
                                             ).let { result ->
                                                 if (result is CardStackFocusResult.Applied) {
@@ -1744,6 +1975,9 @@ private fun AdaptiveStageNotificationStack(
                                     onSettleHaptic = {
                                         haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
                                     },
+                                    onBoundaryHaptic = {
+                                        haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
+                                    },
                                     onNavigate = ::navigate,
                                     onExpand = { detailState.expand(activeCard.content.id) },
                                     onLiveDrag = { dragPx -> liveDragPx = dragPx },
@@ -1756,19 +1990,17 @@ private fun AdaptiveStageNotificationStack(
                                         CardStackScroll(
                                             cardCount = cards.size,
                                             activeCardIndex = activeCardIndex,
-                                            distancePerCardPx =
-                                            ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                            distancePerCardPx = travel.distancePerCardPx,
                                             magnet = resolution.magnet,
+                                            flingVelocityThresholdPxPerSecond =
+                                                travel.flingVelocityThresholdPxPerSecond,
+                                            maxFlingCards = travel.maxFlingCards,
                                         ),
                                 ),
                         ) { entry, cardModifier ->
                             val card = cards[entry.cardIndex]
                             val artwork =
-                                remember(card.artworkSourceKey, card.artworkBase64, artworkCache) {
-                                    card.artworkSourceKey?.let { sourceKey ->
-                                        artworkCache.getOrDecode(sourceKey, card.artworkBase64)
-                                    }
-                                }
+                                rememberAdaptiveStageArtwork(card.artworkSourceKey, card.artworkBase64, artworkCache)
                             val focusedCardSemantics =
                                 if (entry.cardIndex == activeCardIndex) {
                                     Modifier.semantics {
@@ -1970,6 +2202,10 @@ private fun AdaptiveStageThreadSurface(
 }
 
 /**
+ * The fallback per-card travel for callers without a density-aware [CardStackTravelPx]; the live
+ * notification stacks resolve theirs through [rememberCardStackTravel] (#1211) instead, and pass
+ * that same value to every use described below.
+ *
  * Shared by every notification card stack's own [CardStackSettleRequest.distanceThresholdPx] and,
  * separately, its live-drag-to-fractional-index conversion (dragPx / this) -- deliberately the
  * same number for both, so the point at which the stack visually reaches "the next card is now
@@ -1995,12 +2231,13 @@ internal fun adaptiveStageLiveActiveCardIndex(
     activeCardIndex: Int,
     cardCount: Int,
     liveDragPx: Float?,
+    distancePerCardPx: Float = ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
 ): Float =
     cardStackLiveActiveCardIndex(
         activeCardIndex = activeCardIndex,
         cardCount = cardCount,
         liveDragPx = liveDragPx,
-        distancePerCardPx = ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+        distancePerCardPx = distancePerCardPx,
     )
 
 /**
@@ -2074,7 +2311,11 @@ private fun AdaptiveStageAllNotificationsStack(
     }
 
     if (focusedCard == null) {
-        AdaptiveStageAllNotificationsEmptyState(modifier = modifier)
+        AdaptiveStageAllNotificationsEmptyState(
+            access = state.notificationAccessStatus,
+            onAction = onAction,
+            modifier = modifier,
+        )
         return
     }
     val activeCard = focusedCard
@@ -2082,8 +2323,6 @@ private fun AdaptiveStageAllNotificationsStack(
     // See AdaptiveStageNotificationStack's identical mechanism for why this exists and how it's
     // converted to a fractional activeIndex below.
     var liveDragPx by remember { mutableStateOf<Float?>(null) }
-    val liveActiveCardIndex =
-        adaptiveStageLiveActiveCardIndex(activeCardIndex, cards.size, liveDragPx)
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
@@ -2095,6 +2334,25 @@ private fun AdaptiveStageAllNotificationsStack(
                     globalReducedMotion = state.launcherSettings.motion.reducedMotion,
                 )
             }
+        // Per-card travel and fling threshold in dp, resolved for this display (#1211).
+        val travel = rememberCardStackTravel(renderedCardPitchDp = resolution.layoutPolicy.verticalOffsetStep)
+        // Only this derived read -- not the whole stack surface -- is invalidated by a live drag
+        // frame, and only the bounded visible window is laid out.
+        val stackEntries by remember(resolution, cards.size, activeCardIndex, travel) {
+            derivedStateOf {
+                adaptiveStageNotificationStackEntries(
+                    resolution = resolution,
+                    cardCount = cards.size,
+                    activeCardIndex =
+                        adaptiveStageLiveActiveCardIndex(
+                            activeCardIndex = activeCardIndex,
+                            cardCount = cards.size,
+                            liveDragPx = liveDragPx,
+                            distancePerCardPx = travel.distancePerCardPx,
+                        ),
+                )
+            }
+        }
         val isDetailVisible = detailState.expansionState.isVisible
         // Siblings stay composed (and thus discoverable/re-focusable) but dimmed while a card's
         // detail is expanded, instead of being torn down entirely -- same treatment as
@@ -2113,12 +2371,7 @@ private fun AdaptiveStageAllNotificationsStack(
                         // .clipToBounds() clips against the real allotted area instead of a
                         // single card's footprint.
                         modifier = Modifier.matchParentSize(),
-                        entries =
-                            adaptiveStageNotificationStackEntries(
-                                resolution = resolution,
-                                cardCount = cards.size,
-                                activeCardIndex = liveActiveCardIndex,
-                            ),
+                        entries = stackEntries,
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
                         stackPeakFraction = resolution.stackPeakFraction,
@@ -2148,9 +2401,9 @@ private fun AdaptiveStageAllNotificationsStack(
                                                 focusedCardId = activeCard.content.id,
                                                 verticalDragPx = drag,
                                                 verticalVelocityPxPerSecond = velocity,
-                                                distanceThresholdPx =
-                                                ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
-                                                flingVelocityThresholdPxPerSecond = 500f,
+                                                distanceThresholdPx = travel.distancePerCardPx,
+                                                flingVelocityThresholdPxPerSecond =
+                                                    travel.flingVelocityThresholdPxPerSecond,
                                             ),
                                         ).let { result ->
                                             if (result is CardStackFocusResult.Applied) {
@@ -2169,6 +2422,9 @@ private fun AdaptiveStageAllNotificationsStack(
                                 onSettleHaptic = {
                                     haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
                                 },
+                                onBoundaryHaptic = {
+                                    haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
+                                },
                                 onNavigate = ::navigate,
                                 onExpand = { detailState.expand(activeCard.content.id) },
                                 onLiveDrag = { dragPx -> liveDragPx = dragPx },
@@ -2177,9 +2433,11 @@ private fun AdaptiveStageAllNotificationsStack(
                                     CardStackScroll(
                                         cardCount = cards.size,
                                         activeCardIndex = activeCardIndex,
-                                        distancePerCardPx =
-                                        ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                        distancePerCardPx = travel.distancePerCardPx,
                                         magnet = resolution.magnet,
+                                        flingVelocityThresholdPxPerSecond =
+                                            travel.flingVelocityThresholdPxPerSecond,
+                                        maxFlingCards = travel.maxFlingCards,
                                     ),
                             ),
                     ) { entry, cardModifier ->
@@ -2197,11 +2455,7 @@ private fun AdaptiveStageAllNotificationsStack(
                                 }
                         }
                         val artwork =
-                            remember(card.artworkSourceKey, card.artworkBase64, artworkCache) {
-                                card.artworkSourceKey?.let { sourceKey ->
-                                    artworkCache.getOrDecode(sourceKey, card.artworkBase64)
-                                }
-                            }
+                            rememberAdaptiveStageArtwork(card.artworkSourceKey, card.artworkBase64, artworkCache)
                         val focusedCardSemantics =
                             if (entry.cardIndex == activeCardIndex) {
                                 Modifier.semantics {
@@ -2297,17 +2551,47 @@ private fun AdaptiveStageAllNotificationsStack(
     }
 }
 
+/**
+ * The merged page with nothing in it: one line, and -- when the reason is missing notification
+ * access -- the one action that fixes it, never a blank surface.
+ */
 @Composable
-private fun AdaptiveStageAllNotificationsEmptyState(modifier: Modifier) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+private fun AdaptiveStageAllNotificationsEmptyState(
+    access: NotificationAccessStatus,
+    onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
-            text = "No notifications yet",
+            text =
+                if (access == NotificationAccessStatus.GRANTED) {
+                    "No notifications yet"
+                } else {
+                    access.adaptiveStageAccessMessage
+                },
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             style = MaterialTheme.typography.titleMedium,
         )
+        if (access.needsAdaptiveStageAccessRequest) {
+            AdaptiveStageContextActionButton(
+                label = "Allow access",
+                onClick = { onAction(LauncherShellAction.RequestNotificationAccess) },
+            )
+        }
     }
 }
 
-/** Keeps every active notification reachable even when the visual stack depth is smaller. */
+/**
+ * Only the appearance's configured visible depth is composed, plus one fully transparent card each
+ * side so the next card is already present when a drag starts revealing it (see
+ * [com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy.composedDepthMargin]). Cards beyond
+ * that stay reachable through drag/fling, keyboard arrows and the focused card's "Previous
+ * card"/"Next card" accessibility actions -- they are just not composed until they come near focus.
+ */
 internal fun adaptiveStageNotificationStackEntries(
     resolution: AdaptiveStageCardStackResolution,
     cardCount: Int,
@@ -2318,12 +2602,14 @@ internal fun adaptiveStageNotificationStackEntries(
     activeCardIndex: Float,
 ): List<CardStackLayoutEntry> =
     resolution.layoutPolicy
-        .copy(maxVisibleDepth = maxOf(resolution.layoutPolicy.maxVisibleDepth, cardCount - 1))
+        .copy(composedDepthMargin = ADAPTIVE_STAGE_COMPOSED_DEPTH_MARGIN)
         .entries(
             cardCount = cardCount,
             activeIndex = activeCardIndex,
             reducedMotion = resolution.reducedMotion,
         )
+
+private const val ADAPTIVE_STAGE_COMPOSED_DEPTH_MARGIN = 1
 
 @Composable
 private fun AdaptiveStageCardPositionIndicator(
@@ -2502,7 +2788,7 @@ private fun NotificationHideMenuButton(
             onClick = { expanded = true },
             modifier = Modifier.semantics { contentDescription = "Hide notifications like this" },
         ) {
-            Text(text = "⋮")
+            Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
         }
         RiffleContextMenu(
             expanded = expanded,
@@ -2794,6 +3080,10 @@ private fun AdaptiveStageUnavailableState(
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
+    // One clear call to action (#1212): without access, granting it is the only thing that helps;
+    // with access and no stages, adding one is. The old row of "Pin <every app>" buttons is now the
+    // searchable "Add stage" picker.
+    val requestAddStage = LocalAdaptiveStageAddStageRequest.current
     Column(
         modifier = modifier.fillMaxWidth().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
@@ -2805,45 +3095,30 @@ private fun AdaptiveStageUnavailableState(
             style = MaterialTheme.typography.bodyLarge,
         )
         AdaptiveStageDetailRecoveryMessage(recoveryMessage)
-        if (access == NotificationAccessStatus.NOT_GRANTED || access == NotificationAccessStatus.REVOKED) {
-            AdaptiveStageContextActionButton(
-                label = "Allow access",
-                onClick = { onAction(LauncherShellAction.RequestNotificationAccess) },
-            )
-        }
-        if (installedApps.isEmpty()) {
-            Text("Install an app to create your first stage.", style = MaterialTheme.typography.bodyMedium)
-        } else {
-            Text("Choose an app to keep as a stage.", style = MaterialTheme.typography.bodyMedium)
-            val stageApps =
-                installedApps
-                    .distinctBy { app -> "${app.identity.profile.id.value}:${app.identity.packageName.value}" }
-                    .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { app -> app.label })
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(
-                    items = stageApps,
-                    key = { app ->
-                        "${app.identity.profile.id.value}:${app.identity.packageName.value}"
-                    },
-                ) { app ->
-                    AdaptiveStageContextActionButton(
-                        label = "Pin ${app.label}",
-                        onClick = {
-                            onAction(
-                                LauncherShellAction.ToggleAppStagePinned(
-                                    AppStageId(app.identity.packageName, app.identity.profile.id),
-                                ),
-                            )
-                        },
-                    )
-                }
+        when {
+            access.needsAdaptiveStageAccessRequest ->
+                AdaptiveStageContextActionButton(
+                    label = "Allow access",
+                    onClick = { onAction(LauncherShellAction.RequestNotificationAccess) },
+                )
+
+            installedApps.isEmpty() ->
+                Text("Install an app to create your first stage.", style = MaterialTheme.typography.bodyMedium)
+
+            else -> {
+                Text(
+                    "Add a stage to keep an app here even when nothing is waiting.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                AdaptiveStageContextActionButton(label = "Add stage", onClick = requestAddStage)
             }
         }
     }
 }
+
+/** Access that the user can still grant from here, as opposed to granted or still being checked. */
+private val NotificationAccessStatus.needsAdaptiveStageAccessRequest: Boolean
+    get() = this == NotificationAccessStatus.NOT_GRANTED || this == NotificationAccessStatus.REVOKED
 
 private val NotificationAccessStatus.adaptiveStageAccessMessage: String
     get() =
@@ -2912,25 +3187,52 @@ private fun adaptiveStagePostureOrNull(value: String): AdaptiveStagePosture? {
 }
 
 /**
- * A slim, always-centered-on-selection horizontal strip synced to the pager's fractional
- * [pagePosition] -- mirroring the reference app's chapter-carousel concept with Compose idioms:
- * each item's alpha/scale is a function of its distance from [pagePosition], so it visually tracks
- * an in-progress drag rather than jumping only when a page fully settles. Evolves the previous
- * static [AdaptiveStageStageSelector] in place rather than adding a redundant second control; its
- * Previous/Next buttons remain for non-drag (keyboard, switch, accessibility) navigation.
+ * A slim horizontal strip of stage chips synced to the pager's fractional [pagePosition] --
+ * mirroring the reference app's chapter-carousel concept with Compose idioms: each chip's
+ * alpha/scale is a function of its distance from [pagePosition], so it visually tracks an
+ * in-progress drag rather than jumping only when a page fully settles.
+ *
+ * Optional since #1212 (the dock's dynamic section is the stage selector in Cards), but kept
+ * complete: "All" has a chip of its own, first, as in the dock, and the selected chip is scrolled
+ * into view whenever the selection changes.
  */
 @Composable
 private fun AdaptiveStageStageSpine(
+    pages: List<AdaptiveStagePage>,
     stages: List<AppStage>,
     selectedStageId: AppStageId?,
+    allNotificationsSelected: Boolean,
     pagePosition: Float,
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
+    onAllNotificationsSelectedChanged: (Boolean) -> Unit,
 ) {
     if (stages.isEmpty()) return
-    // Previous/Next were removed as redundant with tapping a chip directly (or swiping, via
-    // AdaptiveStageStagePager) -- AdaptiveStageStageHeader's customActions cover non-touch navigation.
+    // page key -> pager position, built once per page list instead of an O(n) lookup per chip per frame.
+    val pageIndexes =
+        remember(pages) { pages.withIndex().associate { (index, page) -> adaptiveStagePageKey(page) to index } }
+    val chips =
+        remember(stages) {
+            listOf<AdaptiveStagePage>(AdaptiveStagePage.AllNotifications) + stages.map(AdaptiveStagePage::Stage)
+        }
+    val isChipSelected: (AdaptiveStagePage) -> Boolean = { chip ->
+        when (chip) {
+            AdaptiveStagePage.AllNotifications -> allNotificationsSelected
+            is AdaptiveStagePage.Stage -> !allNotificationsSelected && chip.stage.id == selectedStageId
+        }
+    }
+    val selectedChipIndex = chips.indexOfFirst(isChipSelected)
+    val listState = rememberLazyListState()
+    val reducedMotion = state.launcherSettings.motion.reducedMotion
+    LaunchedEffect(selectedChipIndex, reducedMotion) {
+        if (selectedChipIndex < 0) return@LaunchedEffect
+        if (reducedMotion) {
+            listState.scrollToItem(selectedChipIndex)
+        } else {
+            listState.animateScrollToItem(selectedChipIndex)
+        }
+    }
     Row(
         modifier =
             Modifier
@@ -2940,19 +3242,41 @@ private fun AdaptiveStageStageSpine(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LazyRow(
+            state = listState,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(stages, key = ::adaptiveStageStageSelectorItemKey) { stage ->
-                val index = stages.indexOf(stage)
-                val proximity = 1f - abs(index - pagePosition).coerceIn(0f, 1f)
+            items(chips, key = ::adaptiveStagePageKey) { chip ->
+                val isSelected = isChipSelected(chip)
+                val pageIndex = pageIndexes[adaptiveStagePageKey(chip)]
+                // "All" is only a pager page when swiping through it is switched on, so a chip with
+                // no page falls back to its selection for emphasis.
+                val proximity =
+                    when {
+                        pageIndex != null -> 1f - abs(pageIndex - pagePosition).coerceIn(0f, 1f)
+                        isSelected -> 1f
+                        else -> 0f
+                    }
                 val itemAlpha = ADAPTIVE_STAGE_SPINE_MIN_ALPHA + (1f - ADAPTIVE_STAGE_SPINE_MIN_ALPHA) * proximity
                 val itemScale = ADAPTIVE_STAGE_SPINE_MIN_SCALE + (1f - ADAPTIVE_STAGE_SPINE_MIN_SCALE) * proximity
-                val identity = stageAppIdentity(stage.id, state)
-                val label = stageLabel(stage.id, state)
+                val identity =
+                    (chip as? AdaptiveStagePage.Stage)?.let { page -> stageAppIdentity(page.stage.id, state) }
+                val label =
+                    when (chip) {
+                        AdaptiveStagePage.AllNotifications -> CARDS_ALL_ENTRY_LABEL
+                        is AdaptiveStagePage.Stage -> stageLabel(chip.stage.id, state)
+                    }
                 TextButton(
-                    onClick = { onAction(LauncherShellAction.SelectAppStage(stage.id)) },
+                    onClick = {
+                        when (chip) {
+                            AdaptiveStagePage.AllNotifications -> onAllNotificationsSelectedChanged(true)
+                            is AdaptiveStagePage.Stage -> {
+                                if (allNotificationsSelected) onAllNotificationsSelectedChanged(false)
+                                onAction(LauncherShellAction.SelectAppStage(chip.stage.id))
+                            }
+                        }
+                    },
                     shape = RoundedCornerShape(percent = 50),
                     colors =
                         ButtonDefaults.textButtonColors(
@@ -2968,12 +3292,7 @@ private fun AdaptiveStageStageSpine(
                             }
                             .semantics {
                                 contentDescription =
-                                    "$label" +
-                                    if (stage.id == selectedStageId) {
-                                        ", selected. Open stage"
-                                    } else {
-                                        ". Open stage"
-                                    }
+                                    "$label" + if (isSelected) ", selected. Open stage" else ". Open stage"
                             },
                 ) {
                     Row(
@@ -3014,8 +3333,34 @@ internal fun adaptiveStageStageSelectorItemKey(stage: AppStage): String {
  */
 @Composable
 internal fun rememberAppStageShellState(state: LauncherShellState): AppStageShellState {
-    val reconciler = remember { AppStageShellStateReconciler(AndroidNotificationStageActionGateway) }
+    val reconciler =
+        remember {
+            MemoizedAppStageShellStateReconciler(AppStageShellStateReconciler(AndroidNotificationStageActionGateway))
+        }
     return reconciler.reconcile(state)
+}
+
+/**
+ * Reconciles only when the input state is a different instance from the last one (#1211). The
+ * surface recomposes far more often than [LauncherShellState] is replaced -- every drag frame, pager
+ * offset and animation tick -- and reconciling rebuilds every stage and card. Identity rather than
+ * equality, because a structural comparison of the whole shell state would itself be a large
+ * per-frame cost, and the state holder always publishes a new instance on a real change.
+ */
+private class MemoizedAppStageShellStateReconciler(
+    private val reconciler: AppStageShellStateReconciler,
+) {
+    private var lastInput: LauncherShellState? = null
+    private var lastOutput: AppStageShellState? = null
+
+    fun reconcile(state: LauncherShellState): AppStageShellState {
+        val cached = lastOutput
+        if (cached != null && lastInput === state) return cached
+        return reconciler.reconcile(state).also { output ->
+            lastInput = state
+            lastOutput = output
+        }
+    }
 }
 
 /** An app's name for a stage, shared with the dock so both name a stage the same way. */
@@ -3023,9 +3368,7 @@ internal fun stageLabel(
     id: AppStageId,
     state: LauncherShellState,
 ): String =
-    state.installedApps.firstOrNull { app ->
-        app.identity.packageName == id.packageName && app.identity.profile.id == id.profileId
-    }?.let { app ->
+    stageInstalledApp(id, state)?.let { app ->
         app.identity.profile.profileDisplayLabel(app.label)
     } ?: "${id.packageName.value} (${id.profileId.value})"
 
@@ -3033,10 +3376,13 @@ internal fun stageLabel(
 internal fun stageAppIdentity(
     id: AppStageId,
     state: LauncherShellState,
-): AppIdentity? =
-    state.installedApps.firstOrNull { app ->
-        app.identity.packageName == id.packageName && app.identity.profile.id == id.profileId
-    }?.identity
+): AppIdentity? = stageInstalledApp(id, state)?.identity
+
+/** The first installed app matching [id], via the state's own stage-id index. */
+private fun stageInstalledApp(
+    id: AppStageId,
+    state: LauncherShellState,
+): InstalledApp? = state.installedAppsByStageId[id]
 
 private fun AppStage.adaptiveStageStageStateDescription(): String =
     buildList {

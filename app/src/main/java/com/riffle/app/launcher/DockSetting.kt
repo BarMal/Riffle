@@ -25,7 +25,6 @@ import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.DockVisualEffect
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_CAPACITY
 import com.riffle.core.domain.launcher.home.MAX_DOCK_CORNER_RADIUS_DP
@@ -38,13 +37,12 @@ import com.riffle.core.domain.launcher.home.MIN_DOCK_CORNER_RADIUS_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_HOME_CONTROLS_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_NOTIFICATION_SLOT_COUNT
-import com.riffle.core.domain.launcher.home.placeableDockPositions
+import com.riffle.core.domain.launcher.home.sharedDockPositions
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 @Composable
 internal fun DockSetting(
     dock: DockModel,
-    viewMode: LauncherViewMode,
     notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -75,14 +73,18 @@ internal fun DockSetting(
         }
         DockPositionSetting(
             position = dock.position,
-            placeablePositions = viewMode.placeableDockPositions,
+            // One dock shared by every mode (#1205), so only the edges every mode can draw it on.
+            placeablePositions = sharedDockPositions,
             onAction = onAction,
         )
-        DockExpandableSetting(
-            expandable = dock.isExpandable,
-            onAction = onAction,
-        )
-        if (dock.isExpandable) {
+        // Hidden while shelf expansion is switched off launcher-wide: the settings would do nothing.
+        if (DockShelfExpansion.enabled) {
+            DockExpandableSetting(
+                expandable = dock.isExpandable,
+                onAction = onAction,
+            )
+        }
+        if (DockShelfExpansion.enabled && dock.isExpandable) {
             DockExpandAffordanceSetting(
                 affordance = dock.expandAffordance,
                 onAction = onAction,
@@ -440,8 +442,8 @@ private fun DockExpandAffordanceSetting(
             title = "Open the shelf with",
             subtitle =
                 when (affordance) {
-                    DockExpandAffordance.GESTURE -> "Swipe up on the dock; the dock's swipe-up action is unused"
-                    DockExpandAffordance.BUTTON -> "A button on the dock; swipe up runs the dock's own action"
+                    DockExpandAffordance.GESTURE -> "Swipe up on the dock"
+                    DockExpandAffordance.BUTTON -> "A button on the dock; swiping it does nothing"
                 },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

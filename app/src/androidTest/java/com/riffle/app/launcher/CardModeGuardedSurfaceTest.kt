@@ -217,7 +217,7 @@ class CardModeGuardedSurfaceTest {
     }
 
     @Test
-    fun cardModeExpandedDockShelfWithBottomMarginReceivesPhysicalTapWithAnActiveAdaptiveStageStage() {
+    fun cardModeDockItemWithBottomMarginReceivesPhysicalTapWithAnActiveAdaptiveStageStage() {
         val primary = cardsHomeApp(packageName = "com.example.camera")
         val overflow = cardsHomeApp(packageName = "com.example.photos")
         val primaryShortcut =
@@ -276,13 +276,6 @@ class CardModeGuardedSurfaceTest {
         }
 
         composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
-            down(center)
-            moveBy(Offset(0f, -24f))
-            updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
-            up()
-        }
-        composeRule.waitForIdle()
 
         composeRule.onNodeWithTag(dockItemTestTag(overflowShortcut.id)).performTouchInput {
             click(Offset(width / 2f, 1f))

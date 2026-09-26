@@ -10,6 +10,8 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
+import com.riffle.core.domain.launcher.home.ModePair
+import com.riffle.core.domain.launcher.home.withHomeMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
@@ -35,6 +37,27 @@ class SettingsSurfaceStateProjectionTest {
                 LauncherViewMode.CARD_INTERFACE,
             ),
             surfaceState.availableLauncherViewModes,
+        )
+    }
+
+    @Test
+    fun projectsTheSettingsDeviceClassModePair() {
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .withHomeMode(HomeLayoutDeviceClass.FOLDABLE, LauncherViewMode.CARD_INTERFACE)
+        val state =
+            LauncherShellState(
+                destination = ShellDestination.SETTINGS,
+                homeLayout = layoutSet.activeLayout,
+                homeLayoutSet = layoutSet,
+                settingsLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                availableLayoutDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            )
+
+        assertEquals(ModePair(LauncherViewMode.CARD_INTERFACE), state.settingsSurfaceState().modePair)
+        assertEquals(
+            ModePair(LauncherViewMode.STANDARD_APP_DRAWER),
+            state.copy(settingsLayoutDeviceClass = HomeLayoutDeviceClass.PHONE).settingsSurfaceState().modePair,
         )
     }
 

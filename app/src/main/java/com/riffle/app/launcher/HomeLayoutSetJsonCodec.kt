@@ -6,6 +6,9 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.withLegacyDocksUnified
+import com.riffle.core.domain.launcher.home.withLibraryDockEdgesMigrated
+import com.riffle.core.domain.launcher.home.withRestoredModePairs
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -14,14 +17,19 @@ fun encodeHomeLayoutSet(layoutSet: HomeLayoutSet): String =
         .put("type", HOME_LAYOUT_SET_TYPE)
         .put("active", encodeLayoutKey(layoutSet.activeKey))
         .put("preferredModes", encodeDeviceClassModes(layoutSet.preferredModesByDeviceClass))
-        .put("lastNonCardsModes", encodeDeviceClassModes(layoutSet.lastNonCardsModeByDeviceClass))
+        .put(MODE_PAIRS_KEY, encodeModePairs(layoutSet.modePairsByDeviceClass))
+        .put("docks", encodeDocks(layoutSet))
+        .put(LIBRARY_DOCK_EDGES_KEY, encodeLibraryDockEdges(layoutSet.libraryDockEdgesByDeviceClass))
         .put(
             "layouts",
             JSONArray(
-                layoutSet.layouts.map { (key, layout) ->
+                layoutSet.layouts.keys.map { key ->
+                    // Each layout is written with its device class's shared dock (and the pages
+                    // fitted to it), so the per-layout copy never disagrees with "docks" -- which is
+                    // what an older build, that only knows per-layout docks, would read.
                     JSONObject()
                         .put("key", encodeLayoutKey(key))
-                        .put("layout", encodeHomeLayoutObject(layout.copy(viewMode = key.viewMode)))
+                        .put("layout", encodeHomeLayoutObject(layoutSet.layoutFor(key)))
                 },
             ),
         )
@@ -31,7 +39,7 @@ fun decodeHomeLayoutSet(value: String): HomeLayoutSet =
     JSONObject(value).let { json ->
         when {
             json.isHomeLayoutSetJson -> json.toHomeLayoutSet()
-            else -> HomeLayoutSet.fromLayout(json.toHomeLayout())
+            else -> HomeLayoutSet.fromLayout(json.toHomeLayout()).withLibraryDockEdgesMigrated()
         }
     }
 
@@ -42,15 +50,33 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
             ?.toHomeLayoutEntries()
             .orEmpty()
     val preferredModes = optDeviceClassModes("preferredModes")
-    val lastNonCardsModes = optDeviceClassModes("lastNonCardsModes")
+    // "modeRings" (#1225) and the older "lastNonCardsModes" are only read to migrate a set written
+    // before the fixed Home <-> Library pair (#1241).
+    val storedModePairs = optModePairs()
+    val legacyModeRings = optLegacyModeRings()
+    val legacyLastNonCardsModes = optDeviceClassModes("lastNonCardsModes")
+    val storedDocks = optJSONArray("docks")?.toDocks()
 
     return HomeLayoutSet(
         activeKey = activeKey,
         layouts = layouts.toMap(),
         preferredModesByDeviceClass =
             preferredModes.ifEmpty { mapOf(activeKey.deviceClass to activeKey.viewMode) },
-        lastNonCardsModeByDeviceClass = lastNonCardsModes,
+    ).withRestoredModePairs(
+        storedPairs = storedModePairs,
+        legacyRings = legacyModeRings,
+        legacyLastNonCardsModes = legacyLastNonCardsModes,
     ).let { layoutSet ->
+        // A set written before the dock was shared (#1205) has no "docks": each mode kept its own,
+        // and unifying them may have to rescue pins only another mode's dock held.
+        storedDocks
+            ?.let { docks -> layoutSet.copy(docks = layoutSet.docks + docks) }
+            ?: layoutSet.withLegacyDocksUnified()
+    }.let { layoutSet ->
+        // A set written before the dock edge was per surface has one edge for every mode: Library
+        // keeps it. Restored after the docks are settled, since that edge is the shared dock's.
+        restoreLibraryDockEdges(layoutSet)
+    }.let { layoutSet ->
         layoutSet.takeIf { set -> set.activeKey in set.layouts }
             ?: layoutSet.copy(layouts = layoutSet.layouts + (activeKey to layoutSet.layoutFor(activeKey)))
     }

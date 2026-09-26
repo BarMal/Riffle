@@ -87,7 +87,7 @@ internal fun Dock(
     interactions: DockInteractions,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
     dynamicEntries: List<DockDynamicEntry> = emptyList(),
-    onShowAllNotifications: () -> Unit = {},
+    onDynamicEntryDelegated: (String) -> Unit = {},
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
 
@@ -124,7 +124,7 @@ internal fun Dock(
             position = position,
             widgetPickerDockPreview = widgetPickerDockPreview,
             dynamicEntries = dynamicEntries,
-            onShowAllNotifications = onShowAllNotifications,
+            onDynamicEntryDelegated = onDynamicEntryDelegated,
         )
     }
 }
@@ -610,8 +610,11 @@ internal data class DockInteractions(
     val reducedMotion: Boolean = false,
     val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
     val homeLayout: HomeLayout? = null,
-    /** What a tap on a pinned app opens: the app (grid), or its stage where it has one (Cards). */
-    val staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
+    /**
+     * Items the active mode adds to a pinned app's long-press menu. A tap on a pinned app always
+     * opens it, in every mode; this is where a mode offers anything more (Cards: "Show stage").
+     */
+    val staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     /** Whether a home-grid item is currently being dragged over the dock, and would drop into it. */
     val isDropHighlighted: Boolean = false,
     val onAction: (LauncherShellAction) -> Unit,
@@ -1103,9 +1106,7 @@ private fun DockShortcut(
                     } else {
                         Modifier.combinedClickable(
                             onClick = {
-                                presentation.interactions.onAction(
-                                    presentation.interactions.staticTapBehaviour.actionFor(shortcut),
-                                )
+                                presentation.interactions.onAction(shortcut.launchAction())
                             },
                             onLongClick = {
                                 presentation.interactions.haptics.longPress()
@@ -1132,6 +1133,7 @@ private fun DockShortcut(
                     isEditing = state.isEditing,
                     shortcutIndex = state.shortcutIndex,
                     shortcutCount = state.shortcutCount,
+                    modeItems = presentation.interactions.staticItemMenuExtras.forApp(shortcut.appIdentity),
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = presentation.interactions.onAction,
@@ -1145,6 +1147,7 @@ internal fun dockShortcutContextMenuItems(
     isEditing: Boolean = false,
     shortcutIndex: Int = 0,
     shortcutCount: Int = 1,
+    modeItems: List<ShortcutContextMenuItem> = emptyList(),
 ): List<ShortcutContextMenuItem> {
     val editItems =
         if (isEditing) {
@@ -1186,18 +1189,12 @@ internal fun dockShortcutContextMenuItems(
             emptyList()
         }
 
-    // Browsing, a tap may select the app's stage rather than open it (Cards), so opening has to
-    // stay reachable somewhere; the long-press menu is that somewhere. Harmless where a tap already
-    // opens -- there it is simply the same thing the tap does.
-    val openItems =
-        if (isEditing) {
-            emptyList()
-        } else {
-            listOf(ShortcutContextMenuItem(label = "Open", action = shortcut.launchAction()))
-        }
+    // A tap on a pinned app opens it in every mode (#1212), so the menu no longer repeats "Open".
+    // What the active mode adds (Cards: "Show stage", "Pin stage") leads the browsing menu.
+    val browsingModeItems = if (isEditing) emptyList() else modeItems
 
     return editItems +
-        openItems +
+        browsingModeItems +
         shortcutContextMenuItems(
             shortcut = shortcut,
             surface = ShortcutContextSurface.DOCK,

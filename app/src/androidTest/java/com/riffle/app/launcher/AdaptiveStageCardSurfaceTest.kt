@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -146,7 +147,28 @@ class AdaptiveStageCardSurfaceTest {
                     .and(hasText("Allow notification access to show your app stages.")),
             ).assertIsDisplayed()
         composeRule.onNodeWithText("Allow access").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("More stage options").assertDoesNotExist()
+        // One call to action: the picker is not offered until access makes stages possible.
+        composeRule.onNodeWithText("Add stage").assertDoesNotExist()
+    }
+
+    @Test
+    fun theOverflowAndSettingsAreReachableEvenWithNoStageSelected() {
+        // #1212: the overflow used to vanish when no stage (or "All") was showing, leaving Cards
+        // with no path to Settings.
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                AdaptiveStageAppStageSurface(
+                    state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
+        composeRule.onNodeWithText("Settings").performClick()
+
+        composeRule.runOnIdle { assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenSettings), actions) }
     }
 
     @Test
@@ -184,8 +206,10 @@ class AdaptiveStageCardSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithText("Choose an app to keep as a stage.").assertIsDisplayed()
-        composeRule.onNodeWithText("Pin ${app.label}").performClick()
+        // One clear call to action, which opens the searchable picker (#1212).
+        composeRule.onNodeWithText("Add stage").performClick()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_ADD_STAGE_SHEET_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText(app.label).performClick()
         assertEquals(
             LauncherShellAction.ToggleAppStagePinned(
                 AppStageId(app.identity.packageName, app.identity.profile.id),
@@ -239,8 +263,10 @@ class AdaptiveStageCardSurfaceTest {
             }
         }
 
+        // "Add stage" lives in the always-present overflow and opens a searchable picker (#1212).
+        composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
         composeRule.onNodeWithText("Add stage").performClick()
-        composeRule.onNodeWithText("Pin ${second.label}").performClick()
+        composeRule.onNodeWithText(second.label).performClick()
 
         assertEquals(
             LauncherShellAction.ToggleAppStagePinned(
@@ -1130,9 +1156,13 @@ class AdaptiveStageCardSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("More stage options").performClick()
+        // Pin appears once, as the header's toggle, never again in the overflow (#1212).
+        composeRule
+            .onNodeWithContentDescription(ADAPTIVE_STAGE_PIN_TOGGLE_LABEL)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Not pinned"))
+        composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
         composeRule.onNodeWithTag(RIFFLE_CONTEXT_MENU_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithText("Pin stage").assertIsDisplayed()
+        composeRule.onNodeWithText("Pin stage").assertDoesNotExist()
         composeRule.onNodeWithText("Open Mail").performClick()
 
         composeRule.runOnIdle {
@@ -1194,7 +1224,7 @@ class AdaptiveStageCardSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("More stage options").performClick()
+        composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
         composeRule.onNodeWithText("Settings").performClick()
 
         composeRule.runOnIdle {
@@ -1757,21 +1787,30 @@ class AdaptiveStageCardSurfaceTest {
     }
 
     @Test
-    fun notificationStackKeepsEveryAvailableCardReachableBeyondConfiguredVisualDepth() {
+    fun notificationStackComposesOnlyTheConfiguredVisualDepthPlusOneEachSide() {
+        // #1211: composing every card regardless of depth violated the performance budget; cards
+        // beyond the window stay reachable through drag, keyboard and the focused card's
+        // Previous/Next accessibility actions.
         val resolution =
             AdaptiveStageAppearanceSettings().resolveCardStack(
                 viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1_200),
             )
+        val policy = resolution.layoutPolicy
+        val below = policy.maxVisibleDepth + 1
+        val above = (policy.aboveFocusDepth ?: policy.maxVisibleDepth) + 1
 
         val entries =
             adaptiveStageNotificationStackEntries(
                 resolution = resolution,
-                cardCount = 11,
-                activeCardIndex = 5f,
+                cardCount = 41,
+                activeCardIndex = 20f,
             )
 
-        assertEquals(11, entries.size)
-        assertEquals((0..10).toSet(), entries.map { entry -> entry.cardIndex }.toSet())
+        assertEquals(
+            ((20 - above).coerceAtLeast(0)..(20 + below).coerceAtMost(40)).toSet(),
+            entries.map { entry -> entry.cardIndex }.toSet(),
+        )
+        assertTrue(entries.size < 41)
     }
 
     private fun adaptiveStageTestApp(): InstalledApp =

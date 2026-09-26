@@ -6,13 +6,14 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
-import com.riffle.core.domain.launcher.settings.DockGestureSettings
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class LauncherGestureSettingsJsonCodecTest {
@@ -61,19 +62,143 @@ class LauncherGestureSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsDockSwipeUpGestureAction() {
-        val settings =
-            GestureSettings(dockGestures = DockGestureSettings(swipeUp = LauncherGestureAction.OPEN_APP_DRAWER))
+    fun decodesRemovedModeActionsAsNoAction() {
+        // Written by builds that bound mode switching to gestures: before the mode ring (#1225) as
+        // Enter/Exit Cards, after it as next/previous mode. Both were removed when the dock pull
+        // became the only mode-transition trigger.
+        val stored =
+            JSONObject()
+                .put(
+                    "homeGestures",
+                    JSONObject()
+                        .put(HomeGesture.THREE_FINGER_UP.name, "NEXT_MODE")
+                        .put(HomeGesture.THREE_FINGER_DOWN.name, "PREVIOUS_MODE")
+                        .put(HomeGesture.TWO_FINGER_LEFT.name, "ENTER_ADAPTIVE_STAGE")
+                        .put(HomeGesture.TWO_FINGER_RIGHT.name, "EXIT_ADAPTIVE_STAGE")
+                        // Bound away from its default, so "no action" cannot be the default showing through.
+                        .put(HomeGesture.ONE_FINGER_LEFT.name, "NEXT_MODE")
+                        .put(HomeGesture.ONE_FINGER_DOWN.name, LauncherGestureAction.OPEN_SEARCH.name),
+                )
 
-        val decoded = encodeGestures(settings).toGestures(GestureSettings())
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
 
-        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decoded.dockGestures.swipeUp)
+        listOf(
+            HomeGesture.THREE_FINGER_UP,
+            HomeGesture.THREE_FINGER_DOWN,
+            HomeGesture.TWO_FINGER_LEFT,
+            HomeGesture.TWO_FINGER_RIGHT,
+            HomeGesture.ONE_FINGER_LEFT,
+        ).forEach { gesture ->
+            assertEquals(gesture.name, LauncherGestureAction.NONE, decoded.actionFor(gesture))
+        }
+        assertEquals(LauncherGestureAction.OPEN_SEARCH, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
     }
 
     @Test
-    fun fallsBackToDefaultDockSwipeUpActionWhenMissing() {
-        val decoded = encodeGestures(GestureSettings()).toGestures(GestureSettings())
+    fun decodesRemovedModeActionsInTheLegacyHomeSwipeShapeAsNoAction() {
+        val stored =
+            JSONObject().put(
+                "homeSwipe",
+                JSONObject()
+                    .put("up", "PREVIOUS_MODE")
+                    .put("left", "EXIT_ADAPTIVE_STAGE")
+                    .put("down", LauncherGestureAction.OPEN_SETTINGS.name),
+            )
 
-        assertEquals(LauncherGestureAction.EXIT_ADAPTIVE_STAGE, decoded.dockGestures.swipeUp)
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
+
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_LEFT))
+        assertEquals(LauncherGestureAction.OPEN_SETTINGS, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
+    }
+
+    @Test
+    fun clearsAnExistingUsersAppDrawerBindings() {
+        // What every install that kept the old defaults has stored: swipe up and pinch out both
+        // opened the app drawer. The binding was removed, so both come back unbound.
+        val stored =
+            JSONObject().put(
+                "homeGestures",
+                JSONObject()
+                    .put(HomeGesture.ONE_FINGER_UP.name, "OPEN_APP_DRAWER")
+                    .put(HomeGesture.PINCH_OUT.name, "OPEN_APP_DRAWER")
+                    .put(HomeGesture.ONE_FINGER_DOWN.name, LauncherGestureAction.OPEN_NOTIFICATIONS.name)
+                    .put(HomeGesture.PINCH_IN.name, LauncherGestureAction.ENTER_HOME_EDIT_MODE.name),
+            )
+
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
+
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.PINCH_OUT))
+        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.ENTER_HOME_EDIT_MODE, decoded.actionFor(HomeGesture.PINCH_IN))
+    }
+
+    @Test
+    fun decodesAnAppDrawerBindingOnAnyGestureAsNoAction() {
+        // Bound away from a default that is itself an action, so "no action" is the decode, not a fallback.
+        val stored =
+            JSONObject().put(
+                "homeGestures",
+                JSONObject()
+                    .put(HomeGesture.TWO_FINGER_UP.name, "OPEN_APP_DRAWER")
+                    .put(HomeGesture.THREE_FINGER_LEFT.name, "OPEN_APP_DRAWER"),
+            )
+
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
+
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.TWO_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.THREE_FINGER_LEFT))
+    }
+
+    @Test
+    fun decodesAnAppDrawerBindingInTheLegacyHomeSwipeShapeAsNoAction() {
+        val stored =
+            JSONObject().put(
+                "homeSwipe",
+                JSONObject()
+                    .put("up", "OPEN_APP_DRAWER")
+                    .put("left", "OPEN_APP_DRAWER")
+                    .put("down", LauncherGestureAction.OPEN_SETTINGS.name),
+            )
+
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
+
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_LEFT))
+        assertEquals(LauncherGestureAction.OPEN_SETTINGS, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
+    }
+
+    @Test
+    fun missingOrBlankActionsStillFallBackToDefaults() {
+        val stored =
+            JSONObject().put(
+                "homeGestures",
+                JSONObject().put(HomeGesture.ONE_FINGER_DOWN.name, ""),
+            )
+
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
+
+        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, decoded.actionFor(HomeGesture.ONE_FINGER_LEFT))
+    }
+
+    @Test
+    fun ignoresTheRemovedDockSwipeUpBinding() {
+        // The dock swipe-up gesture and its setting were removed; stored values must not break decoding.
+        listOf("PREVIOUS_MODE", "OPEN_APP_DRAWER", "EXIT_ADAPTIVE_STAGE", "NONE").forEach { stored ->
+            val decoded =
+                JSONObject()
+                    .put("homeGestures", JSONObject().put(HomeGesture.TWO_FINGER_UP.name, "OPEN_SEARCH"))
+                    .put("dockGestures", JSONObject().put("swipeUp", stored))
+                    .toGestures(GestureSettings())
+
+            assertEquals(LauncherGestureAction.OPEN_SEARCH, decoded.homeGestures.actionFor(HomeGesture.TWO_FINGER_UP))
+        }
+    }
+
+    @Test
+    fun noLongerWritesDockGestures() {
+        assertFalse(encodeGestures(GestureSettings()).has("dockGestures"))
     }
 }

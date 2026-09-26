@@ -207,6 +207,13 @@ private fun SettingsLayoutPageContent(
             onAction = onAction,
         )
     }
+    SettingsSection(title = "Modes") {
+        HomeSurfaceModeSetting(
+            pair = state.modePair,
+            availableViewModes = state.availableLauncherViewModes,
+            onAction = onAction,
+        )
+    }
     SettingsSection(title = "Labels") {
         HomeLabelSetting(
             settings = state.homeLayout.settings.labels,
@@ -224,7 +231,6 @@ private fun SettingsDockPageContent(
     SettingsSection(title = "Dock") {
         DockSetting(
             dock = state.homeLayout.dock,
-            viewMode = state.homeLayout.viewMode,
             notificationAccessStatus = state.notificationAccessStatus,
             onAction = onAction,
         )
@@ -311,10 +317,6 @@ private fun SettingsGesturesPageContent(
             settings = state.settings.gestures,
             installedApps = state.installedApps,
             appShortcutsByApp = state.appShortcutsByApp,
-            onAction = onAction,
-        )
-        DockSwipeUpGestureSetting(
-            settings = state.settings.gestures,
             onAction = onAction,
         )
     }

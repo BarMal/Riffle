@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
@@ -42,10 +45,9 @@ internal fun StandardHomeDockArea(
     actions: HomeWorkspaceActions,
     position: DockPosition = DockPosition.BOTTOM,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
-    isWidgetPickerInteractionActive: Boolean = false,
     dynamicEntries: List<DockDynamicEntry> = notificationShelfState.dynamicEntries(),
-    onShowAllNotifications: () -> Unit = {},
-    staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
+    onDynamicEntryDelegated: (String) -> Unit = {},
+    staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     isDraggedItemOverDock: Boolean = false,
 ) {
     if (!layout.shouldShowDock()) {
@@ -57,10 +59,14 @@ internal fun StandardHomeDockArea(
             hasPanel = layout.dock.panel != null,
             notificationShelfState = notificationShelfState,
         )
-    // Expandability is the user's per-layout choice; content and edit mode are still what decide
-    // whether there is anything to expand into right now.
+    // Expandability is the user's per-layout choice, under the launcher-wide switch that currently
+    // keeps every shelf closed; content and edit mode are still what decide whether there is
+    // anything to expand into right now.
     val canExpand =
-        layout.dock.isExpandable && hasExpandedContent && layout.editMode == HomeEditMode.Browsing
+        DockShelfExpansion.enabled &&
+            layout.dock.isExpandable &&
+            hasExpandedContent &&
+            layout.editMode == HomeEditMode.Browsing
     val showDockShelf = isDockShelfExpanded && canExpand
     val dockInteractions =
         DockInteractions(
@@ -73,7 +79,7 @@ internal fun StandardHomeDockArea(
             reducedMotion = presentation.reducedMotion,
             homeInsetPolicy = presentation.homeInsetPolicy,
             homeLayout = layout,
-            staticTapBehaviour = staticTapBehaviour,
+            staticItemMenuExtras = staticItemMenuExtras,
             isDropHighlighted = isDraggedItemOverDock,
             onAction = actions.onAction,
         )
@@ -89,6 +95,14 @@ internal fun StandardHomeDockArea(
                     dock = layout.dock,
                     margins = margins,
                 )
+                // The container itself as one animated shape (dock-reorient decisions, follow-up to
+                // #1278): a dock pull's COMMIT can swap this area's cross-axis extent (a bottom dock's
+                // height for a side dock's width, or the shelf's own open/close) between one frame and
+                // the next: this eases the resize instead of a hard snap. Reduced motion (Decision:
+                // reduced motion) keeps the snap -- the crossfade it already gets is the whole effect.
+                .animateContentSize(
+                    animationSpec = if (presentation.reducedMotion) snap() else RiffleMotion.smooth(),
+                )
                 .onSizeChanged { size ->
                     actions.onDockInteractionExtentChanged(if (runsAlongASide) size.width else size.height)
                 }
@@ -102,19 +116,7 @@ internal fun StandardHomeDockArea(
                     bottom = if (runsAlongASide || position == DockPosition.BOTTOM) margins.bottom.dp else 0.dp,
                 )
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
-                .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps)
-                // Only claim the swipe-up gesture when the shelf-expand gesture is inactive and no
-                // widget-picker drag/tile interaction is in play: this Column draws on top of
-                // WidgetPickerSurface in the overlapping dock region, so it must yield the region's
-                // touches to the picker's own drag detector whenever it is active.
-                // The shelf only claims swipe-up when its affordance is the gesture, so a
-                // button-expanded (or non-expandable) dock hands the swipe back to this.
-                .dockSwipeUpGestureInput(
-                    enabled = !dockInteractions.claimsSwipeUp() && !isWidgetPickerInteractionActive,
-                    action = presentation.dockGestures.swipeUp,
-                    viewMode = layout.viewMode,
-                    onAction = actions.onAction,
-                ),
+                .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),
         verticalArrangement = if (runsAlongASide) Arrangement.Center else Arrangement.Top,
     ) {
@@ -131,7 +133,7 @@ internal fun StandardHomeDockArea(
                 interactions = dockInteractions,
                 widgetPickerDockPreview = widgetPickerDockPreview,
                 dynamicEntries = dynamicEntries,
-                onShowAllNotifications = onShowAllNotifications,
+                onDynamicEntryDelegated = onDynamicEntryDelegated,
             )
         }
     }
@@ -150,7 +152,7 @@ private fun DockOrShelf(
     interactions: DockInteractions,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
     dynamicEntries: List<DockDynamicEntry>,
-    onShowAllNotifications: () -> Unit,
+    onDynamicEntryDelegated: (String) -> Unit,
 ) {
     if (showDockShelf) {
         ExpandedDockSurface(
@@ -181,7 +183,7 @@ private fun DockOrShelf(
             // Only the collapsed dock carries the section. Expanded, the shelf's card row *is* the
             // same section with room to say more, so drawing both would show every entry twice.
             dynamicEntries = dynamicEntries,
-            onShowAllNotifications = onShowAllNotifications,
+            onDynamicEntryDelegated = onDynamicEntryDelegated,
         )
     }
 }
@@ -210,10 +212,6 @@ private fun Modifier.dockAreaExtent(
         isShelfOpen -> fillMaxHeight().fillMaxWidth(SIDE_DOCK_SHELF_WIDTH_FRACTION)
         else -> fillMaxHeight().width((dockCrossAxisDp(dock.iconSizeDp) + margins.start + margins.end).dp)
     }
-
-/** True while the shelf's own expand gesture is attached, and so owns swipe-up on the dock. */
-private fun DockInteractions.claimsSwipeUp(): Boolean =
-    onShelfExpandedChange != null && shelfExpandAffordance == DockExpandAffordance.GESTURE
 
 /**
  * The visible way into the expanded shelf, for a dock whose affordance is not the swipe.

@@ -112,6 +112,31 @@ class HomeDockContextMenuTest {
     }
 
     @Test
+    fun browsingMenuLeadsWithWhatTheModeAddsAndNoLongerRepeatsOpen() {
+        // #1212: a tap opens the app in every mode, so "Open" is not repeated; Cards adds its
+        // stage items through the neutral modeItems list instead.
+        val shortcut = shortcut()
+        val showStage = ShortcutContextMenuItem("Show stage", LauncherShellAction.OpenSettings)
+
+        val items = dockShortcutContextMenuItems(shortcut = shortcut, modeItems = listOf(showStage))
+
+        assertEquals(showStage, items.first())
+        assertEquals(false, items.any { item -> item.label == "Open" })
+    }
+
+    @Test
+    fun editingHidesTheModeItems() {
+        val items =
+            dockShortcutContextMenuItems(
+                shortcut = shortcut(),
+                isEditing = true,
+                modeItems = listOf(ShortcutContextMenuItem("Show stage", LauncherShellAction.OpenSettings)),
+            )
+
+        assertEquals(false, items.any { item -> item.label == "Show stage" })
+    }
+
+    @Test
     fun editDockShortcutMenuDisablesUnavailableMoveActionsAtBoundaries() {
         val shortcut = shortcut()
 

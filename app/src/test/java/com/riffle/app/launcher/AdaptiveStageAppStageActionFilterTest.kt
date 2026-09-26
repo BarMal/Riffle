@@ -16,11 +16,6 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
-    fun allowsLeavingCards() {
-        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.ExitAdaptiveStage))
-    }
-
-    @Test
     fun doesNotAllowEnteringCardsModeFromWithinCardsMode() {
         assertFalse(
             adaptiveStageAppStageActionFilter(
@@ -30,8 +25,9 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
-    fun allowsOpeningTheAppDrawerFromCardsMode() {
-        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenAppDrawer))
+    fun doesNotLetAGestureOpenTheAppDrawerFromCardsMode() {
+        // No gesture can be bound to the drawer any more; the dock pull reaches Library.
+        assertFalse(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenAppDrawer))
     }
 
     @Test
@@ -40,8 +36,13 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
+    fun allowsTheSettingsGestureFromCardsModeSoItIsNeverADeadEnd() {
+        // #1212: a home gesture bound to Settings used to be filtered out in Cards.
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenSettings))
+    }
+
+    @Test
     fun blocksUnrelatedActionsFromReachingCardsMode() {
-        assertFalse(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenSettings))
         assertFalse(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenNotifications))
         assertFalse(
             adaptiveStageAppStageActionFilter(

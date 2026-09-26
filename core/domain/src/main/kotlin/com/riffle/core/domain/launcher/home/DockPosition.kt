@@ -9,8 +9,9 @@ package com.riffle.core.domain.launcher.home
  * start/end content does. (Content *inside* the dock -- icon order, labels -- still mirrors on its
  * own; that is independent of which edge the strip sits on.)
  *
- * Configured per [HomeLayoutKey]: a phone in portrait and a tablet want different answers, and the
- * layout key is already how this codebase says "per device class and view mode".
+ * Configured per device class: a phone in portrait and a tablet want different answers. It is not
+ * per view mode -- the dock is shared by every mode on a device class (#1205), so it can only take
+ * the [sharedDockPositions] every mode can place.
  */
 enum class DockPosition {
     LEFT,

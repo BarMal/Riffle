@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -31,12 +32,14 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
 /**
- * The Cards dock's expanded shelf ([StandardHomeDockOnlySurface] with showExpandedNotificationShelf
- * = false): the panel stays -- the shelf is a mini-home surface -- but the notification card row is
+ * The Cards dock's expanded shelf (the shared [HomeDockHost] read through a [HomeDockInterpreter]
+ * with showExpandedNotificationShelf = false): the panel stays -- the shelf is a mini-home surface -- but the notification card row is
  * dropped, because the stages already are the notifications and the row would show them twice.
  *
  * Both fixtures grant notification access and supply a group, so the notification row *would* render
@@ -47,6 +50,18 @@ import org.junit.Test
 class CardsDockShelfContentTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    // Shelf expansion is switched off launcher-wide for now (DockShelfExpansion); these tests cover
+    // the dormant shelf, so they switch it on around themselves.
+    @Before
+    fun enableShelfExpansion() {
+        DockShelfExpansion.enabled = true
+    }
+
+    @After
+    fun restoreShelfExpansion() {
+        DockShelfExpansion.enabled = false
+    }
 
     private val docked = shortcut("docked")
     private val panelled = shortcut("clock")
@@ -97,10 +112,9 @@ class CardsDockShelfContentTest {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.size(400.dp)) {
-                    StandardHomeDockOnlySurface(
+                    HomeDockHost(
                         layout = layout,
                         installedApps = listOf(docked.installedApp(), panelled.installedApp(), chat),
-                        interactions = StandardHomeInteractions(),
                         presentation =
                             StandardHomePresentation(
                                 notificationGroupsByApp = listOf(chatNotificationGroup()),
@@ -108,12 +122,17 @@ class CardsDockShelfContentTest {
                                 installedApps = listOf(docked.installedApp(), panelled.installedApp(), chat),
                                 appShortcutsByApp = emptyMap(),
                             ),
+                        position = DockPosition.BOTTOM,
+                        hostState = rememberHomeDockHostState(),
                         appIconLoader = EmptyAppIconLoader,
                         onAction = {},
-                        // Isolate the shelf: no collapsed-strip chips, so a chat label can only be
-                        // the expanded notification row.
-                        dynamicEntries = emptyList(),
-                        showExpandedNotificationShelf = showExpandedNotificationShelf,
+                        interpreter =
+                            HomeDockInterpreter(
+                                // Isolate the shelf: no collapsed-strip chips, so a chat label can
+                                // only be the expanded notification row.
+                                dynamicEntries = emptyList(),
+                                showExpandedNotificationShelf = showExpandedNotificationShelf,
+                            ),
                     )
                 }
             }

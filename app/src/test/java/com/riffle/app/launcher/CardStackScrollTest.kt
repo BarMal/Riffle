@@ -151,6 +151,31 @@ class CardStackScrollTest {
         assertEquals(7, committedCardIndex(scrollPx = -64f * 7f, scroll = scroll))
     }
 
+    @Test
+    fun aReleaseProjectsOntoAnExactCardBoundaryAndAFlingIsCappedToAFewCards() {
+        // #1211: the renderer decides the destination once, at release, rather than letting an
+        // unbounded decay carry an ordinary flick across many cards.
+        val scroll =
+            CardStackScroll(
+                cardCount = 20,
+                activeCardIndex = 5,
+                distancePerCardPx = 187.2f,
+                flingVelocityThresholdPxPerSecond = 1_040f,
+            )
+
+        // A slow release a little past halfway lands on the next card.
+        assertEquals(-187.2f, cardStackProjectedScrollPx(-100f, velocityPxPerSecond = -50f, scroll = scroll), 0.01f)
+        // A small nudge snaps back.
+        assertEquals(0f, cardStackProjectedScrollPx(-10f, velocityPxPerSecond = -10f, scroll = scroll), 0.01f)
+        // However hard the fling, it moves at most MAX_FLING_STEP_COUNT cards.
+        assertEquals(
+            -187.2f * 3f,
+            cardStackProjectedScrollPx(-10f, velocityPxPerSecond = -60_000f, scroll = scroll),
+            0.01f,
+        )
+        assertEquals(5 + 3, committedCardIndex(scrollPx = -187.2f * 3f, scroll = scroll))
+    }
+
     private fun committedCardIndex(
         scrollPx: Float,
         scroll: CardStackScroll,

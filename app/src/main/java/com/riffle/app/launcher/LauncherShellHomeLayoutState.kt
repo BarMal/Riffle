@@ -12,13 +12,24 @@ import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
+import com.riffle.core.domain.launcher.home.ModePair
 import com.riffle.core.domain.launcher.home.seedHomeLayout
+import com.riffle.core.domain.launcher.home.withHomeMode
+import com.riffle.core.domain.launcher.home.withLayoutKeepingDock
+import com.riffle.core.domain.launcher.modeSwitchTargetDeviceClass
 
+/**
+ * Replace the layout on screen.
+ *
+ * The in-memory [LauncherShellState.homeLayoutSet] is the source of truth; the repository is only
+ * told about the result (and writes it behind). Nothing here reads the layout set back from storage,
+ * so an edit can never be based on a copy that lags what is on screen (#1176, #1198).
+ */
 internal fun LauncherShellState.withHomeLayout(
     layout: HomeLayout,
     homeLayoutRepository: HomeLayoutRepository,
 ): LauncherShellState =
-    currentLayoutSet(homeLayoutRepository)
+    homeLayoutSet
         .withActiveLayout(layout)
         .also(homeLayoutRepository::saveHomeLayoutSet)
         .let { layoutSet ->
@@ -31,57 +42,55 @@ internal fun LauncherShellState.withHomeLayout(
 /**
  * Choose which of the per-mode layouts applies.
  *
- * A mode is not a field of a layout. Every mode has a layout of its own, with its own pages and its
- * own dock, and choosing one moves the selection between them -- the layout on screen is saved
- * where it belongs and left there, never written into the mode being switched to.
+ * A mode is not a field of a layout. Every mode has a layout of its own, with its own pages, and
+ * choosing one moves the selection between them -- the layout on screen is saved where it belongs
+ * and left there, never written into the mode being switched to. The dock is the exception: there is
+ * one per device class, shared by every mode, so it is the same before and after the switch (#1205).
  *
- * The choice belongs to whichever device class is being configured, which is not always the one
- * being held: settings can be pointed at another device's layout, and choosing a mode there records
- * the preference for that device without changing what is on screen.
+ * The choice belongs to [targetDeviceClass]. From Settings that is whichever device class is being
+ * configured, which can be another device's layout: choosing a mode there records the preference for
+ * that device without changing what is on screen. Everywhere else (gestures, the dock, leaving
+ * Cards) it is the device being held -- see [modeSwitchTargetDeviceClass].
  */
 internal fun LauncherShellState.withSelectedHomeLayoutMode(
     mode: LauncherViewMode,
     homeLayoutRepository: HomeLayoutRepository,
     viewModeAvailability: LauncherViewModeAvailability,
+    targetDeviceClass: HomeLayoutDeviceClass = modeSwitchTargetDeviceClass,
 ): LauncherShellState {
-    val targetDeviceClass = settingsLayoutDeviceClass
     val resolvedMode = viewModeAvailability.availableModeOrStandard(targetDeviceClass, mode)
     val layoutSet =
-        currentLayoutSet(homeLayoutRepository)
+        homeLayoutSet
             .withActiveLayout(homeLayout)
-            .withPreferredMode(deviceClass = targetDeviceClass, mode = resolvedMode)
-            .let { layouts ->
-                // Only the device being held decides what is on screen. A mode chosen for another
-                // device class is recorded as its preference and applies when that device is next
-                // the active one.
-                if (layouts.activeKey.deviceClass == targetDeviceClass) {
-                    layouts.selectMode(resolvedMode)
-                } else {
-                    layouts
-                }
-            }
+            .withModeChosenFor(deviceClass = targetDeviceClass, mode = resolvedMode)
             .also(homeLayoutRepository::saveHomeLayoutSet)
 
     return copy(homeLayout = layoutSet.activeLayout, homeLayoutSet = layoutSet)
 }
 
 /**
- * Leave Cards for wherever it was entered from.
- *
- * The destination is the active device's last non-Cards mode, which the layout set remembers;
- * [withSelectedHomeLayoutMode] then makes the switch, so availability and per-mode layouts are
- * handled exactly as any other mode change. Exit is only ever dispatched from the home screen, so
- * the device being configured and the device being held are the same one.
+ * Make [mode] the Home of the Home ↔ Library pair of the device class Settings is editing (#1241).
+ * A device class showing its Home switches to [mode]; one showing Library stays there (see
+ * [withHomeMode]). Library, or a mode that device class cannot use, changes nothing.
  */
-internal fun LauncherShellState.withExitedAdaptiveStage(
+internal fun LauncherShellState.withSettingsHomeMode(
+    mode: LauncherViewMode,
     homeLayoutRepository: HomeLayoutRepository,
     viewModeAvailability: LauncherViewModeAvailability,
-): LauncherShellState =
-    withSelectedHomeLayoutMode(
-        mode = currentLayoutSet(homeLayoutRepository).withActiveLayout(homeLayout).modeLeavingCards(),
-        homeLayoutRepository = homeLayoutRepository,
-        viewModeAvailability = viewModeAvailability,
-    )
+): LauncherShellState {
+    val deviceClass = settingsLayoutDeviceClass
+    val canAdopt =
+        mode in ModePair.HOME_MODES &&
+            viewModeAvailability.isAvailable(deviceClass, mode) &&
+            homeLayoutSet.modePairFor(deviceClass).home != mode
+    if (!canAdopt) return this
+
+    return homeLayoutSet
+        .withActiveLayout(homeLayout)
+        .withHomeMode(deviceClass = deviceClass, mode = mode)
+        .also(homeLayoutRepository::saveHomeLayoutSet)
+        .let { updated -> copy(homeLayout = updated.activeLayout, homeLayoutSet = updated) }
+}
 
 internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
     templateId: LauncherTemplateId,
@@ -102,18 +111,13 @@ internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
         }
 
     return layout?.let { selectedLayout ->
-        val currentLayoutSet = currentLayoutSet(homeLayoutRepository).withActiveLayout(homeLayout)
         val updatedLayoutSet =
-            currentLayoutSet
-                .withLayout(key = targetKey, layout = selectedLayout)
-                .withPreferredMode(deviceClass = targetDeviceClass, mode = mode)
-                .let { layoutSet ->
-                    if (layoutSet.activeKey.deviceClass == targetDeviceClass) {
-                        layoutSet.selectMode(mode)
-                    } else {
-                        layoutSet
-                    }
-                }
+            homeLayoutSet
+                .withActiveLayout(homeLayout)
+                // A template seeds pages; the dock is shared by every mode on the device and keeps
+                // what the user built rather than taking the seed's default (#1205).
+                .withLayoutKeepingDock(key = targetKey, layout = selectedLayout)
+                .withModeChosenFor(deviceClass = targetDeviceClass, mode = mode)
 
         homeLayoutRepository.saveHomeLayoutSet(updatedLayoutSet)
 
@@ -135,7 +139,7 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
     homeLayoutRepository: HomeLayoutRepository,
     viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState {
-    val layoutSet = currentLayoutSet(homeLayoutRepository)
+    val layoutSet = homeLayoutSet
     val updatedAvailableDeviceClasses = availableLayoutDeviceClasses + availableDeviceClasses + deviceClass
 
     if (layoutSet.activeKey.deviceClass == deviceClass && layoutSet.activeLayout == homeLayout) {
@@ -207,19 +211,11 @@ internal fun LauncherShellState.withSettingsTargetLayout(
             viewMode = layout.viewMode,
             deviceClass = settingsLayoutDeviceClass,
         )
-    val currentLayoutSet =
-        currentLayoutSet(homeLayoutRepository)
-            .withLayout(key = key, layout = layout)
-            .withPreferredMode(
-                deviceClass = settingsLayoutDeviceClass,
-                mode = key.viewMode,
-            )
     val layoutSet =
-        if (currentLayoutSet.activeKey.deviceClass == settingsLayoutDeviceClass) {
-            currentLayoutSet.selectMode(key.viewMode)
-        } else {
-            currentLayoutSet
-        }
+        homeLayoutSet
+            .withActiveLayout(homeLayout)
+            .withLayout(key = key, layout = layout)
+            .withModeChosenFor(deviceClass = settingsLayoutDeviceClass, mode = key.viewMode)
 
     homeLayoutRepository.saveHomeLayoutSet(layoutSet)
 
@@ -237,8 +233,5 @@ internal val LauncherShellState.settingsTargetLayoutKey: HomeLayoutKey
                 deviceClass = settingsLayoutDeviceClass,
             )
 
-internal fun LauncherShellState.settingsTargetLayout(homeLayoutRepository: HomeLayoutRepository): HomeLayout =
-    currentLayoutSet(homeLayoutRepository).layoutFor(settingsTargetLayoutKey)
-
-private fun LauncherShellState.currentLayoutSet(homeLayoutRepository: HomeLayoutRepository): HomeLayoutSet =
-    homeLayoutRepository.loadHomeLayoutSet() ?: homeLayoutSet.withActiveLayout(homeLayout)
+internal val LauncherShellState.settingsTargetLayout: HomeLayout
+    get() = homeLayoutSet.withActiveLayout(homeLayout).layoutFor(settingsTargetLayoutKey)

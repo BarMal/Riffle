@@ -36,6 +36,8 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -50,6 +52,18 @@ import org.junit.Test
 class DockExpansionInteractionTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    // Shelf expansion is switched off launcher-wide for now (DockShelfExpansion); these tests cover
+    // the dormant shelf, so they switch it on around themselves.
+    @Before
+    fun enableShelfExpansion() {
+        DockShelfExpansion.enabled = true
+    }
+
+    @After
+    fun restoreShelfExpansion() {
+        DockShelfExpansion.enabled = false
+    }
 
     private val docked = shortcut("docked")
     private val panelled = shortcut("clock")
@@ -71,7 +85,7 @@ class DockExpansionInteractionTest {
         composeRule.onAllNodesWithContentDescription(EXPAND_LABEL).assertCountEquals(1)
         assertCollapsed()
 
-        // The swipe belongs to the dock's own gesture action now, so it must not open the shelf.
+        // A button-expanded dock leaves the swipe alone, so it must not open the shelf.
         swipeUpOnTheDock()
         composeRule.onAllNodesWithContentDescription(EXPAND_LABEL).assertCountEquals(1)
         assertCollapsed()
@@ -81,6 +95,29 @@ class DockExpansionInteractionTest {
 
         composeRule.onAllNodesWithContentDescription(COLLAPSE_LABEL).assertCountEquals(1)
         assertExpanded()
+    }
+
+    @Test
+    fun withShelfExpansionSwitchedOffNeitherAffordanceOpensTheShelf() {
+        // The launcher-wide default for now (dock-pull revision, Decision 7): an expandable dock
+        // with content offers no button, and the swipe the shelf used to claim does nothing.
+        DockShelfExpansion.enabled = false
+        setContent(dockLayout(expandAffordance = DockExpandAffordance.BUTTON))
+
+        composeRule.onAllNodesWithTag(HOME_DOCK_EXPAND_BUTTON_TEST_TAG).assertCountEquals(0)
+        swipeUpOnTheDock()
+        assertCollapsed()
+    }
+
+    @Test
+    fun withShelfExpansionSwitchedOffTheSwipeDoesNothingOnADockLeftOnItsDefaults() {
+        DockShelfExpansion.enabled = false
+        setContent(dockLayout(panel = panelWith(panelled)))
+
+        swipeUpOnTheDock()
+
+        assertCollapsed()
+        composeRule.onAllNodesWithTag(DOCK_PANEL_TEST_TAG).assertCountEquals(0)
     }
 
     @Test

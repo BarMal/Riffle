@@ -8,6 +8,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
+import com.riffle.core.domain.launcher.gestures.GestureThresholdsPx
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockPosition
 import kotlin.math.abs
@@ -19,17 +20,21 @@ import kotlin.math.abs
  * that edge and the one that closes it is a push back toward it. Reading the drag through the
  * dock's own edge is what makes that one comparison instead of one per edge -- on a bottom dock it
  * is the same upward pull it has always been.
+ *
+ * [thresholds] are resolved from dp for the current display; the default is the reference-density
+ * resolution, which reproduces the historical 80px/24px pixel values.
  */
 internal fun dockShelfGestureExpandedState(
     isExpanded: Boolean,
     horizontalDragPx: Float,
     verticalDragPx: Float,
     position: DockPosition = DockPosition.BOTTOM,
+    thresholds: GestureThresholdsPx = GestureThresholdsPx.Reference,
 ): Boolean? {
     val awayPx = position.dragAwayFromEdgePx(horizontalDragPx, verticalDragPx)
     val alongRunPx = position.dragAlongRunPx(horizontalDragPx, verticalDragPx)
     return when {
-        abs(awayPx) < DOCK_SHELF_GESTURE_THRESHOLD_PX || abs(awayPx) <= abs(alongRunPx) -> null
+        abs(awayPx) < thresholds.dockShelfTogglePx || abs(awayPx) <= abs(alongRunPx) -> null
         isExpanded && awayPx < 0f -> false
         !isExpanded && awayPx > 0f -> true
         else -> null
@@ -41,10 +46,11 @@ internal fun dockShelfGestureClaimsDrag(
     horizontalDragPx: Float,
     verticalDragPx: Float,
     position: DockPosition = DockPosition.BOTTOM,
+    thresholds: GestureThresholdsPx = GestureThresholdsPx.Reference,
 ): Boolean {
     val awayPx = position.dragAwayFromEdgePx(horizontalDragPx, verticalDragPx)
     val alongRunPx = position.dragAlongRunPx(horizontalDragPx, verticalDragPx)
-    return abs(awayPx) >= DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX &&
+    return abs(awayPx) >= thresholds.dockShelfClaimPx &&
         abs(awayPx) > abs(alongRunPx) &&
         if (isExpanded) awayPx < 0f else awayPx > 0f
 }
@@ -75,8 +81,7 @@ internal fun Modifier.dockShelfGestureInput(interactions: DockInteractions): Mod
         .dockShelfGestureInput(
             isExpanded = interactions.isShelfExpanded,
             position = interactions.position,
-            // A dock whose shelf is reached by button never claims the drag, which is what hands
-            // swipe-up back to the dock's own gesture action.
+            // A dock whose shelf is reached by button never claims the drag.
             onExpandedChange =
                 interactions.onShelfExpandedChange
                     ?.takeIf { interactions.shelfExpandAffordance == DockExpandAffordance.GESTURE },
@@ -93,6 +98,7 @@ private fun Modifier.dockShelfGestureInput(
     return composed {
         val currentOnExpandedChange by rememberUpdatedState(onExpandedChange)
         pointerInput(isExpanded, position) {
+            val thresholds = GestureThresholdsPx.resolve(density = density, touchSlopPx = viewConfiguration.touchSlop)
             awaitEachGesture {
                 // Default (Main) pass, not Initial: Main dispatches descendant-first, so a
                 // descendant gesture (e.g. a horizontal scroll on the dock icon or notification
@@ -119,6 +125,7 @@ private fun Modifier.dockShelfGestureInput(
                                 horizontalDragPx = drag.x,
                                 verticalDragPx = drag.y,
                                 position = position,
+                                thresholds = thresholds,
                             )
                         ) {
                             trackedChange.consume()
@@ -128,6 +135,7 @@ private fun Modifier.dockShelfGestureInput(
                             horizontalDragPx = drag.x,
                             verticalDragPx = drag.y,
                             position = position,
+                            thresholds = thresholds,
                         )?.let { expanded ->
                             currentOnExpandedChange(expanded)
                             handled = true
@@ -142,10 +150,8 @@ private fun Modifier.dockShelfGestureInput(
     }
 }
 
-private const val DOCK_SHELF_GESTURE_THRESHOLD_PX = 80f
-
-// DockShelfGestureInteractionTest pins this to 24f (claiming no later than a 24px drag, ahead of
-// homeGestureInput's own threshold) -- raising it broke that guarantee against those tests' fixed
-// two-step synthetic drags. The eager-capture fix here is the Main-pass + isConsumed change above,
-// not this threshold.
-private const val DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX = 24f
+// Thresholds live in GestureThresholds (dp): the 80px toggle is 30.5dp and the 24px claim is 9dp
+// (never below touch slop), which reproduces the historical pixel values at 2.625x. The claim must
+// stay below homeGestureInput's own threshold so the shelf consumes the drag first;
+// DockShelfGestureInteractionTest drives its synthetic drags in those same dp units. The
+// eager-capture fix is the Main-pass + isConsumed handling above, not the claim threshold.

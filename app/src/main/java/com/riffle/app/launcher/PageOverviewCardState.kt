@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyListState
@@ -22,6 +21,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.core.domain.launcher.home.LauncherPage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -80,7 +80,7 @@ internal fun Modifier.pageOverviewReflow(
     val projectedOffsetX =
         animateFloatAsState(
             targetValue = (state.projectedIndex - state.index) * cardStepPx,
-            animationSpec = if (reducedMotion) androidx.compose.animation.core.snap() else spring(),
+            animationSpec = RiffleMotion.snappy(reducedMotion),
             label = "page-overview-projected-position",
         )
 
@@ -95,7 +95,7 @@ internal fun Modifier.pageOverviewReflow(
         previousIndex = state.index
         reflowOffsetX.snapTo(startOffsetX)
         if (startOffsetX != 0f && !reducedMotion) {
-            reflowOffsetX.animateTo(targetValue = 0f, animationSpec = spring())
+            reflowOffsetX.animateTo(targetValue = 0f, animationSpec = RiffleMotion.snappy(reducedMotion))
         }
     }
 

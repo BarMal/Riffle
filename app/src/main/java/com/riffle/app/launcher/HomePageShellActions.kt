@@ -10,9 +10,9 @@ fun HomePageEngine.applyEdit(
     layout: HomeLayout,
 ): HomePageEditResult =
     when (action) {
-        LauncherShellAction.OpenDefaultHome,
-        LauncherShellAction.EnterHomeEditMode,
-        ->
+        // OpenDefaultHome never reaches here: LauncherHomePageEditReducer handles it off the
+        // in-memory layout set before falling through to the page engine.
+        LauncherShellAction.EnterHomeEditMode ->
             applyModeEdit(action = action, layout = layout)
 
         LauncherShellAction.ExitHomeEditMode ->
@@ -60,7 +60,6 @@ fun HomePageEngine.applyEdit(
         is LauncherShellAction.SelectHomeLabelMaxWidth,
         is LauncherShellAction.SelectHomeLabelMaxLines,
         is LauncherShellAction.SelectHomeLabelSizing,
-        is LauncherShellAction.SelectLauncherViewMode,
         -> applyHomeLayoutConfigurationEdit(action = action, layout = layout)
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
@@ -71,12 +70,6 @@ private fun HomePageEngine.applyModeEdit(
     layout: HomeLayout,
 ): HomePageEditResult =
     when (action) {
-        LauncherShellAction.OpenDefaultHome ->
-            when (val selected = selectPage(layout = layout, pageId = layout.pages.first().id)) {
-                is HomePageEditResult.Updated -> exitEditMode(layout = selected.layout)
-                is HomePageEditResult.Rejected -> selected
-            }
-
         LauncherShellAction.EnterHomeEditMode ->
             enterPageEditMode(
                 layout = layout,

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 
 @Composable
 internal fun SettingsMotionPageContent(
@@ -49,12 +50,15 @@ internal fun SettingsMotionPageContent(
                 },
             )
         }
-        SettingsSwitchRow(
+        val motion = state.settings.motion
+        SettingsClickableRow(
             title = "Reduced motion",
-            subtitle = "Minimise home page settle animations",
-            checked = state.settings.motion.reducedMotion,
-            onCheckedChange = { enabled ->
-                onAction(LauncherShellAction.SelectReducedMotionEnabled(enabled))
+            subtitle = reducedMotionDescription(motion.reducedMotionPreference, motion.systemReducedMotion),
+            onClick = {
+                onAction(LauncherShellAction.SelectReducedMotionPreference(motion.reducedMotionPreference.next()))
+            },
+            trailingContent = {
+                SettingsButtonText(text = motion.reducedMotionPreference.settingsLabel())
             },
         )
         HapticStrengthSetting(
@@ -63,6 +67,28 @@ internal fun SettingsMotionPageContent(
         )
     }
 }
+
+internal fun ReducedMotionPreference.settingsLabel(): String =
+    when (this) {
+        ReducedMotionPreference.SYSTEM -> "System"
+        ReducedMotionPreference.ON -> "On"
+        ReducedMotionPreference.OFF -> "Off"
+    }
+
+internal fun reducedMotionDescription(
+    preference: ReducedMotionPreference,
+    systemReducedMotion: Boolean,
+): String =
+    when (preference) {
+        ReducedMotionPreference.SYSTEM ->
+            if (systemReducedMotion) {
+                "Following system: animations are off, so motion is reduced"
+            } else {
+                "Following system animation settings"
+            }
+        ReducedMotionPreference.ON -> "Minimise launcher animations"
+        ReducedMotionPreference.OFF -> "Always animate, even when system animations are off"
+    }
 
 internal fun nextDockShelfFrameRateTarget(
     currentTargetFps: MotionPerformanceTargetFps,

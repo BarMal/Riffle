@@ -30,6 +30,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
@@ -52,10 +53,12 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
@@ -164,12 +167,10 @@ sealed interface LauncherShellAction {
     data class SelectLauncherViewMode(val mode: LauncherViewMode) : LauncherShellAction
 
     /**
-     * Leaves Cards for the non-Cards mode it was entered from, or Standard if none is recorded.
-     *
-     * Not a [SelectLauncherViewMode] with a fixed mode, because where to return to is a decision
-     * only the layout set can make -- it is the one holding which mode Cards was entered from.
+     * Makes [mode] the Home side of the Home <-> Library pair of the device class Settings is
+     * editing (#1241). Library is always the other side, so [mode] is Cards or Standard.
      */
-    data object ExitAdaptiveStage : LauncherShellAction
+    data class SelectHomeSurfaceMode(val mode: LauncherViewMode) : LauncherShellAction
 
     data class SelectLauncherTemplate(
         val templateId: LauncherTemplateId,
@@ -411,6 +412,19 @@ sealed interface LauncherShellAction {
         val columns: Int,
     ) : LauncherShellAction
 
+    /** Chooses where the launcher settles after leaving Library (#1243). */
+    data class SelectLibraryReturnTarget(
+        val target: LibraryReturnTarget,
+    ) : LauncherShellAction
+
+    /**
+     * Library may have been left by [trigger]: returns to Home when the user's setting says so, and
+     * does nothing on Home or when the setting keeps Library (#1243).
+     */
+    data class LeaveLibrary(
+        val trigger: LibraryExitTrigger,
+    ) : LauncherShellAction
+
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
 
     data class SelectLauncherThemeMode(val mode: LauncherThemeMode) : LauncherShellAction
@@ -451,15 +465,13 @@ sealed interface LauncherShellAction {
 
     data object ResetHomeSwipeGestureActions : LauncherShellAction
 
-    data class SelectDockGestureAction(
-        val action: LauncherGestureAction,
-    ) : LauncherShellAction
-
     data class SelectHapticFeedbackStrength(
         val strength: HapticFeedbackStrength,
     ) : LauncherShellAction
 
-    data class SelectReducedMotionEnabled(val enabled: Boolean) : LauncherShellAction
+    data class SelectReducedMotionPreference(
+        val preference: ReducedMotionPreference,
+    ) : LauncherShellAction
 
     data class SelectMotionPerformanceTargetFps(
         val targetFps: MotionPerformanceTargetFps,
@@ -483,11 +495,20 @@ sealed interface LauncherShellAction {
 
     data class SelectThreadCardGrouping(val grouping: ThreadCardGrouping) : LauncherShellAction
 
-    /** Whether the merged "All notifications" view is offered on the folded (compact) Cards layout. */
+    /**
+     * Whether swiping between stages on the folded (compact) Cards layout passes through the merged
+     * "All notifications" view. The view itself is always the stage selector's first entry (#1212).
+     */
     data class SelectCardsFoldedShowAllNotifications(val enabled: Boolean) : LauncherShellAction
 
-    /** Whether the merged "All notifications" view is offered on the unfolded (wide) Cards layout. */
+    /**
+     * Legacy: whether the merged view was offered on the unfolded layout. Still persisted for
+     * backups, but no longer read or offered in settings -- "All" is always in the selector (#1212).
+     */
     data class SelectCardsUnfoldedShowAllNotifications(val enabled: Boolean) : LauncherShellAction
+
+    /** Whether the compact Cards layout draws the stage spine under the stack (off by default). */
+    data class SelectCardsShowStageSpine(val enabled: Boolean) : LauncherShellAction
 
     data class SelectDockPosition(val position: DockPosition) : LauncherShellAction
 

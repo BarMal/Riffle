@@ -20,8 +20,10 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
+import com.riffle.core.domain.launcher.home.ModePair
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.home.activeModePair
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
@@ -141,36 +143,12 @@ class LauncherShellViewModeViewModelTest {
     }
 
     @Test
-    fun leavingCardsReturnsToTheModeYouCameFrom() {
-        val camera = app(label = "Camera")
-        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
-                homeLayoutRepository = repository,
-                platformDependencies = libraryAndCardsViewModePlatformDependencies,
-            )
-
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
-        )
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE),
-        )
-        viewModel.onHomePageEdited(LauncherShellAction.ExitAdaptiveStage)
-
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
-    }
-
-    @Test
-    fun leavingCardsWithNothingRememberedLandsOnStandard() {
+    fun choosingTheHomeScreenInSettingsWhileOnLibraryKeepsLibraryAndChangesWhereThePullLeads() {
         val camera = app(label = "Camera")
         val repository =
             FakeHomeLayoutRepository(
                 savedLayout =
-                    HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE),
+                    HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
             )
         val viewModel =
             LauncherShellViewModel(
@@ -181,9 +159,19 @@ class LauncherShellViewModeViewModelTest {
             )
 
         runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(LauncherShellAction.ExitAdaptiveStage)
+        assertEquals(ModePair.DEFAULT, viewModel.state.value.homeLayoutSet.activeModePair)
 
-        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, viewModel.state.value.homeLayout.viewMode)
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeSurfaceMode(LauncherViewMode.STANDARD_APP_DRAWER))
+
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
+        assertEquals(
+            ModePair(LauncherViewMode.STANDARD_APP_DRAWER),
+            viewModel.state.value.homeLayoutSet.activeModePair,
+        )
+        assertEquals(
+            LauncherViewMode.STANDARD_APP_DRAWER,
+            viewModel.state.value.homeLayoutSet.activeModePair.counterpart(LauncherViewMode.HOME_SCREEN_LIBRARY),
+        )
     }
 
     @Test
