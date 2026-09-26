@@ -82,6 +82,13 @@ fun HomeDestination(
     // follow-up to #1206/#1278). [dockHostState] is [state] itself once the shell has caught up, so
     // this changes nothing outside that beat.
     val dockHostState = plan.stateFor(plan.shownMode)
+    // The dock's own dynamic (notification) entries are read from [presentation], which was built
+    // from the raw [state] above -- the same stale-beat gap [dockHostState] exists to close, just
+    // for notification badges/icons rather than layout/installed apps. Rebuilt from [dockHostState]
+    // for the dock specifically, so its whole rendering -- static and dynamic sections alike --
+    // draws from one consistent snapshot during that beat; the mode surfaces below keep the plain
+    // [presentation], since they already read their own state per mode via [plan.stateFor].
+    val dockPresentation = standardHomePresentation(dockHostState, widgetRenderers)
 
     Box(modifier = Modifier.fillMaxSize().then(pull.rootModifier)) {
         // The one dock, outside the mode surface: composed at the same place whichever surface runs
@@ -92,7 +99,7 @@ fun HomeDestination(
         HomeDockHost(
             layout = dockHostState.homeLayout,
             installedApps = dockHostState.installedApps,
-            presentation = presentation,
+            presentation = dockPresentation,
             position = pull.dockEdge,
             hostState = dockHost,
             appIconLoader = appIconLoader,
