@@ -45,7 +45,9 @@ data class DockPullThresholds(
     }
 
     companion object {
-        const val DEFAULT_COMMIT_FRACTION: Float = 0.4f
+        // Lowered from 0.4f per direct feedback: a pull the full 40% of the dock's travel read as
+        // too demanding a swipe to reliably trigger the mode switch.
+        const val DEFAULT_COMMIT_FRACTION: Float = 0.3f
         const val DEFAULT_COMMIT_VELOCITY_DP_PER_SECOND: Float = 600f
         const val DEFAULT_MINIMUM_FLING_DISTANCE_DP: Float = 8f
     }

@@ -82,7 +82,7 @@ class DockPullTransitionControllerTest {
 
     @Test
     fun releasingShortOfTheDistanceThresholdCancels() {
-        val settling = assertIs<Settling>(controller.release(pullUp().up(TRAVEL_DP * 0.3f)))
+        val settling = assertIs<Settling>(controller.release(pullUp().up(TRAVEL_DP * 0.2f)))
 
         assertEquals(SettleOutcome.CANCEL, settling.outcome)
         assertEquals(ModeSurface.HOME, settling.endSurface)
@@ -298,8 +298,8 @@ class DockPullTransitionControllerTest {
 
         assertEquals(SettleOutcome.COMMIT, thresholds.outcomeFor(0.05f, 10f, 700f))
         assertEquals(SettleOutcome.CANCEL, thresholds.outcomeFor(0.95f, -10f, -700f))
-        assertEquals(SettleOutcome.COMMIT, thresholds.outcomeFor(0.4f, 80f, 0f))
-        assertEquals(SettleOutcome.CANCEL, thresholds.outcomeFor(0.39f, 78f, 599f))
+        assertEquals(SettleOutcome.COMMIT, thresholds.outcomeFor(0.3f, 60f, 0f))
+        assertEquals(SettleOutcome.CANCEL, thresholds.outcomeFor(0.29f, 58f, 599f))
         assertEquals(SettleOutcome.CANCEL, thresholds.outcomeFor(0.02f, 4f, 10_000f))
     }
 
