@@ -98,7 +98,7 @@ class LauncherSettingsStateReducerTest {
                 action = LauncherShellAction.UpdateAdaptiveStageAppearance(requested),
             )
 
-        assertEquals(6, updatedState.launcherSettings.cards.adaptiveStageAppearance.geometry.visibleDepth)
+        assertEquals(8, updatedState.launcherSettings.cards.adaptiveStageAppearance.geometry.visibleDepth)
         assertEquals(0, updatedState.launcherSettings.cards.adaptiveStageAppearance.surface.blurStrengthPercent)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
