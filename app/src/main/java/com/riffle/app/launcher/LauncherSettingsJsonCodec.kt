@@ -40,6 +40,11 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
+import com.riffle.core.domain.launcher.settings.MAX_STACK_CURVE_FRACTION
+import com.riffle.core.domain.launcher.settings.MAX_STACK_HORIZONTAL_OFFSET_FRACTION
+import com.riffle.core.domain.launcher.settings.MAX_STACK_VERTICAL_SPACING_FRACTION
+import com.riffle.core.domain.launcher.settings.MIN_STACK_HORIZONTAL_OFFSET_FRACTION
+import com.riffle.core.domain.launcher.settings.MIN_STACK_VERTICAL_SPACING_FRACTION
 import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -51,6 +56,7 @@ import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
+import kotlin.math.roundToInt
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -218,14 +224,17 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                     "overlapPercent",
                     appearance.geometry.overlapPercent,
                 ).put(
-                    "verticalSpacingDp",
-                    appearance.geometry.verticalSpacingDp,
+                    "verticalSpacingPercent",
+                    appearance.geometry.verticalSpacingPercent,
                 ).put(
-                    "horizontalOffsetDp",
-                    appearance.geometry.horizontalOffsetDp,
+                    "horizontalOffsetPercent",
+                    appearance.geometry.horizontalOffsetPercent,
                 ).put(
-                    "curveDp",
-                    appearance.geometry.curveDp,
+                    "curvePercent",
+                    appearance.geometry.curvePercent,
+                ).put(
+                    "arcWidthPercent",
+                    appearance.geometry.arcWidthPercent,
                 ).put(
                     "fanDirection",
                     appearance.geometry.fanDirection.name,
@@ -389,20 +398,37 @@ private fun JSONObject.toAdaptiveStageAppearance(
                         "overlapPercent",
                         defaults.geometry.overlapPercent,
                     ),
-                verticalSpacingDp =
-                    geometry.optIntOrDefault(
-                        "verticalSpacingDp",
-                        defaults.geometry.verticalSpacingDp,
+                verticalSpacingPercent =
+                    geometry.optPercentOrMigrateLegacyDp(
+                        percentKey = "verticalSpacingPercent",
+                        legacyDpKey = "verticalSpacingDp",
+                        default = defaults.geometry.verticalSpacingPercent,
+                        minFraction = MIN_STACK_VERTICAL_SPACING_FRACTION,
+                        maxFraction = MAX_STACK_VERTICAL_SPACING_FRACTION,
+                        legacyReferenceDp = LEGACY_REFERENCE_SAFE_HEIGHT_DP,
                     ),
-                horizontalOffsetDp =
-                    geometry.optIntOrDefault(
-                        "horizontalOffsetDp",
-                        defaults.geometry.horizontalOffsetDp,
+                horizontalOffsetPercent =
+                    geometry.optPercentOrMigrateLegacyDp(
+                        percentKey = "horizontalOffsetPercent",
+                        legacyDpKey = "horizontalOffsetDp",
+                        default = defaults.geometry.horizontalOffsetPercent,
+                        minFraction = MIN_STACK_HORIZONTAL_OFFSET_FRACTION,
+                        maxFraction = MAX_STACK_HORIZONTAL_OFFSET_FRACTION,
+                        legacyReferenceDp = LEGACY_REFERENCE_SAFE_WIDTH_DP,
                     ),
-                curveDp =
+                curvePercent =
+                    geometry.optPercentOrMigrateLegacyDp(
+                        percentKey = "curvePercent",
+                        legacyDpKey = "curveDp",
+                        default = defaults.geometry.curvePercent,
+                        minFraction = 0f,
+                        maxFraction = MAX_STACK_CURVE_FRACTION,
+                        legacyReferenceDp = LEGACY_REFERENCE_SAFE_HEIGHT_DP,
+                    ),
+                arcWidthPercent =
                     geometry.optIntOrDefault(
-                        "curveDp",
-                        defaults.geometry.curveDp,
+                        "arcWidthPercent",
+                        defaults.geometry.arcWidthPercent,
                     ),
                 fanDirection =
                     geometry.enumOrDefault(
@@ -589,6 +615,41 @@ private fun JSONObject?.optIntOrDefault(
     name: String,
     default: Int,
 ): Int = this?.optInt(name, default) ?: default
+
+/**
+ * Reads a 0..100 percent field, migrating a pre-#1291 payload's raw dp value (still present under
+ * [legacyDpKey] whenever [percentKey] is absent) into the equivalent percent. The migration is
+ * necessarily approximate: the original dp value was resolved against whatever device rendered it
+ * at the time, and this runs before any viewport is known, so it re-derives a percent against a
+ * single representative reference dimension ([legacyReferenceDp]) rather than the actual one. A
+ * fresh install with neither key present gets [default] untouched.
+ */
+private fun JSONObject?.optPercentOrMigrateLegacyDp(
+    percentKey: String,
+    legacyDpKey: String,
+    default: Int,
+    minFraction: Float,
+    maxFraction: Float,
+    legacyReferenceDp: Int,
+): Int {
+    if (this == null) return default
+    if (has(percentKey)) return optInt(percentKey, default)
+    if (!has(legacyDpKey)) return default
+    val legacyFraction = optInt(legacyDpKey, 0).toFloat() / legacyReferenceDp
+    val fractionRange = maxFraction - minFraction
+    if (fractionRange <= 0f) return default
+    return (((legacyFraction - minFraction) / fractionRange) * 100f)
+        .roundToInt()
+        .coerceIn(0, 100)
+}
+
+/**
+ * Representative safe-viewport dimensions used only to migrate a legacy raw-dp appearance value
+ * (see [optPercentOrMigrateLegacyDp]) into the new percent-of-viewport field it replaced -- not
+ * used anywhere else, since real resolution always uses the actual device viewport.
+ */
+private const val LEGACY_REFERENCE_SAFE_HEIGHT_DP = 760
+private const val LEGACY_REFERENCE_SAFE_WIDTH_DP = 380
 
 private fun JSONObject?.optLongOrDefault(
     name: String,

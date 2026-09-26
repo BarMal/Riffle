@@ -102,12 +102,27 @@ data class AdaptiveStageAppearanceSettings(
         val appearance = effectiveForResolution(capabilities, globalReducedMotion)
         val focusedScale = appearance.geometry.focusedScalePercent / 100f
         val stackBounds = resolveStackBounds(appearance.geometry, appearance.motion, focusedScale)
-        val cardSize = appearance.resolveCardSize(viewport, stackBounds, role)
+        // Resolved from the *viewport's* own safe dimensions, not the card's -- resolving against
+        // the card would be circular, since reduced motion's static reservation (below) needs a
+        // spacing value before the card is sized, and the card's own size depends on that
+        // reservation. Percent-of-viewport also means the same slider value reads as the same
+        // proportion of usable screen on any device, rather than the same raw dp meaning a tight
+        // overlap on a tablet and a near-total separation on a small phone.
+        val resolvedVerticalSpacingDp = appearance.geometry.resolvedVerticalSpacingDp(viewport.safeHeightDp)
+        val resolvedHorizontalOffsetDp = appearance.geometry.resolvedHorizontalOffsetDp(viewport.safeWidthDp)
+        val resolvedCurveDp = appearance.geometry.resolvedCurveDp(viewport.safeHeightDp)
+        val cardSize = appearance.resolveCardSize(viewport, stackBounds, role, resolvedVerticalSpacingDp)
         val requestedPadding = appearance.geometry.contentPaddingDp
-        val isUsable = cardSize.isUsable(role) && appearance.hasReachableStackLayout()
+        val isUsable = cardSize.isUsable(role) && appearance.hasReachableStackLayout(resolvedVerticalSpacingDp)
         val depth = if (isUsable) appearance.geometry.visibleDepth else 1
+        // arcWidthPercent scales how much of the lateral room the side fan (both the focused
+        // card's own peek gap and every background card's horizontal offset) is allowed to reach
+        // into, independent of horizontalOffsetPercent's own per-card magnitude -- mirroring the
+        // reference "Calm" launcher's own `arcWidth`, which likewise stretches or compresses how
+        // far the fan reaches without changing any single card's own step.
         val horizontalTravel =
-            ((viewport.safeWidthDp - cardSize.widthDp * stackBounds.maxWidthScale) / 2f).coerceAtLeast(0f)
+            ((viewport.safeWidthDp - cardSize.widthDp * stackBounds.maxWidthScale) / 2f)
+                .coerceAtLeast(0f) * (appearance.geometry.arcWidthPercent / 100f)
         val verticalTravel =
             ((viewport.safeHeightDp - cardSize.heightDp * stackBounds.maxHeightScale) / 2f).coerceAtLeast(0f)
         val motionScale = appearance.motion.travelIntensityPercent / 100f
@@ -121,7 +136,7 @@ data class AdaptiveStageAppearanceSettings(
             }
         val horizontalStep =
             min(
-                appearance.geometry.horizontalOffsetDp * motionScale,
+                resolvedHorizontalOffsetDp * motionScale,
                 (horizontalTravel - focusedGap).coerceAtLeast(0f) / depth,
             )
         // Reduced motion removes animated travel, but cards still need a static
@@ -129,7 +144,7 @@ data class AdaptiveStageAppearanceSettings(
         val verticalLayoutScale = if (appearance.motion.reducedMotion) 1f else motionScale
         val verticalStep =
             min(
-                appearance.geometry.verticalSpacingDp * verticalLayoutScale,
+                resolvedVerticalSpacingDp * verticalLayoutScale,
                 verticalTravel / depth,
             )
         val remainingVerticalTravel = (verticalTravel - verticalStep * depth).coerceAtLeast(0f)
@@ -138,10 +153,10 @@ data class AdaptiveStageAppearanceSettings(
         // per-depth-squared coefficient) -- still bounded by both the user's own per-depth dp
         // budget and by whatever vertical travel room remains after the linear spacing above, but
         // no longer crushed by a depth-squared division that left the curve barely visible past a
-        // couple of cards regardless of how high curveDp or visibleDepth were set.
+        // couple of cards regardless of how high curvePercent or visibleDepth were set.
         val curveStep =
             min(
-                appearance.geometry.curveDp * motionScale * depth,
+                resolvedCurveDp * motionScale * depth,
                 remainingVerticalTravel,
             )
         val layoutPolicy =
@@ -207,15 +222,17 @@ data class AdaptiveStageAppearanceSettings(
          * layout ships only this one literal set of field values -- there is no preset system (#1058
          * removed it in favor of direct, per-field editing for both layouts).
          *
-         * [AdaptiveStageGeometry.verticalSpacingDp] of 72 mirrors the value the previous hand-rolled
-         * rail policy needed before tiles were reliably tappable -- see #1054's fix: a rail tile is
-         * roughly icon (40dp) + label + padding tall, so a background tile's own center needs to clear
-         * that whole height, not a fraction of it, to land outside the focused tile's larger hit box
+         * [AdaptiveStageGeometry.verticalSpacingPercent] of 60 resolves (via
+         * [resolvedVerticalSpacingDp]) to well past a rail tile's own height on any realistic rail
+         * viewport, mirroring the fixed 72dp step the previous hand-rolled rail policy needed
+         * before tiles were reliably tappable -- see #1054's fix: a rail tile is roughly icon
+         * (40dp) + label + padding tall, so a background tile's own center needs to clear that
+         * whole height, not a fraction of it, to land outside the focused tile's larger hit box
          * (Compose routes a pointer event to whichever entry is topmost by z-order at that point).
          * [AdaptiveStageGeometry.visibleDepth] of 2 matches that same hand-rolled policy's
          * `maxVisibleDepth` for the same reason: [resolveCardStack] divides the available travel by
          * `visibleDepth` (so every ring stays within the viewport), so a larger depth here would
-         * silently claw back the 72dp step below the tappable threshold on a physically narrow rail.
+         * silently claw back that step below the tappable threshold on a physically narrow rail.
          */
         fun unfolded(): AdaptiveStageAppearanceSettings =
             AdaptiveStageAppearanceSettings(
@@ -226,9 +243,9 @@ data class AdaptiveStageAppearanceSettings(
                         focusedGapDp = 8,
                         visibleDepth = 2,
                         overlapPercent = 0,
-                        verticalSpacingDp = 72,
-                        horizontalOffsetDp = 0,
-                        curveDp = 0,
+                        verticalSpacingPercent = 60,
+                        horizontalOffsetPercent = 0,
+                        curvePercent = 0,
                         fanDirection = AdaptiveStageFanDirection.NONE,
                         rotationDegrees = 0,
                         cornerRadiusDp = 16,
@@ -257,28 +274,61 @@ private fun AdaptiveStageAppearanceSettings.effectiveForResolution(
     copy(motion = motion.copy(reducedMotion = motion.reducedMotion || globalReducedMotion))
         .effectiveFor(capabilities)
 
-private fun AdaptiveStageAppearanceSettings.staticVerticalSeparationDp(): Int =
+/**
+ * [AdaptiveStageGeometry.verticalSpacingPercent] resolved against the viewport's own safe height,
+ * rather than the card's -- resolving against the card would be circular, since reduced motion's
+ * static reservation ([staticVerticalSeparationDp]) needs a spacing value before the card is sized.
+ */
+private fun AdaptiveStageGeometry.resolvedVerticalSpacingDp(safeHeightDp: Int): Float =
+    safeHeightDp *
+        lerp(
+            MIN_STACK_VERTICAL_SPACING_FRACTION,
+            MAX_STACK_VERTICAL_SPACING_FRACTION,
+            verticalSpacingPercent / 100f,
+        )
+
+/** [AdaptiveStageGeometry.horizontalOffsetPercent] resolved against the viewport's own safe width. */
+private fun AdaptiveStageGeometry.resolvedHorizontalOffsetDp(safeWidthDp: Int): Float =
+    safeWidthDp *
+        lerp(
+            MIN_STACK_HORIZONTAL_OFFSET_FRACTION,
+            MAX_STACK_HORIZONTAL_OFFSET_FRACTION,
+            horizontalOffsetPercent / 100f,
+        )
+
+/** [AdaptiveStageGeometry.curvePercent] resolved against the viewport's own safe height. */
+private fun AdaptiveStageGeometry.resolvedCurveDp(safeHeightDp: Int): Float =
+    safeHeightDp * lerp(0f, MAX_STACK_CURVE_FRACTION, curvePercent / 100f)
+
+private fun lerp(
+    start: Float,
+    stop: Float,
+    fraction: Float,
+): Float = start + (stop - start) * fraction
+
+private fun AdaptiveStageAppearanceSettings.staticVerticalSeparationDp(resolvedVerticalSpacingDp: Float): Int =
     if (motion.reducedMotion) {
-        geometry.verticalSpacingDp * geometry.visibleDepth
+        (resolvedVerticalSpacingDp * geometry.visibleDepth).toInt()
     } else {
         0
     }
 
-private fun AdaptiveStageAppearanceSettings.hasReachableStackLayout(): Boolean {
-    return !motion.reducedMotion || geometry.verticalSpacingDp > 0
+private fun AdaptiveStageAppearanceSettings.hasReachableStackLayout(resolvedVerticalSpacingDp: Float): Boolean {
+    return !motion.reducedMotion || resolvedVerticalSpacingDp > 0f
 }
 
 private fun AdaptiveStageAppearanceSettings.resolveCardSize(
     viewport: AdaptiveStageViewportDp,
     stackBounds: ResolvedAdaptiveStageStackBounds,
     role: AdaptiveStageCardStackRole,
+    resolvedVerticalSpacingDp: Float,
 ): ResolvedAdaptiveStageCardSize =
     resolveCardSize(
         viewport = viewport,
         requestedPadding = geometry.contentPaddingDp,
         geometry = geometry,
         stackBounds = stackBounds,
-        reservedVerticalSpaceDp = staticVerticalSeparationDp(),
+        reservedVerticalSpaceDp = staticVerticalSeparationDp(resolvedVerticalSpacingDp),
         // RAIL sizes a tile against its own narrow physical strip (#1054): every dp there is
         // needed just to keep tiles reachable, so it keeps filling the full strip exactly as
         // before, ignoring geometry.cardSizePercent entirely. PRIMARY's margin *is*
@@ -556,9 +606,30 @@ data class AdaptiveStageGeometry(
      */
     val stackPeakPercent: Int = CENTERED_ADAPTIVE_STAGE_STACK_PEAK_PERCENT,
     val overlapPercent: Int = 22,
-    val verticalSpacingDp: Int = 8,
-    val horizontalOffsetDp: Int = 20,
-    val curveDp: Int = 6,
+    /**
+     * How far apart adjacent cards sit along the stack's own axis, as a percentage resolved
+     * against the *viewport's* own safe height (see [resolvedVerticalSpacingDp]) rather than a raw
+     * dp value -- the same percentage then reads as the same proportion of usable screen on a
+     * phone or a tablet, instead of a fixed dp meaning a tight overlap on one and a near-total
+     * separation on the other. Mirrors the reference "Calm" launcher's own `verticalSpacing`
+     * (also a 0-100 percentage resolved against a tuned baseline rather than a raw dp). 1 (the
+     * default) resolves close to (though, being a different unit, not identical to) this surface's
+     * previous flat 8dp default on a typical phone viewport; 0 remains available as a genuine "no
+     * static separation at all" floor (see [MIN_STACK_VERTICAL_SPACING_FRACTION]'s own doc).
+     */
+    val verticalSpacingPercent: Int = 1,
+    /**
+     * See [resolvedHorizontalOffsetDp]; percentage-of-viewport-width sibling of
+     * [verticalSpacingPercent]. 8 (the default) resolves close to this surface's previous flat
+     * 20dp default on a typical phone width.
+     */
+    val horizontalOffsetPercent: Int = 8,
+    /**
+     * See [resolvedCurveDp]; percentage-of-viewport-height sibling of [verticalSpacingPercent]. 2
+     * (the default) resolves close to this surface's previous flat 6dp default on a typical phone
+     * height.
+     */
+    val curvePercent: Int = 2,
     val fanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
     val verticalFanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.START,
     /**
@@ -568,6 +639,14 @@ data class AdaptiveStageGeometry(
     val rotationDegrees: Int = 4,
     val cornerRadiusDp: Int = 28,
     val contentPaddingDp: Int = 20,
+    /**
+     * How much of the lateral room [resolveCardStack] reserves for the side fan the horizontal
+     * offset/focused-card gap are actually allowed to reach into, independent of
+     * [horizontalOffsetPercent]'s own per-card magnitude -- mirrors the reference "Calm" launcher's
+     * own `arcWidth`. 100 (the default) reserves the full room this surface always used, so
+     * existing installs see no change until a user moves this slider below it.
+     */
+    val arcWidthPercent: Int = 100,
 ) {
     fun coerce(): AdaptiveStageGeometry =
         copy(
@@ -611,20 +690,25 @@ data class AdaptiveStageGeometry(
                     MIN_ADAPTIVE_STAGE_OVERLAP_PERCENT,
                     MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT,
                 ),
-            verticalSpacingDp =
-                verticalSpacingDp.coerceIn(
-                    MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP,
-                    MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP,
+            verticalSpacingPercent =
+                verticalSpacingPercent.coerceIn(
+                    MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT,
+                    MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT,
                 ),
-            horizontalOffsetDp =
-                horizontalOffsetDp.coerceIn(
-                    MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP,
-                    MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP,
+            horizontalOffsetPercent =
+                horizontalOffsetPercent.coerceIn(
+                    MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_PERCENT,
+                    MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_PERCENT,
                 ),
-            curveDp =
-                curveDp.coerceIn(
-                    MIN_ADAPTIVE_STAGE_CURVE_DP,
-                    MAX_ADAPTIVE_STAGE_CURVE_DP,
+            curvePercent =
+                curvePercent.coerceIn(
+                    MIN_ADAPTIVE_STAGE_CURVE_PERCENT,
+                    MAX_ADAPTIVE_STAGE_CURVE_PERCENT,
+                ),
+            arcWidthPercent =
+                arcWidthPercent.coerceIn(
+                    MIN_ADAPTIVE_STAGE_ARC_WIDTH_PERCENT,
+                    MAX_ADAPTIVE_STAGE_ARC_WIDTH_PERCENT,
                 ),
             rotationDegrees =
                 rotationDegrees.coerceIn(
@@ -875,7 +959,11 @@ enum class AdaptiveStageHapticStrength { OFF, LIGHT, MEDIUM, STRONG }
 
 data class AdaptiveStageRendererCapabilities(val supportsBlur: Boolean = true, val supportsTexture: Boolean = true)
 
-const val CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION = 1
+// Was 1. Bumped for the verticalSpacingDp/horizontalOffsetDp/curveDp -> *Percent unit change (see
+// each field's own doc): the codec migrates a pre-2 JSON payload's legacy dp keys to the new
+// percent fields on load (LauncherSettingsJsonCodec.toAdaptiveStageAppearance), but this field
+// itself is not what branches that migration -- the codec keys off which JSON keys are present.
+const val CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION = 2
 const val MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 55
 
 // Was 100 (square) -- resolveCardSize computes height = width / (cardAspectRatioPercent / 100),
@@ -929,31 +1017,53 @@ const val MIN_ADAPTIVE_STAGE_OVERLAP_PERCENT = 0
 // background card fully out no matter how shallow the stack got. 100 lets the deepest visible card
 // reach fully transparent at any depth, the other end of the fade this field already controls.
 const val MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT = 100
-const val MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP = 0
 
-// Was 96dp. resolveCardStack clips this against the real per-viewport vertical travel budget
-// anyway (verticalTravel / visibleDepth), so raising the ceiling never overshoots a device's own
-// screen -- but at 96 it was *also* well short of a realistic card's own height (a PRIMARY card is
-// commonly 300-500dp tall), so no combination of settings could ever separate adjacent cards enough
-// to stop overlapping and read as a plain non-overlapping vertical list. 640 clears that for every
-// realistic card height, so "spacing >= card height" (a true flat list, paired with 0 overlap/curve/
-// horizontal-offset/rotation and NONE fan direction) is reachable by the slider alone rather than
-// only via the hardcoded unfolded() preset.
-const val MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP = 640
-const val MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP = 0
+/**
+ * [AdaptiveStageGeometry.verticalSpacingPercent]/[horizontalOffsetPercent]/[curvePercent] are all
+ * plain 0..100 percentages -- see each field's own doc for what baseline [resolvedVerticalSpacingDp]
+ * and its siblings resolve them against. Was a raw, per-field dp range (0..96/160/96dp): the same
+ * raw number meant a tight overlap on a tablet and a near-total separation on a small phone, and
+ * (for vertical spacing specifically) topped out well short of a realistic card's own height
+ * (commonly 300-500dp for a PRIMARY card), so no combination of settings could separate adjacent
+ * cards enough to stop overlapping. Percentage-of-viewport, resolved fresh per device, fixes both:
+ * the same slider position now means the same proportion of usable screen everywhere, and the
+ * resolved dp range (see the fraction constants below) reaches genuinely striking values on a real
+ * device rather than being capped by a device-agnostic flat number. Mirrors the reference "Calm"
+ * launcher's own tuning fields (`curve`, `horizontalCurve`, `verticalSpacing`), which are likewise
+ * 0..100 percentages resolved against a tuned baseline rather than raw dp.
+ */
+const val MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT = 100
+const val MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_PERCENT = 100
+const val MIN_ADAPTIVE_STAGE_CURVE_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_CURVE_PERCENT = 100
 
-// Was 160dp -- modest next to a phone's own width, capping how far a fan could spread even with
-// the widest card. 260 reaches a visibly dramatic side-to-side fan on a typical phone width
-// without depending on tablet-sized viewports; resolveCardStack still clips it against the real
-// horizontal travel budget on narrower screens.
-const val MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP = 260
-const val MIN_ADAPTIVE_STAGE_CURVE_DP = 0
+/** See [AdaptiveStageGeometry.arcWidthPercent]'s own doc. */
+const val MIN_ADAPTIVE_STAGE_ARC_WIDTH_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_ARC_WIDTH_PERCENT = 100
 
-// Was 96dp, same reasoning as the horizontal offset ceiling above: too shallow to read as a
-// pronounced arched cascade once split across a multi-card-deep stack. 200 gives a strongly curved
-// "timescape" cascade room to be visible at higher visibleDepth values, still clipped by whatever
-// vertical travel remains after verticalSpacingDp's own share.
-const val MAX_ADAPTIVE_STAGE_CURVE_DP = 200
+/**
+ * The fraction of the viewport's own safe height [resolvedVerticalSpacingDp] resolves
+ * [AdaptiveStageGeometry.verticalSpacingPercent] 0 and 100 to, respectively. 0% reaching literal
+ * zero dp (rather than a small nonzero floor) matters beyond styling: [hasReachableStackLayout]
+ * treats zero static separation under reduced motion as unusable, and that fallback has to stay
+ * reachable at this field's own floor. 50% comfortably clears even a large PRIMARY card's own
+ * height on a typical phone viewport, so a near-fully-separated stack is reachable at the high end
+ * without needing an unrealistically tall device.
+ */
+const val MIN_STACK_VERTICAL_SPACING_FRACTION = 0f
+const val MAX_STACK_VERTICAL_SPACING_FRACTION = 0.5f
+
+/** See [MIN_STACK_VERTICAL_SPACING_FRACTION]; the same idea for [resolvedHorizontalOffsetDp]. */
+const val MIN_STACK_HORIZONTAL_OFFSET_FRACTION = 0f
+const val MAX_STACK_HORIZONTAL_OFFSET_FRACTION = 0.3f
+
+/**
+ * The fraction of the viewport's own safe height [resolvedCurveDp] resolves
+ * [AdaptiveStageGeometry.curvePercent] 100 to; 0 always resolves to no curve at all.
+ */
+const val MAX_STACK_CURVE_FRACTION = 0.3f
 
 /**
  * [AdaptiveStageGeometry.rotationDegrees] is signed: its magnitude is how far the outermost visible
@@ -969,9 +1079,9 @@ const val MAX_ADAPTIVE_STAGE_CURVE_DP = 200
  * by the widened range.
  *
  * The magnitude itself was widened from 18 to 32 for the same reason as the other fan-strength
- * ceilings above (see [MAX_ADAPTIVE_STAGE_CURVE_DP]): 18 degrees on the outermost card reads as a
- * gentle lean, well short of the pronounced tilted-deck look the reference "Calm" timescape can
- * reach. 0 remains the midpoint either way.
+ * ceilings (see [MAX_STACK_CURVE_FRACTION]): 18 degrees on the outermost card reads as a gentle
+ * lean, well short of the pronounced tilted-deck look the reference "Calm" timescape can reach.
+ * 0 remains the midpoint either way.
  */
 const val MIN_ADAPTIVE_STAGE_ROTATION_DEGREES = -32
 const val MAX_ADAPTIVE_STAGE_ROTATION_DEGREES = 32

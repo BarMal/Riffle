@@ -54,18 +54,19 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
 import com.riffle.core.domain.launcher.settings.AdaptiveStageInsetsDp
 import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_ARC_WIDTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CARD_SIZE_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CONTENT_PADDING_DP
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CONTRAST_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CORNER_RADIUS_DP
-import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CURVE_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CURVE_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_FOCUSED_GAP_DP
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT
@@ -80,20 +81,21 @@ import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TEXTURE_INTEN
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_ARC_WIDTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CARD_SIZE_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CONTENT_PADDING_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CONTRAST_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CORNER_RADIUS_DP
-import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CURVE_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CURVE_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_FOCUSED_GAP_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_OVERLAP_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT
@@ -108,7 +110,7 @@ import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TEXTURE_INTEN
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH
 import com.riffle.core.domain.launcher.settings.SYMMETRIC_ABOVE_FOCUS_DEPTH
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
@@ -523,32 +525,42 @@ private fun AdaptiveStageGeometryTabContent(
         }
         AdaptiveStageSlider(
             "Vertical spacing",
-            appearance.geometry.verticalSpacingDp,
-            MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP..MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP,
-            "dp",
+            appearance.geometry.verticalSpacingPercent,
+            MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT..MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT,
+            "%",
         ) { value ->
             update {
-                it.copy(geometry = it.geometry.copy(verticalSpacingDp = value))
+                it.copy(geometry = it.geometry.copy(verticalSpacingPercent = value))
             }
         }
         AdaptiveStageSlider(
             "Horizontal offset",
-            appearance.geometry.horizontalOffsetDp,
-            MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP..MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP,
-            "dp",
+            appearance.geometry.horizontalOffsetPercent,
+            MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_PERCENT..MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_PERCENT,
+            "%",
         ) { value ->
             update {
-                it.copy(geometry = it.geometry.copy(horizontalOffsetDp = value))
+                it.copy(geometry = it.geometry.copy(horizontalOffsetPercent = value))
+            }
+        }
+        AdaptiveStageSlider(
+            "Fan arc width",
+            appearance.geometry.arcWidthPercent,
+            MIN_ADAPTIVE_STAGE_ARC_WIDTH_PERCENT..MAX_ADAPTIVE_STAGE_ARC_WIDTH_PERCENT,
+            "%",
+        ) { value ->
+            update {
+                it.copy(geometry = it.geometry.copy(arcWidthPercent = value))
             }
         }
         AdaptiveStageSlider(
             "Stack curve",
-            appearance.geometry.curveDp,
-            MIN_ADAPTIVE_STAGE_CURVE_DP..MAX_ADAPTIVE_STAGE_CURVE_DP,
-            "dp",
+            appearance.geometry.curvePercent,
+            MIN_ADAPTIVE_STAGE_CURVE_PERCENT..MAX_ADAPTIVE_STAGE_CURVE_PERCENT,
+            "%",
         ) { value ->
             update {
-                it.copy(geometry = it.geometry.copy(curveDp = value))
+                it.copy(geometry = it.geometry.copy(curvePercent = value))
             }
         }
         AdaptiveStageSlider(
