@@ -80,6 +80,35 @@ class DockPullFrameTest {
     }
 
     @Test
+    fun aFinishedCommitFrameMatchesTheIdleFrameItHandsOffTo() {
+        // The two code paths a UI drawing this could read "where the dock sits" from -- the
+        // in-flight [Settling] frame and the [Idle] frame the transition controller's `finish` hands
+        // off to -- must agree exactly at the handoff instant, or a redraw between them is a visible
+        // jump (#1206 dock-transition-consistency). [DockPullTransitionController.finish] only ever
+        // runs on a [Settling] whose `progress` has reached `targetProgress` (Animatable.animateTo
+        // clamps its last reported value to the target), so that is the frame compared here.
+        val finishedCommit = settling(SettleOutcome.COMMIT, releaseProgress = 0.5f, progress = 1f).frame(edges)
+        val idleOnDestination = Idle(ModeSurface.LIBRARY).frame(edges)
+
+        // Only what actually positions and shows the dock: [outgoing]/[incoming] describe the two
+        // mode surfaces, which a consumer only ever reads while transitioning (guarded on
+        // `isTransitioning`), so their values past the handoff are moot rather than required to match.
+        assertEquals(idleOnDestination.dockEdge, finishedCommit.dockEdge)
+        assertEquals(idleOnDestination.dockOffsetFraction, finishedCommit.dockOffsetFraction, TOLERANCE)
+        assertEquals(idleOnDestination.dockBackgroundAlpha, finishedCommit.dockBackgroundAlpha, TOLERANCE)
+    }
+
+    @Test
+    fun aFinishedCancelFrameMatchesTheIdleFrameItHandsOffTo() {
+        val finishedCancel = settling(SettleOutcome.CANCEL, releaseProgress = 0.5f, progress = 0f).frame(edges)
+        val idleOnOrigin = Idle(ModeSurface.HOME).frame(edges)
+
+        assertEquals(idleOnOrigin.dockEdge, finishedCancel.dockEdge)
+        assertEquals(idleOnOrigin.dockOffsetFraction, finishedCancel.dockOffsetFraction, TOLERANCE)
+        assertEquals(idleOnOrigin.dockBackgroundAlpha, finishedCancel.dockBackgroundAlpha, TOLERANCE)
+    }
+
+    @Test
     fun aCancelledReleaseSpringsBackOnTheOriginEdge() {
         val frame = settling(SettleOutcome.CANCEL, releaseProgress = 0.2f, progress = 0.1f).frame(edges)
 

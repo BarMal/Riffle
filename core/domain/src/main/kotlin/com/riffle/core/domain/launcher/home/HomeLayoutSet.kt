@@ -99,9 +99,14 @@ data class HomeLayoutSet(
     fun selectMode(mode: LauncherViewMode): HomeLayoutSet =
         activeKey.copy(viewMode = mode)
             .let { key ->
-                // The dock is not part of what a mode owns: a layout created here shows the
-                // device class's shared dock through layoutFor, like every other.
-                val layout = layouts[key] ?: defaultLayout(key)
+                // The dock is not part of what a mode owns: normalized to the device class's shared
+                // dock before it is stored, not only when read back through layoutFor/activeLayout.
+                // A stored layout that kept whatever dock it last carried (a mode visited before an
+                // edit made elsewhere, or a fresh default's stock dock) would otherwise sit in
+                // [layouts] out of step with [docks] until something happened to read it through
+                // layoutFor -- close enough for every in-process read today, but not an invariant this
+                // type should depend on a caller getting right (#1206 dock-transition-consistency).
+                val layout = (layouts[key] ?: defaultLayout(key)).withSharedDock(dockFor(key.deviceClass))
                 copy(
                     activeKey = key,
                     layouts = layouts + (key to layout),
