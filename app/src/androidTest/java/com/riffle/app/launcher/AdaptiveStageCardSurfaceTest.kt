@@ -43,6 +43,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
 import com.riffle.app.launcher.notifications.MediaCommand
 import com.riffle.app.launcher.notifications.NotificationStageAction
@@ -52,6 +53,8 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
@@ -743,6 +746,48 @@ class AdaptiveStageCardSurfaceTest {
                         key,
                         NotificationStageAction.MediaControl(MediaCommand.PLAY),
                     ),
+                ),
+                actions,
+            )
+        }
+    }
+
+    @Test
+    fun emptyAppDetailQuickActionsCardStackEveryShortcutIsTappable() {
+        val app = adaptiveStageTestApp()
+        val compose = AppShortcut(AppShortcutId("compose"), app.identity, shortLabel = "Compose")
+        val search = AppShortcut(AppShortcutId("search"), app.identity, shortLabel = "Search")
+        val card = AppStageEmptyAppCard(app = app, shortcuts = listOf(compose, search))
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            var expansion by remember { mutableStateOf(CardExpansionState().expand(LauncherCardId("empty"), true)) }
+            val detailState =
+                remember {
+                    AdaptiveStageCardDetailState(
+                        currentExpansion = { expansion },
+                        updateExpansion = { expansion = it },
+                        currentRecoveryMessage = { null },
+                        updateRecoveryMessage = { _ -> },
+                        motion = AdaptiveStageMotion(reducedMotion = true),
+                        globalReducedMotion = false,
+                    )
+                }
+            MaterialTheme {
+                AdaptiveStageEmptyAppDetailSurface(card = card, detailState = detailState, onAction = actions::add)
+            }
+        }
+
+        composeRule.onNodeWithText("Compose").performClick()
+        composeRule.onNodeWithText("Search").performClick()
+        composeRule.onNodeWithText("Open ${app.label}").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(
+                    LauncherShellAction.LaunchAppShortcut(compose),
+                    LauncherShellAction.LaunchAppShortcut(search),
+                    LauncherShellAction.LaunchApp(app.identity),
                 ),
                 actions,
             )

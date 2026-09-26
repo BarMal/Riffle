@@ -6,11 +6,17 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,18 +30,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
+import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.cards.AppStageContentKind
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
+import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
 import kotlinx.coroutines.delay
@@ -148,13 +159,103 @@ internal fun AdaptiveStageEmptyAppDetailSurface(
         TextButton(onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) }) {
             Text("Open ${card.app.label}")
         }
-        card.shortcuts.forEach { shortcut ->
-            TextButton(onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) }) {
-                Text(shortcut.shortLabel)
+        if (card.shortcuts.isNotEmpty()) {
+            EmptyStageQuickActionsCardStack(
+                shortcuts = card.shortcuts,
+                reducedMotion = detailState.reducedMotion,
+                onAction = onAction,
+            )
+        }
+    }
+}
+
+/**
+ * A quiet stage's quick actions (its app's own shortcuts), fanned as a small static card stack
+ * instead of a flat button list -- every card is fully visible and directly tappable at once (no
+ * drag-to-navigate: there is nothing to bring to focus, each one already dispatches its own
+ * shortcut), so this reuses only [CardStackLayoutPolicy]'s pure fan geometry, not the interactive
+ * [CardStack] built for the primary stage stack.
+ */
+@Composable
+private fun EmptyStageQuickActionsCardStack(
+    shortcuts: List<AppShortcut>,
+    reducedMotion: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val policy =
+        remember(shortcuts.size) {
+            CardStackLayoutPolicy(
+                maxVisibleDepth = (shortcuts.size - 1).coerceAtLeast(0),
+                scaleStep = QUICK_ACTION_STACK_SCALE_STEP,
+                offsetStep = QUICK_ACTION_STACK_OFFSET_STEP,
+                verticalOffsetStep = QUICK_ACTION_STACK_VERTICAL_OFFSET_STEP,
+                rotationStep = QUICK_ACTION_STACK_ROTATION_STEP,
+                alphaStep = QUICK_ACTION_STACK_ALPHA_STEP,
+            )
+        }
+    // The front card (depth 0) sits at the top; the fan trails toward the bottom, so the extra
+    // height the fan needs is reserved below it rather than split around it.
+    val entries = remember(policy, shortcuts.size) { policy.entries(cardCount = shortcuts.size, activeIndex = 0) }
+    val fanHeightDp =
+        QUICK_ACTION_STACK_CARD_HEIGHT_DP +
+            (QUICK_ACTION_STACK_VERTICAL_OFFSET_STEP * (shortcuts.size - 1).coerceAtLeast(0))
+
+    Box(
+        // Fanned entries translate past their own footprint by design (see CardStack.kt's own
+        // clipToBounds doc) -- without this, that overflow would bleed into the "Open app" button
+        // above or whatever the scrolling detail column holds below.
+        modifier = Modifier.fillMaxWidth().height(fanHeightDp.dp).clipToBounds(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        entries.forEach { entry ->
+            val shortcut = shortcuts[entry.cardIndex]
+            Surface(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(QUICK_ACTION_STACK_CARD_HEIGHT_DP.dp)
+                        .zIndex(entry.order.toFloat())
+                        .graphicsLayer {
+                            translationX = entry.offset.dp.toPx()
+                            translationY = entry.verticalOffset.dp.toPx()
+                            scaleX = entry.scale
+                            scaleY = entry.scale
+                            rotationZ = if (reducedMotion) 0f else entry.rotationDegrees
+                            alpha = entry.alpha
+                        }
+                        .clickable(onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) })
+                        // Merges the card's own Text into one actionable node, the same way a
+                        // Material Button already does for its label -- a screen reader announces
+                        // one "Reply, button" rather than a click target with no label of its own.
+                        .semantics(mergeDescendants = true) {},
+                shape = RoundedCornerShape(QUICK_ACTION_STACK_CORNER_RADIUS_DP.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                tonalElevation = QUICK_ACTION_STACK_ELEVATION_DP.dp,
+            ) {
+                Box(modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) {
+                    Text(shortcut.shortLabel, style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }
 }
+
+private const val QUICK_ACTION_STACK_CARD_HEIGHT_DP = 48
+private const val QUICK_ACTION_STACK_CORNER_RADIUS_DP = 16
+private const val QUICK_ACTION_STACK_ELEVATION_DP = 2
+private const val QUICK_ACTION_STACK_SCALE_STEP = 0.05f
+private const val QUICK_ACTION_STACK_OFFSET_STEP = 6f
+
+// Each card's full-width Surface is its own touch target, and the nearer-to-focus card always
+// draws (and hit-tests) on top -- so a card behind it is only reliably tappable at points its own
+// center clears the card(s) in front, i.e. this step must exceed half of
+// QUICK_ACTION_STACK_CARD_HEIGHT_DP. A value at or below that half-height would leave a trailing
+// card's center still covered by the card in front of it, so its tap target would silently belong
+// to the wrong card.
+private const val QUICK_ACTION_STACK_VERTICAL_OFFSET_STEP = 30f
+private const val QUICK_ACTION_STACK_ROTATION_STEP = 4f
+private const val QUICK_ACTION_STACK_ALPHA_STEP = 0.12f
 
 @Composable
 private fun AdaptiveStageDetailContainer(
