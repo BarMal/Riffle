@@ -246,7 +246,14 @@ private const val QUICK_ACTION_STACK_CORNER_RADIUS_DP = 16
 private const val QUICK_ACTION_STACK_ELEVATION_DP = 2
 private const val QUICK_ACTION_STACK_SCALE_STEP = 0.05f
 private const val QUICK_ACTION_STACK_OFFSET_STEP = 6f
-private const val QUICK_ACTION_STACK_VERTICAL_OFFSET_STEP = 10f
+
+// Each card's full-width Surface is its own touch target, and the nearer-to-focus card always
+// draws (and hit-tests) on top -- so a card behind it is only reliably tappable at points its own
+// center clears the card(s) in front, i.e. this step must exceed half of
+// QUICK_ACTION_STACK_CARD_HEIGHT_DP. A value at or below that half-height would leave a trailing
+// card's center still covered by the card in front of it, so its tap target would silently belong
+// to the wrong card.
+private const val QUICK_ACTION_STACK_VERTICAL_OFFSET_STEP = 30f
 private const val QUICK_ACTION_STACK_ROTATION_STEP = 4f
 private const val QUICK_ACTION_STACK_ALPHA_STEP = 0.12f
 
