@@ -31,12 +31,17 @@ data class AppDrawerSettings(
     val presentation: AppDrawerPresentation = AppDrawerPresentation.LIST,
     val iconGridColumns: Int = DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS,
     /** Where the launcher settles after leaving Library, the app drawer (Decision 10, #1243). */
-    val afterLeavingLibrary: LibraryReturnTarget = LibraryReturnTarget.HOME,
+    val afterLeavingLibrary: LibraryReturnTarget = LibraryReturnTarget.LIBRARY,
 )
 
 /**
  * Where the launcher settles after an app launch, a Home press or Back from Library, and on a cold
- * start with Library stored: the user's Home (the default), or Library again.
+ * start with Library stored: the user's Home, or [LIBRARY] (the default) -- which, despite its name,
+ * does not force Library open. It means never force a switch *away* from Library on these triggers,
+ * so whatever was actually last showing -- Library or otherwise, since every other trigger already
+ * leaves a non-Library mode alone -- is what the launcher settles on (see
+ * [com.riffle.core.domain.launcher.home.LibraryExitTrigger.returnsHome], which this value always
+ * answers false for). [HOME] is the one case that overrides that: it always leaves Library for Home.
  */
 enum class LibraryReturnTarget {
     HOME,

@@ -97,25 +97,25 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsTheLibraryReturnTargetAndDefaultsAbsentOrUnknownValuesToHome() {
+    fun roundTripsTheLibraryReturnTargetAndDefaultsAbsentOrUnknownValuesToLibrary() {
         val settings =
-            LauncherSettings(appDrawer = AppDrawerSettings(afterLeavingLibrary = LibraryReturnTarget.LIBRARY))
+            LauncherSettings(appDrawer = AppDrawerSettings(afterLeavingLibrary = LibraryReturnTarget.HOME))
 
         assertEquals(
-            LibraryReturnTarget.LIBRARY,
+            LibraryReturnTarget.HOME,
             decodeLauncherSettings(encodeLauncherSettings(settings)).appDrawer.afterLeavingLibrary,
         )
         assertEquals(
-            LibraryReturnTarget.HOME,
+            LibraryReturnTarget.LIBRARY,
             decodeLauncherSettings("{\"appDrawer\": {\"presentation\": \"ICONS\"}}").appDrawer.afterLeavingLibrary,
         )
         assertEquals(
-            LibraryReturnTarget.HOME,
+            LibraryReturnTarget.LIBRARY,
             decodeLauncherSettings("{\"appDrawer\": {\"afterLeavingLibrary\": \"DRAWER\"}}")
                 .appDrawer
                 .afterLeavingLibrary,
         )
-        assertEquals(LibraryReturnTarget.HOME, decodeLauncherSettings("{}").appDrawer.afterLeavingLibrary)
+        assertEquals(LibraryReturnTarget.LIBRARY, decodeLauncherSettings("{}").appDrawer.afterLeavingLibrary)
     }
 
     @Test

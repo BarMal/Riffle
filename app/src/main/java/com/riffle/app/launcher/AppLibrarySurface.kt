@@ -164,7 +164,9 @@ internal fun SettingsAppDrawerSection(
             }
             SettingsTextColumn(
                 title = "After leaving Library, return to",
-                subtitle = "Where the launcher settles after opening an app, pressing Home, or going Back from Library",
+                subtitle =
+                    "Whether opening an app, pressing Home, or going Back from Library always " +
+                        "returns Home, or leaves you wherever you last were",
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LibraryReturnTarget.entries.forEach { target ->
@@ -172,7 +174,7 @@ internal fun SettingsAppDrawerSection(
                         modifier = Modifier.testTag("$LIBRARY_RETURN_TARGET_TEST_TAG_PREFIX${target.name}"),
                         selected = target == state.settings.appDrawer.afterLeavingLibrary,
                         onClick = { onAction(LauncherShellAction.SelectLibraryReturnTarget(target)) },
-                        label = { Text(if (target == LibraryReturnTarget.HOME) "Home" else "Library") },
+                        label = { Text(if (target == LibraryReturnTarget.HOME) "Always Home" else "Last used") },
                     )
                 }
             }
