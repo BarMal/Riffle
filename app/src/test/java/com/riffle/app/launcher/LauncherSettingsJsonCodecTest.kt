@@ -393,12 +393,55 @@ class LauncherSettingsJsonCodecTest {
                 }
                 """.trimIndent(),
             ).cards.adaptiveStageAppearance
-        assertEquals(6, imported.geometry.visibleDepth)
-        assertEquals(6, imported.geometry.aboveFocusDepth)
+        assertEquals(8, imported.geometry.visibleDepth)
+        assertEquals(8, imported.geometry.aboveFocusDepth)
         assertEquals(85, imported.geometry.stackPeakPercent)
         assertEquals(0, imported.surface.blurStrengthPercent)
         assertEquals(600, imported.motion.settleDurationMillis)
         assertEquals(100, imported.motion.magnetStrengthPercent)
+    }
+
+    @Test
+    fun migratesLegacyRawDpGeometryFieldsToTheirPercentEquivalents() {
+        // A payload saved before #1291 (verticalSpacingDp/horizontalOffsetDp/curveDp raw dp
+        // fields) carries none of the new *Percent keys -- decoding must derive a percent from
+        // the legacy dp value rather than silently falling back to the default, which would
+        // discard a real user's own tuning.
+        val decoded =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "timeScapeAppearance": {
+                      "geometry": { "verticalSpacingDp": 0, "horizontalOffsetDp": 0, "curveDp": 0 }
+                    }
+                  }
+                }
+                """.trimIndent(),
+            ).cards.adaptiveStageAppearance
+
+        // Legacy 0dp for every field migrates to 0% (the bottom of each field's own reachable
+        // band), not to the new schema's own nonzero defaults.
+        assertEquals(0, decoded.geometry.verticalSpacingPercent)
+        assertEquals(0, decoded.geometry.horizontalOffsetPercent)
+        assertEquals(0, decoded.geometry.curvePercent)
+
+        val decodedWithNewKey =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "timeScapeAppearance": {
+                      "geometry": { "verticalSpacingDp": 0, "verticalSpacingPercent": 42 }
+                    }
+                  }
+                }
+                """.trimIndent(),
+            ).cards.adaptiveStageAppearance
+
+        // A payload carrying both keys (already migrated once, or a future re-export) prefers the
+        // new key rather than re-deriving from the stale legacy one.
+        assertEquals(42, decodedWithNewKey.geometry.verticalSpacingPercent)
     }
 
     @Test

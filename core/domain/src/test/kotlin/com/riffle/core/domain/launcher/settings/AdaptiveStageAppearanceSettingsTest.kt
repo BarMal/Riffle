@@ -8,6 +8,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
+@Suppress("LargeClass")
 class AdaptiveStageAppearanceSettingsTest {
     @Test
     fun modernDefaultIsCoherentAndMatchesThePlainConstructorDefault() {
@@ -44,7 +45,7 @@ class AdaptiveStageAppearanceSettingsTest {
 
         assertEquals(CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION, coerced.version)
         assertEquals(55, coerced.geometry.cardAspectRatioPercent)
-        assertEquals(6, coerced.geometry.visibleDepth)
+        assertEquals(MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH, coerced.geometry.visibleDepth)
         assertEquals(0, coerced.geometry.contentPaddingDp)
         assertEquals(MAX_ADAPTIVE_STAGE_STACK_PEAK_PERCENT, coerced.geometry.stackPeakPercent)
         assertEquals(100, coerced.surface.blurStrengthPercent)
@@ -191,9 +192,10 @@ class AdaptiveStageAppearanceSettingsTest {
         val depthOneOffset =
             resolution.layoutPolicy.entries(cardCount = 5, activeIndex = 2).first { it.depth == 1 }.offset
 
-        // Default horizontalOffsetDp is 20dp; the pre-fix starved travel budget crushed this down
-        // to roughly 2dp regardless of the configured value.
-        assertTrue(kotlin.math.abs(depthOneOffset) > 15f)
+        // Default horizontalOffsetPercent (8) resolves to roughly 9dp on this viewport's safe
+        // width (376dp); the pre-fix starved travel budget crushed the offset down to roughly 2dp
+        // regardless of the configured value, so this only needs to clear that bugged floor.
+        assertTrue(kotlin.math.abs(depthOneOffset) > 5f)
     }
 
     @Test
@@ -202,21 +204,20 @@ class AdaptiveStageAppearanceSettingsTest {
         // stackBounds.maxHeightScale by cardWidthDp instead of cardHeightDp -- invisible whenever
         // width and height happen to be equal, so this deliberately uses a non-square aspect ratio
         // (cardHeightDp is meaningfully larger than cardWidthDp here) to catch it via isUsable and
-        // cardHeightDp/cardWidthDp below. curveDp=0 isolates the offset assertion from the curve's
-        // own (legitimate) contribution, which this test isn't about; the offset itself legitimately
-        // reaches exactly the configured 96dp spacing here regardless of the bug -- both the buggy
-        // and fixed vertical-travel reservation comfortably exceed 96dp for this viewport, so
-        // verticalStep's own min(96, travel) clamp saturates at 96 either way. The assertion below
-        // still guards against verticalStep somehow exceeding the configured spacing.
+        // cardHeightDp/cardWidthDp below. curvePercent=0 isolates the offset assertion from the
+        // curve's own (legitimate) contribution, which this test isn't about; verticalSpacingPercent
+        // = 20 resolves to a comfortably-reachable 80dp on this viewport's safe height (800dp),
+        // well below either the buggy or the fixed vertical-travel reservation, so this only
+        // guards against verticalStep somehow exceeding the configured spacing.
         val viewport = AdaptiveStageViewportDp(widthDp = 200, heightDp = 800)
         val settings =
             AdaptiveStageAppearanceSettings(
                 geometry =
                     AdaptiveStageGeometry(
                         cardAspectRatioPercent = 60,
-                        verticalSpacingDp = 96,
+                        verticalSpacingPercent = 20,
                         visibleDepth = 1,
-                        curveDp = 0,
+                        curvePercent = 0,
                     ),
             )
 
@@ -226,7 +227,7 @@ class AdaptiveStageAppearanceSettingsTest {
 
         assertTrue(resolution.isUsable)
         assertTrue(resolution.cardHeightDp > resolution.cardWidthDp)
-        assertTrue(kotlin.math.abs(backgroundOffset) <= 96f)
+        assertTrue(kotlin.math.abs(backgroundOffset) <= 80f)
     }
 
     @Test
@@ -592,7 +593,7 @@ class AdaptiveStageAppearanceSettingsTest {
     fun reducedMotionZeroSpacingUsesTheReachableListFallback() {
         val resolution =
             AdaptiveStageAppearanceSettings(
-                geometry = AdaptiveStageGeometry(verticalSpacingDp = 0),
+                geometry = AdaptiveStageGeometry(verticalSpacingPercent = 0),
                 motion = AdaptiveStageMotion(reducedMotion = true),
             ).resolveCardStack(AdaptiveStageViewportDp(widthDp = 1_200, heightDp = 800))
 
@@ -731,20 +732,88 @@ class AdaptiveStageAppearanceSettingsTest {
         val unfolded = AdaptiveStageAppearanceSettings.unfolded()
 
         assertEquals(0, unfolded.geometry.overlapPercent)
-        assertEquals(0, unfolded.geometry.curveDp)
+        assertEquals(0, unfolded.geometry.curvePercent)
         assertEquals(0, unfolded.geometry.rotationDegrees)
         assertEquals(AdaptiveStageFanDirection.NONE, unfolded.geometry.fanDirection)
-        assertTrue(unfolded.geometry.verticalSpacingDp > 0)
+        assertTrue(unfolded.geometry.verticalSpacingPercent > 0)
         assertTrue(modern.geometry.overlapPercent > 0)
-        assertTrue(modern.geometry.curveDp > 0)
+        assertTrue(modern.geometry.curvePercent > 0)
         assertNotEquals(modern.geometry, unfolded.geometry)
+    }
+
+    @Test
+    fun maximumVerticalSpacingCanStillSeparateCardsByMoreThanTheirOwnHeightAtAReasonableCardSize() {
+        // verticalSpacingPercent is percent-of-viewport, not a device-agnostic flat list goal in
+        // its own right (see the field's own doc -- the reference "Calm" launcher's equivalent
+        // never fully removes overlap either), but its ceiling should still comfortably clear a
+        // reasonably-sized card's own height rather than being capped well short of it the way the
+        // old flat 96dp ceiling was. A small card (cardSizePercent at its floor) and a single
+        // background ring leave a generous travel budget, so this isolates the spacing ceiling
+        // itself rather than the (legitimate, separate) travel-budget limit a large card/high depth
+        // would still hit. visibleDepth = 2 (rather than 1) keeps the immediate neighbor's depth
+        // (1) below the edge-fade multiplier's own start (see
+        // CardStackLayoutPolicy.edgeFadeMultiplier), which would otherwise zero its alpha
+        // regardless of overlapPercent -- the fade this test isn't about.
+        val viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 6_000)
+        val resolution =
+            AdaptiveStageAppearanceSettings(
+                geometry =
+                    AdaptiveStageGeometry(
+                        cardSizePercent = 50,
+                        visibleDepth = 2,
+                        overlapPercent = 0,
+                        curvePercent = 0,
+                        rotationDegrees = 0,
+                        horizontalOffsetPercent = 0,
+                        fanDirection = AdaptiveStageFanDirection.NONE,
+                        verticalSpacingPercent = MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT,
+                    ),
+            ).resolveCardStack(viewport)
+        val neighborEntry =
+            resolution.layoutPolicy.entries(cardCount = 4, activeIndex = 1).first { it.depth == 1 }
+
+        assertTrue(resolution.isUsable)
+        assertTrue(kotlin.math.abs(neighborEntry.verticalOffset) >= resolution.cardHeightDp)
+        assertEquals(1f, neighborEntry.alpha)
+        // The neighbor still shrinks by at most MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE's
+        // complement (a fixed, non-configurable part of the stack-bounding math) -- close to, but
+        // not exactly, full size.
+        assertTrue(neighborEntry.scale >= MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE)
+        // Delta-based: this neighbor is the "above focus" entry (signedDistance -1), whose offset/
+        // rotation formulas multiply by signedDistance.sign, so a zero input can legitimately
+        // resolve to -0.0f -- distinct from 0f under kotlin.test's boxed Float equality, though not
+        // under IEEE 754 comparison.
+        assertEquals(0f, neighborEntry.offset, 0f)
+        assertEquals(0f, neighborEntry.rotationDegrees, 0f)
+    }
+
+    @Test
+    fun maximumOverlapFadesNearCardsMoreThanTheOldCeilingCould() {
+        // Was capped at 60 (alphaStep = overlapPercent/100/visibleDepth), which -- at any depth
+        // shy of the stack's own edge (where a separate edge-fade multiplier already zeroes alpha
+        // regardless of this field) -- could never dim a card as much as a genuinely strong
+        // "background cards fade out fast" look calls for. 100 reaches noticeably further.
+        fun depthOneAlpha(overlapPercent: Int) =
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(visibleDepth = 4, overlapPercent = overlapPercent),
+            ).resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+                .layoutPolicy
+                .entries(cardCount = 6, activeIndex = 2)
+                .first { it.depth == 1 }
+                .alpha
+
+        val atOldCeiling = depthOneAlpha(60)
+        val atNewCeiling = depthOneAlpha(MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT)
+
+        assertEquals(100, MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT)
+        assertTrue(atNewCeiling < atOldCeiling)
     }
 
     @Test
     fun railCardStackResolvesFromUnfoldedAppearanceAgainstItsOwnNarrowViewport() {
         val unfoldedAppearance =
             AdaptiveStageAppearanceSettings.unfolded()
-                .copy(geometry = AdaptiveStageGeometry(overlapPercent = 0, verticalSpacingDp = 72))
+                .copy(geometry = AdaptiveStageGeometry(overlapPercent = 0, verticalSpacingPercent = 20))
         val railViewport = AdaptiveStageViewportDp(widthDp = 104, heightDp = 720)
         val resolution =
             LauncherSettings(cards = CardsSettings(unfoldedAppearance = unfoldedAppearance))
@@ -753,5 +822,65 @@ class AdaptiveStageAppearanceSettingsTest {
 
         assertTrue(resolution.isUsable)
         assertTrue(entries.filter { it.depth > 0 }.all { it.verticalOffset != 0f })
+    }
+
+    @Test
+    fun verticalSpacingPercentReadsAsTheSameProportionOfScreenOnAnyDevice() {
+        // The whole point of moving from a raw dp field to a percent-of-viewport one: the same
+        // slider position should mean the same *proportion* of usable screen everywhere, rather
+        // than a fixed dp meaning a tight overlap on a tablet and a near-total separation on a
+        // small phone. A small card and a single background ring (as in the flat-list test above)
+        // keep the travel budget from being the binding constraint, isolating this proportionality.
+        fun neighborVerticalOffset(safeHeightDp: Int) =
+            AdaptiveStageAppearanceSettings(
+                geometry =
+                    AdaptiveStageGeometry(
+                        cardSizePercent = MIN_ADAPTIVE_STAGE_CARD_SIZE_PERCENT,
+                        visibleDepth = 2,
+                        overlapPercent = 0,
+                        curvePercent = 0,
+                        horizontalOffsetPercent = 0,
+                        fanDirection = AdaptiveStageFanDirection.NONE,
+                        verticalSpacingPercent = 30,
+                    ),
+            ).resolveCardStack(AdaptiveStageViewportDp(widthDp = 300, heightDp = safeHeightDp))
+                .layoutPolicy
+                .entries(cardCount = 4, activeIndex = 1)
+                .first { it.depth == 1 }
+                .verticalOffset
+
+        val atSmallerViewport = kotlin.math.abs(neighborVerticalOffset(2_000))
+        val atDoubledViewport = kotlin.math.abs(neighborVerticalOffset(4_000))
+
+        // Not exactly double -- the card itself is sized against the viewport too, and the travel
+        // budget's own halving-by-depth interacts with that -- but a percent-of-viewport field
+        // should scale up noticeably with the viewport, unlike the old flat dp field, which
+        // wouldn't move at all between these two calls.
+        assertTrue(atDoubledViewport > atSmallerViewport * 1.5f)
+    }
+
+    @Test
+    fun arcWidthScalesTheHorizontalFanIndependentlyOfHorizontalOffsetPercent() {
+        // Mirrors the reference "Calm" launcher's own `arcWidth`: a second, independent knob for
+        // how much of the available lateral room the side fan is allowed to reach into, distinct
+        // from horizontalOffsetPercent's own per-card magnitude.
+        fun neighborOffset(arcWidthPercent: Int) =
+            AdaptiveStageAppearanceSettings(
+                geometry =
+                    AdaptiveStageGeometry(
+                        visibleDepth = 1,
+                        horizontalOffsetPercent = MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_PERCENT,
+                        arcWidthPercent = arcWidthPercent,
+                    ),
+            ).resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+                .layoutPolicy
+                .entries(cardCount = 3, activeIndex = 1)
+                .first { it.depth > 0 }
+                .offset
+
+        val fullArc = kotlin.math.abs(neighborOffset(100))
+        val halfArc = kotlin.math.abs(neighborOffset(50))
+
+        assertTrue(halfArc < fullArc)
     }
 }

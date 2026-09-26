@@ -56,8 +56,8 @@ class LauncherBackupDocumentTest {
                                     AdaptiveStageGeometry(
                                         visibleDepth = 2,
                                         overlapPercent = 0,
-                                        horizontalOffsetDp = 0,
-                                        curveDp = 0,
+                                        horizontalOffsetPercent = 0,
+                                        curvePercent = 0,
                                         fanDirection = AdaptiveStageFanDirection.NONE,
                                         rotationDegrees = 0,
                                     ),
@@ -79,7 +79,7 @@ class LauncherBackupDocumentTest {
                         unfoldedAppearance =
                             AdaptiveStageAppearanceSettings.unfolded().let { unfolded ->
                                 unfolded.copy(
-                                    geometry = unfolded.geometry.copy(visibleDepth = 3, verticalSpacingDp = 40),
+                                    geometry = unfolded.geometry.copy(visibleDepth = 3, verticalSpacingPercent = 40),
                                 )
                             },
                     ),
