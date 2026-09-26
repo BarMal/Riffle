@@ -56,9 +56,9 @@ import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
-import kotlin.math.roundToInt
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.math.roundToInt
 
 fun encodeLauncherSettings(settings: LauncherSettings): String =
     JSONObject()
