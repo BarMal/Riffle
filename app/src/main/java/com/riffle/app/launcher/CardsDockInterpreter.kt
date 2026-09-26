@@ -78,37 +78,38 @@ internal fun cardsStageSelection(
     }
 
 /**
- * The stage selector as dock entries. Every entry delegates back to [interpretCardsDockEntry] by
- * key, so the dock never learns what a stage is.
+ * The stage selector's dynamic entries, on the same rule the dock already applies in grid mode:
+ * pinned wins the static side (a pinned stage renders there as a real dock item, see
+ * `CardsDockPinning.kt`) and is excluded from the dynamic one, which is only for a stage with
+ * something new not already pinned. "All" has no pinned/unpinned state of its own -- pending a
+ * dedicated entry point (a multi-finger pinch), it is left off the dock entirely rather than
+ * inflating this section with an entry that is always there whether or not anything is.
  */
 internal fun cardsStageSelectorDockEntries(
     entries: List<CardsStageSelectorEntry>,
     state: LauncherShellState,
 ): List<DockDynamicEntry> =
-    entries.map { entry ->
-        val stage = entry as? CardsStageSelectorEntry.Stage
-        val label = stage?.let { stageLabel(it.stageId, state) } ?: CARDS_ALL_ENTRY_LABEL
-        val cardCount =
-            when (entry) {
-                is CardsStageSelectorEntry.All -> entry.cardCount
-                is CardsStageSelectorEntry.Stage -> entry.cardCount
-            }
-        DockDynamicEntry(
-            key = entry.key,
-            label = label,
-            identity = stage?.let { stageAppIdentity(it.stageId, state) },
-            badgeCount = cardCount,
-            isSelected = entry.isSelected,
-            contentDescription =
-                cardsStageSelectorEntryContentDescription(
-                    label = label,
-                    cardCount = cardCount,
-                    isPinned = stage?.isPinned == true,
-                    isSelected = entry.isSelected,
-                ),
-            intent = DockDynamicEntryIntent.Delegate,
-        )
-    }
+    entries
+        .filterIsInstance<CardsStageSelectorEntry.Stage>()
+        .filter { entry -> !entry.isPinned && entry.cardCount > 0 }
+        .map { entry ->
+            val label = stageLabel(entry.stageId, state)
+            DockDynamicEntry(
+                key = entry.key,
+                label = label,
+                identity = stageAppIdentity(entry.stageId, state),
+                badgeCount = entry.cardCount,
+                isSelected = entry.isSelected,
+                contentDescription =
+                    cardsStageSelectorEntryContentDescription(
+                        label = label,
+                        cardCount = entry.cardCount,
+                        isPinned = false,
+                        isSelected = entry.isSelected,
+                    ),
+                intent = DockDynamicEntryIntent.Delegate,
+            )
+        }
 
 /**
  * What activating a selector entry does: "All" switches the surface to the merged view (a choice

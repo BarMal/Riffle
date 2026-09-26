@@ -8,59 +8,79 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AppStage
+import com.riffle.core.domain.launcher.cards.AppStageContent
+import com.riffle.core.domain.launcher.cards.AppStageContentKind
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStageLifecycle
 import com.riffle.core.domain.launcher.cards.AppStageOrigin
 import com.riffle.core.domain.launcher.cards.CardsStageSelection
 import com.riffle.core.domain.launcher.cards.CardsStageSelector
+import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Cards' side of the dock boundary (#1212): the dock hands over neutral intents and this decides
- * what they mean -- the dynamic section is the stage selector, "All" first, and a pinned icon's
- * stage is one long-press away while a tap opens the app.
+ * what they mean. The dynamic section follows the same rule the dock already applies in grid mode
+ * (#XXXX): pinned wins the static side and is excluded here, so this only ever lists an unpinned
+ * stage with something new. A pinned icon's stage is one long-press away while a tap opens the app.
  */
 class CardsDockInterpreterTest {
     private val state = LauncherShellState(installedApps = listOf(mailApp, notesApp))
+    private val mailContent =
+        listOf(AppStageContent(LauncherCardId("mail-1"), mailStageId, AppStageContentKind.NOTIFICATION, 1L))
     private val stages =
         listOf(
             AppStage(notesStageId, setOf(AppStageOrigin.PINNED), AppStageLifecycle.EMPTY),
-            AppStage(mailStageId, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.EMPTY),
+            AppStage(mailStageId, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.ACTIVE, mailContent),
         )
 
     @Test
-    fun everySelectorEntryDelegatesBackSoTheDockNeverLearnsWhatAStageIs() {
+    fun onlyAnUnpinnedStageWithSomethingNewDelegatesBackAsADockEntry() {
         val entries =
             cardsStageSelectorDockEntries(CardsStageSelector.entries(stages, CardsStageSelection.None), state)
 
-        assertEquals(listOf(CARDS_ALL_ENTRY_LABEL, "Notes", "Mail"), entries.map(DockDynamicEntry::label))
+        assertEquals(listOf("Mail"), entries.map(DockDynamicEntry::label))
         assertTrue(entries.all { entry -> entry.intent == DockDynamicEntryIntent.Delegate })
     }
 
     @Test
-    fun aPinnedEmptyStageIsListedAndSaysWhyItIsQuiet() {
-        val entries =
-            cardsStageSelectorDockEntries(CardsStageSelector.entries(stages, CardsStageSelection.None), state)
+    fun aPinnedStageNeverAppearsHereRegardlessOfContent() {
+        val pinnedWithContent =
+            listOf(AppStage(notesStageId, setOf(AppStageOrigin.PINNED), AppStageLifecycle.ACTIVE, mailContent))
 
-        val notes = entries.single { entry -> entry.label == "Notes" }
-        assertEquals(notesApp.identity, notes.identity)
-        assertEquals("Notes, pinned, nothing new, Open stage", notes.contentDescription)
+        val entries =
+            cardsStageSelectorDockEntries(
+                CardsStageSelector.entries(pinnedWithContent, CardsStageSelection.None),
+                state,
+            )
+
+        assertTrue(entries.isEmpty())
+    }
+
+    @Test
+    fun anUnpinnedStageWithNothingNewIsExcludedTooJustLikeGridModes() {
+        val quiet = listOf(AppStage(mailStageId, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.EMPTY))
+
+        val entries = cardsStageSelectorDockEntries(CardsStageSelector.entries(quiet, CardsStageSelection.None), state)
+
+        assertTrue(entries.isEmpty())
     }
 
     @Test
     fun theShowingEntryIsMarkedSelectedAndSaysSo() {
         val entries =
-            cardsStageSelectorDockEntries(CardsStageSelector.entries(stages, CardsStageSelection.All), state)
+            cardsStageSelectorDockEntries(
+                CardsStageSelector.entries(stages, CardsStageSelection.Stage(mailStageId)),
+                state,
+            )
 
-        assertTrue(entries.first().isSelected)
-        assertTrue(entries.first().contentDescription.endsWith("Showing. Open stage"))
-        assertFalse(entries.drop(1).any(DockDynamicEntry::isSelected))
+        assertTrue(entries.single().isSelected)
+        assertTrue(entries.single().contentDescription.endsWith("Showing. Open stage"))
     }
 
     @Test
