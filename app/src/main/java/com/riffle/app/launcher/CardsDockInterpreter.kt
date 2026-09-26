@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.riffle.app.launcher.notifications.AppStageShellState
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
@@ -11,27 +12,30 @@ import com.riffle.core.domain.launcher.cards.CardsDockItemStageAction
 import com.riffle.core.domain.launcher.cards.CardsStageSelection
 import com.riffle.core.domain.launcher.cards.CardsStageSelector
 import com.riffle.core.domain.launcher.cards.CardsStageSelectorEntry
+import com.riffle.core.domain.launcher.cards.toAppStageId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 
 /*
- * Cards' side of the dock boundary (Decision 2 in docs/product/modes-dock-handle-and-cards-plan.md).
+ * Cards' side of the dock boundary (Decision 2 in docs/product/modes-dock-handle-and-cards-plan.md;
+ * Decision 5's "static dock icons launch their app" is overridden here for a pinned stage -- #XXXX).
  *
  * The dock is mode-agnostic: it renders neutral entries and reports neutral intents -- a pinned app
- * tapped (always opens it), a dynamic entry activated (by key), a long-press menu item chosen. Every
- * piece of Cards meaning -- that the dynamic section is the stage selector, that "All" comes first,
- * what "Show stage" does -- is decided here, in Cards code, and never in the dock.
+ * tapped, a dynamic entry activated (by key), a long-press menu item chosen. Every piece of Cards
+ * meaning -- that a pinned app which is also a stage navigates to it instead of launching, that the
+ * dynamic section is the unpinned stages with something new -- is decided here, in Cards code, and
+ * never in the dock.
  *
  * It all reaches the dock through one value, the [HomeDockInterpreter] [rememberCardsDockInterpreter]
  * builds: the same host contract grid modes fill with its defaults.
  */
 
 /**
- * Cards' [HomeDockInterpreter]: the dynamic section is the stage selector ("All" first, then every
- * stage, the showing one ringed), each entry delegating back to [interpretCardsDockEntry] by key; a
- * pinned icon opens its app as in every mode, with "Show stage" / "Pin stage" on its long-press
- * menu; and the expanded shelf drops its notification row, because the stages already are the
- * notifications.
+ * Cards' [HomeDockInterpreter]: the dynamic section is the unpinned stages with something new, each
+ * entry delegating back to [interpretCardsDockEntry] by key; a pinned icon that is also a stage
+ * navigates to it on a tap instead of launching the app (a pinned icon with no stage still launches,
+ * same as any other mode), with "Show stage" / "Pin stage" still on its long-press menu; and the
+ * expanded shelf drops its notification row, because the stages already are the notifications.
  */
 @Composable
 internal fun rememberCardsDockInterpreter(
@@ -58,6 +62,7 @@ internal fun rememberCardsDockInterpreter(
             )
         },
         staticItemMenuExtras = dockItemMenuExtras,
+        staticItemTapOverride = { identity -> cardsStaticItemTapOverride(identity, stages) },
         // "Show stage" from a pinned icon's menu selects a stage, so it leaves "All" like the selector.
         onAction = { action ->
             interpretCardsAction(action, adaptiveStageContext, onAdaptiveStageContextChanged, onAction)
@@ -65,6 +70,20 @@ internal fun rememberCardsDockInterpreter(
         showExpandedNotificationShelf = false,
     )
 }
+
+/**
+ * What a tap on a pinned dock app does in Cards: navigates to its stage when it has one, instead of
+ * the every-mode default of launching the app -- a pinned Cards stage is reached the same way its
+ * dynamic-section counterpart was before it got pinned. `null` (no matching stage, e.g. notification
+ * access not yet granted) falls back to the default launch, same as any other pinned dock icon.
+ */
+internal fun cardsStaticItemTapOverride(
+    identity: AppIdentity,
+    stages: List<AppStage>,
+): LauncherShellAction? =
+    stages
+        .firstOrNull { stage -> stage.id == identity.toAppStageId() }
+        ?.let { stage -> LauncherShellAction.SelectAppStage(stage.id) }
 
 /** What the Cards surface is showing, in the selector's terms. */
 internal fun cardsStageSelection(

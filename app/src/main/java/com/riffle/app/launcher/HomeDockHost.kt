@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -98,6 +99,11 @@ internal data class HomeDockInterpreter(
     val onDynamicEntryDelegated: (String) -> Unit = {},
     /** Items the mode adds to a pinned app's long-press menu; a tap on a pinned app always opens it. */
     val staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
+    /**
+     * What a tap on a pinned app does instead of opening it, when the mode wants something else for
+     * that identity; null (the default) keeps every mode's "a tap always opens it".
+     */
+    val staticItemTapOverride: (AppIdentity) -> LauncherShellAction? = { null },
     /**
      * Where the actions the dock sends go before reaching the shell -- a mode that reads some of
      * them in its own terms (Cards leaving "All" when a stage is selected) routes them here; null
@@ -208,6 +214,7 @@ internal fun HomeDockHost(
                     dynamicEntries = interpreter.dynamicEntries ?: notificationShelfState.dynamicEntries(),
                     onDynamicEntryDelegated = interpreter.onDynamicEntryDelegated,
                     staticItemMenuExtras = interpreter.staticItemMenuExtras,
+                    staticItemTapOverride = interpreter.staticItemTapOverride,
                     isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,
                 )
             }

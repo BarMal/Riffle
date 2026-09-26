@@ -25,6 +25,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
+import com.riffle.core.domain.launcher.cards.toAppStageId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -211,8 +212,12 @@ class CardModeGuardedSurfaceTest {
         composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { click() }
 
+        // A pinned dock icon that is also a stage navigates to it instead of launching (#XXXX).
         composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.LaunchApp(app.identity)), actions)
+            assertEquals(
+                listOf(LauncherShellAction.SelectAppStage(app.identity.toAppStageId())),
+                actions,
+            )
         }
     }
 
@@ -281,8 +286,12 @@ class CardModeGuardedSurfaceTest {
             click(Offset(width / 2f, 1f))
         }
 
+        // A pinned dock icon that is also a stage navigates to it instead of launching (#XXXX).
         composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.LaunchApp(overflow.identity)), actions)
+            assertEquals(
+                listOf(LauncherShellAction.SelectAppStage(overflow.identity.toAppStageId())),
+                actions,
+            )
         }
     }
 

@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleMotion
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
@@ -48,6 +49,7 @@ internal fun StandardHomeDockArea(
     dynamicEntries: List<DockDynamicEntry> = notificationShelfState.dynamicEntries(),
     onDynamicEntryDelegated: (String) -> Unit = {},
     staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
+    staticItemTapOverride: (AppIdentity) -> LauncherShellAction? = { null },
     isDraggedItemOverDock: Boolean = false,
 ) {
     if (!layout.shouldShowDock()) {
@@ -69,19 +71,17 @@ internal fun StandardHomeDockArea(
             layout.editMode == HomeEditMode.Browsing
     val showDockShelf = isDockShelfExpanded && canExpand
     val dockInteractions =
-        DockInteractions(
-            haptics = actions.haptics,
-            onFolderOpen = actions.onFolderOpen,
-            isShelfExpanded = showDockShelf,
-            shelfExpandAffordance = layout.dock.expandAffordance,
+        dockAreaInteractions(
+            layout = layout,
+            presentation = presentation,
+            actions = actions,
             position = position,
-            onShelfExpandedChange = onDockShelfExpandedChange.takeIf { canExpand },
-            reducedMotion = presentation.reducedMotion,
-            homeInsetPolicy = presentation.homeInsetPolicy,
-            homeLayout = layout,
+            showDockShelf = showDockShelf,
+            canExpand = canExpand,
+            onDockShelfExpandedChange = onDockShelfExpandedChange,
             staticItemMenuExtras = staticItemMenuExtras,
-            isDropHighlighted = isDraggedItemOverDock,
-            onAction = actions.onAction,
+            staticItemTapOverride = staticItemTapOverride,
+            isDraggedItemOverDock = isDraggedItemOverDock,
         )
     val margins = layout.settings.grid.margin.centered()
     val runsAlongASide = !position.isHorizontalEdge
@@ -138,6 +138,35 @@ internal fun StandardHomeDockArea(
         }
     }
 }
+
+@Suppress("LongParameterList")
+private fun dockAreaInteractions(
+    layout: HomeLayout,
+    presentation: StandardHomePresentation,
+    actions: HomeWorkspaceActions,
+    position: DockPosition,
+    showDockShelf: Boolean,
+    canExpand: Boolean,
+    onDockShelfExpandedChange: (Boolean) -> Unit,
+    staticItemMenuExtras: DockItemMenuExtras,
+    staticItemTapOverride: (AppIdentity) -> LauncherShellAction?,
+    isDraggedItemOverDock: Boolean,
+): DockInteractions =
+    DockInteractions(
+        haptics = actions.haptics,
+        onFolderOpen = actions.onFolderOpen,
+        isShelfExpanded = showDockShelf,
+        shelfExpandAffordance = layout.dock.expandAffordance,
+        position = position,
+        onShelfExpandedChange = onDockShelfExpandedChange.takeIf { canExpand },
+        reducedMotion = presentation.reducedMotion,
+        homeInsetPolicy = presentation.homeInsetPolicy,
+        homeLayout = layout,
+        staticItemMenuExtras = staticItemMenuExtras,
+        staticItemTapOverride = staticItemTapOverride,
+        isDropHighlighted = isDraggedItemOverDock,
+        onAction = actions.onAction,
+    )
 
 /** The dock as it stands: its own strip, or the shelf it grows into. */
 @Composable

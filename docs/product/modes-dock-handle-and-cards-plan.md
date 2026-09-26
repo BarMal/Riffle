@@ -110,9 +110,13 @@ and Library benefit directly.
    background fades back in on settle. The two layouts slide with pull progress: the outgoing
    layout moves with the dock, and the incoming layout follows in from the side the dock came from.
    Reduced motion: a short crossfade to the same end state.
-5. **In Cards, the dock's dynamic section is the compact stage selector.** The spine becomes
-   optional; static dock icons **launch** their app (muscle memory), long-press offers "Show
-   stage". "All" and "Now" get permanent entries.
+5. **In Cards, the dock's dynamic section is the unpinned stages with something new** (revised
+   #XXXX: a pinned stage renders as a static dock icon instead of living in this section too, the
+   same pinned/dynamic split grid modes already enforce). The spine becomes optional; static dock
+   icons **launch** their app (muscle memory) *unless* the icon is also a stage, in which case a
+   tap navigates to it instead (#XXXX) -- long-press still offers "Show stage" / "Pin stage" either
+   way. "All" and "Now" get permanent entries pending a dedicated multi-finger-pinch gesture (#XXXX);
+   until then neither has a dock entry point.
 6. **Cards opens on Index**, a text-first contents page (Niagara-like) that leads into the stacks; on
    a large screen, Index and the selected stack form a two-page book spread. See #1229.
 7. **Cards always has something in it**: a pinned **Now** stage (glance), a **Recents** stage, RSS

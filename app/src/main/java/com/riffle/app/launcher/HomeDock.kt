@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -615,6 +616,11 @@ internal data class DockInteractions(
      * opens it, in every mode; this is where a mode offers anything more (Cards: "Show stage").
      */
     val staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
+    /**
+     * What a mode wants a tap on a pinned app to do instead of opening it; null keeps the default
+     * (Cards: a pinned app that is also a stage navigates to it instead, see CardsDockPinning.kt).
+     */
+    val staticItemTapOverride: (AppIdentity) -> LauncherShellAction? = { null },
     /** Whether a home-grid item is currently being dragged over the dock, and would drop into it. */
     val isDropHighlighted: Boolean = false,
     val onAction: (LauncherShellAction) -> Unit,
@@ -1106,7 +1112,10 @@ private fun DockShortcut(
                     } else {
                         Modifier.combinedClickable(
                             onClick = {
-                                presentation.interactions.onAction(shortcut.launchAction())
+                                val action =
+                                    presentation.interactions.staticItemTapOverride(shortcut.appIdentity)
+                                        ?: shortcut.launchAction()
+                                presentation.interactions.onAction(action)
                             },
                             onLongClick = {
                                 presentation.interactions.haptics.longPress()
