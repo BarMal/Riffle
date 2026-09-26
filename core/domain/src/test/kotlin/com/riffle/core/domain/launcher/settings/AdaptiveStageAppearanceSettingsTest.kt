@@ -779,8 +779,12 @@ class AdaptiveStageAppearanceSettingsTest {
         // complement (a fixed, non-configurable part of the stack-bounding math) -- close to, but
         // not exactly, full size.
         assertTrue(neighborEntry.scale >= MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE)
-        assertEquals(0f, neighborEntry.offset)
-        assertEquals(0f, neighborEntry.rotationDegrees)
+        // Delta-based: this neighbor is the "above focus" entry (signedDistance -1), whose offset/
+        // rotation formulas multiply by signedDistance.sign, so a zero input can legitimately
+        // resolve to -0.0f -- distinct from 0f under kotlin.test's boxed Float equality, though not
+        // under IEEE 754 comparison.
+        assertEquals(0f, neighborEntry.offset, 0f)
+        assertEquals(0f, neighborEntry.rotationDegrees, 0f)
     }
 
     @Test
