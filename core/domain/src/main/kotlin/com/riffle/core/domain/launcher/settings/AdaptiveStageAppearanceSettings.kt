@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.core.domain.launcher.settings
 
 import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing

@@ -8,6 +8,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
+@Suppress("LargeClass")
 class AdaptiveStageAppearanceSettingsTest {
     @Test
     fun modernDefaultIsCoherentAndMatchesThePlainConstructorDefault() {
