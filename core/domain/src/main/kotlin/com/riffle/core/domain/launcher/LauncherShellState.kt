@@ -16,6 +16,8 @@ import com.riffle.core.domain.launcher.cards.AppStagePlanner
 import com.riffle.core.domain.launcher.cards.AppStageProfileState
 import com.riffle.core.domain.launcher.cards.AppStageSnapshot
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.cards.dockPinnedStageIds
+import com.riffle.core.domain.launcher.cards.toAppStageId
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -112,11 +114,16 @@ data class LauncherShellState(
                     .cards
                     .stagePreferencesFor(homeLayoutSet.activeKey)
                     .let { preferences ->
-                        if (preferences.selectedStageId == null) {
-                            preferences.copy(selectedStageId = previous?.preferences?.selectedStageId)
-                        } else {
-                            preferences
-                        }
+                        // Pinning a stage now means pinning its app to the dock: the dock's own items
+                        // are the live source of what is pinned. The persisted pinnedStageIds is read
+                        // only as a migration seed, unioned in so a legacy pin never reads as unpinned
+                        // before (or without) that migration materializing its dock item.
+                        preferences.copy(
+                            pinnedStageIds =
+                                (dockPinnedStageIds(homeLayoutSet.activeLayout.dock) + preferences.pinnedStageIds)
+                                    .distinct(),
+                            selectedStageId = preferences.selectedStageId ?: previous?.preferences?.selectedStageId,
+                        )
                     },
             previous = previous,
         )
@@ -171,7 +178,7 @@ enum class WidgetProviderCatalogStatus {
     FAILED,
 }
 
-private fun InstalledApp.toAppStageId(): AppStageId = AppStageId(identity.packageName, identity.profile.id)
+private fun InstalledApp.toAppStageId(): AppStageId = identity.toAppStageId()
 
 private fun LauncherShellState.appStageContentSnapshot(): AppStageContentSnapshot =
     if (notificationAccessStatus != NotificationAccessStatus.GRANTED) {

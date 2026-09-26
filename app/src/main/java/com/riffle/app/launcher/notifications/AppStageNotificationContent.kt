@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.cards.AppStageOrigin
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.AppStageSnapshot
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.cards.representativeInstalledAppForStage
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
@@ -187,20 +188,12 @@ fun appStageEmptyAppCard(
     installedApps: List<InstalledApp>,
     shortcutsByApp: AppShortcutsByApp,
 ): AppStageEmptyAppCard? =
-    installedApps
-        .asSequence()
-        .filter { app ->
-            app.identity.packageName == stageId.packageName &&
-                app.identity.profile.id == stageId.profileId
-        }
-        .sortedBy { app -> app.identity.activityName.value }
-        .firstOrNull()
-        ?.let { app ->
-            AppStageEmptyAppCard(
-                app = app,
-                shortcuts = shortcutsByApp[app.identity].orEmpty().filter(AppShortcut::enabled),
-            )
-        }
+    representativeInstalledAppForStage(stageId, installedApps)?.let { app ->
+        AppStageEmptyAppCard(
+            app = app,
+            shortcuts = shortcutsByApp[app.identity].orEmpty().filter(AppShortcut::enabled),
+        )
+    }
 
 /**
  * One card per notification when there's no genuine per-message history to divide up -- redacted

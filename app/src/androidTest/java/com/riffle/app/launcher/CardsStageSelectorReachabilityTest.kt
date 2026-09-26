@@ -1,13 +1,9 @@
 package com.riffle.app.launcher
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -42,16 +38,18 @@ import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * #1212: in Cards the dock's dynamic section is the stage selector, and every destination on it --
- * "All", a stage with notifications, and a pinned stage with none -- is reachable by touch and by a
- * screen reader's click action. The spine is off by default, so this is the only on-screen selector
- * a compact window has.
+ * #1212 (revised #XXXX): in Cards the dock's dynamic section is the stage selector, but only for a
+ * stage with something new that is not already pinned -- a pinned stage (Notes here) renders as an
+ * ordinary static dock icon instead (see CardsDockPinning.kt), reachable and behaving exactly like
+ * any other pinned app until #XXXX (tap-to-navigate for a pinned stage) changes what its tap does.
+ * "All" has no entry point on the dock at all pending a dedicated gesture. The spine is off by
+ * default, so the dynamic section is the only on-screen selector a compact window has for stages
+ * that are not pinned.
  */
 @RunWith(AndroidJUnit4::class)
 class CardsStageSelectorReachabilityTest {
@@ -59,67 +57,57 @@ class CardsStageSelectorReachabilityTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun everyStageIncludingAPinnedEmptyOneIsReachableByTouch() {
+    fun anUnpinnedStageWithSomethingNewIsReachableByTouch() {
         val actions = mutableListOf<LauncherShellAction>()
         setContent(actions)
 
-        tile(NOTES_LABEL).performScrollTo().performClick()
         tile(MAIL_LABEL).performScrollTo().performClick()
 
         composeRule.runOnIdle {
             assertEquals(
-                listOf<LauncherShellAction>(
-                    LauncherShellAction.SelectAppStage(notesStageId),
-                    LauncherShellAction.SelectAppStage(mailStageId),
-                ),
+                listOf(LauncherShellAction.SelectAppStage(mailStageId)),
                 actions.filterIsInstance<LauncherShellAction.SelectAppStage>(),
             )
         }
     }
 
     @Test
-    fun allIsAlwaysOfferedAndSwitchesToTheMergedView() {
-        var context by mutableStateOf(AdaptiveStageInteractionContext())
-        setContent(mutableListOf(), onContextChanged = { next -> context = next }, context = { context })
+    fun aPinnedStageIsNotOnTheDynamicSectionAtAll() {
+        setContent(mutableListOf())
 
-        tile(CARDS_ALL_ENTRY_LABEL).performScrollTo().performClick()
-
-        composeRule.runOnIdle { assertTrue(context.allNotificationsSelected) }
-        composeRule.onNodeWithContentDescription("Cards stage: $CARDS_ALL_ENTRY_LABEL").assertIsDisplayed()
+        tile(NOTES_LABEL).assertDoesNotExist()
     }
 
     @Test
-    fun everyEntryIsReachableByAScreenReader() {
+    fun allHasNoDockEntryPendingItsOwnGesture() {
+        setContent(mutableListOf())
+
+        composeRule.onNodeWithContentDescription("Cards stage: $CARDS_ALL_ENTRY_LABEL").assertDoesNotExist()
+    }
+
+    @Test
+    fun theDynamicEntryIsReachableByAScreenReader() {
         val actions = mutableListOf<LauncherShellAction>()
         setContent(actions)
 
-        listOf(CARDS_ALL_ENTRY_LABEL, NOTES_LABEL, MAIL_LABEL).forEach { label ->
-            tile(label)
-                .assert(hasClickAction())
-                .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription))
-        }
-        tile(NOTES_LABEL).performSemanticsAction(SemanticsActions.OnClick)
+        tile(MAIL_LABEL)
+            .assert(hasClickAction())
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription))
+            .performSemanticsAction(SemanticsActions.OnClick)
 
         composeRule.runOnIdle {
             assertEquals(
-                LauncherShellAction.SelectAppStage(notesStageId),
+                LauncherShellAction.SelectAppStage(mailStageId),
                 actions.filterIsInstance<LauncherShellAction.SelectAppStage>().single(),
             )
         }
     }
 
     @Test
-    fun thePinnedEmptyStageTellsAScreenReaderWhyItIsQuiet() {
-        setContent(mutableListOf())
-
-        composeRule.onNodeWithContentDescription("Notes, pinned, nothing new, Open stage").assertExists()
-    }
-
-    @Test
     fun theSpineIsOffByDefaultBecauseTheDockIsTheSelector() {
         setContent(mutableListOf())
 
-        composeRule.onNodeWithContentDescription("$NOTES_LABEL. Open stage").assertDoesNotExist()
+        composeRule.onNodeWithContentDescription("$MAIL_LABEL. Open stage").assertDoesNotExist()
     }
 
     private fun tile(label: String) = composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(label))

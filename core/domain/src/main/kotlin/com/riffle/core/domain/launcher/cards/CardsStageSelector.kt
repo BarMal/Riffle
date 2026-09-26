@@ -155,8 +155,6 @@ object CardsStageSelector {
     ): List<InstalledApp> =
         InstalledAppCatalog()
             .searchApps(apps = apps, query = query, shortcutsByApp = shortcutsByApp)
-            .filterNot { app -> app.stageId() in pinnedStageIds }
-            .distinctBy { app -> app.stageId() }
-
-    private fun InstalledApp.stageId(): AppStageId = AppStageId(identity.packageName, identity.profile.id)
+            .filterNot { app -> app.identity.toAppStageId() in pinnedStageIds }
+            .distinctBy { app -> app.identity.toAppStageId() }
 }

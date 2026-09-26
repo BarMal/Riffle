@@ -68,28 +68,18 @@ data class AppStageIdentitySnapshot(
     val profileStates: Map<AppProfileId, AppStageProfileState> = emptyMap(),
 )
 
-/** Persistable user choices only. Duplicate restored pins are normalized by [AppStagePlanner]. */
+/**
+ * Persistable user choices only. Duplicate restored pins are normalized by [AppStagePlanner].
+ *
+ * [pinnedStageIds] is a legacy field now: pinning a stage means pinning its app to the dock (#XXXX),
+ * so the dock's own items are the live source of a stage's pinned state (see
+ * `dockPinnedStageIds` in `CardsDockPinning.kt`) -- this list is read only once, as a migration seed
+ * for stages pinned before that change, and is never written to again.
+ */
 data class AppStagePreferences(
     val pinnedStageIds: List<AppStageId> = emptyList(),
     val selectedStageId: AppStageId? = null,
 ) {
-    fun pin(stageId: AppStageId): AppStagePreferences =
-        if (stageId in pinnedStageIds) this else copy(pinnedStageIds = pinnedStageIds + stageId)
-
-    fun unpin(stageId: AppStageId): AppStagePreferences = copy(pinnedStageIds = pinnedStageIds - stageId)
-
-    fun movePinnedStage(
-        stageId: AppStageId,
-        targetIndex: Int,
-    ): AppStagePreferences {
-        val sourceIndex = pinnedStageIds.indexOf(stageId)
-        if (sourceIndex < 0) return this
-        val reordered = pinnedStageIds.toMutableList()
-        reordered.removeAt(sourceIndex)
-        reordered.add(targetIndex.coerceIn(0, reordered.size), stageId)
-        return copy(pinnedStageIds = reordered)
-    }
-
     fun select(stageId: AppStageId?): AppStagePreferences = copy(selectedStageId = stageId)
 }
 
