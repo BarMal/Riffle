@@ -55,6 +55,25 @@ class HomeLayoutDockUnificationTest {
     }
 
     @Test
+    fun selectingAModeStoresTheSharedDockNotWhateverThatModeLastHeld() {
+        val library = threeModes(activeMode = LIBRARY)
+        val pinned =
+            library.withActiveLayout(
+                library.activeLayout.copy(dock = library.activeLayout.dock.copy(items = listOf(app("mail")))),
+            )
+
+        LauncherViewMode.entries.forEach { mode ->
+            val selected = pinned.selectMode(mode)
+            // Not just once read back through layoutFor/activeLayout (which normalizes either way):
+            // the layout selectMode itself just stored already carries the shared dock too, so a
+            // reader of [HomeLayoutSet.layouts] directly (persistence, a future caller) never sees a
+            // mode's stale dock sitting out of step with every other mode's (#1206
+            // dock-transition-consistency).
+            assertEquals(listOf(app("mail")), selected.layouts.getValue(key(mode)).dock.items, "$mode")
+        }
+    }
+
+    @Test
     fun aModeCreatedOnFirstVisitShowsTheSharedDock() {
         val dock = DockModel(capacity = 6, items = listOf(app("phone")), position = DockPosition.RIGHT)
         val standardOnly = HomeLayoutSet.standard().withActiveDock(dock)

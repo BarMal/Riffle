@@ -72,6 +72,17 @@ fun HomeDestination(
             onAction = onAction,
         )
 
+    // The same state [dockEdge] and [dockInterpreter] are already drawn for: [plan.shownMode], not
+    // necessarily [plan.currentMode]. Once a commit lands, [plan.shownMode] stands in for the
+    // destination mode (through [dockPull]'s pending switch) a beat before the shell itself catches
+    // up and [state] reflects it (#1206). Reading the dock's own content and installed-app list from
+    // [state] directly -- as opposed to this -- would draw the settled-in-place dock against
+    // still-outgoing data for that beat, then pop to the incoming data the instant the shell answers:
+    // the position jump and item-order flicker this fixes (see AGENTS.md dock-transition-consistency
+    // follow-up to #1206/#1278). [dockHostState] is [state] itself once the shell has caught up, so
+    // this changes nothing outside that beat.
+    val dockHostState = plan.stateFor(plan.shownMode)
+
     Box(modifier = Modifier.fillMaxSize().then(pull.rootModifier)) {
         // The one dock, outside the mode surface: composed at the same place whichever surface runs
         // below, so a mode switch keeps this instance (#1205, Decision 2). What differs by mode
@@ -79,8 +90,8 @@ fun HomeDestination(
         // edges. Composed first so the mode's overlays cover it; the grid's own frame sits beneath
         // it (see HOME_CONTENT_Z_INDEX). While a pull runs it is lifted over both surfaces.
         HomeDockHost(
-            layout = state.homeLayout,
-            installedApps = state.installedApps,
+            layout = dockHostState.homeLayout,
+            installedApps = dockHostState.installedApps,
             presentation = presentation,
             position = pull.dockEdge,
             hostState = dockHost,
