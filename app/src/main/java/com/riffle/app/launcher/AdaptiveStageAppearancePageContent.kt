@@ -83,6 +83,7 @@ import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TRANSITION_DU
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH
+import com.riffle.core.domain.launcher.settings.MAX_CARDS_PAGE_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_ARC_WIDTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT
@@ -112,6 +113,7 @@ import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRANSITION_DU
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH
+import com.riffle.core.domain.launcher.settings.MIN_CARDS_PAGE_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.SYMMETRIC_ABOVE_FOCUS_DEPTH
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
@@ -371,6 +373,13 @@ private fun AdaptiveStageLayoutTabContent(
         SettingsListRow(
             title = "About Split",
             subtitle = "Split shows card details in a larger area above the stack",
+        )
+        DiscreteSettingSlider(
+            title = "Page vertical offset",
+            value = state.settings.cards.pageVerticalOffsetDp,
+            valueRange = MIN_CARDS_PAGE_VERTICAL_OFFSET_DP..MAX_CARDS_PAGE_VERTICAL_OFFSET_DP,
+            valueLabel = { "$it dp" },
+            onValueChange = { value -> onAction(LauncherShellAction.SelectCardsPageVerticalOffset(value)) },
         )
     }
     SettingsSection(title = "Threads") {
