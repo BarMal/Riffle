@@ -896,7 +896,11 @@ const val MAX_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT = 115
 const val MIN_ADAPTIVE_STAGE_FOCUSED_GAP_DP = 0
 const val MAX_ADAPTIVE_STAGE_FOCUSED_GAP_DP = 64
 const val MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH = 1
-const val MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH = 6
+
+// Was 6. A dense "deck" look (many thin background slivers peeking out) reads as barely visible
+// at 6 once alphaStep/scaleStep are divided across that many depths; 8 gives that look more room
+// without changing the default (4) or any existing stored value below the old ceiling.
+const val MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH = 8
 
 /**
  * The [AdaptiveStageGeometry.aboveFocusDepth] value meaning "however far [
@@ -920,13 +924,36 @@ const val MAX_ADAPTIVE_STAGE_STACK_PEAK_PERCENT = 85
 /** Centres the focused card on the stage -- this surface's prior fixed behavior. */
 const val CENTERED_ADAPTIVE_STAGE_STACK_PEAK_PERCENT = 50
 const val MIN_ADAPTIVE_STAGE_OVERLAP_PERCENT = 0
-const val MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT = 60
+
+// Was 60 -- alphaStep is overlapPercent/100/depth (see resolveCardStack), so 60 could never fade a
+// background card fully out no matter how shallow the stack got. 100 lets the deepest visible card
+// reach fully transparent at any depth, the other end of the fade this field already controls.
+const val MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT = 100
 const val MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP = 0
-const val MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP = 96
+
+// Was 96dp. resolveCardStack clips this against the real per-viewport vertical travel budget
+// anyway (verticalTravel / visibleDepth), so raising the ceiling never overshoots a device's own
+// screen -- but at 96 it was *also* well short of a realistic card's own height (a PRIMARY card is
+// commonly 300-500dp tall), so no combination of settings could ever separate adjacent cards enough
+// to stop overlapping and read as a plain non-overlapping vertical list. 640 clears that for every
+// realistic card height, so "spacing >= card height" (a true flat list, paired with 0 overlap/curve/
+// horizontal-offset/rotation and NONE fan direction) is reachable by the slider alone rather than
+// only via the hardcoded unfolded() preset.
+const val MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP = 640
 const val MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP = 0
-const val MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP = 160
+
+// Was 160dp -- modest next to a phone's own width, capping how far a fan could spread even with
+// the widest card. 260 reaches a visibly dramatic side-to-side fan on a typical phone width
+// without depending on tablet-sized viewports; resolveCardStack still clips it against the real
+// horizontal travel budget on narrower screens.
+const val MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP = 260
 const val MIN_ADAPTIVE_STAGE_CURVE_DP = 0
-const val MAX_ADAPTIVE_STAGE_CURVE_DP = 96
+
+// Was 96dp, same reasoning as the horizontal offset ceiling above: too shallow to read as a
+// pronounced arched cascade once split across a multi-card-deep stack. 200 gives a strongly curved
+// "timescape" cascade room to be visible at higher visibleDepth values, still clipped by whatever
+// vertical travel remains after verticalSpacingDp's own share.
+const val MAX_ADAPTIVE_STAGE_CURVE_DP = 200
 
 /**
  * [AdaptiveStageGeometry.rotationDegrees] is signed: its magnitude is how far the outermost visible
@@ -940,9 +967,14 @@ const val MAX_ADAPTIVE_STAGE_CURVE_DP = 96
  *
  * 0 still means no rotation and remains the midpoint of the slider, so a stored value is unaffected
  * by the widened range.
+ *
+ * The magnitude itself was widened from 18 to 32 for the same reason as the other fan-strength
+ * ceilings above (see [MAX_ADAPTIVE_STAGE_CURVE_DP]): 18 degrees on the outermost card reads as a
+ * gentle lean, well short of the pronounced tilted-deck look the reference "Calm" timescape can
+ * reach. 0 remains the midpoint either way.
  */
-const val MIN_ADAPTIVE_STAGE_ROTATION_DEGREES = -18
-const val MAX_ADAPTIVE_STAGE_ROTATION_DEGREES = 18
+const val MIN_ADAPTIVE_STAGE_ROTATION_DEGREES = -32
+const val MAX_ADAPTIVE_STAGE_ROTATION_DEGREES = 32
 const val MIN_ADAPTIVE_STAGE_CORNER_RADIUS_DP = 0
 const val MAX_ADAPTIVE_STAGE_CORNER_RADIUS_DP = 64
 const val MIN_ADAPTIVE_STAGE_CONTENT_PADDING_DP = 0

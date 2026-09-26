@@ -44,7 +44,7 @@ class AdaptiveStageAppearanceSettingsTest {
 
         assertEquals(CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION, coerced.version)
         assertEquals(55, coerced.geometry.cardAspectRatioPercent)
-        assertEquals(6, coerced.geometry.visibleDepth)
+        assertEquals(MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH, coerced.geometry.visibleDepth)
         assertEquals(0, coerced.geometry.contentPaddingDp)
         assertEquals(MAX_ADAPTIVE_STAGE_STACK_PEAK_PERCENT, coerced.geometry.stackPeakPercent)
         assertEquals(100, coerced.surface.blurStrengthPercent)
@@ -738,6 +738,68 @@ class AdaptiveStageAppearanceSettingsTest {
         assertTrue(modern.geometry.overlapPercent > 0)
         assertTrue(modern.geometry.curveDp > 0)
         assertNotEquals(modern.geometry, unfolded.geometry)
+    }
+
+    @Test
+    fun maximumVerticalSpacingReachesAGenuinelyNonOverlappingFlatListAtARealisticCardSize() {
+        // Regression guard for the complaint this range widening fixes: at the old 96dp ceiling,
+        // no combination of settings could separate adjacent cards by at least the card's own
+        // height, so a plain non-overlapping vertical list was unreachable through the sliders
+        // alone. A small card (cardSizePercent at its floor) and a single background ring leave a
+        // generous travel budget, so this isolates the vertical-spacing ceiling itself rather than
+        // the (legitimate, separate) travel-budget limit a large card/high depth would still hit.
+        // visibleDepth = 2 (rather than 1) keeps the immediate neighbor's depth (1) below the edge
+        // -fade multiplier's own start (see CardStackLayoutPolicy.edgeFadeMultiplier), which would
+        // otherwise zero its alpha regardless of overlapPercent -- the fade this test isn't about.
+        val viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 6_000)
+        val resolution =
+            AdaptiveStageAppearanceSettings(
+                geometry =
+                    AdaptiveStageGeometry(
+                        cardSizePercent = 50,
+                        visibleDepth = 2,
+                        overlapPercent = 0,
+                        curveDp = 0,
+                        rotationDegrees = 0,
+                        horizontalOffsetDp = 0,
+                        fanDirection = AdaptiveStageFanDirection.NONE,
+                        verticalSpacingDp = MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP,
+                    ),
+            ).resolveCardStack(viewport)
+        val neighborEntry =
+            resolution.layoutPolicy.entries(cardCount = 4, activeIndex = 1).first { it.depth == 1 }
+
+        assertTrue(resolution.isUsable)
+        assertTrue(kotlin.math.abs(neighborEntry.verticalOffset) >= resolution.cardHeightDp)
+        assertEquals(1f, neighborEntry.alpha)
+        // The neighbor still shrinks by at most MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE's
+        // complement (a fixed, non-configurable part of the stack-bounding math) -- close to, but
+        // not exactly, full size.
+        assertTrue(neighborEntry.scale >= MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE)
+        assertEquals(0f, neighborEntry.offset)
+        assertEquals(0f, neighborEntry.rotationDegrees)
+    }
+
+    @Test
+    fun maximumOverlapFadesNearCardsMoreThanTheOldCeilingCould() {
+        // Was capped at 60 (alphaStep = overlapPercent/100/visibleDepth), which -- at any depth
+        // shy of the stack's own edge (where a separate edge-fade multiplier already zeroes alpha
+        // regardless of this field) -- could never dim a card as much as a genuinely strong
+        // "background cards fade out fast" look calls for. 100 reaches noticeably further.
+        fun depthOneAlpha(overlapPercent: Int) =
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(visibleDepth = 4, overlapPercent = overlapPercent),
+            ).resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+                .layoutPolicy
+                .entries(cardCount = 6, activeIndex = 2)
+                .first { it.depth == 1 }
+                .alpha
+
+        val atOldCeiling = depthOneAlpha(60)
+        val atNewCeiling = depthOneAlpha(MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT)
+
+        assertEquals(100, MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT)
+        assertTrue(atNewCeiling < atOldCeiling)
     }
 
     @Test
