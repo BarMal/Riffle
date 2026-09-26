@@ -144,6 +144,7 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
         .put("foldedShowAllNotifications", settings.foldedShowAllNotifications)
         .put("unfoldedShowAllNotifications", settings.unfoldedShowAllNotifications)
         .put("showStageSpine", settings.showStageSpine)
+        .put("pageVerticalOffsetDp", settings.pageVerticalOffsetDp)
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
     JSONObject()
@@ -190,7 +191,8 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
             optBoolean("unfoldedShowAllNotifications", defaults.unfoldedShowAllNotifications),
         // Absent from settings saved before #1212, which takes the default: off.
         showStageSpine = optBoolean("showStageSpine", defaults.showStageSpine),
-    )
+        pageVerticalOffsetDp = optInt("pageVerticalOffsetDp", defaults.pageVerticalOffsetDp),
+    ).coerced()
 }
 
 private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSettings): JSONObject =

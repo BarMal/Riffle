@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -14,6 +15,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.notifications.AppStageShellState
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -338,7 +340,10 @@ private fun CardsHomeSurface(
         AdaptiveStageAppStageSurface(
             state = state,
             shellState = shellState,
-            modifier = Modifier.dockInteractionPadding(dockPosition, dockInteractionExtent),
+            modifier =
+                Modifier
+                    .dockInteractionPadding(dockPosition, dockInteractionExtent)
+                    .offset(y = state.launcherSettings.cards.pageVerticalOffsetDp.dp),
             windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
             windowLayout = adaptiveStageWindowLayout,
             context = adaptiveStageContext,

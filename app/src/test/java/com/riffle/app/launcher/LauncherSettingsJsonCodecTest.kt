@@ -47,6 +47,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
+import com.riffle.core.domain.launcher.settings.MAX_CARDS_PAGE_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
@@ -206,6 +207,42 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(false, decodedSettings.cards.showStageSpine)
+    }
+
+    @Test
+    fun roundTripsAndCoercesThePageVerticalOffset() {
+        val settings = LauncherSettings(cards = CardsSettings(pageVerticalOffsetDp = -80))
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(-80, decoded.cards.pageVerticalOffsetDp)
+
+        val decodedOutOfRange =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": { "pageVerticalOffsetDp": 9999 }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(MAX_CARDS_PAGE_VERTICAL_OFFSET_DP, decodedOutOfRange.cards.pageVerticalOffsetDp)
+    }
+
+    @Test
+    fun settingsSavedBeforeThePageVerticalOffsetExistedDecodeToZero() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "showStageSpine": true
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(0, decodedSettings.cards.pageVerticalOffsetDp)
     }
 
     @Test
