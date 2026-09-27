@@ -75,8 +75,22 @@ internal fun GlassSurface(
     val backdrop = LocalLiquidGlassBackdrop.current
     val supportsLegacyBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
+    // Robolectric's native graphics mode (used by the JVM-side Roborazzi screenshot suite) shadows
+    // enough of the framework for a plain Canvas/blur to render correctly, but its RuntimeShader
+    // binding throws IllegalArgumentException from native code on construction -- a host-JVM gap
+    // unrelated to the shader's own correctness (it compiles and runs fine on a real device/emulator,
+    // per Device verify). Build.FINGERPRINT == "robolectric" is that suite's own standard idiom for
+    // detecting this, so it falls back to the legacy tint layer there instead of crashing every
+    // screenshot test that renders any glass surface.
+    val runningUnderRobolectric = Build.FINGERPRINT == "robolectric"
+
     Box(modifier = modifier.clip(shape)) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !runningUnderRobolectric &&
+            liquidGlass.enabled &&
+            backdrop != null
+        ) {
             LiquidGlassShaderLayer(
                 shape = shape,
                 tint = tint,
