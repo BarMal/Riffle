@@ -43,6 +43,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
 import com.riffle.app.launcher.notifications.MediaCommand
@@ -165,23 +166,26 @@ class AdaptiveStageCardSurfaceTest {
             MaterialTheme {
                 // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
-                // composed after the surface so it (like the real dock) wins hit-testing over the
-                // surface's own full-screen gesture handling beneath it.
+                // on an explicit higher zIndex so it (like the real dock) deterministically wins
+                // hit-testing over the surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
                 AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
-                CardsDockEdgeHeader(
-                    selectedStage = shellState.snapshot.selectedStage,
-                    allNotificationsSelected = false,
-                    stages = shellState.snapshot.stages,
-                    state = state,
-                    appIconLoader = EmptyAppIconLoader,
-                    position = DockPosition.BOTTOM,
-                    onAction = actions::add,
-                )
+                Box(modifier = Modifier.zIndex(1f)) {
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = actions::add,
+                    )
+                }
             }
         }
 
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Settings").performClick()
 
         composeRule.runOnIdle { assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenSettings), actions) }
@@ -194,15 +198,17 @@ class AdaptiveStageCardSurfaceTest {
             MaterialTheme {
                 val shellState = rememberAppStageShellState(state)
                 AdaptiveStageAppStageSurface(state = state, onAction = {})
-                CardsDockEdgeHeader(
-                    selectedStage = shellState.snapshot.selectedStage,
-                    allNotificationsSelected = false,
-                    stages = shellState.snapshot.stages,
-                    state = state,
-                    appIconLoader = EmptyAppIconLoader,
-                    position = DockPosition.BOTTOM,
-                    onAction = {},
-                )
+                Box(modifier = Modifier.zIndex(1f)) {
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = {},
+                    )
+                }
             }
         }
 
@@ -283,24 +289,27 @@ class AdaptiveStageCardSurfaceTest {
             MaterialTheme {
                 // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
-                // composed after the surface so it (like the real dock) wins hit-testing over the
-                // surface's own full-screen gesture handling beneath it.
+                // on an explicit higher zIndex so it (like the real dock) deterministically wins
+                // hit-testing over the surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
                 AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
-                CardsDockEdgeHeader(
-                    selectedStage = shellState.snapshot.selectedStage,
-                    allNotificationsSelected = false,
-                    stages = shellState.snapshot.stages,
-                    state = state,
-                    appIconLoader = EmptyAppIconLoader,
-                    position = DockPosition.BOTTOM,
-                    onAction = actions::add,
-                )
+                Box(modifier = Modifier.zIndex(1f)) {
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = actions::add,
+                    )
+                }
             }
         }
 
         // "Add stage" lives in the always-present overflow and opens a searchable picker (#1212).
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Add stage").performClick()
         composeRule.onNodeWithText(second.label).performClick()
 
@@ -1277,6 +1286,7 @@ class AdaptiveStageCardSurfaceTest {
             .onNodeWithContentDescription(ADAPTIVE_STAGE_PIN_TOGGLE_LABEL)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Not pinned"))
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(RIFFLE_CONTEXT_MENU_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Pin stage").assertDoesNotExist()
         composeRule.onNodeWithText("Open Mail").performClick()
@@ -1336,23 +1346,26 @@ class AdaptiveStageCardSurfaceTest {
             MaterialTheme {
                 // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
-                // composed after the surface so it (like the real dock) wins hit-testing over the
-                // surface's own full-screen gesture handling beneath it.
+                // on an explicit higher zIndex so it (like the real dock) deterministically wins
+                // hit-testing over the surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
                 AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
-                CardsDockEdgeHeader(
-                    selectedStage = shellState.snapshot.selectedStage,
-                    allNotificationsSelected = false,
-                    stages = shellState.snapshot.stages,
-                    state = state,
-                    appIconLoader = EmptyAppIconLoader,
-                    position = DockPosition.BOTTOM,
-                    onAction = actions::add,
-                )
+                Box(modifier = Modifier.zIndex(1f)) {
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = actions::add,
+                    )
+                }
             }
         }
 
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Settings").performClick()
 
         composeRule.runOnIdle {
