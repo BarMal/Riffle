@@ -1556,21 +1556,23 @@ private fun AdaptiveStageStageHeader(
                 )
             }
         }
-        val origin = headerOriginInRoot
-        val restBounds = restIconBoundsInRoot
-        val request = transitionRequest
-        if (animatingIdentity && request != null && origin != null && restBounds != null) {
-            DockIdentityOverlayIcon(
-                request = request,
-                headerOriginInRoot = origin,
-                restBoundsInRoot = restBounds,
-                label = label,
-                appIconLoader = appIconLoader,
-                onSettled = {
-                    haptics.perform(LauncherHapticEvent.COMMIT)
-                    dockHost?.identityTransitionRequest?.value = null
-                },
-            )
+        if (animatingIdentity) {
+            val origin = headerOriginInRoot
+            val restBounds = restIconBoundsInRoot
+            val request = transitionRequest
+            if (request != null && origin != null && restBounds != null) {
+                DockIdentityOverlayIcon(
+                    request = request,
+                    headerOriginInRoot = origin,
+                    restBoundsInRoot = restBounds,
+                    label = label,
+                    appIconLoader = appIconLoader,
+                    onSettled = {
+                        haptics.perform(LauncherHapticEvent.COMMIT)
+                        dockHost?.identityTransitionRequest?.value = null
+                    },
+                )
+            }
         }
     }
 }
