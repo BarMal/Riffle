@@ -36,15 +36,15 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.fetchSemanticsNodes
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.printToString
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -341,14 +341,25 @@ class AdaptiveStageCardSurfaceTest {
         // "Add stage" lives in the always-present overflow and opens a searchable picker (#1212).
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
         composeRule.waitForIdle()
-        // TEMPORARY DIAGNOSTIC (to be removed once the flaky/failing root cause is confirmed):
-        // this test has failed reproducibly on a real device with "could not find ... 'Add stage'"
-        // -- dumping the full semantics tree on failure so the actual rendered state is visible in
-        // CI's test output instead of guessing blind.
+        // TEMPORARY DIAGNOSTIC (to be removed once the failing root cause is confirmed): a full
+        // semantics-tree dump was truncated to 2 lines by Gradle's console reporter, so this
+        // checks a short, fixed set of candidate nodes instead -- guaranteed to fit in one line.
         try {
             composeRule.onNodeWithText("Add stage").performClick()
         } catch (e: Throwable) {
-            throw AssertionError(composeRule.onRoot(useUnmergedTree = true).printToString(Int.MAX_VALUE), e)
+            val menu = composeRule.onAllNodesWithTag(RIFFLE_CONTEXT_MENU_TEST_TAG).fetchSemanticsNodes().size
+            val openMail = composeRule.onAllNodesWithText("Open Mail").fetchSemanticsNodes().size
+            val appInfo = composeRule.onAllNodesWithText("App info").fetchSemanticsNodes().size
+            val addStage = composeRule.onAllNodesWithText("Add stage").fetchSemanticsNodes().size
+            val notifAccess = composeRule.onAllNodesWithText("Notification access").fetchSemanticsNodes().size
+            val cardsAppearance = composeRule.onAllNodesWithText("Cards appearance").fetchSemanticsNodes().size
+            val homeMode = composeRule.onAllNodesWithText("Home mode").fetchSemanticsNodes().size
+            val settings = composeRule.onAllNodesWithText("Settings").fetchSemanticsNodes().size
+            throw AssertionError(
+                "menu=$menu openMail=$openMail appInfo=$appInfo addStage=$addStage " +
+                    "notifAccess=$notifAccess cardsAppearance=$cardsAppearance homeMode=$homeMode settings=$settings",
+                e,
+            )
         }
         composeRule.onNodeWithText(second.label).performClick()
 
