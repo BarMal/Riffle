@@ -362,7 +362,7 @@ private fun AdaptiveStageAppearanceTabPill(
                 } else {
                     Color.Transparent
                 },
-            animationSpec = TactileMotionSpec(),
+            animationSpec = tactileMotionSpec(),
             label = "adaptive-stage-tab-pill",
         )
     Box(

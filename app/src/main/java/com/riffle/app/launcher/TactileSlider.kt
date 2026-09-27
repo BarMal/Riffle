@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
  * [DiscreteSettingSlider]) a slider's snap-to-value. Bouncy enough to read as a physical detent
  * rather than a plain fade.
  */
-internal fun <T> TactileMotionSpec(): FiniteAnimationSpec<T> =
+internal fun <T> tactileMotionSpec(): FiniteAnimationSpec<T> =
     spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
 
 /**
