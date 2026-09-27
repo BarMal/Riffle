@@ -273,6 +273,12 @@ private fun SettingsAppearancePageContent(
             onClick = { onAction(LauncherShellAction.ChangeWallpaper) },
         )
     }
+    SettingsSection(title = "Liquid glass") {
+        LiquidGlassSetting(
+            settings = state.settings.liquidGlass,
+            onAction = onAction,
+        )
+    }
     SettingsSection(title = "System UI") {
         SettingsSwitchRow(
             title = "Hide status bar",

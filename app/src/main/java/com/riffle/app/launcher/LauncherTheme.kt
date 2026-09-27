@@ -31,6 +31,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.ResolvedLiquidGlass
 
 @Composable
 fun RiffleLauncherTheme(
@@ -41,6 +42,7 @@ fun RiffleLauncherTheme(
     themeCornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
     themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
     reducedTransparency: Boolean = false,
+    liquidGlass: ResolvedLiquidGlass = ResolvedLiquidGlass(true, 0.45f, 0.2f, false),
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -72,6 +74,7 @@ fun RiffleLauncherTheme(
                 reducedTransparency = reducedTransparency,
             ),
         LocalLauncherThemeColorOverrides provides themeColors.toColorOverrides(),
+        LocalLiquidGlassSettings provides liquidGlass,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -87,6 +90,14 @@ internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RiffleS
 internal val LocalLauncherThemeSurfaceTokens =
     staticCompositionLocalOf { LauncherThemeSurfaceTokens() }
 internal val LocalLauncherThemeColorOverrides = staticCompositionLocalOf { LauncherThemeColorOverrides() }
+
+/**
+ * The app-wide resolved liquid-glass intent (see [ResolvedLiquidGlass]), read by [GlassSurface] so
+ * every call site picks the setting up automatically rather than threading it through each one's
+ * parameter list. Provided once here, alongside every other app-wide theme/appearance local.
+ */
+internal val LocalLiquidGlassSettings =
+    staticCompositionLocalOf { ResolvedLiquidGlass(enabled = true, 0.45f, 0.2f, reducedMotion = false) }
 
 internal data class LauncherThemeSurfaceTokens(
     val panelColor: Color = Color.Unspecified,

@@ -47,6 +47,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
+import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
 import com.riffle.core.domain.launcher.settings.MAX_CARDS_PAGE_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
@@ -886,6 +887,51 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings("{}")
 
         assertEquals(HapticFeedbackStrength.MEDIUM, decodedSettings.haptics.feedbackStrength)
+    }
+
+    @Test
+    fun roundTripsLiquidGlassSettings() {
+        val settings =
+            LauncherSettings(
+                liquidGlass =
+                    LiquidGlassSettings(
+                        enabled = false,
+                        frostStrengthPercent = 70,
+                        refractionStrengthPercent = 35,
+                    ),
+            )
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(settings.liquidGlass, decodedSettings.liquidGlass)
+    }
+
+    @Test
+    fun defaultsMissingLiquidGlassSettings() {
+        // A settings JSON saved before this field existed decodes to the same conservative
+        // defaults a fresh install gets, rather than failing or leaving the field unset.
+        val decodedSettings = decodeLauncherSettings("{}")
+
+        assertEquals(LiquidGlassSettings(), decodedSettings.liquidGlass)
+    }
+
+    @Test
+    fun coercesOutOfRangeLiquidGlassStrengthsOnDecode() {
+        val json =
+            """
+            {
+                "liquidGlass": {
+                    "enabled": true,
+                    "frostStrengthPercent": -30,
+                    "refractionStrengthPercent": 500
+                }
+            }
+            """.trimIndent()
+
+        val decodedSettings = decodeLauncherSettings(json)
+
+        assertEquals(0, decodedSettings.liquidGlass.frostStrengthPercent)
+        assertEquals(100, decodedSettings.liquidGlass.refractionStrengthPercent)
     }
 
     @Test
