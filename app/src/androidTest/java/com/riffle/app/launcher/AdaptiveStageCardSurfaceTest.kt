@@ -164,8 +164,11 @@ class AdaptiveStageCardSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
-                // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here.
+                // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
+                // composed after the surface so it (like the real dock) wins hit-testing over the
+                // surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
+                AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
                 CardsDockEdgeHeader(
                     selectedStage = shellState.snapshot.selectedStage,
                     allNotificationsSelected = false,
@@ -175,7 +178,6 @@ class AdaptiveStageCardSurfaceTest {
                     position = DockPosition.BOTTOM,
                     onAction = actions::add,
                 )
-                AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
             }
         }
 
@@ -191,6 +193,7 @@ class AdaptiveStageCardSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 val shellState = rememberAppStageShellState(state)
+                AdaptiveStageAppStageSurface(state = state, onAction = {})
                 CardsDockEdgeHeader(
                     selectedStage = shellState.snapshot.selectedStage,
                     allNotificationsSelected = false,
@@ -200,7 +203,6 @@ class AdaptiveStageCardSurfaceTest {
                     position = DockPosition.BOTTOM,
                     onAction = {},
                 )
-                AdaptiveStageAppStageSurface(state = state, onAction = {})
             }
         }
 
@@ -280,8 +282,11 @@ class AdaptiveStageCardSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
-                // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here.
+                // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
+                // composed after the surface so it (like the real dock) wins hit-testing over the
+                // surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
+                AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
                 CardsDockEdgeHeader(
                     selectedStage = shellState.snapshot.selectedStage,
                     allNotificationsSelected = false,
@@ -291,7 +296,6 @@ class AdaptiveStageCardSurfaceTest {
                     position = DockPosition.BOTTOM,
                     onAction = actions::add,
                 )
-                AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
             }
         }
 
@@ -1176,8 +1180,10 @@ class AdaptiveStageCardSurfaceTest {
             MaterialTheme {
                 // The identity pill's semantics this test targets are CardsDockEdgeHeader's now
                 // (rendered beside the dock, not inside AdaptiveStageAppStageSurface) -- mounted
-                // alongside it directly here.
+                // alongside it directly here, composed after the surface so it (like the real dock)
+                // wins hit-testing over the surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
+                AdaptiveStageAppStageSurface(state = state, onAction = {})
                 CardsDockEdgeHeader(
                     selectedStage = shellState.snapshot.selectedStage,
                     allNotificationsSelected = false,
@@ -1187,7 +1193,6 @@ class AdaptiveStageCardSurfaceTest {
                     position = DockPosition.BOTTOM,
                     onAction = {},
                 )
-                AdaptiveStageAppStageSurface(state = state, onAction = {})
             }
         }
 
@@ -1250,17 +1255,20 @@ class AdaptiveStageCardSurfaceTest {
                 // The pin toggle and overflow menu are CardsDockEdgeHeader's now (rendered beside the
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted directly here rather than
                 // through the whole surface, the same way stageHeaderExposesPreviousAndNextStageAs
-                // CustomAccessibilityActions above does.
-                val shellState = rememberAppStageShellState(state)
-                CardsDockEdgeHeader(
-                    selectedStage = shellState.snapshot.selectedStage,
-                    allNotificationsSelected = false,
-                    stages = shellState.snapshot.stages,
-                    state = state,
-                    appIconLoader = EmptyAppIconLoader,
-                    position = DockPosition.BOTTOM,
-                    onAction = actions::add,
-                )
+                // CustomAccessibilityActions above does. Sized so the overflow's DropdownMenu popup,
+                // which anchors off this content's own bounds, has a real size to anchor against.
+                Box(modifier = Modifier.width(400.dp).height(400.dp).clipToBounds()) {
+                    val shellState = rememberAppStageShellState(state)
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = actions::add,
+                    )
+                }
             }
         }
 
@@ -1327,8 +1335,11 @@ class AdaptiveStageCardSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
-                // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here.
+                // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
+                // composed after the surface so it (like the real dock) wins hit-testing over the
+                // surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
+                AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
                 CardsDockEdgeHeader(
                     selectedStage = shellState.snapshot.selectedStage,
                     allNotificationsSelected = false,
@@ -1338,7 +1349,6 @@ class AdaptiveStageCardSurfaceTest {
                     position = DockPosition.BOTTOM,
                     onAction = actions::add,
                 )
-                AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
             }
         }
 
