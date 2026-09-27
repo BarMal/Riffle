@@ -168,14 +168,14 @@ class AdaptiveStageCardSurfaceTest {
         val state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED)
         composeRule.setContent {
             MaterialTheme {
-                // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
+                // The overflow this test targets is CardsDockEdgeCardPanel's now (rendered beside the
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
                 // on an explicit higher zIndex so it (like the real dock) deterministically wins
                 // hit-testing over the surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
                 AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
                 Box(modifier = Modifier.zIndex(1f)) {
-                    CardsDockEdgeHeader(
+                    CardsDockEdgeCardPanel(
                         selectedStage = shellState.snapshot.selectedStage,
                         allNotificationsSelected = false,
                         stages = shellState.snapshot.stages,
@@ -203,7 +203,7 @@ class AdaptiveStageCardSurfaceTest {
                 val shellState = rememberAppStageShellState(state)
                 AdaptiveStageAppStageSurface(state = state, onAction = {})
                 Box(modifier = Modifier.zIndex(1f)) {
-                    CardsDockEdgeHeader(
+                    CardsDockEdgeCardPanel(
                         selectedStage = shellState.snapshot.selectedStage,
                         allNotificationsSelected = false,
                         stages = shellState.snapshot.stages,
@@ -291,12 +291,12 @@ class AdaptiveStageCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
+                // The overflow this test targets is CardsDockEdgeCardPanel's now (rendered beside the
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
                 // on an explicit higher zIndex so it (like the real dock) deterministically wins
                 // hit-testing over the surface's own full-screen gesture handling beneath it.
                 //
-                // CardsDockEdgeHeader's "Add stage" reads LocalAdaptiveStageAddStageRequest, which
+                // CardsDockEdgeCardPanel's "Add stage" reads LocalAdaptiveStageAddStageRequest, which
                 // AdaptiveStageAppStageSurface normally provides -- but only around its own subtree,
                 // not its sibling here. Production has this same gap (dockEdgeCompanion is a sibling
                 // of the mode surface, not a descendant); until that's wired up for real, this test
@@ -306,7 +306,7 @@ class AdaptiveStageCardSurfaceTest {
                 CompositionLocalProvider(LocalAdaptiveStageAddStageRequest provides { addStageSheetOpen = true }) {
                     AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
                     Box(modifier = Modifier.zIndex(1f)) {
-                        CardsDockEdgeHeader(
+                        CardsDockEdgeCardPanel(
                             selectedStage = shellState.snapshot.selectedStage,
                             allNotificationsSelected = false,
                             stages = shellState.snapshot.stages,
@@ -727,7 +727,7 @@ class AdaptiveStageCardSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 val shellState = rememberAppStageShellState(state)
-                CardsDockEdgeHeader(
+                CardsDockEdgeCardPanel(
                     selectedStage = shellState.snapshot.selectedStage,
                     allNotificationsSelected = false,
                     stages = shellState.snapshot.stages,
@@ -740,7 +740,7 @@ class AdaptiveStageCardSurfaceTest {
         }
 
         // Previous/Next are no longer visible buttons (removed as redundant with tapping a stage
-        // directly, or swiping) -- they're reachable via CardsDockEdgeHeader's customActions (now
+        // directly, or swiping) -- they're reachable via CardsDockEdgeCardPanel's customActions (now
         // rendered beside the dock, not inside AdaptiveStageAppStageSurface -- see the dockEdgeCompanion
         // wiring in CardsDockInterpreter.kt), the same CustomAccessibilityAction pattern already used
         // for intra-stack card navigation (see WidgetPickerSurfaceTest for the identical precedent).
@@ -1211,13 +1211,13 @@ class AdaptiveStageCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                // The identity pill's semantics this test targets are CardsDockEdgeHeader's now
+                // The identity pill's semantics this test targets are CardsDockEdgeCardPanel's now
                 // (rendered beside the dock, not inside AdaptiveStageAppStageSurface) -- mounted
                 // alongside it directly here, composed after the surface so it (like the real dock)
                 // wins hit-testing over the surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
                 AdaptiveStageAppStageSurface(state = state, onAction = {})
-                CardsDockEdgeHeader(
+                CardsDockEdgeCardPanel(
                     selectedStage = shellState.snapshot.selectedStage,
                     allNotificationsSelected = false,
                     stages = shellState.snapshot.stages,
@@ -1285,14 +1285,14 @@ class AdaptiveStageCardSurfaceTest {
             )
         composeRule.setContent {
             MaterialTheme {
-                // The pin toggle and overflow menu are CardsDockEdgeHeader's now (rendered beside the
+                // The pin toggle and overflow menu are CardsDockEdgeCardPanel's now (rendered beside the
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted directly here rather than
                 // through the whole surface, the same way stageHeaderExposesPreviousAndNextStageAs
                 // CustomAccessibilityActions above does. Sized so the overflow's DropdownMenu popup,
                 // which anchors off this content's own bounds, has a real size to anchor against.
                 Box(modifier = Modifier.width(400.dp).height(400.dp).clipToBounds()) {
                     val shellState = rememberAppStageShellState(state)
-                    CardsDockEdgeHeader(
+                    CardsDockEdgeCardPanel(
                         selectedStage = shellState.snapshot.selectedStage,
                         allNotificationsSelected = false,
                         stages = shellState.snapshot.stages,
@@ -1368,14 +1368,14 @@ class AdaptiveStageCardSurfaceTest {
             )
         composeRule.setContent {
             MaterialTheme {
-                // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
+                // The overflow this test targets is CardsDockEdgeCardPanel's now (rendered beside the
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
                 // on an explicit higher zIndex so it (like the real dock) deterministically wins
                 // hit-testing over the surface's own full-screen gesture handling beneath it.
                 val shellState = rememberAppStageShellState(state)
                 AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
                 Box(modifier = Modifier.zIndex(1f)) {
-                    CardsDockEdgeHeader(
+                    CardsDockEdgeCardPanel(
                         selectedStage = shellState.snapshot.selectedStage,
                         allNotificationsSelected = false,
                         stages = shellState.snapshot.stages,

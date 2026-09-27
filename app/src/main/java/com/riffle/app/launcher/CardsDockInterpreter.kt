@@ -72,11 +72,12 @@ internal fun rememberCardsDockInterpreter(
         // "Show stage" from a pinned icon's menu selects a stage, so it leaves "All" like the selector.
         onAction = interpretedOnAction,
         showExpandedNotificationShelf = false,
-        // The dock's own edge, wherever the user put it -- the stage-identity pill and pin/overflow
-        // capsule the floating header used to draw (#XXXX), now anchored beside the dock itself
-        // instead of floating near the top of the screen regardless of the dock's actual position.
+        // The dock's own edge, wherever the user put it -- the stage-identity, pin and overflow
+        // controls the floating header used to draw (#XXXX), now anchored beside the dock itself as
+        // one card-shaped panel instead of floating near the top of the screen (or as two separate
+        // pills -- see CardsDockEdgeCardPanel.kt) regardless of the dock's actual position.
         dockEdgeCompanion = {
-            CardsDockEdgeHeader(
+            CardsDockEdgeCardPanel(
                 selectedStage = shellState.snapshot.selectedStage,
                 allNotificationsSelected = adaptiveStageContext.allNotificationsSelected,
                 stages = stages,

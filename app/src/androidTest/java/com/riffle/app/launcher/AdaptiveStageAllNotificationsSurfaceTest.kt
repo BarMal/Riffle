@@ -70,11 +70,11 @@ class AdaptiveStageAllNotificationsSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
-                    // The identity pill this assertion targets is CardsDockEdgeHeader's now (rendered
+                    // The identity pill this assertion targets is CardsDockEdgeCardPanel's now (rendered
                     // beside the dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it
                     // directly here, same as AdaptiveStageCardSurfaceTest does.
                     val shellState = rememberAppStageShellState(state)
-                    CardsDockEdgeHeader(
+                    CardsDockEdgeCardPanel(
                         selectedStage = shellState.snapshot.selectedStage,
                         allNotificationsSelected = context.allNotificationsSelected,
                         stages = shellState.snapshot.stages,
@@ -111,11 +111,11 @@ class AdaptiveStageAllNotificationsSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
-                    // The identity pill this assertion targets is CardsDockEdgeHeader's now (rendered
+                    // The identity pill this assertion targets is CardsDockEdgeCardPanel's now (rendered
                     // beside the dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it
                     // directly here, same as AdaptiveStageCardSurfaceTest does.
                     val shellState = rememberAppStageShellState(state)
-                    CardsDockEdgeHeader(
+                    CardsDockEdgeCardPanel(
                         selectedStage = shellState.snapshot.selectedStage,
                         allNotificationsSelected = context.allNotificationsSelected,
                         stages = shellState.snapshot.stages,

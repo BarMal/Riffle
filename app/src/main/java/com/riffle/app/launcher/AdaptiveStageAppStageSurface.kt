@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,14 +41,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -723,7 +721,7 @@ private fun AdaptiveStageCompactContent(
             },
         )
     // The stage-identity/pin/overflow header this Column used to render inline now lives on the
-    // dock's own edge instead (see CardsDockEdgeHeader, wired in through
+    // dock's own edge instead (see CardsDockEdgeCardPanel, wired in through
     // [HomeDockInterpreter.dockEdgeCompanion]), so this Column is just the pager and its spine.
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         AdaptiveStageCompactStagePager(
@@ -807,7 +805,7 @@ private fun AdaptiveStageSplitContent(
     // upperRegionHeightDp/lowerRegionHeightDp sum to exactly paneLayout.contentHeightDp, so their
     // ratio as Column weights splits the exact space the domain layer intended between the two
     // regions below -- the stage-identity/pin/overflow header this Column used to render inline
-    // first now lives on the dock's own edge instead (see CardsDockEdgeHeader, wired in through
+    // first now lives on the dock's own edge instead (see CardsDockEdgeCardPanel, wired in through
     // [HomeDockInterpreter.dockEdgeCompanion]), so there is no longer a non-weighted header to
     // reserve room for ahead of them.
     val regionHeightTotal = paneLayout.upperRegionHeightDp + paneLayout.lowerRegionHeightDp
@@ -1376,265 +1374,6 @@ private fun AdaptiveStageSupportingPane(
 }
 
 /**
- * Cards' dock-edge companion (design-review follow-up: the header no longer floats near the top of
- * the screen independent of dock position -- it is two small glass pills docked directly to
- * whichever edge the dock itself sits on, via [HomeDockInterpreter.dockEdgeCompanion]). The identity
- * pill (icon + "AppName · N cards") and the pin/overflow capsule stay the two separate pieces they
- * were as a floating header -- a single combined pill read as too large wherever a vertical dock put
- * it beside a narrow column of icons -- just laid out as a Row for a horizontal dock (top/bottom, so
- * they read left-to-right beside its own icon run) or a Column for a vertical one (left/right, so
- * neither pill is wider than the strip it sits beside).
- *
- * [position] only ever picks that Row/Column arrangement; [DockEdgeCompanionSlot] is what actually
- * places the result next to the dock's own measured bounds, so this composable knows nothing about
- * where on screen it ends up.
- */
-@Composable
-internal fun CardsDockEdgeHeader(
-    selectedStage: AppStage?,
-    allNotificationsSelected: Boolean,
-    stages: List<AppStage>,
-    state: LauncherShellState,
-    appIconLoader: AppIconLoader,
-    position: DockPosition,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    // selectedStage stays the last real selection while the merged page is showing (so leaving
-    // "All" returns to it), so "a real stage is showing" needs its own explicit gate.
-    val shownStage = selectedStage?.takeUnless { allNotificationsSelected }
-    val label =
-        when {
-            allNotificationsSelected -> CARDS_ALL_ENTRY_LABEL
-            shownStage != null -> stageLabel(shownStage.id, state)
-            else -> "Cards"
-        }
-    val summary = adaptiveStageHeaderSummary(shownStage, allNotificationsSelected, stages)
-    val shownApp = shownStage?.let { stage -> state.installedAppsByStageId[stage.id] }
-    val identityPill: @Composable () -> Unit = {
-        CardsDockEdgeIdentityPill(
-            label = label,
-            summary = summary,
-            shownApp = shownApp,
-            allNotificationsSelected = allNotificationsSelected,
-            shownStage = shownStage,
-            appIconLoader = appIconLoader,
-            onAction = onAction,
-        )
-    }
-    val actionCapsule: @Composable () -> Unit = {
-        CardsDockEdgeActionCapsule(shownStage = shownStage, shownApp = shownApp, state = state, onAction = onAction)
-    }
-
-    if (position.isHorizontalEdge) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            identityPill()
-            actionCapsule()
-        }
-    } else {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            identityPill()
-            actionCapsule()
-        }
-    }
-}
-
-/** The identity pill: [DOCK_EDGE_HEADER_ICON_SIZE_DP] icon plus the "AppName · N cards" label. */
-@Composable
-private fun CardsDockEdgeIdentityPill(
-    label: String,
-    summary: String?,
-    shownApp: InstalledApp?,
-    allNotificationsSelected: Boolean,
-    shownStage: AppStage?,
-    appIconLoader: AppIconLoader,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    GlassSurface(shape = MaterialTheme.shapes.large) {
-        Row(
-            modifier = Modifier.padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (shownApp != null) {
-                Box(modifier = Modifier.size(DOCK_EDGE_HEADER_ICON_SIZE_DP.dp).padding(end = 10.dp)) {
-                    LauncherAppIcon(
-                        identity = shownApp.identity,
-                        label = label,
-                        iconLoader = appIconLoader,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            }
-            Column(
-                modifier =
-                    Modifier.testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).semantics {
-                        contentDescription = "Cards stage: $label"
-                        stateDescription =
-                            when {
-                                allNotificationsSelected -> "Showing every stage's notifications"
-                                shownStage != null -> shownStage.adaptiveStageStageStateDescription()
-                                else -> "No stage selected"
-                            }
-                        liveRegion = LiveRegionMode.Polite
-                        // Stage-to-stage navigation for TalkBack/switch users, mirroring the
-                        // "Previous card"/"Next card" CustomAccessibilityAction precedent used
-                        // for intra-stack card navigation elsewhere in this file.
-                        customActions =
-                            listOf(
-                                CustomAccessibilityAction("Previous stage") {
-                                    onAction(LauncherShellAction.SelectPreviousAppStage)
-                                    true
-                                },
-                                CustomAccessibilityAction("Next stage") {
-                                    onAction(LauncherShellAction.SelectNextAppStage)
-                                    true
-                                },
-                            )
-                    },
-            ) {
-                // A single compact line ("WhatsApp · 10 cards") rather than a title plus a separate
-                // eyebrow line -- the slimmed pill has no vertical room for a two-line header.
-                Text(
-                    text = listOfNotNull(label, summary).joinToString(" · "),
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-/** The pin-toggle + overflow capsule, unchanged in behaviour from the header it replaces. */
-@Composable
-private fun CardsDockEdgeActionCapsule(
-    shownStage: AppStage?,
-    shownApp: InstalledApp?,
-    state: LauncherShellState,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    GlassSurface(shape = MaterialTheme.shapes.medium) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Pin appears once, as a toggle, and only for a real stage -- "All" is not a stage.
-            if (shownStage != null) {
-                IconToggleButton(
-                    checked = shownStage.isPinned,
-                    onCheckedChange = { onAction(LauncherShellAction.ToggleAppStagePinned(shownStage.id)) },
-                    modifier =
-                        Modifier.semantics {
-                            contentDescription = ADAPTIVE_STAGE_PIN_TOGGLE_LABEL
-                            stateDescription = if (shownStage.isPinned) "Pinned" else "Not pinned"
-                        },
-                ) {
-                    Icon(
-                        imageVector = if (shownStage.isPinned) Icons.Filled.Star else Icons.Outlined.Star,
-                        contentDescription = null,
-                    )
-                }
-            }
-            AdaptiveStageOverflowMenu(
-                shownApp = shownApp,
-                notificationAccessStatus = state.notificationAccessStatus,
-                onAction = onAction,
-            )
-        }
-    }
-}
-
-/** The identity pill's icon slot. */
-private const val DOCK_EDGE_HEADER_ICON_SIZE_DP = 28
-
-/**
- * The header's overflow: always present, whatever is showing -- a stage, "All", or nothing yet --
- * so Settings and the Cards controls are never a dead end (#1212). Before, it hid on "All" and when
- * no stage was selected, which left Cards with no path to Settings at all on a full dock.
- */
-@Composable
-private fun AdaptiveStageOverflowMenu(
-    shownApp: InstalledApp?,
-    notificationAccessStatus: NotificationAccessStatus,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val requestAddStage = LocalAdaptiveStageAddStageRequest.current
-    val choose: (() -> Unit) -> Unit = { choice ->
-        expanded = false
-        choice()
-    }
-    Box {
-        IconButton(
-            onClick = { expanded = true },
-            modifier = Modifier.semantics { contentDescription = ADAPTIVE_STAGE_OVERFLOW_LABEL },
-        ) {
-            Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
-        }
-        RiffleContextMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            shownApp?.let { app ->
-                DropdownMenuItem(
-                    text = { Text("Open ${app.label}") },
-                    onClick = { choose { onAction(LauncherShellAction.LaunchApp(app.identity)) } },
-                )
-                DropdownMenuItem(
-                    text = { Text("App info") },
-                    onClick = { choose { onAction(LauncherShellAction.OpenAppInfo(app.identity)) } },
-                )
-            }
-            DropdownMenuItem(
-                text = { Text("Add stage") },
-                onClick = { choose(requestAddStage) },
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        if (notificationAccessStatus == NotificationAccessStatus.GRANTED) {
-                            "Notification access"
-                        } else {
-                            "Allow notification access"
-                        },
-                    )
-                },
-                onClick = { choose { onAction(LauncherShellAction.RequestNotificationAccess) } },
-            )
-            DropdownMenuItem(
-                text = { Text("Cards appearance") },
-                onClick = {
-                    choose { onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.ADAPTIVE_STAGE_APPEARANCE)) }
-                },
-            )
-            DropdownMenuItem(
-                text = { Text("Home mode") },
-                onClick = { choose { onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.LAYOUT)) } },
-            )
-            DropdownMenuItem(
-                text = { Text("Settings") },
-                onClick = { choose { onAction(LauncherShellAction.OpenSettings) } },
-            )
-        }
-    }
-}
-
-/** A short count for the header's eyebrow, or null when there is nothing to say. */
-private fun adaptiveStageHeaderSummary(
-    shownStage: AppStage?,
-    allNotificationsSelected: Boolean,
-    stages: List<AppStage>,
-): String? {
-    val count =
-        when {
-            allNotificationsSelected -> stages.sumOf { stage -> stage.content.size }
-            shownStage != null -> shownStage.content.size
-            else -> return null
-        }
-    return when {
-        count > 0 -> "$count ${if (count == 1) "card" else "cards"}"
-        shownStage?.isPinned == true -> "Pinned, nothing new"
-        else -> "Nothing new"
-    }
-}
-
-/**
  * The "Add stage" picker: a searchable list of apps, matched by the drawer's own search index, in a
  * bottom sheet. Replaces a dropdown of every installed app, which could not be searched and ran off
  * the screen on any real phone.
@@ -1727,7 +1466,7 @@ internal const val ADAPTIVE_STAGE_OVERFLOW_LABEL = "More options"
 internal const val ADAPTIVE_STAGE_PIN_TOGGLE_LABEL = "Pin stage"
 internal const val ADAPTIVE_STAGE_ADD_STAGE_SHEET_TEST_TAG = "adaptive-stage-add-stage-sheet"
 
-/** Only one [CardsDockEdgeHeader] is ever composed at a time, so a single fixed tag is unambiguous. */
+/** Only one [CardsDockEdgeCardPanel] is ever composed at a time, so a single fixed tag is unambiguous. */
 internal const val ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG = "adaptive-stage-stage-header"
 
 @Composable
@@ -2760,6 +2499,7 @@ private const val ADAPTIVE_STAGE_SHELF_OVERFLOW_CORNER_RADIUS_DP = 16
  * keeps them distinct.
  */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun AdaptiveStageContextShelf(
     card: AppStageNotificationCard,
     onAction: (LauncherShellAction) -> Unit,
@@ -2782,16 +2522,7 @@ internal fun AdaptiveStageContextShelf(
         focusRequester = detailFocusRequester,
         isLaidOut = detailControlLaidOut,
     )
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        // Was unset (defaults to Top), which lined every child up by its own top edge instead of
-        // its visual center -- harmless while the row held only same-height pill buttons, but it
-        // left the trailing overflow control (a plain IconButton, whose larger 48dp touch target
-        // sits taller than a pill's own bounds) visibly low relative to them. Centering is what
-        // actually reads as "one action bar" rather than several controls that happen to share a row.
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    AdaptiveStageActionsFlowRow(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         if (showNotificationActions) {
             card.supportedActions.sortedBy { action -> action.label() }.forEach { action ->
                 AdaptiveStageContextActionButton(
@@ -2824,7 +2555,11 @@ internal fun AdaptiveStageContextShelf(
                         ?: Modifier,
             )
         }
-        NotificationHideMenuButton(card = card, onAction = onAction)
+        NotificationHideMenuButton(
+            card = card,
+            onAction = onAction,
+            modifier = Modifier.align(Alignment.CenterVertically),
+        )
     }
 }
 
@@ -2843,6 +2578,7 @@ internal fun AdaptiveStageContextShelf(
 private fun NotificationHideMenuButton(
     card: AppStageNotificationCard,
     onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val stageId = card.content.stageId
@@ -2864,7 +2600,7 @@ private fun NotificationHideMenuButton(
         )
     }
 
-    Box {
+    Box(modifier = modifier) {
         // Tonal container matches AdaptiveStageContextActionButton's own pill treatment (same
         // surfaceVariant tone/alpha) so the trailing overflow reads as one more control in the
         // same action-bar family instead of a bare, unstyled icon dropped in beside two pills --
@@ -2931,9 +2667,9 @@ private fun NotificationHideMenuButton(
 
 /**
  * A pill-shaped, translucent "glass" action button -- the shared building block for
- * [AdaptiveStageContextShelf]'s inline row and [AdaptiveStageContextActionsGrid]'s two-column layout,
- * styled to sit closer to Calm's `contextActionButton()` glass-pill treatment than a bare
- * [TextButton].
+ * [AdaptiveStageContextShelf], [AdaptiveStageContextActionsGrid] and [AdaptiveStageEmptyStage]'s
+ * quick-actions row, styled to sit closer to Calm's `contextActionButton()` glass-pill treatment
+ * than a bare [TextButton].
  */
 @Composable
 private fun AdaptiveStageContextActionButton(
@@ -2967,9 +2703,33 @@ private fun AdaptiveStageContextActionButton(
 }
 
 /**
+ * Wraps a set of [AdaptiveStageContextActionButton] pills onto as many lines as the available
+ * width needs -- the one container [AdaptiveStageContextShelf] and [AdaptiveStageEmptyStage]'s
+ * quick-actions row both need (previously each rolled its own [FlowRow] call with the same
+ * arrangement, an accidental duplication rather than a deliberate difference). [AdaptiveStageContextActionsGrid]
+ * stays a separate, chunked-by-2 layout rather than reusing this: it renders inside a fixed-width
+ * supporting pane (see its own doc), where an even two-up grid gives predictable row breaks
+ * regardless of label length, unlike a flow that packs however many short pills fit per line.
+ */
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+internal fun AdaptiveStageActionsFlowRow(
+    modifier: Modifier = Modifier,
+    content: @Composable FlowRowScope.() -> Unit,
+) {
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        content = content,
+    )
+}
+
+/**
  * Two-column action grid mirroring Calm's `FocusOverlayController.actionsGrid()`: actions are
  * chunked by 2, and a lone trailing action spans the full row width instead of being stranded
- * beside empty space.
+ * beside empty space. Deliberately not [AdaptiveStageActionsFlowRow] -- see that composable's doc
+ * for why a fixed-width supporting pane calls for an even grid rather than a flow.
  */
 @Composable
 internal fun AdaptiveStageContextActionsGrid(
@@ -3110,10 +2870,7 @@ private fun AdaptiveStageEmptyStage(
                 style = MaterialTheme.typography.bodyMedium,
             )
             emptyCard?.let { card ->
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                AdaptiveStageActionsFlowRow {
                     AdaptiveStageContextActionButton(
                         label = "Open ${card.app.label}",
                         onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) },
@@ -3477,7 +3234,7 @@ private fun stageInstalledApp(
     state: LauncherShellState,
 ): InstalledApp? = state.installedAppsByStageId[id]
 
-private fun AppStage.adaptiveStageStageStateDescription(): String =
+internal fun AppStage.adaptiveStageStageStateDescription(): String =
     buildList {
         add(
             origins
