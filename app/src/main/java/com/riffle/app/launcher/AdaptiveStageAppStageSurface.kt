@@ -1467,31 +1467,33 @@ private fun CardsDockEdgeIdentityPill(
             }
             Column(
                 modifier =
-                    Modifier.widthIn(max = DOCK_EDGE_IDENTITY_LABEL_MAX_WIDTH_DP.dp)
-                        .testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).semantics {
-                        contentDescription = "Cards stage: $label"
-                        stateDescription =
-                            when {
-                                allNotificationsSelected -> "Showing every stage's notifications"
-                                shownStage != null -> shownStage.adaptiveStageStageStateDescription()
-                                else -> "No stage selected"
-                            }
-                        liveRegion = LiveRegionMode.Polite
-                        // Stage-to-stage navigation for TalkBack/switch users, mirroring the
-                        // "Previous card"/"Next card" CustomAccessibilityAction precedent used
-                        // for intra-stack card navigation elsewhere in this file.
-                        customActions =
-                            listOf(
-                                CustomAccessibilityAction("Previous stage") {
-                                    onAction(LauncherShellAction.SelectPreviousAppStage)
-                                    true
-                                },
-                                CustomAccessibilityAction("Next stage") {
-                                    onAction(LauncherShellAction.SelectNextAppStage)
-                                    true
-                                },
-                            )
-                    },
+                    Modifier
+                        .widthIn(max = DOCK_EDGE_IDENTITY_LABEL_MAX_WIDTH_DP.dp)
+                        .testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG)
+                        .semantics {
+                            contentDescription = "Cards stage: $label"
+                            stateDescription =
+                                when {
+                                    allNotificationsSelected -> "Showing every stage's notifications"
+                                    shownStage != null -> shownStage.adaptiveStageStageStateDescription()
+                                    else -> "No stage selected"
+                                }
+                            liveRegion = LiveRegionMode.Polite
+                            // Stage-to-stage navigation for TalkBack/switch users, mirroring the
+                            // "Previous card"/"Next card" CustomAccessibilityAction precedent used
+                            // for intra-stack card navigation elsewhere in this file.
+                            customActions =
+                                listOf(
+                                    CustomAccessibilityAction("Previous stage") {
+                                        onAction(LauncherShellAction.SelectPreviousAppStage)
+                                        true
+                                    },
+                                    CustomAccessibilityAction("Next stage") {
+                                        onAction(LauncherShellAction.SelectNextAppStage)
+                                        true
+                                    },
+                                )
+                        },
             ) {
                 // A single compact line ("WhatsApp · 10 cards") rather than a title plus a separate
                 // eyebrow line -- the slimmed pill has no vertical room for a two-line header.
