@@ -87,9 +87,10 @@ class CardsDockEdgeCardPanelTest {
         }
 
         val bounds = composeRule.onAllNodesWithTag(CARDS_DOCK_EDGE_CARD_PANEL_TEST_TAG)[0].getBoundsInRoot()
+        val width = bounds.right - bounds.left
         assertTrue(
-            "Panel width ${bounds.width} exceeded its own $CARDS_DOCK_EDGE_CARD_PANEL_MAX_WIDTH_DP dp cap",
-            bounds.width <= CARDS_DOCK_EDGE_CARD_PANEL_MAX_WIDTH_DP.dp,
+            "Panel width $width exceeded its own $CARDS_DOCK_EDGE_CARD_PANEL_MAX_WIDTH_DP dp cap",
+            width <= CARDS_DOCK_EDGE_CARD_PANEL_MAX_WIDTH_DP.dp,
         )
     }
 
