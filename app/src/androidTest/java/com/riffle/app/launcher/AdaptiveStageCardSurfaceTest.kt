@@ -69,6 +69,7 @@ import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -659,13 +660,25 @@ class AdaptiveStageCardSurfaceTest {
             )
 
         composeRule.setContent {
-            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = actions::add) }
+            MaterialTheme {
+                val shellState = rememberAppStageShellState(state)
+                CardsDockEdgeHeader(
+                    selectedStage = shellState.snapshot.selectedStage,
+                    allNotificationsSelected = false,
+                    stages = shellState.snapshot.stages,
+                    state = state,
+                    appIconLoader = EmptyAppIconLoader,
+                    position = DockPosition.BOTTOM,
+                    onAction = actions::add,
+                )
+            }
         }
 
         // Previous/Next are no longer visible buttons (removed as redundant with tapping a stage
-        // directly, or swiping) -- they're reachable via AdaptiveStageStageHeader's customActions,
-        // the same CustomAccessibilityAction pattern already used for intra-stack card navigation
-        // (see WidgetPickerSurfaceTest for the identical precedent).
+        // directly, or swiping) -- they're reachable via CardsDockEdgeHeader's customActions (now
+        // rendered beside the dock, not inside AdaptiveStageAppStageSurface -- see the dockEdgeCompanion
+        // wiring in CardsDockInterpreter.kt), the same CustomAccessibilityAction pattern already used
+        // for intra-stack card navigation (see WidgetPickerSurfaceTest for the identical precedent).
         val headerActions =
             composeRule
                 .onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG)
@@ -1176,26 +1189,37 @@ class AdaptiveStageCardSurfaceTest {
                 postedAtEpochMillis = 10,
             )
         val actions = mutableListOf<LauncherShellAction>()
+        val state =
+            LauncherShellState(
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(app),
+                profileContentVisibility =
+                    mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                notificationGroupsByApp =
+                    listOf(
+                        AppNotificationGroup(
+                            packageName = app.identity.packageName,
+                            profileId = app.identity.profile.id,
+                            latestCategory = NotificationCategory.MESSAGE,
+                            latestAgeBucket = NotificationAgeBucket.RECENT,
+                            notifications = listOf(notification),
+                        ),
+                    ),
+            )
         composeRule.setContent {
             MaterialTheme {
-                AdaptiveStageAppStageSurface(
-                    state =
-                        LauncherShellState(
-                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                            installedApps = listOf(app),
-                            profileContentVisibility =
-                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
-                            notificationGroupsByApp =
-                                listOf(
-                                    AppNotificationGroup(
-                                        packageName = app.identity.packageName,
-                                        profileId = app.identity.profile.id,
-                                        latestCategory = NotificationCategory.MESSAGE,
-                                        latestAgeBucket = NotificationAgeBucket.RECENT,
-                                        notifications = listOf(notification),
-                                    ),
-                                ),
-                        ),
+                // The pin toggle and overflow menu are CardsDockEdgeHeader's now (rendered beside the
+                // dock, not inside AdaptiveStageAppStageSurface) -- mounted directly here rather than
+                // through the whole surface, the same way stageHeaderExposesPreviousAndNextStageAs
+                // CustomAccessibilityActions above does.
+                val shellState = rememberAppStageShellState(state)
+                CardsDockEdgeHeader(
+                    selectedStage = shellState.snapshot.selectedStage,
+                    allNotificationsSelected = false,
+                    stages = shellState.snapshot.stages,
+                    state = state,
+                    appIconLoader = EmptyAppIconLoader,
+                    position = DockPosition.BOTTOM,
                     onAction = actions::add,
                 )
             }

@@ -61,6 +61,11 @@ fun HomeDestination(
                 shellState = cardsShellState,
                 adaptiveStageContext = adaptiveStageContext,
                 onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
+                appIconLoader = appIconLoader,
+                // Mirrors [HomeDockPullBinding.dockEdge]'s own no-pull-running fallback: this
+                // interpreter is built before that binding below, so it reads the shown mode's edge
+                // straight off the plan rather than waiting on the binding for the same answer.
+                dockPosition = plan.edges.edgeFor(plan.shownMode.modeSurface),
                 onAction = onAction,
             )
         } else {
@@ -340,7 +345,6 @@ private fun CardsHomeSurface(
         AdaptiveStageAppStageSurface(
             state = state,
             shellState = shellState,
-            dockHost = dockHost,
             modifier =
                 Modifier
                     .dockInteractionPadding(dockPosition, dockInteractionExtent)
