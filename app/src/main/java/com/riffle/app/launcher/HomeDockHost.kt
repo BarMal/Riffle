@@ -199,22 +199,13 @@ internal fun HomeDockHost(
         SideEffect { hostState.extentPx.intValue = 0 }
     }
     val actions =
-        HomeWorkspaceActions(
-            onFolderOpen = { folder -> hostState.openedFolderId.value = folder.id },
-            onDragSessionChanged = {},
+        dockHostWorkspaceActions(
+            hostState = hostState,
+            position = position,
             haptics = haptics,
-            onDockInteractionExtentChanged = { extentPx ->
-                hostState.extentPx.intValue = extentPx
-                hostState.measuredEdge.value = position
-                onExtentChanged(extentPx)
-            },
-            onDockBoundsChanged = { bounds -> hostState.bounds.value = bounds },
-            onIdentityTransitionRequested = { identity, sourceBounds ->
-                hostState.identityTransitionRequest.value =
-                    DockIdentityTransitionRequest(identity, sourceBounds, requestId = System.nanoTime())
-            },
+            dockOnAction = dockOnAction,
             onBackgroundClick = dockShelf.dismiss,
-            onAction = dockOnAction,
+            onExtentChanged = onExtentChanged,
         )
 
     Box(
@@ -259,6 +250,39 @@ internal fun HomeDockHost(
         }
     }
 }
+
+/**
+ * [HomeDockHost]'s own [HomeWorkspaceActions], pulled out of that composable so its body reads as
+ * "wire the callbacks, then lay out the dock" rather than one long inline callback literal --
+ * [HomeDockHost] itself only ever calls this once, so this stays a plain function, not a
+ * `remember`-cached one; recomposition already skips a stable-lambda no-op the same way a
+ * `remember` block would.
+ */
+private fun dockHostWorkspaceActions(
+    hostState: HomeDockHostState,
+    position: DockPosition,
+    haptics: LauncherHaptics,
+    dockOnAction: (LauncherShellAction) -> Unit,
+    onBackgroundClick: () -> Unit,
+    onExtentChanged: (Int) -> Unit,
+): HomeWorkspaceActions =
+    HomeWorkspaceActions(
+        onFolderOpen = { folder -> hostState.openedFolderId.value = folder.id },
+        onDragSessionChanged = {},
+        haptics = haptics,
+        onDockInteractionExtentChanged = { extentPx ->
+            hostState.extentPx.intValue = extentPx
+            hostState.measuredEdge.value = position
+            onExtentChanged(extentPx)
+        },
+        onDockBoundsChanged = { bounds -> hostState.bounds.value = bounds },
+        onIdentityTransitionRequested = { identity, sourceBounds ->
+            hostState.identityTransitionRequest.value =
+                DockIdentityTransitionRequest(identity, sourceBounds, requestId = System.nanoTime())
+        },
+        onBackgroundClick = onBackgroundClick,
+        onAction = dockOnAction,
+    )
 
 /**
  * The room a mode's content leaves for the dock along [position]'s edge: the dock's measured

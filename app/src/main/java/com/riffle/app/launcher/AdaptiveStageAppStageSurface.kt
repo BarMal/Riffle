@@ -1558,9 +1558,10 @@ private fun AdaptiveStageStageHeader(
         }
         val origin = headerOriginInRoot
         val restBounds = restIconBoundsInRoot
-        if (animatingIdentity && transitionRequest != null && origin != null && restBounds != null) {
+        val request = transitionRequest
+        if (animatingIdentity && request != null && origin != null && restBounds != null) {
             DockIdentityOverlayIcon(
-                request = transitionRequest,
+                request = request,
                 headerOriginInRoot = origin,
                 restBoundsInRoot = restBounds,
                 label = label,
