@@ -91,17 +91,12 @@ internal fun GlassSurface(
         // ComplexCondition threshold instead.
         if (!runningUnderRobolectric) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
-                Box(
-                    modifier =
-                        Modifier.matchParentSize().then(
-                            rememberLiquidGlassShaderScrimModifier(
-                                shape = shape,
-                                tint = tint,
-                                backdrop = backdrop,
-                                frostStrength = liquidGlass.frostStrengthFraction,
-                                refractionStrength = liquidGlass.refractionStrengthFraction,
-                            ),
-                        ),
+                LiquidGlassShaderLayer(
+                    shape = shape,
+                    tint = tint,
+                    backdrop = backdrop,
+                    frostStrength = liquidGlass.frostStrengthFraction,
+                    refractionStrength = liquidGlass.refractionStrengthFraction,
                 )
             } else {
                 LegacyGlassTintLayer(supportsBlur = supportsLegacyBlur, tint = tint)
@@ -146,7 +141,7 @@ internal fun rememberLiquidGlassScrimModifier(
     // check does not trace SDK_INT across a function-call boundary otherwise).
     return if (!runningUnderRobolectric) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
-            rememberLiquidGlassShaderScrimModifier(
+            Modifier.clip(shape).liquidGlassShaderBackground(
                 shape = shape,
                 tint = tint,
                 backdrop = backdrop,
@@ -178,27 +173,54 @@ private fun BoxScope.LegacyGlassTintLayer(
 }
 
 /**
- * The real backdrop-capture treatment as a reusable [Modifier]: crops the shared [backdrop] layer
- * down to exactly the node it is applied to (a private, per-surface [GraphicsLayer], not a mutation
- * of the shared one -- see [LocalLiquidGlassBackdrop]'s doc comment for why that matters with more
- * than one glass surface on screen at once), then applies the AGSL refraction/blur/specular shader
- * as that private layer's own [GraphicsLayer.renderEffect] before drawing it.
+ * The real backdrop-capture treatment: crops the shared [backdrop] layer down to exactly this
+ * surface's own bounds (a private, per-surface [GraphicsLayer], not a mutation of the shared one --
+ * see [LocalLiquidGlassBackdrop]'s doc comment for why that matters with more than one glass
+ * surface on screen at once), then applies the AGSL refraction/blur/specular shader as that private
+ * layer's own [GraphicsLayer.renderEffect] before drawing it.
+ */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@Composable
+private fun BoxScope.LiquidGlassShaderLayer(
+    shape: Shape,
+    tint: Color,
+    backdrop: GraphicsLayer,
+    frostStrength: Float,
+    refractionStrength: Float,
+) {
+    Box(
+        modifier =
+            Modifier
+                .matchParentSize()
+                .liquidGlassShaderBackground(
+                    shape = shape,
+                    tint = tint,
+                    backdrop = backdrop,
+                    frostStrength = frostStrength,
+                    refractionStrength = refractionStrength,
+                ),
+    )
+}
+
+/**
+ * The real backdrop-refraction treatment as a plain [Modifier] extension, decoupled from being the
+ * sole content of its own [Box] -- extracted so a call site that already has its own modifier chain
+ * (see `DockAppearance.kt`'s `dockSurfaceAppearance`, and [rememberLiquidGlassScrimModifier] above)
+ * can apply it directly, in place of a flat `Modifier.background(tint)`, without wrapping its
+ * content in an extra layer. [GlassSurface] itself uses this through [LiquidGlassShaderLayer] above,
+ * unchanged from before this was extracted.
  *
- * This is [GlassSurface]'s own fill layer, factored out as a plain modifier so any caller that
- * wants the real material as a background fill within its own modifier chain -- rather than
- * [GlassSurface]'s whole composable, which also draws [content] on top and its chrome-specific top
- * highlight hairline -- can reuse it directly. `AdaptiveStageCardSurface`'s GLASS/FROSTED
- * content-face scrim is exactly that: it needs the shader fill, clipped to its own (possibly
- * content-sized, not full-card) shape, with none of GlassSurface's extra chrome.
- *
- * Eligibility (API 33+, liquid glass enabled, a backdrop installed above the caller, not under
- * Robolectric) is the caller's responsibility, same as [GlassSurface] checks it itself -- this
- * function assumes API 33+ per its [RequiresApi] annotation and a non-null [backdrop].
+ * Tracks this node's own position and size via [onGloballyPositioned], exactly as
+ * [LiquidGlassShaderLayer] did inline, then applies [liquidGlassRefraction] using those. Callers are
+ * responsible for their own eligibility gating (API 33+, liquid glass enabled, a non-null backdrop,
+ * not under Robolectric) and, if a clipped silhouette narrower than their own layout bounds is
+ * needed (see [rememberLiquidGlassScrimModifier]'s `Modifier.clip(shape)` call), for chaining that
+ * themselves -- same as before extraction, this function carries no fallback or clip of its own.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-internal fun rememberLiquidGlassShaderScrimModifier(
+internal fun Modifier.liquidGlassShaderBackground(
     shape: Shape,
     tint: Color,
     backdrop: GraphicsLayer,
@@ -218,22 +240,20 @@ internal fun rememberLiquidGlassShaderScrimModifier(
                 ?: with(density) { GLASS_FALLBACK_CORNER_RADIUS_DP.dp.toPx() }
         }
 
-    return Modifier
-        .clip(shape)
-        .onGloballyPositioned { coordinates ->
-            positionInRoot = coordinates.positionInRoot()
-            sizePx = coordinates.size
-        }.liquidGlassRefraction(
-            localLayer = localLayer,
-            backdrop = backdrop,
-            shader = shader,
-            positionInRoot = { positionInRoot },
-            sizePx = { sizePx },
-            cornerRadiusPx = { cornerRadiusPx },
-            frostStrength = frostStrength,
-            refractionStrength = refractionStrength,
-            tint = tint,
-        )
+    return onGloballyPositioned { coordinates ->
+        positionInRoot = coordinates.positionInRoot()
+        sizePx = coordinates.size
+    }.liquidGlassRefraction(
+        localLayer = localLayer,
+        backdrop = backdrop,
+        shader = shader,
+        positionInRoot = { positionInRoot },
+        sizePx = { sizePx },
+        cornerRadiusPx = { cornerRadiusPx },
+        frostStrength = frostStrength,
+        refractionStrength = refractionStrength,
+        tint = tint,
+    )
 }
 
 /**
