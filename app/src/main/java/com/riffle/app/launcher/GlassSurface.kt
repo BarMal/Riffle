@@ -5,6 +5,7 @@ import android.graphics.RuntimeShader
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -100,7 +101,7 @@ internal fun GlassSurface(
 
 /** Today's pre-AGSL treatment: a blurred flat tint layer, or a stronger flat scrim below API 31. */
 @Composable
-private fun LegacyGlassTintLayer(
+private fun BoxScope.LegacyGlassTintLayer(
     supportsBlur: Boolean,
     tint: Color,
 ) {
@@ -123,7 +124,7 @@ private fun LegacyGlassTintLayer(
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun LiquidGlassShaderLayer(
+private fun BoxScope.LiquidGlassShaderLayer(
     shape: Shape,
     tint: Color,
     backdrop: GraphicsLayer,
