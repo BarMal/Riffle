@@ -602,8 +602,37 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun aHorizontalDockStopsAtItsAbsoluteCapHoweverWideTheScreenIs() {
-        // The cap exists because screens get wider than a dock usefully needs to be.
+    fun fixedDockGivesEveryPersistedItemViewportRoomEvenPastCapacity() {
+        // Capacity is lowered without deleting anything already pinned past it (see
+        // dockRenderedSlotCount's own doc). FIXED ("Full width") must not re-cap the *visible* slot
+        // count to the old capacity -- a longer background that still hid items past it would be the
+        // same "still scrolls" mismatch the setting exists to fix -- so its content viewport is sized
+        // for all seven items, wider than DYNAMIC's, which still only sizes for the five it caps to.
+        val items = (1..7).map { index -> widget("widget:$index", index) }
+        val fixedMetrics =
+            checkNotNull(
+                dockSurfaceMetrics(
+                    dock = DockModel(capacity = 5, items = items, backgroundSizing = DockBackgroundSizing.FIXED),
+                    isEditing = false,
+                    availableMainAxisDp = 2000,
+                ),
+            )
+        val dynamicMetrics =
+            checkNotNull(
+                dockSurfaceMetrics(
+                    dock = DockModel(capacity = 5, items = items, backgroundSizing = DockBackgroundSizing.DYNAMIC),
+                    isEditing = false,
+                    availableMainAxisDp = 2000,
+                ),
+            )
+
+        assertEquals(true, fixedMetrics.contentViewportMainAxisDp > dynamicMetrics.contentViewportMainAxisDp)
+    }
+
+    @Test
+    fun aHorizontalDynamicDockStopsAtItsAbsoluteCapHoweverWideTheScreenIs() {
+        // The cap exists because screens get wider than an under-filled dock usefully needs to be --
+        // it still applies to DYNAMIC (fit content), which is what it was always meant to bound.
         assertEquals(
             560,
             dockContainerMainAxisDp(
@@ -611,14 +640,14 @@ class HomeDockMetricsTest {
                 slotCount = 40,
                 iconSizeDp = 48,
                 itemSpacingDp = 8,
-                backgroundSizing = DockBackgroundSizing.FIXED,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
                 runsHorizontally = true,
             ),
         )
     }
 
     @Test
-    fun aVerticalDockStopsAtAShareOfTheHeightItWasOffered() {
+    fun aVerticalDynamicDockStopsAtAShareOfTheHeightItWasOffered() {
         // A fixed dp would crowd a short screen and stop well short of a tall one.
         assertEquals(
             (800 * 0.7f).toInt(),
@@ -627,7 +656,7 @@ class HomeDockMetricsTest {
                 slotCount = 40,
                 iconSizeDp = 48,
                 itemSpacingDp = 8,
-                backgroundSizing = DockBackgroundSizing.FIXED,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
                 runsHorizontally = false,
             ),
         )
@@ -638,7 +667,7 @@ class HomeDockMetricsTest {
                 slotCount = 40,
                 iconSizeDp = 48,
                 itemSpacingDp = 8,
-                backgroundSizing = DockBackgroundSizing.FIXED,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
                 runsHorizontally = false,
             ),
         )
@@ -658,6 +687,40 @@ class HomeDockMetricsTest {
             )
 
         assertEquals(true, twoItems < (1600 * 0.7f).toInt())
+    }
+
+    @Test
+    fun aFixedHorizontalDockUsesTheFullWidthHoweverWideTheScreenIs() {
+        // FIXED ("Full width") is the user asking the dock to actually use the room it has -- the
+        // absolute cap that bounds an under-filled DYNAMIC dock would otherwise make this setting do
+        // nothing past 560dp, which is exactly the "still scrolls" mismatch it exists to fix.
+        assertEquals(
+            1600,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 1600,
+                slotCount = 40,
+                iconSizeDp = 48,
+                itemSpacingDp = 8,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+                runsHorizontally = true,
+            ),
+        )
+    }
+
+    @Test
+    fun aFixedVerticalDockUsesTheFullHeightHoweverTallTheScreenIs() {
+        // Same fix on the vertical axis: FIXED is not capped to 70% of the height it was offered.
+        assertEquals(
+            800,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 800,
+                slotCount = 40,
+                iconSizeDp = 48,
+                itemSpacingDp = 8,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+                runsHorizontally = false,
+            ),
+        )
     }
 
     @Test

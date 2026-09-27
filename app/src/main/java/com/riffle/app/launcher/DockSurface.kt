@@ -69,8 +69,15 @@ internal fun dockSurfaceMetrics(
     // which is the opposite of what a capacity setting is for -- but capacity is a ceiling, not a
     // fixed width, so an under-filled dynamic dock still sizes to the items it actually holds
     // rather than reserving empty slots. A capacity-zero legacy layout has no ceiling on record.
+    //
+    // FIXED (Full width/height) skips this cap too: it is the user asking the dock to actually use
+    // the room it now has, and a pinned item past the configured capacity (kept, not deleted, when
+    // that setting is lowered after the fact -- see dockRenderedSlotCount's own doc) is exactly the
+    // kind of "still scrolls even though the dock got longer" mismatch that setting exists to fix.
+    // dockMaxMainAxisDp's own run-length cap (lifted the same way for FIXED, above) is what still
+    // stops this from outgrowing the physical screen.
     val visibleSlotCount =
-        if (dock.capacity > 0) {
+        if (dock.capacity > 0 && dock.backgroundSizing != DockBackgroundSizing.FIXED) {
             renderedSlotCount.coerceAtMost(dock.capacity + previewSlotCount.coerceAtLeast(0))
         } else {
             renderedSlotCount
@@ -87,7 +94,8 @@ internal fun dockSurfaceMetrics(
     }
 
     val maxRunMainAxisDp =
-        minOf(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally)).coerceAtLeast(0)
+        minOf(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally, dock.backgroundSizing))
+            .coerceAtLeast(0)
 
     // Notifications going first still leaves the static side a floor: room for one pinned icon,
     // whenever the dock actually has one to show. Without it, a busy enough notification section
