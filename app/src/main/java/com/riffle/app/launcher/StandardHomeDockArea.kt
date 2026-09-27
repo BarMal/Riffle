@@ -165,7 +165,6 @@ private fun dockAreaInteractions(
         staticItemMenuExtras = staticItemMenuExtras,
         staticItemTapOverride = staticItemTapOverride,
         isDropHighlighted = isDraggedItemOverDock,
-        onIdentityTransitionRequested = actions.onIdentityTransitionRequested,
         onAction = actions.onAction,
     )
 
