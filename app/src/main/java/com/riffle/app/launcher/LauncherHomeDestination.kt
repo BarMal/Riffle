@@ -340,7 +340,6 @@ private fun CardsHomeSurface(
         AdaptiveStageAppStageSurface(
             state = state,
             shellState = shellState,
-            dockHost = dockHost,
             modifier =
                 Modifier
                     .dockInteractionPadding(dockPosition, dockInteractionExtent)

@@ -235,11 +235,6 @@ internal fun AdaptiveStageAppStageSurface(
      * compact spine is drawn whatever its setting, so no stage is ever unreachable by touch.
      */
     dockHostsStageSelector: Boolean = false,
-    /**
-     * The shared dock's host state, if this surface is drawn beside one. Null for a caller
-     * rendering the surface alone (previews, tests).
-     */
-    dockHost: HomeDockHostState? = null,
 ) {
     val addStageSheetOpenState = rememberSaveable { mutableStateOf(false) }
     val requestAddStage = remember(addStageSheetOpenState) { { addStageSheetOpenState.value = true } }
