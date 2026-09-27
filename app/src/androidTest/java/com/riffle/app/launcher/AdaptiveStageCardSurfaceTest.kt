@@ -41,8 +41,10 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -339,7 +341,15 @@ class AdaptiveStageCardSurfaceTest {
         // "Add stage" lives in the always-present overflow and opens a searchable picker (#1212).
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("Add stage").performClick()
+        // TEMPORARY DIAGNOSTIC (to be removed once the flaky/failing root cause is confirmed):
+        // this test has failed reproducibly on a real device with "could not find ... 'Add stage'"
+        // -- dumping the full semantics tree on failure so the actual rendered state is visible in
+        // CI's test output instead of guessing blind.
+        try {
+            composeRule.onNodeWithText("Add stage").performClick()
+        } catch (e: Throwable) {
+            throw AssertionError(composeRule.onRoot(useUnmergedTree = true).printToString(Int.MAX_VALUE), e)
+        }
         composeRule.onNodeWithText(second.label).performClick()
 
         assertEquals(
