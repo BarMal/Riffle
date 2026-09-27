@@ -633,7 +633,16 @@ data class AdaptiveStageGeometry(
      */
     val curvePercent: Int = 2,
     val fanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
-    val verticalFanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.START,
+    // END here -- not START -- renders a higher (not-yet-reached) card index below focus and a
+    // lower (already-passed) one above it, which is what dragging the stack actually reaches:
+    // CardStack's own scroll convention (see CardStack.kt's cardStackScrollPxRange doc) makes a
+    // forward drag -- up, decreasing scrollPx -- advance to a *higher* card index, the same
+    // direction a real ScrollView (the reference "Calm" launcher's own, unconfigurable mechanism)
+    // moves scrollY to reach later content. START inverts that pairing: the card a forward drag
+    // reaches would render above focus instead of below it, and a backward drag would reach one
+    // rendered below instead of above -- the fan direction and the drag direction disagree about
+    // which visual side is "forward," which is exactly what reads as scrolling the wrong way.
+    val verticalFanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
     /**
      * How far the outermost visible card is tilted, and -- via its sign -- which way the whole fan
      * leans. See [MIN_ADAPTIVE_STAGE_ROTATION_DEGREES]. Negative mirrors the lean; 0 is flat.

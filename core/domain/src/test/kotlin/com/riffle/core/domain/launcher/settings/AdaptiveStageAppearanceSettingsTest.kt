@@ -449,6 +449,26 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun verticalFanDirectionDefaultsToEndSoForwardCardsRenderBelowFocus() {
+        // CardStack's own scroll convention (cardStackScrollPxRange's doc; matches the reference
+        // "Calm" launcher's real ScrollView, where scrolling forward -- dragging up -- always
+        // reaches *later* content lower down, never higher up) makes a forward drag advance to a
+        // *higher* card index. AdaptiveStageFanDirection.END is what renders that higher index
+        // below focus (see verticalFanDirectionIsIndependentOfHorizontalFanDirection's own "down"
+        // case, above) -- the direction a forward drag actually reaches. Defaulting to START would
+        // render that same card above focus instead, so the fan would visually point one way while
+        // dragging to it required going the other -- the felt "scrolling is backwards" bug.
+        val viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200)
+        val resolution = AdaptiveStageAppearanceSettings().resolveCardStack(viewport)
+
+        val laterCardVerticalOffset =
+            resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }.verticalOffset
+
+        assertEquals(AdaptiveStageFanDirection.END, AdaptiveStageGeometry().verticalFanDirection)
+        assertTrue(laterCardVerticalOffset > 0f)
+    }
+
+    @Test
     fun cardSizeScalesTheCardDownWithoutChangingItsAspectRatio() {
         // Before cardSizePercent existed, aspect ratio was the only size-adjacent knob: shrinking
         // the card meant reshaping it (implying a fixed area), never leaving genuine empty stage
