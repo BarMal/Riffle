@@ -244,6 +244,23 @@ private const val LIQUID_GLASS_SHADER_SRC = """
         return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
     }
 
+    // AGSL/RuntimeShader has no screen-space derivatives (no dFdx/dFdy, unlike full GLSL fragment
+    // shaders) -- Android's single-sample AGSL execution model has no neighboring-pixel quad to
+    // approximate them from. The rounded-rect SDF's gradient is closed-form instead: outward-facing
+    // and axis-aligned along a flat edge, radially outward (mirrored into the point's own quadrant)
+    // in the rounded corner region.
+    float2 roundedRectNormal(float2 point, float2 halfSize, float radius) {
+        float2 q = abs(point) - halfSize + radius;
+        float2 s = sign(point);
+        if (q.x > 0.0 && q.y > 0.0) {
+            return s * (q / max(length(q), 0.0001));
+        } else if (q.x > q.y) {
+            return float2(s.x, 0.0);
+        } else {
+            return float2(0.0, s.y);
+        }
+    }
+
     half4 main(float2 fragCoord) {
         float2 center = size * 0.5;
         float2 local = fragCoord - center;
@@ -252,9 +269,7 @@ private const val LIQUID_GLASS_SHADER_SRC = """
         // 0 across the flat interior, ramping to 1 right at the rim over a fixed-width band.
         float rim = 1.0 - smoothstep(-24.0, 0.0, dist);
 
-        float2 gradient = float2(dFdx(dist), dFdy(dist));
-        float gradientLen = max(length(gradient), 0.0001);
-        float2 normal = gradient / gradientLen;
+        float2 normal = roundedRectNormal(local, center, cornerRadiusPx);
 
         float displacement = rim * refraction * 18.0;
         half3 refracted;
