@@ -171,6 +171,7 @@ private fun BoxScope.LiquidGlassShaderLayer(
  * that layer's [GraphicsLayer.renderEffect], then draws the result -- every frame, so the sampled
  * backdrop and the surface's own position both stay live.
  */
+@Suppress("LongParameterList")
 @OptIn(ExperimentalComposeUiApi::class)
 private fun Modifier.liquidGlassRefraction(
     localLayer: GraphicsLayer,

@@ -37,10 +37,10 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
+import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
 import com.riffle.core.domain.launcher.settings.MAX_STACK_CURVE_FRACTION
 import com.riffle.core.domain.launcher.settings.MAX_STACK_HORIZONTAL_OFFSET_FRACTION
 import com.riffle.core.domain.launcher.settings.MAX_STACK_VERTICAL_SPACING_FRACTION
