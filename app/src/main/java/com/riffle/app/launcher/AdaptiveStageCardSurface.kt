@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -547,7 +548,23 @@ internal fun AdaptiveStageCardSurface(
                 LocalContentColor provides colors.foreground,
                 LocalDensity provides adjustedDensity,
             ) {
-                Box(modifier = contentModifier, content = content)
+                // Vertically centered, not top-anchored (CenterStart keeps text left-aligned; only
+                // the vertical axis centers). A short one-line notification ("Yeah do it") otherwise
+                // sits pinned to the card's top edge inside a card sized for the *stack's* worst case,
+                // leaving the bulk of the card visibly empty -- especially visible across a fanned
+                // stack of short messages, where every card reads as mostly blank.
+                //
+                // The resolved card size itself (resolveCardStack/CardStackLayoutPolicy) is left
+                // untouched: the fan's fixed-pitch geometry math depends on every card in the stack
+                // sharing one stable size, so shrinking a short card's own footprint would either
+                // break that pitch or require a second, content-aware sizing pass the stack's
+                // layout policy doesn't have. Centering *within* the already-resolved box gets the
+                // same visual result -- a short message reads as intentionally compact rather than
+                // top-pinned in leftover space -- without touching that shared geometry at all. Long
+                // content that already fills the box (GLASS/SOLID's fillMaxSize content area) is
+                // unaffected either way. FROSTED already sizes its own scrim to the content, so this
+                // alignment is a no-op there.
+                Box(modifier = contentModifier, contentAlignment = Alignment.CenterStart, content = content)
             }
         }
     }

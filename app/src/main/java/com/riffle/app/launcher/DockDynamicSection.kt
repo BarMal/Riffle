@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -173,6 +173,15 @@ private fun DockDynamicSectionTile(
     val identity = entry.identity
     val isSelected = entry.isSelected
 
+    // The dynamic section's own entries are drawn from notifications (see this file's own doc), so
+    // their icon can be a plain app icon, a messaging app's avatar-style icon, or a media
+    // notification's play-button-style icon -- all three arrive as the same ImageBitmap through
+    // appIconLoader/LauncherAppIcon, but before this they were masked to CircleShape here while
+    // every other dock icon (HomeDock.kt's own shortcuts, folder/widget placeholders) used the
+    // shared DOCK_ICON_MASK_CORNER_RADIUS_DP squircle instead -- one entry in the strip looked
+    // like a different *kind* of control than its neighbours purely because of which section drew
+    // it, not because of anything about the app itself. This tile now shares that same mask.
+    val tileShape = RoundedCornerShape(DOCK_ICON_MASK_CORNER_RADIUS_DP.dp)
     Box(
         modifier =
             Modifier
@@ -191,7 +200,7 @@ private fun DockDynamicSectionTile(
                         Modifier.border(
                             width = SELECTED_ENTRY_RING_DP.dp,
                             color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape,
+                            shape = tileShape,
                         )
                     } else {
                         Modifier
@@ -205,14 +214,14 @@ private fun DockDynamicSectionTile(
                 label = label,
                 iconLoader = appIconLoader,
                 modifier = Modifier.requiredSize(iconSizeDp.dp),
-                shape = CircleShape,
+                shape = tileShape,
             )
         } else {
             Box(
                 modifier =
                     Modifier
                         .requiredSize(iconSizeDp.dp)
-                        .clip(CircleShape)
+                        .clip(tileShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
