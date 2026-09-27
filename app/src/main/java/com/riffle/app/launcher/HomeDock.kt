@@ -397,6 +397,7 @@ private const val DOCK_MAX_HORIZONTAL_MAIN_AXIS_DP = 560
  * conclusion for its tall expanded form with its own screen fraction.
  */
 private const val DOCK_MAX_VERTICAL_MAIN_AXIS_FRACTION = 0.7f
+
 /**
  * Corner radius every dock icon mask shares -- shortcuts (via [LauncherAppIcon]'s own default),
  * folder/widget placeholders and the dynamic section's tiles alike -- so a shortcut, a folder, a
