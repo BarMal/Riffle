@@ -291,17 +291,37 @@ class AdaptiveStageCardSurfaceTest {
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
                 // on an explicit higher zIndex so it (like the real dock) deterministically wins
                 // hit-testing over the surface's own full-screen gesture handling beneath it.
+                //
+                // CardsDockEdgeHeader's "Add stage" reads LocalAdaptiveStageAddStageRequest, which
+                // AdaptiveStageAppStageSurface normally provides -- but only around its own subtree,
+                // not its sibling here. Production has this same gap (dockEdgeCompanion is a sibling
+                // of the mode surface, not a descendant); until that's wired up for real, this test
+                // provides it itself and hosts the sheet it opens, matching what the fix should do.
                 val shellState = rememberAppStageShellState(state)
-                AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
-                Box(modifier = Modifier.zIndex(1f)) {
-                    CardsDockEdgeHeader(
-                        selectedStage = shellState.snapshot.selectedStage,
-                        allNotificationsSelected = false,
-                        stages = shellState.snapshot.stages,
+                var addStageSheetOpen by remember { mutableStateOf(false) }
+                CompositionLocalProvider(LocalAdaptiveStageAddStageRequest provides { addStageSheetOpen = true }) {
+                    AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
+                    Box(modifier = Modifier.zIndex(1f)) {
+                        CardsDockEdgeHeader(
+                            selectedStage = shellState.snapshot.selectedStage,
+                            allNotificationsSelected = false,
+                            stages = shellState.snapshot.stages,
+                            state = state,
+                            appIconLoader = EmptyAppIconLoader,
+                            position = DockPosition.BOTTOM,
+                            onAction = actions::add,
+                        )
+                    }
+                }
+                if (addStageSheetOpen) {
+                    val pinnedStageIds =
+                        shellState.snapshot.stages.filter(AppStage::isPinned).map(AppStage::id).toSet()
+                    AdaptiveStageAddStageSheet(
                         state = state,
+                        pinnedStageIds = pinnedStageIds,
                         appIconLoader = EmptyAppIconLoader,
-                        position = DockPosition.BOTTOM,
                         onAction = actions::add,
+                        onDismiss = { addStageSheetOpen = false },
                     )
                 }
             }

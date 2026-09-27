@@ -341,7 +341,11 @@ private fun CardsHomeSurface(
     val dockHostsStageSelector = visibleLayout.shouldShowDock()
     val dockInteractionExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
 
-    Box(modifier = Modifier.fillMaxSize().then(modifier)) {
+    // Same precedence StandardHome gives its own content (see HOME_CONTENT_Z_INDEX): without it,
+    // this surface ties HomeDockHost's own default zIndex and, being composed after it, wins
+    // hit-testing by composition order -- swallowing taps meant for the dock and its edge companion
+    // (the stage-identity/pin/overflow pills) rather than yielding to them.
+    Box(modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX).then(modifier)) {
         AdaptiveStageAppStageSurface(
             state = state,
             shellState = shellState,

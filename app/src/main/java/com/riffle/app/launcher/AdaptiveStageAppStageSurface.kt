@@ -1641,7 +1641,7 @@ private fun adaptiveStageHeaderSummary(
  */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun AdaptiveStageAddStageSheet(
+internal fun AdaptiveStageAddStageSheet(
     state: LauncherShellState,
     pinnedStageIds: Set<AppStageId>,
     appIconLoader: AppIconLoader,
