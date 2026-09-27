@@ -2,6 +2,8 @@ package com.riffle.app.launcher
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
@@ -85,6 +87,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageCardEffect
 import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
 import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
 import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
@@ -94,6 +97,7 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageTypography
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.ResolvedLiquidGlass
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -1734,6 +1738,174 @@ class AdaptiveStageCardSurfaceTest {
         assertEquals(left.green, right.green, 0.03f)
         assertEquals(left.blue, right.blue, 0.03f)
         assertTrue(contrastRatio(colors.foreground, colors.glass) >= 4.5f)
+    }
+
+    @Test
+    fun glassContentScrimStaysAFlatTintFillWhenLiquidGlassIsDisabled() {
+        // Regression guard for the liquid-glass upgrade to GLASS/FROSTED's content-face scrim:
+        // with liquid glass explicitly off, both effects must still paint the exact flat,
+        // alpha-composited colors.glass fill they always have -- not the shader material.
+        val appearance =
+            AdaptiveStageAppearanceSettings(
+                surface =
+                    AdaptiveStageSurface(
+                        backgroundSource = AdaptiveStageBackgroundSource.CUSTOM_SOLID,
+                        customBackgroundArgb = 0xFF224466L,
+                        glassTintArgb = 0xFFAABBCCL,
+                        glassTransparencyPercent = 30,
+                        blurStrengthPercent = 0,
+                    ),
+            )
+        val colors =
+            resolveAdaptiveStageCardColors(
+                appearance = appearance,
+                background = AdaptiveStageCardBackground(),
+                materialBackground = Color.White,
+                materialAccent = Color.Blue,
+            )
+
+        val effects = listOf(AdaptiveStageCardEffect.GLASS, AdaptiveStageCardEffect.FROSTED)
+        composeRule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(
+                    LocalLiquidGlassSettings provides
+                        ResolvedLiquidGlass(
+                            enabled = false,
+                            frostStrengthFraction = 0.5f,
+                            refractionStrengthFraction = 0.3f,
+                            reducedMotion = false,
+                        ),
+                ) {
+                    Column {
+                        effects.forEach { effect ->
+                            AdaptiveStageCardSurface(
+                                appearance =
+                                    appearance.copy(surface = appearance.surface.copy(cardEffect = effect)),
+                                background = AdaptiveStageCardBackground(),
+                                modifier =
+                                    Modifier
+                                        .requiredSize(120.dp)
+                                        .testTag("disabled-liquid-glass-card-$effect"),
+                            ) {}
+                        }
+                    }
+                }
+            }
+        }
+
+        effects.forEach { effect ->
+            val rendered = composeRule.onNodeWithTag("disabled-liquid-glass-card-$effect").captureToImage()
+            val center = rendered.toPixelMap()[rendered.width / 2, rendered.height / 2]
+            assertEquals(colors.glass.red, center.red, 0.03f)
+            assertEquals(colors.glass.green, center.green, 0.03f)
+            assertEquals(colors.glass.blue, center.blue, 0.03f)
+        }
+    }
+
+    @Test
+    fun glassContentScrimRendersTheLiquidGlassMaterialWithoutCrashingWhenEligible() {
+        // Not a pixel assertion on the shader's own output (that belongs to GlassSurface's own
+        // coverage) -- this is the eligibility wiring for AdaptiveStageCardSurface's content-face
+        // scrim specifically: with liquid glass enabled and a real backdrop installed above it (the
+        // same ProvideLiquidGlassBackdrop wiring HomeDestination uses), GLASS and FROSTED must
+        // still render their content without crashing, on whatever API level this runs at --
+        // below 33 that's this same eligibility gate falling back to the flat fill, at 33+ it is
+        // the real shader.
+        val appearance =
+            AdaptiveStageAppearanceSettings(
+                surface = AdaptiveStageSurface(backgroundSource = AdaptiveStageBackgroundSource.CUSTOM_SOLID),
+            )
+
+        val effects = listOf(AdaptiveStageCardEffect.GLASS, AdaptiveStageCardEffect.FROSTED)
+        composeRule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(
+                    LocalLiquidGlassSettings provides
+                        ResolvedLiquidGlass(
+                            enabled = true,
+                            frostStrengthFraction = 0.5f,
+                            refractionStrengthFraction = 0.3f,
+                            reducedMotion = false,
+                        ),
+                ) {
+                    ProvideLiquidGlassBackdrop { backdropCapture ->
+                        Column(modifier = backdropCapture.fillMaxSize()) {
+                            effects.forEach { effect ->
+                                AdaptiveStageCardSurface(
+                                    appearance =
+                                        appearance.copy(surface = appearance.surface.copy(cardEffect = effect)),
+                                    background = AdaptiveStageCardBackground(),
+                                    modifier =
+                                        Modifier
+                                            .requiredSize(120.dp)
+                                            .testTag("eligible-liquid-glass-card-$effect"),
+                                ) {
+                                    Text("Eligible $effect")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        effects.forEach { effect ->
+            composeRule.onNodeWithTag("eligible-liquid-glass-card-$effect").assertIsDisplayed()
+            composeRule.onNodeWithText("Eligible $effect").assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun solidCardEffectIgnoresLiquidGlassSettingsEntirely() {
+        // SOLID never reaches AdaptiveStageCardSurface's content-face scrim branch at all -- this
+        // is a regression guard that toggling liquid glass on with a real backdrop installed
+        // changes nothing about a SOLID card's flat background colour.
+        val appearance =
+            AdaptiveStageAppearanceSettings(
+                surface =
+                    AdaptiveStageSurface(
+                        cardEffect = AdaptiveStageCardEffect.SOLID,
+                        backgroundSource = AdaptiveStageBackgroundSource.CUSTOM_SOLID,
+                        customBackgroundArgb = 0xFF335577L,
+                    ),
+            )
+        val colors =
+            resolveAdaptiveStageCardColors(
+                appearance = appearance,
+                background = AdaptiveStageCardBackground(),
+                materialBackground = Color.White,
+                materialAccent = Color.Blue,
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(
+                    LocalLiquidGlassSettings provides
+                        ResolvedLiquidGlass(
+                            enabled = true,
+                            frostStrengthFraction = 0.5f,
+                            refractionStrengthFraction = 0.3f,
+                            reducedMotion = false,
+                        ),
+                ) {
+                    ProvideLiquidGlassBackdrop { backdropCapture ->
+                        Box(modifier = backdropCapture.fillMaxSize()) {
+                            AdaptiveStageCardSurface(
+                                appearance = appearance,
+                                background = AdaptiveStageCardBackground(),
+                                modifier = Modifier.requiredSize(120.dp).testTag("solid-card"),
+                            ) {}
+                        }
+                    }
+                }
+            }
+        }
+
+        val rendered = composeRule.onNodeWithTag("solid-card").captureToImage()
+        val center = rendered.toPixelMap()[rendered.width / 2, rendered.height / 2]
+        assertEquals(colors.background.red, center.red, 0.03f)
+        assertEquals(colors.background.green, center.green, 0.03f)
+        assertEquals(colors.background.blue, center.blue, 0.03f)
     }
 
     @Test

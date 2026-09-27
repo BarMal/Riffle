@@ -509,6 +509,14 @@ internal fun AdaptiveStageCardSurface(
         //
         // contentPaddingDp is untouched throughout -- it remains the real content inset other call
         // sites reason about; only the extra bezel and the scrim's own inset are conditional.
+        // GLASS and FROSTED both paint their content face with colors.glass -- the existing flat,
+        // alpha-composited tint -- unless Riffle's real liquid-glass backdrop material is switched
+        // on and eligible here (API 33+, a backdrop installed above this surface, not under
+        // Robolectric; see rememberLiquidGlassScrimModifier's own doc comment), in which case that
+        // same colour still drives the shader's tint uniform, so every existing tint/transparency/
+        // saturation/contrast slider still visibly changes the result -- only the fill technique
+        // underneath it changes. SOLID never reaches either branch below, so it is untouched by
+        // this either way (see the comment on drawsLayeredTreatment above).
         val contentModifier =
             when (effect) {
                 AdaptiveStageCardEffect.GLASS ->
@@ -516,12 +524,12 @@ internal fun AdaptiveStageCardSurface(
                         .fillMaxSize()
                         .clip(shape)
                         .padding(adjustedPadding + ADAPTIVE_STAGE_GLASS_BEZEL_EXTRA_DP.dp)
-                        .background(colors.glass, shape)
+                        .then(rememberLiquidGlassScrimModifier(shape = shape, tint = colors.glass))
 
                 AdaptiveStageCardEffect.FROSTED ->
                     Modifier
                         .padding(adjustedPadding)
-                        .background(colors.glass, scrimShape)
+                        .then(rememberLiquidGlassScrimModifier(shape = scrimShape, tint = colors.glass))
                         .padding(ADAPTIVE_STAGE_TEXT_SCRIM_INSET_DP.dp)
 
                 AdaptiveStageCardEffect.SOLID ->

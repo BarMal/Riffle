@@ -115,6 +115,47 @@ internal fun GlassSurface(
     }
 }
 
+/**
+ * A liquid-glass scrim [Modifier] for callers outside [GlassSurface] itself -- currently
+ * `AdaptiveStageCardSurface`'s GLASS/FROSTED content-face scrim -- that want the real
+ * backdrop-refraction material as a plain background fill in their own modifier chain, with the
+ * same eligibility gate [GlassSurface] applies (API 33+, liquid glass enabled in settings, a
+ * backdrop installed above the caller via [ProvideLiquidGlassBackdrop], not under Robolectric).
+ * Falls back to a flat [tint] fill -- `Modifier.background(tint, shape)`, pixel-for-pixel what
+ * callers drew before this existed -- whenever any of that is not the case, so a caller can use
+ * this unconditionally and get today's exact look when liquid glass is off or unavailable.
+ */
+@Composable
+internal fun rememberLiquidGlassScrimModifier(
+    shape: Shape,
+    tint: Color,
+): Modifier {
+    val liquidGlass = LocalLiquidGlassSettings.current
+    val backdrop = LocalLiquidGlassBackdrop.current
+    val runningUnderRobolectric = Build.FINGERPRINT == "robolectric"
+
+    // Nested rather than one compound condition, mirroring GlassSurface's own gate above -- see
+    // its comment for why folding !runningUnderRobolectric into the inner condition would push it
+    // over detekt's ComplexCondition threshold, and why the inner check stays a direct
+    // Build.VERSION.SDK_INT comparison rather than a precomputed boolean (Android Lint's NewApi
+    // check does not trace SDK_INT across a function-call boundary otherwise).
+    return if (!runningUnderRobolectric) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
+            Modifier.clip(shape).liquidGlassShaderBackground(
+                shape = shape,
+                tint = tint,
+                backdrop = backdrop,
+                frostStrength = liquidGlass.frostStrengthFraction,
+                refractionStrength = liquidGlass.refractionStrengthFraction,
+            )
+        } else {
+            Modifier.background(tint, shape)
+        }
+    } else {
+        Modifier.background(tint, shape)
+    }
+}
+
 /** Today's pre-AGSL treatment: a blurred flat tint layer, or a stronger flat scrim below API 31. */
 @Composable
 private fun BoxScope.LegacyGlassTintLayer(
@@ -164,15 +205,17 @@ private fun BoxScope.LiquidGlassShaderLayer(
 /**
  * The real backdrop-refraction treatment as a plain [Modifier] extension, decoupled from being the
  * sole content of its own [Box] -- extracted so a call site that already has its own modifier chain
- * (see `DockAppearance.kt`'s `dockSurfaceAppearance`) can apply it directly, in place of a flat
- * `Modifier.background(tint)`, without wrapping its content in an extra layer. [GlassSurface] itself
- * uses this through [LiquidGlassShaderLayer] above, unchanged from before this was extracted.
+ * (see `DockAppearance.kt`'s `dockSurfaceAppearance`, and [rememberLiquidGlassScrimModifier] above)
+ * can apply it directly, in place of a flat `Modifier.background(tint)`, without wrapping its
+ * content in an extra layer. [GlassSurface] itself uses this through [LiquidGlassShaderLayer] above,
+ * unchanged from before this was extracted.
  *
  * Tracks this node's own position and size via [onGloballyPositioned], exactly as
  * [LiquidGlassShaderLayer] did inline, then applies [liquidGlassRefraction] using those. Callers are
  * responsible for their own eligibility gating (API 33+, liquid glass enabled, a non-null backdrop,
- * not under Robolectric) -- same as before extraction, this function assumes it is only ever called
- * once that gate has already passed, so it carries no fallback of its own.
+ * not under Robolectric) and, if a clipped silhouette narrower than their own layout bounds is
+ * needed (see [rememberLiquidGlassScrimModifier]'s `Modifier.clip(shape)` call), for chaining that
+ * themselves -- same as before extraction, this function carries no fallback or clip of its own.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalComposeUiApi::class)
