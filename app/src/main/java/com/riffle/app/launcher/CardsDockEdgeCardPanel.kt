@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -116,7 +117,11 @@ internal fun CardsDockEdgeCardPanel(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                identity()
+                // controls() (pin + overflow) is measured at its own natural size first -- weighting
+                // identity() instead of it guarantees the pin/overflow touch targets are never
+                // squeezed out of place by a long "AppName · N cards" label; identity()'s own Text
+                // already ellipsizes into whatever width that leaves it.
+                Box(modifier = Modifier.weight(1f, fill = false)) { identity() }
                 controls()
             }
         } else {
