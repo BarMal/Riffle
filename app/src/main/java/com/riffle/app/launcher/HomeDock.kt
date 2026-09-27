@@ -41,13 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -438,17 +435,28 @@ internal const val WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG = "widget-picker-dock-pre
  * The longest run the dock may have, given how much it was offered and which way it runs.
  *
  * The two axes want different kinds of cap, so this is where the difference lives rather than in
- * one number that has to suit both.
+ * one number that has to suit both. [backgroundSizing] lifts both caps entirely when it is
+ * [DockBackgroundSizing.FIXED]: that setting is the user asking for the dock to actually use the
+ * full run it was offered, so a "Full width"/"Full height" dock that still stopped at a tablet-sized
+ * absolute dp or 70% of a tall screen would be the setting doing nothing past a certain size --
+ * exactly the mismatch (a longer background that still forced the same scrolling) this exists to fix.
+ * The two caps still apply to [DockBackgroundSizing.DYNAMIC], where they keep their original job of
+ * stopping a lightly-populated dock from stretching further than its icons need.
  */
 internal fun dockMaxMainAxisDp(
     availableMainAxisDp: Int,
     runsHorizontally: Boolean,
-): Int =
-    if (runsHorizontally) {
+    backgroundSizing: DockBackgroundSizing = DockBackgroundSizing.DYNAMIC,
+): Int {
+    if (backgroundSizing == DockBackgroundSizing.FIXED) {
+        return availableMainAxisDp.coerceAtLeast(0)
+    }
+    return if (runsHorizontally) {
         DOCK_MAX_HORIZONTAL_MAIN_AXIS_DP
     } else {
         (availableMainAxisDp.coerceAtLeast(0) * DOCK_MAX_VERTICAL_MAIN_AXIS_FRACTION).toInt()
     }
+}
 
 /**
  * The dock's thickness -- across its run, not along it. The strip is one icon deep plus chrome
@@ -497,7 +505,7 @@ internal fun dockContainerMainAxisDp(
 ): Int {
     val maxDockMainAxis =
         runMainAxisCapDp?.let { cap -> min(availableMainAxisDp, cap) }
-            ?: min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally))
+            ?: min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally, backgroundSizing))
     if (backgroundSizing == DockBackgroundSizing.FIXED) {
         return maxDockMainAxis
     }
@@ -642,14 +650,6 @@ internal data class DockInteractions(
     val staticItemTapOverride: (AppIdentity) -> LauncherShellAction? = { null },
     /** Whether a home-grid item is currently being dragged over the dock, and would drop into it. */
     val isDropHighlighted: Boolean = false,
-    /**
-     * Called with a pinned app's identity and its dock icon's current root-coordinate bounds right
-     * before [staticItemTapOverride] navigates to its stage instead of launching it -- the
-     * shared-element source rect for the header's dock-to-header identity transition (Cards mode
-     * only; see [com.riffle.app.launcher.DockIdentityTransitionRequest]). No-op default leaves every
-     * other mode, and a tap that launches rather than navigates, unaffected.
-     */
-    val onIdentityTransitionRequested: (AppIdentity, Rect) -> Unit = { _, _ -> },
     val onAction: (LauncherShellAction) -> Unit,
 )
 
@@ -1122,10 +1122,6 @@ private fun DockShortcut(
     appIconLoader: AppIconLoader,
 ) {
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
-    // The icon's own on-screen bounds, refreshed on every layout pass -- read only at tap time, when
-    // a stage-navigating tap needs a source rect for the dock-to-header identity transition (see
-    // DockInteractions.onIdentityTransitionRequested). Root coordinates, matching HomeDockHostState.
-    var iconBoundsInRoot by remember(shortcut.id) { mutableStateOf<Rect?>(null) }
 
     Box(
         modifier =
@@ -1138,7 +1134,6 @@ private fun DockShortcut(
             iconLoader = appIconLoader,
             modifier =
                 Modifier.requiredSize(state.iconSizeDp.dp)
-                    .onGloballyPositioned { coordinates -> iconBoundsInRoot = coordinates.boundsInRoot() }
                     .then(
                         if (state.isEditing) {
                             Modifier.clickable(onClick = { isContextMenuExpanded.value = true })
@@ -1147,14 +1142,6 @@ private fun DockShortcut(
                                 onClick = {
                                     val override =
                                         presentation.interactions.staticItemTapOverride(shortcut.appIdentity)
-                                    if (override is LauncherShellAction.SelectAppStage) {
-                                        iconBoundsInRoot?.let { bounds ->
-                                            presentation.interactions.onIdentityTransitionRequested(
-                                                shortcut.appIdentity,
-                                                bounds,
-                                            )
-                                        }
-                                    }
                                     presentation.interactions.onAction(override ?: shortcut.launchAction())
                                 },
                                 onLongClick = {

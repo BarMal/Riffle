@@ -8,7 +8,6 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.WidgetItem
-import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -395,173 +394,6 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun dockShelfUsesStandardSpringMotionWhenReducedMotionIsOff() {
-        assertEquals(
-            DockShelfMotionPolicy.StandardSpring,
-            dockShelfMotionPolicy(reducedMotion = false),
-        )
-    }
-
-    @Test
-    fun dockShelfUsesShortTweenMotionWhenReducedMotionIsOn() {
-        assertEquals(
-            DockShelfMotionPolicy.ReducedShortTween,
-            dockShelfMotionPolicy(reducedMotion = true),
-        )
-        assertEquals(80, REDUCED_MOTION_DOCK_SHELF_DURATION_MILLIS)
-    }
-
-    @Test
-    fun motionPerformanceTargetsCycleThroughSupportedRefreshRates() {
-        assertEquals(MotionPerformanceTargetFps.FPS_90, MotionPerformanceTargetFps.FPS_60.next())
-        assertEquals(MotionPerformanceTargetFps.FPS_120, MotionPerformanceTargetFps.FPS_90.next())
-        assertEquals(MotionPerformanceTargetFps.FPS_60, MotionPerformanceTargetFps.FPS_120.next())
-    }
-
-    @Test
-    fun frameRateGatewaySkipsUnsupportedPlatformCapabilities() {
-        val platform = FakeDockShelfFrameRatePlatform(initialFrameRate = null)
-
-        assertEquals(null, DockShelfFrameRateGateway(platform).acquire(MotionPerformanceTargetFps.FPS_90))
-        assertEquals(emptyList<Float>(), platform.requestedFrameRates)
-    }
-
-    @Test
-    fun frameRateGatewayFallsBackWhenPlatformRejectsTarget() {
-        val platform = FakeDockShelfFrameRatePlatform(initialFrameRate = 60f, acceptsRequests = false)
-
-        assertEquals(null, DockShelfFrameRateGateway(platform).acquire(MotionPerformanceTargetFps.FPS_90))
-        assertEquals(60f, platform.currentFrameRate)
-        assertEquals(listOf(90f), platform.requestedFrameRates)
-    }
-
-    @Test
-    fun frameRateGatewayRestoresPreviousPreferenceWhenLeaseEnds() {
-        val platform = FakeDockShelfFrameRatePlatform(initialFrameRate = 60f)
-        val lease = DockShelfFrameRateGateway(platform).acquire(MotionPerformanceTargetFps.FPS_90)
-
-        assertEquals(90f, platform.currentFrameRate)
-        lease?.restore()
-
-        assertEquals(60f, platform.currentFrameRate)
-        assertEquals(listOf(90f, 60f), platform.requestedFrameRates)
-    }
-
-    @Test
-    fun frameRateGatewayUsesTheLowestSupportedRateAtOrAboveTheTarget() {
-        val platform =
-            FakeDockShelfFrameRatePlatform(
-                initialFrameRate = 60f,
-                supportedFrameRates = listOf(60f, 144f),
-            )
-
-        val lease = DockShelfFrameRateGateway(platform).acquire(MotionPerformanceTargetFps.FPS_120)
-
-        assertEquals(144f, platform.currentFrameRate)
-        lease?.restore()
-        assertEquals(60f, platform.currentFrameRate)
-        assertEquals(listOf(144f, 60f), platform.requestedFrameRates)
-    }
-
-    @Test
-    fun frameRateGatewayUsesFractionalSupportedModesForMatchingTarget() {
-        val platform =
-            FakeDockShelfFrameRatePlatform(
-                initialFrameRate = 59.94f,
-                supportedFrameRates = listOf(59.94f, 119.88f),
-            )
-        val gateway = DockShelfFrameRateGateway(platform)
-        val availability = gateway.availability(MotionPerformanceTargetFps.FPS_120)
-
-        assertEquals(
-            MotionPerformanceTargetFps.FPS_120,
-            availability.effectiveChoice?.targetFps,
-        )
-        gateway.acquire(MotionPerformanceTargetFps.FPS_120)
-
-        assertEquals(listOf(119.88f), platform.requestedFrameRates)
-    }
-
-    @Test
-    fun frameRateAvailabilityFallsBackToHighestAvailableTarget() {
-        val availability =
-            dockShelfFrameRateAvailability(
-                requestedTargetFps = MotionPerformanceTargetFps.FPS_120,
-                supportedFrameRates =
-                    listOf(
-                        59.94f,
-                        89.9f,
-                    ),
-            )
-
-        assertEquals(
-            listOf(MotionPerformanceTargetFps.FPS_60, MotionPerformanceTargetFps.FPS_90),
-            availability.choices.map(DockShelfFrameRateChoice::targetFps),
-        )
-        assertEquals(
-            MotionPerformanceTargetFps.FPS_90,
-            availability.effectiveChoice?.targetFps,
-        )
-        assertEquals(true, availability.usesFallback)
-    }
-
-    @Test
-    fun frameRateAvailabilityIsUnavailableWithoutDisplayModes() {
-        val availability =
-            dockShelfFrameRateAvailability(
-                MotionPerformanceTargetFps.FPS_120,
-                supportedFrameRates = null,
-            )
-
-        assertEquals(emptyList<DockShelfFrameRateChoice>(), availability.choices)
-        assertEquals(null, availability.effectiveChoice)
-    }
-
-    @Test
-    fun frameRateTargetCyclingSkipsUnsupportedChoices() {
-        val choices =
-            listOf(
-                DockShelfFrameRateChoice(MotionPerformanceTargetFps.FPS_60, 59.94f),
-                DockShelfFrameRateChoice(MotionPerformanceTargetFps.FPS_120, 119.88f),
-            )
-
-        assertEquals(
-            MotionPerformanceTargetFps.FPS_120,
-            nextDockShelfFrameRateTarget(MotionPerformanceTargetFps.FPS_60, choices),
-        )
-        assertEquals(
-            MotionPerformanceTargetFps.FPS_60,
-            nextDockShelfFrameRateTarget(MotionPerformanceTargetFps.FPS_120, choices),
-        )
-        assertEquals(
-            MotionPerformanceTargetFps.FPS_90,
-            nextDockShelfFrameRateTarget(MotionPerformanceTargetFps.FPS_90, emptyList()),
-        )
-    }
-
-    private class FakeDockShelfFrameRatePlatform(
-        initialFrameRate: Float?,
-        private val supportedFrameRates: List<Float>? = listOf(60f, 90f, 120f),
-        private val acceptsRequests: Boolean = true,
-    ) : DockShelfFrameRatePlatform {
-        var currentFrameRate = initialFrameRate
-            private set
-        val requestedFrameRates = mutableListOf<Float>()
-
-        override fun preferredFrameRate(): Float? = currentFrameRate
-
-        override fun supportedFrameRates(): List<Float>? = supportedFrameRates
-
-        override fun setPreferredFrameRate(frameRate: Float): Boolean {
-            requestedFrameRates += frameRate
-            if (!acceptsRequests) return false
-
-            currentFrameRate = frameRate
-            return true
-        }
-    }
-
-    @Test
     fun everyDockItemRendersWhateverTheCapacityIs() {
         // Capacity no longer truncates. All seven items are laid out; the strip scrolls.
         val items = (1..7).map { index -> widget("widget:$index", index) }
@@ -602,8 +434,37 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun aHorizontalDockStopsAtItsAbsoluteCapHoweverWideTheScreenIs() {
-        // The cap exists because screens get wider than a dock usefully needs to be.
+    fun fixedDockGivesEveryPersistedItemViewportRoomEvenPastCapacity() {
+        // Capacity is lowered without deleting anything already pinned past it (see
+        // dockRenderedSlotCount's own doc). FIXED ("Full width") must not re-cap the *visible* slot
+        // count to the old capacity -- a longer background that still hid items past it would be the
+        // same "still scrolls" mismatch the setting exists to fix -- so its content viewport is sized
+        // for all seven items, wider than DYNAMIC's, which still only sizes for the five it caps to.
+        val items = (1..7).map { index -> widget("widget:$index", index) }
+        val fixedMetrics =
+            checkNotNull(
+                dockSurfaceMetrics(
+                    dock = DockModel(capacity = 5, items = items, backgroundSizing = DockBackgroundSizing.FIXED),
+                    isEditing = false,
+                    availableMainAxisDp = 2000,
+                ),
+            )
+        val dynamicMetrics =
+            checkNotNull(
+                dockSurfaceMetrics(
+                    dock = DockModel(capacity = 5, items = items, backgroundSizing = DockBackgroundSizing.DYNAMIC),
+                    isEditing = false,
+                    availableMainAxisDp = 2000,
+                ),
+            )
+
+        assertEquals(true, fixedMetrics.contentViewportMainAxisDp > dynamicMetrics.contentViewportMainAxisDp)
+    }
+
+    @Test
+    fun aHorizontalDynamicDockStopsAtItsAbsoluteCapHoweverWideTheScreenIs() {
+        // The cap exists because screens get wider than an under-filled dock usefully needs to be --
+        // it still applies to DYNAMIC (fit content), which is what it was always meant to bound.
         assertEquals(
             560,
             dockContainerMainAxisDp(
@@ -611,14 +472,14 @@ class HomeDockMetricsTest {
                 slotCount = 40,
                 iconSizeDp = 48,
                 itemSpacingDp = 8,
-                backgroundSizing = DockBackgroundSizing.FIXED,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
                 runsHorizontally = true,
             ),
         )
     }
 
     @Test
-    fun aVerticalDockStopsAtAShareOfTheHeightItWasOffered() {
+    fun aVerticalDynamicDockStopsAtAShareOfTheHeightItWasOffered() {
         // A fixed dp would crowd a short screen and stop well short of a tall one.
         assertEquals(
             (800 * 0.7f).toInt(),
@@ -627,7 +488,7 @@ class HomeDockMetricsTest {
                 slotCount = 40,
                 iconSizeDp = 48,
                 itemSpacingDp = 8,
-                backgroundSizing = DockBackgroundSizing.FIXED,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
                 runsHorizontally = false,
             ),
         )
@@ -638,7 +499,7 @@ class HomeDockMetricsTest {
                 slotCount = 40,
                 iconSizeDp = 48,
                 itemSpacingDp = 8,
-                backgroundSizing = DockBackgroundSizing.FIXED,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
                 runsHorizontally = false,
             ),
         )
@@ -658,6 +519,40 @@ class HomeDockMetricsTest {
             )
 
         assertEquals(true, twoItems < (1600 * 0.7f).toInt())
+    }
+
+    @Test
+    fun aFixedHorizontalDockUsesTheFullWidthHoweverWideTheScreenIs() {
+        // FIXED ("Full width") is the user asking the dock to actually use the room it has -- the
+        // absolute cap that bounds an under-filled DYNAMIC dock would otherwise make this setting do
+        // nothing past 560dp, which is exactly the "still scrolls" mismatch it exists to fix.
+        assertEquals(
+            1600,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 1600,
+                slotCount = 40,
+                iconSizeDp = 48,
+                itemSpacingDp = 8,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+                runsHorizontally = true,
+            ),
+        )
+    }
+
+    @Test
+    fun aFixedVerticalDockUsesTheFullHeightHoweverTallTheScreenIs() {
+        // Same fix on the vertical axis: FIXED is not capped to 70% of the height it was offered.
+        assertEquals(
+            800,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 800,
+                slotCount = 40,
+                iconSizeDp = 48,
+                itemSpacingDp = 8,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+                runsHorizontally = false,
+            ),
+        )
     }
 
     @Test

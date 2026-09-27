@@ -1410,7 +1410,6 @@ internal fun CardsDockEdgeHeader(
         }
     val summary = adaptiveStageHeaderSummary(shownStage, allNotificationsSelected, stages)
     val shownApp = shownStage?.let { stage -> state.installedAppsByStageId[stage.id] }
-
     val identityPill: @Composable () -> Unit = {
         CardsDockEdgeIdentityPill(
             label = label,
