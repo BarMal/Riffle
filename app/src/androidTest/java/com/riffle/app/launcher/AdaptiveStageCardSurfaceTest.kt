@@ -294,7 +294,12 @@ class AdaptiveStageCardSurfaceTest {
                 // The overflow this test targets is CardsDockEdgeCardPanel's now (rendered beside the
                 // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
                 // on an explicit higher zIndex so it (like the real dock) deterministically wins
-                // hit-testing over the surface's own full-screen gesture handling beneath it.
+                // hit-testing over the surface's own full-screen gesture handling beneath it. Sized
+                // (like appStageHeaderOverflowExposesFunctionalStageActions below) so the overflow's
+                // DropdownMenu popup, which anchors off this content's own bounds, has a real size to
+                // anchor against -- shownApp is non-null here (a real stage is pinned/selected), which
+                // adds "Open <app>"/"App info" ahead of "Add stage" in the menu, and without an
+                // explicit bound the popup failed to anchor correctly with that taller content.
                 //
                 // CardsDockEdgeCardPanel's "Add stage" reads LocalAdaptiveStageAddStageRequest, which
                 // AdaptiveStageAppStageSurface normally provides -- but only around its own subtree,
@@ -305,7 +310,7 @@ class AdaptiveStageCardSurfaceTest {
                 var addStageSheetOpen by remember { mutableStateOf(false) }
                 CompositionLocalProvider(LocalAdaptiveStageAddStageRequest provides { addStageSheetOpen = true }) {
                     AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
-                    Box(modifier = Modifier.zIndex(1f)) {
+                    Box(modifier = Modifier.zIndex(1f).width(400.dp).height(400.dp).clipToBounds()) {
                         CardsDockEdgeCardPanel(
                             selectedStage = shellState.snapshot.selectedStage,
                             allNotificationsSelected = false,
