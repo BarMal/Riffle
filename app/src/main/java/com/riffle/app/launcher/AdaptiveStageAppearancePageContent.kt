@@ -7,24 +7,29 @@
 
 package com.riffle.app.launcher
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,10 +39,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.cards.MIN_CARD_STACK_MAGNET_STRENGTH_PERCENT
@@ -141,7 +151,7 @@ internal fun AdaptiveStageAppearancePageContent(
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = RiffleShapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             AdaptiveStageAppearancePreview(
@@ -310,26 +320,107 @@ internal fun AdaptiveStageAppearanceTab.label(): String =
         AdaptiveStageAppearanceTab.ACCESSIBILITY -> "Accessibility"
     }
 
+/**
+ * The Layout/Geometry/Surface/Color/Motion/Accessibility chooser, as a row of glass pills rather
+ * than Material's thin-underline [androidx.compose.material3.TabRow] -- the underline is easy to
+ * miss at a glance, while a filled pill behind the active label reads at a touch.
+ */
 @Composable
 private fun AdaptiveStageAppearanceTabRow(
     selected: AdaptiveStageAppearanceTab,
     onSelected: (AdaptiveStageAppearanceTab) -> Unit,
 ) {
-    val tabs = AdaptiveStageAppearanceTab.entries
-    ScrollableTabRow(
-        selectedTabIndex = tabs.indexOf(selected),
-        edgePadding = 8.dp,
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = ADAPTIVE_STAGE_CONTENT_INSET, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        tabs.forEach { tab ->
-            Tab(
-                selected = tab == selected,
+        AdaptiveStageAppearanceTab.entries.forEach { tab ->
+            AdaptiveStageAppearanceTabPill(
+                tab = tab,
+                active = tab == selected,
                 onClick = { onSelected(tab) },
-                text = { Text(tab.label()) },
-                modifier =
-                    Modifier
-                        .semantics { contentDescription = "Appearance section: ${tab.label()}" }
-                        .testTag("adaptive-stage-appearance-tab-${tab.name}"),
             )
+        }
+    }
+}
+
+@Composable
+private fun AdaptiveStageAppearanceTabPill(
+    tab: AdaptiveStageAppearanceTab,
+    active: Boolean,
+    onClick: () -> Unit,
+) {
+    val pillColor by
+        animateColorAsState(
+            targetValue =
+                if (active) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = ADAPTIVE_STAGE_TAB_PILL_ALPHA)
+                } else {
+                    Color.Transparent
+                },
+            animationSpec = tactileMotionSpec(),
+            label = "adaptive-stage-tab-pill",
+        )
+    Box(
+        modifier =
+            Modifier
+                .clip(RiffleShapes.medium)
+                .background(pillColor)
+                .selectable(selected = active, role = Role.Tab, onClick = onClick)
+                .semantics { contentDescription = "Appearance section: ${tab.label()}" }
+                .testTag("adaptive-stage-appearance-tab-${tab.name}")
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = tab.label(),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * A section header with real weight -- accent-tinted, bolder, and ruled off with a hairline --
+ * so a long tab of many field labels reads as grouped sections rather than one undifferentiated
+ * list. Field labels underneath ([SettingsPrimaryText], [SettingsTextColumn]) stay at body scale,
+ * which is now clearly a step down from this rather than indistinguishable from it.
+ */
+@Composable
+private fun AdaptiveStageSettingsSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = ADAPTIVE_STAGE_SECTION_EXTRA_TOP_SPACING),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = ADAPTIVE_STAGE_CONTENT_INSET)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RiffleShapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+            ) {
+                content()
+            }
         }
     }
 }
@@ -359,7 +450,7 @@ private fun AdaptiveStageLayoutTabContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsSection(title = "Layout") {
+    AdaptiveStageSettingsSection(title = "Layout") {
         AdaptiveStageEnumChoices(
             title = "Pane arrangement",
             values = AdaptiveStagePaneArrangement.entries,
@@ -380,9 +471,10 @@ private fun AdaptiveStageLayoutTabContent(
             valueRange = MIN_CARDS_PAGE_VERTICAL_OFFSET_DP..MAX_CARDS_PAGE_VERTICAL_OFFSET_DP,
             valueLabel = { "$it dp" },
             onValueChange = { value -> onAction(LauncherShellAction.SelectCardsPageVerticalOffset(value)) },
+            modifier = Modifier.padding(horizontal = ADAPTIVE_STAGE_CONTENT_INSET),
         )
     }
-    SettingsSection(title = "Threads") {
+    AdaptiveStageSettingsSection(title = "Threads") {
         AdaptiveStageEnumChoices(
             title = "Card grouping",
             values = ThreadCardGrouping.entries,
@@ -404,7 +496,7 @@ private fun AdaptiveStageLayoutTabContent(
     // (#1212), so the merged view no longer needs a per-posture switch to be reachable. What stays a
     // choice is whether swiping between stages also passes through it, and whether the chip spine is
     // drawn under the stack.
-    SettingsSection(title = "Stage navigation") {
+    AdaptiveStageSettingsSection(title = "Stage navigation") {
         SettingsSwitchRow(
             title = "Swipe through All",
             subtitle = "Include the merged All view when swiping between stages on the compact layout",
@@ -429,7 +521,7 @@ private fun AdaptiveStageGeometryTabContent(
     appearance: AdaptiveStageAppearanceSettings,
     update: AdaptiveStageAppearanceUpdate,
 ) {
-    SettingsSection(title = "Card geometry") {
+    AdaptiveStageSettingsSection(title = "Card geometry") {
         AdaptiveStageSlider(
             "Card aspect ratio",
             appearance.geometry.cardAspectRatioPercent,
@@ -491,7 +583,7 @@ private fun AdaptiveStageGeometryTabContent(
             }
         }
     }
-    SettingsSection(title = "Stack and fan") {
+    AdaptiveStageSettingsSection(title = "Stack and fan") {
         AdaptiveStageSlider(
             "Visible card depth",
             appearance.geometry.visibleDepth,
@@ -610,7 +702,7 @@ private fun AdaptiveStageSurfaceTabContent(
     appearance: AdaptiveStageAppearanceSettings,
     update: AdaptiveStageAppearanceUpdate,
 ) {
-    SettingsSection(title = "Surface and glass") {
+    AdaptiveStageSettingsSection(title = "Surface and glass") {
         AdaptiveStageEnumChoices(
             "Card effect",
             AdaptiveStageCardEffect.entries,
@@ -734,7 +826,7 @@ private fun AdaptiveStageColorTabContent(
     appearance: AdaptiveStageAppearanceSettings,
     update: AdaptiveStageAppearanceUpdate,
 ) {
-    SettingsSection(title = "Colour and content") {
+    AdaptiveStageSettingsSection(title = "Colour and content") {
         AdaptiveStageEnumChoices(
             "Accent",
             AdaptiveStageAccentSource.entries,
@@ -792,7 +884,7 @@ private fun AdaptiveStageMotionTabContent(
     appearance: AdaptiveStageAppearanceSettings,
     update: AdaptiveStageAppearanceUpdate,
 ) {
-    SettingsSection(title = "Motion") {
+    AdaptiveStageSettingsSection(title = "Motion") {
         AdaptiveStageSlider(
             "Settle duration",
             appearance.motion.settleDurationMillis,
@@ -927,7 +1019,7 @@ private fun AdaptiveStageAccessibilityTabContent(
     appearance: AdaptiveStageAppearanceSettings,
     update: AdaptiveStageAppearanceUpdate,
 ) {
-    SettingsSection(title = "Accessibility fallbacks") {
+    AdaptiveStageSettingsSection(title = "Accessibility fallbacks") {
         SettingsSwitchRow(
             "Reduced motion",
             "Use static, reachable card positions",
@@ -959,9 +1051,21 @@ private fun AdaptiveStageSlider(
     unit: String,
     onValueChange: (Int) -> Unit,
 ) {
-    DiscreteSettingSlider(title, value, range, { "$it $unit" }, onValueChange)
+    DiscreteSettingSlider(
+        title,
+        value,
+        range,
+        { "$it $unit" },
+        onValueChange,
+        modifier = Modifier.padding(horizontal = ADAPTIVE_STAGE_CONTENT_INSET),
+    )
 }
 
+/**
+ * A field label and its chip row, with no separate caption restating the selected value -- the
+ * highlighted chip already shows it, and a caption that can only ever agree with the chip it sits
+ * above is not a second source of information, just the same one said twice.
+ */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun <T> AdaptiveStageEnumChoices(
@@ -972,8 +1076,11 @@ private fun <T> AdaptiveStageEnumChoices(
     testTag: ((T) -> String)? = null,
     onSelected: (T) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SettingsTextColumn(title = title, subtitle = label(selected))
+    Column(
+        modifier = Modifier.padding(horizontal = ADAPTIVE_STAGE_CONTENT_INSET),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SettingsPrimaryText(text = title)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             values.forEach { value ->
                 FilterChip(
@@ -1048,6 +1155,14 @@ private val REPRESENTATIVE_PHONE_VIEWPORT =
         heightDp = 740,
         insets = AdaptiveStageInsetsDp(topDp = 48, bottomDp = 220),
     )
+
+/** The comfortable side inset every text label in the sheet already had; sliders and chip rows now share it. */
+private val ADAPTIVE_STAGE_CONTENT_INSET = 16.dp
+
+/** Extra breathing room above each section, on top of the tab content column's own 16dp gap. */
+private val ADAPTIVE_STAGE_SECTION_EXTRA_TOP_SPACING = 8.dp
+
+private const val ADAPTIVE_STAGE_TAB_PILL_ALPHA = 0.16f
 
 private fun AdaptiveStageCardEffect.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
 

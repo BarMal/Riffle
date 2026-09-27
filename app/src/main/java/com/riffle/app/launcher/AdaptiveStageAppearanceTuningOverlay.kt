@@ -32,12 +32,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.designsystem.RiffleElevation
+import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -103,6 +106,10 @@ internal fun AdaptiveStageAppearanceTuningOverlay(
                 ),
         )
 
+    // Rounded only at the top: the sheet reaches the screen's bottom edge, so a bottom radius would
+    // never be seen and would only leave an unclipped gap for whatever is behind to bleed through.
+    val sheetShape = RoundedCornerShape(topStart = RiffleShapes.radiusL, topEnd = RiffleShapes.radiusL)
+
     BottomSheetScaffold(
         modifier = modifier.testTag(APPEARANCE_TUNING_OVERLAY_TEST_TAG),
         scaffoldState = scaffoldState,
@@ -114,21 +121,38 @@ internal fun AdaptiveStageAppearanceTuningOverlay(
         // sheet drags from anywhere on it regardless of that slot, so the header sits in the content
         // and carries its own grab affordance.
         sheetDragHandle = null,
+        // Painted by the glass layer below instead: a flat opaque colour here read as a hard,
+        // abrupt cut against the live surface behind, with no shadow or translucency to make the
+        // layering intentional. Transparent here also means the shape only clips the glass layer
+        // once, rather than clipping an opaque fill *and* a separately-clipped glass overlay --
+        // which is what was leaving unclipped corner fragments of the surface behind visible.
+        sheetContainerColor = Color.Transparent,
+        sheetShape = sheetShape,
+        sheetShadowElevation = RiffleElevation.level4,
         sheetContent = {
-            AppearanceTuningSheetHeader(
-                sheetState = scaffoldState.bottomSheetState,
-                onDismiss = onDismiss,
-                modifier = Modifier.onSizeChanged { size -> headerHeightPx = size.height },
-            )
-            AdaptiveStageAppearanceEditor(
-                state = state,
-                target = target,
-                onTargetChange = { next -> target = next },
-                onAction = onAction,
-                // Tall enough to work in, short enough that the surface being tuned stays worth
-                // looking at -- the sheet takes its expanded height from what its content asks for.
-                modifier = Modifier.fillMaxWidth().fillMaxHeight(APPEARANCE_SHEET_EXPANDED_FRACTION),
-            )
+            Box {
+                // Fills exactly the size the header + editor below resolve to (matchParentSize
+                // sizes against the other, regular children of this Box), so every pixel of the
+                // sheet is glass -- nothing behind can show through undimmed or unclipped.
+                GlassSurface(modifier = Modifier.matchParentSize(), shape = sheetShape)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    AppearanceTuningSheetHeader(
+                        sheetState = scaffoldState.bottomSheetState,
+                        onDismiss = onDismiss,
+                        modifier = Modifier.onSizeChanged { size -> headerHeightPx = size.height },
+                    )
+                    AdaptiveStageAppearanceEditor(
+                        state = state,
+                        target = target,
+                        onTargetChange = { next -> target = next },
+                        onAction = onAction,
+                        // Tall enough to work in, short enough that the surface being tuned stays
+                        // worth looking at -- the sheet takes its expanded height from what its
+                        // content asks for.
+                        modifier = Modifier.fillMaxWidth().fillMaxHeight(APPEARANCE_SHEET_EXPANDED_FRACTION),
+                    )
+                }
+            }
         },
     ) {
         // The padding this hands back is how much the peeking sheet covers. Ignored on purpose:
