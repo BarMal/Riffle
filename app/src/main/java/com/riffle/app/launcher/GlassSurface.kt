@@ -85,19 +85,22 @@ internal fun GlassSurface(
     val runningUnderRobolectric = Build.FINGERPRINT == "robolectric"
 
     Box(modifier = modifier.clip(shape)) {
-        if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            !runningUnderRobolectric &&
-            liquidGlass.enabled &&
-            backdrop != null
-        ) {
-            LiquidGlassShaderLayer(
-                shape = shape,
-                tint = tint,
-                backdrop = backdrop,
-                frostStrength = liquidGlass.frostStrengthFraction,
-                refractionStrength = liquidGlass.refractionStrengthFraction,
-            )
+        // Nested rather than one compound condition so the inner if -- unchanged from the version
+        // Android Lint's NewApi check already traces correctly -- keeps doing so; folding
+        // !runningUnderRobolectric into that same condition would push it over detekt's
+        // ComplexCondition threshold instead.
+        if (!runningUnderRobolectric) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
+                LiquidGlassShaderLayer(
+                    shape = shape,
+                    tint = tint,
+                    backdrop = backdrop,
+                    frostStrength = liquidGlass.frostStrengthFraction,
+                    refractionStrength = liquidGlass.refractionStrengthFraction,
+                )
+            } else {
+                LegacyGlassTintLayer(supportsBlur = supportsLegacyBlur, tint = tint)
+            }
         } else {
             LegacyGlassTintLayer(supportsBlur = supportsLegacyBlur, tint = tint)
         }
