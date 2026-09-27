@@ -40,6 +40,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
+import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
 import com.riffle.core.domain.launcher.settings.MAX_STACK_CURVE_FRACTION
 import com.riffle.core.domain.launcher.settings.MAX_STACK_HORIZONTAL_OFFSET_FRACTION
 import com.riffle.core.domain.launcher.settings.MAX_STACK_VERTICAL_SPACING_FRACTION
@@ -69,6 +70,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("contextual", encodeContextual(settings.contextual))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
+        .put("liquidGlass", encodeLiquidGlass(settings.liquidGlass))
         .put("motion", encodeMotionSettings(settings.motion))
         .put("notificationHiding", encodeNotificationHiding(settings.notificationHiding))
         .put("overlayDock", encodeOverlayDock(settings.overlayDock))
@@ -86,6 +88,8 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
             contextual = json.optJSONObject("contextual")?.toContextual(defaults.contextual) ?: defaults.contextual,
             gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
             haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
+            liquidGlass =
+                json.optJSONObject("liquidGlass")?.toLiquidGlass(defaults.liquidGlass) ?: defaults.liquidGlass,
             motion = json.optJSONObject("motion")?.toMotionSettings(defaults.motion) ?: defaults.motion,
             notificationHiding =
                 json.optJSONObject("notificationHiding")?.toNotificationHiding(defaults.notificationHiding)
@@ -819,6 +823,19 @@ private fun JSONObject.toHaptics(defaults: HapticSettings): HapticSettings =
                 .getOrDefault(defaults.feedbackStrength),
     )
 
+private fun encodeLiquidGlass(settings: LiquidGlassSettings): JSONObject =
+    JSONObject()
+        .put("enabled", settings.enabled)
+        .put("frostStrengthPercent", settings.frostStrengthPercent)
+        .put("refractionStrengthPercent", settings.refractionStrengthPercent)
+
+private fun JSONObject.toLiquidGlass(defaults: LiquidGlassSettings): LiquidGlassSettings =
+    LiquidGlassSettings(
+        enabled = optBoolean("enabled", defaults.enabled),
+        frostStrengthPercent = optInt("frostStrengthPercent", defaults.frostStrengthPercent),
+        refractionStrengthPercent = optInt("refractionStrengthPercent", defaults.refractionStrengthPercent),
+    ).coerced()
+
 private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =
     JSONObject()
         .put("enabled", settings.enabled)
@@ -962,4 +979,4 @@ private fun JSONObject.toFeedProfile(): AppProfile? =
         }
     }
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 9
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 10

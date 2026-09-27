@@ -54,6 +54,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
+import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import kotlinx.coroutines.delay
 
 @Composable
@@ -126,6 +127,7 @@ fun LauncherShellContent(
         themeCornerStyle = state.launcherSettings.appearance.themeCornerStyle,
         themeTypography = state.launcherSettings.appearance.themeTypography,
         reducedTransparency = state.launcherSettings.cards.adaptiveStageAppearance.motion.reducedTransparency,
+        liquidGlass = state.launcherSettings.resolveLiquidGlass(),
     ) {
         val usesSystemWallpaper =
             state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM &&

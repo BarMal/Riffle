@@ -19,6 +19,7 @@ data class LauncherSettings(
     val contextual: ContextualSettings = ContextualSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
+    val liquidGlass: LiquidGlassSettings = LiquidGlassSettings(),
     val motion: MotionSettings = MotionSettings(),
     val notificationHiding: NotificationHidingSettings = NotificationHidingSettings(),
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),

@@ -471,6 +471,18 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectHomeNavigationBarHidden(hidden = true),
                 ),
                 settings(
+                    "SelectLiquidGlassEnabled",
+                    LauncherShellAction.SelectLiquidGlassEnabled(enabled = false),
+                ),
+                settings(
+                    "SelectLiquidGlassFrostStrength",
+                    LauncherShellAction.SelectLiquidGlassFrostStrength(percent = 60),
+                ),
+                settings(
+                    "SelectLiquidGlassRefractionStrength",
+                    LauncherShellAction.SelectLiquidGlassRefractionStrength(percent = 30),
+                ),
+                settings(
                     "SelectHomeSwipeGestureAction",
                     LauncherShellAction.SelectHomeSwipeGestureAction(
                         direction = HomeSwipeGestureDirection.UP,

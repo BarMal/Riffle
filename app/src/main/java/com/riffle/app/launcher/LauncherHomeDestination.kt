@@ -97,61 +97,66 @@ fun HomeDestination(
     // [presentation], since they already read their own state per mode via [plan.stateFor].
     val dockPresentation = standardHomePresentation(dockHostState, widgetRenderers)
 
-    Box(modifier = Modifier.fillMaxSize().then(pull.rootModifier)) {
-        // The one dock, outside the mode surface: composed at the same place whichever surface runs
-        // below, so a mode switch keeps this instance (#1205, Decision 2). What differs by mode
-        // reaches it only through [dockInterpreter]; the dock pull moves it between the surfaces'
-        // edges. Composed first so the mode's overlays cover it; the grid's own frame sits beneath
-        // it (see HOME_CONTENT_Z_INDEX). While a pull runs it is lifted over both surfaces.
-        HomeDockHost(
-            layout = dockHostState.homeLayout,
-            installedApps = dockHostState.installedApps,
-            presentation = dockPresentation,
-            position = pull.dockEdge,
-            hostState = dockHost,
-            appIconLoader = appIconLoader,
-            onAction = onAction,
-            modifier = Modifier.zIndex(if (pull.isTransitioning) DOCK_PULL_DOCK_Z_INDEX else 0f),
-            interpreter = dockInterpreter,
-            haptics = haptics,
-            dockModifier = pull.dockModifier,
-            dockBackgroundAlpha = pull.dockBackgroundAlpha,
-            dockContentRevealAlpha = pull.dockContentRevealAlpha,
-        )
-        // The screen-wide reorient frost -- see [HomeDockPullBinding.screenFrostModifier] -- is
-        // composed onto each surface's own modifier chain below, not a wrapping Box around them:
-        // an intervening Box here would put every mode surface one layout level deeper than
-        // [HomeDockHost], so StandardHome's `Modifier.zIndex(HOME_CONTENT_Z_INDEX)` -- which yields
-        // hit-test priority to the dock by ranking below it among *its own* siblings -- would no
-        // longer be comparing against the dock at all: it would rank inside the wrapping Box, which
-        // would itself tie the dock's zIndex and win hit-testing on placement order, swallowing the
-        // dock-pull gesture (see DockPullInteractionTest regressions). Composed per-surface instead,
-        // every mode surface stays a direct sibling of [HomeDockHost] exactly as before this frost
-        // was added, so that precedence still holds.
-        plan.composedModes.forEach { mode ->
-            // Keyed by mode, so the surface a pull brings in is the very composition shown once
-            // the switch lands, and a cancelled pull leaves the outgoing one untouched.
-            key(mode) {
-                ModeSurfaceContent(
-                    mode = mode,
-                    state = plan.stateFor(mode),
-                    dockEdge = plan.edges.edgeFor(mode.modeSurface),
-                    surfaceModifier =
-                        pull.surfaceModifier(isOutgoing = mode == plan.currentMode).then(pull.screenFrostModifier),
-                    cardsShellState = cardsShellState,
-                    dockHost = dockHost,
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                    widgetRenderers = widgetRenderers,
-                    haptics = haptics,
-                    cards =
-                        CardsSurfaceInputs(
-                            windowLayout = adaptiveStageWindowLayout,
-                            context = adaptiveStageContext,
-                            onContextChanged = onAdaptiveStageContextChanged,
-                        ),
-                    onAction = onAction,
-                )
+    // The shared backdrop every liquid-glass surface on Home samples from (see
+    // `LiquidGlassBackdrop.kt`): installed here, around this content specifically, since this is
+    // exactly the wallpaper-plus-surface subtree every glass surface on Home floats above.
+    ProvideLiquidGlassBackdrop { backdropCapture ->
+        Box(modifier = Modifier.fillMaxSize().then(pull.rootModifier).then(backdropCapture)) {
+            // The one dock, outside the mode surface: composed at the same place whichever surface runs
+            // below, so a mode switch keeps this instance (#1205, Decision 2). What differs by mode
+            // reaches it only through [dockInterpreter]; the dock pull moves it between the surfaces'
+            // edges. Composed first so the mode's overlays cover it; the grid's own frame sits beneath
+            // it (see HOME_CONTENT_Z_INDEX). While a pull runs it is lifted over both surfaces.
+            HomeDockHost(
+                layout = dockHostState.homeLayout,
+                installedApps = dockHostState.installedApps,
+                presentation = dockPresentation,
+                position = pull.dockEdge,
+                hostState = dockHost,
+                appIconLoader = appIconLoader,
+                onAction = onAction,
+                modifier = Modifier.zIndex(if (pull.isTransitioning) DOCK_PULL_DOCK_Z_INDEX else 0f),
+                interpreter = dockInterpreter,
+                haptics = haptics,
+                dockModifier = pull.dockModifier,
+                dockBackgroundAlpha = pull.dockBackgroundAlpha,
+                dockContentRevealAlpha = pull.dockContentRevealAlpha,
+            )
+            // The screen-wide reorient frost -- see [HomeDockPullBinding.screenFrostModifier] -- is
+            // composed onto each surface's own modifier chain below, not a wrapping Box around them:
+            // an intervening Box here would put every mode surface one layout level deeper than
+            // [HomeDockHost], so StandardHome's `Modifier.zIndex(HOME_CONTENT_Z_INDEX)` -- which yields
+            // hit-test priority to the dock by ranking below it among *its own* siblings -- would no
+            // longer be comparing against the dock at all: it would rank inside the wrapping Box, which
+            // would itself tie the dock's zIndex and win hit-testing on placement order, swallowing the
+            // dock-pull gesture (see DockPullInteractionTest regressions). Composed per-surface instead,
+            // every mode surface stays a direct sibling of [HomeDockHost] exactly as before this frost
+            // was added, so that precedence still holds.
+            plan.composedModes.forEach { mode ->
+                // Keyed by mode, so the surface a pull brings in is the very composition shown once
+                // the switch lands, and a cancelled pull leaves the outgoing one untouched.
+                key(mode) {
+                    ModeSurfaceContent(
+                        mode = mode,
+                        state = plan.stateFor(mode),
+                        dockEdge = plan.edges.edgeFor(mode.modeSurface),
+                        surfaceModifier =
+                            pull.surfaceModifier(isOutgoing = mode == plan.currentMode).then(pull.screenFrostModifier),
+                        cardsShellState = cardsShellState,
+                        dockHost = dockHost,
+                        presentation = presentation,
+                        appIconLoader = appIconLoader,
+                        widgetRenderers = widgetRenderers,
+                        haptics = haptics,
+                        cards =
+                            CardsSurfaceInputs(
+                                windowLayout = adaptiveStageWindowLayout,
+                                context = adaptiveStageContext,
+                                onContextChanged = onAdaptiveStageContextChanged,
+                            ),
+                        onAction = onAction,
+                    )
+                }
             }
         }
     }
