@@ -41,13 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -642,14 +639,6 @@ internal data class DockInteractions(
     val staticItemTapOverride: (AppIdentity) -> LauncherShellAction? = { null },
     /** Whether a home-grid item is currently being dragged over the dock, and would drop into it. */
     val isDropHighlighted: Boolean = false,
-    /**
-     * Called with a pinned app's identity and its dock icon's current root-coordinate bounds right
-     * before [staticItemTapOverride] navigates to its stage instead of launching it -- the
-     * shared-element source rect for the header's dock-to-header identity transition (Cards mode
-     * only; see [com.riffle.app.launcher.DockIdentityTransitionRequest]). No-op default leaves every
-     * other mode, and a tap that launches rather than navigates, unaffected.
-     */
-    val onIdentityTransitionRequested: (AppIdentity, Rect) -> Unit = { _, _ -> },
     val onAction: (LauncherShellAction) -> Unit,
 )
 
@@ -1122,10 +1111,6 @@ private fun DockShortcut(
     appIconLoader: AppIconLoader,
 ) {
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
-    // The icon's own on-screen bounds, refreshed on every layout pass -- read only at tap time, when
-    // a stage-navigating tap needs a source rect for the dock-to-header identity transition (see
-    // DockInteractions.onIdentityTransitionRequested). Root coordinates, matching HomeDockHostState.
-    var iconBoundsInRoot by remember(shortcut.id) { mutableStateOf<Rect?>(null) }
 
     Box(
         modifier =
@@ -1138,7 +1123,6 @@ private fun DockShortcut(
             iconLoader = appIconLoader,
             modifier =
                 Modifier.requiredSize(state.iconSizeDp.dp)
-                    .onGloballyPositioned { coordinates -> iconBoundsInRoot = coordinates.boundsInRoot() }
                     .then(
                         if (state.isEditing) {
                             Modifier.clickable(onClick = { isContextMenuExpanded.value = true })
@@ -1147,14 +1131,6 @@ private fun DockShortcut(
                                 onClick = {
                                     val override =
                                         presentation.interactions.staticItemTapOverride(shortcut.appIdentity)
-                                    if (override is LauncherShellAction.SelectAppStage) {
-                                        iconBoundsInRoot?.let { bounds ->
-                                            presentation.interactions.onIdentityTransitionRequested(
-                                                shortcut.appIdentity,
-                                                bounds,
-                                            )
-                                        }
-                                    }
                                     presentation.interactions.onAction(override ?: shortcut.launchAction())
                                 },
                                 onLongClick = {

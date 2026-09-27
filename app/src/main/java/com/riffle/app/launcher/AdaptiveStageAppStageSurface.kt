@@ -73,12 +73,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -238,13 +235,6 @@ internal fun AdaptiveStageAppStageSurface(
      * compact spine is drawn whatever its setting, so no stage is ever unreachable by touch.
      */
     dockHostsStageSelector: Boolean = false,
-    /**
-     * The shared dock's host state, if this surface is drawn beside one -- the source of the
-     * dock-icon-to-header identity transition (see AdaptiveStageHeaderIdentityTransition.kt). Null
-     * for a caller rendering the surface alone (previews, tests): the header then just shows its
-     * icon at rest, with no transition to run.
-     */
-    dockHost: HomeDockHostState? = null,
 ) {
     val addStageSheetOpenState = rememberSaveable { mutableStateOf(false) }
     val requestAddStage = remember(addStageSheetOpenState) { { addStageSheetOpenState.value = true } }
@@ -264,7 +254,6 @@ internal fun AdaptiveStageAppStageSurface(
                     spineEnabled = state.launcherSettings.cards.showStageSpine,
                     dockHostsSelector = dockHostsStageSelector,
                 ),
-            dockHost = dockHost,
         )
     }
     if (addStageSheetOpenState.value) {
@@ -290,7 +279,6 @@ private fun AdaptiveStageAppStageSurfaceContent(
     appIconLoader: AppIconLoader,
     shellState: AppStageShellState,
     showSpine: Boolean,
-    dockHost: HomeDockHostState? = null,
 ) {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -501,7 +489,6 @@ private fun AdaptiveStageAppStageSurfaceContent(
                             },
                             onAction = onAction,
                             appIconLoader = appIconLoader,
-                            dockHost = dockHost,
                         )
 
                     AdaptiveStagePaneMode.SPLIT ->
@@ -530,7 +517,6 @@ private fun AdaptiveStageAppStageSurfaceContent(
                             },
                             onAction = onAction,
                             appIconLoader = appIconLoader,
-                            dockHost = dockHost,
                         )
 
                     AdaptiveStagePaneMode.TWO_PANE, AdaptiveStagePaneMode.THREE_PANE -> {
@@ -574,7 +560,6 @@ private fun AdaptiveStageAppStageSurfaceContent(
                                     state = state,
                                     appIconLoader = appIconLoader,
                                     onAction = onAction,
-                                    dockHost = dockHost,
                                 )
                                 AdaptiveStageCompactStagePager(
                                     pages = pages,
@@ -726,7 +711,6 @@ private fun AdaptiveStageCompactContent(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
-    dockHost: HomeDockHostState? = null,
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -753,7 +737,6 @@ private fun AdaptiveStageCompactContent(
             state = state,
             appIconLoader = appIconLoader,
             onAction = onAction,
-            dockHost = dockHost,
         )
         AdaptiveStageCompactStagePager(
             pages = pages,
@@ -816,7 +799,6 @@ private fun AdaptiveStageSplitContent(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
-    dockHost: HomeDockHostState? = null,
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -855,7 +837,6 @@ private fun AdaptiveStageSplitContent(
             state = state,
             appIconLoader = appIconLoader,
             onAction = onAction,
-            dockHost = dockHost,
         )
         AdaptiveStageSupportingPane(
             stage = selectedStage,
@@ -1416,11 +1397,7 @@ private fun AdaptiveStageSupportingPane(
 
 /**
  * Slimmed down from a full-width opaque toolbar to a compact glass label plus a small floating
- * action capsule (design review polish pass): the dock is now the one persistent place an app's
- * identity lives, so this header no longer draws a second, disconnected copy of the icon -- it
- * receives that exact icon via [DockIdentityOverlayIcon] instead, animating in from wherever the
- * user tapped it in the dock. See AdaptiveStageHeaderIdentityTransition.kt for why that is a manual
- * approximation rather than a real `SharedTransitionLayout`.
+ * action capsule (design review polish pass).
  */
 @Composable
 private fun AdaptiveStageStageHeader(
@@ -1430,7 +1407,6 @@ private fun AdaptiveStageStageHeader(
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
-    dockHost: HomeDockHostState? = null,
 ) {
     // selectedStage stays the last real selection while the merged page is showing (so leaving
     // "All" returns to it), so "a real stage is showing" needs its own explicit gate.
@@ -1443,21 +1419,12 @@ private fun AdaptiveStageStageHeader(
         }
     val summary = adaptiveStageHeaderSummary(shownStage, allNotificationsSelected, stages)
     val shownApp = shownStage?.let { stage -> state.installedAppsByStageId[stage.id] }
-    val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
-
-    var headerOriginInRoot by remember { mutableStateOf<Offset?>(null) }
-    var restIconBoundsInRoot by remember { mutableStateOf<Rect?>(null) }
-    val transitionRequest = dockHost?.identityTransitionRequest?.value
-    val animatingIdentity =
-        shouldAnimateIdentityTransition(transitionRequest, shownApp?.identity, reducedMotion)
 
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .onGloballyPositioned { coordinates -> headerOriginInRoot = coordinates.boundsInRoot().topLeft },
+                .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         GlassSurface(
             shape = MaterialTheme.shapes.large,
@@ -1469,16 +1436,7 @@ private fun AdaptiveStageStageHeader(
             ) {
                 if (shownApp != null) {
                     Box(
-                        modifier =
-                            Modifier
-                                .size(HEADER_ICON_SIZE_DP.dp)
-                                .padding(end = 10.dp)
-                                .onGloballyPositioned { coordinates ->
-                                    restIconBoundsInRoot = coordinates.boundsInRoot()
-                                }
-                                // Hidden for exactly the transition's travel: the overlay icon
-                                // drawn below is standing in for it, arriving at this same slot.
-                                .graphicsLayer { alpha = if (animatingIdentity) 0f else 1f },
+                        modifier = Modifier.size(HEADER_ICON_SIZE_DP.dp).padding(end = 10.dp),
                     ) {
                         LauncherAppIcon(
                             identity = shownApp.identity,
@@ -1553,24 +1511,6 @@ private fun AdaptiveStageStageHeader(
                     shownApp = shownApp,
                     notificationAccessStatus = state.notificationAccessStatus,
                     onAction = onAction,
-                )
-            }
-        }
-        if (animatingIdentity) {
-            val origin = headerOriginInRoot
-            val restBounds = restIconBoundsInRoot
-            val request = transitionRequest
-            if (request != null && origin != null && restBounds != null) {
-                DockIdentityOverlayIcon(
-                    request = request,
-                    headerOriginInRoot = origin,
-                    restBoundsInRoot = restBounds,
-                    label = label,
-                    appIconLoader = appIconLoader,
-                    onSettled = {
-                        haptics.perform(LauncherHapticEvent.COMMIT)
-                        dockHost?.identityTransitionRequest?.value = null
-                    },
                 )
             }
         }
