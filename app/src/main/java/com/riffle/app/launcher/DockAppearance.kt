@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RenderEffect
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -77,7 +79,7 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
     if (backgroundAlpha === OpaqueDockBackground) {
         var result = this
         if (spec.elevationDp > 0) result = result.shadow(spec.elevationDp.dp, shape)
-        result = result.clip(shape).background(dockSurfaceColor(dock))
+        result = result.clip(shape).dockAtRestBackground(shape, dock)
         if (spec.outlineWidthDp > 0) {
             result = result.border(spec.outlineWidthDp.dp, MaterialTheme.colorScheme.outlineVariant, shape)
         }
@@ -106,6 +108,47 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
             )
         }
     }
+}
+
+/**
+ * The dock's at-rest background fill (branch 1 of [dockSurfaceAppearance] -- the dock-pull
+ * transition in branch 2 is untouched by this and keeps its own flat [dockSurfaceColor] fade,
+ * documented as a known follow-up where [dockSurfaceAppearance] calls this).
+ *
+ * When liquid glass is enabled and this call site is eligible for the real shader treatment (API
+ * 33+, a [LocalLiquidGlassBackdrop] installed above Home's root, not under Robolectric -- the exact
+ * same gate [GlassSurface] itself checks), the dock's flat [dockSurfaceColor] fill is replaced by
+ * [liquidGlassShaderBackground], the same backdrop-refraction material `GlassSurface` gives its own
+ * content, using [dockSurfaceColor] as the shader's tint so FLAT/ELEVATED keep tinting distinctly,
+ * exactly as today, and [shape] as the surface actually clips to (already applied by the caller).
+ * Otherwise this is exactly today's flat [dockSurfaceColor] fill -- zero behavior change.
+ */
+@Composable
+private fun Modifier.dockAtRestBackground(
+    shape: Shape,
+    dock: DockModel,
+): Modifier {
+    val liquidGlass = LocalLiquidGlassSettings.current
+    val backdrop = LocalLiquidGlassBackdrop.current
+    val color = dockSurfaceColor(dock)
+
+    // Nested rather than one compound condition, matching GlassSurface.kt's own structure: Android
+    // Lint's NewApi check does not trace a precomputed boolean referencing SDK_INT across a function
+    // call boundary, so the API-33 shader call must sit behind a *direct*
+    // `Build.VERSION.SDK_INT >= ...` check here, not one folded into a single condition with the
+    // Robolectric guard (which would also push this over detekt's ComplexCondition threshold).
+    if (Build.FINGERPRINT != "robolectric") {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
+            return liquidGlassShaderBackground(
+                shape = shape,
+                tint = color,
+                backdrop = backdrop,
+                frostStrength = liquidGlass.frostStrengthFraction,
+                refractionStrength = liquidGlass.refractionStrengthFraction,
+            )
+        }
+    }
+    return background(color)
 }
 
 /**

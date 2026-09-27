@@ -139,7 +139,6 @@ private fun BoxScope.LegacyGlassTintLayer(
  * layer's own [GraphicsLayer.renderEffect] before drawing it.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun BoxScope.LiquidGlassShaderLayer(
     shape: Shape,
@@ -148,6 +147,43 @@ private fun BoxScope.LiquidGlassShaderLayer(
     frostStrength: Float,
     refractionStrength: Float,
 ) {
+    Box(
+        modifier =
+            Modifier
+                .matchParentSize()
+                .liquidGlassShaderBackground(
+                    shape = shape,
+                    tint = tint,
+                    backdrop = backdrop,
+                    frostStrength = frostStrength,
+                    refractionStrength = refractionStrength,
+                ),
+    )
+}
+
+/**
+ * The real backdrop-refraction treatment as a plain [Modifier] extension, decoupled from being the
+ * sole content of its own [Box] -- extracted so a call site that already has its own modifier chain
+ * (see `DockAppearance.kt`'s `dockSurfaceAppearance`) can apply it directly, in place of a flat
+ * `Modifier.background(tint)`, without wrapping its content in an extra layer. [GlassSurface] itself
+ * uses this through [LiquidGlassShaderLayer] above, unchanged from before this was extracted.
+ *
+ * Tracks this node's own position and size via [onGloballyPositioned], exactly as
+ * [LiquidGlassShaderLayer] did inline, then applies [liquidGlassRefraction] using those. Callers are
+ * responsible for their own eligibility gating (API 33+, liquid glass enabled, a non-null backdrop,
+ * not under Robolectric) -- same as before extraction, this function assumes it is only ever called
+ * once that gate has already passed, so it carries no fallback of its own.
+ */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+internal fun Modifier.liquidGlassShaderBackground(
+    shape: Shape,
+    tint: Color,
+    backdrop: GraphicsLayer,
+    frostStrength: Float,
+    refractionStrength: Float,
+): Modifier {
     val density = LocalDensity.current
     var positionInRoot by remember { mutableStateOf(Offset.Zero) }
     var sizePx by remember { mutableStateOf(IntSize.Zero) }
@@ -161,25 +197,19 @@ private fun BoxScope.LiquidGlassShaderLayer(
                 ?: with(density) { GLASS_FALLBACK_CORNER_RADIUS_DP.dp.toPx() }
         }
 
-    Box(
-        modifier =
-            Modifier
-                .matchParentSize()
-                .onGloballyPositioned { coordinates ->
-                    positionInRoot = coordinates.positionInRoot()
-                    sizePx = coordinates.size
-                }
-                .liquidGlassRefraction(
-                    localLayer = localLayer,
-                    backdrop = backdrop,
-                    shader = shader,
-                    positionInRoot = { positionInRoot },
-                    sizePx = { sizePx },
-                    cornerRadiusPx = { cornerRadiusPx },
-                    frostStrength = frostStrength,
-                    refractionStrength = refractionStrength,
-                    tint = tint,
-                ),
+    return onGloballyPositioned { coordinates ->
+        positionInRoot = coordinates.positionInRoot()
+        sizePx = coordinates.size
+    }.liquidGlassRefraction(
+        localLayer = localLayer,
+        backdrop = backdrop,
+        shader = shader,
+        positionInRoot = { positionInRoot },
+        sizePx = { sizePx },
+        cornerRadiusPx = { cornerRadiusPx },
+        frostStrength = frostStrength,
+        refractionStrength = refractionStrength,
+        tint = tint,
     )
 }
 
