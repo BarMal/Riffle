@@ -58,6 +58,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
@@ -1002,6 +1003,8 @@ internal data class HomeWorkspaceActions(
     val onBottomControlsHeightChanged: (Int) -> Unit = {},
     val onWorkspaceGridBoundsChanged: (LauncherPageId, Rect) -> Unit = { _, _ -> },
     val onDockBoundsChanged: (Rect) -> Unit = {},
+    /** See [DockInteractions.onIdentityTransitionRequested]. */
+    val onIdentityTransitionRequested: (AppIdentity, Rect) -> Unit = { _, _ -> },
     val onBackgroundClick: () -> Unit = {},
     val onAction: (LauncherShellAction) -> Unit,
 )

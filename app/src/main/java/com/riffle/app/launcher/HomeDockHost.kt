@@ -68,6 +68,15 @@ internal class HomeDockHostState {
     /** A folder opened from the dock itself (folders on a home page are the content's own). */
     val openedFolderId: MutableState<LauncherItemId?> = mutableStateOf(null)
 
+    /**
+     * The most recent dock-icon-to-header identity transition Cards asked for (a pinned app's dock
+     * icon was tapped to navigate to its stage, not launch it), or null once consumed. Read by
+     * [com.riffle.app.launcher.AdaptiveStageStageHeader]'s dock-to-header shared-element
+     * approximation; written from [DockShortcut]'s tap handler, the one place that both knows the
+     * tapped identity is navigating (not launching) and can measure its own on-screen bounds.
+     */
+    val identityTransitionRequest: MutableState<DockIdentityTransitionRequest?> = mutableStateOf(null)
+
     fun dismissShelf() {
         isShelfExpanded.value = dockShelfExpandedStateAfterBackgroundTap(isExpanded = isShelfExpanded.value)
     }
@@ -82,6 +91,18 @@ internal class HomeDockHostState {
 
 @Composable
 internal fun rememberHomeDockHostState(): HomeDockHostState = remember { HomeDockHostState() }
+
+/**
+ * One dock icon's identity, captured the instant a tap on it is about to navigate to its Cards
+ * stage. [sourceBounds] is in root coordinates -- the same space [HomeDockHostState.bounds] already
+ * uses -- and [requestId] disambiguates two taps on the same identity in a row, so the header's own
+ * `LaunchedEffect(request)` re-fires even though `request.identity` alone wouldn't have changed.
+ */
+internal data class DockIdentityTransitionRequest(
+    val identity: AppIdentity,
+    val sourceBounds: Rect,
+    val requestId: Long,
+)
 
 /**
  * How the active mode interprets the shared dock's intents (Decision 2) -- the one interpreter
@@ -188,6 +209,10 @@ internal fun HomeDockHost(
                 onExtentChanged(extentPx)
             },
             onDockBoundsChanged = { bounds -> hostState.bounds.value = bounds },
+            onIdentityTransitionRequested = { identity, sourceBounds ->
+                hostState.identityTransitionRequest.value =
+                    DockIdentityTransitionRequest(identity, sourceBounds, requestId = System.nanoTime())
+            },
             onBackgroundClick = dockShelf.dismiss,
             onAction = dockOnAction,
         )

@@ -73,9 +73,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -235,6 +238,13 @@ internal fun AdaptiveStageAppStageSurface(
      * compact spine is drawn whatever its setting, so no stage is ever unreachable by touch.
      */
     dockHostsStageSelector: Boolean = false,
+    /**
+     * The shared dock's host state, if this surface is drawn beside one -- the source of the
+     * dock-icon-to-header identity transition (see AdaptiveStageHeaderIdentityTransition.kt). Null
+     * for a caller rendering the surface alone (previews, tests): the header then just shows its
+     * icon at rest, with no transition to run.
+     */
+    dockHost: HomeDockHostState? = null,
 ) {
     val addStageSheetOpenState = rememberSaveable { mutableStateOf(false) }
     val requestAddStage = remember(addStageSheetOpenState) { { addStageSheetOpenState.value = true } }
@@ -254,6 +264,7 @@ internal fun AdaptiveStageAppStageSurface(
                     spineEnabled = state.launcherSettings.cards.showStageSpine,
                     dockHostsSelector = dockHostsStageSelector,
                 ),
+            dockHost = dockHost,
         )
     }
     if (addStageSheetOpenState.value) {
@@ -279,6 +290,7 @@ private fun AdaptiveStageAppStageSurfaceContent(
     appIconLoader: AppIconLoader,
     shellState: AppStageShellState,
     showSpine: Boolean,
+    dockHost: HomeDockHostState? = null,
 ) {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -489,6 +501,7 @@ private fun AdaptiveStageAppStageSurfaceContent(
                             },
                             onAction = onAction,
                             appIconLoader = appIconLoader,
+                            dockHost = dockHost,
                         )
 
                     AdaptiveStagePaneMode.SPLIT ->
@@ -517,6 +530,7 @@ private fun AdaptiveStageAppStageSurfaceContent(
                             },
                             onAction = onAction,
                             appIconLoader = appIconLoader,
+                            dockHost = dockHost,
                         )
 
                     AdaptiveStagePaneMode.TWO_PANE, AdaptiveStagePaneMode.THREE_PANE -> {
@@ -560,6 +574,7 @@ private fun AdaptiveStageAppStageSurfaceContent(
                                     state = state,
                                     appIconLoader = appIconLoader,
                                     onAction = onAction,
+                                    dockHost = dockHost,
                                 )
                                 AdaptiveStageCompactStagePager(
                                     pages = pages,
@@ -711,6 +726,7 @@ private fun AdaptiveStageCompactContent(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
+    dockHost: HomeDockHostState? = null,
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -737,6 +753,7 @@ private fun AdaptiveStageCompactContent(
             state = state,
             appIconLoader = appIconLoader,
             onAction = onAction,
+            dockHost = dockHost,
         )
         AdaptiveStageCompactStagePager(
             pages = pages,
@@ -799,6 +816,7 @@ private fun AdaptiveStageSplitContent(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
+    dockHost: HomeDockHostState? = null,
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -837,6 +855,7 @@ private fun AdaptiveStageSplitContent(
             state = state,
             appIconLoader = appIconLoader,
             onAction = onAction,
+            dockHost = dockHost,
         )
         AdaptiveStageSupportingPane(
             stage = selectedStage,
@@ -1395,6 +1414,14 @@ private fun AdaptiveStageSupportingPane(
     }
 }
 
+/**
+ * Slimmed down from a full-width opaque toolbar to a compact glass label plus a small floating
+ * action capsule (design review polish pass): the dock is now the one persistent place an app's
+ * identity lives, so this header no longer draws a second, disconnected copy of the icon -- it
+ * receives that exact icon via [DockIdentityOverlayIcon] instead, animating in from wherever the
+ * user tapped it in the dock. See AdaptiveStageHeaderIdentityTransition.kt for why that is a manual
+ * approximation rather than a real `SharedTransitionLayout`.
+ */
 @Composable
 private fun AdaptiveStageStageHeader(
     selectedStage: AppStage?,
@@ -1403,6 +1430,7 @@ private fun AdaptiveStageStageHeader(
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
+    dockHost: HomeDockHostState? = null,
 ) {
     // selectedStage stays the last real selection while the merged page is showing (so leaving
     // "All" returns to it), so "a real stage is showing" needs its own explicit gate.
@@ -1415,84 +1443,142 @@ private fun AdaptiveStageStageHeader(
         }
     val summary = adaptiveStageHeaderSummary(shownStage, allNotificationsSelected, stages)
     val shownApp = shownStage?.let { stage -> state.installedAppsByStageId[stage.id] }
-    Row(
+    val reducedMotion = state.launcherSettings.motion.reducedMotion
+    val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
+
+    var headerOriginInRoot by remember { mutableStateOf<Offset?>(null) }
+    var restIconBoundsInRoot by remember { mutableStateOf<Rect?>(null) }
+    val transitionRequest = dockHost?.identityTransitionRequest?.value
+    val animatingIdentity =
+        shouldAnimateIdentityTransition(transitionRequest, shownApp?.identity, reducedMotion)
+
+    Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
-                .padding(start = 20.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .onGloballyPositioned { coordinates -> headerOriginInRoot = coordinates.boundsInRoot().topLeft },
     ) {
-        if (shownApp != null) {
-            LauncherAppIcon(
-                identity = shownApp.identity,
-                label = label,
-                iconLoader = appIconLoader,
-                modifier = Modifier.launcherIconSize().padding(end = 12.dp),
-            )
-        }
-        Column(
-            modifier =
-                Modifier.weight(1f).testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).semantics {
-                    contentDescription = "Cards stage: $label"
-                    stateDescription =
-                        when {
-                            allNotificationsSelected -> "Showing every stage's notifications"
-                            shownStage != null -> shownStage.adaptiveStageStageStateDescription()
-                            else -> "No stage selected"
-                        }
-                    liveRegion = LiveRegionMode.Polite
-                    // Stage-to-stage navigation for TalkBack/switch users, mirroring the "Previous
-                    // card"/"Next card" CustomAccessibilityAction precedent used for intra-stack card
-                    // navigation elsewhere in this file.
-                    customActions =
-                        listOf(
-                            CustomAccessibilityAction("Previous stage") {
-                                onAction(LauncherShellAction.SelectPreviousAppStage)
-                                true
-                            },
-                            CustomAccessibilityAction("Next stage") {
-                                onAction(LauncherShellAction.SelectNextAppStage)
-                                true
-                            },
-                        )
-                },
+        GlassSurface(
+            shape = MaterialTheme.shapes.large,
+            modifier = Modifier.fillMaxWidth().padding(end = HEADER_CAPSULE_RESERVED_WIDTH_DP.dp),
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            // The eyebrow says how much is here, never just "Cards" again under a "Cards" title.
-            summary?.let { text ->
-                Text(text = text, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            Row(
+                modifier = Modifier.padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (shownApp != null) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(HEADER_ICON_SIZE_DP.dp)
+                                .padding(end = 10.dp)
+                                .onGloballyPositioned { coordinates ->
+                                    restIconBoundsInRoot = coordinates.boundsInRoot()
+                                }
+                                // Hidden for exactly the transition's travel: the overlay icon
+                                // drawn below is standing in for it, arriving at this same slot.
+                                .graphicsLayer { alpha = if (animatingIdentity) 0f else 1f },
+                    ) {
+                        LauncherAppIcon(
+                            identity = shownApp.identity,
+                            label = label,
+                            iconLoader = appIconLoader,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+                Column(
+                    modifier =
+                        Modifier.weight(1f).testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).semantics {
+                            contentDescription = "Cards stage: $label"
+                            stateDescription =
+                                when {
+                                    allNotificationsSelected -> "Showing every stage's notifications"
+                                    shownStage != null -> shownStage.adaptiveStageStageStateDescription()
+                                    else -> "No stage selected"
+                                }
+                            liveRegion = LiveRegionMode.Polite
+                            // Stage-to-stage navigation for TalkBack/switch users, mirroring the
+                            // "Previous card"/"Next card" CustomAccessibilityAction precedent used
+                            // for intra-stack card navigation elsewhere in this file.
+                            customActions =
+                                listOf(
+                                    CustomAccessibilityAction("Previous stage") {
+                                        onAction(LauncherShellAction.SelectPreviousAppStage)
+                                        true
+                                    },
+                                    CustomAccessibilityAction("Next stage") {
+                                        onAction(LauncherShellAction.SelectNextAppStage)
+                                        true
+                                    },
+                                )
+                        },
+                ) {
+                    // A single compact line ("WhatsApp · 10 cards") rather than a title plus a
+                    // separate eyebrow line -- the slimmed pill no longer has the vertical room a
+                    // two-line header did, and does not need it now that the icon carries identity.
+                    Text(
+                        text = listOfNotNull(label, summary).joinToString(" · "),
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
-        // Pin appears once, as a toggle, and only for a real stage -- "All" is not a stage.
-        if (shownStage != null) {
-            IconToggleButton(
-                checked = shownStage.isPinned,
-                onCheckedChange = { onAction(LauncherShellAction.ToggleAppStagePinned(shownStage.id)) },
-                modifier =
-                    Modifier.semantics {
-                        contentDescription = ADAPTIVE_STAGE_PIN_TOGGLE_LABEL
-                        stateDescription = if (shownStage.isPinned) "Pinned" else "Not pinned"
-                    },
-            ) {
-                Icon(
-                    imageVector = if (shownStage.isPinned) Icons.Filled.Star else Icons.Outlined.Star,
-                    contentDescription = null,
+        GlassSurface(
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.align(Alignment.TopEnd),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Pin appears once, as a toggle, and only for a real stage -- "All" is not a stage.
+                if (shownStage != null) {
+                    IconToggleButton(
+                        checked = shownStage.isPinned,
+                        onCheckedChange = { onAction(LauncherShellAction.ToggleAppStagePinned(shownStage.id)) },
+                        modifier =
+                            Modifier.semantics {
+                                contentDescription = ADAPTIVE_STAGE_PIN_TOGGLE_LABEL
+                                stateDescription = if (shownStage.isPinned) "Pinned" else "Not pinned"
+                            },
+                    ) {
+                        Icon(
+                            imageVector = if (shownStage.isPinned) Icons.Filled.Star else Icons.Outlined.Star,
+                            contentDescription = null,
+                        )
+                    }
+                }
+                AdaptiveStageOverflowMenu(
+                    shownApp = shownApp,
+                    notificationAccessStatus = state.notificationAccessStatus,
+                    onAction = onAction,
                 )
             }
         }
-        AdaptiveStageOverflowMenu(
-            shownApp = shownApp,
-            notificationAccessStatus = state.notificationAccessStatus,
-            onAction = onAction,
-        )
+        val origin = headerOriginInRoot
+        val restBounds = restIconBoundsInRoot
+        if (animatingIdentity && transitionRequest != null && origin != null && restBounds != null) {
+            DockIdentityOverlayIcon(
+                request = transitionRequest,
+                headerOriginInRoot = origin,
+                restBoundsInRoot = restBounds,
+                label = label,
+                appIconLoader = appIconLoader,
+                onSettled = {
+                    haptics.perform(LauncherHapticEvent.COMMIT)
+                    dockHost?.identityTransitionRequest?.value = null
+                },
+            )
+        }
     }
 }
+
+/** Room reserved at the pill's trailing edge for the floating pin/overflow capsule to sit over. */
+private const val HEADER_CAPSULE_RESERVED_WIDTH_DP = 96
+
+/** The header's own rest-icon slot -- smaller than the old full toolbar icon; it is a label now, not a focal point. */
+private const val HEADER_ICON_SIZE_DP = 28
 
 /**
  * The header's overflow: always present, whatever is showing -- a stage, "All", or nothing yet --
