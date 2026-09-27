@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ internal fun <T> tactileMotionSpec(): FiniteAnimationSpec<T> =
  * the accessibility semantics a caller attaches via [modifier] all stay Material's; only the track
  * and thumb visuals are Riffle's.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TactileSlider(
     value: Float,
