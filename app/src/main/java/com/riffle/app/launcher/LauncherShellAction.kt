@@ -510,6 +510,13 @@ sealed interface LauncherShellAction {
     /** Whether the compact Cards layout draws the stage spine under the stack (off by default). */
     data class SelectCardsShowStageSpine(val enabled: Boolean) : LauncherShellAction
 
+    /**
+     * How far the whole AdaptiveStage card-stack surface is shifted vertically within the home
+     * page -- negative moves it up, positive moves it down. See
+     * [com.riffle.core.domain.launcher.settings.CardsSettings.pageVerticalOffsetDp].
+     */
+    data class SelectCardsPageVerticalOffset(val offsetDp: Int) : LauncherShellAction
+
     data class SelectDockPosition(val position: DockPosition) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction

@@ -170,6 +170,18 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectCardsPageVerticalOffset ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                cards =
+                                    state.launcherSettings.cards.copy(
+                                        pageVerticalOffsetDp = action.offsetDp,
+                                    ).coerced(),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectSearchResultPresentation ->
                     state.withLauncherSettings(
                         settings =

@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.MAX_CARDS_PAGE_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
@@ -159,6 +160,20 @@ class LauncherSettingsStateReducerTest {
             )
 
         assertEquals(true, updatedState.launcherSettings.cards.showStageSpine)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsAndCoercesThePageVerticalOffset() {
+        val repository = FakeLauncherSettingsRepository()
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectCardsPageVerticalOffset(offsetDp = 9999),
+            )
+
+        assertEquals(MAX_CARDS_PAGE_VERTICAL_OFFSET_DP, updatedState.launcherSettings.cards.pageVerticalOffsetDp)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

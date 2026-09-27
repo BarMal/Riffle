@@ -15,6 +15,19 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsThePageVerticalOffsetToZeroAndCoercesItToItsSignedRange() {
+        assertEquals(0, LauncherSettings().cards.pageVerticalOffsetDp)
+        assertEquals(
+            MAX_CARDS_PAGE_VERTICAL_OFFSET_DP,
+            CardsSettings(pageVerticalOffsetDp = 9999).coerced().pageVerticalOffsetDp,
+        )
+        assertEquals(
+            MIN_CARDS_PAGE_VERTICAL_OFFSET_DP,
+            CardsSettings(pageVerticalOffsetDp = -9999).coerced().pageVerticalOffsetDp,
+        )
+    }
+
+    @Test
     fun defaultsThemeAccentToDefault() {
         assertEquals(LauncherThemeAccent.DEFAULT, LauncherSettings().appearance.themeAccent)
     }

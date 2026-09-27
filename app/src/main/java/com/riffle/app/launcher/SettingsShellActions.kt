@@ -96,6 +96,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectCardsFoldedShowAllNotifications,
         is LauncherShellAction.SelectCardsUnfoldedShowAllNotifications,
         is LauncherShellAction.SelectCardsShowStageSpine,
+        is LauncherShellAction.SelectCardsPageVerticalOffset,
         is LauncherShellAction.SelectOverlayDockEnabled,
         is LauncherShellAction.SelectOverlayDockEdge,
         is LauncherShellAction.SelectOverlayDockHandleThickness,

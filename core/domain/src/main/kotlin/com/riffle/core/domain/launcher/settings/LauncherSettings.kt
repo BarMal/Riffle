@@ -113,7 +113,38 @@ data class CardsSettings(
      * this never strands a stage (see `CardsStageSelector.showsSpine`).
      */
     val showStageSpine: Boolean = false,
-)
+    /**
+     * How far the whole AdaptiveStage card-stack surface is shifted vertically within the home
+     * page -- negative moves it up, positive moves it down -- e.g. to leave room above it for a
+     * clock widget, or below it for the dock. Distinct from
+     * [AdaptiveStageAppearanceSettings.geometry]'s `stackPeakPercent`, which only positions the
+     * *focused card* within the stage's own already-placed viewport; this instead repositions that
+     * whole viewport on the page, so the two compose without either one reading the other. Applied
+     * as a plain Compose offset at the surface's own placement site (`CardsHomeSurface`), not fed
+     * into `resolveCardStack`'s sizing math -- a page-position shift isn't a room reservation, so it
+     * doesn't shrink the resolved card size the way a system-bar inset does.
+     */
+    val pageVerticalOffsetDp: Int = 0,
+) {
+    fun coerced(): CardsSettings =
+        copy(
+            pageVerticalOffsetDp =
+                pageVerticalOffsetDp.coerceIn(
+                    MIN_CARDS_PAGE_VERTICAL_OFFSET_DP,
+                    MAX_CARDS_PAGE_VERTICAL_OFFSET_DP,
+                ),
+        )
+}
+
+/**
+ * The reachable band for [CardsSettings.pageVerticalOffsetDp]. Signed and symmetric: enough range
+ * (±160dp) to clear room for a typical clock/greeting widget above the stage or extra breathing
+ * room below it, without an unbounded value letting the whole stage be pushed off-screen -- unlike
+ * [AdaptiveStageAppearanceSettings]'s own fields, nothing downstream clips this against the actual
+ * viewport, since it is applied as a raw Compose offset outside `resolveCardStack`'s reach.
+ */
+const val MIN_CARDS_PAGE_VERTICAL_OFFSET_DP = -160
+const val MAX_CARDS_PAGE_VERTICAL_OFFSET_DP = 160
 
 /**
  * How a messaging notification that carries message history becomes cards.
