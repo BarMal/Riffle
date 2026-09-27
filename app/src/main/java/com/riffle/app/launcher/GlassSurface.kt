@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -72,21 +73,19 @@ internal fun GlassSurface(
 ) {
     val liquidGlass = LocalLiquidGlassSettings.current
     val backdrop = LocalLiquidGlassBackdrop.current
-    val supportsShader = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     val supportsLegacyBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     Box(modifier = modifier.clip(shape)) {
-        when {
-            supportsShader && liquidGlass.enabled && backdrop != null ->
-                LiquidGlassShaderLayer(
-                    shape = shape,
-                    tint = tint,
-                    backdrop = backdrop,
-                    frostStrength = liquidGlass.frostStrengthFraction,
-                    refractionStrength = liquidGlass.refractionStrengthFraction,
-                )
-
-            else -> LegacyGlassTintLayer(supportsBlur = supportsLegacyBlur, tint = tint)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
+            LiquidGlassShaderLayer(
+                shape = shape,
+                tint = tint,
+                backdrop = backdrop,
+                frostStrength = liquidGlass.frostStrengthFraction,
+                refractionStrength = liquidGlass.refractionStrengthFraction,
+            )
+        } else {
+            LegacyGlassTintLayer(supportsBlur = supportsLegacyBlur, tint = tint)
         }
         Box(
             modifier =
@@ -122,6 +121,7 @@ private fun BoxScope.LegacyGlassTintLayer(
  * surface on screen at once), then applies the AGSL refraction/blur/specular shader as that private
  * layer's own [GraphicsLayer.renderEffect] before drawing it.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun BoxScope.LiquidGlassShaderLayer(
@@ -171,6 +171,7 @@ private fun BoxScope.LiquidGlassShaderLayer(
  * that layer's [GraphicsLayer.renderEffect], then draws the result -- every frame, so the sampled
  * backdrop and the surface's own position both stay live.
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Suppress("LongParameterList")
 @OptIn(ExperimentalComposeUiApi::class)
 private fun Modifier.liquidGlassRefraction(
