@@ -15,6 +15,7 @@ import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.core.domain.launcher.cards.AdaptiveStageHingeBounds
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
+import com.riffle.core.domain.launcher.settings.ResolvedLiquidGlass
 
 /**
  * The launcher's own theme over a fixed stand-in wallpaper.
@@ -23,10 +24,19 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
  * gradient keeps translucent surfaces (dock, cards glass) legible and identical between runs.
  * The theme follows the Robolectric `night` qualifier through its SYSTEM mode, which is how the
  * dark-theme variants are produced.
+ *
+ * [liquidGlassEnabled] defaults to true (today's every-other-screenshot-test behavior, unchanged);
+ * pass false to lock in the flat, glass-off fallback a surface like [SettingsSection] renders
+ * instead.
  */
 @Composable
-internal fun ScreenshotBackdrop(content: @Composable () -> Unit) {
-    RiffleLauncherTheme {
+internal fun ScreenshotBackdrop(
+    liquidGlassEnabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    RiffleLauncherTheme(
+        liquidGlass = ResolvedLiquidGlass(liquidGlassEnabled, 0.45f, 0.2f, reducedMotion = false),
+    ) {
         Box(modifier = Modifier.fillMaxSize().background(ScreenshotWallpaper)) {
             content()
         }

@@ -148,10 +148,54 @@ internal fun SettingsSection(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        SettingsSectionContainer {
+            content()
+        }
+    }
+}
+
+/**
+ * The per-section rounded "card" container behind every [SettingsSection]'s rows.
+ *
+ * When liquid glass is switched on ([LocalLiquidGlassSettings.current.enabled]), this uses the
+ * shared [GlassSurface] material -- the same one Settings' own "Cards appearance" tuning sheet
+ * (`AdaptiveStageAppearanceTuningOverlay.kt`) already renders with -- tinted with today's
+ * [ColorScheme.surfaceContainerLow] so a glassy section still reads as a Settings surface rather
+ * than a color change. Settings is reached as its own top-level [ShellDestination], composed as a
+ * sibling of [HomeDestination] rather than inside it (see `LauncherShell.kt`'s
+ * `when (state.destination)`), so [LocalLiquidGlassBackdrop] is never installed here and
+ * `GlassSurface` always takes its below-API-33/no-backdrop fallback: a blurred flat tint layer, not
+ * true backdrop refraction. That is a deliberate, scoped limitation (see this PR's description) --
+ * there is nothing interesting behind a settings section worth refracting (just the flat screen
+ * background from [SettingsSurface]'s own root `Surface`, left untouched by this change) -- rather
+ * than installing a second, pointless backdrop capture just to say the "real" shader path runs here.
+ *
+ * When liquid glass is switched off, this renders exactly today's flat [Surface] fill -- unchanged
+ * pixels, zero regression -- since [GlassSurface]'s own disabled-state fallback is a translucent
+ * blurred tint, not the flat opaque fill this container had before liquid glass existed.
+ */
+@Composable
+private fun SettingsSectionContainer(content: @Composable ColumnScope.() -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
+    val tint = MaterialTheme.colorScheme.surfaceContainerLow
+    if (LocalLiquidGlassSettings.current.enabled) {
+        GlassSurface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = shape,
+            tint = tint,
+        ) {
+            Column(
+                modifier = Modifier.padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+            ) {
+                content()
+            }
+        }
+    } else {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            shape = shape,
+            color = tint,
         ) {
             Column(
                 modifier = Modifier.padding(vertical = 8.dp),
