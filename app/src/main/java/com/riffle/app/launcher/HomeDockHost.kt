@@ -316,9 +316,10 @@ private fun DockEdgeCompanionIfAny(
     position: DockPosition,
     hostBoxOriginInRoot: Offset?,
 ) {
-    val dockEdgeCompanion = interpreter.dockEdgeCompanion ?: return
-    val dockBoundsInRoot = hostState.bounds.value ?: return
-    val boxOrigin = hostBoxOriginInRoot ?: return
+    val dockEdgeCompanion = interpreter.dockEdgeCompanion
+    val dockBoundsInRoot = hostState.bounds.value
+    val boxOrigin = hostBoxOriginInRoot
+    if (dockEdgeCompanion == null || dockBoundsInRoot == null || boxOrigin == null) return
     DockEdgeCompanionSlot(
         position = position,
         dockBoundsLocal = dockBoundsInRoot.relativeTo(boxOrigin),
