@@ -28,6 +28,7 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -143,8 +144,22 @@ class AdaptiveStageUnfoldedStagePagerTest {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(widthDp.dp).height(PANE_HEIGHT_DP.dp).clipToBounds()) {
+                    val currentState = state()
+                    // The identity pill these assertions target is CardsDockEdgeHeader's now (rendered
+                    // beside the dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it
+                    // directly here, same as AdaptiveStageCardSurfaceTest does.
+                    val shellState = rememberAppStageShellState(currentState)
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = currentState,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = onAction,
+                    )
                     AdaptiveStageAppStageSurface(
-                        state = state(),
+                        state = currentState,
                         windowLayout =
                             AdaptiveStageWindowLayout(
                                 widthDp = widthDp,

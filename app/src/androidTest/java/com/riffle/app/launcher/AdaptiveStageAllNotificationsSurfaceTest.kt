@@ -24,6 +24,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -69,6 +70,19 @@ class AdaptiveStageAllNotificationsSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
+                    // The identity pill this assertion targets is CardsDockEdgeHeader's now (rendered
+                    // beside the dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it
+                    // directly here, same as AdaptiveStageCardSurfaceTest does.
+                    val shellState = rememberAppStageShellState(state)
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = context.allNotificationsSelected,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = {},
+                    )
                     AdaptiveStageAppStageSurface(
                         state = state,
                         windowLayout =
@@ -97,6 +111,19 @@ class AdaptiveStageAllNotificationsSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
+                    // The identity pill this assertion targets is CardsDockEdgeHeader's now (rendered
+                    // beside the dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it
+                    // directly here, same as AdaptiveStageCardSurfaceTest does.
+                    val shellState = rememberAppStageShellState(state)
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = context.allNotificationsSelected,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = {},
+                    )
                     AdaptiveStageAppStageSurface(
                         state = state,
                         context = context,
