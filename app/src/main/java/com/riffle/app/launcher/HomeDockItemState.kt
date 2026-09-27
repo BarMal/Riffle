@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -79,7 +80,13 @@ internal fun DockItemPlaceholder(
         modifier =
             modifier
                 .requiredSize(iconSizeDp.dp)
-                .clip(LocalLauncherCardShape.current)
+                // A fixed 12dp mask, not the theme-driven LocalLauncherCardShape a home-grid folder
+                // uses: a dock icon sits directly beside shortcut icons masked to that same fixed
+                // radius (see DOCK_ICON_MASK_CORNER_RADIUS_DP's own doc), and LocalLauncherCardShape
+                // can resolve to a materially different shape per theme (a squarer corner, or a
+                // fuller pill) -- fine for a home-grid card, but it would make this one dock slot
+                // drift out of step with its neighbours every time the theme's corner style changed.
+                .clip(RoundedCornerShape(DOCK_ICON_MASK_CORNER_RADIUS_DP.dp))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
                 .semantics {
                     contentDescription = "${item.label} ${item.kind.label} dock item"
@@ -127,7 +134,10 @@ internal fun DockWidget(
         modifier =
             Modifier
                 .requiredSize(iconSizeDp.dp)
-                .clip(LocalLauncherCardShape.current)
+                // See DockItemPlaceholder's own doc: the same fixed 12dp mask, not the
+                // theme-driven LocalLauncherCardShape, so a widget dock tile stays visually
+                // aligned with the shortcut icons beside it regardless of theme corner style.
+                .clip(RoundedCornerShape(DOCK_ICON_MASK_CORNER_RADIUS_DP.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest),
         contentAlignment = Alignment.Center,
     ) {
