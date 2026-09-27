@@ -435,17 +435,28 @@ internal const val WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG = "widget-picker-dock-pre
  * The longest run the dock may have, given how much it was offered and which way it runs.
  *
  * The two axes want different kinds of cap, so this is where the difference lives rather than in
- * one number that has to suit both.
+ * one number that has to suit both. [backgroundSizing] lifts both caps entirely when it is
+ * [DockBackgroundSizing.FIXED]: that setting is the user asking for the dock to actually use the
+ * full run it was offered, so a "Full width"/"Full height" dock that still stopped at a tablet-sized
+ * absolute dp or 70% of a tall screen would be the setting doing nothing past a certain size --
+ * exactly the mismatch (a longer background that still forced the same scrolling) this exists to fix.
+ * The two caps still apply to [DockBackgroundSizing.DYNAMIC], where they keep their original job of
+ * stopping a lightly-populated dock from stretching further than its icons need.
  */
 internal fun dockMaxMainAxisDp(
     availableMainAxisDp: Int,
     runsHorizontally: Boolean,
-): Int =
-    if (runsHorizontally) {
+    backgroundSizing: DockBackgroundSizing = DockBackgroundSizing.DYNAMIC,
+): Int {
+    if (backgroundSizing == DockBackgroundSizing.FIXED) {
+        return availableMainAxisDp.coerceAtLeast(0)
+    }
+    return if (runsHorizontally) {
         DOCK_MAX_HORIZONTAL_MAIN_AXIS_DP
     } else {
         (availableMainAxisDp.coerceAtLeast(0) * DOCK_MAX_VERTICAL_MAIN_AXIS_FRACTION).toInt()
     }
+}
 
 /**
  * The dock's thickness -- across its run, not along it. The strip is one icon deep plus chrome
@@ -494,7 +505,7 @@ internal fun dockContainerMainAxisDp(
 ): Int {
     val maxDockMainAxis =
         runMainAxisCapDp?.let { cap -> min(availableMainAxisDp, cap) }
-            ?: min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally))
+            ?: min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally, backgroundSizing))
     if (backgroundSizing == DockBackgroundSizing.FIXED) {
         return maxDockMainAxis
     }

@@ -252,7 +252,7 @@ private fun DockBackgroundSizingSetting(
             subtitle =
                 when (sizing) {
                     DockBackgroundSizing.DYNAMIC -> "Fits dock items"
-                    DockBackgroundSizing.FIXED -> "Uses available width"
+                    DockBackgroundSizing.FIXED -> "Uses available width, showing more icons before scrolling"
                 },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
