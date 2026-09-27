@@ -242,9 +242,12 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
             heightDp = 360
         }
 
-        // The wide layout's navigation lives on the dock, which is a sibling of this surface --
-        // see DockDynamicSectionTest. What this surface owes a resize is that the stage survives it.
-        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
+        // The wide layout's navigation lives on the dock, which is a sibling of this surface -- see
+        // DockDynamicSectionTest. The stage-identity header also now lives beside the dock (see
+        // CardsDockEdgeHeader, rendered by HomeDockHost, not this surface). What this surface owes a
+        // resize is that its own content survives it -- with no notification access and no stages,
+        // that content is the "allow access" recovery state.
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
     }
 
     @Test

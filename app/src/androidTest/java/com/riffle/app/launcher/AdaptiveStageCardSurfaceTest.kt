@@ -43,6 +43,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
 import com.riffle.app.launcher.notifications.MediaCommand
@@ -69,6 +70,7 @@ import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -159,16 +161,31 @@ class AdaptiveStageCardSurfaceTest {
         // #1212: the overflow used to vanish when no stage (or "All") was showing, leaving Cards
         // with no path to Settings.
         val actions = mutableListOf<LauncherShellAction>()
+        val state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED)
         composeRule.setContent {
             MaterialTheme {
-                AdaptiveStageAppStageSurface(
-                    state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
-                    onAction = actions::add,
-                )
+                // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
+                // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
+                // on an explicit higher zIndex so it (like the real dock) deterministically wins
+                // hit-testing over the surface's own full-screen gesture handling beneath it.
+                val shellState = rememberAppStageShellState(state)
+                AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
+                Box(modifier = Modifier.zIndex(1f)) {
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = actions::add,
+                    )
+                }
             }
         }
 
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Settings").performClick()
 
         composeRule.runOnIdle { assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenSettings), actions) }
@@ -176,12 +193,22 @@ class AdaptiveStageCardSurfaceTest {
 
     @Test
     fun stageHeaderDoesNotRepeatAdaptiveStageWhenNoStageIsSelected() {
+        val state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED)
         composeRule.setContent {
             MaterialTheme {
-                AdaptiveStageAppStageSurface(
-                    state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
-                    onAction = {},
-                )
+                val shellState = rememberAppStageShellState(state)
+                AdaptiveStageAppStageSurface(state = state, onAction = {})
+                Box(modifier = Modifier.zIndex(1f)) {
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = {},
+                    )
+                }
             }
         }
 
@@ -236,38 +263,73 @@ class AdaptiveStageCardSurfaceTest {
         val cardLayout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE)
         val cardLayoutSet = HomeLayoutSet.fromLayout(cardLayout)
         val actions = mutableListOf<LauncherShellAction>()
+        val state =
+            LauncherShellState(
+                homeLayout = cardLayout,
+                homeLayoutSet = cardLayoutSet,
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(first, second),
+                launcherSettings =
+                    LauncherSettings(
+                        cards =
+                            CardsSettings(
+                                stagePreferencesByLayout =
+                                    mapOf(
+                                        HomeLayoutKey(LauncherViewMode.CARD_INTERFACE) to
+                                            AppStagePreferences(
+                                                pinnedStageIds = listOf(firstStageId),
+                                                selectedStageId = firstStageId,
+                                            ),
+                                    ),
+                            ),
+                    ),
+            )
 
         composeRule.setContent {
             MaterialTheme {
-                AdaptiveStageAppStageSurface(
-                    state =
-                        LauncherShellState(
-                            homeLayout = cardLayout,
-                            homeLayoutSet = cardLayoutSet,
-                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                            installedApps = listOf(first, second),
-                            launcherSettings =
-                                LauncherSettings(
-                                    cards =
-                                        CardsSettings(
-                                            stagePreferencesByLayout =
-                                                mapOf(
-                                                    HomeLayoutKey(LauncherViewMode.CARD_INTERFACE) to
-                                                        AppStagePreferences(
-                                                            pinnedStageIds = listOf(firstStageId),
-                                                            selectedStageId = firstStageId,
-                                                        ),
-                                                ),
-                                        ),
-                                ),
-                        ),
-                    onAction = actions::add,
-                )
+                // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
+                // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
+                // on an explicit higher zIndex so it (like the real dock) deterministically wins
+                // hit-testing over the surface's own full-screen gesture handling beneath it.
+                //
+                // CardsDockEdgeHeader's "Add stage" reads LocalAdaptiveStageAddStageRequest, which
+                // AdaptiveStageAppStageSurface normally provides -- but only around its own subtree,
+                // not its sibling here. Production has this same gap (dockEdgeCompanion is a sibling
+                // of the mode surface, not a descendant); until that's wired up for real, this test
+                // provides it itself and hosts the sheet it opens, matching what the fix should do.
+                val shellState = rememberAppStageShellState(state)
+                var addStageSheetOpen by remember { mutableStateOf(false) }
+                CompositionLocalProvider(LocalAdaptiveStageAddStageRequest provides { addStageSheetOpen = true }) {
+                    AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
+                    Box(modifier = Modifier.zIndex(1f)) {
+                        CardsDockEdgeHeader(
+                            selectedStage = shellState.snapshot.selectedStage,
+                            allNotificationsSelected = false,
+                            stages = shellState.snapshot.stages,
+                            state = state,
+                            appIconLoader = EmptyAppIconLoader,
+                            position = DockPosition.BOTTOM,
+                            onAction = actions::add,
+                        )
+                    }
+                }
+                if (addStageSheetOpen) {
+                    val pinnedStageIds =
+                        shellState.snapshot.stages.filter(AppStage::isPinned).map(AppStage::id).toSet()
+                    AdaptiveStageAddStageSheet(
+                        state = state,
+                        pinnedStageIds = pinnedStageIds,
+                        appIconLoader = EmptyAppIconLoader,
+                        onAction = actions::add,
+                        onDismiss = { addStageSheetOpen = false },
+                    )
+                }
             }
         }
 
         // "Add stage" lives in the always-present overflow and opens a searchable picker (#1212).
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Add stage").performClick()
         composeRule.onNodeWithText(second.label).performClick()
 
@@ -659,13 +721,25 @@ class AdaptiveStageCardSurfaceTest {
             )
 
         composeRule.setContent {
-            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = actions::add) }
+            MaterialTheme {
+                val shellState = rememberAppStageShellState(state)
+                CardsDockEdgeHeader(
+                    selectedStage = shellState.snapshot.selectedStage,
+                    allNotificationsSelected = false,
+                    stages = shellState.snapshot.stages,
+                    state = state,
+                    appIconLoader = EmptyAppIconLoader,
+                    position = DockPosition.BOTTOM,
+                    onAction = actions::add,
+                )
+            }
         }
 
         // Previous/Next are no longer visible buttons (removed as redundant with tapping a stage
-        // directly, or swiping) -- they're reachable via AdaptiveStageStageHeader's customActions,
-        // the same CustomAccessibilityAction pattern already used for intra-stack card navigation
-        // (see WidgetPickerSurfaceTest for the identical precedent).
+        // directly, or swiping) -- they're reachable via CardsDockEdgeHeader's customActions (now
+        // rendered beside the dock, not inside AdaptiveStageAppStageSurface -- see the dockEdgeCompanion
+        // wiring in CardsDockInterpreter.kt), the same CustomAccessibilityAction pattern already used
+        // for intra-stack card navigation (see WidgetPickerSurfaceTest for the identical precedent).
         val headerActions =
             composeRule
                 .onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG)
@@ -1109,31 +1183,43 @@ class AdaptiveStageCardSurfaceTest {
                 label = "Mail",
             )
         val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
+        val state =
+            LauncherShellState(
+                notificationAccessStatus = NotificationAccessStatus.REVOKED,
+                installedApps = listOf(app),
+                profileContentVisibility =
+                    mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                launcherSettings =
+                    LauncherSettings(
+                        cards =
+                            CardsSettings(
+                                stagePreferencesByLayout =
+                                    mapOf(
+                                        HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                            AppStagePreferences(
+                                                pinnedStageIds = listOf(stageId),
+                                                selectedStageId = stageId,
+                                            ),
+                                    ),
+                            ),
+                    ),
+            )
 
         composeRule.setContent {
             MaterialTheme {
-                AdaptiveStageAppStageSurface(
-                    state =
-                        LauncherShellState(
-                            notificationAccessStatus = NotificationAccessStatus.REVOKED,
-                            installedApps = listOf(app),
-                            profileContentVisibility =
-                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
-                            launcherSettings =
-                                LauncherSettings(
-                                    cards =
-                                        CardsSettings(
-                                            stagePreferencesByLayout =
-                                                mapOf(
-                                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
-                                                        AppStagePreferences(
-                                                            pinnedStageIds = listOf(stageId),
-                                                            selectedStageId = stageId,
-                                                        ),
-                                                ),
-                                        ),
-                                ),
-                        ),
+                // The identity pill's semantics this test targets are CardsDockEdgeHeader's now
+                // (rendered beside the dock, not inside AdaptiveStageAppStageSurface) -- mounted
+                // alongside it directly here, composed after the surface so it (like the real dock)
+                // wins hit-testing over the surface's own full-screen gesture handling beneath it.
+                val shellState = rememberAppStageShellState(state)
+                AdaptiveStageAppStageSurface(state = state, onAction = {})
+                CardsDockEdgeHeader(
+                    selectedStage = shellState.snapshot.selectedStage,
+                    allNotificationsSelected = false,
+                    stages = shellState.snapshot.stages,
+                    state = state,
+                    appIconLoader = EmptyAppIconLoader,
+                    position = DockPosition.BOTTOM,
                     onAction = {},
                 )
             }
@@ -1176,28 +1262,42 @@ class AdaptiveStageCardSurfaceTest {
                 postedAtEpochMillis = 10,
             )
         val actions = mutableListOf<LauncherShellAction>()
+        val state =
+            LauncherShellState(
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(app),
+                profileContentVisibility =
+                    mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                notificationGroupsByApp =
+                    listOf(
+                        AppNotificationGroup(
+                            packageName = app.identity.packageName,
+                            profileId = app.identity.profile.id,
+                            latestCategory = NotificationCategory.MESSAGE,
+                            latestAgeBucket = NotificationAgeBucket.RECENT,
+                            notifications = listOf(notification),
+                        ),
+                    ),
+            )
         composeRule.setContent {
             MaterialTheme {
-                AdaptiveStageAppStageSurface(
-                    state =
-                        LauncherShellState(
-                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                            installedApps = listOf(app),
-                            profileContentVisibility =
-                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
-                            notificationGroupsByApp =
-                                listOf(
-                                    AppNotificationGroup(
-                                        packageName = app.identity.packageName,
-                                        profileId = app.identity.profile.id,
-                                        latestCategory = NotificationCategory.MESSAGE,
-                                        latestAgeBucket = NotificationAgeBucket.RECENT,
-                                        notifications = listOf(notification),
-                                    ),
-                                ),
-                        ),
-                    onAction = actions::add,
-                )
+                // The pin toggle and overflow menu are CardsDockEdgeHeader's now (rendered beside the
+                // dock, not inside AdaptiveStageAppStageSurface) -- mounted directly here rather than
+                // through the whole surface, the same way stageHeaderExposesPreviousAndNextStageAs
+                // CustomAccessibilityActions above does. Sized so the overflow's DropdownMenu popup,
+                // which anchors off this content's own bounds, has a real size to anchor against.
+                Box(modifier = Modifier.width(400.dp).height(400.dp).clipToBounds()) {
+                    val shellState = rememberAppStageShellState(state)
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = actions::add,
+                    )
+                }
             }
         }
 
@@ -1206,6 +1306,7 @@ class AdaptiveStageCardSurfaceTest {
             .onNodeWithContentDescription(ADAPTIVE_STAGE_PIN_TOGGLE_LABEL)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Not pinned"))
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(RIFFLE_CONTEXT_MENU_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Pin stage").assertDoesNotExist()
         composeRule.onNodeWithText("Open Mail").performClick()
@@ -1244,32 +1345,47 @@ class AdaptiveStageCardSurfaceTest {
                 postedAtEpochMillis = 10,
             )
         val actions = mutableListOf<LauncherShellAction>()
+        val state =
+            LauncherShellState(
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(app),
+                profileContentVisibility =
+                    mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                notificationGroupsByApp =
+                    listOf(
+                        AppNotificationGroup(
+                            packageName = app.identity.packageName,
+                            profileId = app.identity.profile.id,
+                            latestCategory = NotificationCategory.MESSAGE,
+                            latestAgeBucket = NotificationAgeBucket.RECENT,
+                            notifications = listOf(notification),
+                        ),
+                    ),
+            )
         composeRule.setContent {
             MaterialTheme {
-                AdaptiveStageAppStageSurface(
-                    state =
-                        LauncherShellState(
-                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                            installedApps = listOf(app),
-                            profileContentVisibility =
-                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
-                            notificationGroupsByApp =
-                                listOf(
-                                    AppNotificationGroup(
-                                        packageName = app.identity.packageName,
-                                        profileId = app.identity.profile.id,
-                                        latestCategory = NotificationCategory.MESSAGE,
-                                        latestAgeBucket = NotificationAgeBucket.RECENT,
-                                        notifications = listOf(notification),
-                                    ),
-                                ),
-                        ),
-                    onAction = actions::add,
-                )
+                // The overflow this test targets is CardsDockEdgeHeader's now (rendered beside the
+                // dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it directly here,
+                // on an explicit higher zIndex so it (like the real dock) deterministically wins
+                // hit-testing over the surface's own full-screen gesture handling beneath it.
+                val shellState = rememberAppStageShellState(state)
+                AdaptiveStageAppStageSurface(state = state, onAction = actions::add)
+                Box(modifier = Modifier.zIndex(1f)) {
+                    CardsDockEdgeHeader(
+                        selectedStage = shellState.snapshot.selectedStage,
+                        allNotificationsSelected = false,
+                        stages = shellState.snapshot.stages,
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        position = DockPosition.BOTTOM,
+                        onAction = actions::add,
+                    )
+                }
             }
         }
 
         composeRule.onNodeWithContentDescription(ADAPTIVE_STAGE_OVERFLOW_LABEL).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Settings").performClick()
 
         composeRule.runOnIdle {

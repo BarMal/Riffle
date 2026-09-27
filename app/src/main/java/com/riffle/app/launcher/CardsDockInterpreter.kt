@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.cards.CardsStageSelectorEntry
 import com.riffle.core.domain.launcher.cards.toAppStageId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
 
 /*
  * Cards' side of the dock boundary (Decision 2 in docs/product/modes-dock-handle-and-cards-plan.md;
@@ -43,6 +44,8 @@ internal fun rememberCardsDockInterpreter(
     shellState: AppStageShellState,
     adaptiveStageContext: AdaptiveStageInteractionContext,
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
+    appIconLoader: AppIconLoader,
+    dockPosition: DockPosition,
     onAction: (LauncherShellAction) -> Unit,
 ): HomeDockInterpreter {
     val stages = shellState.snapshot.stages
@@ -50,6 +53,9 @@ internal fun rememberCardsDockInterpreter(
     val selectorEntries = remember(stages, selection) { CardsStageSelector.entries(stages, selection) }
     val dockItemMenuExtras =
         remember(state.homeLayout.dock, stages) { cardsDockItemMenuExtras(state.homeLayout.dock, stages) }
+    val interpretedOnAction: (LauncherShellAction) -> Unit = { action ->
+        interpretCardsAction(action, adaptiveStageContext, onAdaptiveStageContextChanged, onAction)
+    }
     return HomeDockInterpreter(
         dynamicEntries = cardsStageSelectorDockEntries(selectorEntries, state),
         onDynamicEntryDelegated = { key ->
@@ -64,10 +70,22 @@ internal fun rememberCardsDockInterpreter(
         staticItemMenuExtras = dockItemMenuExtras,
         staticItemTapOverride = { identity -> cardsStaticItemTapOverride(identity, stages) },
         // "Show stage" from a pinned icon's menu selects a stage, so it leaves "All" like the selector.
-        onAction = { action ->
-            interpretCardsAction(action, adaptiveStageContext, onAdaptiveStageContextChanged, onAction)
-        },
+        onAction = interpretedOnAction,
         showExpandedNotificationShelf = false,
+        // The dock's own edge, wherever the user put it -- the stage-identity pill and pin/overflow
+        // capsule the floating header used to draw (#XXXX), now anchored beside the dock itself
+        // instead of floating near the top of the screen regardless of the dock's actual position.
+        dockEdgeCompanion = {
+            CardsDockEdgeHeader(
+                selectedStage = shellState.snapshot.selectedStage,
+                allNotificationsSelected = adaptiveStageContext.allNotificationsSelected,
+                stages = stages,
+                state = state,
+                appIconLoader = appIconLoader,
+                position = dockPosition,
+                onAction = interpretedOnAction,
+            )
+        },
     )
 }
 

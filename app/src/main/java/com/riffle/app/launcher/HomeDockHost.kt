@@ -9,13 +9,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
@@ -116,6 +121,15 @@ internal data class HomeDockInterpreter(
      * entries are [dynamicEntries] and stay either way.
      */
     val showExpandedNotificationShelf: Boolean = true,
+    /**
+     * Content the active mode wants anchored to the dock's own edge, alongside the strip itself --
+     * Cards' stage-identity pill and pin/overflow capsule (replacing the floating header the
+     * design-review pass flagged as a redundant, second copy of what the dock already shows). Null
+     * (every grid mode) renders nothing extra; [HomeDockHost] positions whatever this returns with
+     * [DockEdgeCompanionSlot] using bounds it already tracks for other purposes, so the dock itself
+     * never has to know this is a stage label, a pin toggle, or anything else "Cards" at all.
+     */
+    val dockEdgeCompanion: (@Composable () -> Unit)? = null,
 )
 
 /**
@@ -187,11 +201,13 @@ internal fun HomeDockHost(
             onExtentChanged = onExtentChanged,
         )
 
+    var hostBoxOriginInRoot by remember { mutableStateOf<Offset?>(null) }
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .windowInsetsPadding(presentation.homeInsetPolicy.safeDrawingInsets()),
+                .windowInsetsPadding(presentation.homeInsetPolicy.safeDrawingInsets())
+                .onGloballyPositioned { coordinates -> hostBoxOriginInRoot = coordinates.boundsInRoot().topLeft },
         contentAlignment = position.dockHostAlignment(LocalLayoutDirection.current),
     ) {
         Box(modifier = dockModifier.graphicsLayer { alpha = dockContentRevealAlpha() }) {
@@ -214,6 +230,7 @@ internal fun HomeDockHost(
                 )
             }
         }
+        DockEdgeCompanionIfAny(interpreter, hostState, position, hostBoxOriginInRoot)
     }
     visibleLayout.openedFolder(hostState.openedFolderId.value)?.let { folder ->
         // Over whatever the mode drew after the dock: a folder opened from it is the thing in focus.
@@ -258,6 +275,30 @@ private fun dockHostWorkspaceActions(
         onBackgroundClick = onBackgroundClick,
         onAction = dockOnAction,
     )
+
+/**
+ * Renders [HomeDockInterpreter.dockEdgeCompanion], if the interpreter supplies one and the two
+ * `onGloballyPositioned` callbacks [HomeDockHost] needs to place it have both fired at least once --
+ * pulled out of [HomeDockHost] itself so its body reads as "lay out the dock, then its companion"
+ * rather than the three-way null check inline.
+ */
+@Composable
+private fun DockEdgeCompanionIfAny(
+    interpreter: HomeDockInterpreter,
+    hostState: HomeDockHostState,
+    position: DockPosition,
+    hostBoxOriginInRoot: Offset?,
+) {
+    val dockEdgeCompanion = interpreter.dockEdgeCompanion
+    val dockBoundsInRoot = hostState.bounds.value
+    val boxOrigin = hostBoxOriginInRoot
+    if (dockEdgeCompanion == null || dockBoundsInRoot == null || boxOrigin == null) return
+    DockEdgeCompanionSlot(
+        position = position,
+        dockBoundsLocal = dockBoundsInRoot.relativeTo(boxOrigin),
+        content = dockEdgeCompanion,
+    )
+}
 
 /**
  * The room a mode's content leaves for the dock along [position]'s edge: the dock's measured

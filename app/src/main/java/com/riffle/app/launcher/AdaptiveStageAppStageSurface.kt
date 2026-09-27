@@ -127,6 +127,7 @@ import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
@@ -553,14 +554,6 @@ private fun AdaptiveStageAppStageSurfaceContent(
                                     .fillMaxHeight(),
                         ) {
                             Column(modifier = Modifier.width(paneLayout.stackWidthDp.dp).fillMaxSize()) {
-                                AdaptiveStageStageHeader(
-                                    selectedStage = selectedStage,
-                                    allNotificationsSelected = allNotificationsSelected,
-                                    stages = stages,
-                                    state = state,
-                                    appIconLoader = appIconLoader,
-                                    onAction = onAction,
-                                )
                                 AdaptiveStageCompactStagePager(
                                     pages = pages,
                                     selectedPageIndex = selectedPageIndex,
@@ -729,15 +722,10 @@ private fun AdaptiveStageCompactContent(
                 adaptiveStageOnPageSettled(pages, index, onAction, onAllNotificationsSelectedChanged)
             },
         )
+    // The stage-identity/pin/overflow header this Column used to render inline now lives on the
+    // dock's own edge instead (see CardsDockEdgeHeader, wired in through
+    // [HomeDockInterpreter.dockEdgeCompanion]), so this Column is just the pager and its spine.
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        AdaptiveStageStageHeader(
-            selectedStage = selectedStage,
-            allNotificationsSelected = allNotificationsSelected,
-            stages = stages,
-            state = state,
-            appIconLoader = appIconLoader,
-            onAction = onAction,
-        )
         AdaptiveStageCompactStagePager(
             pages = pages,
             selectedPageIndex = selectedPageIndex,
@@ -816,12 +804,12 @@ private fun AdaptiveStageSplitContent(
                 adaptiveStageOnPageSettled(pages, index, onAction, onAllNotificationsSelectedChanged)
             },
         )
-    // upperRegionHeightDp/lowerRegionHeightDp sum to exactly paneLayout.contentHeightDp -- the
-    // domain layer has no notion of the header this Column also renders, so using those as fixed
-    // heights directly would make the Column taller than the Box it's measured within, overflowing
-    // un-clipped past the header. Use their ratio as Column weights instead: Compose reserves space
-    // for the non-weighted header first, then splits whatever's left between the two regions in the
-    // same proportion the domain layer intended.
+    // upperRegionHeightDp/lowerRegionHeightDp sum to exactly paneLayout.contentHeightDp, so their
+    // ratio as Column weights splits the exact space the domain layer intended between the two
+    // regions below -- the stage-identity/pin/overflow header this Column used to render inline
+    // first now lives on the dock's own edge instead (see CardsDockEdgeHeader, wired in through
+    // [HomeDockInterpreter.dockEdgeCompanion]), so there is no longer a non-weighted header to
+    // reserve room for ahead of them.
     val regionHeightTotal = paneLayout.upperRegionHeightDp + paneLayout.lowerRegionHeightDp
     val upperRegionWeight =
         if (regionHeightTotal > 0) {
@@ -830,14 +818,6 @@ private fun AdaptiveStageSplitContent(
             DEFAULT_SPLIT_UPPER_REGION_WEIGHT
         }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        AdaptiveStageStageHeader(
-            selectedStage = selectedStage,
-            allNotificationsSelected = allNotificationsSelected,
-            stages = stages,
-            state = state,
-            appIconLoader = appIconLoader,
-            onAction = onAction,
-        )
         AdaptiveStageSupportingPane(
             stage = selectedStage,
             selectedCardId = selectedDetailCardId,
@@ -1396,16 +1376,27 @@ private fun AdaptiveStageSupportingPane(
 }
 
 /**
- * Slimmed down from a full-width opaque toolbar to a compact glass label plus a small floating
- * action capsule (design review polish pass).
+ * Cards' dock-edge companion (design-review follow-up: the header no longer floats near the top of
+ * the screen independent of dock position -- it is two small glass pills docked directly to
+ * whichever edge the dock itself sits on, via [HomeDockInterpreter.dockEdgeCompanion]). The identity
+ * pill (icon + "AppName · N cards") and the pin/overflow capsule stay the two separate pieces they
+ * were as a floating header -- a single combined pill read as too large wherever a vertical dock put
+ * it beside a narrow column of icons -- just laid out as a Row for a horizontal dock (top/bottom, so
+ * they read left-to-right beside its own icon run) or a Column for a vertical one (left/right, so
+ * neither pill is wider than the strip it sits beside).
+ *
+ * [position] only ever picks that Row/Column arrangement; [DockEdgeCompanionSlot] is what actually
+ * places the result next to the dock's own measured bounds, so this composable knows nothing about
+ * where on screen it ends up.
  */
 @Composable
-private fun AdaptiveStageStageHeader(
+internal fun CardsDockEdgeHeader(
     selectedStage: AppStage?,
     allNotificationsSelected: Boolean,
     stages: List<AppStage>,
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
+    position: DockPosition,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     // selectedStage stays the last real selection while the merged page is showing (so leaving
@@ -1419,109 +1410,138 @@ private fun AdaptiveStageStageHeader(
         }
     val summary = adaptiveStageHeaderSummary(shownStage, allNotificationsSelected, stages)
     val shownApp = shownStage?.let { stage -> state.installedAppsByStageId[stage.id] }
+    val identityPill: @Composable () -> Unit = {
+        CardsDockEdgeIdentityPill(
+            label = label,
+            summary = summary,
+            shownApp = shownApp,
+            allNotificationsSelected = allNotificationsSelected,
+            shownStage = shownStage,
+            appIconLoader = appIconLoader,
+            onAction = onAction,
+        )
+    }
+    val actionCapsule: @Composable () -> Unit = {
+        CardsDockEdgeActionCapsule(shownStage = shownStage, shownApp = shownApp, state = state, onAction = onAction)
+    }
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        GlassSurface(
-            shape = MaterialTheme.shapes.large,
-            modifier = Modifier.fillMaxWidth().padding(end = HEADER_CAPSULE_RESERVED_WIDTH_DP.dp),
+    if (position.isHorizontalEdge) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            identityPill()
+            actionCapsule()
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            identityPill()
+            actionCapsule()
+        }
+    }
+}
+
+/** The identity pill: [DOCK_EDGE_HEADER_ICON_SIZE_DP] icon plus the "AppName · N cards" label. */
+@Composable
+private fun CardsDockEdgeIdentityPill(
+    label: String,
+    summary: String?,
+    shownApp: InstalledApp?,
+    allNotificationsSelected: Boolean,
+    shownStage: AppStage?,
+    appIconLoader: AppIconLoader,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    GlassSurface(shape = MaterialTheme.shapes.large) {
+        Row(
+            modifier = Modifier.padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (shownApp != null) {
-                    Box(
-                        modifier = Modifier.size(HEADER_ICON_SIZE_DP.dp).padding(end = 10.dp),
-                    ) {
-                        LauncherAppIcon(
-                            identity = shownApp.identity,
-                            label = label,
-                            iconLoader = appIconLoader,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-                }
-                Column(
-                    modifier =
-                        Modifier.weight(1f).testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).semantics {
-                            contentDescription = "Cards stage: $label"
-                            stateDescription =
-                                when {
-                                    allNotificationsSelected -> "Showing every stage's notifications"
-                                    shownStage != null -> shownStage.adaptiveStageStageStateDescription()
-                                    else -> "No stage selected"
-                                }
-                            liveRegion = LiveRegionMode.Polite
-                            // Stage-to-stage navigation for TalkBack/switch users, mirroring the
-                            // "Previous card"/"Next card" CustomAccessibilityAction precedent used
-                            // for intra-stack card navigation elsewhere in this file.
-                            customActions =
-                                listOf(
-                                    CustomAccessibilityAction("Previous stage") {
-                                        onAction(LauncherShellAction.SelectPreviousAppStage)
-                                        true
-                                    },
-                                    CustomAccessibilityAction("Next stage") {
-                                        onAction(LauncherShellAction.SelectNextAppStage)
-                                        true
-                                    },
-                                )
-                        },
-                ) {
-                    // A single compact line ("WhatsApp · 10 cards") rather than a title plus a
-                    // separate eyebrow line -- the slimmed pill no longer has the vertical room a
-                    // two-line header did, and does not need it now that the icon carries identity.
-                    Text(
-                        text = listOfNotNull(label, summary).joinToString(" · "),
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+            if (shownApp != null) {
+                Box(modifier = Modifier.size(DOCK_EDGE_HEADER_ICON_SIZE_DP.dp).padding(end = 10.dp)) {
+                    LauncherAppIcon(
+                        identity = shownApp.identity,
+                        label = label,
+                        iconLoader = appIconLoader,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
             }
-        }
-        GlassSurface(
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.align(Alignment.TopEnd),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Pin appears once, as a toggle, and only for a real stage -- "All" is not a stage.
-                if (shownStage != null) {
-                    IconToggleButton(
-                        checked = shownStage.isPinned,
-                        onCheckedChange = { onAction(LauncherShellAction.ToggleAppStagePinned(shownStage.id)) },
-                        modifier =
-                            Modifier.semantics {
-                                contentDescription = ADAPTIVE_STAGE_PIN_TOGGLE_LABEL
-                                stateDescription = if (shownStage.isPinned) "Pinned" else "Not pinned"
-                            },
-                    ) {
-                        Icon(
-                            imageVector = if (shownStage.isPinned) Icons.Filled.Star else Icons.Outlined.Star,
-                            contentDescription = null,
-                        )
-                    }
-                }
-                AdaptiveStageOverflowMenu(
-                    shownApp = shownApp,
-                    notificationAccessStatus = state.notificationAccessStatus,
-                    onAction = onAction,
+            Column(
+                modifier =
+                    Modifier.testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).semantics {
+                        contentDescription = "Cards stage: $label"
+                        stateDescription =
+                            when {
+                                allNotificationsSelected -> "Showing every stage's notifications"
+                                shownStage != null -> shownStage.adaptiveStageStageStateDescription()
+                                else -> "No stage selected"
+                            }
+                        liveRegion = LiveRegionMode.Polite
+                        // Stage-to-stage navigation for TalkBack/switch users, mirroring the
+                        // "Previous card"/"Next card" CustomAccessibilityAction precedent used
+                        // for intra-stack card navigation elsewhere in this file.
+                        customActions =
+                            listOf(
+                                CustomAccessibilityAction("Previous stage") {
+                                    onAction(LauncherShellAction.SelectPreviousAppStage)
+                                    true
+                                },
+                                CustomAccessibilityAction("Next stage") {
+                                    onAction(LauncherShellAction.SelectNextAppStage)
+                                    true
+                                },
+                            )
+                    },
+            ) {
+                // A single compact line ("WhatsApp · 10 cards") rather than a title plus a separate
+                // eyebrow line -- the slimmed pill has no vertical room for a two-line header.
+                Text(
+                    text = listOfNotNull(label, summary).joinToString(" · "),
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
     }
 }
 
-/** Room reserved at the pill's trailing edge for the floating pin/overflow capsule to sit over. */
-private const val HEADER_CAPSULE_RESERVED_WIDTH_DP = 96
+/** The pin-toggle + overflow capsule, unchanged in behaviour from the header it replaces. */
+@Composable
+private fun CardsDockEdgeActionCapsule(
+    shownStage: AppStage?,
+    shownApp: InstalledApp?,
+    state: LauncherShellState,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    GlassSurface(shape = MaterialTheme.shapes.medium) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Pin appears once, as a toggle, and only for a real stage -- "All" is not a stage.
+            if (shownStage != null) {
+                IconToggleButton(
+                    checked = shownStage.isPinned,
+                    onCheckedChange = { onAction(LauncherShellAction.ToggleAppStagePinned(shownStage.id)) },
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription = ADAPTIVE_STAGE_PIN_TOGGLE_LABEL
+                            stateDescription = if (shownStage.isPinned) "Pinned" else "Not pinned"
+                        },
+                ) {
+                    Icon(
+                        imageVector = if (shownStage.isPinned) Icons.Filled.Star else Icons.Outlined.Star,
+                        contentDescription = null,
+                    )
+                }
+            }
+            AdaptiveStageOverflowMenu(
+                shownApp = shownApp,
+                notificationAccessStatus = state.notificationAccessStatus,
+                onAction = onAction,
+            )
+        }
+    }
+}
 
-/** The header's own rest-icon slot -- smaller than the old full toolbar icon; it is a label now, not a focal point. */
-private const val HEADER_ICON_SIZE_DP = 28
+/** The identity pill's icon slot. */
+private const val DOCK_EDGE_HEADER_ICON_SIZE_DP = 28
 
 /**
  * The header's overflow: always present, whatever is showing -- a stage, "All", or nothing yet --
@@ -1621,7 +1641,7 @@ private fun adaptiveStageHeaderSummary(
  */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun AdaptiveStageAddStageSheet(
+internal fun AdaptiveStageAddStageSheet(
     state: LauncherShellState,
     pinnedStageIds: Set<AppStageId>,
     appIconLoader: AppIconLoader,
@@ -1707,7 +1727,7 @@ internal const val ADAPTIVE_STAGE_OVERFLOW_LABEL = "More options"
 internal const val ADAPTIVE_STAGE_PIN_TOGGLE_LABEL = "Pin stage"
 internal const val ADAPTIVE_STAGE_ADD_STAGE_SHEET_TEST_TAG = "adaptive-stage-add-stage-sheet"
 
-/** Only one [AdaptiveStageStageHeader] is ever composed at a time, so a single fixed tag is unambiguous. */
+/** Only one [CardsDockEdgeHeader] is ever composed at a time, so a single fixed tag is unambiguous. */
 internal const val ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG = "adaptive-stage-stage-header"
 
 @Composable
