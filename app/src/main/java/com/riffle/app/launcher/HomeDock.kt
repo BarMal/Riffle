@@ -364,7 +364,7 @@ private fun WidgetPickerDockPlaceholder(
         modifier =
             Modifier
                 .requiredSize(sizeDp.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(DOCK_ICON_MASK_CORNER_RADIUS_DP.dp))
                 .background(color)
                 .testTag(WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG),
         contentAlignment = Alignment.Center,
@@ -397,6 +397,20 @@ private const val DOCK_MAX_HORIZONTAL_MAIN_AXIS_DP = 560
  * conclusion for its tall expanded form with its own screen fraction.
  */
 private const val DOCK_MAX_VERTICAL_MAIN_AXIS_FRACTION = 0.7f
+/**
+ * Corner radius every dock icon mask shares -- shortcuts (via [LauncherAppIcon]'s own default),
+ * folder/widget placeholders and the dynamic section's tiles alike -- so a shortcut, a folder, a
+ * widget preview and a notification-derived entry all read as the same family of icon when they
+ * sit in the same strip. Before this, the dynamic section masked its own tiles to [CircleShape]
+ * while everything else here used this same 12dp squircle, so an avatar-style or
+ * play-button-style notification icon (both routed through the dynamic section) looked like a
+ * visually different *kind* of control from a plain app shortcut two slots over, rather than just
+ * a different app. This is the small step of the cross-surface design pass's shared radius scale
+ * (24/16/12), kept as its own dock-scoped constant rather than folding into [RiffleShapes] --
+ * that general system has no 12dp step of its own (its closest, `radiusS`, is 8dp and serves
+ * unrelated surfaces), and widening it to add one now would ripple well past this slice.
+ */
+internal const val DOCK_ICON_MASK_CORNER_RADIUS_DP = 12
 internal const val DOCK_CROSS_AXIS_CHROME_DP = 32
 internal const val DOCK_MAIN_AXIS_PADDING_DP = 14
 internal const val DOCK_CROSS_AXIS_PADDING_DP = 10

@@ -2690,6 +2690,26 @@ private fun adaptiveStageMessageAvatarColor(seed: String): Color {
 
 private const val ADAPTIVE_STAGE_CARD_VISIBLE_MESSAGE_COUNT = 3
 
+/**
+ * Corner radius for the context shelf's overflow chip -- the shared "medium" step (chips/buttons)
+ * of the cross-surface design pass this card, the header/dock transition and the appearance sheet
+ * all align to, rather than [RiffleShapes]'s own general-purpose scale (whose closest step, 8dp,
+ * predates and is unrelated to this pass). Intentionally a plain literal, not a shared token: only
+ * this one shelf control needs it, and inventing a new named constant elsewhere for a single call
+ * site would be the parallel system [RiffleShapes] already exists to avoid.
+ */
+private const val ADAPTIVE_STAGE_SHELF_OVERFLOW_CORNER_RADIUS_DP = 16
+
+/**
+ * The focused card's own action bar: reply/dismiss-style [card] actions, "View thread" for a
+ * grouped conversation, "Details" to expand the card, and [NotificationHideMenuButton]'s "hide
+ * notifications like this" overflow -- every action here is scoped to *this* notification/card,
+ * never to the app as a whole. That is a deliberate, narrow scope: a separate overflow lives in
+ * the header this composable does not touch, and owns whatever is app-level (open app info, app
+ * settings, etc.) rather than per-notification. Two overflow affordances in the same stage read as
+ * redundant only if their contents actually overlap; keeping this one strictly per-card is what
+ * keeps them distinct.
+ */
 @Composable
 internal fun AdaptiveStageContextShelf(
     card: AppStageNotificationCard,
@@ -2716,6 +2736,12 @@ internal fun AdaptiveStageContextShelf(
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        // Was unset (defaults to Top), which lined every child up by its own top edge instead of
+        // its visual center -- harmless while the row held only same-height pill buttons, but it
+        // left the trailing overflow control (a plain IconButton, whose larger 48dp touch target
+        // sits taller than a pill's own bounds) visibly low relative to them. Centering is what
+        // actually reads as "one action bar" rather than several controls that happen to share a row.
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (showNotificationActions) {
             card.supportedActions.sortedBy { action -> action.label() }.forEach { action ->
@@ -2757,6 +2783,12 @@ internal fun AdaptiveStageContextShelf(
  * A per-card overflow menu offering durable "hide notifications like this" rules, built from the
  * card's own content rather than freeform authoring -- mirrors the "Calm" reference app's
  * contextual rule-creation UX.
+ *
+ * This is deliberately narrow: every item below creates a rule scoped to *this card's* app,
+ * title or body (see [NotificationHideRule.Kind]) -- there is no "open app info"/"app settings"
+ * item here, because that already lives in the header's own, separate overflow (out of this
+ * PR's scope). Two "⋮" affordances on one stage would be redundant only if they exposed the same
+ * actions; this one only ever offers to hide notifications *like this one*.
  */
 @Composable
 private fun NotificationHideMenuButton(
@@ -2784,11 +2816,23 @@ private fun NotificationHideMenuButton(
     }
 
     Box {
+        // Tonal container matches AdaptiveStageContextActionButton's own pill treatment (same
+        // surfaceVariant tone/alpha) so the trailing overflow reads as one more control in the
+        // same action-bar family instead of a bare, unstyled icon dropped in beside two pills --
+        // the row's actual affordance was already consistent (menu vs. button), only its paint was not.
         IconButton(
             onClick = { expanded = true },
-            modifier = Modifier.semantics { contentDescription = "Hide notifications like this" },
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(ADAPTIVE_STAGE_SHELF_OVERFLOW_CORNER_RADIUS_DP.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f))
+                    .semantics { contentDescription = "Hide notifications like this" },
         ) {
-            Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
+            Icon(
+                imageVector = Icons.Filled.MoreVert,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         RiffleContextMenu(
             expanded = expanded,
