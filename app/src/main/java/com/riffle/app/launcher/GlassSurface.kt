@@ -18,8 +18,9 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Riffle's glass material: a tinted, blurred layer with a 1dp top hairline highlight, used for
- * floating chrome (sheets, pills) so it reads as a distinct surface above whatever sits behind it
- * rather than a flat, abruptly-cut card.
+ * floating chrome (sheets, pills, the card-stack header's pill and action capsule) so it reads as
+ * a distinct surface above whatever sits behind it rather than a flat, abruptly-cut card. Shared
+ * across the cross-surface design pass rather than each surface growing its own.
  *
  * True backdrop blur -- sampling the pixels actually behind this layer -- needs a captured render
  * node that a plain composable cannot get to. This blurs the tint layer itself instead, which reads

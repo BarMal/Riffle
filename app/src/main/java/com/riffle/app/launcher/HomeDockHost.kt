@@ -68,6 +68,15 @@ internal class HomeDockHostState {
     /** A folder opened from the dock itself (folders on a home page are the content's own). */
     val openedFolderId: MutableState<LauncherItemId?> = mutableStateOf(null)
 
+    /**
+     * The most recent dock-icon-to-header identity transition Cards asked for (a pinned app's dock
+     * icon was tapped to navigate to its stage, not launch it), or null once consumed. Read by
+     * [com.riffle.app.launcher.AdaptiveStageStageHeader]'s dock-to-header shared-element
+     * approximation; written from [DockShortcut]'s tap handler, the one place that both knows the
+     * tapped identity is navigating (not launching) and can measure its own on-screen bounds.
+     */
+    val identityTransitionRequest: MutableState<DockIdentityTransitionRequest?> = mutableStateOf(null)
+
     fun dismissShelf() {
         isShelfExpanded.value = dockShelfExpandedStateAfterBackgroundTap(isExpanded = isShelfExpanded.value)
     }
@@ -82,6 +91,18 @@ internal class HomeDockHostState {
 
 @Composable
 internal fun rememberHomeDockHostState(): HomeDockHostState = remember { HomeDockHostState() }
+
+/**
+ * One dock icon's identity, captured the instant a tap on it is about to navigate to its Cards
+ * stage. [sourceBounds] is in root coordinates -- the same space [HomeDockHostState.bounds] already
+ * uses -- and [requestId] disambiguates two taps on the same identity in a row, so the header's own
+ * `LaunchedEffect(request)` re-fires even though `request.identity` alone wouldn't have changed.
+ */
+internal data class DockIdentityTransitionRequest(
+    val identity: AppIdentity,
+    val sourceBounds: Rect,
+    val requestId: Long,
+)
 
 /**
  * How the active mode interprets the shared dock's intents (Decision 2) -- the one interpreter
@@ -178,18 +199,13 @@ internal fun HomeDockHost(
         SideEffect { hostState.extentPx.intValue = 0 }
     }
     val actions =
-        HomeWorkspaceActions(
-            onFolderOpen = { folder -> hostState.openedFolderId.value = folder.id },
-            onDragSessionChanged = {},
+        dockHostWorkspaceActions(
+            hostState = hostState,
+            position = position,
             haptics = haptics,
-            onDockInteractionExtentChanged = { extentPx ->
-                hostState.extentPx.intValue = extentPx
-                hostState.measuredEdge.value = position
-                onExtentChanged(extentPx)
-            },
-            onDockBoundsChanged = { bounds -> hostState.bounds.value = bounds },
+            dockOnAction = dockOnAction,
             onBackgroundClick = dockShelf.dismiss,
-            onAction = dockOnAction,
+            onExtentChanged = onExtentChanged,
         )
 
     Box(
@@ -234,6 +250,39 @@ internal fun HomeDockHost(
         }
     }
 }
+
+/**
+ * [HomeDockHost]'s own [HomeWorkspaceActions], pulled out of that composable so its body reads as
+ * "wire the callbacks, then lay out the dock" rather than one long inline callback literal --
+ * [HomeDockHost] itself only ever calls this once, so this stays a plain function, not a
+ * `remember`-cached one; recomposition already skips a stable-lambda no-op the same way a
+ * `remember` block would.
+ */
+private fun dockHostWorkspaceActions(
+    hostState: HomeDockHostState,
+    position: DockPosition,
+    haptics: LauncherHaptics,
+    dockOnAction: (LauncherShellAction) -> Unit,
+    onBackgroundClick: () -> Unit,
+    onExtentChanged: (Int) -> Unit,
+): HomeWorkspaceActions =
+    HomeWorkspaceActions(
+        onFolderOpen = { folder -> hostState.openedFolderId.value = folder.id },
+        onDragSessionChanged = {},
+        haptics = haptics,
+        onDockInteractionExtentChanged = { extentPx ->
+            hostState.extentPx.intValue = extentPx
+            hostState.measuredEdge.value = position
+            onExtentChanged(extentPx)
+        },
+        onDockBoundsChanged = { bounds -> hostState.bounds.value = bounds },
+        onIdentityTransitionRequested = { identity, sourceBounds ->
+            hostState.identityTransitionRequest.value =
+                DockIdentityTransitionRequest(identity, sourceBounds, requestId = System.nanoTime())
+        },
+        onBackgroundClick = onBackgroundClick,
+        onAction = dockOnAction,
+    )
 
 /**
  * The room a mode's content leaves for the dock along [position]'s edge: the dock's measured
