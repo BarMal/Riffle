@@ -259,7 +259,6 @@ internal fun AdaptiveStageAppStageSurface(
                     spineEnabled = state.launcherSettings.cards.showStageSpine,
                     dockHostsSelector = dockHostsStageSelector,
                 ),
-            dockHost = dockHost,
         )
     }
     if (addStageSheetOpenState.value) {
@@ -285,7 +284,6 @@ private fun AdaptiveStageAppStageSurfaceContent(
     appIconLoader: AppIconLoader,
     shellState: AppStageShellState,
     showSpine: Boolean,
-    dockHost: HomeDockHostState? = null,
 ) {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -496,7 +494,6 @@ private fun AdaptiveStageAppStageSurfaceContent(
                             },
                             onAction = onAction,
                             appIconLoader = appIconLoader,
-                            dockHost = dockHost,
                         )
 
                     AdaptiveStagePaneMode.SPLIT ->
@@ -525,7 +522,6 @@ private fun AdaptiveStageAppStageSurfaceContent(
                             },
                             onAction = onAction,
                             appIconLoader = appIconLoader,
-                            dockHost = dockHost,
                         )
 
                     AdaptiveStagePaneMode.TWO_PANE, AdaptiveStagePaneMode.THREE_PANE -> {
@@ -720,7 +716,6 @@ private fun AdaptiveStageCompactContent(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
-    dockHost: HomeDockHostState? = null,
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -809,7 +804,6 @@ private fun AdaptiveStageSplitContent(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
-    dockHost: HomeDockHostState? = null,
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
