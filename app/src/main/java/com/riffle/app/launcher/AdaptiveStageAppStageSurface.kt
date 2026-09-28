@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -1466,30 +1467,33 @@ private fun CardsDockEdgeIdentityPill(
             }
             Column(
                 modifier =
-                    Modifier.testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).semantics {
-                        contentDescription = "Cards stage: $label"
-                        stateDescription =
-                            when {
-                                allNotificationsSelected -> "Showing every stage's notifications"
-                                shownStage != null -> shownStage.adaptiveStageStageStateDescription()
-                                else -> "No stage selected"
-                            }
-                        liveRegion = LiveRegionMode.Polite
-                        // Stage-to-stage navigation for TalkBack/switch users, mirroring the
-                        // "Previous card"/"Next card" CustomAccessibilityAction precedent used
-                        // for intra-stack card navigation elsewhere in this file.
-                        customActions =
-                            listOf(
-                                CustomAccessibilityAction("Previous stage") {
-                                    onAction(LauncherShellAction.SelectPreviousAppStage)
-                                    true
-                                },
-                                CustomAccessibilityAction("Next stage") {
-                                    onAction(LauncherShellAction.SelectNextAppStage)
-                                    true
-                                },
-                            )
-                    },
+                    Modifier
+                        .widthIn(max = DOCK_EDGE_IDENTITY_LABEL_MAX_WIDTH_DP.dp)
+                        .testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG)
+                        .semantics {
+                            contentDescription = "Cards stage: $label"
+                            stateDescription =
+                                when {
+                                    allNotificationsSelected -> "Showing every stage's notifications"
+                                    shownStage != null -> shownStage.adaptiveStageStageStateDescription()
+                                    else -> "No stage selected"
+                                }
+                            liveRegion = LiveRegionMode.Polite
+                            // Stage-to-stage navigation for TalkBack/switch users, mirroring the
+                            // "Previous card"/"Next card" CustomAccessibilityAction precedent used
+                            // for intra-stack card navigation elsewhere in this file.
+                            customActions =
+                                listOf(
+                                    CustomAccessibilityAction("Previous stage") {
+                                        onAction(LauncherShellAction.SelectPreviousAppStage)
+                                        true
+                                    },
+                                    CustomAccessibilityAction("Next stage") {
+                                        onAction(LauncherShellAction.SelectNextAppStage)
+                                        true
+                                    },
+                                )
+                        },
             ) {
                 // A single compact line ("WhatsApp · 10 cards") rather than a title plus a separate
                 // eyebrow line -- the slimmed pill has no vertical room for a two-line header.
@@ -1542,6 +1546,18 @@ private fun CardsDockEdgeActionCapsule(
 
 /** The identity pill's icon slot. */
 private const val DOCK_EDGE_HEADER_ICON_SIZE_DP = 28
+
+/**
+ * The identity pill's label column, capped so a long combined "AppName · N cards" string (a long
+ * app name, a long translation) can't grow the pill without bound -- it previously had a
+ * [maxLines] cap but no width cap, so [DockEdgeCompanionSlot] would measure and place an
+ * arbitrarily wide pill, and [dockEdgeCompanionOffset]'s vertical-dock case anchors the companion
+ * by that measured width, dragging it toward the screen's center the wider it grew. There is no
+ * existing "companion slot budget" to derive this from -- [DockEdgeCompanionSlot] measures its
+ * content with loose (unbounded) constraints by design, so a fixed, named cap is what's clamped
+ * here instead.
+ */
+private const val DOCK_EDGE_IDENTITY_LABEL_MAX_WIDTH_DP = 140
 
 /**
  * The header's overflow: always present, whatever is showing -- a stage, "All", or nothing yet --
@@ -2760,6 +2776,7 @@ private const val ADAPTIVE_STAGE_SHELF_OVERFLOW_CORNER_RADIUS_DP = 16
  * keeps them distinct.
  */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun AdaptiveStageContextShelf(
     card: AppStageNotificationCard,
     onAction: (LauncherShellAction) -> Unit,
@@ -2782,16 +2799,24 @@ internal fun AdaptiveStageContextShelf(
         focusRequester = detailFocusRequester,
         isLaidOut = detailControlLaidOut,
     )
-    Row(
+    // FlowRow, not a plain Row: a Row never clips or wraps its children, so once there were enough
+    // actions to need more than the row's own width, they simply overflowed past its bounds --
+    // rendering as the overlapping, truncated pills reported against the dock's vertical/right-edge
+    // orientation. FlowRow reflows overflow onto a new line instead, matching the already-correct
+    // pattern AdaptiveStageEmptyStage's own action row uses below.
+    FlowRow(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         // Was unset (defaults to Top), which lined every child up by its own top edge instead of
         // its visual center -- harmless while the row held only same-height pill buttons, but it
         // left the trailing overflow control (a plain IconButton, whose larger 48dp touch target
-        // sits taller than a pill's own bounds) visibly low relative to them. Centering is what
-        // actually reads as "one action bar" rather than several controls that happen to share a row.
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+        // sits taller than a pill's own bounds) visibly low relative to them. FlowRow has no
+        // row-level verticalAlignment of its own (unlike Row), so each child aligns itself via
+        // FlowRowScope.align instead, which reads as "one action bar" rather than several controls
+        // that happen to share a row.
+        val centerVertically = Modifier.align(Alignment.CenterVertically)
         if (showNotificationActions) {
             card.supportedActions.sortedBy { action -> action.label() }.forEach { action ->
                 AdaptiveStageContextActionButton(
@@ -2799,11 +2824,12 @@ internal fun AdaptiveStageContextShelf(
                     onClick = {
                         onAction(LauncherShellAction.PerformNotificationStageAction(card.notificationKey, action))
                     },
+                    modifier = centerVertically,
                 )
             }
         }
         onViewThread?.let { viewThread ->
-            AdaptiveStageContextActionButton(label = "View thread", onClick = viewThread)
+            AdaptiveStageContextActionButton(label = "View thread", onClick = viewThread, modifier = centerVertically)
         }
         onDetailRequested?.let { requestDetail ->
             AdaptiveStageContextActionButton(
@@ -2811,7 +2837,7 @@ internal fun AdaptiveStageContextShelf(
                 onClick = requestDetail,
                 modifier =
                     detailFocusRequester?.let { requester ->
-                        Modifier.focusRequester(requester).onGloballyPositioned {
+                        centerVertically.focusRequester(requester).onGloballyPositioned {
                             if (restoreDetailFocus) detailControlLaidOut = true
                         }
                             .onFocusChanged { focusState ->
@@ -2821,10 +2847,12 @@ internal fun AdaptiveStageContextShelf(
                                 }
                             }.focusable()
                     }
-                        ?: Modifier,
+                        ?: centerVertically,
             )
         }
-        NotificationHideMenuButton(card = card, onAction = onAction)
+        Box(modifier = centerVertically) {
+            NotificationHideMenuButton(card = card, onAction = onAction)
+        }
     }
 }
 
@@ -3108,6 +3136,10 @@ private fun AdaptiveStageEmptyStage(
             Text(
                 "This stage stays available so you can return to it.",
                 style = MaterialTheme.typography.bodyMedium,
+                // No cap before meant a long enough string (a translation, say) could push the
+                // FlowRow of quick actions below it out of the card entirely.
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
             emptyCard?.let { card ->
                 FlowRow(

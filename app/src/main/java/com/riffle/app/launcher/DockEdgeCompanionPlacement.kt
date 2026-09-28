@@ -35,6 +35,7 @@ internal fun dockEdgeCompanionOffset(
     position: DockPosition,
     companionSize: IntSize,
     gapPx: Int,
+    maxTravelPx: Int = Int.MAX_VALUE,
 ): IntOffset {
     val x: Float
     val y: Float
@@ -50,9 +51,21 @@ internal fun dockEdgeCompanionOffset(
         y = dockBoundsLocal.center.y - companionSize.height / 2f
         x =
             if (position == DockPosition.LEFT) {
+                // A LEFT dock's companion is anchored just to the strip's right, a fixed offset
+                // that does not shift with the companion's own width -- growing the companion only
+                // extends its own *far* edge further right, so it needs no maxTravelPx clamp here.
                 dockBoundsLocal.right + gapPx
             } else {
-                dockBoundsLocal.left - gapPx - companionSize.width
+                // A RIGHT dock anchors its companion just outside its own edge by subtracting the
+                // companion's own measured width, so an unexpectedly wide companion (a long
+                // identity-pill label, before that pill capped its own width) would otherwise be
+                // placed however far left that width demanded, dragging it toward the screen's
+                // center -- the exact mechanism behind the reported overlap. [maxTravelPx] is a
+                // second, independent bound on top of that width cap: whatever the companion
+                // measures, its near edge can never sit further left of the dock's own edge than
+                // this, so a pathologically long label (a long translation, say) can't reproduce
+                // the same overlap through some other path.
+                (dockBoundsLocal.left - gapPx - companionSize.width).coerceAtLeast(dockBoundsLocal.left - maxTravelPx)
             }
     }
     val maxX = (containerSize.width - companionSize.width).toFloat().coerceAtLeast(0f)
@@ -78,10 +91,12 @@ internal fun DockEdgeCompanionSlot(
         val placeable = measurables.firstOrNull()?.measure(loose)
         val containerSize = IntSize(constraints.maxWidth, constraints.maxHeight)
         val gapPx = DOCK_EDGE_COMPANION_GAP_DP.dp.roundToPx()
+        val maxTravelPx = DOCK_EDGE_COMPANION_MAX_TRAVEL_DP.dp.roundToPx()
         layout(constraints.maxWidth, constraints.maxHeight) {
             placeable?.let {
                 val companionSize = IntSize(it.width, it.height)
-                val offset = dockEdgeCompanionOffset(containerSize, dockBoundsLocal, position, companionSize, gapPx)
+                val offset =
+                    dockEdgeCompanionOffset(containerSize, dockBoundsLocal, position, companionSize, gapPx, maxTravelPx)
                 it.place(offset)
             }
         }
@@ -90,3 +105,12 @@ internal fun DockEdgeCompanionSlot(
 
 /** The gap left between the dock strip and its companion pills, so they read as two things, not one. */
 private const val DOCK_EDGE_COMPANION_GAP_DP = 8
+
+/**
+ * A second, independent bound on how far a vertical dock's companion can travel from the dock's
+ * own edge -- see [dockEdgeCompanionOffset]. Generous enough to comfortably fit the identity
+ * pill's own capped label width (see `DOCK_EDGE_IDENTITY_LABEL_MAX_WIDTH_DP` in
+ * AdaptiveStageAppStageSurface.kt) plus its icon and padding, but never so wide that the companion
+ * can be pushed into a card's own content.
+ */
+private const val DOCK_EDGE_COMPANION_MAX_TRAVEL_DP = 220
