@@ -77,6 +77,67 @@ class DockEdgeCompanionPlacementTest {
     }
 
     @Test
+    fun aRightDockClampsAPathologicallyWideCompanionToMaxTravelFromTheDocksOwnEdge() {
+        // Reproduces the reported bug's mechanism directly: with no maxTravelPx bound, an
+        // unexpectedly wide companion (e.g. a long identity-pill label before it capped its own
+        // width) would be anchored however far left of the dock's own edge its width demanded,
+        // dragging it toward the screen's center. A generously large container keeps the
+        // pre-existing container-bounds clamp (coerceIn(0f, maxX)) from being what limits x here,
+        // so this test isolates maxTravelPx's own effect.
+        val bigContainer = IntSize(width = 3000, height = 800)
+        val dockBounds = Rect(left = 1900f, top = 300f, right = 1972f, bottom = 500f)
+        val pathologicallyWideCompanion = IntSize(width = 1000, height = 40)
+
+        val offset =
+            dockEdgeCompanionOffset(
+                bigContainer,
+                dockBounds,
+                DockPosition.RIGHT,
+                pathologicallyWideCompanion,
+                gapPx = 8,
+                maxTravelPx = 220,
+            )
+
+        // Never further left than 220px from the dock's own left edge (1900), regardless of how
+        // wide the companion measured (without the clamp this would be 1900 - 8 - 1000 = 892).
+        assertEquals(1900 - 220, offset.x)
+    }
+
+    @Test
+    fun aLeftDockCompanionsAnchorDoesNotDependOnItsOwnWidthSoItNeedsNoTravelClamp() {
+        // A LEFT dock places its companion at a fixed offset from the strip's own right edge --
+        // unlike RIGHT, growing the companion's width only extends its far edge further right, it
+        // never moves the anchor itself, so maxTravelPx has nothing to do here even for a
+        // pathologically wide companion.
+        val bigContainer = IntSize(width = 3000, height = 800)
+        val dockBounds = Rect(left = 0f, top = 300f, right = 72f, bottom = 500f)
+        val pathologicallyWideCompanion = IntSize(width = 1000, height = 40)
+
+        val offset =
+            dockEdgeCompanionOffset(
+                bigContainer,
+                dockBounds,
+                DockPosition.LEFT,
+                pathologicallyWideCompanion,
+                gapPx = 8,
+                maxTravelPx = 220,
+            )
+
+        assertEquals(72 + 8, offset.x)
+    }
+
+    @Test
+    fun withoutAnExplicitMaxTravelTheDefaultLeavesExistingPlacementUnchanged() {
+        // maxTravelPx defaults to unbounded, so every pre-existing caller (and the tests above it)
+        // keeps its prior behaviour unless it opts into the new clamp.
+        val dockBounds = Rect(left = 328f, top = 300f, right = 400f, bottom = 500f)
+
+        val offset = dockEdgeCompanionOffset(container, dockBounds, DockPosition.RIGHT, companion, gapPx = 8)
+
+        assertEquals(IntOffset(x = 200, y = 380), offset)
+    }
+
+    @Test
     fun relativeToShiftsARectByTheGivenOrigin() {
         val rect = Rect(left = 100f, top = 200f, right = 148f, bottom = 248f)
 
