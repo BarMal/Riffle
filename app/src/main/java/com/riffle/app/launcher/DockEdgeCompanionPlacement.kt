@@ -108,9 +108,9 @@ private const val DOCK_EDGE_COMPANION_GAP_DP = 8
 
 /**
  * A second, independent bound on how far a vertical dock's companion can travel from the dock's
- * own edge -- see [dockEdgeCompanionOffset]. Generous enough to comfortably fit the identity
- * pill's own capped label width (see `DOCK_EDGE_IDENTITY_LABEL_MAX_WIDTH_DP` in
- * AdaptiveStageAppStageSurface.kt) plus its icon and padding, but never so wide that the companion
- * can be pushed into a card's own content.
+ * own edge -- see [dockEdgeCompanionOffset]. Generous enough to comfortably fit the dock-edge card
+ * panel's own capped width (see `CARDS_DOCK_EDGE_CARD_PANEL_MAX_WIDTH_DP` in
+ * CardsDockEdgeCardPanel.kt), but never so wide that the companion can be pushed into a card's own
+ * content.
  */
 private const val DOCK_EDGE_COMPANION_MAX_TRAVEL_DP = 220

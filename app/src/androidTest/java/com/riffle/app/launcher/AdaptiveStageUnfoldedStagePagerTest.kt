@@ -145,11 +145,11 @@ class AdaptiveStageUnfoldedStagePagerTest {
             MaterialTheme {
                 Box(modifier = Modifier.width(widthDp.dp).height(PANE_HEIGHT_DP.dp).clipToBounds()) {
                     val currentState = state()
-                    // The identity pill these assertions target is CardsDockEdgeHeader's now (rendered
+                    // The identity pill these assertions target is CardsDockEdgeCardPanel's now (rendered
                     // beside the dock, not inside AdaptiveStageAppStageSurface) -- mounted alongside it
                     // directly here, same as AdaptiveStageCardSurfaceTest does.
                     val shellState = rememberAppStageShellState(currentState)
-                    CardsDockEdgeHeader(
+                    CardsDockEdgeCardPanel(
                         selectedStage = shellState.snapshot.selectedStage,
                         allNotificationsSelected = false,
                         stages = shellState.snapshot.stages,
