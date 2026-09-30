@@ -44,6 +44,25 @@ class CalendarItemMapperTest {
     }
 
     @Test
+    fun `recurring instances keep distinct item ids but link to the same event`() {
+        val items =
+            mapper.nextEvents(
+                listOf(
+                    CalendarEvent("7:100", "Standup", 100, 200, eventId = "7"),
+                    CalendarEvent("7:300", "Standup", 300, 400, eventId = "7"),
+                ),
+                nowEpochMillis = 0,
+                limit = 2,
+            )
+
+        assertEquals(listOf("calendar:7:100", "calendar:7:300"), items.map { it.id.value })
+        assertEquals(
+            setOf<ItemTarget>(ItemTarget.DeepLink("content://com.android.calendar/events/7")),
+            items.map { it.target }.toSet(),
+        )
+    }
+
+    @Test
     fun `no upcoming events yields no items`() {
         assertTrue(mapper.nextEvents(listOf(event("past", 0, 5)), nowEpochMillis = 10).isEmpty())
     }

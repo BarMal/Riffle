@@ -342,3 +342,31 @@ lifecycle-bound observer is not wired), hide-rule edits apply on the next refres
 transport actions (no media-session repository exists), and there is no platform calendar adapter, so the
 calendar source reports `Unavailable` until one is designed (it needs an explicit, user-initiated
 `READ_CALENDAR` flow, which is out of scope here).
+
+## Calendar access policy (`READ_CALENDAR`)
+
+`READ_CALENDAR` is a dangerous runtime permission and is the only one the workspace sources add. It is
+requested only by an explicit user action, never at launch, on install, on first run, or because a
+workspace or lens merely contains the Calendar source.
+
+- **Until granted** the Calendar source emits `PermissionRequired`, does not query the calendar and does
+  not prompt. `CalendarAccessStatus` (`UNKNOWN`, `GRANTED`, `NOT_GRANTED`, `DENIED_PERMANENTLY`) maps to
+  `SourceAccess`; only `GRANTED` reads data. `UNKNOWN` counts as not granted.
+- **Entry points.** (a) Settings > Permissions > "Calendar", which always shows what the access is used
+  for next to an Allow button. (b) `LauncherShellAction.RequestCalendarAccess`, for a surface (an
+  expression, the editor) that shows a "needs calendar access" state. Such a surface must show the
+  rationale beside its button; it never triggers the request itself.
+- **Next step** is decided by the pure `calendarAccessStep(status, rationaleVisible)`: rationale first if
+  not yet visible, then the system dialog, and for a permanent denial the app's system settings page
+  instead of a dialog that can no longer appear. A denial is recorded by the launcher (a flag, not
+  calendar data) because Android cannot otherwise tell "never asked" from "don't ask again".
+- **Revocation** returns the source to `PermissionRequired` on the next status refresh; the stream drops
+  the events it held. Revoking in system settings normally restarts the process anyway.
+- **Privacy.** Events are read into memory only, never persisted or sent anywhere. Events the calendar
+  marks private or confidential become `SENSITIVE` items and are redacted by the usual privacy
+  projection.
+- **Standard launcher mode** never depends on this permission: with access absent nothing is empty,
+  blocked or prompted.
+- **Store implication.** Adding `READ_CALENDAR` to the manifest requires declaring calendar access in the
+  Play Console data-safety form and privacy policy (data accessed on device, not collected or shared,
+  used for on-device display only) before a release that includes it.
