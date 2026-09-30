@@ -13,6 +13,7 @@ import com.riffle.app.screenshots.ScreenshotBackdrop
 import com.riffle.app.screenshots.ScreenshotFixtures
 import com.riffle.app.screenshots.captureScreen
 import com.riffle.core.domain.launcher.workspace.Item
+import com.riffle.core.domain.launcher.workspace.ItemAction
 import com.riffle.core.domain.launcher.workspace.ItemGroup
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
 import com.riffle.core.domain.launcher.workspace.LensResult
@@ -53,6 +54,9 @@ internal object ExpressionFixtures {
 
     /** Messages with subtitle, body snippet and a timestamp. */
     fun flatMessages(): LensResult = LensResult.Flat(messages())
+
+    /** One message with artwork and actions, for the single Card expression. */
+    fun singleCard(): LensResult = LensResult.Flat(listOf(messages().first().copy(image = ItemImageHandle("artwork"))))
 
     /** The same messages grouped by the app that posted them. */
     fun groupedMessages(): LensResult {
@@ -107,7 +111,13 @@ internal object ExpressionFixtures {
             title = title,
             groupKey = group.lowercase(),
             timeEpochMillis = ScreenshotFixtures.FIXED_NOW_EPOCH_MILLIS - minutesAgo * MILLIS_PER_MINUTE,
-        ).copy(subtitle = subtitle, body = body, groupLabel = group, icon = ItemImageHandle(group.lowercase()))
+        ).copy(
+            subtitle = subtitle,
+            body = body,
+            groupLabel = group,
+            icon = ItemImageHandle(group.lowercase()),
+            actions = listOf(ItemAction.Open(), ItemAction.Dismiss()),
+        )
 }
 
 /** Renders [content] on the theme's surface colour (the screenshot backdrop's wallpaper would hurt contrast). */

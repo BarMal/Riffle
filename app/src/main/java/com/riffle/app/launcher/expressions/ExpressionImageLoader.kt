@@ -3,6 +3,8 @@ package com.riffle.app.launcher.expressions
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -81,7 +83,8 @@ class FakeExpressionImageLoader : ExpressionImageLoader {
 /**
  * An item's icon or image at [size], clipped to [shape]. A quiet surface-tone placeholder stands in
  * until (or unless) the loader returns. Decorative by default: the row or card that contains it
- * carries the description.
+ * carries the description. With [fillWidth] the image spans the available width and [size] is its
+ * height, for card artwork.
  */
 @Composable
 internal fun ItemImage(
@@ -91,13 +94,15 @@ internal fun ItemImage(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     shape: Shape = RiffleShapes.small,
+    fillWidth: Boolean = false,
 ) {
     val sizePx = with(LocalDensity.current) { size.roundToPx() }
     var image by remember(handle, loader, sizePx) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(handle, loader, sizePx) {
         image = handle?.let { loader.load(it, sizePx) }
     }
-    val base = modifier.size(size).clip(shape)
+    val sized = if (fillWidth) modifier.fillMaxWidth().height(size) else modifier.size(size)
+    val base = sized.clip(shape)
     val loaded = image
     if (loaded != null) {
         Image(
