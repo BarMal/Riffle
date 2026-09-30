@@ -6,7 +6,9 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -24,7 +26,7 @@ class LauncherShellLibraryReturnTest {
             val reducer =
                 LauncherHomePageEditReducer(
                     homeLayoutRepository = repository,
-                    viewModeAvailability = defaultLauncherViewModeAvailability(),
+                    viewModeAvailability = cardsEnabledAvailability(),
                 )
 
             val updated = reducer.reduce(libraryState(), LauncherShellAction.LeaveLibrary(trigger))
@@ -42,7 +44,7 @@ class LauncherShellLibraryReturnTest {
             val reducer =
                 LauncherHomePageEditReducer(
                     homeLayoutRepository = RecordingHomeLayoutRepository(),
-                    viewModeAvailability = defaultLauncherViewModeAvailability(),
+                    viewModeAvailability = cardsEnabledAvailability(),
                 )
 
             assertEquals("$trigger", state, reducer.reduce(state, LauncherShellAction.LeaveLibrary(trigger)))
@@ -100,3 +102,11 @@ class LauncherShellLibraryReturnTest {
         }
     }
 }
+
+private fun cardsEnabledAvailability() =
+    LauncherViewModeAvailability(
+        enabledExperimentalModesByDeviceClass =
+            HomeLayoutDeviceClass.entries.associateWith {
+                setOf(LauncherViewMode.HOME_SCREEN_LIBRARY, LauncherViewMode.CARD_INTERFACE)
+            },
+    )

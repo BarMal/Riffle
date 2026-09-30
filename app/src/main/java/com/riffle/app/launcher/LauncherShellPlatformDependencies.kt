@@ -25,13 +25,14 @@ data class LauncherShellPlatformDependencies(
         catalog.sortedProviders(widgetProviderRepository.installedWidgetProviders())
 }
 
+/**
+ * Only Library is offered for now: Cards and Standard are hidden until they are redesigned
+ * (#1318-#1325). Stored layouts in a hidden mode resolve to Library on load.
+ */
 fun defaultLauncherViewModeAvailability(): LauncherViewModeAvailability =
     LauncherViewModeAvailability(
         enabledExperimentalModesByDeviceClass =
-            HomeLayoutDeviceClass.entries.associateWith {
-                setOf(
-                    LauncherViewMode.HOME_SCREEN_LIBRARY,
-                    LauncherViewMode.CARD_INTERFACE,
-                )
-            },
+            HomeLayoutDeviceClass.entries.associateWith { setOf(LauncherViewMode.HOME_SCREEN_LIBRARY) },
+        alwaysAvailableModes = emptySet(),
+        fallbackMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
     )

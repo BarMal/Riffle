@@ -188,11 +188,13 @@ private fun SettingsLayoutPageContent(
 ) {
     SettingsDeviceConfigurationTabs(state = state, onAction = onAction)
     SettingsSection(title = "Home layout") {
-        HomeViewModeSetting(
-            viewMode = state.homeLayout.viewMode,
-            availableViewModes = state.availableLauncherViewModes,
-            onAction = onAction,
-        )
+        if (state.availableLauncherViewModes.size > 1) {
+            HomeViewModeSetting(
+                viewMode = state.homeLayout.viewMode,
+                availableViewModes = state.availableLauncherViewModes,
+                onAction = onAction,
+            )
+        }
         HomeTemplateSetting(
             selectedViewMode = state.homeLayout.viewMode,
             selectedTemplateId = state.homeLayout.templateId,
@@ -207,12 +209,14 @@ private fun SettingsLayoutPageContent(
             onAction = onAction,
         )
     }
-    SettingsSection(title = "Modes") {
-        HomeSurfaceModeSetting(
-            pair = state.modePair,
-            availableViewModes = state.availableLauncherViewModes,
-            onAction = onAction,
-        )
+    if (homeSurfaceModeOptions(state.availableLauncherViewModes).size > 1) {
+        SettingsSection(title = "Modes") {
+            HomeSurfaceModeSetting(
+                pair = state.modePair,
+                availableViewModes = state.availableLauncherViewModes,
+                onAction = onAction,
+            )
+        }
     }
     SettingsSection(title = "Labels") {
         HomeLabelSetting(

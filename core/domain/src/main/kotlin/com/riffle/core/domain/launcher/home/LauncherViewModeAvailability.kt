@@ -2,10 +2,14 @@ package com.riffle.core.domain.launcher.home
 
 data class LauncherViewModeAvailability(
     val enabledExperimentalModesByDeviceClass: Map<HomeLayoutDeviceClass, Set<LauncherViewMode>> = emptyMap(),
+    /** Modes available on every device class without being enabled. */
+    val alwaysAvailableModes: Set<LauncherViewMode> = setOf(LauncherViewMode.STANDARD_APP_DRAWER),
+    /** The mode anything unavailable resolves to. Must be available. */
+    val fallbackMode: LauncherViewMode = LauncherViewMode.STANDARD_APP_DRAWER,
 ) {
     fun availableModes(deviceClass: HomeLayoutDeviceClass): List<LauncherViewMode> =
         LauncherViewMode.entries.filter { mode ->
-            mode == LauncherViewMode.STANDARD_APP_DRAWER ||
+            mode in alwaysAvailableModes ||
                 enabledExperimentalModesByDeviceClass[deviceClass].orEmpty().contains(mode)
         }
 
@@ -20,7 +24,7 @@ data class LauncherViewModeAvailability(
     ): LauncherViewMode =
         preferredMode
             ?.takeIf { mode -> isAvailable(deviceClass, mode) }
-            ?: LauncherViewMode.STANDARD_APP_DRAWER
+            ?: fallbackMode
 
     fun availableKeyFor(
         layoutSet: HomeLayoutSet,
