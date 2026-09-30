@@ -2,8 +2,8 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class DefaultViewModeAvailabilityTest {
     private val availability = defaultLauncherViewModeAvailability()
