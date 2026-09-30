@@ -28,6 +28,7 @@ import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
+import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
@@ -97,6 +98,7 @@ internal class MainActivityDependencies(
                     screenWidthDp = activity.resources.configuration.screenWidthDp,
                     screenHeightDp = activity.resources.configuration.screenHeightDp,
                 ),
+            viewModeAvailability = libraryOnlyLauncherViewModeAvailability(),
             deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
             feedArticleCacheRepository = feedArticleCacheRepository,
         )

@@ -35,3 +35,15 @@ fun defaultLauncherViewModeAvailability(): LauncherViewModeAvailability =
                 )
             },
     )
+
+/**
+ * What the shipped app offers: only Library, until Cards and Standard are redesigned
+ * (#1318-#1325). Stored layouts in a hidden mode resolve to Library on load.
+ */
+fun libraryOnlyLauncherViewModeAvailability(): LauncherViewModeAvailability =
+    LauncherViewModeAvailability(
+        enabledExperimentalModesByDeviceClass =
+            HomeLayoutDeviceClass.entries.associateWith { setOf(LauncherViewMode.HOME_SCREEN_LIBRARY) },
+        alwaysAvailableModes = emptySet(),
+        fallbackMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+    )
