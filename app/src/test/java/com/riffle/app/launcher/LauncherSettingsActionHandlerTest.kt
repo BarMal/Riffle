@@ -49,6 +49,16 @@ class LauncherSettingsActionHandlerTest {
     }
 
     @Test
+    fun calendarAccessIsRequestedOnlyWhenTheActionIsHandled() {
+        var requests = 0
+        val handler = handler(callbacks = callbacks().copy(requestCalendarAccess = { requests++ }))
+
+        assertEquals(0, requests)
+        assertTrue(handler.handle(LauncherShellAction.RequestCalendarAccess))
+        assertEquals(1, requests)
+    }
+
+    @Test
     fun ignoresNonSettingsActions() {
         val handler = handler()
 

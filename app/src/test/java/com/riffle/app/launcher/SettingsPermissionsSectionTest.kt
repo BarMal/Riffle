@@ -2,7 +2,10 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsPermissionsSectionTest {
@@ -50,6 +53,15 @@ class SettingsPermissionsSectionTest {
                 permissionStatus = OverlayDockPermissionStatus.GRANTED,
             ),
         )
+    }
+
+    @Test
+    fun calendarRowExplainsWhyBeforeAskingAndRoutesPermanentDenialToAppSettings() {
+        assertEquals("Allow calendar access", CalendarAccessStatus.NOT_GRANTED.calendarAccessActionLabel())
+        assertEquals("Open app settings", CalendarAccessStatus.DENIED_PERMANENTLY.calendarAccessActionLabel())
+        assertNull(CalendarAccessStatus.GRANTED.calendarAccessActionLabel())
+        assertTrue(CalendarAccessStatus.NOT_GRANTED.calendarAccessSettingsLabel().contains("only when you tap"))
+        assertTrue(CalendarAccessStatus.DENIED_PERMANENTLY.calendarAccessSettingsLabel().contains("Android settings"))
     }
 
     @Test

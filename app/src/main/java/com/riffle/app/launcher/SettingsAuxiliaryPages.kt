@@ -26,6 +26,7 @@ internal fun SettingsPermissionsPageContent(
         firstRunStatus = state.firstRunStatus,
         notificationAccessStatus = state.notificationAccessStatus,
         overlayDockPermissionStatus = state.overlayDockPermissionStatus,
+        calendarAccessStatus = state.calendarAccessStatus,
         onAction = onAction,
     )
 }

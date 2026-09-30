@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.ModePair
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 
 data class SettingsSurfaceState(
     val settings: LauncherSettings,
@@ -29,4 +30,5 @@ data class SettingsSurfaceState(
     val appBuildIdentityLabel: String,
     /** The Home ↔ Library pair of [selectedLayoutDeviceClass] (#1241). */
     val modePair: ModePair = ModePair.DEFAULT,
+    val calendarAccessStatus: CalendarAccessStatus = CalendarAccessStatus.UNKNOWN,
 )

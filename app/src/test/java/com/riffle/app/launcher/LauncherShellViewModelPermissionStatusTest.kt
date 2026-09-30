@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
+import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -27,6 +28,20 @@ class LauncherShellViewModelPermissionStatusTest {
         assertEquals(
             "Notifications allowed · Home set · Floating dock allowed",
             permissionsResult.subtitle,
+        )
+    }
+
+    @Test
+    fun calendarAccessStartsUnknownAndOnlyReflectsPlatformStatus() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+        assertEquals(CalendarAccessStatus.UNKNOWN, viewModel.state.value.calendarAccessStatus)
+
+        viewModel.onCalendarAccessStatusChanged(CalendarAccessStatus.DENIED_PERMANENTLY)
+
+        assertEquals(CalendarAccessStatus.DENIED_PERMANENTLY, viewModel.state.value.calendarAccessStatus)
+        assertEquals(
+            CalendarAccessStatus.DENIED_PERMANENTLY,
+            viewModel.state.value.settingsSurfaceState().calendarAccessStatus,
         )
     }
 

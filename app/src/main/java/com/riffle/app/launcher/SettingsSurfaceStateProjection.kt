@@ -30,5 +30,6 @@ internal fun LauncherShellState.settingsSurfaceState(
         appVersionLabel = appVersionLabel,
         appBuildIdentityLabel = appBuildIdentityLabel,
         modePair = homeLayoutSet.modePairFor(settingsLayoutDeviceClass),
+        calendarAccessStatus = calendarAccessStatus,
     )
 }

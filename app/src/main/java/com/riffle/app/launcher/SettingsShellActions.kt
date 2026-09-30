@@ -24,6 +24,11 @@ internal class DefaultLauncherSettingsActionHandler(
                 true
             }
 
+            LauncherSettingsActionRoute.RequestCalendarAccess -> {
+                callbacks.requestCalendarAccess()
+                true
+            }
+
             LauncherSettingsActionRoute.ChangeWallpaper -> {
                 callbacks.changeWallpaper()
                 true
@@ -50,6 +55,8 @@ internal data class LauncherSettingsActionCallbacks(
     val changeWallpaper: () -> Unit,
     val exportBackup: () -> Unit,
     val importBackup: () -> Unit,
+    /** Explicit, user-initiated only: launches the system dialog or app settings per the calendar policy. */
+    val requestCalendarAccess: () -> Unit = {},
 )
 
 internal sealed interface LauncherSettingsActionRoute {
@@ -60,6 +67,8 @@ internal sealed interface LauncherSettingsActionRoute {
     data object RequestNotificationAccess : LauncherSettingsActionRoute
 
     data object RequestOverlayDockPermission : LauncherSettingsActionRoute
+
+    data object RequestCalendarAccess : LauncherSettingsActionRoute
 
     data object ChangeWallpaper : LauncherSettingsActionRoute
 
@@ -129,6 +138,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
 
         LauncherShellAction.RequestNotificationAccess -> LauncherSettingsActionRoute.RequestNotificationAccess
         LauncherShellAction.RequestOverlayDockPermission -> LauncherSettingsActionRoute.RequestOverlayDockPermission
+        LauncherShellAction.RequestCalendarAccess -> LauncherSettingsActionRoute.RequestCalendarAccess
         LauncherShellAction.ChangeWallpaper -> LauncherSettingsActionRoute.ChangeWallpaper
         LauncherShellAction.ExportLauncherBackup -> LauncherSettingsActionRoute.ExportBackup
         LauncherShellAction.RequestImportLauncherBackup -> LauncherSettingsActionRoute.RequestImportBackup

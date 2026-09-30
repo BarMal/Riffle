@@ -82,10 +82,13 @@ internal class NotificationSourceDependencies(
 
 internal class CalendarSourceDependencies(
     val repository: CalendarEventRepository,
+    /** Never prompts; only reports whether the user already granted calendar access. */
     val access: () -> SourceAccess,
+    /** Calendar changes and permission flips. [SourceChangeSource.NONE] means the source is not `LIVE`. */
+    val changes: SourceChangeSource = SourceChangeSource.NONE,
 ) {
     companion object {
-        /** No platform calendar adapter exists yet, so the source honestly reports itself unavailable. */
+        /** For builds or tests without a platform calendar adapter: the source reports itself unavailable. */
         val UNAVAILABLE =
             CalendarSourceDependencies(
                 repository = { _, _ -> emptyList() },
@@ -210,7 +213,7 @@ private fun notificationStream(
 }
 
 private fun calendarSource(deps: BuiltInSourceDependencies): SharedSourceStream =
-    stream(deps, SourceIds.CALENDAR, setOf(SourceCapability.PRIVACY_SENSITIVE), SourceChangeSource.NONE) {
+    stream(deps, SourceIds.CALENDAR, setOf(SourceCapability.PRIVACY_SENSITIVE), deps.calendar.changes) {
         sourceStateFor(deps.calendar.access()) {
             val now = deps.nowEpochMillis()
             CalendarItemMapper().nextEvents(deps.calendar.repository.upcomingEvents(now, CALENDAR_QUERY_LIMIT), now)

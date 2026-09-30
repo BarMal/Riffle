@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 
 @Composable
 internal fun SettingsPermissionsSection(
@@ -12,6 +13,7 @@ internal fun SettingsPermissionsSection(
     firstRunStatus: FirstRunStatus,
     notificationAccessStatus: NotificationAccessStatus,
     overlayDockPermissionStatus: OverlayDockPermissionStatus,
+    calendarAccessStatus: CalendarAccessStatus = CalendarAccessStatus.UNKNOWN,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSection(title = "Permissions") {
@@ -32,8 +34,36 @@ internal fun SettingsPermissionsSection(
             actionLabel = overlayDockPermissionStatus.permissionActionLabel("Allow overlay access"),
             onAction = { onAction(LauncherShellAction.RequestOverlayDockPermission) },
         )
+        permissionSetting(
+            title = "Calendar",
+            status = calendarAccessStatus.calendarAccessSettingsLabel(),
+            actionLabel = calendarAccessStatus.calendarAccessActionLabel(),
+            onAction = { onAction(LauncherShellAction.RequestCalendarAccess) },
+        )
     }
 }
+
+/** The rationale lives here so the user always reads why before the system dialog can appear. */
+internal fun CalendarAccessStatus.calendarAccessSettingsLabel(): String =
+    when (this) {
+        CalendarAccessStatus.GRANTED ->
+            "Your next events can appear on cards. Private events stay hidden. Nothing is stored or sent."
+        CalendarAccessStatus.NOT_GRANTED ->
+            "Optional. Allow access to show your next events on cards. Riffle reads event times, titles " +
+                "and places on this device only, never stores or sends them, and asks only when you tap Allow."
+        CalendarAccessStatus.DENIED_PERMANENTLY ->
+            "Calendar access is turned off. Open Android settings to allow it. Riffle works fine without it."
+        CalendarAccessStatus.UNKNOWN -> "Checking calendar access."
+    }
+
+internal fun CalendarAccessStatus.calendarAccessActionLabel(): String? =
+    when (this) {
+        CalendarAccessStatus.GRANTED -> null
+        CalendarAccessStatus.DENIED_PERMANENTLY -> "Open app settings"
+        CalendarAccessStatus.NOT_GRANTED,
+        CalendarAccessStatus.UNKNOWN,
+        -> "Allow calendar access"
+    }
 
 @Composable
 private fun permissionSetting(
