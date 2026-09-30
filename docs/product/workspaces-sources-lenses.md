@@ -122,6 +122,25 @@ Draws a `LensResult`. Each declares `requires`, `uses`, `accepts` and interactio
 `IconRow`, `IconGrid`, `List`, `Index` (text-first, inline snippets), `Card`, `CardStack`,
 `Categories` (App-Library style), `AlphaList` (A–Z scrubber).
 
+#### Expression rendering contract (WS3)
+
+Expressions live in `app/.../launcher/expressions/`, one composable per kind (`ListExpression`,
+`IndexExpression`, `AlphaListExpression`, ...). Each takes a redacted `LensResult`, an
+`ExpressionState` (`Ready`, `Loading`, `Unavailable(message)`; an empty ready result draws the empty
+message) and an `ExpressionEnvironment` (image loader, time formatter, content padding for insets,
+resolved reduced-motion flag). They never see a source or its `SourceState`; the hosting container
+maps source state onto `ExpressionState`.
+
+- Images resolve through the injected `ExpressionImageLoader` (main-safe `suspend`, placeholder until
+  it returns); expressions never decode bitmaps.
+- Redacted titles (null or blank) draw as "Hidden content".
+- Text-heavy expressions cap their width at 640 dp so unfolded and tablet windows stay readable.
+- AlphaList buckets through the pure `AlphaIndex` (domain). Its scrubber is a platform `draggable`
+  plus a labelled button per letter, so a drag is never the only way to jump. Letters are thinned
+  to fit the font scale. Letter targets are full container width by about 24 dp tall rather than
+  48 dp, because 27 targets cannot each be 48 dp on a phone; TalkBack users reach sections by
+  activating letters or heading navigation.
+
 ### Container
 
 | Container | Meaning |
