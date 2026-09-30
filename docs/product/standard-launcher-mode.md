@@ -19,6 +19,11 @@ With contextual behaviour and expanded dock notification cards disabled, Riffle 
 standard home, app drawer, dock, and settings surfaces available. Disabled notification cards
 must not produce a notification-access prompt; enabling them is an explicit user choice.
 
+Calendar access (`READ_CALENDAR`) follows the same rule: it is never requested at launch or because a
+calendar source exists, only from Settings > Permissions or an explicit action on a surface that needs it.
+Standard surfaces are fully functional without it. See the Calendar access policy in
+`workspaces-sources-lenses.md`.
+
 ## Product and design guardrails
 
 - Use current Android patterns and Material components for standard launcher UI: settings,

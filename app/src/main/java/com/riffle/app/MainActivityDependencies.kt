@@ -27,6 +27,9 @@ import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
 import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
+import com.riffle.app.launcher.calendar.AndroidCalendarAccessGateway
+import com.riffle.app.launcher.calendar.CalendarAccessChanges
+import com.riffle.app.launcher.calendar.SharedPreferencesCalendarDenialHistory
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
 import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
@@ -70,6 +73,10 @@ internal class MainActivityDependencies(
     val wallpaperController by lazy { AndroidLauncherWallpaperController(activity.window) }
     val wallpaperPickerGateway by lazy { AndroidWallpaperPickerGateway(activity) }
     val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(activity) }
+    val calendarAccessGateway by lazy {
+        AndroidCalendarAccessGateway(activity, SharedPreferencesCalendarDenialHistory(activity))
+    }
+    val calendarAccessChanges by lazy { CalendarAccessChanges() }
     val overlayDockPermissionGateway by lazy { AndroidOverlayDockPermissionGateway(activity) }
     val overlayDockServiceController by lazy { AndroidOverlayDockServiceController(activity) }
     val homeLayoutDeviceClassObserver by lazy { AndroidHomeLayoutDeviceClassObserver(activity) }

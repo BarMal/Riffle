@@ -37,6 +37,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.feedStagePreferencesFor
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
+import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 
 data class LauncherShellState(
     val firstRunStatus: FirstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
@@ -53,6 +54,8 @@ data class LauncherShellState(
     val availableLayoutDeviceClasses: Set<HomeLayoutDeviceClass> = setOf(homeLayoutSet.activeKey.deviceClass),
     val launcherSettings: LauncherSettings = LauncherSettings(),
     val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
+    /** Calendar access is explicit and user-initiated; this only reflects it, it never requests it. */
+    val calendarAccessStatus: CalendarAccessStatus = CalendarAccessStatus.UNKNOWN,
     val notificationCountsByCategory: Map<NotificationCategory, Int> = emptyMap(),
     val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
     val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),

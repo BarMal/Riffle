@@ -92,6 +92,13 @@ sealed interface LauncherShellAction {
 
     data object RequestOverlayDockPermission : LauncherShellAction
 
+    /**
+     * An explicit user request to allow calendar access: the Settings row, or a surface showing a
+     * "needs calendar access" state (which must show its rationale next to the button). Never dispatched
+     * at launch or because a calendar source is merely present.
+     */
+    data object RequestCalendarAccess : LauncherShellAction
+
     data object ExportLauncherBackup : LauncherShellAction
 
     data object RequestImportLauncherBackup : LauncherShellAction

@@ -1,5 +1,6 @@
 package com.riffle.app
 
+import android.Manifest
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.Intent
@@ -40,6 +41,7 @@ import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
 import com.riffle.app.launcher.WallpaperPickerLaunchResult
 import com.riffle.app.launcher.apps.AppCatalogChange
+import com.riffle.app.launcher.calendar.CalendarAccessCoordinator
 import com.riffle.app.launcher.canPerformStageAction
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
@@ -125,6 +127,8 @@ class MainActivity : ComponentActivity() {
     private val wallpaperController get() = dependencies.wallpaperController
     private val wallpaperPickerGateway get() = dependencies.wallpaperPickerGateway
     private val notificationAccessGateway get() = dependencies.notificationAccessGateway
+    private val calendarAccessGateway get() = dependencies.calendarAccessGateway
+    private val calendarAccessChanges get() = dependencies.calendarAccessChanges
     private val overlayDockPermissionGateway get() = dependencies.overlayDockPermissionGateway
     private val overlayDockServiceController get() = dependencies.overlayDockServiceController
     private val activeNotificationRepository get() = dependencies.activeNotificationRepository
@@ -168,6 +172,29 @@ class MainActivity : ComponentActivity() {
         ) {
             refreshPlatformStatuses()
         }
+
+    /** Only ever launched from an explicit user action via [calendarAccessCoordinator]; never at startup. */
+    private val requestCalendarPermission =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            calendarAccessGateway.recordRequestResult(granted)
+            refreshPlatformStatuses()
+        }
+
+    private val calendarAccessCoordinator by lazy {
+        CalendarAccessCoordinator(
+            gateway = calendarAccessGateway,
+            launchPermissionRequest = { requestCalendarPermission.launch(Manifest.permission.READ_CALENDAR) },
+            openAppSettings = {
+                val launched =
+                    runCatching { startActivity(calendarAccessGateway.createAppSettingsIntent()) }.isSuccess
+                if (!launched) {
+                    Toast.makeText(this, "App settings are unavailable on this device.", Toast.LENGTH_SHORT).show()
+                }
+            },
+        )
+    }
 
     private val requestWidgetBind =
         registerForActivityResult(
@@ -340,6 +367,7 @@ class MainActivity : ComponentActivity() {
                                     ).show()
                                 }
                             },
+                            requestCalendarAccess = { calendarAccessCoordinator.request() },
                             changeWallpaper = {
                                 when (wallpaperPickerGateway.launchWallpaperPicker()) {
                                     WallpaperPickerLaunchResult.Launched -> Unit
@@ -517,6 +545,9 @@ class MainActivity : ComponentActivity() {
             overlayDockPermissionStatus = overlayDockPermissionGateway.getOverlayDockPermissionStatus(),
             publishStatuses = shellViewModel::onHomeRoleStatusChanged,
         )
+        val calendarAccessStatus = calendarAccessGateway.status()
+        shellViewModel.onCalendarAccessStatusChanged(calendarAccessStatus)
+        calendarAccessChanges.onStatus(calendarAccessStatus)
         if (
             notificationAccessStatus == NotificationAccessStatus.REVOKED &&
             !notificationAccessWasRevoked

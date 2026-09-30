@@ -53,6 +53,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withStagePreferences
+import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -225,6 +226,13 @@ class LauncherShellViewModel(
                 }
                 persistSetupCardDismissal(state, firstRunRepository)
             }
+    }
+
+    /** Reflects the platform's calendar permission; never requests it. */
+    fun onCalendarAccessStatusChanged(calendarAccessStatus: CalendarAccessStatus) {
+        if (mutableState.value.calendarAccessStatus != calendarAccessStatus) {
+            mutableState.value = mutableState.value.copy(calendarAccessStatus = calendarAccessStatus)
+        }
     }
 
     fun onDefaultHomeRequestStarted() {

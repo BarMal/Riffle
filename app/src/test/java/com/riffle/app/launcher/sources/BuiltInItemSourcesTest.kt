@@ -180,6 +180,60 @@ class BuiltInItemSourcesTest {
         assertEquals(1, calendarReads)
     }
 
+    private fun gatedCalendar(
+        changes: SourceChangeSource,
+        access: () -> SourceAccess,
+    ) = CalendarSourceDependencies(
+        repository =
+            CalendarEventRepository { from, _ ->
+                calendarReads++
+                listOf(CalendarEvent("e", "Standup", from + 10, from + 20))
+            },
+        access = access,
+        changes = changes,
+    )
+
+    @Test
+    fun calendarWithoutPermissionNeverReadsAndNeverPrompts() {
+        val calendar = gatedCalendar(FakeChanges()) { SourceAccess.REQUIRED }
+        assertEquals(SourceState.PermissionRequired, registry(calendar).latest(SourceIds.CALENDAR))
+        assertEquals(0, calendarReads)
+    }
+
+    @Test
+    fun calendarIsLiveOnceAChangeSourceExistsAndObservesOnlyWhileSubscribed() {
+        val changes = FakeChanges()
+        val calendar = gatedCalendar(changes) { SourceAccess.GRANTED }
+        val registry = registry(calendar)
+        val source = registry.source(SourceIds.CALENDAR)!!
+
+        assertTrue(SourceCapability.LIVE in source.descriptor.capabilities)
+        assertEquals(0, changes.observers)
+        val subscription = source.subscribe { }
+        assertEquals(1, changes.observers)
+        subscription.cancel()
+        assertEquals(0, changes.observers)
+    }
+
+    @Test
+    fun calendarFollowsGrantAndRevocationWhenNotifiedOfTheChange() {
+        val changes = FakeChanges()
+        var access = SourceAccess.REQUIRED
+        val calendar = gatedCalendar(changes) { access }
+        var state: SourceState = SourceState.Loading
+        registry(calendar).source(SourceIds.CALENDAR)!!.subscribe { state = it }
+        assertEquals(SourceState.PermissionRequired, state)
+        assertEquals(0, calendarReads)
+
+        access = SourceAccess.GRANTED
+        changes.listener!!.invoke()
+        assertTrue(state is SourceState.Ready)
+
+        access = SourceAccess.REQUIRED
+        changes.listener!!.invoke()
+        assertEquals(SourceState.PermissionRequired, state)
+    }
+
     @Test
     fun capabilitiesAreHonest() {
         val byId = registry().descriptors().associateBy { it.id }

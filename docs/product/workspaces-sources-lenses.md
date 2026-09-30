@@ -247,12 +247,17 @@ Canonical ids live in `SourceIds` (`apps.all`, `apps.recent`, `notifications`, `
 - Permission-gated sources (notifications, media, recents, calendar) emit `PermissionRequired` and never
   read gated data or prompt. `UNKNOWN` notification access counts as not granted.
 - Capabilities are declared honestly: `LIVE` only where a change source exists.
+- Calendar is a real adapter: `AndroidCalendarEventRepository` reads the next 7 days of visible calendars
+  through `CalendarContract.Instances` (recurring instances expanded, at most 200 rows, off the main thread
+  only). Private and confidential events become `SENSITIVE`. A `ContentObserver` (plus a permission-flip
+  notifier fed by the shell's status refresh) makes the source `LIVE`; it is registered only while the
+  stream has observers. Without `READ_CALENDAR` the source stays `PermissionRequired`; see the policy below.
 
 Known gaps, to revisit rather than assume: package and shortcut changes are not observed yet (the
 lifecycle-bound observer is not wired), hide-rule edits apply on the next refresh, media items have no
-transport actions (no media-session repository exists), and there is no platform calendar adapter, so the
-calendar source reports `Unavailable` until one is designed (it needs an explicit, user-initiated
-`READ_CALENDAR` flow, which is out of scope here).
+transport actions (no media-session repository exists), and calendar events that end while the stream is
+running leave on the next calendar change or restart (no timer-driven refresh). `androidItemSources` is
+still not wired into any UI (WS3/WS6); `androidCalendarSourceDependencies` is ready for that wiring.
 
 ## Calendar access policy (`READ_CALENDAR`)
 
