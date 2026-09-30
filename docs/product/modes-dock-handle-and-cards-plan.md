@@ -3,6 +3,9 @@
 Status: **accepted plan**, tracked by #1196. The workstream issues link back here. Where this
 document and an issue disagree, update this document in the same PR that settles the question.
 
+> **Partly superseded (workspaces).** [`workspaces-sources-lenses.md`](workspaces-sources-lenses.md)
+> replaces Decisions 1, 3, 5, 6, 9 and 11 (see its *Relationship to the existing plan* table).
+
 > **Revision 2026-09-25 — the dock is a literal handle.** Decisions 1–4 are rewritten and
 > Decisions 9–13 added. What changed: the configurable 2–3 mode ring becomes a fixed pair,
 > **Home ↔ Library**, with Library as the app drawer; the dock keeps one shared content model but
