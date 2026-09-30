@@ -77,6 +77,45 @@ shapes it `accepts` (flat, grouped, single). A lens/expression pairing is valid 
 result satisfies both. The editor filters choices by this check, so invalid combinations cannot be
 built. A flat lens with `limit = 1` yields a single-item result (and is also a valid flat result).
 
+#### Lens evaluation semantics (WS2)
+
+Implemented by `DefaultLensEvaluator` in `core/domain/.../launcher/workspace/lens/`. It is a pure
+function of `(lens, items, context)`; the context injects `nowEpochMillis` (age filters) and a
+`DayBucketer` (time zone for `ByDay`). `AsyncLensEvaluator` runs any evaluator on a caller-supplied
+`Executor`, so evaluation stays off the main thread without a coroutines dependency. Pipeline:
+
+1. **Merge.** Items from sources not in the lens are ignored. Order is the source's position in
+   `lens.sources`, then emission order within the source.
+2. **Dedupe by `ItemId`.** First in merged order wins (earlier source in the lens beats later; within
+   a source the first emitted). Runs before filtering, so `FromSource(b)` will not resurrect an id that
+   source `a` already won.
+3. **Bound.** At most `maxInputItems` (default 10 000) merged items are considered, and filters nested
+   deeper than `maxFilterDepth` (default 32) match nothing.
+4. **Filter** on the unredacted item. `AgeAtMost/AtLeast` use `now - time`, bounds inclusive; items
+   with no time match neither. Empty `AllOf` is true, empty `AnyOf` is false.
+5. **Sort.** `TITLE` compares case-insensitively, then by raw title; missing values sort last in both
+   directions; ties always break by item id ascending, so results do not depend on input order
+   (`SOURCE_ORDER` is input order by definition). `pinnedFirst` puts items with ext flag
+   `launcher.pinned = Flag(true)` first, then applies the field sort within each band.
+6. **Limit.** Applied after sort and before grouping, as a **total across the result**, not per
+   group. `limit = n` therefore never yields more than n items whatever the shape, and matches the
+   existing rule that a flat `limit = 1` lens is the SINGLE shape. A per-group cap, if wanted later,
+   should be a new lens field rather than a change of meaning.
+7. **Group.** Groups appear in order of their first member in the sorted list (so `TIME` descending
+   puts the newest day first). `ByGroupKey`: key is `groupKey`, label is the first non-blank
+   `groupLabel` in the group, else the key. `ByDay`: key is ISO `yyyy-MM-dd` from the bucketer, label =
+   key. `ByExt`: key is the ext value as text (`Number`/`Flag` via `toString`), label = key. Items with
+   no key go to one trailing group with key `""` and a null label.
+8. **Project and redact.** Fields not in `project` are cleared; SENSITIVE items additionally lose
+   `SENSITIVE_ITEM_FIELDS` whatever `project` says. `id`, `sourceId`, `target` and `privacy` are always
+   kept. This is the only redaction point.
+
+Privacy consequences of evaluating before redaction: sort keys and pinned state read the item as it
+will be seen after redaction (a SENSITIVE item sorts as title-less and is never pinned), and `ByExt`
+puts SENSITIVE items in the ungrouped group, so ordering and group keys cannot leak redacted content.
+Filters see the raw item, so a filter can reveal membership (a boolean) but never content. `ItemGroup`
+keys and labels are lens structure, not item fields: they exist even if `project` omits `GROUP`/`TIME`.
+
 ### Expression
 
 Draws a `LensResult`. Each declares `requires`, `uses`, `accepts` and interaction `axes`. Initial set:
@@ -94,6 +133,8 @@ Draws a `LensResult`. Each declares `requires`, `uses`, `accepts` and interactio
 A container declares which gesture axes it owns (scroll axis, horizontal pager, none). The arbitration
 layer (`docs/product/gestures.md`) consumes this declaration instead of special cases. A page-set owns
 the horizontal pager, so its expression may not also own a horizontal axis.
+Each page draws one group's items, so a page-set's expression is checked against a flat per-group
+result (e.g. `CardStack` or `IconGrid`; not `Categories`, which draws the grouped result itself).
 
 ### Workspace
 

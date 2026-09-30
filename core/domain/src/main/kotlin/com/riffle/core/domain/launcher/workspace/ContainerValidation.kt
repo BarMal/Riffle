@@ -54,6 +54,16 @@ object ContainerValidation {
             is LensValidity.Invalid -> listOf(ContainerIssue.InvalidPairing(id, validity.issues))
         }
 
+    private fun validatePerGroupBinding(
+        id: ContainerId,
+        binding: LensBinding,
+        sources: List<SourceDescriptor>?,
+    ): List<ContainerIssue> =
+        when (val validity = LensExpressionValidity.checkPerGroup(binding.lens, binding.expression, sources)) {
+            LensValidity.Valid -> emptyList()
+            is LensValidity.Invalid -> listOf(ContainerIssue.InvalidPairing(id, validity.issues))
+        }
+
     private fun validatePage(
         page: PageContainer,
         sources: List<SourceDescriptor>?,
@@ -78,7 +88,7 @@ object ContainerValidation {
         sources: List<SourceDescriptor>?,
     ): List<ContainerIssue> =
         buildList {
-            addAll(validateBinding(pageSet.id, pageSet.binding, sources))
+            addAll(validatePerGroupBinding(pageSet.id, pageSet.binding, sources))
             if (LensGroup.None == pageSet.binding.lens.group) add(ContainerIssue.PageSetNeedsGroupedLens(pageSet.id))
             ExpressionCatalog.descriptorFor(pageSet.binding.expression).axes
                 .filter { it == GestureAxis.HORIZONTAL_SCROLL || it == GestureAxis.HORIZONTAL_PAGER }
