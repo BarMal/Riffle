@@ -99,6 +99,7 @@ class WorkspaceMigrationTest {
         val pageSet = assertIs<PageSetContainer>(ws.pages.first())
         assertEquals(listOf(SourceIds.NOTIFICATIONS), pageSet.binding.lens.sources)
         assertEquals(LensGroup.ByGroupKey, pageSet.binding.lens.group)
+        assertEquals(ExpressionKind.CARD_STACK, pageSet.binding.expression)
         assertEquals("page:home", ws.pages[1].id.value)
     }
 

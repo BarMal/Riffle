@@ -48,6 +48,18 @@ class ContainerValidationTest {
     }
 
     @Test
+    fun pageSetExpressionIsCheckedAgainstOneGroupsFlatResult() {
+        fun set(expression: ExpressionKind) = PageSetContainer(ContainerId("s"), LensBinding(grouped, expression))
+        // Notifications per app drawn as a card stack per group: the design's TimeScape Inbox page.
+        assertTrue(ContainerValidation.validate(set(ExpressionKind.CARD_STACK)).isEmpty())
+        assertTrue(ContainerValidation.validate(set(ExpressionKind.ICON_GRID)).isEmpty())
+        // Categories draws the grouped result itself, so it cannot be drawn once per group.
+        assertTrue(
+            ContainerValidation.validate(set(ExpressionKind.CATEGORIES)).any { it is ContainerIssue.InvalidPairing },
+        )
+    }
+
+    @Test
     fun widgetsInAGridDetectBoundsAndOverlap() {
         val outOfBounds = grid(WidgetPlacement(widget("a", cols = 2), column = 3, row = 0))
         assertTrue(ContainerValidation.validate(outOfBounds).any { it is ContainerIssue.WidgetOutOfBounds })
