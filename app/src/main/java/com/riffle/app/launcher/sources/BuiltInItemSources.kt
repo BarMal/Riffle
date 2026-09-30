@@ -193,6 +193,8 @@ private fun notificationStream(
         sourceStateFor(notifications.access().toSourceAccess()) {
             val snapshot = deps.apps.installedApps.snapshot()
             val labels = snapshot?.apps.orEmpty().associate { app -> app.identity.packageName to app.label }
+            val profileTypes =
+                snapshot?.apps.orEmpty().map { app -> app.identity.profile }.associate { it.id to it.type }
             map(
                 NotificationItemInput(
                     notifications = notifications.repository.activeNotifications(),
@@ -200,6 +202,7 @@ private fun notificationStream(
                     hideRules = notifications.hideRules(),
                     profileContentVisibility = snapshot?.profileContentVisibility.orEmpty(),
                     appLabel = labels::get,
+                    profileTypes = profileTypes,
                 ),
             )
         }

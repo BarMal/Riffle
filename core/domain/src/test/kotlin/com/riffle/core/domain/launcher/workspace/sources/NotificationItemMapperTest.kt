@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -12,10 +13,12 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.notifications.NotificationPriority
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemAction
+import com.riffle.core.domain.launcher.workspace.ItemExtValue
 import com.riffle.core.domain.launcher.workspace.ItemPrivacy
 import com.riffle.core.domain.launcher.workspace.ItemTarget
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.SourceState
+import com.riffle.core.domain.launcher.workspace.WorkspaceSourceIds
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -24,6 +27,7 @@ import kotlin.test.assertTrue
 class NotificationItemMapperTest {
     private val mapper = NotificationItemMapper()
     private val now = 1_000_000L
+    private val profileKey = WorkspaceSourceIds.APP_PROFILE_EXT
     private val personal = AppProfile.personal().id
     private val work = AppProfile.work().id
     private val visible = mapOf(personal to AppProfileContentVisibility.VISIBLE)
@@ -153,8 +157,30 @@ class NotificationItemMapperTest {
         assertNull(item.body)
         assertNull(item.image)
         assertTrue(item.actions.isEmpty())
-        assertTrue(item.ext.isEmpty())
+        assertEquals(mapOf(profileKey to ItemExtValue.Text("work")), item.ext)
         assertEquals("chat:work", item.groupKey)
+    }
+
+    @Test
+    fun `items carry the app profile ext from known types or well known ids`() {
+        val custom = AppProfileId("user:10")
+        val data =
+            input(
+                notification("p"),
+                notification("w", profile = work),
+                notification("c", profile = custom),
+                notification("u", profile = AppProfileId("user:11")),
+                visibility =
+                    listOf(personal, work, custom, AppProfileId("user:11"))
+                        .associateWith { AppProfileContentVisibility.VISIBLE },
+            ).copy(profileTypes = mapOf(custom to AppProfileType.PRIVATE))
+
+        val byGroup = mapper.notificationItems(data).associateBy { it.groupKey }
+
+        assertEquals(ItemExtValue.Text("personal"), byGroup.getValue("chat:personal").ext[profileKey])
+        assertEquals(ItemExtValue.Text("work"), byGroup.getValue("chat:work").ext[profileKey])
+        assertEquals(ItemExtValue.Text("private"), byGroup.getValue("chat:user:10").ext[profileKey])
+        assertNull(byGroup.getValue("chat:user:11").ext[profileKey])
     }
 
     @Test

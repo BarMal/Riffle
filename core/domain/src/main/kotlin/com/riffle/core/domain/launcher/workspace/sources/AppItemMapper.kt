@@ -6,8 +6,6 @@ import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.RecentAppUsage
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemAction
-import com.riffle.core.domain.launcher.workspace.ItemExtKey
-import com.riffle.core.domain.launcher.workspace.ItemExtValue
 import com.riffle.core.domain.launcher.workspace.ItemId
 import com.riffle.core.domain.launcher.workspace.ItemTarget
 import com.riffle.core.domain.launcher.workspace.SourceId
@@ -60,12 +58,11 @@ class AppItemMapper(
             groupKey = category,
             groupLabel = category,
             actions = listOf(ItemAction.Open()),
-            ext = mapOf(PROFILE_KEY to ItemExtValue.Text(identity.profile.type.name.lowercase())),
+            ext = appProfileExt(identity.profile.type),
         )
     }
 
     private companion object {
         const val DEFAULT_RECENT_LIMIT = 20
-        val PROFILE_KEY = ItemExtKey("app.profile")
     }
 }
