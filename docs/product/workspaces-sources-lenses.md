@@ -344,6 +344,21 @@ Pure planning lives in `core/domain/.../workspace/container/`; the Compose hosts
 - `AxisDeclaration.forPageCount(n)` drops the pager axis for a page-set with fewer than two pages, so hosts
   declare nothing they cannot consume (gestures.md rule 4).
 
+- **Compose hosts** (`app/.../launcher/containers/`). `WidgetContainerHost`, `PageContainerHost` and
+  `PageSetContainerHost` take a container and a `ContainerServices` (the shared `LensResultProvider`, the WS3
+  `ExpressionEnvironment`, and item/action callbacks). Each observes its lens for as long as it is composed
+  (`rememberLensOutput`: cancelled on dispose, output written to snapshot state) and draws through
+  `BoundExpression`, the single `ExpressionKind` -> composable mapping. Nesting is bounded by the model
+  (page -> widget -> expression). A grid page draws its `WidgetGridPlanner` plan in reading order inside one
+  traversal group, padded by the environment's insets once (widgets get none), capped at 840 dp wide on large
+  windows. A page-set draws one `PageSetPlanner` page per group in a platform `HorizontalPager` keyed by page
+  key, under a scrollable tab row (the non-gesture way to reach a page); selection follows the page key
+  through `PageSetSelection`. Reduced motion makes page changes snap. Hosts report their `AxisDeclaration`
+  through `onAxesDeclared` for the surface to pass to `homeGestureInput(childAxes = ...)`; they handle no
+  pointer input themselves. Loading, missing permission and unavailable sources show the WS3 expression
+  states; a page-set over a non-grouped lens says it needs a grouped lens. Not wired into the home surface:
+  WS6/WS7/WS8 integrate. `ContainersScreenshotTest` renders all three at compact and unfolded widths.
+
 Proposed doc change, not new behaviour: the page cap and widget cap above are bounds chosen here (the design
 only asked for bounded composition); revisit if a preset needs more.
 
