@@ -2,12 +2,12 @@ package com.riffle.app.launcher.sources
 
 import android.content.ContentResolver
 import com.riffle.app.launcher.apps.AndroidRecentAppRepository
+import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.calendar.AndroidCalendarChangeSource
 import com.riffle.app.launcher.calendar.AndroidCalendarEventRepository
 import com.riffle.app.launcher.calendar.CalendarAccessChanges
 import com.riffle.app.launcher.calendar.CalendarAccessGateway
 import com.riffle.app.launcher.calendar.sourceAccess
-import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnection

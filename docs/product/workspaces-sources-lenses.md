@@ -122,6 +122,25 @@ Draws a `LensResult`. Each declares `requires`, `uses`, `accepts` and interactio
 `IconRow`, `IconGrid`, `List`, `Index` (text-first, inline snippets), `Card`, `CardStack`,
 `Categories` (App-Library style), `AlphaList` (A–Z scrubber).
 
+#### Expression rendering contract (WS3)
+
+Expressions live in `app/.../launcher/expressions/`, one composable per kind (`ListExpression`,
+`IndexExpression`, `AlphaListExpression`, ...). Each takes a redacted `LensResult`, an
+`ExpressionState` (`Ready`, `Loading`, `Unavailable(message)`; an empty ready result draws the empty
+message) and an `ExpressionEnvironment` (image loader, time formatter, content padding for insets,
+resolved reduced-motion flag). They never see a source or its `SourceState`; the hosting container
+maps source state onto `ExpressionState`.
+
+- Images resolve through the injected `ExpressionImageLoader` (main-safe `suspend`, placeholder until
+  it returns); expressions never decode bitmaps.
+- Redacted titles (null or blank) draw as "Hidden content".
+- Text-heavy expressions cap their width at 640 dp so unfolded and tablet windows stay readable.
+- AlphaList buckets through the pure `AlphaIndex` (domain). Its scrubber is a platform `draggable`
+  plus a labelled button per letter, so a drag is never the only way to jump. Letters are thinned
+  to fit the font scale. Letter targets are full container width by about 24 dp tall rather than
+  48 dp, because 27 targets cannot each be 48 dp on a phone; TalkBack users reach sections by
+  activating letters or heading navigation.
+
 ### Container
 
 | Container | Meaning |
@@ -219,6 +238,76 @@ those contracts and their fakes (`launcher/workspace/testing/`).
 | WS7 | Workspace editor: source → expression → container flow, validity filtering | WS0, WS2, WS3 |
 | WS8 | Presets: iOS, Nova, TimeScape, Niagara, Kvaesitso | WS1–WS5 |
 | WS9 | Screenshot tests for every expression and preset in compact and unfolded; feasibility spike for windowed launch | WS3 |
+
+## Persistence and migration (WS5)
+
+### Storage
+
+`WorkspaceSet` holds a `LayoutWorkspaces` per `HomeLayoutDeviceClass`: the workspaces in display order,
+the active id and the default id. Layouts are independent; `copyFromOtherLayout(source, target)` is a
+one-time deep copy (fresh workspace and container ids) that replaces the target's workspaces and maps
+active and default onto their copies. Invariants hold by construction: at least one workspace, unique
+ids, active and default ids exist. An operation that cannot apply (remove the last workspace, unknown
+id, blank rename, duplicate id) returns the set unchanged. A device class with nothing stored reads as
+the built-in Standard default. `resolveActive(deviceClass, capabilities, sources)` returns the active
+workspace, or the layout's default plus the issues when this layout cannot draw it.
+
+Serialization is `WorkspaceSetCodec` over `StoredValue` (framework-free, schema version 1, per
+workspace versions inside). Decoding never throws: unknown device classes, undecodable workspaces and
+workspaces with no drawable page are dropped, stale active/default ids fall back, and a layout left
+empty reads as the default (and is rebuilt by migration). Only lenses and workspaces are stored; items
+have no codec.
+
+### Migration mapping
+
+`WorkspaceMigration.migrate(HomeLayoutSet)` runs per device class. Each mode that has a stored layout
+(plus the mode the device class currently shows) becomes one workspace, so nothing a user set up is
+lost. The shown mode's workspace is active and default. Ids are deterministic
+(`ws:<deviceclass>:<mode>`), so migrating again gives the same result, and `ensureMigrated` never
+overwrites workspaces that already exist (it only fills device classes that have none).
+
+| Old | New |
+| --- | --- |
+| `STANDARD_APP_DRAWER` layout | Workspace "Standard" (the Nova-style default): one Page per `LauncherPage` |
+| `HOME_SCREEN_LIBRARY` layout | Workspace "Library": its pages plus a last Finder page (All apps, grouped by group key, drawn as Categories) |
+| `CARD_INTERFACE` layout | Workspace "Cards": a Notifications page-set (grouped by app) first, then its pages |
+| Dock `showNotificationCards` / `notificationSlotCount` | `dock.dynamicSection`: Notifications, newest first, limit = slot count, drawn as IconRow |
+| Dock pinned items, edge, size, appearance | Unchanged: they stay in `DockModel`, which the workspace does not duplicate |
+
+Page mapping (container id `page:<pageId>`, deduplicated):
+
+| `LauncherPageType` | Lens | Expression |
+| --- | --- | --- |
+| `Home` | `home.grid`, filter `GroupKeyIs(pageId)` | IconGrid |
+| `AllApps` | `apps.all`, by title | AlphaList |
+| `Generated(APP)` | `apps.all`, by title | IconGrid |
+| `Generated(CATEGORY)` | `apps.all`, grouped by group key | Categories |
+| `Generated(TODAY)` | `apps.recent`, newest first | List |
+| `Generated(WORK / PERSONAL)` | `apps.all`, filter `ExtEquals(app.profile, work / personal)` | IconGrid |
+| `Generated(FAVOURITES)` | `apps.favourite` | IconGrid |
+| `Generated(FREQUENTLY_USED)` | `apps.frequent` | IconGrid |
+| `Generated(NOTIFICATION_CARDS)` | `notifications`, newest first | CardStack |
+
+Placed home items (apps, folders, widgets, shortcuts) are user content that is not the output of a
+lens, so they stay in `HomeLayout` and are not copied. A migrated home page references its
+`HomeLayout` page through the `home.grid` source and `GroupKeyIs(pageId)`; `home.grid` is therefore a
+source the home grid must provide (or WS1/WS4 replace with a placed-items container) before migrated
+Home pages draw items. `HomeLayoutSet` remains the source of truth for placement, selected page, pins
+and dock until that cut-over, so migration loses nothing and is safe to re-run.
+
+### Source ids
+
+Part of the storage format, never renamed. Canonical ids live in `SourceIds` (owned by the source
+adapters, WS1): `apps.all`, `apps.recent`, `notifications`, `shortcuts`, `media`, `calendar`. The ids
+WS5 adds live in `WorkspaceSourceIds`, same dotted scheme: `apps.frequent`, `apps.favourite`,
+`home.grid`, plus the ext key `app.profile` (`work` / `personal`). The adapters must register
+descriptors under these ids (and emit `app.profile`), or tell WS5 which to change.
+
+### Open questions raised by WS5
+
+1. **Mode names are stored data.** Migrated workspaces are named "Standard", "Library" and "Cards"
+   (unlocalized, user-renamable). The editor may want to localize defaults.
+2. **`isPinned` on `LauncherPage`** has no workspace counterpart; it stays in `HomeLayout`.
 
 ## Decisions on the original open questions
 
