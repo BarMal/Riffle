@@ -17,6 +17,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.Velocity
+import com.riffle.core.domain.launcher.gestures.ContainerGestureAxes
 import com.riffle.core.domain.launcher.gestures.GestureThresholdsPx
 import com.riffle.core.domain.launcher.gestures.HomeGestureArbiter
 import com.riffle.core.domain.launcher.gestures.HomeGestureDisposition
@@ -36,6 +37,9 @@ import kotlin.math.hypot
  * @param overscrollHandOff also listen for drags a child scroller left unconsumed (nested scroll),
  *   so a vertical swipe that runs past the end of a card stack still reaches this layer. Opt-in:
  *   only surfaces whose scrolling children should hand their edges back (Cards mode) enable it.
+ * @param childAxes axes the containers under this layer declare (workspace containers): a vertical
+ *   declaration enables the hand-off like [overscrollHandOff], and a one- or two-finger drag along a
+ *   declared axis is never fired as a home swipe, even before the child has consumed a pointer.
  */
 internal fun Modifier.homeGestureInput(
     enabled: Boolean,
@@ -43,6 +47,7 @@ internal fun Modifier.homeGestureInput(
     onAction: (LauncherShellAction) -> Unit,
     actionFilter: (LauncherShellAction) -> Boolean = { true },
     overscrollHandOff: Boolean = false,
+    childAxes: ContainerGestureAxes = ContainerGestureAxes(),
 ): Modifier =
     if (!enabled) {
         this
@@ -50,7 +55,7 @@ internal fun Modifier.homeGestureInput(
         this.composed {
             val handOffTracker = remember { OverscrollHandOffTracker() }
             val handOffModifier =
-                if (overscrollHandOff) {
+                if (childAxes.resolveHandOff(overscrollHandOff)) {
                     Modifier.homeOverscrollHandOff(
                         tracker = handOffTracker,
                         settings = settings,
@@ -60,14 +65,14 @@ internal fun Modifier.homeGestureInput(
                 } else {
                     Modifier
                 }
-            handOffModifier.pointerInput(settings) {
+            handOffModifier.pointerInput(settings, childAxes) {
                 val thresholds =
                     GestureThresholdsPx.resolve(density = density, touchSlopPx = viewConfiguration.touchSlop)
                 val interpreter = HomeSwipeGestureInterpreter(thresholdPx = thresholds.homeSwipePx)
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final)
                     handOffTracker.reset()
-                    val arbiter = HomeGestureArbiter()
+                    val arbiter = HomeGestureArbiter(childAxes = childAxes)
                     var start = HomeGestureStart.from(listOf(down))
                     var handled = false
 
@@ -95,11 +100,10 @@ internal fun Modifier.homeGestureInput(
                         if (activeChanges.size != start.pointerCount) {
                             start = HomeGestureStart.from(activeChanges)
                         }
-                        if (disposition == HomeGestureDisposition.YIELDED) {
+                        val drag = activeChanges.centroid() - start.centroid
+                        if (!arbiter.mayFireOnDrag(drag.x, drag.y, activeChanges.size)) {
                             continue
                         }
-
-                        val drag = activeChanges.centroid() - start.centroid
                         val action =
                             homeSwipeActionForDrag(
                                 pointerCount = activeChanges.size,
