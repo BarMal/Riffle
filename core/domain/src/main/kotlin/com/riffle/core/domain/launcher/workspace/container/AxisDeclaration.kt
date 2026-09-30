@@ -35,6 +35,13 @@ data class AxisDeclaration(
     val hasConflict: Boolean get() = conflicts.isNotEmpty()
 
     operator fun contains(axis: GestureAxis): Boolean = axis in effective
+
+    /**
+     * A page-set with fewer than two pages has nowhere to page to, so it must not claim the pager axis
+     * (gestures.md rule 4: a container with no room scrolls nowhere and hands the drag on).
+     */
+    fun forPageCount(pageCount: Int): AxisDeclaration =
+        if (pageCount >= 2) this else copy(owned = owned - GestureAxis.HORIZONTAL_PAGER)
 }
 
 object AxisDeclarations {

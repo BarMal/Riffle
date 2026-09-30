@@ -333,6 +333,17 @@ Pure planning lives in `core/domain/.../workspace/container/`; the Compose hosts
   other: each owns its own region. A horizontally scrolling widget on a grid page is allowed; it consumes
   first and the home pager takes the drag at its edge.
 
+- **Lens output** (`LensResultProvider`). The seam containers use instead of touching sources: `observe(lens,
+  listener)` reports a `LensOutput` (`LOADING`, `READY` with a result, `PERMISSION_REQUIRED`, `UNAVAILABLE`) now
+  and on every change, and the returned handle stops everything. `SourceBackedLensResultProvider` reads sources
+  through `SharedSourceRegistry` (one upstream per source however many lenses, containers or widgets read it),
+  evaluates with `AsyncLensEvaluator` off the main thread, delivers in order, and lets a newer change supersede
+  an in-flight evaluation; after cancel nothing is delivered. A lens reading several sources is `READY` as soon
+  as any one is ready (a container cannot say which source is missing); otherwise loading beats a missing
+  permission beats unavailable. A source missing from the registry reads as unavailable.
+- `AxisDeclaration.forPageCount(n)` drops the pager axis for a page-set with fewer than two pages, so hosts
+  declare nothing they cannot consume (gestures.md rule 4).
+
 Proposed doc change, not new behaviour: the page cap and widget cap above are bounds chosen here (the design
 only asked for bounded composition); revisit if a preset needs more.
 
