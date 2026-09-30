@@ -77,6 +77,45 @@ shapes it `accepts` (flat, grouped, single). A lens/expression pairing is valid 
 result satisfies both. The editor filters choices by this check, so invalid combinations cannot be
 built. A flat lens with `limit = 1` yields a single-item result (and is also a valid flat result).
 
+#### Lens evaluation semantics (WS2)
+
+Implemented by `DefaultLensEvaluator` in `core/domain/.../launcher/workspace/lens/`. It is a pure
+function of `(lens, items, context)`; the context injects `nowEpochMillis` (age filters) and a
+`DayBucketer` (time zone for `ByDay`). `AsyncLensEvaluator` runs any evaluator on a caller-supplied
+`Executor`, so evaluation stays off the main thread without a coroutines dependency. Pipeline:
+
+1. **Merge.** Items from sources not in the lens are ignored. Order is the source's position in
+   `lens.sources`, then emission order within the source.
+2. **Dedupe by `ItemId`.** First in merged order wins (earlier source in the lens beats later; within
+   a source the first emitted). Runs before filtering, so `FromSource(b)` will not resurrect an id that
+   source `a` already won.
+3. **Bound.** At most `maxInputItems` (default 10 000) merged items are considered, and filters nested
+   deeper than `maxFilterDepth` (default 32) match nothing.
+4. **Filter** on the unredacted item. `AgeAtMost/AtLeast` use `now - time`, bounds inclusive; items
+   with no time match neither. Empty `AllOf` is true, empty `AnyOf` is false.
+5. **Sort.** `TITLE` compares case-insensitively, then by raw title; missing values sort last in both
+   directions; ties always break by item id ascending, so results do not depend on input order
+   (`SOURCE_ORDER` is input order by definition). `pinnedFirst` puts items with ext flag
+   `launcher.pinned = Flag(true)` first, then applies the field sort within each band.
+6. **Limit.** Applied after sort and before grouping, as a **total across the result**, not per
+   group. `limit = n` therefore never yields more than n items whatever the shape, and matches the
+   existing rule that a flat `limit = 1` lens is the SINGLE shape. A per-group cap, if wanted later,
+   should be a new lens field rather than a change of meaning.
+7. **Group.** Groups appear in order of their first member in the sorted list (so `TIME` descending
+   puts the newest day first). `ByGroupKey`: key is `groupKey`, label is the first non-blank
+   `groupLabel` in the group, else the key. `ByDay`: key is ISO `yyyy-MM-dd` from the bucketer, label =
+   key. `ByExt`: key is the ext value as text (`Number`/`Flag` via `toString`), label = key. Items with
+   no key go to one trailing group with key `""` and a null label.
+8. **Project and redact.** Fields not in `project` are cleared; SENSITIVE items additionally lose
+   `SENSITIVE_ITEM_FIELDS` whatever `project` says. `id`, `sourceId`, `target` and `privacy` are always
+   kept. This is the only redaction point.
+
+Privacy consequences of evaluating before redaction: sort keys and pinned state read the item as it
+will be seen after redaction (a SENSITIVE item sorts as title-less and is never pinned), and `ByExt`
+puts SENSITIVE items in the ungrouped group, so ordering and group keys cannot leak redacted content.
+Filters see the raw item, so a filter can reveal membership (a boolean) but never content. `ItemGroup`
+keys and labels are lens structure, not item fields: they exist even if `project` omits `GROUP`/`TIME`.
+
 ### Expression
 
 Draws a `LensResult`. Each declares `requires`, `uses`, `accepts` and interaction `axes`. Initial set:
@@ -113,6 +152,8 @@ maps source state onto `ExpressionState`.
 A container declares which gesture axes it owns (scroll axis, horizontal pager, none). The arbitration
 layer (`docs/product/gestures.md`) consumes this declaration instead of special cases. A page-set owns
 the horizontal pager, so its expression may not also own a horizontal axis.
+Each page draws one group's items, so a page-set's expression is checked against a flat per-group
+result (e.g. `CardStack` or `IconGrid`; not `Categories`, which draws the grouped result itself).
 
 ### Workspace
 
@@ -198,6 +239,76 @@ those contracts and their fakes (`launcher/workspace/testing/`).
 | WS8 | Presets: iOS, Nova, TimeScape, Niagara, Kvaesitso | WS1–WS5 |
 | WS9 | Screenshot tests for every expression and preset in compact and unfolded; feasibility spike for windowed launch | WS3 |
 
+## Persistence and migration (WS5)
+
+### Storage
+
+`WorkspaceSet` holds a `LayoutWorkspaces` per `HomeLayoutDeviceClass`: the workspaces in display order,
+the active id and the default id. Layouts are independent; `copyFromOtherLayout(source, target)` is a
+one-time deep copy (fresh workspace and container ids) that replaces the target's workspaces and maps
+active and default onto their copies. Invariants hold by construction: at least one workspace, unique
+ids, active and default ids exist. An operation that cannot apply (remove the last workspace, unknown
+id, blank rename, duplicate id) returns the set unchanged. A device class with nothing stored reads as
+the built-in Standard default. `resolveActive(deviceClass, capabilities, sources)` returns the active
+workspace, or the layout's default plus the issues when this layout cannot draw it.
+
+Serialization is `WorkspaceSetCodec` over `StoredValue` (framework-free, schema version 1, per
+workspace versions inside). Decoding never throws: unknown device classes, undecodable workspaces and
+workspaces with no drawable page are dropped, stale active/default ids fall back, and a layout left
+empty reads as the default (and is rebuilt by migration). Only lenses and workspaces are stored; items
+have no codec.
+
+### Migration mapping
+
+`WorkspaceMigration.migrate(HomeLayoutSet)` runs per device class. Each mode that has a stored layout
+(plus the mode the device class currently shows) becomes one workspace, so nothing a user set up is
+lost. The shown mode's workspace is active and default. Ids are deterministic
+(`ws:<deviceclass>:<mode>`), so migrating again gives the same result, and `ensureMigrated` never
+overwrites workspaces that already exist (it only fills device classes that have none).
+
+| Old | New |
+| --- | --- |
+| `STANDARD_APP_DRAWER` layout | Workspace "Standard" (the Nova-style default): one Page per `LauncherPage` |
+| `HOME_SCREEN_LIBRARY` layout | Workspace "Library": its pages plus a last Finder page (All apps, grouped by group key, drawn as Categories) |
+| `CARD_INTERFACE` layout | Workspace "Cards": a Notifications page-set (grouped by app) first, then its pages |
+| Dock `showNotificationCards` / `notificationSlotCount` | `dock.dynamicSection`: Notifications, newest first, limit = slot count, drawn as IconRow |
+| Dock pinned items, edge, size, appearance | Unchanged: they stay in `DockModel`, which the workspace does not duplicate |
+
+Page mapping (container id `page:<pageId>`, deduplicated):
+
+| `LauncherPageType` | Lens | Expression |
+| --- | --- | --- |
+| `Home` | `home.grid`, filter `GroupKeyIs(pageId)` | IconGrid |
+| `AllApps` | `apps.all`, by title | AlphaList |
+| `Generated(APP)` | `apps.all`, by title | IconGrid |
+| `Generated(CATEGORY)` | `apps.all`, grouped by group key | Categories |
+| `Generated(TODAY)` | `apps.recent`, newest first | List |
+| `Generated(WORK / PERSONAL)` | `apps.all`, filter `ExtEquals(app.profile, work / personal)` | IconGrid |
+| `Generated(FAVOURITES)` | `apps.favourite` | IconGrid |
+| `Generated(FREQUENTLY_USED)` | `apps.frequent` | IconGrid |
+| `Generated(NOTIFICATION_CARDS)` | `notifications`, newest first | CardStack |
+
+Placed home items (apps, folders, widgets, shortcuts) are user content that is not the output of a
+lens, so they stay in `HomeLayout` and are not copied. A migrated home page references its
+`HomeLayout` page through the `home.grid` source and `GroupKeyIs(pageId)`; `home.grid` is therefore a
+source the home grid must provide (or WS1/WS4 replace with a placed-items container) before migrated
+Home pages draw items. `HomeLayoutSet` remains the source of truth for placement, selected page, pins
+and dock until that cut-over, so migration loses nothing and is safe to re-run.
+
+### Source ids
+
+Part of the storage format, never renamed. Canonical ids live in `SourceIds` (owned by the source
+adapters, WS1): `apps.all`, `apps.recent`, `notifications`, `shortcuts`, `media`, `calendar`. The ids
+WS5 adds live in `WorkspaceSourceIds`, same dotted scheme: `apps.frequent`, `apps.favourite`,
+`home.grid`, plus the ext key `app.profile` (`work` / `personal`). The adapters must register
+descriptors under these ids (and emit `app.profile`), or tell WS5 which to change.
+
+### Open questions raised by WS5
+
+1. **Mode names are stored data.** Migrated workspaces are named "Standard", "Library" and "Cards"
+   (unlocalized, user-renamable). The editor may want to localize defaults.
+2. **`isPinned` on `LauncherPage`** has no workspace counterpart; it stays in `HomeLayout`.
+
 ## Decisions on the original open questions
 
 Provisional defaults adopted in WS0; revisit by editing this section.
@@ -210,3 +321,24 @@ Provisional defaults adopted in WS0; revisit by editing this section.
 3. **Skin.** Global default with an optional per-workspace override (`skinOverrideId`; null follows
    global).
 4. **Windowed launch.** Still open; answered by the WS9 spike.
+
+## WS1 source adapters (as built)
+
+Canonical ids live in `SourceIds` (`apps.all`, `apps.recent`, `notifications`, `shortcuts`, `media`,
+`calendar`, plus `rss`, `search`); they are a stored contract and are never renamed.
+
+- Every source is a `SharedSourceStream`: one upstream however many observers, latest state replayed,
+  started on the first observer and stopped on the last. Platform reads run on one background executor.
+- Notifications and Media share the existing notification pipeline (hide rules, stale filter, grouper,
+  profile content visibility). A notification with a media session appears in Media only. Groups use
+  `groupKey = package:profile` and `groupLabel = app name`. Quiet profiles yield `SENSITIVE` items with
+  no content; locked, unavailable and unknown profiles yield none.
+- Permission-gated sources (notifications, media, recents, calendar) emit `PermissionRequired` and never
+  read gated data or prompt. `UNKNOWN` notification access counts as not granted.
+- Capabilities are declared honestly: `LIVE` only where a change source exists.
+
+Known gaps, to revisit rather than assume: package and shortcut changes are not observed yet (the
+lifecycle-bound observer is not wired), hide-rule edits apply on the next refresh, media items have no
+transport actions (no media-session repository exists), and there is no platform calendar adapter, so the
+calendar source reports `Unavailable` until one is designed (it needs an explicit, user-initiated
+`READ_CALENDAR` flow, which is out of scope here).

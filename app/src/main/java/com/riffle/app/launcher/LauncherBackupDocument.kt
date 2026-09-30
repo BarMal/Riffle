@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -12,6 +13,8 @@ data class LauncherBackupDocument(
     val launcherSettings: LauncherSettings,
     val hiddenAppIdentities: Set<AppIdentity> = emptySet(),
     val exportedAtEpochMillis: Long? = null,
+    /** Lenses and workspaces only, never item content. Absent in backups written before workspaces. */
+    val workspaceSet: WorkspaceSet? = null,
 )
 
 fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
@@ -22,6 +25,9 @@ fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
         .put("homeLayouts", JSONObject(encodeHomeLayoutSet(document.homeLayoutSet)))
         .put("settings", JSONObject(encodeLauncherSettings(document.launcherSettings)))
         .put("hiddenApps", JSONArray(encodeHiddenAppIdentities(document.hiddenAppIdentities)))
+        .also { json ->
+            document.workspaceSet?.let { set -> json.put("workspaces", JSONObject(encodeWorkspaceSet(set))) }
+        }
         .toString()
 
 fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
@@ -47,6 +53,7 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
                     ?: LauncherSettings(),
             hiddenAppIdentities = json.optHiddenAppIdentities(),
             exportedAtEpochMillis = json.optLongOrNull("exportedAtEpochMillis"),
+            workspaceSet = json.optJSONObject("workspaces")?.let { decodeWorkspaceSet(it.toString()) },
         )
     }.getOrElse { error ->
         when (error) {
