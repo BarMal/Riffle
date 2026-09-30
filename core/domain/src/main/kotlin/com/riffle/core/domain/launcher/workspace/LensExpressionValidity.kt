@@ -38,6 +38,7 @@ object LensExpressionValidity {
         lens: Lens,
         expression: ExpressionDescriptor,
         sources: List<SourceDescriptor>? = null,
+        produced: Set<ResultShape> = lens.resultShapes,
     ): LensValidity {
         val issues =
             buildList {
@@ -46,7 +47,6 @@ object LensExpressionValidity {
                         LensIssue.MissingRequiredField(it),
                     )
                 }
-                val produced = lens.resultShapes
                 if (produced.none { it in expression.accepts }) {
                     add(
                         LensIssue.ShapeNotAccepted(produced, expression.accepts),
@@ -62,6 +62,16 @@ object LensExpressionValidity {
         kind: ExpressionKind,
         sources: List<SourceDescriptor>? = null,
     ): LensValidity = check(lens, ExpressionCatalog.descriptorFor(kind), sources)
+
+    /**
+     * Pairing check for a page-set: its grouped lens expands to one page per group, and each page
+     * draws one group's items, so the expression must accept a flat result rather than a grouped one.
+     */
+    fun checkPerGroup(
+        lens: Lens,
+        kind: ExpressionKind,
+        sources: List<SourceDescriptor>? = null,
+    ): LensValidity = check(lens, ExpressionCatalog.descriptorFor(kind), sources, setOf(ResultShape.FLAT))
 
     /** The expressions the editor may offer for [lens]. */
     fun compatibleExpressions(
