@@ -9,11 +9,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
@@ -56,7 +54,7 @@ class LibraryBackReturnTest {
         val reducer =
             LauncherHomePageEditReducer(
                 homeLayoutRepository = InMemoryHomeLayoutRepository(),
-                viewModeAvailability = cardsEnabledAvailability(),
+                viewModeAvailability = defaultLauncherViewModeAvailability(),
             )
         val library =
             HomeLayoutSet.fromLayout(
@@ -105,11 +103,3 @@ class LibraryBackReturnTest {
         }
     }
 }
-
-private fun cardsEnabledAvailability() =
-    LauncherViewModeAvailability(
-        enabledExperimentalModesByDeviceClass =
-            HomeLayoutDeviceClass.entries.associateWith {
-                setOf(LauncherViewMode.HOME_SCREEN_LIBRARY, LauncherViewMode.CARD_INTERFACE)
-            },
-    )

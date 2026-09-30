@@ -4,11 +4,9 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -26,7 +24,7 @@ class LauncherShellLibraryReturnTest {
             val reducer =
                 LauncherHomePageEditReducer(
                     homeLayoutRepository = repository,
-                    viewModeAvailability = cardsEnabledAvailability(),
+                    viewModeAvailability = defaultLauncherViewModeAvailability(),
                 )
 
             val updated = reducer.reduce(libraryState(), LauncherShellAction.LeaveLibrary(trigger))
@@ -44,7 +42,7 @@ class LauncherShellLibraryReturnTest {
             val reducer =
                 LauncherHomePageEditReducer(
                     homeLayoutRepository = RecordingHomeLayoutRepository(),
-                    viewModeAvailability = cardsEnabledAvailability(),
+                    viewModeAvailability = defaultLauncherViewModeAvailability(),
                 )
 
             assertEquals("$trigger", state, reducer.reduce(state, LauncherShellAction.LeaveLibrary(trigger)))
@@ -102,11 +100,3 @@ class LauncherShellLibraryReturnTest {
         }
     }
 }
-
-private fun cardsEnabledAvailability() =
-    LauncherViewModeAvailability(
-        enabledExperimentalModesByDeviceClass =
-            HomeLayoutDeviceClass.entries.associateWith {
-                setOf(LauncherViewMode.HOME_SCREEN_LIBRARY, LauncherViewMode.CARD_INTERFACE)
-            },
-    )

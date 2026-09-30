@@ -5,8 +5,8 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class DefaultViewModeAvailabilityTest {
-    private val availability = defaultLauncherViewModeAvailability()
+class LibraryOnlyViewModeAvailabilityTest {
+    private val availability = libraryOnlyLauncherViewModeAvailability()
 
     @Test
     fun onlyLibraryIsOffered() {
