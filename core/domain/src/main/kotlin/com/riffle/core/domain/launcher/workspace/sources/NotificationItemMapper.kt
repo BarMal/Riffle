@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.workspace.sources
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
@@ -26,6 +27,8 @@ data class NotificationItemInput(
     val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),
     /** Display name of an app, by package; the package name itself is used when this returns null. */
     val appLabel: (AppPackageName) -> String? = { null },
+    /** Profile types by id when known; the well-known ids (`personal`, `work`, `private`) resolve without it. */
+    val profileTypes: Map<AppProfileId, AppProfileType> = emptyMap(),
 )
 
 /**
@@ -83,6 +86,7 @@ class NotificationItemMapper(
                 groupKey = "${packageName.value}:${profileId.value}",
                 groupLabel = appName,
                 privacy = if (redacted) ItemPrivacy.SENSITIVE else ItemPrivacy.VISIBLE,
+                ext = appProfileExt(profileId, input.profileTypes),
             )
         return if (redacted) base else base.withContent(this, appName)
     }
@@ -104,11 +108,12 @@ class NotificationItemMapper(
                     ItemAction.Dismiss().takeIf { notification.canDismiss },
                 ),
             ext =
-                mapOf(
-                    CATEGORY_KEY to ItemExtValue.Text(notification.category.name.lowercase()),
-                    PRIORITY_KEY to ItemExtValue.Number(notification.priority.rank.toLong()),
-                    APP_KEY to ItemExtValue.Text(appName),
-                ),
+                ext +
+                    mapOf(
+                        CATEGORY_KEY to ItemExtValue.Text(notification.category.name.lowercase()),
+                        PRIORITY_KEY to ItemExtValue.Number(notification.priority.rank.toLong()),
+                        APP_KEY to ItemExtValue.Text(appName),
+                    ),
         )
 
     private companion object {

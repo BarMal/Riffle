@@ -9,8 +9,10 @@ import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.RecentAppUsage
+import com.riffle.core.domain.launcher.workspace.ItemExtValue
 import com.riffle.core.domain.launcher.workspace.ItemTarget
 import com.riffle.core.domain.launcher.workspace.SourceIds
+import com.riffle.core.domain.launcher.workspace.WorkspaceSourceIds
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -59,6 +61,25 @@ class AppAndShortcutItemMapperTest {
     fun `same package in two profiles yields distinct items`() {
         val items = apps.allApps(listOf(app("a"), app("a", profile = AppProfile.work())))
         assertEquals(2, items.map { it.id }.toSet().size)
+        assertEquals(
+            listOf(ItemExtValue.Text("personal"), ItemExtValue.Text("work")),
+            items.map { it.ext[WorkspaceSourceIds.APP_PROFILE_EXT] },
+        )
+    }
+
+    @Test
+    fun `recents and shortcuts carry the app profile ext`() {
+        val work = app("w", profile = AppProfile.work())
+        val recent = apps.recentApps(listOf(RecentAppUsage(AppPackageName("w"), 1L)), listOf(work)).single()
+        val shortcut =
+            ShortcutItemMapper()
+                .quickActions(
+                    listOf(work),
+                    mapOf(work.identity to listOf(AppShortcut(AppShortcutId("s"), work.identity, "S"))),
+                ).single()
+
+        assertEquals(ItemExtValue.Text("work"), recent.ext[WorkspaceSourceIds.APP_PROFILE_EXT])
+        assertEquals(ItemExtValue.Text("work"), shortcut.ext[WorkspaceSourceIds.APP_PROFILE_EXT])
     }
 
     @Test

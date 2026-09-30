@@ -42,6 +42,7 @@ class ShortcutItemMapper(
             groupKey = "${identity.packageName.value}:$profile",
             groupLabel = app.label,
             actions = listOf(ItemAction.Open()),
+            ext = appProfileExt(identity.profile.type),
         )
     }
 }
