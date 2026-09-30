@@ -232,3 +232,24 @@ Provisional defaults adopted in WS0; revisit by editing this section.
 3. **Skin.** Global default with an optional per-workspace override (`skinOverrideId`; null follows
    global).
 4. **Windowed launch.** Still open; answered by the WS9 spike.
+
+## WS1 source adapters (as built)
+
+Canonical ids live in `SourceIds` (`apps.all`, `apps.recent`, `notifications`, `shortcuts`, `media`,
+`calendar`, plus `rss`, `search`); they are a stored contract and are never renamed.
+
+- Every source is a `SharedSourceStream`: one upstream however many observers, latest state replayed,
+  started on the first observer and stopped on the last. Platform reads run on one background executor.
+- Notifications and Media share the existing notification pipeline (hide rules, stale filter, grouper,
+  profile content visibility). A notification with a media session appears in Media only. Groups use
+  `groupKey = package:profile` and `groupLabel = app name`. Quiet profiles yield `SENSITIVE` items with
+  no content; locked, unavailable and unknown profiles yield none.
+- Permission-gated sources (notifications, media, recents, calendar) emit `PermissionRequired` and never
+  read gated data or prompt. `UNKNOWN` notification access counts as not granted.
+- Capabilities are declared honestly: `LIVE` only where a change source exists.
+
+Known gaps, to revisit rather than assume: package and shortcut changes are not observed yet (the
+lifecycle-bound observer is not wired), hide-rule edits apply on the next refresh, media items have no
+transport actions (no media-session repository exists), and there is no platform calendar adapter, so the
+calendar source reports `Unavailable` until one is designed (it needs an explicit, user-initiated
+`READ_CALENDAR` flow, which is out of scope here).
