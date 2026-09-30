@@ -94,6 +94,8 @@ Draws a `LensResult`. Each declares `requires`, `uses`, `accepts` and interactio
 A container declares which gesture axes it owns (scroll axis, horizontal pager, none). The arbitration
 layer (`docs/product/gestures.md`) consumes this declaration instead of special cases. A page-set owns
 the horizontal pager, so its expression may not also own a horizontal axis.
+Each page draws one group's items, so a page-set's expression is checked against a flat per-group
+result (e.g. `CardStack` or `IconGrid`; not `Categories`, which draws the grouped result itself).
 
 ### Workspace
 
