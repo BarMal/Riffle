@@ -309,6 +309,33 @@ descriptors under these ids (and emit `app.profile`), or tell WS5 which to chang
    (unlocalized, user-renamable). The editor may want to localize defaults.
 2. **`isPinned` on `LauncherPage`** has no workspace counterpart; it stays in `HomeLayout`.
 
+## Containers and layout (WS4, as built)
+
+Pure planning lives in `core/domain/.../workspace/container/`; the Compose hosts (later slice) only draw plans.
+
+- **Page-set expansion** (`PageSetPlanner`). A grouped result becomes one page per non-empty group, in group
+  order. The page key is `group:<groupKey>` (the ungrouped trailing group is `group:`), so it depends on the
+  group and never on its position: a pager keeps its selection and per-page state when groups reorder.
+  Empty groups and repeated group keys are skipped; at most `MAX_PAGES` (32) pages are produced and the
+  overflow is counted (`truncatedGroupCount`) for the host to say so. A flat result is reported as a shape
+  mismatch with no pages. `reconcileSelection(previousKey, previousIndex)` keeps the selected page by key,
+  else the page now at the old index (clamped).
+- **Widget grid** (`WidgetGridPlanner`). Stored grids are validated by `ContainerValidation`, but drawing must
+  tolerate a broken one, so the planner places widgets through `GridPlacementEngine` (the same collision and
+  bounds rules as the home grid): the first placement in stored order wins, later offenders are dropped and
+  reported with a reason, and at most `MAX_WIDGETS` (48) are drawn. The plan is in reading order, which is
+  also the accessibility traversal order. `rectFor` divides an area evenly into cells; a span covers its cells
+  plus the gaps between them.
+- **Axis declaration** (`AxisDeclarations.resolve`). Combines a container's `ownedAxes` with its children's
+  (widgets in a grid page) into an `AxisDeclaration`: `owned`, per-child `childAxes`, `effective`, and
+  `conflicts`. Conflicts are the same as `ContainerValidation`'s `AxisConflict` (a page-set's expression may
+  not scroll horizontally), checked for every expression by a test. Sibling widgets never conflict with each
+  other: each owns its own region. A horizontally scrolling widget on a grid page is allowed; it consumes
+  first and the home pager takes the drag at its edge.
+
+Proposed doc change, not new behaviour: the page cap and widget cap above are bounds chosen here (the design
+only asked for bounded composition); revisit if a preset needs more.
+
 ## Decisions on the original open questions
 
 Provisional defaults adopted in WS0; revisit by editing this section.

@@ -34,6 +34,7 @@ enum class HomeGestureDisposition {
  */
 class HomeGestureArbiter(
     private val claimPointerCount: Int = GestureThresholds.MULTI_FINGER_CLAIM_POINTER_COUNT,
+    private val childAxes: ContainerGestureAxes = ContainerGestureAxes(),
 ) {
     init {
         require(claimPointerCount >= 2) { "A claim needs more than one finger." }
@@ -47,6 +48,25 @@ class HomeGestureArbiter(
     /** Whether a recognised gesture may fire now. */
     val mayFire: Boolean
         get() = claimed || !yielded
+
+    /**
+     * Whether a drag of ([dx], [dy]) under fewer than the claim count of fingers belongs to a child
+     * that declared that axis even if it has not consumed the pointer yet (e.g. inside its touch slop),
+     * so the home layer must not fire on it. With nothing declared this is always false, which keeps
+     * the consumption-only behaviour of rules 1-3.
+     */
+    fun dragBelongsToDeclaredChild(
+        dx: Float,
+        dy: Float,
+        pointerCount: Int,
+    ): Boolean = !claimed && pointerCount < claimPointerCount && childAxes.declaresDragAlong(dx, dy)
+
+    /** Whether a recognised gesture may fire on a drag of ([dx], [dy]): no yield, no declared child owning it. */
+    fun mayFireOnDrag(
+        dx: Float,
+        dy: Float,
+        pointerCount: Int,
+    ): Boolean = mayFire && !dragBelongsToDeclaredChild(dx, dy, pointerCount)
 
     /**
      * Called on the Initial pass, before any child sees the event. Returns true when the home

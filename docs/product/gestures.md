@@ -164,6 +164,14 @@ means no default binding, so nothing happens unless the user binds the gesture.
    the dock body, which is already inset from the screen edge; exclusion over the dock is added
    only if device testing shows side-dock conflicts with Back (Decision 13).
 
+7. **Containers declare their axes (WS4).** `HomeGestureArbiter` takes `ContainerGestureAxes` (the axes
+   `AxisDeclarations.resolve` produced for the containers under the home layer) instead of per-surface flags.
+   A declared vertical axis turns the nested-scroll hand-off on (rule 3, same as `overscrollHandOff`), and a
+   one- or two-finger drag along a declared axis is never fired as a home swipe, even before the child has
+   consumed a pointer (`mayFireOnDrag`). Three fingers still always belong to home. A container that cannot
+   scroll right now (a stack with one card) passes no axes (rule 4). `homeGestureInput(childAxes = ...)` is
+   the app-side input; nothing passes it yet, so existing surfaces behave as before until WS6-WS8 wire it.
+
 Boundary feel: when a drag first pushes against the first or last card the stack ticks one haptic
 (`CardStackInteraction.onBoundaryHaptic`, the Cards settle haptic strength). There is no rubber-band
 stretch: drawing one would need the stack to move past its clamp, and the travel it absorbed would
