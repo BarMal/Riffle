@@ -120,8 +120,7 @@ internal object HomeLayoutWorkspaceMapper {
         )
 
     /**
-     * Cards mode centres on notifications grouped by app. Drawn as [ExpressionKind.INDEX] because the WS0
-     * container validation rejects a grouped lens for CARD_STACK (see the open question in the design doc).
+     * Cards mode centres on notifications grouped by app: one card stack per app, as a page-set.
      */
     private fun notificationsPageSet(): PageHost =
         PageSetContainer(
@@ -129,7 +128,7 @@ internal object HomeLayoutWorkspaceMapper {
             binding =
                 LensBinding(
                     notificationsLens().copy(group = LensGroup.ByGroupKey),
-                    ExpressionKind.INDEX,
+                    ExpressionKind.CARD_STACK,
                 ),
         )
 

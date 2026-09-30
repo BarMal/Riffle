@@ -286,14 +286,9 @@ descriptors under these ids (and emit `app.profile`), or tell WS5 which to chang
 
 ### Open questions raised by WS5
 
-1. **Page-set with CardStack is rejected by WS0 validation.** The worked example above (Notifications
-   grouped by app, CardStack per group, as a page-set) fails `ContainerValidation` because
-   `CARD_STACK` accepts only flat results and a page-set's lens is grouped. Migration therefore draws
-   the Cards notifications page-set as `INDEX` (which accepts grouped). Proposal: validate a page-set's
-   expression against the per-group (flat) shape; then migration switches to `CARD_STACK`.
-2. **Mode names are stored data.** Migrated workspaces are named "Standard", "Library" and "Cards"
+1. **Mode names are stored data.** Migrated workspaces are named "Standard", "Library" and "Cards"
    (unlocalized, user-renamable). The editor may want to localize defaults.
-3. **`isPinned` on `LauncherPage`** has no workspace counterpart; it stays in `HomeLayout`.
+2. **`isPinned` on `LauncherPage`** has no workspace counterpart; it stays in `HomeLayout`.
 
 ## Decisions on the original open questions
 
