@@ -175,6 +175,35 @@ page, Finder (an All apps lens, drawn as Categories or AlphaList per workspace),
 
 Horizontal dock swipes to switch workspace are parked as an interaction detail for later.
 
+### Workspace menu (WS6, #1351)
+
+`WorkspaceMenuPlanner` (domain, `launcher/workspace/menu/`) turns the active layout's `WorkspaceSet`
+into a `WorkspaceMenuModel`; `WorkspaceMenuReducer` holds the open/closed state and turns an action
+(`Open`, `Close`, `SwitchWorkspace`, `JumpToPage`, `OpenFinder`, `EditWorkspace`) into a
+`WorkspaceMenuEffect` the shell performs. Both are pure.
+
+| Entry | Rule |
+| --- | --- |
+| Switch workspace | Every workspace of the layout in display order; the stored active one is marked. Re-choosing it only closes the menu. A single workspace shows no switch choice. |
+| Jump to page | The displayed workspace's pages in order (the Finder page excluded: it has its own entry). A page-set expands to its evaluated groups, at most `maxGroupsPerPageSet` (default 8) each; the rest are counted (`omittedGroupCount`) and reached by paging. Group labels are transient lens output and are never stored. |
+| Finder | The displayed workspace's `PageRole.FINDER` page. **Hidden when the workspace has none**: Riffle does not invent a default Finder page, because opening something the workspace never defined would be a surprise. |
+| Edit workspace | Always present; targets the displayed workspace. |
+| Fallback notice | When the active workspace cannot be drawn on this layout, the default is displayed and the menu says so with the validation reasons (`WorkspaceMenuFallback`). Jump, Finder and Edit act on the displayed workspace; the stored active one stays marked. |
+
+With the workspace system off (no stored `WorkspaceSet`, or none with a layout) there is no model, the
+menu cannot open and nothing is drawn or blocked: standard launcher mode is unaffected.
+
+**Enabling.** The menu is off by default behind `WorkspaceMenuFeature.enabled` (app layer), separate
+from `DockShelfExpansion.enabled`. Off, the dock pull and the dock behave exactly as today.
+
+**Proposed doc change (open question for review).** The dock pull away from the dock edge is today
+the Home <-> Library mode switch, and the arbitration table in `gestures.md` reserves it. "Pull the
+dock up opens the menu" therefore cannot ship while modes exist without taking that gesture from the
+mode switch. Proposal: while both exist, the menu opens from an explicit dock affordance (a button on
+the dock, plus a dock accessibility action "Workspace menu") that reuses the shelf's composables but
+not its swipe; once workspaces replace the mode pair, the dock pull opens the menu, with the same
+accessibility action and Ctrl+arrow equivalent. No new pointer loop is added either way.
+
 ## Worked example: folded "TimeScape" workspace
 
 | Page | Lens | Expression | Container |
