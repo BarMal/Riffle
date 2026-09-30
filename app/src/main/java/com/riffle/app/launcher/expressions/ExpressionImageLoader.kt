@@ -6,8 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -90,8 +93,9 @@ internal fun ItemImage(
     shape: Shape = RiffleShapes.small,
 ) {
     val sizePx = with(LocalDensity.current) { size.roundToPx() }
-    val image by produceState<ImageBitmap?>(initialValue = null, handle, loader, sizePx) {
-        value = handle?.let { loader.load(it, sizePx) }
+    var image by remember(handle, loader, sizePx) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(handle, loader, sizePx) {
+        image = handle?.let { loader.load(it, sizePx) }
     }
     val base = modifier.size(size).clip(shape)
     val loaded = image
