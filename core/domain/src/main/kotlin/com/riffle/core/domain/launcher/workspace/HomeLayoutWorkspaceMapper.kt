@@ -96,7 +96,12 @@ internal object HomeLayoutWorkspaceMapper {
                 page(id, appsByGroup(), ExpressionKind.CATEGORIES)
             GeneratedLauncherPageKind.TODAY ->
                 page(id, recentAppsLens(), ExpressionKind.LIST)
-            GeneratedLauncherPageKind.WORK -> page(id, profileLens(WorkspaceSourceIds.PROFILE_WORK), ExpressionKind.ICON_GRID)
+            GeneratedLauncherPageKind.WORK ->
+                page(
+                    id,
+                    profileLens(WorkspaceSourceIds.PROFILE_WORK),
+                    ExpressionKind.ICON_GRID,
+                )
             GeneratedLauncherPageKind.PERSONAL ->
                 page(id, profileLens(WorkspaceSourceIds.PROFILE_PERSONAL), ExpressionKind.ICON_GRID)
             GeneratedLauncherPageKind.FAVOURITES ->

@@ -125,7 +125,7 @@ class WorkspaceSetCodecTest {
     fun encodingNeverContainsItemContent() {
         // Items have no codec: the encoded tree only ever names sources by id.
         val text = WorkspaceSetCodec.encode(WorkspaceMigration.migrate(HomeLayoutSet.standard())).toString()
-        assertTrue("home_grid" in text)
+        assertTrue("home.grid" in text)
         assertTrue("title" !in text && "body" !in text)
     }
 }

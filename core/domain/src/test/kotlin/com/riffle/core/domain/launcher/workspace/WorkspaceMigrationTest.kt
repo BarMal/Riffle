@@ -157,13 +157,16 @@ class WorkspaceMigrationTest {
 
         assertEquals(
             listOf(
-                SourceIds.ALL_APPS, SourceIds.RECENT_APPS, WorkspaceSourceIds.FAVOURITE_APPS, WorkspaceSourceIds.FREQUENT_APPS,
-                SourceIds.ALL_APPS, SourceIds.ALL_APPS, SourceIds.ALL_APPS, SourceIds.NOTIFICATIONS, SourceIds.ALL_APPS,
+                "apps.all", "apps.recent", "apps.favourite", "apps.frequent",
+                "apps.all", "apps.all", "apps.all", "notifications", "apps.all",
             ),
-            ws.pages.indices.map { ws.boundLens(it).sources.single() },
+            ws.pages.indices.map { ws.boundLens(it).sources.single().value },
         )
         assertEquals(
-            LensFilter.ExtEquals(WorkspaceSourceIds.APP_PROFILE_EXT, ItemExtValue.Text(WorkspaceSourceIds.PROFILE_WORK)),
+            LensFilter.ExtEquals(
+                WorkspaceSourceIds.APP_PROFILE_EXT,
+                ItemExtValue.Text(WorkspaceSourceIds.PROFILE_WORK),
+            ),
             ws.boundLens(4).filter,
         )
     }
