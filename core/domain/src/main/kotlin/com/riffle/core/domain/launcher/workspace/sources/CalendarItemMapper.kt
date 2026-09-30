@@ -19,10 +19,13 @@ data class CalendarEvent(
     val allDay: Boolean = false,
     /** The calendar marks the event private or confidential. */
     val isPrivate: Boolean = false,
+    /** The calendar event this is an occurrence of; differs from [id] for recurring instances. */
+    val eventId: String = id,
 ) {
     init {
         require(id.isNotBlank()) { "Calendar event ids must not be blank." }
         require(startEpochMillis >= 0L) { "Calendar event start cannot be negative." }
+        require(eventId.isNotBlank()) { "Calendar event ids must not be blank." }
         require(endEpochMillis >= startEpochMillis) { "Calendar event cannot end before it starts." }
     }
 }
@@ -54,7 +57,7 @@ class CalendarItemMapper {
         Item(
             id = ItemId("${SourceIds.CALENDAR.value}:$id"),
             sourceId = SourceIds.CALENDAR,
-            target = ItemTarget.DeepLink("content://com.android.calendar/events/$id"),
+            target = ItemTarget.DeepLink("content://com.android.calendar/events/$eventId"),
             title = title.takeIf(String::isNotBlank),
             subtitle = location?.takeIf(String::isNotBlank),
             timeEpochMillis = startEpochMillis,
