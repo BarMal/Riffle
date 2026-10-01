@@ -73,19 +73,25 @@ private fun HostedWorkspacesPage(
             host.workspaces.model(viewed, host.currentLayout, tabs.map { it.deviceClass })
         }
     WorkspacesFeedbackEffect(host.workspaces)
-    WorkspacesSettingsContent(
-        model = model,
-        viewed = viewed,
-        tabs = tabs,
-        callbacks =
-            WorkspacesPageCallbacks(
-                onAction = { action -> host.workspaces.dispatch(viewed, action) },
-                onEdit = host.onEdit,
-                onSelectLayout = { layout ->
-                    onAction(LauncherShellAction.SelectSettingsLayoutDeviceClass(layout))
-                },
-            ),
-    )
+    Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.l)) {
+        WorkspacesSettingsContent(
+            model = model,
+            viewed = viewed,
+            tabs = tabs,
+            callbacks =
+                WorkspacesPageCallbacks(
+                    onAction = { action -> host.workspaces.dispatch(viewed, action) },
+                    onEdit = host.onEdit,
+                    onSelectLayout = { layout ->
+                        onAction(LauncherShellAction.SelectSettingsLayoutDeviceClass(layout))
+                    },
+                ),
+        )
+        SettingsReturnBehaviorSection(
+            current = state.settings.home.returnBehavior,
+            onSelect = { behavior -> onAction(LauncherShellAction.SelectReturnBehavior(behavior)) },
+        )
+    }
 }
 
 /**

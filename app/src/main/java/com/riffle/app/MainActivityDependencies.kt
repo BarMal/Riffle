@@ -46,6 +46,10 @@ import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnectio
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
+import com.riffle.app.launcher.pool.CachedPoolRepository
+import com.riffle.app.launcher.pool.DataStorePoolStore
+import com.riffle.app.launcher.pool.PoolItemActions
+import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.app.launcher.rss.AndroidFeedParser
 import com.riffle.app.launcher.rss.AndroidFeedTransport
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
@@ -249,6 +253,20 @@ internal class MainActivityDependencies(
             exclusions = exclusionRepository,
         )
     }
+
+    /**
+     * The Workspaces (preview) placed-items pool runtime. Call it only once the preview opens: building it
+     * reads no storage; the store is read when the preview calls `initialize`. Item taps go through the same
+     * app launcher the standard home uses.
+     */
+    fun poolRuntime(): PoolRuntime =
+        PoolRuntime(
+            repository = CachedPoolRepository(DataStorePoolStore(activity)),
+            iconLoader = appIconLoader,
+            widgetViews = widgetHostGateway,
+            actions = PoolItemActions(launchApp = appLauncher::launch, launchShortcut = appLauncher::launchShortcut),
+            providerOf = widgetHostGateway::hostedWidgetProvider,
+        )
 
     fun packageChangeObserver(onCatalogChanged: (AppCatalogChange) -> Unit): AndroidPackageChangeObserver =
         AndroidPackageChangeObserver(activity) { change ->

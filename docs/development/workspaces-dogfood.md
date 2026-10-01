@@ -42,6 +42,9 @@ overwritten (seeded layouts are saved only when you edit something).
       and icons load without jank.
 - [ ] Open the workspace menu (handle beside the dock). Switch between presets/workspaces; the
       preview changes. Note any workspace that falls back to the default with a notice.
+- [ ] Home page: your real icons, folders and widgets appear in their cells; tapping an app launches it; a folder opens a
+      list; **Refresh home items** catches up after you rearrange Home (full list in
+      [`workspaces-pool-cutover.md`](../product/workspaces-pool-cutover.md)).
 - [ ] Jump to a page from the menu; open **Finder** (scrolls to the Finder page).
 - [ ] **Edit workspace**: change a page's lens or expression, check the live preview, tap Done; the
       preview re-renders with the change. Close without saving and confirm the discard prompt.
@@ -61,9 +64,10 @@ overwritten (seeded layouts are saved only when you edit something).
 
 ## Known gaps
 
-- **Home pages show a placeholder** ("Home items are not migrated into this preview yet."). Items
-  placed on the home grid are not fed into lenses (`home.grid` has no adapter) and are not
-  migrated.
+- **Home pages show your real home items, read-only** (S4, see
+  [`workspaces-pool-cutover.md`](../product/workspaces-pool-cutover.md)): apps, shortcuts, folders and widgets from a
+  one-time import of your standard home. They go stale when you rearrange Home; use **Refresh home items** in the preview
+  bar. No editing, and the dock is still a placeholder.
 - **No search box UI**: the search source exists but nothing writes a query yet.
 - **RSS shows cached articles only** (no refresh path; see #1374); with no cache it is empty.
 - **Calendar events appear only after access is granted**, and only then.

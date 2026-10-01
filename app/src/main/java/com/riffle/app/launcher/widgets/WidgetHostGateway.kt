@@ -28,6 +28,12 @@ interface WidgetHostGateway {
     fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent
 
     /**
+     * The provider [hostedWidgetId] is bound to, or null when it is unbound or unknown. Read-only; used once to
+     * backfill the provider of widgets migrated into the placed-items pool.
+     */
+    fun hostedWidgetProvider(hostedWidgetId: HostedWidgetId): WidgetProviderIdentity? = null
+
+    /**
      * Reports the currently committed host bounds to the provider.
      *
      * Values are density-independent pixels, matching the Android AppWidget options contract.

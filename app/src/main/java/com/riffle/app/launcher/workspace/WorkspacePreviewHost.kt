@@ -2,18 +2,29 @@ package com.riffle.app.launcher.workspace
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.WorkspaceMenuHost
+import com.riffle.app.launcher.pool.PlacedHomeContent
+import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.WorkspaceId
+import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * What the shell needs to host the Workspaces (preview): its [controller] and the repository's change
@@ -26,6 +37,8 @@ class WorkspacePreviewHost internal constructor(
     internal val runtime: () -> WorkspaceRuntime,
     /** Called only when the user taps "Review access" in the editor; routes to the existing explicit flows. */
     internal val onRequestSourceAccess: (SourceId) -> Unit = {},
+    /** The placed-items pool behind the home pages; null keeps the placeholder. Built only when the preview opens. */
+    internal val pool: (() -> PoolRuntime)? = null,
 )
 
 /** Stands in for an absent host, so the shell can observe "enabled" and "version" unconditionally. */
@@ -50,12 +63,35 @@ internal fun WorkspacePreviewLayer(
         runtime.repository.initialize(WorkspaceBootstrap::seed)
         viewModel.workspaceMenu.refresh()
     }
+    ReturnToLauncherEffect(host.controller)
     LaunchedEffect(host) { viewModel.workspaceMenuEffects.collect { effect -> host.controller.onEffect(effect) } }
     val open by host.controller.isOpen.collectAsState()
     val editing by host.controller.editing.collectAsState()
     if (open) WorkspacePreviewContent(host, runtime, state, menu)
     if (open) {
         editing?.let { id -> WorkspaceEditorLayer(host, runtime, state, id) }
+    }
+}
+
+/** Coming back from another app (the activity stopped, then started) is a Return for the open preview. */
+@Composable
+private fun ReturnToLauncherEffect(controller: WorkspacePreviewController) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, controller) {
+        var stopped = false
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> stopped = true
+                    Lifecycle.Event.ON_START -> {
+                        if (stopped) controller.onReturn()
+                        stopped = false
+                    }
+                    else -> Unit
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 }
 
@@ -68,6 +104,7 @@ private fun WorkspacePreviewContent(
 ) {
     val version by host.workspaceVersion.collectAsState()
     val navigation by host.controller.navigation.collectAsState()
+    val returnRequest by host.controller.returnRequest.collectAsState()
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
     val workspace = remember(version, deviceClass) { runtime.repository.load()?.resolveActive(deviceClass)?.workspace }
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -75,6 +112,7 @@ private fun WorkspacePreviewContent(
         remember(runtime, reducedMotion) {
             { padding: PaddingValues -> runtime.services(reducedMotion, padding) }
         }
+    val placedHome = rememberPlacedHome(host, state, workspace?.id)
     WorkspacePreviewTheme(state) {
         WorkspacePreviewSurface(
             workspace = workspace,
@@ -83,8 +121,48 @@ private fun WorkspacePreviewContent(
             reducedMotion = reducedMotion,
             navigation = navigation,
             onNavigationConsumed = host.controller::navigationConsumed,
+            returnBehavior = state.launcherSettings.home.returnBehavior,
+            returnRequest = returnRequest,
+            onReturnConsumed = host.controller::returnConsumed,
             onExit = host.controller::close,
+            placedHome = placedHome,
         )
+    }
+}
+
+/**
+ * The read-only placed home content, or null when the host has no pool. Loads the pool once the preview is open
+ * (the one-time import from the standard home runs here), and rebuilds when the pool or the active workspace changes.
+ */
+@Composable
+private fun rememberPlacedHome(
+    host: WorkspacePreviewHost,
+    state: LauncherShellState,
+    workspaceId: WorkspaceId?,
+): PlacedHomeContent? {
+    val pool = remember(host) { host.pool?.invoke() }
+    val layoutSet by rememberUpdatedState(state.homeLayoutSet)
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(pool) { pool?.initialize(layoutSet) }
+    val version by (pool?.repository?.version ?: NoWorkspaceVersion).collectAsState()
+    val deviceClass = state.homeLayoutSet.activeKey.deviceClass
+    val shownMode = state.homeLayoutSet.activeKey.viewMode
+    val labels = state.homeLayoutSet.activeLayout.settings.labels
+    return remember(pool, version, workspaceId, deviceClass, shownMode, labels) {
+        pool?.let { runtime ->
+            PlacedHomeContent(
+                resolve = { page ->
+                    val candidates = workspaceId?.let { PoolHomeView.candidates(it, deviceClass, shownMode) }
+                    val placed = runtime.repository.pool(deviceClass)
+                    if (candidates == null || placed == null) null else PoolHomeView.resolve(placed, page, candidates)
+                },
+                iconLoader = runtime.iconLoader,
+                widgetViews = runtime.widgetViews,
+                labelSettings = labels,
+                onOpen = { item -> runtime.actions.open(item) },
+                onReimport = { scope.launch { runtime.reimport(layoutSet) } },
+            )
+        }
     }
 }
 

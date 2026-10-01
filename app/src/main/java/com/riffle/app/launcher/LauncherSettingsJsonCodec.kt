@@ -32,6 +32,7 @@ import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
+import com.riffle.core.domain.launcher.settings.HomeBehaviourSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
@@ -57,6 +58,7 @@ import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
+import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.roundToInt
@@ -70,6 +72,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("contextual", encodeContextual(settings.contextual))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
+        .put("home", encodeHomeBehaviour(settings.home))
         .put("liquidGlass", encodeLiquidGlass(settings.liquidGlass))
         .put("motion", encodeMotionSettings(settings.motion))
         .put("notificationHiding", encodeNotificationHiding(settings.notificationHiding))
@@ -88,6 +91,7 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
             contextual = json.optJSONObject("contextual")?.toContextual(defaults.contextual) ?: defaults.contextual,
             gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
             haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
+            home = json.section("home", defaults.home, JSONObject::toHomeBehaviour),
             liquidGlass =
                 json.optJSONObject("liquidGlass")?.toLiquidGlass(defaults.liquidGlass) ?: defaults.liquidGlass,
             motion = json.optJSONObject("motion")?.toMotionSettings(defaults.motion) ?: defaults.motion,
@@ -123,6 +127,25 @@ private fun JSONObject.toAppDrawerSettings(defaults: AppDrawerSettings): AppDraw
                 ?.let { name -> LibraryReturnTarget.entries.firstOrNull { it.name == name } }
                 ?: defaults.afterLeavingLibrary,
     ).coerced()
+
+/** Decodes the object under [key] with [parse], or returns [default] when it is absent or not an object. */
+private fun <T> JSONObject.section(
+    key: String,
+    default: T,
+    parse: JSONObject.(T) -> T,
+): T = optJSONObject(key)?.parse(default) ?: default
+
+private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
+    JSONObject().put("returnBehavior", settings.returnBehavior.name)
+
+private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBehaviourSettings =
+    HomeBehaviourSettings(
+        returnBehavior =
+            optString("returnBehavior")
+                .takeIf(String::isNotEmpty)
+                ?.let { name -> ReturnBehavior.entries.firstOrNull { it.name == name } }
+                ?: defaults.returnBehavior,
+    )
 
 private fun encodeSearchSettings(settings: SearchSettings): JSONObject =
     JSONObject().put("resultPresentation", settings.resultPresentation.name)

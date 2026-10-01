@@ -5,11 +5,16 @@ internal object WorkspaceCopy {
     fun withFreshIds(
         workspace: Workspace,
         ids: WorkspaceIdFactory,
-    ): Workspace =
-        workspace.copy(
-            id = WorkspaceId(ids.next()),
-            pages = workspace.pages.map { page -> withFreshIds(page, ids) },
+    ): Workspace {
+        val newId = WorkspaceId(ids.next())
+        val pages = workspace.pages.map { page -> withFreshIds(page, ids) }
+        val startIndex = workspace.pages.indexOfFirst { it.id == workspace.startPageId }
+        return workspace.copy(
+            id = newId,
+            pages = pages,
+            startPageId = pages.getOrNull(startIndex)?.id,
         )
+    }
 
     private fun withFreshIds(
         page: PageHost,

@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.workspace.Lens
 import com.riffle.core.domain.launcher.workspace.LensBinding
 import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageContent
+import com.riffle.core.domain.launcher.workspace.PageRole
 import com.riffle.core.domain.launcher.workspace.PageSetContainer
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.WidgetContainer
@@ -154,11 +155,61 @@ class WorkspacePreviewControllerTest {
     }
 
     @Test
+    fun returnAndHomePressRaiseARequestOnlyWhileOpen() {
+        controller.setEnabled(true)
+        controller.onReturn()
+        controller.onHomePress()
+        assertNull(controller.returnRequest.value)
+
+        controller.open()
+        controller.onReturn()
+        assertEquals(false, controller.returnRequest.value?.homePress)
+        controller.onHomePress()
+        assertEquals(true, controller.returnRequest.value?.homePress)
+    }
+
+    @Test
+    fun twoIdenticalRequestsAreDistinctAndConsumingTheStaleOneKeepsTheNewer() {
+        controller.setEnabled(true)
+        controller.open()
+        controller.onHomePress()
+        val first = controller.returnRequest.value!!
+        controller.onHomePress()
+        val second = controller.returnRequest.value!!
+        assertTrue(first != second)
+
+        controller.returnConsumed(first)
+        assertEquals(second, controller.returnRequest.value)
+        controller.returnConsumed(second)
+        assertNull(controller.returnRequest.value)
+    }
+
+    @Test
+    fun closingDropsAPendingReturnRequest() {
+        controller.setEnabled(true)
+        controller.open()
+        controller.onReturn()
+        controller.close()
+        assertNull(controller.returnRequest.value)
+    }
+
+    @Test
     fun pageIndexFindsContainersByIdOrMinusOne() {
         val workspace = Workspace(WorkspaceId("w"), "W", listOf(boundPage("a"), boundPage("b")))
 
         assertEquals(1, workspace.pageIndexOf(ContainerId("b")))
         assertEquals(-1, workspace.pageIndexOf(ContainerId("zzz")))
+    }
+
+    @Test
+    fun pageIndexCountsPagerPagesOnlySoTheFinderHasNone() {
+        val binding = LensBinding(Lens(listOf(SourceId("apps"))), ExpressionKind.ALPHA_LIST)
+        val finder = PageContainer(ContainerId("f"), PageContent.Bound(binding), PageRole.FINDER)
+        val workspace = Workspace(WorkspaceId("w"), "W", listOf(finder, boundPage("a"), boundPage("b")))
+
+        assertEquals(0, workspace.pageIndexOf(ContainerId("a")))
+        assertEquals(1, workspace.pageIndexOf(ContainerId("b")))
+        assertEquals(-1, workspace.pageIndexOf(ContainerId("f")))
     }
 
     @Test
