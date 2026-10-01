@@ -26,7 +26,22 @@ internal object PageEdits {
         if (workspace.pages.none { it.id == id }) {
             EditResult.Rejected(EditRejection.UnknownPage(id))
         } else {
-            EditResult.Applied(workspace.copy(pages = workspace.pages.filterNot { it.id == id }))
+            EditResult.Applied(
+                workspace.copy(
+                    pages = workspace.pages.filterNot { it.id == id },
+                    startPageId = workspace.startPageId?.takeUnless { it == id },
+                ),
+            )
+        }
+
+    fun setStartPage(
+        workspace: Workspace,
+        id: ContainerId?,
+    ): EditResult =
+        if (id != null && workspace.pages.none { it.id == id }) {
+            EditResult.Rejected(EditRejection.UnknownPage(id))
+        } else {
+            EditResult.Applied(workspace.copy(startPageId = id))
         }
 
     fun move(

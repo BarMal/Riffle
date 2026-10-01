@@ -29,8 +29,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -54,22 +57,33 @@ import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageContent
 import com.riffle.core.domain.launcher.workspace.PageHost
 import com.riffle.core.domain.launcher.workspace.PageSetContainer
+import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceDock
 import com.riffle.core.domain.launcher.workspace.WorkspaceSourceIds
+import com.riffle.core.domain.launcher.workspace.finderPage
+import com.riffle.core.domain.launcher.workspace.pagerPages
 
 internal const val WORKSPACE_PREVIEW_TEST_TAG = "workspace-preview"
 internal const val WORKSPACE_PREVIEW_EXIT_TEST_TAG = "workspace-preview-exit"
 internal const val WORKSPACE_PREVIEW_HOME_PLACEHOLDER_TEST_TAG = "workspace-preview-home-placeholder"
 internal const val WORKSPACE_PREVIEW_DOCK_TEST_TAG = "workspace-preview-dock"
+internal const val WORKSPACE_PREVIEW_FINDER_TEST_TAG = "workspace-preview-finder"
+internal const val WORKSPACE_PREVIEW_FINDER_CLOSE_TEST_TAG = "workspace-preview-finder-close"
 
 private val PreviewBarHeight: Dp = 56.dp
 private val DockBarHeight: Dp = 72.dp
+private val FinderBarHeight: Dp = 48.dp
 
 /**
  * The Workspaces (preview) screen: a platform pager over the workspace's pages, a clearly marked dock
  * placeholder (the dock's dynamic section when the workspace has one), the workspace menu and an always
  * present Exit action. System Back also exits (the menu, when open, closes first).
+ *
+ * The pager swipes through the workspace's pages except the Finder, which opens as its own surface over the
+ * pager (from the menu's Finder entry, or as the start page) and closes with its Close button or Back. The page
+ * shown on opening, on coming back from an app and on a Home press follows [returnBehavior] (see
+ * [PreviewPositions]); [returnRequest] is raised by the activity and consumed once.
  *
  * [servicesFor] builds the container services for the content padding this surface computes from the window
  * insets, so expressions never draw under the bars. [workspace] is null while workspaces are still loading.
@@ -86,6 +100,9 @@ internal fun WorkspacePreviewSurface(
     onNavigationConsumed: (PreviewNavigation) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
+    returnBehavior: ReturnBehavior = ReturnBehavior.RESTORE,
+    returnRequest: ReturnRequest? = null,
+    onReturnConsumed: (ReturnRequest) -> Unit = {},
 ) {
     BackHandler(onBack = onExit)
     val direction = LocalLayoutDirection.current
@@ -109,7 +126,16 @@ internal fun WorkspacePreviewSurface(
                 )
             } else {
                 key(workspace.id) {
-                    WorkspacePager(workspace, services, reducedMotion, navigation, onNavigationConsumed)
+                    WorkspaceStage(
+                        workspace = workspace,
+                        services = services,
+                        reducedMotion = reducedMotion,
+                        returnBehavior = returnBehavior,
+                        navigation = navigation,
+                        onNavigationConsumed = onNavigationConsumed,
+                        returnRequest = returnRequest,
+                        onReturnConsumed = onReturnConsumed,
+                    )
                 }
                 DockBar(workspace.dock, services, Modifier.align(Alignment.BottomCenter))
             }
@@ -126,35 +152,123 @@ internal fun WorkspacePreviewSurface(
     }
 }
 
+@Suppress("LongParameterList")
 @Composable
-private fun WorkspacePager(
+private fun WorkspaceStage(
     workspace: Workspace,
     services: ContainerServices,
     reducedMotion: Boolean,
+    returnBehavior: ReturnBehavior,
     navigation: PreviewNavigation?,
     onNavigationConsumed: (PreviewNavigation) -> Unit,
+    returnRequest: ReturnRequest?,
+    onReturnConsumed: (ReturnRequest) -> Unit,
 ) {
-    val pageCount by rememberUpdatedState(workspace.pages.size)
-    val pagerState = rememberPagerState(pageCount = { pageCount })
+    var position by remember { mutableStateOf(PreviewPositions.initial(workspace, returnBehavior)) }
+    val behavior by rememberUpdatedState(returnBehavior)
+    val pageCount by rememberUpdatedState(workspace.pagerPages.size)
+    val initialPage = position.page?.let(workspace::pagerIndexOf)?.coerceAtLeast(0) ?: 0
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { pageCount })
+    LaunchedEffect(pagerState, workspace) {
+        snapshotFlow { pagerState.settledPage }.collect { index ->
+            workspace.pagerPages.getOrNull(index)?.let { page ->
+                position = PreviewPositions.settled(position, workspace, page.id)
+            }
+        }
+    }
     LaunchedEffect(navigation, workspace) {
         if (navigation is PreviewNavigation.ToPage) {
-            val index = workspace.pageIndexOf(navigation.containerId)
-            if (index >= 0) {
-                if (reducedMotion) {
-                    pagerState.scrollToPage(index)
-                } else {
-                    pagerState.animateScrollToPage(index, animationSpec = RiffleMotion.smooth<Float>(false))
-                }
-            }
+            position = PreviewPositions.navigated(position, workspace, navigation.containerId)
             onNavigationConsumed(navigation)
+        }
+    }
+    LaunchedEffect(returnRequest, workspace) {
+        if (returnRequest != null) {
+            position = PreviewPositions.returned(position, workspace, behavior, returnRequest)
+            onReturnConsumed(returnRequest)
+        }
+    }
+    LaunchedEffect(position.page, workspace) {
+        val index = position.page?.let(workspace::pagerIndexOf) ?: -1
+        if (index >= 0 && index != pagerState.currentPage) {
+            if (reducedMotion) {
+                pagerState.scrollToPage(index)
+            } else {
+                pagerState.animateScrollToPage(index, animationSpec = RiffleMotion.smooth<Float>(false))
+            }
         }
     }
     HorizontalPager(
         state = pagerState,
         modifier = Modifier.fillMaxSize(),
-        key = { index -> workspace.pages.getOrNull(index)?.id?.value ?: index },
+        key = { index -> workspace.pagerPages.getOrNull(index)?.id?.value ?: index },
     ) { index ->
-        workspace.pages.getOrNull(index)?.let { page -> PreviewPage(page, services) }
+        workspace.pagerPages.getOrNull(index)?.let { page -> PreviewPage(page, services) }
+    }
+    val finder = workspace.finderPage
+    if (position.finderOpen && finder != null) {
+        BackHandler { position = PreviewPositions.finderClosed(position) }
+        FinderSurface(finder, services) { position = PreviewPositions.finderClosed(position) }
+    }
+}
+
+/**
+ * The Finder as its own surface over the pager: it is not a swipe position. A bar with a 48dp Close action sits
+ * under the preview bar; the Finder's content fills the rest.
+ */
+@Composable
+private fun FinderSurface(
+    finder: PageContainer,
+    services: ContainerServices,
+    onClose: () -> Unit,
+) {
+    val direction = LocalLayoutDirection.current
+    val padding = services.environment.contentPadding
+    val contentServices =
+        remember(services, padding, direction) {
+            val below =
+                PaddingValues(
+                    start = padding.calculateStartPadding(direction),
+                    top = 0.dp,
+                    end = padding.calculateEndPadding(direction),
+                    bottom = padding.calculateBottomPadding(),
+                )
+            services.copy(environment = services.environment.copy(contentPadding = below))
+        }
+    Surface(
+        modifier = Modifier.fillMaxSize().testTag(WORKSPACE_PREVIEW_FINDER_TEST_TAG),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Column(modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = padding.calculateStartPadding(direction) + RiffleSpacing.m,
+                            end = padding.calculateEndPadding(direction) + RiffleSpacing.m,
+                        ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = WorkspacePreviewText.FINDER_TITLE,
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                )
+                TextButton(
+                    onClick = onClose,
+                    modifier =
+                        Modifier
+                            .heightIn(min = FinderBarHeight)
+                            .testTag(WORKSPACE_PREVIEW_FINDER_CLOSE_TEST_TAG),
+                ) {
+                    Text(WorkspacePreviewText.CLOSE_FINDER)
+                }
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                PageContainerHost(finder, contentServices, Modifier.fillMaxSize())
+            }
+        }
     }
 }
 

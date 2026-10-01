@@ -4,6 +4,8 @@ package com.riffle.app.launcher.workspace
 internal object WorkspacePreviewText {
     const val TITLE = "Workspaces (preview)"
     const val EXIT = "Exit preview"
+    const val FINDER_TITLE = "Finder"
+    const val CLOSE_FINDER = "Close Finder"
     const val LOADING = "Loading workspaces"
     const val HOME_GRID_TITLE = "Home page"
     const val HOME_GRID_BODY = "Home items are not migrated into this preview yet."

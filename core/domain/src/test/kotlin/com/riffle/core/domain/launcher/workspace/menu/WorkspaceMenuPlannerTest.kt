@@ -88,11 +88,11 @@ class WorkspaceMenuPlannerTest {
     }
 
     @Test
-    fun finderPageIsNotRepeatedAsAJumpEntryAndPageNumbersCountIt() {
+    fun finderPageIsNotRepeatedAsAJumpEntryAndPageNumbersSkipIt() {
         val model =
             assertNotNull(WorkspaceMenuPlanner.plan(layoutSet("a", workspace("a", finder("f"), page("p"))), phone))
         assertEquals(listOf(WorkspacePageKey.Page(ContainerId("p"))), model.jumpEntries.map { it.key })
-        assertEquals(2, model.jumpEntries.single().pageNumber)
+        assertEquals(1, model.jumpEntries.single().pageNumber)
     }
 
     @Test

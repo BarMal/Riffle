@@ -35,6 +35,7 @@ import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
+import com.riffle.core.domain.launcher.settings.HomeBehaviourSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
@@ -74,6 +75,7 @@ import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
+import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -880,6 +882,20 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(HapticFeedbackStrength.STRONG, decodedSettings.haptics.feedbackStrength)
+    }
+
+    @Test
+    fun roundTripsReturnBehaviorAndDefaultsToRestore() {
+        ReturnBehavior.entries.forEach { behavior ->
+            val settings = LauncherSettings(home = HomeBehaviourSettings(returnBehavior = behavior))
+            assertEquals(behavior, decodeLauncherSettings(encodeLauncherSettings(settings)).home.returnBehavior)
+        }
+        assertEquals(ReturnBehavior.RESTORE, decodeLauncherSettings("{}").home.returnBehavior)
+        assertEquals(ReturnBehavior.RESTORE, decodeLauncherSettings("""{"home": 1}""").home.returnBehavior)
+        assertEquals(
+            ReturnBehavior.RESTORE,
+            decodeLauncherSettings("""{"home": {"returnBehavior": "NOT_A_THING"}}""").home.returnBehavior,
+        )
     }
 
     @Test

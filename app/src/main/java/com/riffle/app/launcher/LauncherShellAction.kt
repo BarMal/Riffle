@@ -64,6 +64,7 @@ import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 
 sealed interface LauncherShellAction {
     data object RequestDefaultHome : LauncherShellAction
@@ -406,6 +407,11 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data object ResetSearchFilters : LauncherShellAction
+
+    /** Sets which page of the active workspace shows when the launcher comes back (Settings > Workspaces). */
+    data class SelectReturnBehavior(
+        val behavior: ReturnBehavior,
+    ) : LauncherShellAction
 
     data class SelectSearchResultPresentation(
         val presentation: SearchResultPresentation,

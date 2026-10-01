@@ -20,6 +20,7 @@ object WorkspaceCodec {
             "gestures" to StoredValue.Obj(workspace.gestureBindings.mapValues { str(it.value) }),
             "skin" to workspace.skinOverrideId?.let(::str),
             "preset" to workspace.presetId?.let(::str),
+            "start" to workspace.startPageId?.let { str(it.value) },
         )
 
     fun encode(lens: Lens): StoredValue.Obj = LensCodec.encode(lens)
@@ -39,6 +40,7 @@ object WorkspaceCodec {
                         .toMap(),
                 skinOverrideId = root.string("skin"),
                 presetId = root.string("preset")?.takeIf { it.isNotBlank() },
+                startPageId = root.string("start")?.takeIf { it.isNotBlank() }?.let(::ContainerId),
             )
         }
     }
