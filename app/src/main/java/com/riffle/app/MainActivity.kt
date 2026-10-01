@@ -52,6 +52,7 @@ import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.launchNotificationListenerSettings
+import com.riffle.app.launcher.overlay.AndroidUsageAccessSettingsAction
 import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
@@ -62,6 +63,7 @@ import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
 import com.riffle.app.launcher.workspace.SharedPreferencesWorkspacePreviewPreference
+import com.riffle.app.launcher.workspace.SourceAccessLaunchers
 import com.riffle.app.launcher.workspace.WorkspacePreviewController
 import com.riffle.app.launcher.workspace.WorkspacePreviewHost
 import com.riffle.core.domain.launcher.FirstRunStatus
@@ -107,6 +109,21 @@ class MainActivity : ComponentActivity() {
             controller = workspacePreviewController,
             workspaceVersion = dependencies.workspaceRepository.version,
             runtime = { dependencies.workspaceRuntime { shellViewModel.state.value.launcherSettings } },
+            onRequestSourceAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
+        )
+    }
+
+    /** The editor's "Review access" button leads only to the existing explicit user-initiated flows. */
+    private val sourceAccessLaunchers by lazy {
+        SourceAccessLaunchers(
+            calendar = { launcherActionRouter.handle(LauncherShellAction.RequestCalendarAccess) },
+            notificationAccess = { launcherActionRouter.handle(LauncherShellAction.RequestNotificationAccess) },
+            usageAccess = {
+                if (!AndroidUsageAccessSettingsAction(this).open()) {
+                    Toast.makeText(this, "Usage access settings are unavailable on this device.", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            },
         )
     }
     private val homeRoleGateway get() = dependencies.homeRoleGateway

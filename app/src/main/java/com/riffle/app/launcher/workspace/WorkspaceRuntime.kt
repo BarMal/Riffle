@@ -5,12 +5,16 @@ import com.riffle.app.launcher.CachedWorkspaceRepository
 import com.riffle.app.launcher.containers.ContainerServices
 import com.riffle.app.launcher.expressions.ExpressionEnvironment
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
+import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceRegistry
 import com.riffle.core.domain.launcher.workspace.container.LensResultProvider
 import com.riffle.core.domain.launcher.workspace.container.SourceBackedLensResultProvider
+import com.riffle.core.domain.launcher.workspace.editor.SourceChoice
+import com.riffle.core.domain.launcher.workspace.editor.SourceChoices
 import com.riffle.core.domain.launcher.workspace.lens.AsyncLensEvaluator
 import com.riffle.core.domain.launcher.workspace.lens.LensEvaluationContext
 import com.riffle.core.domain.launcher.workspace.lens.ZoneDayBucketer
+import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import java.time.ZoneId
 import java.util.concurrent.Executor
 
@@ -29,7 +33,11 @@ internal class WorkspaceRuntime(
     val provider: LensResultProvider,
     private val imageLoader: ExpressionImageLoader,
     private val itemActions: WorkspaceItemActions,
+    private val sourceAccess: () -> Map<SourceId, SourceAccess> = { emptyMap() },
 ) {
+    /** The editor's source choices: every registered source with the access it currently has (never prompts). */
+    fun sourceChoices(): List<SourceChoice> = SourceChoices.build(registry.descriptors(), sourceAccess())
+
     /**
      * Services for a surface: [reducedMotion] is the resolved preference, [contentPadding] the insets the
      * surface wants expressions to respect.

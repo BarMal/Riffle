@@ -11,6 +11,7 @@ import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.WorkspaceMenuHost
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
+import com.riffle.core.domain.launcher.workspace.SourceId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -23,6 +24,8 @@ class WorkspacePreviewHost internal constructor(
     internal val controller: WorkspacePreviewController,
     internal val workspaceVersion: StateFlow<Int>,
     internal val runtime: () -> WorkspaceRuntime,
+    /** Called only when the user taps "Review access" in the editor; routes to the existing explicit flows. */
+    internal val onRequestSourceAccess: (SourceId) -> Unit = {},
 )
 
 /** Stands in for an absent host, so the shell can observe "enabled" and "version" unconditionally. */
@@ -48,7 +51,11 @@ internal fun WorkspacePreviewLayer(
     }
     LaunchedEffect(host) { viewModel.workspaceMenuEffects.collect { effect -> host.controller.onEffect(effect) } }
     val open by host.controller.isOpen.collectAsState()
+    val editing by host.controller.editing.collectAsState()
     if (open) WorkspacePreviewContent(host, runtime, state, menu)
+    if (open) {
+        editing?.let { id -> WorkspaceEditorLayer(host, runtime, state, id) }
+    }
 }
 
 @Composable

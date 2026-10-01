@@ -33,6 +33,7 @@ import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.calendar.AndroidCalendarAccessGateway
 import com.riffle.app.launcher.calendar.CalendarAccessChanges
 import com.riffle.app.launcher.calendar.SharedPreferencesCalendarDenialHistory
+import com.riffle.app.launcher.calendar.sourceAccess
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
 import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
@@ -58,6 +59,7 @@ import com.riffle.app.launcher.workspace.AndroidExpressionImageLoader
 import com.riffle.app.launcher.workspace.AndroidItemLaunchPort
 import com.riffle.app.launcher.workspace.WorkspaceItemActions
 import com.riffle.app.launcher.workspace.WorkspaceRuntime
+import com.riffle.app.launcher.workspace.sourceAccessMap
 import com.riffle.app.launcher.workspace.workspaceLensProvider
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -65,6 +67,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.hostsWidget
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -180,6 +183,14 @@ internal class MainActivityDependencies(
             provider = workspaceLensProvider(registry, lensExecutor),
             imageLoader = AndroidExpressionImageLoader(activity.packageManager),
             itemActions = WorkspaceItemActions(AndroidItemLaunchPort(activity, appLauncher)),
+            sourceAccess = {
+                sourceAccessMap(
+                    notificationAccess = notificationAccessGateway.getNotificationAccessStatus(),
+                    calendarAccess = calendarAccessGateway.sourceAccess(),
+                    recentAppsAccess =
+                        if (recentAppRepository.canReadRecentApps()) SourceAccess.GRANTED else SourceAccess.REQUIRED,
+                )
+            },
         )
     }
 
