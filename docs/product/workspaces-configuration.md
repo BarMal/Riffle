@@ -1,8 +1,9 @@
 # Workspaces: user configuration (WS10)
 
-Status: proposed design for review, before any code. Tracking: #1363 (WS10 parent), #1364 (saved
-lenses). Related: #1323, #1324, #1325 (legacy mode/settings problems this resolves), #1365 (RSS and
-Search adapters), #1366 (other external sources, researched separately).
+Status: proposed design, **revised 2026-10-01 after the owner's decisions** (see the banner below), still
+before any code. Tracking: #1363 (WS10 parent), #1364 (saved lenses). Related: #1323, #1324, #1325 (legacy
+mode/settings problems this resolves), #1365 (RSS and Search adapters, merged), #1366 (other external
+sources, researched, merged), #1374 (RSS refresh, separate issue, not WS10).
 
 This document is about how a person *configures and lives with* the workspace system. The model itself
 (sources, lenses, expressions, containers, workspaces) is in
@@ -12,6 +13,41 @@ the dock menu (WS6) are separate workstreams and are dependencies here, not scop
 Sections are split into **As built today** (verified against the code at the commit this was written)
 and **Proposed**. Anything under "Needs owner decision" is collected again in
 [Open questions](#open-questions-for-the-owner).
+
+> **Revision 2026-10-01: owner decisions.** The owner answered Q1 to Q19 and the external-sources and
+> search questions in a comment on #1363. Where the answer matched the earlier recommendation the text
+> below was only updated in place. Rows marked **(differs)** changed the design and have real new work:
+> they are the reason for sections 9 to 16 and for the re-sequenced slices (section 7) and rollout
+> (section 1.7). A later requirement from the owner (source exclusion rules) is section 14.
+> Sections still describing the *old* answer say so ("superseded by"), so nothing is silently wrong.
+>
+> | Q | Decision | What changed in this document | Why it matters |
+> | --- | --- | --- | --- |
+> | Q1 | Preview: internal/beta only | 1.7 stage R3 is internal/beta | None. |
+> | Q2 | Keep "Use workspaces / Classic" permanently **(differs)** | 1.7, 1.1; new section 10 (what classic means, how to bound it) | The classic path is a supported product path, not a temporary fallback: cost and test matrix. |
+> | Q3 | Lens library **per layout** **(differs)** | Section 4 rewritten (library lives in `LayoutWorkspaces`; copy-from-layout copies lenses) | Reverses the earlier "global, shared refs" design. |
+> | Q4 | Presets **use saved lenses** **(differs)** | 4.3, 4.6 and 4.9 (install and reset write to the layout library) | The merged inline WS8 presets need a small rework. |
+> | Q5 | Dock notification cards: per workspace | 3.1 row (no change) | Matches `WorkspaceDock.dynamicSection`. |
+> | Q6 | Drawer presentation moves into the Finder page expression | 3.1; 8.3; `FINDER_EXPRESSIONS` must allow `ICON_GRID` | Today Finder accepts only Categories or AlphaList, drawer "Icons" has no home. |
+> | Q7 | Return behaviour is a **Settings choice**: Restore / First page / Start page, default Restore **(differs)** | 3.2 rewritten; IA row in 2.1 | A setting, not a fixed rule. |
+> | Q8 | Drop the locked-device rule; keep optional screenshot/recents setting **(differs)** | Section 6 (rule and setting removed), slice S16 | Profile locks and notification hide rules stay. |
+> | Q9 | Dock pull opens the workspace menu once modes retire | 3.1; section 11.5; `gestures.md` note | Interacts with per-workspace dock hiding (11.4). |
+> | Q10 | Single-workspace export/import: deferred | Section 5 | Cut line, not designed further. |
+> | Q11 | Restore = replace, with Undo | Section 5 (unchanged) | None. |
+> | Q12 | `home.grid` page-id uniqueness is not a decision | Becomes a test (section 7.1) and is **mooted** by section 9 once placed items move | |
+> | Q13 | Add `OFF` source status | 2.4 (unchanged) | |
+> | Q14 | Start page per workspace; Finder hidden from the pager unless start page. iOS-style home = home pages with placed items, Finder = All apps as Categories at the end | 8.3, 3.2, section 9 (placed items) | |
+> | Q15 | Skin = existing theme preset, per-workspace override | 8.7 (unchanged) | |
+> | Q16 | Placed items **move into workspaces now** **(differs)** | New section 9 (the largest item), staged migration, risk register | HomeLayoutSet stops being the long-term source of truth, so cheap revert is gone. |
+> | Q17 | **Per-workspace dock overrides** **(differs)** | New section 11 | Edge, size, hidden, dynamic section, layered over the shared `DockModel`. |
+> | Q18 | One default: Nova with Finder | 8.1 (unchanged) | |
+> | Q19 | Favourite/frequent as **All-apps lenses**, no new adapters **(differs)** | Section 12; flip-blocker language removed | Needs a definition of "favourite" and "frequent". |
+> | - | Tokenised feed/ICS URLs excluded from backup | Section 5 | |
+> | - | External items allowed in the dock; ICS full recurrence **(differs)** | Section 15, plus a note in `workspaces-external-sources.md` | Trust model and dock budget; larger ICS scope. |
+> | - | Play data-safety/privacy declarations owned by the owner | PR checklist line, section 7.2 | |
+> | - | **Per-lens search queries now** **(differs)** | New section 13 | Additive WS0 hook; the query text is still never persisted. |
+> | - | **Source exclusion rules** (added later): layered, unified model, contextual plus Settings authoring **(differs)** | New section 14 | Replaces hidden apps and notification hide rules with one model. |
+> | - | Extension API: not yet; editor per-group expressions kept; RSS refresh is #1374 | Nothing (parked or out of scope) | |
 
 ## Fixed decisions (owner)
 
