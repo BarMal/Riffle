@@ -133,7 +133,7 @@ class WorkspaceMenuScreenshotTest {
     }
 
     @Test
-    @Config(sdk = [ScreenshotDevices.SDK], qualifiers = ScreenshotDevices.COMPACT_PHONE + ScreenshotDevices.NIGHT)
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
     fun openCompactDark() {
         render(full)
         composeRule.captureScreen()
