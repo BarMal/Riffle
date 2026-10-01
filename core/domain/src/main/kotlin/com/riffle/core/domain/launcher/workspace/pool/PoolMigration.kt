@@ -1,12 +1,17 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherItem
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.workspace.HomeLayoutWorkspaceMapper
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceMigration
@@ -51,6 +56,35 @@ object PoolMigration {
         return PoolMigrationResult(pools, issues)
     }
 
+    /**
+     * The inverse for the one-time migration check and for importing old backups, never a live mirror: the Home pages
+     * of [deviceClass]'s [mode] layout as `LauncherPage`s with the original `LauncherItemId`s (the migration prefix
+     * is stripped). Equals the original Home pages for well-formed data.
+     */
+    fun homePages(
+        pool: PlacedItemPool,
+        deviceClass: HomeLayoutDeviceClass,
+        mode: LauncherViewMode,
+    ): List<LauncherPage> {
+        val prefix = prefix(deviceClass, mode)
+        val arrangement = pool.arrangements[HomeLayoutWorkspaceMapper.workspaceId(deviceClass, mode)]
+        return arrangement?.let { ArrangementAdapter.toLauncherPages(it, pool) }.orEmpty().map { page ->
+            page.copy(items = page.items.map { it.withId(LauncherItemId(it.id.value.removePrefix(prefix))) })
+        }
+    }
+
+    private fun prefix(
+        deviceClass: HomeLayoutDeviceClass,
+        mode: LauncherViewMode,
+    ) = "pi:${deviceClass.name.lowercase()}:${mode.name.lowercase()}:"
+
+    private fun LauncherItem.withId(id: LauncherItemId): LauncherItem =
+        when (this) {
+            is AppShortcutItem -> copy(id = id)
+            is FolderItem -> copy(id = id)
+            is WidgetItem -> copy(id = id)
+        }
+
     private class PlacedItemBuilder {
         private val items = LinkedHashMap<PoolItemId, PoolItem>()
         private val arrangements = LinkedHashMap<WorkspaceId, Arrangement>()
@@ -66,7 +100,7 @@ object PoolMigration {
             workspaceId: WorkspaceId,
             layout: HomeLayout,
         ) {
-            val prefix = "pi:${deviceClass.name.lowercase()}:${mode.name.lowercase()}:"
+            val prefix = prefix(deviceClass, mode)
             val pages = layout.pages.filter { it.type == LauncherPageType.Home }.map { page(workspaceId, prefix, it) }
             arrangements[workspaceId] = Arrangement(pages)
         }
