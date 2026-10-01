@@ -9,6 +9,7 @@ import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.AndroidWallpaperPickerGateway
 import com.riffle.app.launcher.AndroidWebSearchLauncher
 import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
+import com.riffle.app.launcher.AndroidWorkspaceBackupPort
 import com.riffle.app.launcher.CachedWorkspaceRepository
 import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
 import com.riffle.app.launcher.DataStoreWorkspaceStore
@@ -276,10 +277,21 @@ internal class MainActivityDependencies(
                     homeLayoutRepository = homeLayoutRepository,
                     appVisibilityRepository = appVisibilityRepository,
                     currentState = currentState,
+                    workspaceBackup = workspaceBackupPort,
                 ),
             importCoordinator = LauncherBackupImportCoordinator(),
             documentGateway = LauncherBackupDocumentGateway(),
+            workspaceBackup = workspaceBackupPort,
         )
+
+    /** Workspaces and exclusion rules in the backup: reads/writes only what the stores hold (see docs). */
+    private val workspaceBackupPort by lazy {
+        AndroidWorkspaceBackupPort(
+            workspaces = workspaceRepository,
+            exclusions = exclusionRepository,
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        )
+    }
 
     fun widgetAddRequestHandler(
         selectedGrid: () -> GridDimensions,

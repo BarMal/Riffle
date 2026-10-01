@@ -20,3 +20,4 @@ includeBuild("build-logic")
 
 include(":app")
 include(":core:domain")
+include(":core:recurrence-ical4j")
