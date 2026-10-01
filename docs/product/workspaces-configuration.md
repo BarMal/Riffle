@@ -57,6 +57,14 @@ and **Proposed**. Anything under "Needs owner decision" is collected again in
    Standard launcher mode keeps working throughout; nothing may block home, drawer, dock or settings.
 2. Lenses are **saved and reusable** (a named lens library), not only inline.
 3. RSS and Search adapters are in scope (#1365). Other external sources are explored in #1366.
+4. (2026-10-01) The classic path (the pre-workspace home, drawer and dock rendering) is **supported
+   permanently** behind "Use workspaces / Classic" (Q2). It is a product path, not a transitional fallback.
+5. (2026-10-01) Placed items (apps, folders, widgets, shortcuts on home pages) **move into workspaces now**
+   (Q16); `HomeLayoutSet` stops being the long-term source of truth. Section 9.
+6. (2026-10-01) The lens library is **per layout** (Q3), presets use saved lenses (Q4), the dock has
+   **per-workspace overrides** (Q17), lenses may take **per-lens search queries** (section 13), and all
+   hiding (hidden apps, notification hide rules, per-source hiding) becomes one **source exclusion** model
+   (section 14).
 
 These are not re-argued below.
 
@@ -75,7 +83,15 @@ Verified in the code, because it changes what "default" has to mean:
 | `WorkspaceSetCodec` (schema 1) never throws; drops undecodable workspaces and empty layouts; `LayoutWorkspaces.repaired` fixes stale active/default ids. `decodeWorkspaceSet` in the app returns `null` for a non-object. | `WorkspaceSetCodec.kt`, `LayoutWorkspaces.kt`, `WorkspaceSetJsonCodec.kt` |
 | `WorkspaceSet.resolveActive` already falls back to the layout default with reasons (`WorkspaceResolution.FellBack`), and the WS6 menu model carries `WorkspaceMenuFallback`. | `WorkspaceSet.kt`, `menu/WorkspaceMenuPlanner.kt` |
 | Settings is a paged surface (`SettingsPage` enum, grouped main page with search aliases). RSS feeds, Permissions (incl. Calendar), Backup, Hidden apps, Gestures, Contextual, Motion each have a page. | `SettingsPages.kt`, `SettingsMainPageEntries.kt` |
-| `HomeLayoutSet` stays the source of truth for placed items, pins, selected page and dock; migrated Home pages point at it through the `home.grid` source. | `workspaces-sources-lenses.md`, "Migration mapping" |
+| **As built:** `HomeLayoutSet` is the source of truth for placed items, pins, selected page and dock; migrated Home pages point at it through the `home.grid` source (no adapter exists for that id). Per owner decision Q16 this is the thing section 9 moves; "as built" here is what is on `main` today. | `workspaces-sources-lenses.md`, "Migration mapping" |
+| `LauncherPage` / `LauncherItem` (`AppShortcutItem`, `FolderItem`, `WidgetItem` with `HostedWidgetId`) are plain Kotlin in `core/domain` with no Compose or Android types; the placement, collision, folder, widget and page engines (`GridPlacementEngine`, `FolderEngine`, `WidgetEngine`, `HomePageEngine`) operate on `HomeLayout`/`LauncherPage` values. This is what makes reuse in section 9 possible. | `core/domain/.../launcher/home/` |
+| `HomePageEngine.duplicatePage` already **rejects** pages containing widgets (`CANNOT_DUPLICATE_PAGE_WITH_WIDGETS`): a hosted widget id is a live platform instance and cannot be cloned. | `HomePageEngine.kt` |
+| Widget host ids are allocated and deleted through `WidgetHostGateway` (`allocateHostedWidgetId`, `deleteHostedWidgetId`); removal of a widget, a page or a dock widget calls `deleteHostedWidgetId`. | `app/.../launcher/widgets/AndroidWidgetHostGateway.kt`, `LauncherShellViewModel.kt` |
+| `ContainerValidation.FINDER_EXPRESSIONS = {CATEGORIES, ALPHA_LIST}`: a Finder page cannot be an icon grid, while the drawer setting `AppDrawerPresentation` has `LIST` and `ICONS`. | `ContainerValidation.kt`, `LauncherSettings.kt` |
+| `LauncherNotification` carries package, profile, category, title, text and key, but no channel id or conversation/thread id. `Item` ext keys exist for `app.profile`, `calendar.end`, `calendar.all_day`, and the `launcher.pinned` flag read by `LensSort.pinnedFirst` is defined but **no adapter sets it**. | `LauncherNotification.kt`, `AppItemMapper.kt`, `LensSorting.kt` |
+| `FAVOURITES` / `FREQUENTLY_USED` generated pages produce **no items** today (`GeneratedLauncherPageContentPlan` returns empty; `favouriteAppsAvailable` defaults false); `RecentAppUsage` is `(package, lastUsedAtMillis)` only, there is no launch count. | `GeneratedLauncherPageContentPlan.kt`, `RecentAppRepository.kt` |
+| Hiding today is two unrelated mechanisms: `AppVisibilityRepository` (hidden `AppIdentity` set, applied by `withHiddenApps` in `LauncherShellViewModel` and in `BuiltInItemSources`) and `NotificationHideRule` (app / title / body / empty content, exact / contains / wildcard, capped at `MAX_NOTIFICATION_HIDE_RULES = 200`, stored in settings and applied by `NotificationHideRuleFilter` in `NotificationItemMapper` and `NotificationCounterState`). | `AppVisibilityRepository.kt`, `NotificationHideRule.kt`, `NotificationHidingSettings.kt` |
+| No auto-placement of newly installed apps on home pages exists in `core/domain` (searched); "pages appear as you fill them" and "new apps go to Home or Library only" are both new behaviour. | grep of `core/domain/.../home/` |
 
 Consequence: "make it the default" is four distinct jobs, not one flag flip: wire storage and startup,
 wire backup, build the Settings surface, and retire the mode settings that currently stand in for it.
@@ -92,11 +108,14 @@ On every launch of a release where the rollout is on:
    sources)`), and the home surface draws that workspace.
 2. The dock workspace menu exists (WS6) and Settings shows the Workspaces section.
 3. The legacy mode pair (Home/Library) no longer drives what is shown (see section 3). Placed home items
-   still live in `HomeLayoutSet` until the container cut-over (as documented in WS5).
+   are owned by the workspace once the placed-items cut-over (section 9, slice S17) ships; until then they
+   live in `HomeLayoutSet` (as documented in WS5).
 
 "Default" does **not** mean workspaces are mandatory for the launcher to function. The classic path
-(read `HomeLayoutSet`, draw as today) stays compiled in and is the fallback in every failure case below.
-The classic path is retired only in the last slice, after at least one release in the wild.
+(draw the classic home, drawer and dock as today) stays compiled in **permanently** (owner decision Q2)
+and is the fallback in every failure case below. What the classic path *is* once placed items are owned
+by workspaces, and how its cost is bounded, is section 10: it is a second **rendering** over the same
+stored data, not a second copy of the data.
 
 ### 1.2 Startup sequence
 
@@ -152,9 +171,9 @@ Rules:
 
 | Today | Becomes |
 | --- | --- |
-| `WorkspaceMenuFeature.enabled` (global mutable, default `false`) | Deleted in slice S10. In between, replaced by `WorkspaceRollout` (below). Tests and previews keep a test-only override. |
+| `WorkspaceMenuFeature.enabled` (global mutable, default `false`) | Deleted in slice S20. In between, replaced by `WorkspaceRollout` (below). Tests and previews keep a test-only override. |
 | `DockShelfExpansion.enabled` | Untouched by WS10 (WS6 owns it). |
-| `libraryOnlyLauncherViewModeAvailability()` | Retired in slice S9: the mode pair stops being a user concept, and the stored `LauncherViewMode` remains only as data to migrate from. |
+| `libraryOnlyLauncherViewModeAvailability()` | Retired in slice S18: the mode pair stops being a user concept, and the stored `LauncherViewMode` remains only as data to migrate from. |
 | `LauncherSettings.contextual.enabled`, `DockModel.showNotificationCards` | Unchanged storage; their user-facing meaning is reconciled in section 3. |
 
 ```kotlin
@@ -167,9 +186,9 @@ internal data class WorkspaceRollout(
 ```
 
 `WorkspaceRolloutMode.CLASSIC` is the escape hatch: it makes the bootstrap return `Classic(userChoice)`
-immediately, does not delete workspaces, and the Workspaces settings page then shows a single row
-"Use workspaces" to turn it back on. It sits under Settings > Workspaces > Advanced, always reachable
-(also from the Settings search).
+immediately, does not delete workspaces or placed items, and the Workspaces settings page then shows a
+single row "Use workspaces" to turn it back on. It sits under Settings > Workspaces > Advanced, always
+reachable (also from the Settings search). **It stays permanently** (Q2); it is not scheduled for removal.
 
 ### 1.5 Failure handling and corrupt data
 
@@ -208,47 +227,73 @@ This is what makes "Restore previous copy" and undo-after-restore cheap.
 - Switching workspaces is a normal action on the current layout only; it changes that layout's
   `activeId` and nothing else.
 
-### 1.7 Staged rollout, checkpoints, revert
+### 1.7 Staged rollout, checkpoints, revert (revised 2026-10-01)
 
-| Stage | Ships | Default | Checkpoint before moving on |
+> Superseded: the earlier version of this section assumed `HomeLayoutSet` stays the placed-items source
+> of truth through the flip, which made revert a one-line change. Q16 moves placed items into workspaces,
+> so revert needs an explicit mechanism (section 9.7). Slice ids refer to the re-sequenced list in
+> section 7.
+
+| Stage | Ships (slices) | Default | Checkpoint before moving on |
 | --- | --- | --- | --- |
 | R0 | Nothing user-visible (today) | off | n/a |
-| R1 **Shadow** (S1+S2) | Storage + bootstrap + `ensureMigrated` on every start; workspaces are written but **not drawn**. Local-only outcome counters in Settings > About diagnostics. | classic | Migration golden tests pass for every `HomeLayoutSet` fixture; cold start time unchanged within noise (benchmark); corrupt/timeout/newer-schema tests pass; a dogfood build ran a week with `lastOutcome = Ready` and no `Repaired` surprises. |
-| R2 **Backup** (S3) | Backup export/import of workspaces and library | classic | Round-trip tests; manual restore on a second device. Independent of drawing, can ship alongside R1. |
-| R3 **Preview** (S5, S6, S7, WS6/7/8 present) | Settings > Workspaces, Sources, Saved lenses, menu on; surface switch is a Settings toggle "Use workspaces (preview)" | classic, opt-in in Settings | Standard-mode checklist (`standard-launcher-mode.md`) passes with workspaces ON and OFF; accessibility and reduced-motion pass (section 2.6); screenshot tests green at compact and unfolded. |
-| R4 **Default** (S9+S10) | Flip: new installs get the preset; existing installs migrated; mode settings retired; `CLASSIC` stays as an Advanced escape hatch | **workspaces ON** | All items in "Flip criteria" below. |
-| R5 **Cleanup** (S11) | Delete `WorkspaceMenuFeature`, mode-pair UI, `libraryOnly...Availability` once a full release shipped at R4 with no `Classic(error)` reports | on | Zero unexplained `Classic(error)` in dogfood/beta. |
+| R1 **Shadow** | S1, S2 (workspace storage, bootstrap, migration written, not drawn), S6 (exclusion engine, pure), S11, S12 (placed items as workspace data, **shadow-written** from `HomeLayoutSet` on every save and compared on read; nothing drawn from it) | classic | Migration golden tests pass for every `HomeLayoutSet` fixture; **shadow compare reports zero mismatches over a week of dogfood** (counter in Settings > About diagnostics: counts only); cold start time unchanged within noise (benchmark); corrupt/timeout/newer-schema tests pass. |
+| R2 **Data** | S3 (backup of workspaces, library, exclusions), S4 (per-layout lens library, preset rework), S5 (favourite/frequent lenses), S7 (exclusions wired, legacy stores mirrored) | classic | Round-trip backup tests; manual restore on a second device; hidden apps and hide rules behave identically before and after S7 (golden tests); no UI change for users. |
+| R3 **Preview (internal/beta only)** | S8, S9, S10 (per-lens query contract, workspace additions, dock overrides), S13 to S16 (Settings pages, privacy), S17 (placed-items cut-over) behind a beta-only `PlacedItemsOwner` switch | classic; workspaces opt-in in Settings in beta builds | Standard-mode checklist (`standard-launcher-mode.md`) passes with workspaces ON and OFF; accessibility and reduced-motion pass (2.8); screenshot tests green at compact and unfolded; **the S17 rollback drill (9.7) executed once on a beta device**; manual home-edit regression (9.4). |
+| R4 **Default** | S18, S19 (legacy reconciliation, flip). Placed items owned by workspaces (S17 on for everyone **iff** staging option C or B below, else R5) with the **legacy mirror still written** | **workspaces ON**; Classic one tap away, permanently | All items in "Flip criteria" below. |
+| R5 **Settle** | S20 after one full release at R4: stop mirroring placed items back into `HomeLayoutSet` (the one-release rollback path ends); delete `WorkspaceMenuFeature`, dead mode code, unused settings UI; keep codec fields. **The classic path is not removed** (Q2). | on | Zero unexplained `Classic(error)` and zero shadow mismatches in beta/dogfood across R4. |
+
+**Staging of the placed-items cut-over: options.** The owner wants placed items in workspaces now. There
+is a genuine trade-off in *when* relative to the default flip, because two risky changes landing in one
+release cannot be told apart in the field:
+
+| Option | What ships when | For | Against |
+| --- | --- | --- | --- |
+| A. Flip first, cut over next release | R4: workspaces default-on while `HomeLayoutSet` still owns placed items (shadow-written). R5: cut over. | Smallest blast radius per release; the cheap revert survives the flip. | Two releases; owner's "now" slips by one release; `home.grid` adapter must exist for R4 anyway (it does in every option). |
+| B. Together, no shadow | R4 does both at once, no R1 shadow period. | One release. | A migration bug loses placed items on the first launch of the default build. No evidence before shipping. **Not recommended.** |
+| **C. Shadow now, then together (recommended)** | Ship S11/S12 invisibly in R1 (placed items written into workspace form on every save and compared, never drawn), run them through dogfood and beta; then in R4 flip the default **and** make workspace placed items the source of truth, still mirroring writes back into `HomeLayoutSet` for one release. | Respects "now" (the data move starts in R1, the cut-over is at the flip); the migration is proven on real layouts before it is authoritative; rollback is real (9.7). | Needs the shadow period to be honest: if compare finds mismatches, fall back to option A without redesign (the slices are the same, only the flip order changes). |
+
+Recommendation: **C, with A as the pre-agreed fallback** if the shadow compare is not at zero mismatches
+by the R3 checkpoint. Listed as new open question N1.
 
 **Flip criteria (R3 to R4).** Every one must be true:
 
 1. WS6 menu, WS7 editor, WS8 presets (at least Nova-style and the existing three migrated workspaces)
-   are merged.
-2. `./gradlew verify deviceVerify` green, including the migration golden tests and the standard-mode
-   regression (home, drawer, dock, settings reachable) with workspaces ON, OFF, and corrupt.
+   are merged, and the editor and presets have the saved-lens rework of section 4 (S4).
+2. `./gradlew verify deviceVerify` green, including the migration golden tests (workspaces **and placed
+   items**) and the standard-mode regression (home, drawer, dock, settings reachable) with workspaces ON,
+   OFF (classic), and corrupt.
 3. A user on the shipped Library-only build upgrades with no change in what they see on first launch
-   (the migrated shown-mode workspace equals the current screen) - verified manually and by a golden
-   test using `libraryOnlyLauncherViewModeAvailability` data.
-4. Backup from an R3 build restores into an R4 build and vice versa (older app ignores the new keys).
+   (the migrated shown-mode workspace equals the current screen, **including every placed icon, folder,
+   widget and its position**) - verified manually and by a golden test using
+   `libraryOnlyLauncherViewModeAvailability` data.
+4. Backup from an R3 build restores into an R4 build and vice versa (older app ignores the new keys and
+   still restores layouts, settings and hidden apps from the unchanged legacy keys, section 5).
 5. The Calendar/notification permission rules are unchanged: nothing new prompts at launch.
 5a. Every `SourceId` that migration output or any preset references has a registered source (a test
-   over `WorkspaceMigration.migrate` fixtures and `WorkspacePresets`): in particular `home.grid`
-   (no adapter exists today, it is an id only), `apps.favourite` and `apps.frequent`. A page whose
-   source is not registered reads `UNAVAILABLE`, which on a user's migrated Home page is a regression
-   from today. See section 8, items 6 and 8.
+   over `WorkspaceMigration.migrate` fixtures and `WorkspacePresets`): in particular `home.grid` (until
+   section 9 replaces it, an id only, no adapter exists today). With Q19 the migrated Favourites and
+   Frequent pages map to `apps.all`/`apps.recent` lenses (section 12), so `apps.favourite` and
+   `apps.frequent` are no longer referenced and are **not** flip blockers.
 5b. The default a fresh install gets and the default a missing layout reads as are the same workspace
    (section 8, item 1).
-6. Rollback tested: flipping the default back to classic in a build leaves installs that did not touch
-   the toggle on classic, and installs that did keep their choice.
+6. Rollback tested (two kinds): flipping the default back to classic in a build leaves installs that did
+   not touch the toggle on classic and installs that did keep their choice; **and** the S17 rollback drill
+   (9.7): a build with the placed-items owner switched back restores every placed item from the mirror.
+7. Shadow compare (R1) at zero mismatches across the dogfood and beta population for the agreed window
+   (proposal: two weeks, at least N real layouts; N is a beta-size question, see N1).
 
-**Revert.** Three levels, cheapest first: (a) user: Settings > Workspaces > Advanced > Classic;
-(b) release: change the default constant to `CLASSIC` for users with `mode` unset (the choice is stored
-only once the user changes it, so the default is a build constant, not a migration); (c) data:
-workspaces are additive; `HomeLayoutSet` is untouched by workspace use until the container cut-over,
-so deleting the workspace blob always returns to a working classic launcher. This is why the classic
-path and the `HomeLayoutSet` source of truth are kept until R5.
+**Revert, as revised.** Four levels, cheapest first: (a) user: Settings > Workspaces > Advanced >
+Classic: draws the classic rendering over the **same** stored data, so nothing is lost and nothing needs
+reverting (section 10). (b) release: change the default constant to `CLASSIC` for users with `mode`
+unset. (c) data, placed items: a build that switches `PlacedItemsOwner` back to `LEGACY` re-reads
+`HomeLayoutSet`, which was mirrored on every write during R4 (9.7). (d) data, workspaces: deleting the
+workspace blob alone returns to a working classic launcher **only while the mirror is on**; after R5 it
+does not, because the blob then holds the only copy of placed items, so from R5 the blob has a
+`workspaces_prev` generation and the backup (section 5) as its safety nets, and R5 must not ship until the
+mirror has had a full release without mismatches.
 
-Needs owner decision: whether R3 (opt-in preview in a release) is wanted, or internal builds only
-before R4. Recommendation: internal/beta only, one release at most (see Open questions).
+Q1: preview is internal and beta builds only, one release at most (owner decision).
 
 ---
 
@@ -261,19 +306,19 @@ accessibility, Apps & content, Permissions/privacy & backup. Proposal, keeping t
 
 | Group | Entry | Notes |
 | --- | --- | --- |
-| Home & layout | **Workspaces** (new, first row) | Switch, presets, rename, clone, delete, reset, copy to other layout, Advanced (Classic toggle). |
-| Home & layout | Layout | Slimmed: grid, labels, dock-adjacent geometry. No mode, no template (section 3). |
-| Home & layout | Dock | Pins, edge, size, appearance, and the dynamic section binding. |
+| Home & layout | **Workspaces** (new, first row) | Switch, presets, rename, clone, delete, reset, copy to other layout, per-workspace **Dock** and **Start page** rows, Advanced (Classic toggle, permanent). |
+| Home & layout | Layout | Slimmed: grid, labels, dock-adjacent geometry, **"Returning to Home" (Restore / First page / Start page, default Restore; Q7, 3.2)**, "New apps" (placement, 9.5). No mode, no template (section 3). |
+| Home & layout | Dock | Device-class dock: pins, edge, size, appearance. A workspace may override edge, size, visibility and the dynamic section (section 11); this page shows "Overridden by workspace X" where one applies. |
 | Home & layout | Floating dock | Unchanged. |
-| Apps & content | **Sources** (new) | Replaces "RSS feeds" as a row; RSS becomes a source detail. Old route stays as an alias. |
-| Apps & content | **Saved lenses** (new) | The library. |
-| Apps & content | App drawer, Hidden apps | Unchanged (see section 3 for presentation overlap). |
-| Permissions, privacy & backup | **Privacy** (new) | Section 6. |
+| Apps & content | **Sources** (new) | Replaces "RSS feeds" as a row; RSS becomes a source detail. Old route stays as an alias. Hosts **exclusion rules** (section 14): per-source list plus an "All exclusions" row. |
+| Apps & content | **Saved lenses** (new) | The library **for the layout shown in the device tab** (per layout, Q3). |
+| Apps & content | App drawer, Hidden apps | App drawer: presentation moves into the Finder page expression (Q6, 3.1). **Hidden apps** becomes a filtered view of the app exclusion rules (section 14); same page, same behaviour. |
+| Permissions, privacy & backup | **Privacy** (new) | Section 6 (no locked-device rule; optional screenshot/recents setting; content level per source; links to exclusions). |
 | Permissions, privacy & backup | Permissions | Unchanged rows; Sources screen links to the same actions. |
 | Permissions, privacy & backup | Backup | Extended (section 5). |
 
-New `SettingsPage` entries: `WORKSPACES`, `WORKSPACE_DETAIL`, `SOURCES`, `SOURCE_DETAIL`, `LENSES`,
-`LENS_DETAIL`, `PRIVACY`. Each gets a `SettingsPageEntry` with `searchAliases` (preset, workspace,
+New `SettingsPage` entries: `WORKSPACES`, `WORKSPACE_DETAIL`, `SOURCES`, `SOURCE_DETAIL`, `EXCLUSIONS`,
+`LENSES`, `LENS_DETAIL`, `PRIVACY`. Each gets a `SettingsPageEntry` with `searchAliases` (preset, workspace,
 lens, source, redact, ...) so search finds them, following `settingsMainPageEntries`.
 
 Nothing here owns domain logic: each page is a thin Compose view over pure planners in the domain
@@ -293,12 +338,14 @@ This layout can't draw "Index" here, so "Standard" is shown.   (only when FellBa
  ( ) Work                Custom · 2 pages          [ : ]
  + New workspace  (choose a preset)
 
- Copy from other layout…        (unfolded -> this one, replaces this layout's workspaces)
+ Copy from other layout…        (unfolded -> this one, replaces this layout's workspaces and saved lenses)
  Advanced
-   Use workspaces                [ on ]
+   Use workspaces                [ on ]        (off = Classic; permanent choice, Q2)
    Restore previous copy         (only if one exists)
 -------------------------------------------------------------
-[ : ] = Rename · Duplicate · Make default · Reset to preset · Delete
+[ : ] = Rename · Duplicate · Make default · Reset to preset · Start page… · Dock… · Delete
+Workspace detail adds: Dock (Follow device dock / Override: edge, size, hidden), Start page,
+Appearance (Follow global / theme preset, Q15).
 ```
 
 - Radio list = switch workspace (one action, same `activate` as the menu). The marked row is the
@@ -307,9 +354,13 @@ This layout can't draw "Index" here, so "Standard" is shown.   (only when FellBa
   (additive, section 4.6). Without it the action is hidden, not guessed.
 - **Delete** is disabled on the last workspace (domain rule: `remove` is a no-op) with the reason as
   supporting text, and asks for confirmation with an Undo snackbar. Deleting the default moves the
-  default as `LayoutWorkspaces.remove` does.
-- **Copy from other layout** shows what will be replaced ("Replaces your 3 workspaces on this layout"),
-  confirms, and offers Undo (the previous generation blob makes undo exact).
+  default as `LayoutWorkspaces.remove` does. **Revised for Q16:** a workspace now *owns* its placed items
+  (section 9), so the confirmation states what goes with it ("Deletes this workspace and its 24 placed
+  items, 2 widgets"); Undo is exact (the workspace value is restored whole) and released widget host ids
+  are only deleted after the Undo window closes (9.3).
+- **Copy from other layout** shows what will be replaced ("Replaces your 3 workspaces and 5 saved lenses
+  on this layout"), confirms, and offers Undo (the previous generation blob makes undo exact). Widgets are
+  not copied (9.3); the dialog says how many were left out.
 - **New workspace** opens the preset picker (below), then the editor (WS7) if the user chooses Custom.
 
 ### 2.3 Preset picker
@@ -346,8 +397,9 @@ Sources
 ```
 
 Status values come from `LensAvailability` already used by containers (`LOADING`, `READY`,
-`PERMISSION_REQUIRED`, `UNAVAILABLE`) plus a new `OFF` for a disabled source. Status is text, never
-colour alone.
+`PERMISSION_REQUIRED`, `UNAVAILABLE`) plus a new `OFF` for a disabled source (Q13, adopted). Status is
+text, never colour alone. A source whose items are all excluded (section 14) is `READY` with an
+"Excluding N items" line, never `OFF` or `UNAVAILABLE`.
 
 - **Permission affordances** reuse the existing explicit flows, unchanged and never auto-prompting: an
   Allow button dispatches `LauncherShellAction.RequestNotificationAccess` / `RequestCalendarAccess`
@@ -361,12 +413,12 @@ colour alone.
   Sources" and a button to turn it on (an explicit user action). Stored as part of the workspace blob
   (`"disabledSources": [...]`, additive) so it travels with backup.
 - **Per-source settings** (detail pages):
-  - Notifications: hide rules list (existing `NotificationHidingSettings`, `AddNotificationHideRule` /
-    `RemoveNotificationHideRule`), and the content level (section 6).
+  - Notifications: **exclusion rules** list (section 14: the former hide rules, migrated; same match kinds
+    and the same contextual creation), and the content level (section 6).
   - RSS: the existing feeds UI (`RssSettings`, refresh interval) moves here unchanged; storage is
     untouched. Refresh stays user-triggered as today.
   - Search (#1365): provider settings defined by that issue; the Sources page only hosts the row.
-  - Apps: link to Hidden apps.
+  - Apps: Hidden apps (a filtered view of app exclusion rules, section 14).
   - Calendar: only status/permission (calendar selection is not a thing today; out of scope).
 - Source rows for sources #1365/#1366 have not shipped simply do not appear; the list is driven by the
   registry's descriptors (`SourceRegistry.descriptors()`), not hard-coded.
@@ -374,7 +426,7 @@ colour alone.
 ### 2.5 Saved lenses page
 
 ```
-Saved lenses                                          [ + New ]
+Saved lenses                 [layout: Phone folded v]         [ + New ]   <- per layout (Q3)
  Work notifications by app      Notifications · grouped · used in 2 places   >
  Recent, newest first           Recent apps · list · used in 1 place          >
  Unused lens                    Apps · no containers                          >
@@ -385,7 +437,9 @@ Lens detail
 ```
 
 The lens builder is WS7's lens step, hosted in a settings detail page, so the editing UI is written
-once. Detail shows **Used by** from `LensLibrary.dependents`. Delete behaviour is in 4.3.
+once. Detail shows **Used by** from `LensLibrary.dependents`, which is bounded to this layout's
+workspaces. Delete behaviour is in 4.3. "Copy to <other layout>" on a lens is an explicit one-time copy
+with a fresh id (4.3); nothing is shared between layouts.
 
 ### 2.6 Privacy and Backup pages
 
@@ -435,59 +489,86 @@ their natural size. Rotation and fold keep the selected row by workspace id.
 
 | Legacy setting | Where (code) | Maps to in workspaces | Disposition |
 | --- | --- | --- | --- |
-| **Home screen** (Home side of the Home/Library pair: Cards or Standard) | `HomeSurfaceModeSetting.kt`, `ModePair`, `SettingsPageContent.kt:212` ("Modes" section) | The active workspace of the layout (Workspaces page) | **Retire.** Hidden today when only Library is available; removed at S9. |
+| **Home screen** (Home side of the Home/Library pair: Cards or Standard) | `HomeSurfaceModeSetting.kt`, `ModePair`, `SettingsPageContent.kt:212` ("Modes" section) | The active workspace of the layout (Workspaces page) | **Retire.** Hidden today when only Library is available; removed at S18. |
 | **Home layout > view mode** | `HomeViewModeSetting`, `SettingsPageContent.kt:191` | Same | **Retire.** `LauncherViewMode` stays as migration input and in `HomeLayoutKey`, not as a user choice. |
 | **Layout template** | `HomeTemplateSetting.kt`, `LauncherTemplateCatalog` | Preset picker (WS8). `LauncherTemplate` already "evolves into workspace templates". | **Retire** the row; the catalog is data WS8 consumes. |
-| `viewModeAvailability` (library only) | `LauncherShellPlatformDependencies.kt:43`, `MainActivityDependencies.kt:108` | n/a | **Retire** at S9 (stored hidden-mode layouts are migrated to workspaces instead of resolving to Library). |
-| Grid (columns, rows, visible dimensions) | `HomeGridSetting`, `HomeLayout.settings.grid` | Home grid page content, per `HomeLayout` | **Stays** (Layout page) until the placed-items container replaces `home.grid`. |
+| `viewModeAvailability` (library only) | `LauncherShellPlatformDependencies.kt:43`, `MainActivityDependencies.kt:108` | n/a | **Retire** at S18 (stored hidden-mode layouts are migrated to workspaces instead of resolving to Library). |
+| Grid (columns, rows, visible dimensions) | `HomeGridSetting`, `HomeLayout.settings.grid` | The grid of each placed-items page (section 9: `LauncherPage.grid`) | **Stays** (Layout page); after S17 it edits the active workspace's placed pages, with the device-class default (`HomeLayoutSettings`) kept as the template for new pages. |
 | Labels | `HomeLabelSetting`, `settings.labels` | Home grid and icon expressions | **Stays.** |
-| Dock: pins, edge, size, appearance | `DockSetting`, `DockModel` | `DockModel` unchanged (workspace does not duplicate it) | **Stays.** |
+| Dock: pins, edge, size, appearance | `DockSetting`, `DockModel` | `DockModel` stays the shared per-device-class base; a workspace may carry a `DockPresentation` **override** of edge, size and visibility (section 11); pins are never per workspace | **Stays** as the base; overrides edited on the workspace page. |
 | Dock: show notification cards, slot count | `DockModel.showNotificationCards`, `notificationSlotCount` | `WorkspaceDock.dynamicSection` (Notifications lens, limit = slots, IconRow), already how migration maps it | **Stays as one row**, rewritten to edit the active workspace's dynamic section: on = Notifications lens; off = `null`. Needs owner decision (3.3, Q5): per workspace or global. |
 | Floating dock | `SettingsPage.FLOATING_DOCK`, `OverlayDockSettings` | None | **Stays.** |
-| After leaving Library (`LibraryReturnTarget`) | `AppDrawerSettings.afterLeavingLibrary`, `LauncherShellLibraryReturn.kt` | Return rule in 3.2 | **Retire**; the stored value is ignored, the codec keeps reading and writing it for backup compatibility. |
-| App drawer presentation (list/icons), icon grid columns | `AppDrawerSettings` | Finder page expression (`AlphaList` vs `IconGrid`) | **Stays** until the Finder page is the drawer; then maps to the Finder page's expression and the row is hidden. Needs owner decision (Q6). |
+| After leaving Library (`LibraryReturnTarget`) | `AppDrawerSettings.afterLeavingLibrary`, `LauncherShellLibraryReturn.kt` | `ReturnBehavior` setting in 3.2 (Restore / First page / Start page) | **Replace**; the stored value is ignored, the codec keeps reading and writing it for backup compatibility. |
+| App drawer presentation (list/icons), icon grid columns | `AppDrawerSettings` | The Finder page's expression (`ALPHA_LIST`, `CATEGORIES`, or `ICON_GRID` after the validation widening in 8.3a) (Q6, decided) | **Moves into the Finder page expression**; the row is hidden once the Finder replaces the drawer (S18). Migration: `LIST` maps to `ALPHA_LIST`, `ICONS` to `ICON_GRID`; `iconGridColumns` stays a global setting until expressions have per-expression options. |
 | Search result presentation | `SearchSettings.resultPresentation` | Search source (#1365) display | **Stays.** |
 | Cards appearance (geometry, glass, colour) | `CardsSettings`, `SettingsPage.ADAPTIVE_STAGE_APPEARANCE` | Appearance of `Card`/`CardStack` expressions | **Stays**, renamed "Card appearance"; shown whenever any workspace uses a card expression, otherwise collapsed under Appearance. |
 | Cards stage selector/spine, thread grouping, folded/unfolded show-all | `CardsSettings` fields | Page-set + dock dynamic section behaviour | **Stays** (dormant fields keep round-tripping); not exposed beyond what Cards appearance shows today. |
 | Contextual behaviour (`ContextualSettings.enabled`) | `SettingsContextualPageContent.kt` | Independent: smart behaviour, not a layout choice | **Stays**; copy clarifies it is separate from workspaces. |
-| Gestures | `GestureSettings`, `LauncherGestureMappings`, `Workspace.gestureBindings` | Global defaults, optional per-workspace overrides | **Stays**; per-workspace overrides are WS7. The dock-pull row follows the WS6 gesture decision (Q9). |
+| Gestures | `GestureSettings`, `LauncherGestureMappings`, `Workspace.gestureBindings` | Global defaults, optional per-workspace overrides | **Stays**; per-workspace overrides are WS7. The dock pull **opens the workspace menu** once modes retire (Q9, decided; 11.5, `gestures.md` change in S18). |
+| Hidden apps | `AppVisibilityRepository`, `SettingsPage.HIDDEN_APPS` | App exclusion rules (section 14) | **Unified** into source exclusion rules; the Hidden apps page stays as a filtered view. Storage keys kept readable and mirrored (14.6). |
+| Notification hide rules | `NotificationHidingSettings` | Notification exclusion rules (section 14) | **Unified**, same match kinds, migrated without loss. |
 | Motion & haptics, reduced motion | `MotionSettings`, `ReducedMotionPreference` | Global | **Stays.** |
 | RSS feeds page | `SettingsPage.RSS`, `RssSettings` | Source detail (RSS) | **Moves**; storage unchanged; old route aliased. |
-| Notification hide rules | `NotificationHidingSettings` | Source detail (Notifications) | **Moves**; storage unchanged. |
 | Permissions rows (Home app, notifications, overlay, calendar) | `SettingsPermissionsSection.kt` | Sources links to the same actions | **Stays** as the canonical place. |
-| Hidden apps | `SettingsPage.HIDDEN_APPS` | Filter on the Apps source | **Stays.** |
 | Backup | `SettingsPage.BACKUP` | Extended | **Stays**, section 5. |
 
 Rule used for every row: if it expresses *which arrangement is on screen*, it is a workspace choice;
 if it tunes how a standard Android launcher behaves (grid, dock, labels, permissions, hidden apps),
 it stays; storage formats are never changed or removed by this, only their UI.
 
-### 3.2 #1323: active mode is not preserved on return
+### 3.2 #1323: active mode is not preserved on return (revised: Return behaviour is a setting, Q7)
 
 Cause today: the return target is computed from a mode pair and a setting
 (`afterLeavingLibrary`, `LibraryExitTrigger`, `modeAfterLeavingLibrary`), so leaving the launcher can
 switch the mode. With workspaces there is no mode to switch: `LayoutWorkspaces.activeId` is the
-durable "what was last active", written on switch, restored on every start.
+durable "what was last active", written on switch, restored on every start. **Nothing a return does ever
+changes the active workspace** (only an explicit user action does); the setting below governs only *which
+page* of the active workspace is shown.
 
-Proposed rule (Needs owner decision, Q7):
+**As built:** `AppDrawerSettings.afterLeavingLibrary: LibraryReturnTarget` (`HOME` or `LIBRARY`, default
+`LIBRARY`) in `LauncherSettings.kt`, consumed by `LauncherShellLibraryReturn.kt`. It is mode-shaped and has
+no page notion.
 
-1. App launch then return, or process restart: show the **active workspace** at the **page that was
-   showing** (page position is already stored for the home layout as `selectedPageId`; for page-sets,
-   by group key).
-2. Home press while already on the launcher: go to the active workspace's **start page** (its first
-   non-Finder page unless the workspace declares one, section 8 item 3), as a standard launcher
-   does; a second press does nothing (standard).
-3. Home press while the Finder (All apps) is open: close the Finder and return to the page it was
-   opened from (to the start page if the Finder itself is the start page).
-4. Nothing ever changes the active workspace except an explicit user action.
+**Proposed (owner decision):** a Settings choice, replacing `afterLeavingLibrary`:
 
-Testable as a pure reducer (`WorkspaceReturnReducer`) with the cases above, closing #1323 with
-regression tests rather than a mode-specific patch. This refines, and should be reconciled with, the
-Home-press semantics in #1176.
+```kotlin
+// core/domain/.../settings: additive field, default RESTORE
+enum class ReturnBehavior { RESTORE, FIRST_PAGE, START_PAGE }
+data class HomeBehaviourSettings(val returnBehavior: ReturnBehavior = ReturnBehavior.RESTORE)
+```
+
+Two events are distinguished, because Android makes them different:
+
+* **E1 Return**: the launcher comes back to the foreground after an app launch, a process restart, or
+  a posture change (Home button while another app is in front, Recents, back out of an app).
+* **E2 Home press while already home**: the Home button pressed while the launcher is the foreground app.
+
+| Setting | E1 Return | E2 Home press at home | Home press with Finder open |
+| --- | --- | --- | --- |
+| **Restore** (default) | The active workspace at the page that was showing (`selectedPageId` for placed-item pages, group key for page-sets via `PageSetSelection`) | The workspace's start page; a second press does nothing | Close the Finder; go to the page it was opened from (to the start page if the Finder itself is the start page) |
+| **First page** | The first non-Finder page | Same | Same as Restore |
+| **Start page** | The workspace's start page (`startPageId`, else first non-Finder page) | Same | Same as Restore |
+
+Rules common to all three: the active workspace is never changed; a start page id that no longer exists is
+ignored (falls to the first non-Finder page, never an error); a posture change keeps the selected page by
+container id when the same workspace exists on both layouts (1.6). The Finder is not in the pager (Q14), so
+"first page" never means the Finder.
+
+Where it lives in the IA: **Settings > Home & layout > Layout > "Returning to Home"**, a three-option radio
+with one line of supporting text each. It is a global (per install) setting, not per workspace, because
+it describes the person's habit, not an arrangement; the per-workspace part is only the start page, set on
+the workspace detail page. Reconciliation: this closes #1323 (a return never switches mode or workspace,
+by construction and by test), supersedes the Home-press rule in #1176 for the page target (E2 is the same
+as #1176 for the Restore default), and retires `afterLeavingLibrary` (the stored value is ignored; the codec
+keeps reading and writing it for backup compatibility, as in 3.1).
+
+Testable as a pure reducer (`WorkspaceReturnReducer(settings, workspace, lastPage, event, finderOpen) ->
+target`): the full table above as parametrised cases, plus one regression test per #1323 scenario, plus a
+property test that no input ever yields a different `workspaceId`.
 
 ### 3.3 #1324: Standard mode unreachable
 
-Standard is the **Nova-style preset**, which is also the new-install default. After S9 there is no
+Standard is the **Nova-style preset**, which is also the new-install default. After S18 there is no
 "Standard mode" to hide: the Standard arrangement is a workspace anyone can select in Workspaces or the
 dock menu, and the migrated "Standard" workspace is preserved for users who had one. The stored
 `STANDARD_APP_DRAWER` layout is no longer resolved to Library on load. Recorded as the deliberate
@@ -497,7 +578,7 @@ redesign decision that #1324 asked for.
 
 Resolved by the table: Home screen, view mode, template and Modes sections all express "which
 arrangement", so they collapse into the Workspaces page and the preset picker; the Layout page keeps
-only grid and labels. Until S9, the rule from #1325 stands ("hide options that don't apply while only
+grid, labels and the new "Returning to Home" choice. Until S18, the rule from #1325 stands ("hide options that don't apply while only
 one mode is available"), which the code already does for view mode and Modes, but **not** for
 `HomeTemplateSetting`, which renders unconditionally on the Layout page (`SettingsPageContent.kt:198`).
 Quick win independent of this design: hide the template row while a single mode is available.
@@ -515,6 +596,10 @@ encoded by `LensCodec.encodeBinding` (`{"lens": ..., "expression": ...}`) and de
 Validity is `LensExpressionValidity.check` / `checkPerGroup`, called from `ContainerValidation` and
 `WorkspaceValidation`. Nothing has an id or a name.
 
+> **Revision 2026-10-01 (Q3, Q4):** the library is **per layout** (device class), not global, and
+> presets use saved lenses. Everything below that still says "global" is marked superseded; the
+> per-layout design is 4.2 (data), 4.3 (semantics) and 4.9 (presets).
+
 ### 4.2 Design: references are additive, with a snapshot
 
 Constraint: WS7 (editor) and WS8 (presets) are in flight and build `LensBinding(lens, expression)`.
@@ -530,7 +615,10 @@ data class SavedLens(
     val lens: Lens,
 )
 
-/** Global per install. Ordered for display. Bounded by MAX_SAVED_LENSES (100). */
+/**
+ * One per layout (device class), owned by that layout's [LayoutWorkspaces]. Ordered for display.
+ * Bounded by MAX_SAVED_LENSES (100) per layout.
+ */
 data class LensLibrary(val lenses: List<SavedLens> = emptyList()) {
     fun find(id: LensId): SavedLens?
     // All operations return the receiver unchanged when they cannot apply (WS5 convention).
@@ -538,6 +626,8 @@ data class LensLibrary(val lenses: List<SavedLens> = emptyList()) {
     fun rename(id: LensId, name: String): LensLibrary
     fun duplicate(id: LensId, ids: WorkspaceIdFactory): LensLibrary   // "<name> copy", fresh id
     fun move(id: LensId, toIndex: Int): LensLibrary
+    /** Copies [lens] in with a fresh id and a collision-free name; used by copy-to-layout and presets. */
+    fun addCopy(lens: SavedLens, ids: WorkspaceIdFactory): Pair<LensLibrary, LensId>
 }
 
 data class LensBinding(
@@ -546,10 +636,15 @@ data class LensBinding(
     val ref: LensId? = null,           // NEW, default null = inline lens, exactly today's meaning
 )
 
-data class WorkspaceSet(
-    val layouts: Map<HomeLayoutDeviceClass, LayoutWorkspaces> = emptyMap(),
-    val library: LensLibrary = LensLibrary(),   // NEW, default empty
+// LayoutWorkspaces (existing) gains the library; the invariant "refs resolve in this layout's library"
+// is enforced by construction and re-established on decode.
+data class LayoutWorkspaces(
+    val workspaces: List<Workspace>,
+    val activeId: WorkspaceId,
+    val defaultId: WorkspaceId,
+    val library: LensLibrary = LensLibrary(),   // NEW, default empty (per layout, Q3)
 )
+// WorkspaceSet itself does not change: its `layouts` map carries one library per device class.
 ```
 
 **Snapshot semantics.** A binding with a `ref` still carries a full `lens`. The invariant, enforced at
@@ -564,12 +659,19 @@ Alternatives considered:
 | --- | --- |
 | `sealed interface LensSource { Inline; Ref }` replacing `LensBinding.lens` | Every consumer of `binding.lens`, every WS7/WS8 constructor call and every test changes; needs a resolver threaded through pure planners. High rework for in-flight PRs. |
 | Resolve at draw time only, store just the id | Dangling refs become an empty container; backup of a single workspace loses its lens; every validator needs the library. |
-| Per-layout library | A lens is sources + filter + group + sort; nothing in it is layout specific, and expression validity is checked per binding anyway. Per-layout would force "copy to other layout" to copy lenses and break "edit in one place". |
+| Global library (the earlier recommendation) | Superseded by the owner's decision (Q3): per layout. Kept here because it is the simpler model and the cost of the choice is concrete: copy-from-layout must copy lenses (below), and there is no "edit once, both layouts follow". |
 
-**Global library.** One library per install, stored in the same blob as the workspaces (the
-`WorkspaceSet`), so a library edit and the snapshot refresh of its dependents are written in one
-atomic DataStore edit. This avoids the failure mode of a library and workspaces diverging after a
-crash between two writes.
+**Per-layout library (replaces the earlier "global library", Q3).** Each device class's library lives
+inside its `LayoutWorkspaces`, in the same blob as the workspaces, so a library edit and the snapshot
+refresh of its dependents are one atomic DataStore edit (no divergence after a crash between two writes).
+Consequences, all deliberate: a lens edited on the folded layout never changes the unfolded layout; a
+binding can only reference a lens in **its own layout's** library (a ref to anything else is dangling by
+definition and falls back to its snapshot); **copy-from-other-layout must copy the referenced lenses**
+(4.3) because refs cannot cross layouts; and "Used by" is naturally bounded to one layout. The cost is
+duplication: the same "Work notifications by app" lens exists once per layout the user wants it on,
+and there is an explicit "Copy to <layout>" on a lens for convenience. Posture-specific lenses (a
+compact "latest three" versus an expanded "latest ten") are now easy, which was the argument for
+per-layout.
 
 **Ids and names.** `LensId` is a random id (the same `WorkspaceIdFactory`), never reused, never shown.
 Names are user-facing, trimmed, 1..40 characters, case-insensitively unique; a clashing rename or add
@@ -588,9 +690,10 @@ is rejected with the reason shown; duplicates get " copy" (then " copy 2"...). L
 | **Detach** a binding | `ref = null`; the snapshot becomes the inline lens. Always valid. |
 | **Promote** ("Save as lens") on an inline binding | Adds a library entry from `binding.lens` with a name the user types, sets `ref` on that binding (and offers "use it in the N other containers with an identical lens", the exact-equality dependents). |
 | **Dangling ref** (library lacks the id: tampered/old backup, partial restore, bug) | Never crashes and never blanks the container. The binding keeps its snapshot and draws normally, the ref is reported as dangling, and the editor/Settings show "Saved lens 'X' is missing: Using a copy" with **Save as lens** or **Detach**. This is stronger than a "missing lens" empty state: the user's screen does not change because a definition was lost. |
-| **Clone workspace** (`LayoutWorkspaces.duplicate`) | Refs are **shared**, not deep-copied: the clone is a new workspace using the same saved lenses, so editing a lens updates both, which is what "reusable" means. A "Make independent" action detaches all refs in a workspace. |
-| **Copy to other layout** (`copyFromOtherLayout`) | The library is global, so refs are preserved and shared. No lens copy needed. |
-| **Preset install** (WS8) | Presets ship **inline** lenses (self-contained, no hidden library writes, no id collisions, trivially resettable). Users promote the ones they want. A preset *may* later declare suggested saved lenses; not needed for WS10. |
+| **Clone workspace** (`LayoutWorkspaces.duplicate`) | Within one layout, refs are **shared**, not deep-copied: the clone is a new workspace using the same saved lenses, so editing a lens updates both, which is what "reusable" means. A "Make independent" action detaches all refs in a workspace. |
+| **Copy from other layout** (`WorkspaceSet.copyFromOtherLayout`) | **Revised (Q3).** The target's workspaces *and library* are replaced by deep copies of the source's: every library lens is copied with a **fresh `LensId`**, names kept (the target library is being replaced, so there are no collisions), and every ref in every copied workspace is rewritten through the old-id to new-id map. Lenses that no workspace references are copied too (the user's library is part of what is being copied). Refs that were already dangling stay dangling-with-snapshot. Result: nothing is shared, and the target satisfies the per-layout invariant by construction. Implementation: `LayoutWorkspaces.repaired(...)` gains a `library` parameter and `WorkspaceCopy.withFreshIds` gains an id-map overload. |
+| **Copy a lens to another layout** (explicit, from the library page) | `LensLibrary.addCopy` in the target: fresh id, name collision resolved by suffix (" 2"). One-time copy; no link. |
+| **Preset install** (WS8) | **Revised (Q4).** Installing a preset writes the lenses it uses into **the target layout's library** and installs bindings that reference them; see 4.9 for naming, idempotence and reset-to-preset. |
 
 ### 4.4 Validity when a saved lens is edited
 
@@ -598,7 +701,7 @@ The pairing rule is unchanged (`LensExpressionValidity`); what is new is a pure 
 
 ```kotlin
 data class LensDependent(
-    val deviceClass: HomeLayoutDeviceClass,
+    val deviceClass: HomeLayoutDeviceClass,     // always the library's own layout (per-layout library)
     val workspaceId: WorkspaceId,
     val containerId: ContainerId?,        // null = the dock's dynamic section
     val expression: ExpressionKind,
@@ -610,13 +713,14 @@ data class EditImpact(
     val wouldBreak: List<Pair<LensDependent, List<LensIssue>>>,
 )
 
+/** Every operation is scoped to one layout: it takes and returns that layout's [LayoutWorkspaces]. */
 object LensLibraryOps {
-    fun dependents(set: WorkspaceSet, id: LensId): List<LensDependent>
-    fun previewEdit(set: WorkspaceSet, id: LensId, newLens: Lens,
+    fun dependents(layout: LayoutWorkspaces, id: LensId): List<LensDependent>
+    fun previewEdit(layout: LayoutWorkspaces, id: LensId, newLens: Lens,
                     sources: List<SourceDescriptor>?): EditImpact
-    fun applyEdit(set: WorkspaceSet, id: LensId, newLens: Lens): WorkspaceSet   // refresh snapshots
-    fun remove(set: WorkspaceSet, id: LensId, policy: RemovePolicy): WorkspaceSet
-    fun rehydrate(set: WorkspaceSet): Rehydrated    // set + dangling refs, used by decode and import
+    fun applyEdit(layout: LayoutWorkspaces, id: LensId, newLens: Lens): LayoutWorkspaces   // refresh snapshots
+    fun remove(layout: LayoutWorkspaces, id: LensId, policy: RemovePolicy): LayoutWorkspaces
+    fun rehydrate(set: WorkspaceSet): Rehydrated    // per layout; set + dangling refs, used by decode and import
 }
 ```
 
@@ -634,8 +738,9 @@ safety net already exists without changes to `WorkspaceValidation`.
 
 ### 4.5 Persistence, codec versioning, migration
 
-- `WorkspaceSetCodec`: set schema `1 -> 2`. Adds root key `"library": {"lenses": [{"id","name","lens"}]}`
-  and per-binding optional `"ref": "<id>"` next to the existing `"lens"` and `"expression"`. A
+- `WorkspaceSetCodec`: set schema `1 -> 2`. Adds, **inside each layout entry** (revised for Q3), a key
+  `"library": {"lenses": [{"id","name","lens","origin"?}]}` and per-binding optional `"ref": "<id>"` next
+  to the existing `"lens"` and `"expression"`. A
   workspace's own schema version (`CURRENT_WORKSPACE_SCHEMA_VERSION`) can stay at 1 because the
   addition is optional and ignorable.
 - **Migration from inline: none needed.** A v1 blob decodes with an empty library and `ref = null`
@@ -644,8 +749,10 @@ safety net already exists without changes to `WorkspaceValidation`.
 - **Downgrade safety.** A v1 decoder ignores `"ref"` and `"library"` and reads the snapshot, so an
   older app still draws every container correctly (it just loses the sharing). This is also why the
   snapshot is stored rather than recomputed.
-- Decode order: decode library, decode workspaces, then `rehydrate` (for each resolvable ref set
-  `lens := library lens`, library wins; dangling refs keep the snapshot and are reported). A library
+- Decode order, per layout: decode that layout's library, decode its workspaces, then `rehydrate` (for each
+  ref that resolves **in this layout's library** set `lens := library lens`, library wins; a ref that does
+  not resolve there keeps the snapshot and is reported dangling; a ref that names a lens that only exists
+  in another layout is the same case). A library
   entry that fails to decode is dropped, which turns its bindings into dangling-with-snapshot rather
   than data loss.
 - Decode still never throws; the `DecodeReport` (1.5) gains `droppedLenses` and `danglingRefs`.
@@ -660,21 +767,21 @@ All changes are additive with defaults; no existing call site or test must chang
 
 | Area | Change | Impact on in-flight work |
 | --- | --- | --- |
-| WS0 contracts | `LensBinding.ref: LensId? = null`; new `LensId`, `SavedLens`, `LensLibrary`, `LensLibraryOps`; `WorkspaceSet.library` default empty; `Workspace.presetId: String? = null` (for Reset to preset) | Existing `LensBinding(lens, expression)` calls compile unchanged. `data class` `copy` and equality now include `ref`/`library`: tests comparing whole sets need no change when both are default. |
-| WS5 codecs/migration | Set schema 2 with `library`; binding `ref`; workspace `"preset"` optional string. Migration (`HomeLayoutWorkspaceMapper`, `MigratedLenses`) untouched: they emit inline. `ensureMigrated(stored, layoutSet)` preserves `stored.library`: today it builds `WorkspaceSet(migrated.layouts + stored.layouts)`, which would drop a library, so it must become `stored.copy(layouts = ...)`. | One small fix in `WorkspaceMigration.ensureMigrated`, covered by a test. |
+| WS0 contracts | `LensBinding.ref: LensId? = null`; new `LensId`, `SavedLens` (with optional `origin: LensOrigin?`, 4.9), `LensLibrary`, `LensLibraryOps`; `LayoutWorkspaces.library` default empty (per layout); `Workspace.presetId: String? = null` (for Reset to preset) | Existing `LensBinding(lens, expression)` calls compile unchanged. `data class` `copy` and equality now include `ref`/`library`: tests comparing whole sets need no change when both are default. |
+| WS5 codecs/migration | Set schema 2 with a per-layout `library`; binding `ref`; workspace `"preset"` optional string. Migration (`HomeLayoutWorkspaceMapper`, `MigratedLenses`) untouched: they emit inline. `ensureMigrated(stored, layoutSet)` preserves each stored layout's library: it builds `WorkspaceSet(migrated.layouts + stored.layouts)` (verified in `WorkspaceMigration.kt`), which keeps stored `LayoutWorkspaces` values whole once `library` is a field of `LayoutWorkspaces` (a test pins this, replacing the earlier "must become `stored.copy(...)`" note). `WorkspaceSet.copyFromOtherLayout` is the one function that must change (4.3). | `copyFromOtherLayout` change plus tests. |
 | WS7 editor | **Phase 1 (no dependency):** inline only, as now. **Phase 2:** adds "Use saved lens" and "Save as lens" to its lens step, and the impact list on edit. | WS7 can merge today; phase 2 is a follow-up PR after S4 below. It must route edits through `LensLibraryOps`, not mutate bindings of referenced lenses directly. |
-| WS8 presets (merged, `workspace/preset/`) | Presets stay inline. `WorkspacePresets.installPreset` additionally sets `Workspace.presetId` (needed for Reset to preset; WS8 currently links nothing back to the preset). | Catalog and tests need no change; `installPreset` gains one `copy(presetId = ...)` and its tests an assertion. `skinHintId` stays unwritten (section 8, item 7). |
+| WS8 presets (merged, `workspace/preset/`) | **Rework (Q4), small:** see 4.9. The catalog data stays; bindings gain a stable lens key and a display name; `installPreset` and `PresetInstaller` become library-aware and set `Workspace.presetId`. `skinHintId` stays unwritten (section 8, item 7). | Preset tests change in three places (install writes the library, install twice reuses lenses, reset). |
 | WS6 menu | None. It reads `binding.lens` snapshots. Optionally shows nothing about refs. | None. |
 | WS4 hosts/planners | None (snapshot). | None. |
-| Backup | `workspaceSet` already carries the object; the library rides inside it (section 5). | None. |
+| Backup | `workspaceSet` already carries the object; each layout's library rides inside it (section 5). | None. |
 
-Recommended merge order to minimise rework: WS6, WS7 (inline) and WS8 merge as they are -> S4 (library
-domain + codec) -> WS7 phase 2 and S7 (library UI). S4 can also be written before those merge because
-nothing it adds is required by them.
+Recommended merge order to minimise rework: WS6, WS7 (inline) and WS8 (merged) stay as they are -> S4
+(library domain + codec + the small preset rework) -> WS7 phase 2 and S15 (library UI). S4 can also be
+written before those merge because nothing it adds is required by them.
 
 ### 4.7 Limits
 
-`MAX_SAVED_LENSES = 100`, name 1..40 chars. These follow the bounded-settings convention used by
+`MAX_SAVED_LENSES = 100` **per layout**, name 1..40 chars. These follow the bounded-settings convention used by
 `MAX_NOTIFICATION_HIDE_RULES` and `MAX_CONFIGURED_FEEDS`; revisit if a real need appears.
 
 ### 4.8 Tests specific to lenses
@@ -682,9 +789,66 @@ nothing it adds is required by them.
 Domain: library ops (unique names, cap, no-op rules), `rehydrate` (resolved, dangling, library
 wins), property test of the snapshot invariant after random edit/rename/duplicate/delete/promote/
 detach sequences, `previewEdit` (per-group pairing, dock, page-set, widget), `remove` policies,
-clone shares refs, `copyFromOtherLayout` preserves refs, `ensureMigrated` keeps the library, codec
+clone shares refs within a layout, **`copyFromOtherLayout` copies referenced lenses with fresh ids and
+rewrites refs (including unreferenced lenses, dangling refs, and a property test that the target never
+holds an id that is also in the source's library)**, a binding cannot resolve against another layout's
+library, preset install/reset (4.9), `ensureMigrated` keeps each layout's library, codec
 golden files (v1 blob decodes unchanged; v2 blob; v2 blob read by a v1-style decode ignoring unknown
 keys; dangling ref; corrupt library entry; hostile ids).
+
+### 4.9 Presets with saved lenses (Q4)
+
+**As built:** `WorkspacePresets.installPreset(preset, posture | deviceClass, ids)` returns a deep copy with
+fresh workspace and container ids; bindings are inline; `PresetInstaller.newInstallLayout` / `withDefaultsFor`
+/ `addPreset` put results into the `WorkspaceSet`; nothing links a workspace back to its preset
+(`workspaces-presets.md`). `PresetBindings.kt` builds the bindings.
+
+**Proposed rework (kept small, catalog data unchanged):**
+
+```kotlin
+/** A lens a preset uses, with a key stable across releases and a name for the library. */
+data class PresetLens(val key: String, val name: String, val lens: Lens)   // key e.g. "nova.finder"
+
+sealed interface LensOrigin { data class Preset(val presetId: String, val key: String) : LensOrigin }
+// SavedLens.origin: LensOrigin? = null   (optional codec key "origin"; ignorable by older decoders)
+
+data class InstalledPreset(val layout: LayoutWorkspaces, val workspaceId: WorkspaceId)
+
+object PresetInstaller {
+    fun install(layout: LayoutWorkspaces, preset: WorkspacePreset, posture: PresetPosture,
+                ids: WorkspaceIdFactory, activate: Boolean): InstalledPreset
+    fun reset(layout: LayoutWorkspaces, workspaceId: WorkspaceId, resetLenses: Boolean,
+              ids: WorkspaceIdFactory): LayoutWorkspaces
+}
+```
+
+* **Install** adds the preset's workspace and, for each `PresetLens`, ensures a library entry in **that
+  layout's library** with `origin = Preset(presetId, key)`. If an entry with the same origin already
+  exists it is **reused** (idempotent: installing Nova twice does not create a second "Finder (A to Z)");
+  otherwise it is added with the preset's name. Bindings in the installed workspace get `ref` set and
+  carry the snapshot. Bindings built from `PresetBindings` helpers pass a `PresetLens`; any binding a
+  preset builds directly stays inline (no promotion of one-off lenses).
+* **Naming collisions.** Library names are unique case-insensitively (4.2). A preset lens name that
+  collides with a *user* lens (different origin) gets a suffix " (Nova)" then " (Nova 2)"; the preset
+  never renames or overwrites a user's lens. A user renaming a preset lens is fine; the origin key, not the
+  name, is the identity.
+* **Reset to preset** (workspace menu: "Reset to preset", needs `Workspace.presetId`): rebuilds the
+  workspace's *arrangement* (pages, containers, dock section, gesture bindings) from the current catalog,
+  keeping the workspace id and name. Saved lenses: by default **kept as the user left them** (they may be
+  shared with other workspaces); an explicit second choice "Also restore the N saved lenses this preset
+  created" shows `previewEdit` impact on every dependent and resets only lenses whose origin matches. A
+  workspace without `presetId` has no Reset (hidden, not guessed). A preset-origin lens deleted by the user
+  is re-added on reset.
+* **Placed items and presets (Q16).** An installed preset creates its placed-item pages empty (9.6): a
+  preset arrangement never moves or deletes placed items of other workspaces. Reset keeps the placed items
+  of pages that still exist in the preset arrangement and asks before dropping any.
+* **Tests.** `workspaces-presets.md`'s validation list stays true (validates, resolves, round-trips, no
+  item content, needs no permission); three tests change: install writes the expected library entries,
+  install twice reuses entries (workspaces structurally equal apart from ids), reset restores the
+  arrangement and, when asked, only preset-origin lenses.
+* **Merged WS8 impact:** `PresetBindings` call sites (five preset files) pass a `PresetLens` for each lens
+  they already build; `PresetInstaller` gains the library-aware functions beside the existing ones, which
+  stay as thin wrappers for the inline form until S4 removes their last callers.
 
 ---
 
