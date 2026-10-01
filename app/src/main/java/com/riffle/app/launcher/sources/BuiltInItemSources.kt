@@ -103,6 +103,8 @@ internal class BuiltInSourceDependencies(
     val apps: AppSourceDependencies,
     val notifications: NotificationSourceDependencies,
     val calendar: CalendarSourceDependencies = CalendarSourceDependencies.UNAVAILABLE,
+    val feeds: FeedSourceDependencies = FeedSourceDependencies.NONE,
+    val search: SearchSourceDependencies = SearchSourceDependencies(),
 )
 
 /** A [SourceRegistry] over a fixed set of sources; each id resolves to one shared stream. */
@@ -128,10 +130,12 @@ internal fun builtInSourceRegistry(deps: BuiltInSourceDependencies): SourceRegis
             notificationsSource(deps),
             mediaSource(deps),
             calendarSource(deps),
+            feedSource(deps),
+            searchSource(deps),
         ),
     )
 
-private fun stream(
+internal fun stream(
     deps: BuiltInSourceDependencies,
     id: SourceId,
     capabilities: Set<SourceCapability>,

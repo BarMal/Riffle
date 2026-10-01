@@ -22,10 +22,12 @@ import java.util.concurrent.Executors
  * already held by the activity dependencies). Reads run on one background thread, nothing prompts for a
  * permission, and nothing starts until a source gets an observer.
  *
- * Not wired into any UI yet (WS3/WS6). Known gaps: package/shortcut changes have no change source yet, so
- * the app and shortcut sources refresh when their stream starts; hide-rule edits are picked up on the next
+ * [content] carries the RSS feeds with their offline cache and the shared search query; it defaults to
+ * empty. Not wired into any UI yet (WS3/WS6). Known gaps: package/shortcut changes have no change source yet,
+ * so the app and shortcut sources refresh when their stream starts; hide-rule edits are picked up on the next
  * refresh; calendar events that end while the stream is running leave on the next change or restart.
  */
+@Suppress("LongParameterList") // One wiring seam over the platform repositories the activity already holds.
 internal fun androidItemSources(
     installedApps: PackageManagerInstalledAppRepository,
     appVisibility: AppVisibilityRepository,
@@ -34,6 +36,7 @@ internal fun androidItemSources(
     notificationAccess: AndroidNotificationAccessGateway,
     hideRules: () -> List<NotificationHideRule>,
     calendar: CalendarSourceDependencies,
+    content: ContentSourceDependencies = ContentSourceDependencies(),
 ): SourceRegistry {
     val snapshotChanges =
         SourceChangeSource { onChanged -> notificationRepository.observeActiveNotifications(onChanged) }
@@ -63,6 +66,8 @@ internal fun androidItemSources(
                     hideRules = hideRules,
                 ),
             calendar = calendar,
+            feeds = content.feeds,
+            search = content.search,
         ),
     )
 }

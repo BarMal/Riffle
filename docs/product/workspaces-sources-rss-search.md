@@ -78,7 +78,10 @@ answer is `Unavailable`. There is no permission.
 
 ## Registration and tests
 
-Both are registered in `builtInSourceRegistry`. A pure test asserts that every `SourceIds.BUILT_IN` id has a
+Both are registered in `builtInSourceRegistry` (`FeedAndSearchSources.kt`). `androidItemSources` takes a
+`ContentSourceDependencies` (feeds plus the shared `SearchQueryHolder`, defaulting to no feeds and an empty
+query); wiring it to the settings-backed feed source, the article cache and a search box is left to the UI
+slices, as for the other sources. A pure test asserts that every `SourceIds.BUILT_IN` id has a
 registered source and nothing else is registered.
 
 ## Open question
