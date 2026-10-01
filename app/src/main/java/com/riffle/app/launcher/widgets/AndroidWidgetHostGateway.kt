@@ -9,8 +9,10 @@ import android.os.Bundle
 import android.view.View
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
 @Suppress("TooManyFunctions") // One platform adapter owns the complete AppWidget host contract.
@@ -59,6 +61,11 @@ class AndroidWidgetHostGateway internal constructor(
         hostedWidgetId: HostedWidgetId,
         provider: WidgetProviderIdentity,
     ): Boolean = platform.boundProvider(hostedWidgetId.value) == provider.androidBindingTarget()
+
+    override fun hostedWidgetProvider(hostedWidgetId: HostedWidgetId): WidgetProviderIdentity? =
+        platform.boundProvider(hostedWidgetId.value)?.let { target ->
+            WidgetProviderIdentity(AppPackageName(target.packageName), WidgetProviderClassName(target.className))
+        }
 
     override fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent =
         configureHostedWidgetIntentData(hostedWidgetId, platform.configureActivity(hostedWidgetId.value)).toIntent()
