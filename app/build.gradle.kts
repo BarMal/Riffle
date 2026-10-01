@@ -3,6 +3,14 @@ plugins {
     id("riffle.android.screenshots")
 }
 
+// Opt-in R8 minification and resource shrinking for the release build type, used only by the
+// Minified Release Check workflow (docs/release/r8-minification.md). Defaults to false, so the
+// shipped alpha/stable builds are unchanged unless a build passes -Priffle.minify=true.
+val minifyRelease =
+    providers.gradleProperty("riffle.minify")
+        .map(String::toBoolean)
+        .getOrElse(false)
+
 android {
     namespace = "com.riffle.app"
 
@@ -43,7 +51,8 @@ android {
             applicationIdSuffix = ".debug"
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = minifyRelease
+            isShrinkResources = minifyRelease
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -23,3 +23,9 @@ Only raise the budget with an explicit pull request that explains:
 - whether shrinking alternatives were considered.
 
 Release notes continue to include APK and AAB sizes for every published build.
+
+## Shrinking
+
+The release build does not yet use R8. The APK is 98% unshrunk, uncompressed dex; see
+[`R8 Minification`](r8-minification.md) for the measured composition, keep-rule review, the opt-in
+`riffle.minify` build, and the staged plan to enable it.

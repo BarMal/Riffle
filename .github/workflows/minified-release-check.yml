@@ -1,0 +1,175 @@
+name: Minified Release Check
+
+# Builds the release APK twice from the same commit (shipped configuration, then R8 minified with
+# -Priffle.minify=true), reports the size delta, and smoke-tests the minified APK on an emulator.
+# It never publishes a release or touches the alpha/stable workflows. See docs/release/r8-minification.md.
+
+on:
+  pull_request:
+    paths:
+      - app/build.gradle.kts
+      - app/proguard-rules.pro
+      - build-logic/**
+      - gradle/libs.versions.toml
+      - .github/workflows/minified-release-check.yml
+      - .github/scripts/apk-composition.py
+      - .github/scripts/smoke-minified-apk.sh
+  workflow_dispatch:
+    inputs:
+      use_release_key:
+        description: Sign with the release key so the APK installs over the published alpha
+        required: false
+        default: false
+        type: boolean
+      version_code:
+        description: Version code for a release-key build (the installed alpha's code or higher); ignored otherwise
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and compare
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare signing key
+        env:
+          USE_RELEASE_KEY: ${{ inputs.use_release_key }}
+          RIFFLE_SIGNING_KEYSTORE_BASE64: ${{ secrets.RIFFLE_SIGNING_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RIFFLE_SIGNING_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RIFFLE_SIGNING_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RIFFLE_SIGNING_KEY_PASSWORD }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/signing"
+          keystore="$RUNNER_TEMP/signing/check.jks"
+          if [[ "$USE_RELEASE_KEY" == "true" ]]; then
+            # Same key as the alpha, so the owner can install the result over a published alpha.
+            test -n "$RIFFLE_SIGNING_KEYSTORE_BASE64"
+            echo "$RIFFLE_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+            store_password="$RELEASE_STORE_PASSWORD"
+            key_alias="$RELEASE_KEY_ALIAS"
+            key_password="$RELEASE_KEY_PASSWORD"
+          else
+            # Throwaway key generated for this run only: installs on an emulator, never over the alpha.
+            store_password="$(openssl rand -hex 16)"
+            echo "::add-mask::$store_password"
+            key_alias=check
+            key_password="$store_password"
+            keytool -genkeypair -keystore "$keystore" -storepass "$store_password" \
+              -keypass "$key_password" -alias "$key_alias" -keyalg RSA -keysize 2048 \
+              -validity 2 -dname "CN=riffle-minified-check"
+          fi
+          {
+            echo "RIFFLE_SIGNING_STORE_FILE=$keystore"
+            echo "RIFFLE_SIGNING_STORE_PASSWORD=$store_password"
+            echo "RIFFLE_SIGNING_KEY_ALIAS=$key_alias"
+            echo "RIFFLE_SIGNING_KEY_PASSWORD=$key_password"
+          } >> "$GITHUB_ENV"
+
+      - name: Build shipped-configuration release (unminified)
+        env:
+          RIFFLE_VERSION_CODE: ${{ inputs.use_release_key && inputs.version_code || github.run_number }}
+          RIFFLE_VERSION_NAME: 0.1.0-minified-check.${{ github.run_number }}
+        run: |
+          ./gradlew :app:assembleRelease
+          mkdir -p "$RUNNER_TEMP/out"
+          cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/out/riffle-unminified.apk"
+
+      - name: Build R8-minified release
+        env:
+          RIFFLE_VERSION_CODE: ${{ inputs.use_release_key && inputs.version_code || github.run_number }}
+          RIFFLE_VERSION_NAME: 0.1.0-minified-check.${{ github.run_number }}
+        run: |
+          ./gradlew :app:assembleRelease -Priffle.minify=true
+          cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/out/riffle-minified.apk"
+          mkdir -p "$RUNNER_TEMP/out/r8"
+          cp app/build/outputs/mapping/release/*.txt "$RUNNER_TEMP/out/r8/"
+
+      - name: Report size delta
+        run: |
+          unminified="$RUNNER_TEMP/out/riffle-unminified.apk"
+          minified="$RUNNER_TEMP/out/riffle-minified.apk"
+          before=$(stat -c %s "$unminified")
+          after=$(stat -c %s "$minified")
+          {
+            echo "## Minified release size"
+            echo
+            echo "| Build | Size |"
+            echo "| --- | ---: |"
+            python3 - "$before" "$after" <<'PY'
+          import sys
+          before, after = int(sys.argv[1]), int(sys.argv[2])
+          mib = lambda n: f"{n / 1048576:.2f}"
+          print(f"| Unminified (shipped configuration) | {mib(before)} MiB ({before} bytes) |")
+          print(f"| R8 minified and resource shrinking | {mib(after)} MiB ({after} bytes) |")
+          print(f"| Saved | {mib(before - after)} MiB ({(before - after) * 100 / before:.1f} percent) |")
+          PY
+            echo
+            python3 .github/scripts/apk-composition.py "unminified=$unminified" "minified=$minified"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload minified APK and R8 mapping
+        uses: actions/upload-artifact@v4
+        with:
+          name: riffle-minified-check-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/out/riffle-minified.apk
+            ${{ runner.temp }}/out/r8/
+          if-no-files-found: error
+          retention-days: 3
+
+  emulator-smoke:
+    name: Emulator smoke (minified APK)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download minified APK
+        uses: actions/download-artifact@v4
+        with:
+          name: riffle-minified-check-${{ github.run_id }}
+          path: minified
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke test on emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: .github/scripts/smoke-minified-apk.sh minified/riffle-minified.apk
