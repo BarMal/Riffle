@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.workspace.Lens
 import com.riffle.core.domain.launcher.workspace.LensGroup
 import com.riffle.core.domain.launcher.workspace.LensResult
 import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.exclusions.SourceExclusionFilter
 
 /**
  * Turns the items of a lens's sources into a [LensResult]. Implementations must be pure: no threading,
@@ -23,6 +24,8 @@ fun interface LensEvaluator {
 /**
  * The reference evaluator. Pipeline, in order:
  *
+ * 0. **Exclude.** Items hidden by the layout's source exclusions (`context.exclusions`, empty by default) are
+ *    dropped first, so no later step, filter or limit can bring them back.
  * 1. **Merge.** Keep items whose source is in `lens.sources`; order them by the source's position in
  *    `lens.sources` (repeats ignored), then by input order within the source.
  * 2. **Dedupe by [ItemId].** The first item in merged order wins: an earlier source in the lens beats a
@@ -44,7 +47,7 @@ object DefaultLensEvaluator : LensEvaluator {
         context: LensEvaluationContext,
     ): LensResult {
         val filtered =
-            LensMerge.merge(lens.sources, items, context.maxInputItems)
+            LensMerge.merge(lens.sources, SourceExclusionFilter.apply(context.exclusions, items), context.maxInputItems)
                 .filter { LensFilterEvaluator.matches(lens.filter, it.item, context) }
         val limited =
             LensSorting.sort(filtered, lens.sort).map { it.item }.let { sorted ->
