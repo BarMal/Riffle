@@ -24,8 +24,9 @@ enum class SettingsPage(
     HIDDEN_APPS("Hidden apps"),
     VERSION("About"),
 
-    /** Developer page: reachable only from the Developer section while Workspaces (preview) is on. */
+    /** Developer pages: reachable only from the Developer section while Workspaces (preview) is on. */
     WORKSPACES("Workspaces"),
+    SOURCES("Sources"),
 }
 
 internal enum class SettingsPageGroup(

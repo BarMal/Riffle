@@ -1,10 +1,13 @@
 package com.riffle.app.launcher
 
 import com.riffle.app.launcher.editor.EditorText
+import com.riffle.app.launcher.workspace.SourceAccessRoute
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.settings.LayoutFallbackNotice
+import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
 import com.riffle.core.domain.launcher.workspace.settings.WorkspaceRow
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsMessage
+import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 
 /** User-visible wording for the Workspaces and Sources settings pages. Plain strings so JVM tests can check them. */
 internal object WorkspacesSettingsText {
@@ -138,4 +141,48 @@ internal object WorkspacesDialogText {
             WorkspacesSettingsMessage.NoKnownPreset -> "This workspace has no recorded preset to reset to."
             WorkspacesSettingsMessage.NothingToDo -> "Nothing changed."
         }
+}
+
+/** Wording for the Sources page. */
+internal object SourcesSettingsText {
+    const val TITLE = "Sources"
+    const val SOURCES_INTRO =
+        "Turn a source off to stop Riffle reading it. Pages that use it then say it is turned off, with a " +
+            "button to turn it back on. Nothing is deleted."
+    const val HIDDEN_ITEMS_SOON = "Hidden items and rules (coming soon)"
+    const val HIDDEN_ITEMS_SOON_BODY = "Rules to hide items from a source will be managed here."
+    const val ALLOW = "Allow"
+
+    /** The label of the Allow button for a source's explicit access flow; null when it has none. */
+    fun allowLabel(
+        route: SourceAccessRoute,
+        calendar: CalendarAccessStatus,
+    ): String? =
+        when (route) {
+            SourceAccessRoute.CALENDAR -> calendar.calendarAccessActionLabel() ?: ALLOW
+            SourceAccessRoute.NOTIFICATION_ACCESS -> "Allow notification access"
+            SourceAccessRoute.USAGE_ACCESS -> "Open usage access settings"
+            SourceAccessRoute.NONE -> null
+        }
+
+    /** Why access is asked for, shown next to the button so the reason is read before anything can appear. */
+    fun rationale(
+        route: SourceAccessRoute,
+        calendar: CalendarAccessStatus,
+    ): String? =
+        when (route) {
+            SourceAccessRoute.CALENDAR -> calendar.calendarAccessSettingsLabel()
+            SourceAccessRoute.NOTIFICATION_ACCESS ->
+                "Riffle reads notifications on this device only and never stores or sends them. This opens " +
+                    "Android's notification access settings."
+            SourceAccessRoute.USAGE_ACCESS ->
+                "Riffle reads which apps you used lately, on this device only. This opens Android's usage " +
+                    "access settings."
+            SourceAccessRoute.NONE -> null
+        }
+
+    fun statusDescription(
+        title: String,
+        status: SourceStatus,
+    ): String = "$title, ${status.label}"
 }

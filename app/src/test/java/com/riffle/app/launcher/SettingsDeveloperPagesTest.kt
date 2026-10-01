@@ -5,11 +5,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The Workspaces page is a Developer page: it never joins the main page's groups, its search or
+ * The Workspaces and Sources pages are Developer pages: they never join the main page's groups, its search or
  * the launcher search, so with the preview off nothing about Settings differs.
  */
 class SettingsDeveloperPagesTest {
-    private val developerPages = setOf(SettingsPage.WORKSPACES)
+    private val developerPages = setOf(SettingsPage.WORKSPACES, SettingsPage.SOURCES)
 
     @Test
     fun theMainPageEntriesDoNotListThem() {
@@ -18,15 +18,20 @@ class SettingsDeveloperPagesTest {
 
     @Test
     fun settingsSearchCannotFindThem() {
-        listOf("workspaces", "preset", "lens").forEach { query ->
+        listOf("workspaces", "sources", "preset", "source", "lens").forEach { query ->
             assertTrue(query, settingsMainPageEntriesMatching(query).none { it.page in developerPages })
         }
-        val pageIds = developerPages.map { it.name.lowercase() }
-        assertTrue(settingsLauncherSearchEntries().none { entry -> entry.id.value in pageIds })
+        assertTrue(
+            settingsLauncherSearchEntries().none {
+                    entry ->
+                entry.id.value in developerPages.map { it.name.lowercase() }
+            },
+        )
     }
 
     @Test
-    fun itIsNamedForItsTitle() {
+    fun theyAreNamedForTheirTitles() {
         assertEquals("Workspaces", SettingsPage.WORKSPACES.title)
+        assertEquals("Sources", SettingsPage.SOURCES.title)
     }
 }

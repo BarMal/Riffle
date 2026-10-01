@@ -21,6 +21,8 @@ data class ContainerActions(
     val onItemClick: (Item) -> Unit = {},
     val onAction: (Item, ItemAction) -> Unit = { _, _ -> },
     val onGroupClick: (ItemGroup) -> Unit = {},
+    /** Turns on every source [Lens] reads (the "Turn on" button of a lens whose source is off). */
+    val onEnableSources: (Lens) -> Unit = {},
 )
 
 /**
@@ -38,16 +40,19 @@ data class ContainerServices(
 object ContainerText {
     const val PERMISSION_REQUIRED = "Allow access to show this"
     const val UNAVAILABLE = "This content is not available"
+    const val OFF = "This source is turned off"
+    const val ENABLE = "Turn on"
     const val NEEDS_GROUPED = "This page set needs a grouped lens"
     const val OTHER_PAGE = "Other"
 }
 
-/** The state an expression should draw for this output. */
-internal fun LensOutput.toExpressionState(): ExpressionState =
+/** The state an expression should draw for this output; [onEnable] is what its Turn on button does. */
+internal fun LensOutput.toExpressionState(onEnable: () -> Unit = {}): ExpressionState =
     when (availability) {
         LensAvailability.LOADING -> ExpressionState.Loading
         LensAvailability.READY -> ExpressionState.Ready
         LensAvailability.PERMISSION_REQUIRED -> ExpressionState.Unavailable(ContainerText.PERMISSION_REQUIRED)
+        LensAvailability.OFF -> ExpressionState.Off(ContainerText.OFF, ContainerText.ENABLE, onEnable)
         LensAvailability.UNAVAILABLE -> ExpressionState.Unavailable(ContainerText.UNAVAILABLE)
     }
 

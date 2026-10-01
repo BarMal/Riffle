@@ -58,6 +58,11 @@ class AlphaListExpressionsScreenshotTest {
         render(state = ExpressionState.Unavailable("Notification access is off"))
     }
 
+    @Test
+    fun alphaListOff() {
+        render(state = ExpressionState.Off("This source is turned off", "Turn on") {})
+    }
+
     private fun render(
         result: LensResult = ExpressionFixtures.flatApps(),
         state: ExpressionState = ExpressionState.Ready,

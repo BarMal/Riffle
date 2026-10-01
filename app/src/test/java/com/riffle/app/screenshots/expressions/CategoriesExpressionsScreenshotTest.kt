@@ -58,6 +58,11 @@ class CategoriesExpressionsScreenshotTest {
         render(state = ExpressionState.Unavailable("Notification access is off"))
     }
 
+    @Test
+    fun categoriesOff() {
+        render(state = ExpressionState.Off("This source is turned off", "Turn on") {})
+    }
+
     private fun render(
         result: LensResult = ExpressionFixtures.groupedApps(),
         state: ExpressionState = ExpressionState.Ready,

@@ -23,6 +23,12 @@ sealed interface SourceState {
     data object PermissionRequired : SourceState
 
     data object Unavailable : SourceState
+
+    /**
+     * The user turned this source off (Settings > Sources). Nothing was read: a disabled source never
+     * touches its repository. Distinct from [Unavailable] so the UI can offer to turn it back on.
+     */
+    data object Off : SourceState
 }
 
 fun interface SourceObserver {

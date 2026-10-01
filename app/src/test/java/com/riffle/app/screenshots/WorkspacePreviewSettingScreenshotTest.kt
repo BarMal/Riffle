@@ -11,8 +11,13 @@ import com.riffle.app.launcher.SettingsPage
 import com.riffle.app.launcher.SettingsWorkspacePreviewSection
 import com.riffle.app.launcher.WorkspacePreviewSetting
 import com.riffle.app.launcher.WorkspaceSettingsHost
+import com.riffle.app.launcher.workspace.SourcesSettingsController
 import com.riffle.app.launcher.workspace.WorkspacesSettingsController
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.settings.InMemoryDisabledSourcesStore
+import com.riffle.core.domain.launcher.workspace.settings.SourceStatusMonitor
+import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
+import com.riffle.core.domain.launcher.workspace.testing.FakeSourceRegistry
 import com.riffle.core.domain.launcher.workspace.testing.InMemoryWorkspaceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
@@ -75,7 +80,7 @@ class WorkspacePreviewSettingScreenshotTest {
     }
 
     @Test
-    fun onWithTheSettingsHostOffersTheWorkspacesPage() {
+    fun onWithTheSettingsHostOffersTheWorkspacesAndSourcesPages() {
         val pages = mutableListOf<SettingsPage>()
         composeRule.setContent {
             ScreenshotBackdrop {
@@ -90,23 +95,26 @@ class WorkspacePreviewSettingScreenshotTest {
         composeRule.captureScreen()
 
         composeRule.onNodeWithText("Workspaces").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Sources").assertIsDisplayed().performClick()
 
-        assertEquals(listOf(SettingsPage.WORKSPACES), pages)
+        assertEquals(listOf(SettingsPage.WORKSPACES, SettingsPage.SOURCES), pages)
     }
 
     @Test
-    fun offTheSettingsPageIsNotOffered() {
+    fun offTheSettingsPagesAreNotOffered() {
         renderSection(setting(enabled = false), settingsHost())
 
         composeRule.onNodeWithText("Workspaces").assertDoesNotExist()
+        composeRule.onNodeWithText("Sources").assertDoesNotExist()
     }
 
     @Test
-    fun withoutTheSettingsHostThePageIsNotOffered() {
+    fun withoutTheSettingsHostThePagesAreNotOffered() {
         renderSection(setting(enabled = true), null)
 
         composeRule.onNodeWithText("Open Workspaces (preview)").assertIsDisplayed()
         composeRule.onNodeWithText("Workspaces").assertDoesNotExist()
+        composeRule.onNodeWithText("Sources").assertDoesNotExist()
     }
 
     private fun renderSection(
@@ -128,9 +136,19 @@ class WorkspacePreviewSettingScreenshotTest {
     private fun settingsHost() =
         WorkspaceSettingsHost(
             workspaces = WorkspacesSettingsController(InMemoryWorkspaceRepository()),
+            sources =
+                SourcesSettingsController(
+                    monitorFor = {
+                            onChange ->
+                        SourceStatusMonitor(FakeSourceRegistry(emptyList()), emptyList(), onChange)
+                    },
+                    enablement = StoredSourceEnablement(InMemoryDisabledSourcesStore()),
+                    descriptors = { emptyList() },
+                ),
             version = MutableStateFlow(0),
             currentLayout = HomeLayoutDeviceClass.PHONE,
             onEdit = {},
+            onRequestSourceAccess = {},
         )
 
     @Test

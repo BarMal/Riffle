@@ -5,10 +5,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +45,13 @@ internal fun ExpressionStateHost(
                     ExpressionStatusMessage(ExpressionText.LOADING, showSpinner = !reducedMotion)
                 state is ExpressionState.Unavailable ->
                     ExpressionStatusMessage(state.message, showSpinner = false)
+                state is ExpressionState.Off ->
+                    ExpressionStatusMessage(
+                        message = state.message,
+                        showSpinner = false,
+                        actionLabel = state.actionLabel,
+                        onAction = state.onEnable,
+                    )
                 isEmpty -> ExpressionStatusMessage(emptyMessage, showSpinner = false)
                 else -> content()
             }
@@ -54,6 +63,8 @@ internal fun ExpressionStateHost(
 private fun ExpressionStatusMessage(
     message: String,
     showSpinner: Boolean,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(RiffleSpacing.xl),
@@ -70,5 +81,13 @@ private fun ExpressionStatusMessage(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        if (actionLabel != null) {
+            FilledTonalButton(
+                onClick = onAction,
+                modifier = Modifier.heightIn(min = ExpressionMinTouchTarget),
+            ) {
+                Text(actionLabel)
+            }
+        }
     }
 }
