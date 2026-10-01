@@ -4,10 +4,10 @@ import android.text.format.DateUtils
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -76,8 +76,9 @@ internal fun rssFeedStatusText(
 ): String? {
     if (coordinator == null || !feed.enabled) return null
     val tick = rememberRefreshTick(coordinator)
-    val cachedAt by produceState<Long?>(null, feed.id, tick) {
-        value = withContext(Dispatchers.IO) { coordinator.lastCachedAtMillis(feed.id) }
+    var cachedAt by remember(feed.id) { mutableStateOf<Long?>(null) }
+    LaunchedEffect(feed.id, tick) {
+        cachedAt = withContext(Dispatchers.IO) { coordinator.lastCachedAtMillis(feed.id) }
     }
     val status = remember(tick) { coordinator.statusOf(feed.id) }
     val updatedAt = status.lastUpdatedAtEpochMillis ?: cachedAt
