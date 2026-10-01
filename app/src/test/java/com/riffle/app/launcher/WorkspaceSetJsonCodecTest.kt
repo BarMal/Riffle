@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.workspace.CURRENT_WORKSPACE_SET_SCHEMA_VERSION
 import com.riffle.core.domain.launcher.workspace.ContainerId
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
@@ -73,7 +74,7 @@ class WorkspaceSetJsonCodecTest {
     fun encodedJsonCarriesSchemaVersionAndNoItemContent() {
         val json = JSONObject(encodeWorkspaceSet(WorkspaceMigration.migrate(HomeLayoutSet.standard())))
 
-        assertEquals(1, json.getInt("version"))
+        assertEquals(CURRENT_WORKSPACE_SET_SCHEMA_VERSION, json.getInt("version"))
         assertFalse(json.toString().contains("\"title\""))
     }
 
