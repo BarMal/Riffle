@@ -76,7 +76,7 @@ internal fun rssFeedStatusText(
 ): String? {
     if (coordinator == null || !feed.enabled) return null
     val tick = rememberRefreshTick(coordinator)
-    val cachedAt by produceState<Long?>(null, coordinator, feed.id, tick) {
+    val cachedAt by produceState<Long?>(null, feed.id, tick) {
         value = withContext(Dispatchers.IO) { coordinator.lastCachedAtMillis(feed.id) }
     }
     val status = remember(tick) { coordinator.statusOf(feed.id) }
