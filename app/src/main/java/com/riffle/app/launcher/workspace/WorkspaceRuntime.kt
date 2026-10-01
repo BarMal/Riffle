@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.workspace.container.LensResultProvider
 import com.riffle.core.domain.launcher.workspace.container.SourceBackedLensResultProvider
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoice
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoices
+import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleSet
 import com.riffle.core.domain.launcher.workspace.lens.AsyncLensEvaluator
 import com.riffle.core.domain.launcher.workspace.lens.LensEvaluationContext
 import com.riffle.core.domain.launcher.workspace.lens.ZoneDayBucketer
@@ -24,6 +25,9 @@ import java.util.concurrent.Executor
  * provider shares one upstream subscription per source), the [provider] that evaluates lenses off the main
  * thread, the [imageLoader] and the item [actions].
  *
+ * [prepareExclusions] loads the layout's source exclusion rules, which lens evaluation applies before every
+ * lens; until it has run nothing is excluded.
+ *
  * Nothing here starts work: sources subscribe only when a lens is observed, which only happens while a
  * container is composed, so with the preview off no source runs.
  */
@@ -34,7 +38,11 @@ internal class WorkspaceRuntime(
     private val imageLoader: ExpressionImageLoader,
     private val itemActions: WorkspaceItemActions,
     private val sourceAccess: () -> Map<SourceId, SourceAccess> = { emptyMap() },
+    private val exclusionLoader: suspend () -> Unit = {},
 ) {
+    /** Loads the per-layout exclusion rules (migrating the legacy ones once); called when the preview is on. */
+    suspend fun prepareExclusions() = exclusionLoader()
+
     /** The editor's source choices: every registered source with the access it currently has (never prompts). */
     fun sourceChoices(): List<SourceChoice> = SourceChoices.build(registry.descriptors(), sourceAccess())
 
@@ -67,9 +75,10 @@ internal fun workspaceLensProvider(
     executor: Executor,
     nowEpochMillis: () -> Long = System::currentTimeMillis,
     zone: () -> ZoneId = ZoneId::systemDefault,
+    exclusions: () -> ExclusionRuleSet = { ExclusionRuleSet.EMPTY },
 ): LensResultProvider =
     SourceBackedLensResultProvider(
         registry = registry,
         evaluator = AsyncLensEvaluator(executor),
-        context = { LensEvaluationContext(nowEpochMillis(), ZoneDayBucketer(zone())) },
+        context = { LensEvaluationContext(nowEpochMillis(), ZoneDayBucketer(zone()), exclusions = exclusions()) },
     )

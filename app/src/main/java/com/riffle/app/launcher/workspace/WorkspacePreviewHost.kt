@@ -46,6 +46,7 @@ internal fun WorkspacePreviewLayer(
 ) {
     val runtime = remember(host) { host.runtime() }
     LaunchedEffect(runtime) {
+        runtime.prepareExclusions()
         runtime.repository.initialize(WorkspaceBootstrap::seed)
         viewModel.workspaceMenu.refresh()
     }

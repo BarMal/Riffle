@@ -34,6 +34,8 @@ import com.riffle.app.launcher.calendar.AndroidCalendarAccessGateway
 import com.riffle.app.launcher.calendar.CalendarAccessChanges
 import com.riffle.app.launcher.calendar.SharedPreferencesCalendarDenialHistory
 import com.riffle.app.launcher.calendar.sourceAccess
+import com.riffle.app.launcher.exclusions.CachedExclusionRepository
+import com.riffle.app.launcher.exclusions.DataStoreExclusionStore
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
 import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
@@ -63,6 +65,7 @@ import com.riffle.app.launcher.workspace.sourceAccessMap
 import com.riffle.app.launcher.workspace.workspaceLensProvider
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.hostsWidget
@@ -85,6 +88,7 @@ internal class MainActivityDependencies(
             appShortcutRepository = AndroidAppShortcutRepository(activity),
         )
     }
+    val exclusionRepository by lazy { CachedExclusionRepository(DataStoreExclusionStore(activity)) }
     val appVisibilityRepository by lazy { SharedPreferencesAppVisibilityRepository(activity) }
     val feedArticleCacheRepository by lazy { DataStoreFeedArticleCacheRepository(activity) }
 
@@ -180,9 +184,27 @@ internal class MainActivityDependencies(
         return WorkspaceRuntime(
             repository = workspaceRepository,
             registry = registry,
-            provider = workspaceLensProvider(registry, lensExecutor),
+            provider =
+                workspaceLensProvider(
+                    registry,
+                    lensExecutor,
+                    exclusions = {
+                        exclusionRepository.rules(
+                            homeLayoutDeviceClassFromConfiguration(
+                                screenWidthDp = activity.resources.configuration.screenWidthDp,
+                                screenHeightDp = activity.resources.configuration.screenHeightDp,
+                            ) ?: HomeLayoutDeviceClass.PHONE,
+                        )
+                    },
+                ),
             imageLoader = AndroidExpressionImageLoader(activity.packageManager),
             itemActions = WorkspaceItemActions(AndroidItemLaunchPort(activity, appLauncher)),
+            exclusionLoader = {
+                exclusionRepository.initialize(
+                    hiddenApps = appVisibilityRepository.hiddenAppIdentities(),
+                    hideRules = launcherSettings().notificationHiding.rules,
+                )
+            },
             sourceAccess = {
                 sourceAccessMap(
                     notificationAccess = notificationAccessGateway.getNotificationAccessStatus(),
