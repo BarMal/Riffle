@@ -58,6 +58,11 @@ class IndexExpressionsScreenshotTest {
         render(state = ExpressionState.Unavailable("Notification access is off"))
     }
 
+    @Test
+    fun indexLoading() {
+        render(state = ExpressionState.Loading)
+    }
+
     private fun render(
         result: LensResult = ExpressionFixtures.groupedMessages(),
         state: ExpressionState = ExpressionState.Ready,

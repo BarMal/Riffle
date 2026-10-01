@@ -51,6 +51,17 @@ class ContainersScreenshotTest {
     }
 
     @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun widgetCompactDark() {
+        renderWidget()
+    }
+
+    @Test
+    fun widgetUnavailable() {
+        renderWidget(ContainerServices(StaticLensResultProvider(LensOutput.Unavailable), services.environment))
+    }
+
+    @Test
     fun boundPageCompact() {
         renderBoundPage()
     }
@@ -93,6 +104,17 @@ class ContainersScreenshotTest {
     @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
     fun pageSetUnfolded() {
         renderPageSet()
+    }
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun pageSetCompactDark() {
+        renderPageSet()
+    }
+
+    @Test
+    fun pageSetPermissionRequired() {
+        renderPageSet(ContainerServices(StaticLensResultProvider(LensOutput.PermissionRequired), services.environment))
     }
 
     @Test

@@ -48,12 +48,25 @@ class IconGridExpressionsScreenshotTest {
         render(result = LensResult.Flat(emptyList()))
     }
 
-    private fun render(result: LensResult = ExpressionFixtures.flatApps()) {
+    @Test
+    fun iconGridLoading() {
+        render(state = ExpressionState.Loading)
+    }
+
+    @Test
+    fun iconGridUnavailable() {
+        render(state = ExpressionState.Unavailable("Notification access is off"))
+    }
+
+    private fun render(
+        result: LensResult = ExpressionFixtures.flatApps(),
+        state: ExpressionState = ExpressionState.Ready,
+    ) {
         composeRule.renderExpression {
             IconGridExpression(
                 result = result,
                 onItemClick = {},
-                state = ExpressionState.Ready,
+                state = state,
                 environment = ExpressionFixtures.environment,
             )
         }

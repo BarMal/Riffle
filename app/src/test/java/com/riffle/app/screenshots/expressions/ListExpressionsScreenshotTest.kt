@@ -53,6 +53,11 @@ class ListExpressionsScreenshotTest {
         render(state = ExpressionState.Loading)
     }
 
+    @Test
+    fun listUnavailable() {
+        render(state = ExpressionState.Unavailable("Notification access is off"))
+    }
+
     private fun render(
         result: LensResult = ExpressionFixtures.flatMessages(),
         state: ExpressionState = ExpressionState.Ready,
