@@ -55,9 +55,9 @@ Findings:
 
 | Lever | Estimate | Basis |
 | --- | --- | --- |
-| R8 shrink + optimise (this work) | **ESTIMATED 11 to 16 MiB saved, APK about 9 to 14 MiB**. Dex is stored uncompressed, so APK size tracks dex size 1:1. | Compose/AndroidX/DataStore libraries (about 47% of methods) typically shrink 60 to 75% under R8; app code 10 to 30%. |
-| `isShrinkResources` | ESTIMATED under 0.1 MiB | `res/` is 13 KB; only the arsc table can shrink. Enabled with minify since it is free and low risk. |
-| Compress dex in the APK | **MEASURED upper bound: 24.27 to 8.26 MiB of dex** (zlib level 9). Independent of R8; combined with R8 the APK would be roughly 3 to 5 MiB (ESTIMATED). | Trade-off: larger on-device install footprint and a slightly slower install, because the system extracts and optimises dex instead of mapping it. Reasonable for a sideloaded alpha; decide separately. |
+| R8 shrink + optimise (this work) | **MEASURED (CI run 36896105589, same commit): 25.66 MiB to 4.38 MiB, saved 21.28 MiB (82.9%).** dex 25.08 to 4.10 MiB (3 files to 1), `resources.arsc` 0.40 to 0.12 MiB. The earlier 11 to 16 MiB estimate was far too conservative. | Built with `-Priffle.minify=true`; R8 completed without errors. |
+| `isShrinkResources` | MEASURED about 0.28 MiB (arsc 0.40 to 0.12), included in the figure above | Enabled with minify. |
+| Compress dex in the APK | **MEASURED upper bound: 24.27 to 8.26 MiB of dex** (zlib level 9). Independent of R8; on top of R8 it would save roughly 1.5 MiB more (ESTIMATED: 4.10 MiB of dex compresses about 3x), so it is now much less compelling. | Trade-off: larger on-device install footprint and a slightly slower install, because the system extracts and optimises dex instead of mapping it. Reasonable for a sideloaded alpha; decide separately. |
 | `localeFilters` (English only) | ESTIMATED 0.2 to 0.3 MiB | Only the arsc library string tables. Costs localised accessibility strings in library UI, so not recommended while a11y is a priority. |
 | ABI splits / drop ABIs | MEASURED about 0.04 MiB | Negligible. |
 | Extended icons removal | 0 MiB | Not present. |

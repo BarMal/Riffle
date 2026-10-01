@@ -172,4 +172,4 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          script: .github/scripts/smoke-minified-apk.sh minified/riffle-minified.apk
+          script: bash .github/scripts/smoke-minified-apk.sh minified/riffle-minified.apk
