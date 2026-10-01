@@ -1,5 +1,7 @@
 package com.riffle.core.domain.launcher.workspace
 
+import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
+
 /**
  * The workspaces one layout (device class) holds: its list in display order, which one is active and
  * which is the default the resolver falls back to.
@@ -13,6 +15,10 @@ data class LayoutWorkspaces(
     val workspaces: List<Workspace>,
     val activeId: WorkspaceId,
     val defaultId: WorkspaceId,
+    /** This layout's saved lenses (per layout, never shared across layouts). Empty by default. */
+    val library: LensLibrary = LensLibrary(),
+    /** Placed items shared by this layout's workspaces (WS10 S3). Empty until the pool is wired in. */
+    val pool: PlacedItemPool = PlacedItemPool(),
 ) {
     init {
         require(workspaces.isNotEmpty()) { "A layout needs at least one workspace." }
@@ -108,12 +114,13 @@ data class LayoutWorkspaces(
             workspaces: List<Workspace>,
             activeId: WorkspaceId?,
             defaultId: WorkspaceId?,
+            library: LensLibrary = LensLibrary(),
         ): LayoutWorkspaces? {
             val unique = workspaces.distinctBy { it.id }
             val first = unique.firstOrNull() ?: return null
             val default = unique.firstOrNull { it.id == defaultId } ?: first
             val active = unique.firstOrNull { it.id == activeId } ?: default
-            return LayoutWorkspaces(unique, active.id, default.id)
+            return LayoutWorkspaces(unique, active.id, default.id, library)
         }
     }
 }

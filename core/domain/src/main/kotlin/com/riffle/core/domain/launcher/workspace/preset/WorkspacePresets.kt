@@ -71,7 +71,10 @@ object PresetInstaller {
             if (deviceClass in acc.layouts) acc else acc.withLayout(deviceClass, newInstallLayout(deviceClass, ids))
         }
 
-    /** Adds an installed [preset] to [deviceClass]'s workspaces (materializing the default if none stored). */
+    /**
+     * Adds an installed [preset] to [deviceClass]'s workspaces (materializing the default if none stored),
+     * writing its lenses to that layout's saved-lens library ([PresetLensInstaller]).
+     */
     fun addPreset(
         set: WorkspaceSet,
         deviceClass: HomeLayoutDeviceClass,
@@ -79,5 +82,7 @@ object PresetInstaller {
         activate: Boolean = false,
         ids: WorkspaceIdFactory = WorkspaceIdFactory.Random,
     ): WorkspaceSet =
-        set.update(deviceClass) { it.add(WorkspacePresets.installPreset(preset, deviceClass, ids), activate) }
+        set.update(deviceClass) {
+            PresetLensInstaller.install(it, preset, PresetPosture.of(deviceClass), ids, activate).layout
+        }
 }

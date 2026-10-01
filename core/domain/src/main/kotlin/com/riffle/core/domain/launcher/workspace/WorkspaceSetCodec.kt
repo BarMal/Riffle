@@ -1,8 +1,10 @@
 package com.riffle.core.domain.launcher.workspace
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.pool.PoolCodec
+import com.riffle.core.domain.launcher.workspace.pool.PoolValidation
 
-const val CURRENT_WORKSPACE_SET_SCHEMA_VERSION = 1
+const val CURRENT_WORKSPACE_SET_SCHEMA_VERSION = 2
 
 /**
  * Encodes and decodes a [WorkspaceSet] to [StoredValue], on top of [WorkspaceCodec]. Only lenses and
@@ -12,6 +14,11 @@ const val CURRENT_WORKSPACE_SET_SCHEMA_VERSION = 1
  * to decode or have no drawable page are dropped; a missing or stale active or default id falls back
  * (see [LayoutWorkspaces.repaired]); a layout left with no workspace is dropped, so it reads as the
  * built-in default and migration can rebuild it. A newer schema version is read on a best-effort basis.
+ *
+ * Schema 2 adds, per layout, an optional `library` (saved lenses) and, per binding, an optional `ref`; a
+ * schema 1 blob has neither and decodes unchanged. Every ref-carrying binding also stores its lens inline,
+ * so a reader that ignores both keys still draws every container. Schema 2 also adds an optional per-layout
+ * `pool` (placed items), which decodes safely, see [PoolCodec].
  */
 object WorkspaceSetCodec {
     fun encode(set: WorkspaceSet): StoredValue.Obj =
@@ -39,6 +46,8 @@ object WorkspaceSetCodec {
             "active" to str(layout.activeId.value),
             "default" to str(layout.defaultId.value),
             "workspaces" to arr(layout.workspaces.map(WorkspaceCodec::encode)),
+            "library" to layout.library.takeIf { it.lenses.isNotEmpty() }?.let(LensLibraryCodec::encode),
+            "pool" to layout.pool.takeUnless { it.isEmpty }?.let(PoolCodec::encode),
         )
 
     private fun decodeLayout(root: StoredValue.Obj): Pair<HomeLayoutDeviceClass, LayoutWorkspaces>? {
@@ -52,7 +61,13 @@ object WorkspaceSetCodec {
                 workspaces = workspaces,
                 activeId = root.string("active")?.let(::WorkspaceId),
                 defaultId = root.string("default")?.let(::WorkspaceId),
+                library = LensLibraryCodec.decode(root.obj("library")),
             )
-        return layout?.let { deviceClass to it }
+        // A ref that resolves in this layout's library takes the library's lens; others keep their snapshot.
+        return layout?.let { deviceClass to LensLibraryOps.rehydrate(it.withDecodedPool(root.obj("pool"))).layout }
     }
+
+    /** Missing or unreadable pool data is an empty pool; arrangements of unknown workspaces are dropped. */
+    private fun LayoutWorkspaces.withDecodedPool(value: StoredValue.Obj?): LayoutWorkspaces =
+        copy(pool = PoolValidation.retainWorkspaces(PoolCodec.decode(value).pool, workspaces.map { it.id }.toSet()))
 }

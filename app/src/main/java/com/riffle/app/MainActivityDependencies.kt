@@ -34,6 +34,8 @@ import com.riffle.app.launcher.calendar.AndroidCalendarAccessGateway
 import com.riffle.app.launcher.calendar.CalendarAccessChanges
 import com.riffle.app.launcher.calendar.SharedPreferencesCalendarDenialHistory
 import com.riffle.app.launcher.calendar.sourceAccess
+import com.riffle.app.launcher.exclusions.CachedExclusionRepository
+import com.riffle.app.launcher.exclusions.DataStoreExclusionStore
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
 import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
@@ -43,7 +45,10 @@ import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnectio
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
+import com.riffle.app.launcher.rss.AndroidFeedParser
+import com.riffle.app.launcher.rss.AndroidFeedTransport
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
+import com.riffle.app.launcher.rss.FeedRefreshCoordinator
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.sources.ContentSourceDependencies
 import com.riffle.app.launcher.sources.FeedSourceDependencies
@@ -63,6 +68,7 @@ import com.riffle.app.launcher.workspace.sourceAccessMap
 import com.riffle.app.launcher.workspace.workspaceLensProvider
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.hostsWidget
@@ -85,8 +91,26 @@ internal class MainActivityDependencies(
             appShortcutRepository = AndroidAppShortcutRepository(activity),
         )
     }
+    val exclusionRepository by lazy { CachedExclusionRepository(DataStoreExclusionStore(activity)) }
     val appVisibilityRepository by lazy { SharedPreferencesAppVisibilityRepository(activity) }
     val feedArticleCacheRepository by lazy { DataStoreFeedArticleCacheRepository(activity) }
+
+    /**
+     * User-triggered RSS refresh (#1374). Constructing it does no I/O and starts nothing; the network is touched
+     * only when a refresh is requested, on its own background thread. Feeds are read from the saved settings.
+     */
+    val feedRefreshCoordinator by lazy {
+        FeedRefreshCoordinator(
+            transport = AndroidFeedTransport(),
+            parser = AndroidFeedParser(),
+            cache = feedArticleCacheRepository,
+            configuredFeeds = { launcherSettingsRepository.loadLauncherSettings()?.rss?.feeds.orEmpty() },
+            executor =
+                Executors.newSingleThreadExecutor { task ->
+                    Thread(task, "riffle-feed-refresh").apply { isDaemon = true }
+                },
+        )
+    }
 
     /**
      * The explicit wiring point from the DataStore workspace store to the shell (#1351). Built lazily and
@@ -170,6 +194,7 @@ internal class MainActivityDependencies(
                             FeedSourceDependencies(
                                 configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
                                 cache = feedArticleCacheRepository,
+                                changes = feedRefreshCoordinator.cacheChanges,
                             ),
                     ),
             )
@@ -180,9 +205,27 @@ internal class MainActivityDependencies(
         return WorkspaceRuntime(
             repository = workspaceRepository,
             registry = registry,
-            provider = workspaceLensProvider(registry, lensExecutor),
+            provider =
+                workspaceLensProvider(
+                    registry,
+                    lensExecutor,
+                    exclusions = {
+                        exclusionRepository.rules(
+                            homeLayoutDeviceClassFromConfiguration(
+                                screenWidthDp = activity.resources.configuration.screenWidthDp,
+                                screenHeightDp = activity.resources.configuration.screenHeightDp,
+                            ) ?: HomeLayoutDeviceClass.PHONE,
+                        )
+                    },
+                ),
             imageLoader = AndroidExpressionImageLoader(activity.packageManager),
             itemActions = WorkspaceItemActions(AndroidItemLaunchPort(activity, appLauncher)),
+            exclusionLoader = {
+                exclusionRepository.initialize(
+                    hiddenApps = appVisibilityRepository.hiddenAppIdentities(),
+                    hideRules = launcherSettings().notificationHiding.rules,
+                )
+            },
             sourceAccess = {
                 sourceAccessMap(
                     notificationAccess = notificationAccessGateway.getNotificationAccessStatus(),

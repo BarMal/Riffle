@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -39,6 +40,7 @@ import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
+import com.riffle.app.launcher.LocalFeedRefreshCoordinator
 import com.riffle.app.launcher.WallpaperPickerLaunchResult
 import com.riffle.app.launcher.WorkspaceMenuFeature
 import com.riffle.app.launcher.apps.AppCatalogChange
@@ -519,20 +521,24 @@ class MainActivity : ComponentActivity() {
             refreshStatuses = ::refreshPlatformStatuses,
             compose = {
                 setContent {
-                    LauncherShell(
-                        viewModel = shellViewModel,
-                        appVersionLabel = appVersionLabel,
-                        appBuildIdentityLabel = appBuildIdentityLabel,
-                        appIconLoader = appIconLoader,
-                        widgetRenderers =
-                            LauncherWidgetRenderers(
-                                viewFactory = widgetHostGateway,
-                                previewImageLoader = dependencies.widgetPreviewImageLoader,
-                            ),
-                        adaptiveStageWindowLayout = adaptiveStageWindowLayout,
-                        workspacePreview = workspacePreviewHost,
-                        onAction = launcherActionRouter::handle,
-                    )
+                    CompositionLocalProvider(
+                        LocalFeedRefreshCoordinator provides dependencies.feedRefreshCoordinator,
+                    ) {
+                        LauncherShell(
+                            viewModel = shellViewModel,
+                            appVersionLabel = appVersionLabel,
+                            appBuildIdentityLabel = appBuildIdentityLabel,
+                            appIconLoader = appIconLoader,
+                            widgetRenderers =
+                                LauncherWidgetRenderers(
+                                    viewFactory = widgetHostGateway,
+                                    previewImageLoader = dependencies.widgetPreviewImageLoader,
+                                ),
+                            adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                            workspacePreview = workspacePreviewHost,
+                            onAction = launcherActionRouter::handle,
+                        )
+                    }
                 }
             },
         )

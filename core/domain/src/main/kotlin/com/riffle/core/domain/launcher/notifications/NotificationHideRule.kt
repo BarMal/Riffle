@@ -72,7 +72,7 @@ data class NotificationHideRule(
             return digitRun.replace(normalized, ANY_PLACEHOLDER)
         }
 
-        private fun wildcardRegex(pattern: String): Regex {
+        internal fun wildcardRegex(pattern: String): Regex {
             val regex =
                 buildString {
                     append("^")

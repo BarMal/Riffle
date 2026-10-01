@@ -7,10 +7,17 @@ value class ContainerId(val value: String) {
     }
 }
 
-/** A lens and the expression that draws it: the unit a container hosts. */
+/**
+ * A lens and the expression that draws it: the unit a container hosts.
+ *
+ * [ref] optionally names the [SavedLens] in the layout's [LensLibrary] this binding uses. [lens] always
+ * stays the lens to draw: when [ref] resolves it equals the library's lens (a snapshot refreshed on every
+ * library edit); when it does not (dangling) the snapshot is drawn as is. Null means an inline lens.
+ */
 data class LensBinding(
     val lens: Lens,
     val expression: ExpressionKind,
+    val ref: LensId? = null,
 )
 
 /**

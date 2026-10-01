@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.lens
 
+import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleSet
 import java.time.Instant
 import java.time.ZoneId
 
@@ -25,6 +26,8 @@ data class LensEvaluationContext(
     val dayBucketer: DayBucketer = ZoneDayBucketer(ZoneId.of("UTC")),
     val maxInputItems: Int = DEFAULT_MAX_INPUT_ITEMS,
     val maxFilterDepth: Int = DEFAULT_MAX_FILTER_DEPTH,
+    /** The current layout's source exclusions, applied before every lens; empty means nothing is excluded. */
+    val exclusions: ExclusionRuleSet = ExclusionRuleSet.EMPTY,
 ) {
     init {
         require(maxInputItems > 0) { "maxInputItems must be positive." }
