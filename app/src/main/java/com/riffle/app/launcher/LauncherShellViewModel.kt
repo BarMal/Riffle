@@ -53,13 +53,17 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withStagePreferences
+import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuEffect
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class LauncherShellViewModel(
     private val firstRunRepository: FirstRunRepository,
@@ -150,6 +154,23 @@ class LauncherShellViewModel(
             ),
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
+
+    private val mutableWorkspaceMenuEffects = MutableSharedFlow<WorkspaceMenuEffect>(extraBufferCapacity = 8)
+
+    /**
+     * Menu choices the shell does not perform itself: jump to a page, open the Finder, edit the
+     * workspace. The pager host and the workspace editor collect them; switching workspace is already
+     * persisted by [workspaceMenu] before it is emitted here.
+     */
+    val workspaceMenuEffects: SharedFlow<WorkspaceMenuEffect> = mutableWorkspaceMenuEffects
+
+    /** The dock's workspace menu (#1351): inert while [WorkspaceMenuFeature.enabled] is false. */
+    internal val workspaceMenu =
+        WorkspaceMenuController(
+            repository = platformDependencies.workspaceRepository,
+            deviceClass = { mutableState.value.homeLayoutSet.activeKey.deviceClass },
+            onEffect = { effect -> mutableWorkspaceMenuEffects.tryEmit(effect) },
+        )
     internal val refreshActions =
         LauncherShellRefreshActions(
             coroutineScope = viewModelScope,
@@ -174,6 +195,13 @@ class LauncherShellViewModel(
         )
 
     init {
+        val workspaces = platformDependencies.workspaceRepository
+        if (workspaces != null && WorkspaceMenuFeature.enabled) {
+            viewModelScope.launch {
+                workspaces.initialize(mutableState.value.homeLayoutSet)
+                workspaceMenu.refresh()
+            }
+        }
         if (platformDependencies.loadInitialPlatformState) {
             refreshInstalledApps()
             refreshNotifications()

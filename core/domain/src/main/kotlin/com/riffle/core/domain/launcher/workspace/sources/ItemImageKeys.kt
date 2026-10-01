@@ -22,6 +22,9 @@ object ItemImageKeys {
         profileId: AppProfileId,
     ): ItemImageHandle = ItemImageHandle("package-icon:${profileId.value}:${packageName.value}")
 
+    /** Cached artwork of one feed article, keyed by its opaque digest; resolving it never uses the network. */
+    fun feedArtwork(digest: String): ItemImageHandle = ItemImageHandle("feed-art:$digest")
+
     fun notificationArtwork(
         profileId: AppProfileId,
         notificationKey: String,

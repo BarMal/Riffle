@@ -29,6 +29,7 @@ import com.riffle.core.domain.launcher.home.ModeDockEdges
 import com.riffle.core.domain.launcher.home.ModeSurface
 import com.riffle.core.domain.launcher.home.dockEdgeFor
 import com.riffle.core.domain.launcher.home.modeSurface
+import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import kotlinx.coroutines.delay
 
 @Composable
@@ -40,6 +41,7 @@ fun HomeDestination(
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
     adaptiveStageContext: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
+    workspaceMenu: WorkspaceMenuHost? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val dockHost = rememberHomeDockHostState()
@@ -77,6 +79,7 @@ fun HomeDestination(
             plan = HomeDockPullPlan(plan.currentMode, plan.counterpartMode, plan.shownMode, plan.edges),
             dockPull = dockPull,
             onAction = onAction,
+            onOpenWorkspaceMenu = workspaceMenu?.let { menu -> { menu.onAction(WorkspaceMenuAction.Open) } },
         )
 
     // The same state [dockEdge] and [dockInterpreter] are already drawn for: [plan.shownMode], not

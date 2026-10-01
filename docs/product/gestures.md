@@ -90,6 +90,11 @@ defaults to false. Off, no dock opens its shelf -- by swipe or by button -- and 
 settings are hidden; the swipe away from the dock edge that the shelf used to claim does nothing.
 The shelf code and its tests stay (the tests switch the flag on around themselves).
 
+**Workspace menu (#1351, off by default behind `WorkspaceMenuFeature.enabled`).** It does not use any
+dock drag: the dock pull stays the Home <-> Library switch. The menu opens from a dock affordance and
+from the dock's accessibility action "Workspace menu"; see "Workspace menu" in
+`workspaces-sources-lenses.md`.
+
 ## Thresholds
 
 All thresholds are dp (`GestureThresholds`), resolved to pixels per display

@@ -225,6 +225,7 @@ section does that job, so the rail is gone (#1159).
 | Panel exists, standard conventions | Done — a real `LauncherPage` on the same grid machinery as a home page |
 | Cards expanded shelf is panel-only | Done (#1166) — the notification card row is dropped there, the panel stays |
 | Shelf expansion | **Switched off** (plan Decision 11) behind `DockShelfExpansion.enabled`; code kept |
+| Workspace menu from the dock | **In progress** (#1351) behind `WorkspaceMenuFeature.enabled` (default off): opens from a dock affordance and the "Workspace menu" accessibility action, never from the dock pull; see workspaces-sources-lenses.md |
 | Dock swipe-up gesture action | **Removed** (plan Decision 9) — the dock pull will be the only mode-transition trigger |
 | Panel configurable: size, grid, padding | **Not started** |
 | Panel editing: drag in from the picker | **Not started** — needs a non-fullscreen picker so the dock stays visible |

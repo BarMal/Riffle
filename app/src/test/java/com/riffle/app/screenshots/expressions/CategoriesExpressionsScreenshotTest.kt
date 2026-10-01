@@ -48,12 +48,25 @@ class CategoriesExpressionsScreenshotTest {
         render(result = LensResult.Grouped(emptyList()))
     }
 
-    private fun render(result: LensResult = ExpressionFixtures.groupedApps()) {
+    @Test
+    fun categoriesLoading() {
+        render(state = ExpressionState.Loading)
+    }
+
+    @Test
+    fun categoriesUnavailable() {
+        render(state = ExpressionState.Unavailable("Notification access is off"))
+    }
+
+    private fun render(
+        result: LensResult = ExpressionFixtures.groupedApps(),
+        state: ExpressionState = ExpressionState.Ready,
+    ) {
         composeRule.renderExpression {
             CategoriesExpression(
                 result = result,
                 onItemClick = {},
-                state = ExpressionState.Ready,
+                state = state,
                 environment = ExpressionFixtures.environment,
             )
         }

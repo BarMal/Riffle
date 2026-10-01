@@ -48,12 +48,25 @@ class IconRowExpressionsScreenshotTest {
         render(result = LensResult.Flat(emptyList()))
     }
 
-    private fun render(result: LensResult = ExpressionFixtures.flatApps(count = 12)) {
+    @Test
+    fun iconRowLoading() {
+        render(state = ExpressionState.Loading)
+    }
+
+    @Test
+    fun iconRowUnavailable() {
+        render(state = ExpressionState.Unavailable("Notification access is off"))
+    }
+
+    private fun render(
+        result: LensResult = ExpressionFixtures.flatApps(count = 12),
+        state: ExpressionState = ExpressionState.Ready,
+    ) {
         composeRule.renderExpression {
             IconRowExpression(
                 result = result,
                 onItemClick = {},
-                state = ExpressionState.Ready,
+                state = state,
                 environment = ExpressionFixtures.environment,
             )
         }
