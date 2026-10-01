@@ -56,6 +56,7 @@ page per workspace) from `workspaces-configuration.md` (sections 3.2 and 8.3). R
     Home from another app); `onNewIntent` for a Home press raises a Home press only when the launcher was already
     resumed. Requests are ignored while the preview is closed.
   * Reduced motion: page changes use an instant scroll, as the existing navigation does.
+* Settings > Workspaces: a "Returning to Home" radio group under the workspace list (below).
 * Editor: each page card shows "Start page" on the current start page and a "Set as start page" button (48dp, with
   a per-page content description) on the others. It goes through `EditorAction.Apply`, so it validates and has Undo.
   The first page counts as the start page when none is set.
@@ -65,9 +66,10 @@ page per workspace) from `workspaces-configuration.md` (sections 3.2 and 8.3). R
 1. **Return lives in a new `home` settings group**, not in `AppDrawerSettings`, matching the doc's
    `HomeBehaviourSettings`. `afterLeavingLibrary` is untouched (it still drives the standard shell); retiring it is
    the pool/S9 cut-over's job.
-2. **Settings UI row is not added.** `SettingsPage.WORKSPACES` does not exist on main yet. Where it goes: Settings >
-   Workspaces (or Home & layout > Layout > "Returning to Home" per the doc), a three-option radio bound to
-   `LauncherShellAction.SelectReturnBehavior`, Restore default, one line of supporting text each.
+2. **The Return row lives in Settings > Workspaces**, because that page now exists on main (#1391) and is
+   preview-gated; the doc's eventual home (Home & layout > Layout > "Returning to Home") can move it later. A
+   three-option radio (`SettingsReturnBehaviorSection`) bound to `LauncherShellAction.SelectReturnBehavior`,
+   Restore default, one supporting line each, 48dp rows, selected state spoken.
 3. **A Home press no longer closes the open preview.** It used to leave the preview for the standard launcher; now it
    goes to the page the Return rule names and Exit stays one tap away. This follows E2 in section 3.2.
 4. **Home press from another app is a Return, not E2.** `onNewIntent` runs before the activity restarts in that case, so it is
@@ -77,7 +79,6 @@ page per workspace) from `workspaces-configuration.md` (sections 3.2 and 8.3). R
 
 ## Not done
 
-* Settings > Workspaces row for the Return setting (page does not exist yet).
 * Per-workspace start page row on a workspace detail page (the doc's Settings > Workspaces detail); only the editor
   action exists.
 * The Finder gesture binding and the Finder as the dock-menu-only entry for real home pages: the preview opens it
@@ -96,8 +97,7 @@ page per workspace) from `workspaces-configuration.md` (sections 3.2 and 8.3). R
 2. Dock menu > Finder opens the Finder surface over the pager. "Close Finder" and system Back both close it without
    leaving the preview; Back again exits.
 3. Edit the workspace, "Set as start page" on page 3, save, Exit and reopen the preview: it lands on page 3 (Restore
-   and Start page) or page 1 (First page, once the setting row exists; until then set it with a debug build or
-   backup edit).
+   and Start page) or page 1 (First page, chosen in Settings > Workspaces > Returning to Home).
 4. Swipe to page 2, launch an app, return with Back: lands on page 2 (Restore). Return with the Home button from the
    app: also page 2.
 5. With the preview open on page 2, press Home: moves to the start page (all three settings), does not leave the
