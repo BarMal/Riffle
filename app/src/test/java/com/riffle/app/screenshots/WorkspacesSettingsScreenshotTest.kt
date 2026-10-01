@@ -7,6 +7,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -127,10 +130,11 @@ class WorkspacesSettingsScreenshotTest {
 
         composeRule.onNodeWithText("Install preset...").performClick()
 
+        // Some names also label rows of the page behind the dialog, so look only inside the dialog.
         listOf("Nova", "iOS", "TimeScape", "Niagara", "Kvaesitso").forEach { name ->
-            composeRule.onNodeWithText(name).assertIsDisplayed()
+            composeRule.onNode(hasText(name) and hasAnyAncestor(isDialog())).assertExists()
         }
-        composeRule.onNodeWithText("Default").assertIsDisplayed()
+        composeRule.onNode(hasText("Default") and hasAnyAncestor(isDialog())).assertExists()
         composeRule.captureScreen()
 
         composeRule.onNodeWithText("Install").performClick()
@@ -144,7 +148,7 @@ class WorkspacesSettingsScreenshotTest {
 
         composeRule.onNodeWithText("Copy from other layout...").performClick()
 
-        composeRule.onNodeWithText("one-time copy", substring = true).assertIsDisplayed()
+        composeRule.onNode(hasText("one-time copy", substring = true) and hasAnyAncestor(isDialog())).assertExists()
         composeRule.captureScreen()
 
         composeRule.onNodeWithText("Replace and copy").performClick()
