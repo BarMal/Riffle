@@ -412,8 +412,11 @@ Answers recorded on #1363; the design consequences for configuration are in
    - source exclusion rules and the `OFF` status apply; `PRIVACY_SENSITIVE` items show the icon only.
 4. ICS recurrence: **full recurrence support** (this differs from the "documented RRULE subset" assumed in
    the build order and in question 5). Scope: RFC 5545 `RRULE` expansion, `EXDATE`/`RDATE`,
-   `RECURRENCE-ID` overrides, time zones including DST, bounded expansion windows and an instance cap; an
-   in-repo implementation versus a dependency is open (N8 in the configuration doc). Raises the ICS slice
+   `RECURRENCE-ID` overrides, time zones including DST, bounded expansion windows and an instance cap.
+   **N8 (2026-10-01): use a third-party library**, isolated behind a domain `IcsEngine` interface so it can be
+   swapped. Selection criteria, a web-verified shortlist (ical4j, lib-recur, biweekly), the recommended pick
+   (ical4j 4.x, lib-recur as fallback) and the spike plan with the RFC 5545 acceptance corpus are in
+   [`workspaces-configuration.md`](workspaces-configuration.md) section 15.2 and 15.3. Raises the ICS slice
    from small to medium.
 5. Play data-safety and privacy declarations: the **owner** updates them; every PR that adds a permission or
    a data class carries a checklist line (configuration doc, 7.2).
