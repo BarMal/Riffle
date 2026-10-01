@@ -92,6 +92,7 @@ internal fun SettingsPageContent(
             SettingsPage.BACKUP -> SettingsBackupPageContent(onAction = onAction)
             SettingsPage.HIDDEN_APPS -> SettingsHiddenAppsPageContent(state = state, onAction = onAction)
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state)
+            SettingsPage.WORKSPACES -> SettingsWorkspacesPageContent(state = state, onAction = onAction)
         }
     }
 }
@@ -109,7 +110,7 @@ private fun SettingsMainPageContent(
         firstRunStatus = state.firstRunStatus,
         onAction = onAction,
     )
-    SettingsWorkspacePreviewSection()
+    SettingsWorkspacePreviewSection(onPageSelected = onPageSelected)
     AppSearchField(
         modifier = Modifier.fillMaxWidth(),
         query = settingsQuery.value,

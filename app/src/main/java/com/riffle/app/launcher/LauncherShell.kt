@@ -44,6 +44,7 @@ import com.riffle.app.launcher.workspace.NeverEnabled
 import com.riffle.app.launcher.workspace.NoWorkspaceVersion
 import com.riffle.app.launcher.workspace.WorkspacePreviewHost
 import com.riffle.app.launcher.workspace.WorkspacePreviewLayer
+import com.riffle.app.launcher.workspace.WorkspacesSettingsController
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -55,11 +56,13 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
+import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuEffect
 import kotlinx.coroutines.delay
 
 @Composable
@@ -104,9 +107,13 @@ fun LauncherShell(
     val workspaceMenu = menuHost.takeUnless { previewOpen }
 
     val previewSetting = rememberWorkspacePreviewSetting(workspacePreview, previewEnabled)
+    val settingsHost = rememberWorkspaceSettingsHost(workspacePreview, previewEnabled, deviceClass, viewModel)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        CompositionLocalProvider(LocalWorkspacePreviewSetting provides previewSetting) {
+        CompositionLocalProvider(
+            LocalWorkspacePreviewSetting provides previewSetting,
+            LocalWorkspaceSettingsHost provides settingsHost,
+        ) {
             LauncherShellContent(
                 state = state,
                 viewModeAvailability = viewModel.viewModeAvailability,
@@ -141,6 +148,35 @@ private fun rememberWorkspacePreviewSetting(
                 enabled = enabled,
                 onEnabledChange = previewHost.controller::setEnabled,
                 onOpen = previewHost.controller::open,
+            )
+        }
+    }
+
+/**
+ * The Workspaces settings page's view of the runtime. Null (so the page does not exist) unless the
+ * preview switch is on; the runtime it reads is the one the preview layer already shares.
+ */
+@Composable
+private fun rememberWorkspaceSettingsHost(
+    host: WorkspacePreviewHost?,
+    enabled: Boolean,
+    currentLayout: HomeLayoutDeviceClass,
+    viewModel: LauncherShellViewModel,
+): WorkspaceSettingsHost? =
+    if (host == null || !enabled) {
+        null
+    } else {
+        val runtime = remember(host) { host.runtime() }
+        remember(host, runtime, currentLayout) {
+            WorkspaceSettingsHost(
+                workspaces =
+                    WorkspacesSettingsController(
+                        repository = runtime.repository,
+                        onChanged = { viewModel.workspaceMenu.refresh() },
+                    ),
+                version = host.workspaceVersion,
+                currentLayout = currentLayout,
+                onEdit = { id -> host.controller.onEffect(WorkspaceMenuEffect.EditWorkspace(id)) },
             )
         }
     }

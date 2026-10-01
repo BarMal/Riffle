@@ -18,7 +18,7 @@ internal val LocalWorkspacePreviewSetting = staticCompositionLocalOf<WorkspacePr
 
 /** Top of the main settings page: easy to find, off by default, reversible without losing any data. */
 @Composable
-internal fun SettingsWorkspacePreviewSection() {
+internal fun SettingsWorkspacePreviewSection(onPageSelected: (SettingsPage) -> Unit = {}) {
     val setting = LocalWorkspacePreviewSetting.current ?: return
     SettingsSection(title = "Developer") {
         SettingsSwitchRow(
@@ -36,6 +36,14 @@ internal fun SettingsWorkspacePreviewSection() {
                 subtitle = "Leave it any time with Exit preview or the Back button.",
                 onClick = setting.onOpen,
             )
+            // The page exists only while the preview is on (and only where a host provides it).
+            if (LocalWorkspaceSettingsHost.current != null) {
+                SettingsClickableRow(
+                    title = WorkspacesSettingsText.WORKSPACES_TITLE,
+                    subtitle = "Switch, rename, duplicate, delete, presets and copying between layouts",
+                    onClick = { onPageSelected(SettingsPage.WORKSPACES) },
+                )
+            }
         }
     }
 }
