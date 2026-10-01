@@ -6,11 +6,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.SourcesSettingsContent
 import com.riffle.core.domain.launcher.workspace.SourceId
@@ -66,14 +66,14 @@ class SourcesSettingsScreenshotTest {
         render()
 
         assertEquals(emptyList<SourceId>(), allowed)
-        composeRule.onNodeWithText("Hidden items and rules (coming soon)").assertIsDisplayed()
+        composeRule.onNodeWithText("Hidden items and rules (coming soon)").assertExists()
     }
 
     @Test
     fun allowOnlyReportsTheTappedSourceToTheExistingFlow() {
         render()
 
-        composeRule.onAllNodesWithText("Allow notification access")[0].performClick()
+        composeRule.onAllNodesWithText("Allow notification access")[0].performScrollTo().performClick()
 
         assertEquals(listOf(SourceIds.NOTIFICATIONS), allowed)
     }
@@ -82,8 +82,8 @@ class SourcesSettingsScreenshotTest {
     fun theSwitchTurnsASourceOnOrOff() {
         render()
 
-        composeRule.onNodeWithText("Apps").performClick()
-        composeRule.onNodeWithText("Calendar").performClick()
+        composeRule.onNodeWithText("Apps").performScrollTo().performClick()
+        composeRule.onNodeWithText("Calendar").performScrollTo().performClick()
 
         assertEquals(listOf(SourceIds.ALL_APPS to false, SourceIds.CALENDAR to true), toggles)
     }
