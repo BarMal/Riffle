@@ -23,13 +23,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WorkspacePreviewControllerTest {
-    private class FakePreference(var enabled: Boolean = false) : WorkspacePreviewPreference {
+    private class FakePreference(var stored: Boolean = false) : WorkspacePreviewPreference {
         var writes = 0
 
-        override fun isEnabled(): Boolean = enabled
+        override fun isEnabled(): Boolean = stored
 
         override fun setEnabled(enabled: Boolean) {
-            this.enabled = enabled
+            stored = enabled
             writes++
         }
     }
@@ -47,7 +47,7 @@ class WorkspacePreviewControllerTest {
 
     @Test
     fun startsFromThePersistedSetting() {
-        val enabled = WorkspacePreviewController(FakePreference(enabled = true)) { flagChanges += it }
+        val enabled = WorkspacePreviewController(FakePreference(stored = true)) { flagChanges += it }
 
         assertTrue(enabled.enabled.value)
         assertEquals(false, enabled.isOpen.value)
@@ -59,7 +59,7 @@ class WorkspacePreviewControllerTest {
         controller.setEnabled(true)
 
         assertTrue(controller.enabled.value)
-        assertTrue(preference.enabled)
+        assertTrue(preference.stored)
         assertEquals(listOf(false, true), flagChanges)
     }
 
@@ -83,7 +83,7 @@ class WorkspacePreviewControllerTest {
 
         assertFalse(controller.isOpen.value)
         assertNull(controller.editing.value)
-        assertFalse(preference.enabled)
+        assertFalse(preference.stored)
     }
 
     @Test
