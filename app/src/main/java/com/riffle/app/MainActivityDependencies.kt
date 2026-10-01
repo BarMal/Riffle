@@ -9,7 +9,9 @@ import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.AndroidWallpaperPickerGateway
 import com.riffle.app.launcher.AndroidWebSearchLauncher
 import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
+import com.riffle.app.launcher.CachedWorkspaceRepository
 import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
+import com.riffle.app.launcher.DataStoreWorkspaceStore
 import com.riffle.app.launcher.HomeLayoutRepositories
 import com.riffle.app.launcher.HostedWidgetAddAction
 import com.riffle.app.launcher.HostedWidgetAddCompletionResult
@@ -51,6 +53,9 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.hostsWidget
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 internal class MainActivityDependencies(
     private val activity: Activity,
@@ -66,6 +71,17 @@ internal class MainActivityDependencies(
     }
     val appVisibilityRepository by lazy { SharedPreferencesAppVisibilityRepository(activity) }
     val feedArticleCacheRepository by lazy { DataStoreFeedArticleCacheRepository(activity) }
+
+    /**
+     * The explicit wiring point from the DataStore workspace store to the shell (#1351). Built lazily and
+     * read only when the workspace menu is switched on; its writes outlive the activity on their own scope.
+     */
+    val workspaceRepository by lazy {
+        CachedWorkspaceRepository(
+            store = DataStoreWorkspaceStore(activity),
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        )
+    }
     val homeRoleGateway by lazy { AndroidHomeRoleGateway(activity) }
     val appLauncher by lazy { AndroidAppLauncher(activity) }
     val webSearchLauncher by lazy { AndroidWebSearchLauncher(activity) }
@@ -108,6 +124,7 @@ internal class MainActivityDependencies(
             viewModeAvailability = libraryOnlyLauncherViewModeAvailability(),
             deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
             feedArticleCacheRepository = feedArticleCacheRepository,
+            workspaceRepository = workspaceRepository,
         )
 
     fun packageChangeObserver(onCatalogChanged: (AppCatalogChange) -> Unit): AndroidPackageChangeObserver =

@@ -20,6 +20,8 @@ data class LauncherShellPlatformDependencies(
     val viewModeAvailability: LauncherViewModeAvailability = defaultLauncherViewModeAvailability(),
     val deleteHostedWidgetId: (HostedWidgetId) -> Unit = {},
     val feedArticleCacheRepository: FeedArticleCacheRepository = NoopFeedArticleCacheRepository,
+    /** The workspace store the dock's workspace menu reads (#1351); null leaves the menu unavailable. */
+    val workspaceRepository: CachedWorkspaceRepository? = null,
 ) {
     fun installedWidgetProviders(catalog: WidgetProviderCatalog): List<InstalledWidgetProvider> =
         catalog.sortedProviders(widgetProviderRepository.installedWidgetProviders())

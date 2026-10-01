@@ -105,6 +105,8 @@ internal fun rememberHomeDockPullBinding(
     plan: HomeDockPullPlan,
     dockPull: DockPullState,
     onAction: (LauncherShellAction) -> Unit,
+    /** The dock's "Workspace menu" accessibility action (#1351); null (the default) adds none. */
+    onOpenWorkspaceMenu: (() -> Unit)? = null,
 ): HomeDockPullBinding {
     val rootSize = remember { mutableStateOf(IntSize.Zero) }
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -130,19 +132,11 @@ internal fun rememberHomeDockPullBinding(
     }
     val host = rememberDockPullGestureHost(dockPull, canPull, currentSurface, reducedMotion, rootSize)
     val switchNow = { dockPull.switchNow(currentSurface, pullDirection, reducedMotion) }
-    val actionLabel = dockPullActionLabel(currentSurface)
     val dockModifier =
         Modifier
             .testTag(HOME_DOCK_PULL_TEST_TAG)
-            .then(
-                if (canPull) {
-                    Modifier.semantics {
-                        customActions = listOf(CustomAccessibilityAction(actionLabel) { switchNow() })
-                    }
-                } else {
-                    Modifier
-                },
-            )
+            .then(dockPullActionModifier(canPull, dockPullActionLabel(currentSurface), switchNow))
+            .then(workspaceMenuActionModifier(onOpenWorkspaceMenu))
             // Before the translation, so the finger is measured against the dock's resting place.
             .dockPullInput(pullDirection, host)
             .graphicsLayer {
@@ -190,6 +184,41 @@ internal fun rememberHomeDockPullBinding(
         pullDirection = pullDirection,
     )
 }
+
+/** The dock's "Switch to Library/Home" accessibility action; identity while a pull is not allowed. */
+private fun dockPullActionModifier(
+    canPull: Boolean,
+    label: String,
+    switchNow: () -> Boolean,
+): Modifier =
+    if (canPull) {
+        Modifier.semantics { customActions = listOf(CustomAccessibilityAction(label) { switchNow() }) }
+    } else {
+        Modifier
+    }
+
+/**
+ * The dock's "Workspace menu" accessibility action. It is not the dock pull (which stays the Home <->
+ * Library switch): the menu opens from this and from the dock's explicit affordance. Identity when the
+ * menu is off. Custom actions of stacked semantics modifiers are concatenated, so this adds to the
+ * mode-switch action rather than replacing it.
+ */
+private fun workspaceMenuActionModifier(onOpen: (() -> Unit)?): Modifier =
+    if (onOpen == null) {
+        Modifier
+    } else {
+        Modifier.semantics {
+            customActions =
+                listOf(
+                    CustomAccessibilityAction(WORKSPACE_MENU_ACTION_LABEL) {
+                        onOpen()
+                        true
+                    },
+                )
+        }
+    }
+
+internal const val WORKSPACE_MENU_ACTION_LABEL = "Workspace menu"
 
 /**
  * How far the dock's own [androidx.compose.ui.graphics.GraphicsLayerScope.cameraDistance] is pushed
