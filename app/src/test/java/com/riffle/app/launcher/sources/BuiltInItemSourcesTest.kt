@@ -24,7 +24,6 @@ import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -106,21 +105,11 @@ class BuiltInItemSourcesTest {
     }
 
     @Test
-    fun registryExposesEveryBuiltInSourceExceptUnbuiltOnes() {
+    fun registryExposesEveryBuiltInSource() {
         val registry = registry()
         val ids = registry.descriptors().map { it.id }.toSet()
-        assertEquals(
-            setOf(
-                SourceIds.ALL_APPS,
-                SourceIds.RECENT_APPS,
-                SourceIds.QUICK_ACTIONS,
-                SourceIds.NOTIFICATIONS,
-                SourceIds.MEDIA,
-                SourceIds.CALENDAR,
-            ),
-            ids,
-        )
-        assertNull(registry.source(SourceIds.RSS))
+        assertEquals(SourceIds.BUILT_IN.toSet(), ids)
+        SourceIds.BUILT_IN.forEach { id -> assertNotNull(registry.source(id)) }
     }
 
     @Test
