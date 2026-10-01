@@ -40,6 +40,7 @@ import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
 import com.riffle.app.launcher.WallpaperPickerLaunchResult
+import com.riffle.app.launcher.WorkspaceMenuFeature
 import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.calendar.CalendarAccessCoordinator
 import com.riffle.app.launcher.canPerformStageAction
@@ -60,6 +61,9 @@ import com.riffle.app.launcher.widgets.PendingWidgetAddStep
 import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
+import com.riffle.app.launcher.workspace.SharedPreferencesWorkspacePreviewPreference
+import com.riffle.app.launcher.workspace.WorkspacePreviewController
+import com.riffle.app.launcher.workspace.WorkspacePreviewHost
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
@@ -90,6 +94,19 @@ class MainActivity : ComponentActivity() {
             homeLayoutRepository = homeLayoutRepository,
             launcherSettingsRepository = launcherSettingsRepository,
             platformDependencies = dependencies.platformDependencies(),
+        )
+    }
+    private val workspacePreviewController by lazy {
+        WorkspacePreviewController(
+            preference = SharedPreferencesWorkspacePreviewPreference(this),
+            onEnabledChanged = { enabled -> WorkspaceMenuFeature.enabled = enabled },
+        )
+    }
+    private val workspacePreviewHost by lazy {
+        WorkspacePreviewHost(
+            controller = workspacePreviewController,
+            workspaceVersion = dependencies.workspaceRepository.version,
+            runtime = { dependencies.workspaceRuntime { shellViewModel.state.value.launcherSettings } },
         )
     }
     private val homeRoleGateway get() = dependencies.homeRoleGateway
@@ -491,6 +508,7 @@ class MainActivity : ComponentActivity() {
                                 previewImageLoader = dependencies.widgetPreviewImageLoader,
                             ),
                         adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                        workspacePreview = workspacePreviewHost,
                         onAction = launcherActionRouter::handle,
                     )
                 }
@@ -524,6 +542,8 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         refreshPlatformStatuses()
         if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
+            // A Home press always leaves the Workspaces (preview) for the standard launcher.
+            workspacePreviewController.close()
             // A Home press: leave Library first (when the setting says so), then reset Home's page.
             shellViewModel.leaveLibrary(LibraryExitTrigger.HOME_PRESS)
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)

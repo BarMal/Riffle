@@ -39,6 +39,10 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.workspace.NeverEnabled
+import com.riffle.app.launcher.workspace.NoWorkspaceVersion
+import com.riffle.app.launcher.workspace.WorkspacePreviewHost
+import com.riffle.app.launcher.workspace.WorkspacePreviewLayer
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -65,6 +69,7 @@ fun LauncherShell(
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
+    workspacePreview: WorkspacePreviewHost? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val storedState by viewModel.state.collectAsState()
@@ -80,12 +85,22 @@ fun LauncherShell(
     }
     // Absent while the feature is off or no workspaces are loaded, so nothing downstream composes it.
     val menuState by viewModel.workspaceMenu.state.collectAsState()
-    val workspaceMenu =
-        if (WorkspaceMenuFeature.enabled && viewModel.workspaceMenu.isAvailable()) {
+    val previewEnabled by (workspacePreview?.controller?.enabled ?: NeverEnabled).collectAsState()
+    val previewOpen by (workspacePreview?.controller?.isOpen ?: NeverEnabled).collectAsState()
+    val workspaceVersion by (workspacePreview?.workspaceVersion ?: NoWorkspaceVersion).collectAsState()
+    val deviceClass = state.homeLayoutSet.activeKey.deviceClass
+    val menuAvailable =
+        remember(previewEnabled, workspaceVersion, deviceClass) {
+            WorkspaceMenuFeature.enabled && viewModel.workspaceMenu.isAvailable()
+        }
+    val menuHost =
+        if (menuAvailable) {
             WorkspaceMenuHost(state = menuState, onAction = viewModel.workspaceMenu::dispatch)
         } else {
             null
         }
+    // The home dock's own menu is hidden while the preview covers it, so only one menu is ever drawn.
+    val workspaceMenu = menuHost.takeUnless { previewOpen }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LauncherShellContent(
@@ -102,6 +117,10 @@ fun LauncherShell(
             onSetupCardDismissed = viewModel::onSetupCardDismissed,
             onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
         )
+        // Composed only while the Workspaces (preview) setting is on; otherwise no workspace code runs.
+        if (workspacePreview != null && previewEnabled) {
+            WorkspacePreviewLayer(workspacePreview, state, viewModel, menuHost)
+        }
     }
 }
 
