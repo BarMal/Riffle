@@ -36,7 +36,7 @@ class WorkspaceMenuPlannerTest {
         role: PageRole = PageRole.STANDARD,
     ) = PageContainer(ContainerId(id), PageContent.Bound(LensBinding(flat, expression)), role)
 
-    private fun finder(id: String = "finder") = page(id, ExpressionKind.CATEGORIES, PageRole.FINDER)
+    private fun finder(id: String = "finder") = page(id, ExpressionKind.ALPHA_LIST, PageRole.FINDER)
 
     private fun pageSet(id: String) = PageSetContainer(ContainerId(id), LensBinding(grouped, ExpressionKind.CARD_STACK))
 
@@ -150,7 +150,7 @@ class WorkspaceMenuPlannerTest {
     fun fallbackResolvedWorkspaceShowsTheDefaultAndTheReason() {
         val default = workspace("default", page("d"))
         val fancy = workspace("fancy", page("p", ExpressionKind.CARD_STACK), finder("f"))
-        val caps = LayoutCapabilities(setOf(ExpressionKind.LIST, ExpressionKind.CATEGORIES))
+        val caps = LayoutCapabilities(setOf(ExpressionKind.LIST, ExpressionKind.ALPHA_LIST))
         val model = assertNotNull(WorkspaceMenuPlanner.plan(layoutSet("fancy", default, fancy), phone, caps))
         val fallback = assertNotNull(model.fallback)
         assertEquals(WorkspaceId("fancy"), fallback.requested)
@@ -162,6 +162,15 @@ class WorkspaceMenuPlannerTest {
         assertEquals(listOf(WorkspacePageKey.Page(ContainerId("d"))), model.jumpEntries.map { it.key })
         assertNull(model.finder)
         assertEquals(WorkspaceId("default"), model.editTarget)
+    }
+
+    @Test
+    fun aValidNonDefaultActiveWorkspaceWithAFinderIsDisplayedWithoutFallback() {
+        val set = layoutSet("b", workspace("a", page("p")), workspace("b", page("p"), finder("f")))
+        val model = assertNotNull(WorkspaceMenuPlanner.plan(set, phone))
+        assertNull(model.fallback)
+        assertEquals(WorkspaceId("b"), model.editTarget)
+        assertEquals(ContainerId("f"), model.finder?.pageId)
     }
 
     @Test
