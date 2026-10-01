@@ -66,6 +66,8 @@ import com.riffle.app.launcher.widgets.PersistentWidgetAddTransactionStore
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import com.riffle.app.launcher.workspace.AndroidExpressionImageLoader
 import com.riffle.app.launcher.workspace.AndroidItemLaunchPort
+import com.riffle.app.launcher.workspace.SharedPreferencesDisabledSourcesStore
+import com.riffle.app.launcher.workspace.SourceControls
 import com.riffle.app.launcher.workspace.WorkspaceItemActions
 import com.riffle.app.launcher.workspace.WorkspaceRuntime
 import com.riffle.app.launcher.workspace.sourceAccessMap
@@ -77,6 +79,9 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.hostsWidget
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
+import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
+import com.riffle.core.domain.launcher.workspace.sources.EnablementSourceRegistry
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -206,12 +211,16 @@ internal class MainActivityDependencies(
             Executors.newSingleThreadExecutor { task ->
                 Thread(task, "riffle-lens-evaluation").apply { isDaemon = true }
             }
+        // A source the user turned off emits Off without reading its repository; the shared registry on top
+        // gives containers and the Sources page one connection per source.
+        val enablement = StoredSourceEnablement(SharedPreferencesDisabledSourcesStore(activity))
+        val shared = SharedSourceRegistry(EnablementSourceRegistry(registry, enablement))
         return WorkspaceRuntime(
             repository = workspaceRepository,
             registry = registry,
             provider =
                 workspaceLensProvider(
-                    registry,
+                    shared,
                     lensExecutor,
                     exclusions = {
                         exclusionRepository.rules(
@@ -238,6 +247,7 @@ internal class MainActivityDependencies(
                         if (recentAppRepository.canReadRecentApps()) SourceAccess.GRANTED else SourceAccess.REQUIRED,
                 )
             },
+            sourceControls = SourceControls(statusRegistry = shared, enablement = enablement),
         )
     }
 

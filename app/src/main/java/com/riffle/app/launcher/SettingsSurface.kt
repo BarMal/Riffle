@@ -19,11 +19,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +44,7 @@ fun SettingsSurface(
     // while this settings session remains open. Leaving Settings removes this state.
     val selectedPage = rememberSaveable(initialPage) { mutableStateOf(initialPage) }
     val pageScrollStates = settingsPageScrollStates()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
         selectedPage.value = SettingsPage.MAIN
@@ -80,14 +85,18 @@ fun SettingsSurface(
                         settingsPageScrollStateFor(pageScrollStates, selectedPage.value),
                     )
                 }
-            SettingsPageContent(
-                modifier = settingsContentModifier,
-                state = state,
-                page = selectedPage.value,
-                onPageSelected = { page -> selectedPage.value = page },
-                onAction = onAction,
-                onRequestAdaptiveStageAppearanceTuning = onRequestAdaptiveStageAppearanceTuning,
-            )
+            CompositionLocalProvider(LocalSettingsSnackbarHostState provides snackbarHostState) {
+                SettingsPageContent(
+                    modifier = settingsContentModifier,
+                    state = state,
+                    page = selectedPage.value,
+                    onPageSelected = { page -> selectedPage.value = page },
+                    onAction = onAction,
+                    onRequestAdaptiveStageAppearanceTuning = onRequestAdaptiveStageAppearanceTuning,
+                )
+            }
+            // Takes no room until a page announces something (the Workspaces page's confirmations and Undo).
+            SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.CenterHorizontally))
         }
     }
 }

@@ -19,6 +19,7 @@ object WorkspaceCodec {
             "dock" to obj("dynamic" to workspace.dock.dynamicSection?.let(LensCodec::encodeBinding)),
             "gestures" to StoredValue.Obj(workspace.gestureBindings.mapValues { str(it.value) }),
             "skin" to workspace.skinOverrideId?.let(::str),
+            "preset" to workspace.presetId?.let(::str),
         )
 
     fun encode(lens: Lens): StoredValue.Obj = LensCodec.encode(lens)
@@ -37,6 +38,7 @@ object WorkspaceCodec {
                         .mapNotNull { (k, v) -> (v as? StoredValue.Str)?.let { k to it.value } }
                         .toMap(),
                 skinOverrideId = root.string("skin"),
+                presetId = root.string("preset")?.takeIf { it.isNotBlank() },
             )
         }
     }

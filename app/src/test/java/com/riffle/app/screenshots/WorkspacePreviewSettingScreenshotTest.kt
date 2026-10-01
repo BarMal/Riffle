@@ -6,8 +6,20 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.riffle.app.launcher.LocalWorkspacePreviewSetting
+import com.riffle.app.launcher.LocalWorkspaceSettingsHost
+import com.riffle.app.launcher.SettingsPage
 import com.riffle.app.launcher.SettingsWorkspacePreviewSection
 import com.riffle.app.launcher.WorkspacePreviewSetting
+import com.riffle.app.launcher.WorkspaceSettingsHost
+import com.riffle.app.launcher.workspace.SourcesSettingsController
+import com.riffle.app.launcher.workspace.WorkspacesSettingsController
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.settings.InMemoryDisabledSourcesStore
+import com.riffle.core.domain.launcher.workspace.settings.SourceStatusMonitor
+import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
+import com.riffle.core.domain.launcher.workspace.testing.FakeSourceRegistry
+import com.riffle.core.domain.launcher.workspace.testing.InMemoryWorkspaceRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -66,6 +78,78 @@ class WorkspacePreviewSettingScreenshotTest {
 
         assertEquals(listOf(true), changes)
     }
+
+    @Test
+    fun onWithTheSettingsHostOffersTheWorkspacesAndSourcesPages() {
+        val pages = mutableListOf<SettingsPage>()
+        composeRule.setContent {
+            ScreenshotBackdrop {
+                CompositionLocalProvider(
+                    LocalWorkspacePreviewSetting provides setting(enabled = true),
+                    LocalWorkspaceSettingsHost provides settingsHost(),
+                ) {
+                    SettingsWorkspacePreviewSection(onPageSelected = { pages += it })
+                }
+            }
+        }
+        composeRule.captureScreen()
+
+        composeRule.onNodeWithText("Workspaces").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("Sources").assertIsDisplayed().performClick()
+
+        assertEquals(listOf(SettingsPage.WORKSPACES, SettingsPage.SOURCES), pages)
+    }
+
+    @Test
+    fun offTheSettingsPagesAreNotOffered() {
+        renderSection(setting(enabled = false), settingsHost())
+
+        composeRule.onNodeWithText("Workspaces").assertDoesNotExist()
+        composeRule.onNodeWithText("Sources").assertDoesNotExist()
+    }
+
+    @Test
+    fun withoutTheSettingsHostThePagesAreNotOffered() {
+        renderSection(setting(enabled = true), null)
+
+        composeRule.onNodeWithText("Open Workspaces (preview)").assertIsDisplayed()
+        composeRule.onNodeWithText("Workspaces").assertDoesNotExist()
+        composeRule.onNodeWithText("Sources").assertDoesNotExist()
+    }
+
+    private fun renderSection(
+        setting: WorkspacePreviewSetting,
+        host: WorkspaceSettingsHost?,
+    ) {
+        composeRule.setContent {
+            ScreenshotBackdrop {
+                CompositionLocalProvider(
+                    LocalWorkspacePreviewSetting provides setting,
+                    LocalWorkspaceSettingsHost provides host,
+                ) {
+                    SettingsWorkspacePreviewSection()
+                }
+            }
+        }
+    }
+
+    private fun settingsHost() =
+        WorkspaceSettingsHost(
+            workspaces = WorkspacesSettingsController(InMemoryWorkspaceRepository()),
+            sources =
+                SourcesSettingsController(
+                    monitorFor = {
+                            onChange ->
+                        SourceStatusMonitor(FakeSourceRegistry(emptyList()), emptyList(), onChange)
+                    },
+                    enablement = StoredSourceEnablement(InMemoryDisabledSourcesStore()),
+                    descriptors = { emptyList() },
+                ),
+            version = MutableStateFlow(0),
+            currentLayout = HomeLayoutDeviceClass.PHONE,
+            onEdit = {},
+            onRequestSourceAccess = {},
+        )
 
     @Test
     fun withoutAHostNothingIsDrawn() {

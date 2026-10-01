@@ -14,7 +14,27 @@ internal object LensCodec {
                 ),
             "limit" to lens.limit?.let(::num),
             "project" to arr(lens.project.sortedBy { it.ordinal }.map { str(it.name) }),
+            "params" to encodeParameters(lens),
         )
+
+    /** Only present when the lens has a parameter for one of its sources, so older data is unaffected. */
+    private fun encodeParameters(lens: Lens): StoredValue.Arr? =
+        lens.sources.distinct().mapNotNull { id ->
+            lens.parameterFor(id)?.let { obj("source" to str(id.value), "query" to str(it.text)) }
+        }.takeIf { it.isNotEmpty() }?.let(::arr)
+
+    private fun decodeParameters(
+        root: StoredValue.Obj,
+        sources: List<String>,
+    ): Map<SourceId, SourceParameter> =
+        buildMap {
+            root.array("params").forEach { entry ->
+                val item = entry as? StoredValue.Obj ?: return@forEach
+                val source = item.string("source")?.takeIf { it in sources } ?: return@forEach
+                val parameter = item.string("query")?.let(SourceParameter::query) ?: return@forEach
+                putIfAbsent(SourceId(source), parameter)
+            }
+        }
 
     /** Returns null when no usable source remains. */
     fun decode(value: StoredValue?): Lens? {
@@ -36,6 +56,7 @@ internal object LensCodec {
                     ),
                 limit = root.long("limit")?.toInt()?.takeIf { it > 0 },
                 project = decodeProjection(root),
+                parameters = decodeParameters(root, sources),
             )
         }
     }

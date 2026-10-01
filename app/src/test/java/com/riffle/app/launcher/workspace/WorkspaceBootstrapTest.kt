@@ -49,6 +49,17 @@ class WorkspaceBootstrapTest {
     }
 
     @Test
+    fun aSeededDefaultRecordsItsPresetButStoredWorkspacesAreNotStamped() {
+        val stored = WorkspaceSet().update(phone) { it.rename(it.activeId, "Mine") }
+
+        val seeded = WorkspaceBootstrap.seed(stored)
+
+        assertEquals(null, seeded.workspacesFor(phone).active.presetId)
+        assertEquals("nova", seeded.workspacesFor(HomeLayoutDeviceClass.TABLET).active.presetId)
+        assertEquals("nova", WorkspaceBootstrap.seed(null).workspacesFor(phone).active.presetId)
+    }
+
+    @Test
     fun initializingNeverOverwritesStoredWorkspacesAndWritesNothing() =
         runBlocking {
             val stored = WorkspaceSet().update(phone) { it.rename(it.activeId, "Mine") }

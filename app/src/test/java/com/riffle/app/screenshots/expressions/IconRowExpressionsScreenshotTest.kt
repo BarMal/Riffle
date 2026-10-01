@@ -58,6 +58,11 @@ class IconRowExpressionsScreenshotTest {
         render(state = ExpressionState.Unavailable("Notification access is off"))
     }
 
+    @Test
+    fun iconRowOff() {
+        render(state = ExpressionState.Off("This source is turned off", "Turn on") {})
+    }
+
     private fun render(
         result: LensResult = ExpressionFixtures.flatApps(count = 12),
         state: ExpressionState = ExpressionState.Ready,

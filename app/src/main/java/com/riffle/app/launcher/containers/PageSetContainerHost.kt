@@ -67,7 +67,7 @@ fun PageSetContainerHost(
         if (output.availability == LensAvailability.READY && plan.shapeMismatch) {
             ExpressionState.Unavailable(ContainerText.NEEDS_GROUPED)
         } else {
-            output.toExpressionState()
+            output.toExpressionState { services.actions.onEnableSources(container.binding.lens) }
         }
     ExpressionStateHost(
         state = state,

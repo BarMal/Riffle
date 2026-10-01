@@ -59,6 +59,11 @@ class IndexExpressionsScreenshotTest {
     }
 
     @Test
+    fun indexOff() {
+        render(state = ExpressionState.Off("This source is turned off", "Turn on") {})
+    }
+
+    @Test
     fun indexLoading() {
         render(state = ExpressionState.Loading)
     }

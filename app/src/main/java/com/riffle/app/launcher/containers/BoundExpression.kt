@@ -61,7 +61,7 @@ internal fun LensBoundExpression(
     BoundExpression(
         kind = binding.expression,
         result = output.resultOrEmpty(),
-        state = output.toExpressionState(),
+        state = output.toExpressionState { services.actions.onEnableSources(binding.lens) },
         environment = services.environment,
         actions = services.actions,
         modifier = modifier,

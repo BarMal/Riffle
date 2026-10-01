@@ -10,6 +10,9 @@ enum class LensAvailability {
     LOADING,
     READY,
     PERMISSION_REQUIRED,
+
+    /** Every source the lens reads was turned off by the user (Settings > Sources). */
+    OFF,
     UNAVAILABLE,
 }
 
@@ -30,6 +33,7 @@ data class LensOutput(
     companion object {
         val Loading = LensOutput(LensAvailability.LOADING)
         val PermissionRequired = LensOutput(LensAvailability.PERMISSION_REQUIRED)
+        val Off = LensOutput(LensAvailability.OFF)
         val Unavailable = LensOutput(LensAvailability.UNAVAILABLE)
 
         fun ready(result: LensResult): LensOutput = LensOutput(LensAvailability.READY, result)
@@ -37,13 +41,14 @@ data class LensOutput(
         /**
          * One availability for a lens reading several sources. Any ready source makes the lens ready (the
          * items that exist are better than none, and a container cannot say which source is missing);
-         * otherwise still loading beats a missing permission beats unavailable.
+         * otherwise still loading beats a missing permission beats a source the user turned off beats unavailable.
          */
         fun availabilityOf(states: Collection<SourceState>): LensAvailability =
             when {
                 states.isEmpty() || states.any { it is SourceState.Ready } -> LensAvailability.READY
                 states.any { it is SourceState.Loading } -> LensAvailability.LOADING
                 states.any { it is SourceState.PermissionRequired } -> LensAvailability.PERMISSION_REQUIRED
+                states.any { it is SourceState.Off } -> LensAvailability.OFF
                 else -> LensAvailability.UNAVAILABLE
             }
     }
