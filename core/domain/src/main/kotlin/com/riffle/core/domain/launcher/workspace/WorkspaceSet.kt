@@ -38,13 +38,17 @@ data class WorkspaceSet(
     ): WorkspaceSet {
         if (source == target) return this
         val from = workspacesFor(source)
-        val copies = from.workspaces.map { it.id to WorkspaceCopy.withFreshIds(it, ids) }
+        // Refs cannot cross layouts: the library is copied with fresh ids and every ref rewritten.
+        val library = LensLibraryCopy.copy(from.library, ids)
+        val copies =
+            from.workspaces.map { it.id to LensLibraryCopy.remap(WorkspaceCopy.withFreshIds(it, ids), library.idMap) }
         val byOldId = copies.toMap()
         val copied =
             LayoutWorkspaces.repaired(
                 workspaces = copies.map { it.second },
                 activeId = byOldId[from.activeId]?.id,
                 defaultId = byOldId[from.defaultId]?.id,
+                library = library.library,
             )
         return copied?.let { withLayout(target, it) } ?: this
     }
