@@ -214,6 +214,18 @@ before it is emitted. `LauncherShell` passes a `WorkspaceMenuHost` down to `Home
 `WorkspaceMenuFeature.enabled` and a model exists, so a disabled menu adds no semantics, surface or
 dock change.
 
+**Surface.** `WorkspaceMenuLayer` (app, `WorkspaceMenuSurface.kt`) draws a "Workspaces" handle beside the
+dock while closed and, once open, a scrim plus a Material 3 panel on the dock's own edge (bottom, top,
+left or right from the existing dock-edge logic), cleared of the dock's measured thickness and of the
+system bars and cutouts. Spacing, shapes, elevation and motion come from the Riffle tokens; it fades
+in and is instant under reduced motion. It takes taps only (rows are radio or button semantics with
+48dp targets, the scrim and Back close it), so every action is already reachable by TalkBack and
+keyboard; the dock's "Workspace menu" custom action opens it. It reuses the shelf's dock-edge
+placement and the dock's measured extent rather than the shelf's panel composables, because the menu
+holds choices, not a widget grid: this is a deliberate narrowing of "reviving the shelf". Single
+workspace hides the switch section; Finder is hidden without a Finder page; the fall-back reason is
+shown when the displayed workspace is the default.
+
 **Repository wiring.** `CachedWorkspaceRepository` adapts the suspend `DataStoreWorkspaceStore`
 (through `WorkspaceStorePort`) to the synchronous `WorkspaceRepository`: `load()` is null until
 `initialize(layoutSet)`, which runs `WorkspaceMigration.ensureMigrated(stored, layoutSet)` and so only
