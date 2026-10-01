@@ -161,6 +161,8 @@ fun HomeDestination(
                     )
                 }
             }
+            // Nothing is composed while the feature is off or no workspaces are loaded (#1351).
+            HomeWorkspaceMenu(workspaceMenu, dockHost, pull.dockEdge, state.launcherSettings.motion.reducedMotion)
         }
     }
 }
