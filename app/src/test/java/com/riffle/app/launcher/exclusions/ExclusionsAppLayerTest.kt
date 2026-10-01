@@ -178,4 +178,30 @@ class ExclusionsAppLayerTest {
             assertEquals(1, repository.rules(phone).rules.size)
             assertTrue(store.writes.isEmpty())
         }
+
+    @Test
+    fun aRestoreFromBackupTellsObserversOnceLoaded() =
+        runBlocking {
+            val store = FakeStore()
+            val repository = CachedExclusionRepository(store, CoroutineScope(Dispatchers.Unconfined))
+            val backedUp = SourceExclusionRule(ExclusionRuleId("b"), SourceIds.RSS, ExclusionMatcher.Group("g"))
+            val restored =
+                LayoutExclusionRules(
+                    mapOf(phone to ExclusionRuleSet(listOf(backedUp))),
+                    legacyMigrated = true,
+                )
+            var notified = 0
+            repository.observe { notified++ }
+
+            repository.replaceFromBackup(restored)
+            assertEquals(0, notified)
+            assertEquals(restored, store.stored)
+
+            repository.initialize(emptySet(), emptyList())
+            assertEquals(1, notified)
+            repository.replaceFromBackup(LayoutExclusionRules(legacyMigrated = true))
+
+            assertEquals(2, notified)
+            assertTrue(repository.rules(phone).isEmpty)
+        }
 }

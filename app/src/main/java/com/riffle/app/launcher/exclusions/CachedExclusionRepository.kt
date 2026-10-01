@@ -83,13 +83,17 @@ internal class CachedExclusionRepository(
     suspend fun currentOrStored(): LayoutExclusionRules? = cached ?: store.read()
 
     /**
-     * Replaces the rules from a backup: always written to the store, and the in-memory copy is replaced when
-     * [initialize] has already run. Before it has, the next [initialize] reads what was written (and does not
-     * copy the legacy hide rules again when the restored value says it already did).
+     * Replaces the rules from a backup: always written to the store, and the in-memory copy is replaced (and
+     * observers told) when [initialize] has already run. Before it has, the next [initialize] reads what was
+     * written (and does not copy the legacy hide rules again when the restored value says it already did).
      */
     suspend fun replaceFromBackup(rules: LayoutExclusionRules) {
         store.write(rules)
-        if (cached != null) cached = rules
+        val replaced =
+            synchronized(lock) {
+                (cached != null).also { loaded -> if (loaded) cached = rules }
+            }
+        if (replaced) changed()
     }
 
     /** The rule set of [deviceClass]; empty before [initialize]. */
