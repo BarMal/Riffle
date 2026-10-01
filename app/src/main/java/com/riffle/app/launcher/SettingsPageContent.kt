@@ -109,6 +109,7 @@ private fun SettingsMainPageContent(
         firstRunStatus = state.firstRunStatus,
         onAction = onAction,
     )
+    SettingsWorkspacePreviewSection()
     AppSearchField(
         modifier = Modifier.fillMaxWidth(),
         query = settingsQuery.value,

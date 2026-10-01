@@ -26,12 +26,14 @@ import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
 import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
+import com.riffle.app.launcher.apps.AndroidRecentAppRepository
 import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.calendar.AndroidCalendarAccessGateway
 import com.riffle.app.launcher.calendar.CalendarAccessChanges
 import com.riffle.app.launcher.calendar.SharedPreferencesCalendarDenialHistory
+import com.riffle.app.launcher.calendar.sourceAccess
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
 import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
@@ -42,20 +44,34 @@ import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
+import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
+import com.riffle.app.launcher.sources.ContentSourceDependencies
+import com.riffle.app.launcher.sources.FeedSourceDependencies
+import com.riffle.app.launcher.sources.androidCalendarSourceDependencies
+import com.riffle.app.launcher.sources.androidItemSources
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
 import com.riffle.app.launcher.widgets.HostedWidgetIdReferenceState
 import com.riffle.app.launcher.widgets.PersistentWidgetAddTransactionStore
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
+import com.riffle.app.launcher.workspace.AndroidExpressionImageLoader
+import com.riffle.app.launcher.workspace.AndroidItemLaunchPort
+import com.riffle.app.launcher.workspace.WorkspaceItemActions
+import com.riffle.app.launcher.workspace.WorkspaceRuntime
+import com.riffle.app.launcher.workspace.sourceAccessMap
+import com.riffle.app.launcher.workspace.workspaceLensProvider
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.hostsWidget
+import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import java.util.concurrent.Executors
 
 internal class MainActivityDependencies(
     private val activity: Activity,
@@ -82,6 +98,7 @@ internal class MainActivityDependencies(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
         )
     }
+    val recentAppRepository by lazy { AndroidRecentAppRepository(activity) }
     val homeRoleGateway by lazy { AndroidHomeRoleGateway(activity) }
     val appLauncher by lazy { AndroidAppLauncher(activity) }
     val webSearchLauncher by lazy { AndroidWebSearchLauncher(activity) }
@@ -126,6 +143,56 @@ internal class MainActivityDependencies(
             feedArticleCacheRepository = feedArticleCacheRepository,
             workspaceRepository = workspaceRepository,
         )
+
+    /**
+     * The workspace preview's runtime (debug-only experience). Call it only once the preview is switched on:
+     * nothing in it subscribes to a source until a container observes a lens, and creating it reads no
+     * platform data. [launcherSettings] supplies the notification hide rules and RSS feeds.
+     */
+    fun workspaceRuntime(launcherSettings: () -> LauncherSettings): WorkspaceRuntime {
+        val registry =
+            androidItemSources(
+                installedApps = installedAppRepository,
+                appVisibility = appVisibilityRepository,
+                recentApps = recentAppRepository,
+                notificationRepository = activeNotificationRepository,
+                notificationAccess = notificationAccessGateway,
+                hideRules = { launcherSettings().notificationHiding.rules },
+                calendar =
+                    androidCalendarSourceDependencies(
+                        contentResolver = activity.contentResolver,
+                        access = calendarAccessGateway,
+                        accessChanges = calendarAccessChanges,
+                    ),
+                content =
+                    ContentSourceDependencies(
+                        feeds =
+                            FeedSourceDependencies(
+                                configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
+                                cache = feedArticleCacheRepository,
+                            ),
+                    ),
+            )
+        val lensExecutor =
+            Executors.newSingleThreadExecutor { task ->
+                Thread(task, "riffle-lens-evaluation").apply { isDaemon = true }
+            }
+        return WorkspaceRuntime(
+            repository = workspaceRepository,
+            registry = registry,
+            provider = workspaceLensProvider(registry, lensExecutor),
+            imageLoader = AndroidExpressionImageLoader(activity.packageManager),
+            itemActions = WorkspaceItemActions(AndroidItemLaunchPort(activity, appLauncher)),
+            sourceAccess = {
+                sourceAccessMap(
+                    notificationAccess = notificationAccessGateway.getNotificationAccessStatus(),
+                    calendarAccess = calendarAccessGateway.sourceAccess(),
+                    recentAppsAccess =
+                        if (recentAppRepository.canReadRecentApps()) SourceAccess.GRANTED else SourceAccess.REQUIRED,
+                )
+            },
+        )
+    }
 
     fun packageChangeObserver(onCatalogChanged: (AppCatalogChange) -> Unit): AndroidPackageChangeObserver =
         AndroidPackageChangeObserver(activity) { change ->

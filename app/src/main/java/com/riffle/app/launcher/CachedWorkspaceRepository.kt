@@ -4,7 +4,12 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.workspace.WorkspaceMigration
 import com.riffle.core.domain.launcher.workspace.WorkspaceRepository
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -26,6 +31,10 @@ interface WorkspaceStorePort {
  * [WorkspaceMigration.ensureMigrated], so stored workspaces are never overwritten; it writes nothing
  * itself, because the migration is deterministic and is re-derived on the next start until the first
  * [save]. [save] updates the copy at once and persists in order on [scope].
+ *
+ * A read that throws (as opposed to a blob that cannot be decoded, which reads as null) falls back to the
+ * in-memory default and disables persistence for this process, so a transient storage failure can never
+ * replace workspaces that exist on disk. [version] changes whenever the copy does, for UI that observes it.
  */
 class CachedWorkspaceRepository(
     private val store: WorkspaceStorePort,
@@ -34,18 +43,35 @@ class CachedWorkspaceRepository(
     @Volatile
     private var cached: WorkspaceSet? = null
     private val writeLock = Mutex()
+    private val mutableVersion = MutableStateFlow(0)
 
-    suspend fun initialize(layoutSet: HomeLayoutSet) {
+    @Volatile
+    private var persistenceEnabled = true
+
+    /** Increases every time [load] starts returning something different. */
+    val version: StateFlow<Int> = mutableVersion.asStateFlow()
+
+    suspend fun initialize(layoutSet: HomeLayoutSet) =
+        initialize { stored -> WorkspaceMigration.ensureMigrated(stored, layoutSet) }
+
+    /** Like [initialize], but [bootstrap] decides what to hold given what is stored (null when nothing is). */
+    suspend fun initialize(bootstrap: (WorkspaceSet?) -> WorkspaceSet) {
         if (cached != null) return
-        val loaded = WorkspaceMigration.ensureMigrated(store.read(), layoutSet)
+        val read = runCatching { store.read() }.onFailure { if (it is CancellationException) throw it }
+        if (read.isFailure) persistenceEnabled = false
+        val loaded = bootstrap(read.getOrNull())
         // A save that raced the read wins: it is newer than anything the store held.
-        if (cached == null) cached = loaded
+        if (cached == null) {
+            cached = loaded
+            mutableVersion.update { it + 1 }
+        }
     }
 
     override fun load(): WorkspaceSet? = cached
 
     override fun save(set: WorkspaceSet) {
         cached = set
-        scope.launch { writeLock.withLock { store.write(cached ?: set) } }
+        mutableVersion.update { it + 1 }
+        if (persistenceEnabled) scope.launch { writeLock.withLock { store.write(cached ?: set) } }
     }
 }

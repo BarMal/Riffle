@@ -22,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,6 +40,10 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.workspace.NeverEnabled
+import com.riffle.app.launcher.workspace.NoWorkspaceVersion
+import com.riffle.app.launcher.workspace.WorkspacePreviewHost
+import com.riffle.app.launcher.workspace.WorkspacePreviewLayer
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -65,6 +70,7 @@ fun LauncherShell(
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
+    workspacePreview: WorkspacePreviewHost? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val storedState by viewModel.state.collectAsState()
@@ -80,30 +86,64 @@ fun LauncherShell(
     }
     // Absent while the feature is off or no workspaces are loaded, so nothing downstream composes it.
     val menuState by viewModel.workspaceMenu.state.collectAsState()
-    val workspaceMenu =
-        if (WorkspaceMenuFeature.enabled && viewModel.workspaceMenu.isAvailable()) {
+    val previewEnabled by (workspacePreview?.controller?.enabled ?: NeverEnabled).collectAsState()
+    val previewOpen by (workspacePreview?.controller?.isOpen ?: NeverEnabled).collectAsState()
+    val workspaceVersion by (workspacePreview?.workspaceVersion ?: NoWorkspaceVersion).collectAsState()
+    val deviceClass = state.homeLayoutSet.activeKey.deviceClass
+    val menuAvailable =
+        remember(previewEnabled, workspaceVersion, deviceClass) {
+            WorkspaceMenuFeature.enabled && viewModel.workspaceMenu.isAvailable()
+        }
+    val menuHost =
+        if (menuAvailable) {
             WorkspaceMenuHost(state = menuState, onAction = viewModel.workspaceMenu::dispatch)
         } else {
             null
         }
+    // The home dock's own menu is hidden while the preview covers it, so only one menu is ever drawn.
+    val workspaceMenu = menuHost.takeUnless { previewOpen }
+
+    val previewSetting = rememberWorkspacePreviewSetting(workspacePreview, previewEnabled)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        LauncherShellContent(
-            state = state,
-            viewModeAvailability = viewModel.viewModeAvailability,
-            appInfo = LauncherShellAppInfo(appVersionLabel, appBuildIdentityLabel),
-            appIconLoader = appIconLoader,
-            widgetRenderers = widgetRenderers,
-            adaptiveStageWindowLayout = adaptiveStageWindowLayout,
-            adaptiveStageContext = adaptiveStageContext,
-            onAdaptiveStageContextChanged = { adaptiveStageContext = it },
-            workspaceMenu = workspaceMenu,
-            onAction = onAction,
-            onSetupCardDismissed = viewModel::onSetupCardDismissed,
-            onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
-        )
+        CompositionLocalProvider(LocalWorkspacePreviewSetting provides previewSetting) {
+            LauncherShellContent(
+                state = state,
+                viewModeAvailability = viewModel.viewModeAvailability,
+                appInfo = LauncherShellAppInfo(appVersionLabel, appBuildIdentityLabel),
+                appIconLoader = appIconLoader,
+                widgetRenderers = widgetRenderers,
+                adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                adaptiveStageContext = adaptiveStageContext,
+                onAdaptiveStageContextChanged = { adaptiveStageContext = it },
+                workspaceMenu = workspaceMenu,
+                onAction = onAction,
+                onSetupCardDismissed = viewModel::onSetupCardDismissed,
+                onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
+            )
+        }
+        // Composed only while the Workspaces (preview) setting is on; otherwise no workspace code runs.
+        if (workspacePreview != null && previewEnabled) {
+            WorkspacePreviewLayer(workspacePreview, state, viewModel, menuHost)
+        }
     }
 }
+
+/** The Settings row's view of the preview setting; null when the shell has no preview host. */
+@Composable
+private fun rememberWorkspacePreviewSetting(
+    host: WorkspacePreviewHost?,
+    enabled: Boolean,
+): WorkspacePreviewSetting? =
+    host?.let { previewHost ->
+        remember(previewHost, enabled) {
+            WorkspacePreviewSetting(
+                enabled = enabled,
+                onEnabledChange = previewHost.controller::setEnabled,
+                onOpen = previewHost.controller::open,
+            )
+        }
+    }
 
 @Composable
 fun LauncherShellContent(
