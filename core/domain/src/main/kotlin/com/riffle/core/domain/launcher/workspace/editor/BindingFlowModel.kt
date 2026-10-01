@@ -61,6 +61,9 @@ sealed interface BindingFlowAction {
 
     data class SetLimit(val limit: Int?) : BindingFlowAction
 
+    /** Sets the query of [source] on the draft; blank clears it. Ignored for a source that takes no query. */
+    data class SetQuery(val source: SourceId, val text: String) : BindingFlowAction
+
     data class PickExpression(val kind: ExpressionKind) : BindingFlowAction
 
     /** [target] is only read for widgets; null picks the first accepted place. */

@@ -55,7 +55,7 @@ class SourceBackedLensResultProvider(
         }
 
         private fun attach(id: SourceId) {
-            val subscription = sources.source(id).subscribe { state -> onSourceState(id, state) }
+            val subscription = sources.source(id, lens.parameterFor(id)).subscribe { state -> onSourceState(id, state) }
             val stale = synchronized(lock) { closed || !subscriptions.add(subscription) }
             if (stale) subscription.cancel()
         }
