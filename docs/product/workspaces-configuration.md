@@ -1837,6 +1837,11 @@ get wrong), and it has Android precedent. Costs to accept: the largest size (R8 
 build), four compile dependencies, and a Java 11 target that must be proven on-device. If the spike fails criteria 2 or 4,
 use lib-recur for expansion plus a small bounded parser.
 
+**Spike result (2026-10-01, #1395): ical4j 4.3.0, confined to its `Recur` engine behind a domain `RecurrenceExpander`;
+lib-recur passed the same 52-case corpus and is the proven fallback.** Evidence, size estimate, decision and the not-done list
+(Android size/R8/device run, parser) are in [`workspaces-ics-recurrence.md`](workspaces-ics-recurrence.md). The UNVERIFIED items
+above that concern recurrence correctness are now settled by that corpus; the Android-specific ones are not.
+
 **Spike plan (before S12 writes any source code; about a day, JVM plus one device run).**
 1. Add the library to a throw-away module. Confirm it builds with the project's toolchain, check the APK size delta and
    that R8 keeps it working (run the corpus once on a release-shrunk build on the phone).
@@ -1854,6 +1859,9 @@ use lib-recur for expansion plus a small bounded parser.
    criteria above; write the result into this section.
 
 ### 15.3 Isolation behind a domain interface
+
+> Built so far (#1395): the narrower `RecurrenceExpander` seam in `core/domain` and the module `core/recurrence-ical4j`
+> (not yet a dependency of `:app`). The `IcsEngine` below, which adds parsing, is still to build.
 
 The domain never imports the library. In `core/domain` (pure):
 
