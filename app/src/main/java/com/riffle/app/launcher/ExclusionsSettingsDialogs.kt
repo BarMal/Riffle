@@ -83,15 +83,16 @@ internal fun ExclusionsDialogs(
  * anything but what is typed here.
  */
 @Composable
-private fun AddTextRuleDialog(
+internal fun AddTextRuleDialog(
     problemWith: (TextRuleDraft) -> TextRuleProblem?,
     onAdd: (TextRuleDraft) -> Unit,
     onDismiss: () -> Unit,
+    initialValue: String = "",
 ) {
     var source by remember { mutableStateOf(TextRuleValidator.SOURCES.first()) }
     var field by remember { mutableStateOf(ExclusionTextField.TITLE) }
     var mode by remember { mutableStateOf(ExclusionMatchMode.CONTAINS) }
-    var value by rememberSaveable { mutableStateOf("") }
+    var value by rememberSaveable { mutableStateOf(initialValue) }
     val draft = TextRuleDraft(source, field, mode, value)
     val problem = problemWith(draft)
     // Nothing typed yet is not an error to show, only a button that is not ready.

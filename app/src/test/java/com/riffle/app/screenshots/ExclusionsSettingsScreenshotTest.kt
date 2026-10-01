@@ -22,13 +22,12 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.AddTextRuleDialog
 import com.riffle.app.launcher.EXCLUSIONS_ADD_TEST_TAG
 import com.riffle.app.launcher.EXCLUSIONS_EMPTY_TEST_TAG
 import com.riffle.app.launcher.EXCLUSIONS_SUMMARY_TEST_TAG
 import com.riffle.app.launcher.EXCLUSION_PROBLEM_TEST_TAG
-import com.riffle.app.launcher.EXCLUSION_VALUE_FIELD_TEST_TAG
 import com.riffle.app.launcher.ExclusionsPageCallbacks
 import com.riffle.app.launcher.ExclusionsSettingsContent
 import com.riffle.app.launcher.exclusionRowTestTag
@@ -194,19 +193,32 @@ class ExclusionsSettingsScreenshotTest {
     }
 
     @Test
-    fun addingATextRuleValidatesWhileTypingAndNeverCreatesAnythingElse() {
+    fun theAddDialogOpensDisabledUntilThereIsValidText() {
         render(capture = false)
 
         composeRule.onNodeWithTag(EXCLUSIONS_ADD_TEST_TAG).performScrollTo().performClick()
+
         composeRule.onNode(hasText("Add text rule") and hasAnyAncestor(isDialog())).assertExists()
         composeRule.onNode(hasText("Add rule") and hasAnyAncestor(isDialog())).assertIsNotEnabled()
+        assertEquals(emptyList<ExclusionsSettingsAction>(), actions)
+    }
 
-        composeRule.onNodeWithTag(EXCLUSION_VALUE_FIELD_TEST_TAG).performTextInput("ab")
+    // The dialog is drawn with its text pre-filled: typing into a focused field keeps the test clock from idling.
+    @Test
+    fun aTooShortTextShowsItsReasonAndCannotBeAdded() {
+        renderAddDialog("ab")
+
         composeRule.onNodeWithTag(EXCLUSION_PROBLEM_TEST_TAG)
             .assert(hasText("Use at least 3 characters", substring = true))
+        composeRule.onNode(hasText("Add rule") and hasAnyAncestor(isDialog())).assertIsNotEnabled()
         composeRule.captureScreen()
+        assertEquals(emptyList<ExclusionsSettingsAction>(), actions)
+    }
 
-        composeRule.onNodeWithTag(EXCLUSION_VALUE_FIELD_TEST_TAG).performTextInput("c sale")
+    @Test
+    fun aValidTextAddsExactlyTheTypedRule() {
+        renderAddDialog("abc sale")
+
         composeRule.onNode(hasText("Add rule") and hasAnyAncestor(isDialog())).performClick()
 
         assertEquals(
@@ -222,6 +234,19 @@ class ExclusionsSettingsScreenshotTest {
             ),
             actions,
         )
+    }
+
+    private fun renderAddDialog(initialValue: String) {
+        composeRule.setContent {
+            ScreenshotBackdrop {
+                AddTextRuleDialog(
+                    problemWith = callbacks.problemWith,
+                    onAdd = { draft -> actions += ExclusionsSettingsAction.AddText(draft) },
+                    onDismiss = {},
+                    initialValue = initialValue,
+                )
+            }
+        }
     }
 
     private fun render(
