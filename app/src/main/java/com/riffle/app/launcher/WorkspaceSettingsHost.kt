@@ -22,9 +22,9 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * [version] changes whenever the stored workspaces do (an edit, a menu switch), so the page re-plans.
  * [currentLayout] is the layout this device is showing now: the only one the editor can open. [onEdit] opens
- * the existing editor through the menu's Edit route; [exclusions] drives Settings > Hidden items and rules (null
- * where the runtime has no exclusion repository, which then shows the page as not loaded); [onRequestSourceAccess] is the existing explicit
- * user-initiated flow for a source (never called except from a tap).
+ * the existing editor through the menu's Edit route; [onRequestSourceAccess] is the existing explicit
+ * user-initiated flow for a source (never called except from a tap). [exclusions] drives Settings > Hidden items
+ * and rules (null where the runtime has no exclusion repository, which then shows the page as not loaded).
  */
 internal class WorkspaceSettingsHost(
     val workspaces: WorkspacesSettingsController,
