@@ -3,6 +3,8 @@
 Status: proposed plan (supersedes parts of `modes-dock-handle-and-cards-plan.md`; see
 [Relationship to the existing plan](#relationship-to-the-existing-plan)). Tracking issue: TBD.
 
+User configuration of the workspace system (default-on rollout, Settings, saved lenses, backup, privacy): [`workspaces-configuration.md`](workspaces-configuration.md).
+
 ## Why
 
 Riffle's modes (Standard, Library, Cards) each bundle a data source, a way of drawing it, and a place
