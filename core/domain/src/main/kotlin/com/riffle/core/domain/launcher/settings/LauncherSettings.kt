@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.rss.FeedStagePreferences
+import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 
 data class LauncherSettings(
     val appDrawer: AppDrawerSettings = AppDrawerSettings(),
@@ -19,12 +20,21 @@ data class LauncherSettings(
     val contextual: ContextualSettings = ContextualSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
+    val home: HomeBehaviourSettings = HomeBehaviourSettings(),
     val liquidGlass: LiquidGlassSettings = LiquidGlassSettings(),
     val motion: MotionSettings = MotionSettings(),
     val notificationHiding: NotificationHidingSettings = NotificationHidingSettings(),
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),
     val rss: RssSettings = RssSettings(),
     val search: SearchSettings = SearchSettings(),
+)
+
+/**
+ * Durable home behaviour. [returnBehavior] picks which page of the active workspace shows when the launcher
+ * comes back (Restore by default); it is global, not per workspace, and never changes the workspace.
+ */
+data class HomeBehaviourSettings(
+    val returnBehavior: ReturnBehavior = ReturnBehavior.RESTORE,
 )
 
 /** Durable presentation preferences for the launcher app drawer. */

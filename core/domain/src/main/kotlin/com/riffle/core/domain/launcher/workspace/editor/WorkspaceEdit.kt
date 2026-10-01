@@ -51,6 +51,9 @@ sealed interface WorkspaceEdit {
 
     data class RemoveWidget(val pageId: ContainerId, val widgetId: ContainerId) : WorkspaceEdit
 
+    /** Sets (or clears, when null) the page the launcher opens on. The page must exist; the Finder is allowed. */
+    data class SetStartPage(val pageId: ContainerId?) : WorkspaceEdit
+
     data class Rename(val name: String) : WorkspaceEdit
 
     /** Sets (or clears, when null) the dock's dynamic section lens. */

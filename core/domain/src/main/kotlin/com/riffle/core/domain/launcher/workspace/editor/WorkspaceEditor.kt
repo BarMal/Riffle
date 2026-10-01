@@ -54,6 +54,7 @@ object WorkspaceEditor {
             is WorkspaceEdit.SetPageBinding -> PageEdits.setBinding(workspace, edit)
             is WorkspaceEdit.Rename -> rename(workspace, edit.name)
             is WorkspaceEdit.SetDockSection -> applied(workspace.copy(dock = WorkspaceDock(edit.binding)))
+            is WorkspaceEdit.SetStartPage -> PageEdits.setStartPage(workspace, edit.pageId)
             is WorkspaceEdit.SetSkinOverride -> setSkin(workspace, edit.skinId)
             is WorkspaceEdit.AddWidget,
             is WorkspaceEdit.MoveWidget,

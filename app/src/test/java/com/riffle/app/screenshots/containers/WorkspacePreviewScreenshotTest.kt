@@ -6,6 +6,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.riffle.app.launcher.workspace.WORKSPACE_PREVIEW_DOCK_TEST_TAG
 import com.riffle.app.launcher.workspace.WORKSPACE_PREVIEW_EXIT_TEST_TAG
+import com.riffle.app.launcher.workspace.WORKSPACE_PREVIEW_FINDER_CLOSE_TEST_TAG
+import com.riffle.app.launcher.workspace.WORKSPACE_PREVIEW_FINDER_TEST_TAG
 import com.riffle.app.launcher.workspace.WORKSPACE_PREVIEW_HOME_PLACEHOLDER_TEST_TAG
 import com.riffle.app.launcher.workspace.WorkspacePreviewSurface
 import com.riffle.app.screenshots.ScreenshotBackdrop
@@ -17,6 +19,7 @@ import com.riffle.core.domain.launcher.workspace.Lens
 import com.riffle.core.domain.launcher.workspace.LensBinding
 import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageContent
+import com.riffle.core.domain.launcher.workspace.PageRole
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceSourceIds
@@ -51,6 +54,16 @@ class WorkspacePreviewScreenshotTest {
         Workspace(WorkspaceId("data"), "Nova", listOf(ContainerFixtures.boundPage, ContainerFixtures.pageSet))
     private val homeWorkspace =
         Workspace(WorkspaceId("home"), "Nova", listOf(homeGridPage, ContainerFixtures.boundPage))
+    private val finderPage = ContainerFixtures.boundPage.copy(id = ContainerId("finder"), role = PageRole.FINDER)
+
+    // The Finder is not in the pager: here it is the start page, so it opens over the first pager page.
+    private val finderStartWorkspace =
+        Workspace(
+            WorkspaceId("finder-start"),
+            "Nova",
+            listOf(ContainerFixtures.pageSet, finderPage),
+            startPageId = ContainerId("finder"),
+        )
     private var exits = 0
 
     private fun render(workspace: Workspace?) {
@@ -102,6 +115,22 @@ class WorkspacePreviewScreenshotTest {
     @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
     fun homeGridPageShowsThePlaceholderUnfolded() {
         render(homeWorkspace)
+    }
+
+    @Test
+    fun finderAsStartPageOpensItsOwnSurfaceCompact() {
+        render(finderStartWorkspace)
+        composeRule.onNodeWithTag(WORKSPACE_PREVIEW_FINDER_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(WORKSPACE_PREVIEW_FINDER_CLOSE_TEST_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun closingTheFinderLeavesThePagerWithoutExiting() {
+        render(finderStartWorkspace)
+        composeRule.onNodeWithTag(WORKSPACE_PREVIEW_FINDER_CLOSE_TEST_TAG).performClick()
+        composeRule.onNodeWithTag(WORKSPACE_PREVIEW_FINDER_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(WORKSPACE_PREVIEW_DOCK_TEST_TAG).assertIsDisplayed()
+        assertEquals(0, exits)
     }
 
     @Test

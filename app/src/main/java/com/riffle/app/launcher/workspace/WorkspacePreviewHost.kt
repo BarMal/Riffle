@@ -2,12 +2,16 @@ package com.riffle.app.launcher.workspace
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.WorkspaceMenuHost
@@ -59,12 +63,35 @@ internal fun WorkspacePreviewLayer(
         runtime.repository.initialize(WorkspaceBootstrap::seed)
         viewModel.workspaceMenu.refresh()
     }
+    ReturnToLauncherEffect(host.controller)
     LaunchedEffect(host) { viewModel.workspaceMenuEffects.collect { effect -> host.controller.onEffect(effect) } }
     val open by host.controller.isOpen.collectAsState()
     val editing by host.controller.editing.collectAsState()
     if (open) WorkspacePreviewContent(host, runtime, state, menu)
     if (open) {
         editing?.let { id -> WorkspaceEditorLayer(host, runtime, state, id) }
+    }
+}
+
+/** Coming back from another app (the activity stopped, then started) is a Return for the open preview. */
+@Composable
+private fun ReturnToLauncherEffect(controller: WorkspacePreviewController) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, controller) {
+        var stopped = false
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> stopped = true
+                    Lifecycle.Event.ON_START -> {
+                        if (stopped) controller.onReturn()
+                        stopped = false
+                    }
+                    else -> Unit
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 }
 
@@ -77,6 +104,7 @@ private fun WorkspacePreviewContent(
 ) {
     val version by host.workspaceVersion.collectAsState()
     val navigation by host.controller.navigation.collectAsState()
+    val returnRequest by host.controller.returnRequest.collectAsState()
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
     val workspace = remember(version, deviceClass) { runtime.repository.load()?.resolveActive(deviceClass)?.workspace }
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -93,6 +121,9 @@ private fun WorkspacePreviewContent(
             reducedMotion = reducedMotion,
             navigation = navigation,
             onNavigationConsumed = host.controller::navigationConsumed,
+            returnBehavior = state.launcherSettings.home.returnBehavior,
+            returnRequest = returnRequest,
+            onReturnConsumed = host.controller::returnConsumed,
             onExit = host.controller::close,
             placedHome = placedHome,
         )

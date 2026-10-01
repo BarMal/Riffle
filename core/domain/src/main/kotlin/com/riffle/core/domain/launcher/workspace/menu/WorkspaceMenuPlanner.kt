@@ -3,13 +3,12 @@ package com.riffle.core.domain.launcher.workspace.menu
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.ContainerId
 import com.riffle.core.domain.launcher.workspace.LayoutCapabilities
-import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageHost
-import com.riffle.core.domain.launcher.workspace.PageRole
 import com.riffle.core.domain.launcher.workspace.PageSetContainer
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceResolution
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import com.riffle.core.domain.launcher.workspace.isFinderPage
 
 /** One group of a page-set, as the lens engine evaluated it. Transient: the planner never stores it. */
 data class PageSetGroupRef(
@@ -25,9 +24,9 @@ data class PageSetGroupRef(
  * - Switch entries list every workspace of the device class in display order; the stored active one is
  *   marked. When the active workspace cannot be drawn the default is displayed instead and
  *   [WorkspaceMenuModel.fallback] carries the reasons.
- * - Jump entries cover the displayed workspace's pages in order; a page-set expands to its groups
- *   (from `groups`, in the given order) bounded by `maxGroupsPerPageSet`. The Finder page has its own
- *   entry, so it is not repeated as a jump entry.
+ * - Jump entries cover the displayed workspace's pager pages in order (page numbers skip the Finder); a
+ *   page-set expands to its groups (from `groups`, in the given order) bounded by `maxGroupsPerPageSet`.
+ *   The Finder page has its own entry, so it is not repeated as a jump entry.
  * - Finder is hidden when the displayed workspace has no Finder page (decision: never guess a
  *   "default Finder", because opening a page the workspace does not define would surprise the user).
  */
@@ -83,9 +82,11 @@ object WorkspaceMenuPlanner {
         maxGroups: Int,
     ): Jump {
         var omitted = 0
+        var pagerPosition = 0
         val entries =
-            workspace.pages.withIndex().flatMap { (index, page) ->
-                val number = index + 1
+            workspace.pages.flatMap { page ->
+                // The Finder is not in the pager, so it takes no page number.
+                val number = if (page.isFinder()) 0 else ++pagerPosition
                 when {
                     page.isFinder() -> emptyList()
                     page is PageSetContainer -> {
@@ -101,5 +102,5 @@ object WorkspaceMenuPlanner {
         return Jump(entries, omitted)
     }
 
-    private fun PageHost.isFinder(): Boolean = this is PageContainer && role == PageRole.FINDER
+    private fun PageHost.isFinder(): Boolean = isFinderPage()
 }

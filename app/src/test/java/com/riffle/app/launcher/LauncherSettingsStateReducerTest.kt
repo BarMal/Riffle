@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.homeSystemBars
+import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -60,6 +61,21 @@ class LauncherSettingsStateReducerTest {
             )
 
         assertEquals(SearchResultPresentation.LIST, updatedState.launcherSettings.search.resultPresentation)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsReturnBehaviorSelectionAndDefaultsToRestore() {
+        val repository = FakeLauncherSettingsRepository()
+        assertEquals(ReturnBehavior.RESTORE, LauncherShellState().launcherSettings.home.returnBehavior)
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectReturnBehavior(ReturnBehavior.START_PAGE),
+            )
+
+        assertEquals(ReturnBehavior.START_PAGE, updatedState.launcherSettings.home.returnBehavior)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

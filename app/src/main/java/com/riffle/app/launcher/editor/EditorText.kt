@@ -53,6 +53,8 @@ internal object EditorText {
     const val EMPTY_WORKSPACE = "No pages"
     const val FINDER_PAGE_LABEL = "Finder"
     const val PER_GROUP_NOTE = "Draws each group on its own page"
+    const val START_PAGE_CURRENT = "Start page"
+    const val SET_START_PAGE = "Set as start page"
     const val MOVE_UP = "Move up"
     const val MOVE_DOWN = "Move down"
     const val REMOVE = "Remove"

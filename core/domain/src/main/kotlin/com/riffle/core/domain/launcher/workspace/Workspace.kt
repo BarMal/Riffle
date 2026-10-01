@@ -28,6 +28,11 @@ data class Workspace(
      * "Reset to preset". Never inferred; null for workspaces migrated or created before it was recorded.
      */
     val presetId: String? = null,
+    /**
+     * The page the launcher opens on (see [WorkspaceReturnResolver]). Null means the first pager page. An id
+     * that names no page is ignored, never an error. May name the Finder page, which opens on search.
+     */
+    val startPageId: ContainerId? = null,
 )
 
 /** Pinned dock entries stay in `DockModel`; the workspace only adds the dynamic section's lens. */

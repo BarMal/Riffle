@@ -32,6 +32,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.riffle.app.launcher.designsystem.RiffleElevation
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
@@ -41,6 +43,7 @@ import com.riffle.core.domain.launcher.workspace.PageHost
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.editor.FlowMode
 import com.riffle.core.domain.launcher.workspace.editor.WorkspaceEdit
+import com.riffle.core.domain.launcher.workspace.effectiveStartPageId
 
 /**
  * The workspace as an editable list: name, pages (reorder, change content, remove), widgets inside grid
@@ -63,7 +66,7 @@ internal fun EditorOverview(
             Text(EditorText.EMPTY_WORKSPACE, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         workspace.pages.forEachIndexed { index, page ->
-            PageCard(page, index, workspace.pages.size, onAction)
+            PageCard(page, index, workspace.pages.size, page.id == workspace.effectiveStartPageId, onAction)
         }
         Button(onClick = { onAction(EditorAction.StartFlow(FlowMode.Add)) }) {
             Icon(Icons.Filled.Add, contentDescription = null)
@@ -102,6 +105,7 @@ private fun PageCard(
     page: PageHost,
     index: Int,
     count: Int,
+    isStartPage: Boolean,
     onAction: (EditorAction) -> Unit,
 ) {
     val name = EditorDescribe.pageName(index)
@@ -112,6 +116,7 @@ private fun PageCard(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        StartPageAction(page, name, isStartPage, onAction)
         Row(
             horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
@@ -133,6 +138,31 @@ private fun PageCard(
         }
         if (page is PageContainer && page.content is PageContent.WidgetGrid) {
             GridWidgets(page, page.content as PageContent.WidgetGrid, onAction)
+        }
+    }
+}
+
+/** Marks the page the launcher opens on, or offers to make this one it. Undo reverts it like any edit. */
+@Composable
+private fun StartPageAction(
+    page: PageHost,
+    name: String,
+    isStartPage: Boolean,
+    onAction: (EditorAction) -> Unit,
+) {
+    if (isStartPage) {
+        Text(
+            EditorText.START_PAGE_CURRENT,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.semantics { contentDescription = "${EditorText.START_PAGE_CURRENT}: $name" },
+        )
+    } else {
+        TextButton(
+            onClick = { onAction(EditorAction.Apply(WorkspaceEdit.SetStartPage(page.id))) },
+            modifier = Modifier.semantics { contentDescription = "${EditorText.SET_START_PAGE}: $name" },
+        ) {
+            Text(EditorText.SET_START_PAGE)
         }
     }
 }

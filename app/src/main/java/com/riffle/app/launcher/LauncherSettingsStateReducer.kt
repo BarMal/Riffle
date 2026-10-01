@@ -215,6 +215,15 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectReturnBehavior ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                home = state.launcherSettings.home.copy(returnBehavior = action.behavior),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectSearchResultPresentation ->
                     state.withLauncherSettings(
                         settings =

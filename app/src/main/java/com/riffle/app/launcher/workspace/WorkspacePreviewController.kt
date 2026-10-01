@@ -43,6 +43,7 @@ internal class WorkspacePreviewController(
     private val mutableOpen = MutableStateFlow(false)
     private val mutableNavigation = MutableStateFlow<PreviewNavigation?>(null)
     private val mutableEditing = MutableStateFlow<WorkspaceId?>(null)
+    private val returns = ReturnRequests()
 
     val enabled: StateFlow<Boolean> = mutableEnabled.asStateFlow()
     val isOpen: StateFlow<Boolean> = mutableOpen.asStateFlow()
@@ -50,6 +51,13 @@ internal class WorkspacePreviewController(
 
     /** The workspace the editor is open on, or null. */
     val editing: StateFlow<WorkspaceId?> = mutableEditing.asStateFlow()
+
+    /**
+     * The latest Return or Home-press request, for the surface to resolve against the open workspace and the
+     * Return setting and consume once. Only raised while the preview is open: with it closed (or the setting
+     * off) a Return or Home press changes nothing here.
+     */
+    val returnRequest: StateFlow<ReturnRequest?> = returns.current
 
     init {
         onEnabledChanged(mutableEnabled.value)
@@ -71,6 +79,7 @@ internal class WorkspacePreviewController(
     fun close() {
         mutableEditing.value = null
         mutableNavigation.value = null
+        returns.clear()
         mutableOpen.value = false
     }
 
@@ -88,6 +97,18 @@ internal class WorkspacePreviewController(
         }
     }
 
+    /** The launcher came back to the foreground from another app (E1). */
+    fun onReturn() {
+        if (mutableOpen.value) returns.raise(homePress = false)
+    }
+
+    /** Home was pressed while the launcher was already in front (E2). */
+    fun onHomePress() {
+        if (mutableOpen.value) returns.raise(homePress = true)
+    }
+
+    fun returnConsumed(consumed: ReturnRequest) = returns.consume(consumed)
+
     fun navigationConsumed(consumed: PreviewNavigation) {
         mutableNavigation.update { current -> if (current == consumed) null else current }
     }
@@ -102,5 +123,5 @@ internal class WorkspacePreviewController(
     }
 }
 
-/** The pager index of [containerId] among the workspace's pages, or -1. */
-internal fun Workspace.pageIndexOf(containerId: ContainerId): Int = pages.indexOfFirst { it.id == containerId }
+/** The pager index of [containerId] among the pages the pager swipes through (the Finder is not one), or -1. */
+internal fun Workspace.pageIndexOf(containerId: ContainerId): Int = pagerIndexOf(containerId)

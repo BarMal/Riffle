@@ -576,8 +576,10 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         refreshPlatformStatuses()
         if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
-            // A Home press always leaves the Workspaces (preview) for the standard launcher.
-            workspacePreviewController.close()
+            // Home pressed while the launcher is in front: the Workspaces (preview), when open, goes to the page
+            // the Return setting names, and Exit stays one tap. From another app it is a Return instead, which the
+            // preview layer's lifecycle observer handles.
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) workspacePreviewController.onHomePress()
             // A Home press: leave Library first (when the setting says so), then reset Home's page.
             shellViewModel.leaveLibrary(LibraryExitTrigger.HOME_PRESS)
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
