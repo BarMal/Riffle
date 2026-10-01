@@ -194,9 +194,11 @@ class ExclusionsSettingsScreenshotTest {
 
     @Test
     fun theAddDialogOpensDisabledUntilThereIsValidText() {
+        pauseClock()
         render(capture = false)
 
         composeRule.onNodeWithTag(EXCLUSIONS_ADD_TEST_TAG).performScrollTo().performClick()
+        composeRule.mainClock.advanceTimeBy(CLOCK_STEP_MILLIS)
 
         composeRule.onNode(hasText("Add text rule") and hasAnyAncestor(isDialog())).assertExists()
         composeRule.onNode(hasText("Add rule") and hasAnyAncestor(isDialog())).assertIsNotEnabled()
@@ -206,17 +208,18 @@ class ExclusionsSettingsScreenshotTest {
     // The dialog is drawn with its text pre-filled: typing into a focused field keeps the test clock from idling.
     @Test
     fun aTooShortTextShowsItsReasonAndCannotBeAdded() {
+        pauseClock()
         renderAddDialog("ab")
 
         composeRule.onNodeWithTag(EXCLUSION_PROBLEM_TEST_TAG)
             .assert(hasText("Use at least 3 characters", substring = true))
         composeRule.onNode(hasText("Add rule") and hasAnyAncestor(isDialog())).assertIsNotEnabled()
-        composeRule.captureScreen()
         assertEquals(emptyList<ExclusionsSettingsAction>(), actions)
     }
 
     @Test
     fun aValidTextAddsExactlyTheTypedRule() {
+        pauseClock()
         renderAddDialog("abc sale")
 
         composeRule.onNode(hasText("Add rule") and hasAnyAncestor(isDialog())).performClick()
@@ -236,6 +239,11 @@ class ExclusionsSettingsScreenshotTest {
         )
     }
 
+    // A text field in a dialog can take focus, and its blinking cursor then never lets the test clock idle.
+    private fun pauseClock() {
+        composeRule.mainClock.autoAdvance = false
+    }
+
     private fun renderAddDialog(initialValue: String) {
         composeRule.setContent {
             ScreenshotBackdrop {
@@ -247,6 +255,7 @@ class ExclusionsSettingsScreenshotTest {
                 )
             }
         }
+        composeRule.mainClock.advanceTimeBy(CLOCK_STEP_MILLIS)
     }
 
     private fun render(
@@ -275,3 +284,5 @@ class ExclusionsSettingsScreenshotTest {
         if (capture) composeRule.captureScreen()
     }
 }
+
+private const val CLOCK_STEP_MILLIS = 500L
