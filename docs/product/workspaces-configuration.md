@@ -1,9 +1,9 @@
 # Workspaces: user configuration (WS10)
 
-Status: proposed design, **revised 2026-10-01 after the owner's decisions** (see the banner below), still
-before any code. Tracking: #1363 (WS10 parent), #1364 (saved lenses). Related: #1323, #1324, #1325 (legacy
-mode/settings problems this resolves), #1365 (RSS and Search adapters, merged), #1366 (other external
-sources, researched, merged), #1374 (RSS refresh, separate issue, not WS10).
+Status: proposed design, **second revision 2026-10-01** (owner answers N1 to N9, then rescoped for a solo
+alpha), still before any code. Tracking: #1363 (WS10 parent), #1364 (saved lenses). Related: #1323, #1324,
+#1325 (legacy mode/settings problems this resolves), #1365 (RSS and Search adapters, merged), #1366 (other
+external sources, researched, merged), #1374 (RSS refresh, separate issue, not WS10).
 
 This document is about how a person *configures and lives with* the workspace system. The model itself
 (sources, lenses, expressions, containers, workspaces) is in
@@ -11,60 +11,91 @@ This document is about how a person *configures and lives with* the workspace sy
 the dock menu (WS6) are separate workstreams and are dependencies here, not scope.
 
 Sections are split into **As built today** (verified against the code at the commit this was written)
-and **Proposed**. Anything under "Needs owner decision" is collected again in
-[Open questions](#open-questions-for-the-owner).
+and **Proposed**. Open decisions are collected in [Open questions](#open-questions-for-the-owner).
 
-> **Revision 2026-10-01: owner decisions.** The owner answered Q1 to Q19 and the external-sources and
-> search questions in a comment on #1363. Where the answer matched the earlier recommendation the text
-> below was only updated in place. Rows marked **(differs)** changed the design and have real new work:
-> they are the reason for sections 9 to 16 and for the re-sequenced slices (section 7) and rollout
-> (section 1.7). A later requirement from the owner (source exclusion rules) is section 14.
-> Sections still describing the *old* answer say so ("superseded by"), so nothing is silently wrong.
+## Scope for a solo alpha
+
+Riffle has **no user base**: it is a personal alpha with one developer, and the owner's own phone is the only
+install. This changes what the design must protect, so the document is scoped accordingly.
+
+**In scope (all feature decisions stand):** shared placed-items pool with per-workspace arrangements (section
+9), per-layout saved lenses (4), per-layout exclusion rules (14), per-workspace dock overrides (11),
+per-lens search queries (13), the Return setting and start page (3.2, 8.3), New-apps-per-preset (9.8),
+recency and favourite lenses (12), ICS recurrence through a library (15), settings IA and backup (2, 5).
+
+**Out of scope, deliberately:**
+
+| Dropped | Why it is not needed here |
+| --- | --- |
+| Staged rollout R0 to R5, "zero mismatches across the beta population", flip criteria beyond a short checklist | The owner's device is the whole population. |
+| Shadow compare, dual-write mirror, `PlacedItemsOwner` rollback switch, rollback drills, a one-release revert window | A **backup export plus git** is the revert (1.7). |
+| Compatibility with old stored formats beyond the owner's own data | A one-time migration of the owner's layout, or a **destructive reset**, is acceptable (1.7 says where). |
+| Golden tests whose only job is to protect other users' data | Tests that guard real logic bugs are kept (7.1). |
+| Play data-safety and privacy-policy checklist lines | Only matter if the app is ever published; revisit before that (7.2). |
+| "Classic" as a supported product path | Default plan: at most a developer toggle, then dropped (section 10). Full parity is an explicit option with its cost. |
+
+**Working rules that replace the rollout machinery.** (1) Get a **runnable, dogfoodable debug build** onto the
+owner's phone first (S1, S2 in section 7), then add one slice at a time, each run on the device before the
+next builds on it: the main danger is a large amount of agent-written code that has never run on a device.
+(2) Take a backup export before any slice that changes how data is stored. (3) Fix forward.
+
+> **Revision 2026-10-01 (2): N1-N9 answers.** The owner answered the nine open questions of the first revision
+> (comment on #1363). Where an answer matched the recommendation the text was updated in place; the rows
+> marked **(differs)** redesigned a section. A later instruction rescoped the whole document for a solo alpha
+> (above), which removed most rollout text rather than marking it.
 >
-> | Q | Decision | What changed in this document | Why it matters |
-> | --- | --- | --- | --- |
-> | Q1 | Preview: internal/beta only | 1.7 stage R3 is internal/beta | None. |
-> | Q2 | Keep "Use workspaces / Classic" permanently **(differs)** | 1.7, 1.1; new section 10 (what classic means, how to bound it) | The classic path is a supported product path, not a temporary fallback: cost and test matrix. |
-> | Q3 | Lens library **per layout** **(differs)** | Section 4 rewritten (library lives in `LayoutWorkspaces`; copy-from-layout copies lenses) | Reverses the earlier "global, shared refs" design. |
-> | Q4 | Presets **use saved lenses** **(differs)** | 4.3, 4.6 and 4.9 (install and reset write to the layout library) | The merged inline WS8 presets need a small rework. |
-> | Q5 | Dock notification cards: per workspace | 3.1 row (no change) | Matches `WorkspaceDock.dynamicSection`. |
-> | Q6 | Drawer presentation moves into the Finder page expression | 3.1; 8.3; `FINDER_EXPRESSIONS` must allow `ICON_GRID` | Today Finder accepts only Categories or AlphaList, drawer "Icons" has no home. |
-> | Q7 | Return behaviour is a **Settings choice**: Restore / First page / Start page, default Restore **(differs)** | 3.2 rewritten; IA row in 2.1 | A setting, not a fixed rule. |
-> | Q8 | Drop the locked-device rule; keep optional screenshot/recents setting **(differs)** | Section 6 (rule and setting removed), slice S16 | Profile locks and notification hide rules stay. |
-> | Q9 | Dock pull opens the workspace menu once modes retire | 3.1; section 11.5; `gestures.md` note | Interacts with per-workspace dock hiding (11.4). |
-> | Q10 | Single-workspace export/import: deferred | Section 5 | Cut line, not designed further. |
-> | Q11 | Restore = replace, with Undo | Section 5 (unchanged) | None. |
-> | Q12 | `home.grid` page-id uniqueness is not a decision | Becomes a test (section 7.1) and is **mooted** by section 9 once placed items move | |
-> | Q13 | Add `OFF` source status | 2.4 (unchanged) | |
-> | Q14 | Start page per workspace; Finder hidden from the pager unless start page. iOS-style home = home pages with placed items, Finder = All apps as Categories at the end | 8.3, 3.2, section 9 (placed items) | |
-> | Q15 | Skin = existing theme preset, per-workspace override | 8.7 (unchanged) | |
-> | Q16 | Placed items **move into workspaces now** **(differs)** | New section 9 (the largest item), staged migration, risk register | HomeLayoutSet stops being the long-term source of truth, so cheap revert is gone. |
-> | Q17 | **Per-workspace dock overrides** **(differs)** | New section 11 | Edge, size, hidden, dynamic section, layered over the shared `DockModel`. |
-> | Q18 | One default: Nova with Finder | 8.1 (unchanged) | |
-> | Q19 | Favourite/frequent as **All-apps lenses**, no new adapters **(differs)** | Section 12; flip-blocker language removed | Needs a definition of "favourite" and "frequent". |
-> | - | Tokenised feed/ICS URLs excluded from backup | Section 5 | |
-> | - | External items allowed in the dock; ICS full recurrence **(differs)** | Section 15, plus a note in `workspaces-external-sources.md` | Trust model and dock budget; larger ICS scope. |
-> | - | Play data-safety/privacy declarations owned by the owner | PR checklist line, section 7.2 | |
-> | - | **Per-lens search queries now** **(differs)** | New section 13 | Additive WS0 hook; the query text is still never persisted. |
-> | - | **Source exclusion rules** (added later): layered, unified model, contextual plus Settings authoring **(differs)** | New section 14 | Replaces hidden apps and notification hide rules with one model. |
-> | - | Extension API: not yet; editor per-group expressions kept; RSS refresh is #1374 | Nothing (parked or out of scope) | |
+> | N | Decision | What changed in this document |
+> | --- | --- | --- |
+> | N1 | Shadow now, cut over with the flip (option C), fall back to A | **Replaced by the solo plan** (1.7): take a backup, run the migration on the owner's device, flip, fix forward. No shadow compare, no mirror, no R-stages. The staging table and flip criteria are deleted. |
+> | N2 | **(differs)** Shared pool per layout, per-workspace arrangements | Section 9 rewritten: pool model, widget single-placement rule, reference derivation and GC, deletion and Undo, copy semantics, uninstall, restore, migration, adapter. The workspace-owned `PlacedItemsPage(page: LauncherPage)` design is superseded and deleted. Q12 and Q16 text updated. |
+> | N3 | Recency lens now, counter later | Section 12 (kept; UI name "Recently used"). |
+> | N4 | **(differs)** Exclusion rules are per layout | 14.6 rewritten (storage, migration, copy semantics, UI cues). Layered evaluation order kept. One consequence needs a decision: rotating a phone changes the layout (10.2, new question N10). |
+> | N5 | Channel/thread/calendar-id keys after the flip | 14.4, cut line (7). |
+> | N6 | Hidden dock requires a bound gesture | 11.4 (kept). |
+> | N7 | **(differs)** Classic gets every feature | Section 10 rewritten: what Classic would be, its cost, why the default plan is a developer toggle only, naming recommendation. Presented as an option for the owner to confirm. |
+> | N8 | **(differs)** Use a library for ICS recurrence | Section 15.2: criteria, web-verified shortlist, recommended pick, spike plan, isolation behind a domain interface. Note in `workspaces-external-sources.md`. |
+> | N9 | New-apps default per preset, as a setting | 9.8. |
+> | - | Solo alpha rescope | New "Scope for a solo alpha"; sections 1, 5, 7, 9, 10, 16 and the open questions rewritten shorter; slices cut from 20 to 12. |
+
+> **Revision 2026-10-01 (1): owner decisions Q1-Q19.** Kept as a short history; rows marked *(rev 2)* were changed again.
+>
+> | Q | Decision | Where |
+> | --- | --- | --- |
+> | Q1 | Preview: internal/beta only | Moot for a solo alpha. |
+> | Q2 | Keep "Use workspaces / Classic" permanently | *(rev 2)* superseded by N7 and the solo-alpha scope: section 10. |
+> | Q3 | Lens library **per layout** | Section 4. |
+> | Q4 | Presets **use saved lenses** | 4.9. |
+> | Q5 | Dock notification cards per workspace | 3.1. |
+> | Q6 | Drawer presentation moves into the Finder page expression (`FINDER_EXPRESSIONS` gains `ICON_GRID`) | 3.1, 8.3a. |
+> | Q7 | Return behaviour is a setting: Restore / First page / Start page | 3.2. |
+> | Q8 | Drop the locked-device rule; optional screenshot/recents setting | Section 6. |
+> | Q9 | Dock pull opens the workspace menu once modes retire | 11.5. |
+> | Q10, Q11 | Single-workspace export deferred; restore = replace with Undo | Section 5. |
+> | Q12 | `home.grid` page-id uniqueness: a test, now **mooted** by the pool | 9.7. |
+> | Q13 | Add `OFF` source status | 2.4. |
+> | Q14 | Start page per workspace; Finder out of the pager; iOS-style home | 8.3, 9.8. |
+> | Q15 | Skin = theme preset, per-workspace override | 8.7. |
+> | Q16 | Placed items move into workspaces now | *(rev 2)* redesigned as a shared pool: section 9. |
+> | Q17 | Per-workspace dock overrides | Section 11. |
+> | Q18 | One default: Nova with Finder | 8.1. |
+> | Q19 | Favourite/frequent as All-apps lenses | Section 12. |
+> | - | Exclusion rules: layered, unified, contextual + Settings authoring | *(rev 2)* scope changed to per layout: section 14. |
+> | - | Per-lens search queries now; external items allowed in the dock; ICS full recurrence; tokenised URLs excluded from backup | Sections 13, 15, 5. |
 
 ## Fixed decisions (owner)
 
-1. The workspace system is **the default**, not opt-in, and part of normal configuration (Settings).
-   New installs get a preset (Nova-style by default). Existing installs are migrated without loss. If
-   anything fails to decode or resolve, Riffle falls back safely to the previous/default behaviour.
-   Standard launcher mode keeps working throughout; nothing may block home, drawer, dock or settings.
-2. Lenses are **saved and reusable** (a named lens library), not only inline.
+1. The workspace system is **the default**, not opt-in, and part of normal configuration (Settings). New
+   installs get a preset (Nova-style by default). If anything fails to decode or resolve, Riffle falls back to
+   the built-in default workspace rather than a blank home. Standard launcher parity (home, drawer, dock,
+   settings) must keep working throughout.
+2. Lenses are **saved and reusable** (a named lens library, **per layout**, Q3), and presets use saved lenses (Q4).
 3. RSS and Search adapters are in scope (#1365). Other external sources are explored in #1366.
-4. (2026-10-01) The classic path (the pre-workspace home, drawer and dock rendering) is **supported
-   permanently** behind "Use workspaces / Classic" (Q2). It is a product path, not a transitional fallback.
-5. (2026-10-01) Placed items (apps, folders, widgets, shortcuts on home pages) **move into workspaces now**
-   (Q16); `HomeLayoutSet` stops being the long-term source of truth. Section 9.
-6. (2026-10-01) The lens library is **per layout** (Q3), presets use saved lenses (Q4), the dock has
-   **per-workspace overrides** (Q17), lenses may take **per-lens search queries** (section 13), and all
-   hiding (hidden apps, notification hide rules, per-source hiding) becomes one **source exclusion** model
-   (section 14).
+4. Placed items (apps, folders, widgets, shortcuts on home pages) live in a **shared pool per layout with
+   per-workspace arrangements** (N2, section 9). `HomeLayoutSet` stops being the source of truth.
+5. The dock has **per-workspace overrides** (Q17), lenses may take **per-lens search queries** (section 13), and
+   all hiding becomes one **source exclusion** model that is **per layout** (N4, section 14).
+6. **"Classic gets every feature" (N7)** is recorded, but for a solo alpha the default plan is a developer
+   toggle only; full parity is an option the owner confirms (section 10).
 
 These are not re-argued below.
 
@@ -98,202 +129,108 @@ wire backup, build the Settings surface, and retire the mode settings that curre
 
 ---
 
-## 1. Default-on rollout
+## 1. Making workspaces the default
 
 ### 1.1 What "default" means
 
-On every launch of a release where the rollout is on:
+On every launch: the active layout's workspace is **resolved** (`WorkspaceSet.resolveActive(deviceClass,
+capabilities, sources)`), the home surface draws it, the dock workspace menu exists (WS6) and Settings shows the
+Workspaces section. The mode pair (Home/Library) stops driving what is shown (section 3). Until the pool
+cut-over (S4) the placed items still come from `HomeLayoutSet` (the existing home surface is hosted as the
+workspace's home page, 9.9); after it they come from the pool.
 
-1. The active layout's workspace is **resolved** (`WorkspaceSet.resolveActive(deviceClass, capabilities,
-   sources)`), and the home surface draws that workspace.
-2. The dock workspace menu exists (WS6) and Settings shows the Workspaces section.
-3. The legacy mode pair (Home/Library) no longer drives what is shown (see section 3). Placed home items
-   are owned by the workspace once the placed-items cut-over (section 9, slice S17) ships; until then they
-   live in `HomeLayoutSet` (as documented in WS5).
-
-"Default" does **not** mean workspaces are mandatory for the launcher to function. The classic path
-(draw the classic home, drawer and dock as today) stays compiled in **permanently** (owner decision Q2)
-and is the fallback in every failure case below. What the classic path *is* once placed items are owned
-by workspaces, and how its cost is bounded, is section 10: it is a second **rendering** over the same
-stored data, not a second copy of the data.
+"Default" does not mean workspaces may leave the user without a home: bootstrap never throws and always has a
+built-in default workspace to draw (1.5).
 
 ### 1.2 Startup sequence
 
-Keep the current constraint: no extra blocking work on the main thread beyond what the layout read
-already does, and no blocking at all if the read is slow.
+Keep the existing constraint: no extra blocking work on the main thread beyond the layout read already done
+(`loadHomeLayoutSetAtStartup`, one blocking read, IO dispatcher), and a bounded read for the workspace blob.
 
 ```
 Process start
- ├─ loadHomeLayoutSetAtStartup()              (existing, blocking once, IO dispatcher)
- ├─ loadWorkspaceBlobAtStartup(timeout 500 ms) (new; same IO hop, bounded; null on timeout/error)
- │
- ▼  WorkspaceBootstrap.run(blob, layoutSet, isNewInstall)   (new, pure, never throws)
- │     1. decode blob            -> DecodeReport(set?, droppedWorkspaces, droppedLayouts, blobState)
- │     2. new install?           -> seed from the default preset (Nova-style) for every device class
- │     3. else ensureMigrated    -> WorkspaceMigration.ensureMigrated(decoded, layoutSet)
- │     4. rehydrate saved-lens refs (section 4)
- │     5. validate active workspace per device class (WorkspaceValidation), capabilities of the layout
- │  => BootstrapResult(set, outcome, notices)
- │
- ▼  outcome:
-      Ready                 -> draw workspaces; write only if the set changed (idempotent)
-      Repaired(notices)     -> draw workspaces; write; one dismissible notice
-      Classic(reason)       -> draw the classic path; do not write; record reason for Settings
+ ├─ loadHomeLayoutSetAtStartup()                (existing)
+ ├─ loadWorkspaceBlobAtStartup(timeout 500 ms)  (new; null on timeout or error)
+ ▼  WorkspaceBootstrap.run(blob, layoutSet)     (new, pure, never throws)
+      decode -> (nothing stored? seed Nova preset) -> ensureMigrated -> validate active workspace
+ => BootstrapResult(set, outcome)   outcome: Ready | Repaired(notice) | Fallback(reason)
 ```
 
-Rules:
+`ensureMigrated` already never overwrites stored workspaces and is deterministic (`ws:<deviceclass>:<mode>`),
+so it can run on every start; the bootstrap writes only when the result differs from what was decoded, off the
+main thread (write-behind like `WriteBehindHomeLayoutRepository`, flushed in `onStop`). On timeout the
+launcher draws the built-in Nova default and loads asynchronously.
 
-- `isNewInstall` = no stored `HomeLayoutSet` **and** no workspace blob. Everything else (including a
-  stored layout set with no blob, i.e. every current user) takes the `ensureMigrated` branch.
-- `ensureMigrated` already never overwrites stored workspaces and is deterministic
-  (`ws:<deviceclass>:<mode>`), so running it on every start is safe. The bootstrap writes only when
-  `result != decoded`, so a normal launch performs no write.
-- The first write after migration is the only place a user's data is created. It happens off the main
-  thread (write-behind, mirroring `WriteBehindHomeLayoutRepository`), flushed in `onStop` like layouts.
-- The blocking read is bounded. If it exceeds the bound the launcher starts in `Classic(timeout)` and
-  loads workspaces asynchronously, then switches on the next resolution without a visible jump (the
-  classic Standard default and the Nova-style preset are the same arrangement, by construction of
-  `WorkspaceMigration.defaultFor`).
+### 1.3 Fresh data and the first-run chooser
 
-### 1.3 New installs: preset selection
+With nothing stored the home is the **Nova-style preset** (WS8), seeded by `PresetInstaller.withDefaultsFor`
+(fills only layouts with nothing stored). A non-blocking "Choose your home style" sheet in the existing
+first-run flow offers the preset cards (2.3); Skip keeps Nova; it never delays the Home role request. This is
+a nice-to-have for the alpha: with one user it can slip behind the Workspaces page's preset picker.
 
-- The home is drawn immediately from the **Nova-style preset** (WS8, merged), with no gate, seeded by
-  `PresetInstaller.withDefaultsFor(set, deviceClasses, ids)` (fills only device classes with nothing
-  stored). See section 8, item 1, for why this must be the single built-in default.
-- Offer a **non-blocking** "Choose your home style" step in the existing first-run flow
-  (`FirstRunRepository`; it already asks for the Home role). It is a sheet with the preset cards from
-  the picker in section 2, Nova pre-selected; Skip keeps Nova. It must not delay the Home role request,
-  and the launcher is fully usable while it is open or skipped.
-- Choosing a preset replaces the layout's workspace list with that preset (one workspace) and marks it
-  active and default. Presets are ordinary workspaces afterwards.
-
-### 1.4 Flags: retired or replaced
+### 1.4 Flags
 
 | Today | Becomes |
 | --- | --- |
-| `WorkspaceMenuFeature.enabled` (global mutable, default `false`) | Deleted in slice S20. In between, replaced by `WorkspaceRollout` (below). Tests and previews keep a test-only override. |
-| `DockShelfExpansion.enabled` | Untouched by WS10 (WS6 owns it). |
-| `libraryOnlyLauncherViewModeAvailability()` | Retired in slice S18: the mode pair stops being a user concept, and the stored `LauncherViewMode` remains only as data to migrate from. |
-| `LauncherSettings.contextual.enabled`, `DockModel.showNotificationCards` | Unchanged storage; their user-facing meaning is reconciled in section 3. |
+| `WorkspaceMenuFeature.enabled` (global mutable, default `false`) | **A developer toggle** "Use workspaces" under Settings > Developer (debug builds), default on in debug from S1. Deleted at S9 when workspaces are the only path. Tests keep a test-only override. |
+| `libraryOnlyLauncherViewModeAvailability()` | Retired in S9: the mode pair stops being a user concept; the stored `LauncherViewMode` remains only as migration input. |
+| `LauncherSettings.contextual.enabled`, `DockModel.showNotificationCards` | Unchanged storage; user-facing meaning reconciled in section 3. |
 
-```kotlin
-// app layer, persisted next to the workspace blob (same DataStore, separate key)
-enum class WorkspaceRolloutMode { ON, CLASSIC }          // user-visible escape hatch
-internal data class WorkspaceRollout(
-    val mode: WorkspaceRolloutMode = defaultMode,        // BuildConfig-level default; see 1.7
-    val lastOutcome: BootstrapOutcomeCode? = null,       // for Settings diagnostics, never content
-)
-```
+There is no persisted `WorkspaceRollout` record and no "Classic" user setting in the default plan (section 10).
 
-`WorkspaceRolloutMode.CLASSIC` is the escape hatch: it makes the bootstrap return `Classic(userChoice)`
-immediately, does not delete workspaces or placed items, and the Workspaces settings page then shows a
-single row "Use workspaces" to turn it back on. It sits under Settings > Workspaces > Advanced, always
-reachable (also from the Settings search). **It stays permanently** (Q2); it is not scheduled for removal.
+### 1.5 Failure handling
 
-### 1.5 Failure handling and corrupt data
-
-Principle: **no failure may leave the user with no home, drawer, dock or settings**, and no failure may
-destroy user data silently.
+Principle: **no failure may leave a blank home**, and a failure may not silently destroy the owner's data.
 
 | Situation | Behaviour |
 | --- | --- |
-| No blob, layout set present (every current user) | `ensureMigrated`; write once. |
-| No blob, no layout set | New install path (1.3). |
-| Blob is not a JSON object (`decodeWorkspaceSet` returns `null`) | Treated as corrupt: keep the raw blob once in a `workspaces_corrupt` slot (definitions only, no item content), rebuild with `ensureMigrated(null, layoutSet)`, outcome `Repaired`, notice "Your workspaces could not be read and were rebuilt from your layout". |
-| Some workspaces dropped (codec drops undecodable ones and ones with no pages) | Layout still resolves (`repaired` fixes active/default). Outcome `Repaired`; the notice names the count. If a **previous-generation blob** is available, offer "Restore previous copy". |
-| A layout (device class) ends up with no workspace | Reads as `WorkspaceMigration.defaultFor`; migration rebuilds it from the `HomeLayoutSet` entry on the next start. |
-| Active workspace invalid for this layout's capabilities | `resolveActive` returns `FellBack`; the default is drawn; the menu and Settings say why (1.6). No write. |
-| Active and default both invalid | Draw the built-in default (`WorkspaceMigration.defaultFor`) and say so. The user can still open Settings and Reset. |
-| Blob has a newer schema than the app | Decode best-effort (codec does). Do **not** write back in a way that drops unknown fields: while the stored schema is newer than the app's, the app is read-only for workspaces (changes are kept in memory for the session only and a notice says why). Prevents a downgrade from destroying data. |
-| Any exception escapes bootstrap | Caught at the boundary: `Classic(error)`. The error type is recorded, never the exception message or data. |
+| No blob, layout set present (the owner's phone today) | `ensureMigrated`; write once. |
+| No blob, no layout set | Seed the Nova preset (1.3). |
+| Blob unreadable (not a JSON object) | Rebuild from `HomeLayoutSet` (before S4) or from the built-in Nova default (after S4, where the pool lives in the blob); keep the raw blob once in `workspaces_corrupt` for debugging; show one notice. **A destructive reset is acceptable here**: the owner has a backup export (1.7). |
+| Some workspaces dropped by the codec | Layout still resolves (`LayoutWorkspaces.repaired`); notice names the count. |
+| Active workspace invalid for this layout | `resolveActive` returns `FellBack`; default drawn; menu and Settings say why (1.6). No write. |
+| Active and default both invalid | Draw `WorkspaceMigration.defaultFor`; the user can open Settings and Reset. |
+| Blob has a newer schema than the app | Best-effort decode; do not write back. Only relevant if the owner downgrades a debug build; one line of code, keep it. |
+| Any exception escapes bootstrap | Caught at the boundary: draw the built-in default; the error *type* is logged, never data. |
 
-**Previous generation.** Each successful *changing* write first copies the current blob to
-`workspaces_prev`. One generation only (bounded; definitions only). Cost is one extra string per edit.
-This is what makes "Restore previous copy" and undo-after-restore cheap.
+One previous generation of the blob (`workspaces_prev`) is cheap (one extra string per changing write) and
+makes Undo after restore or after a bad edit exact; keep it, nothing more elaborate.
 
 ### 1.6 Per-layout behaviour and posture changes
 
-- Workspaces are per device class (`HomeLayoutDeviceClass`) and independent, as already built.
-  `LayoutCapabilities.expressions` is the per-layout "can this layout draw X" input; the compact layout
-  can declare it does not draw, say, two-pane expressions.
-- Posture change mid-use (fold/unfold, rotation that changes device class): the shell recomputes
-  `resolveActive` for the new class. No write happens. The selected page is kept **by container id**
-  (page-set selection is already by group key, `PageSetSelection`), so folding and unfolding keeps
-  the user in place when the same workspace exists on both layouts, and goes to the new layout's
-  active workspace's first page otherwise.
-- A layout that falls back shows the message in the menu (already specified) **and** in Settings >
-  Workspaces for that layout: "This layout can't draw *Index* on this screen, so *Standard* is shown.
-  Edit workspace / Switch / Copy from other layout."
-- Switching workspaces is a normal action on the current layout only; it changes that layout's
-  `activeId` and nothing else.
+- Workspaces, the pool (9), the lens library (4) and exclusion rules (14) are **per layout**
+  (`HomeLayoutDeviceClass`), independent, as already built. Note the layout is derived from the window size
+  at runtime (`HomeLayoutDeviceClassClassifier`: `PHONE`, `PHONE_LANDSCAPE`, `FOLDABLE`, `TABLET`, `DESKTOP`), so
+  rotating a phone to landscape *changes layout*. That is pre-existing for layouts and is a real consequence
+  for exclusions (14.6, N10).
+- Posture change mid-use: the shell recomputes `resolveActive` for the new class, no write. The selected page
+  is kept by container id (`PageSetSelection`) when the same workspace exists on both layouts, else the new
+  layout's active workspace's first page.
+- A layout that falls back shows the message in the menu and in Settings > Workspaces: "This layout can't draw
+  *Index* on this screen, so *Standard* is shown. Edit workspace / Switch / Copy from other layout."
+- Switching workspaces changes that layout's `activeId` and nothing else.
 
-### 1.7 Staged rollout, checkpoints, revert (revised 2026-10-01)
+### 1.7 Plan for the owner's device (replaces the staged rollout and N1)
 
-> Superseded: the earlier version of this section assumed `HomeLayoutSet` stays the placed-items source
-> of truth through the flip, which made revert a one-line change. Q16 moves placed items into workspaces,
-> so revert needs an explicit mechanism (section 9.7). Slice ids refer to the re-sequenced list in
-> section 7.
+Option C of the first revision (shadow, then cut over with the flip) existed to protect users who cannot be
+asked to re-place their icons. There are none. Plan instead:
 
-| Stage | Ships (slices) | Default | Checkpoint before moving on |
-| --- | --- | --- | --- |
-| R0 | Nothing user-visible (today) | off | n/a |
-| R1 **Shadow** | S1, S2 (workspace storage, bootstrap, migration written, not drawn), S6 (exclusion engine, pure), S11, S12 (placed items as workspace data, **shadow-written** from `HomeLayoutSet` on every save and compared on read; nothing drawn from it) | classic | Migration golden tests pass for every `HomeLayoutSet` fixture; **shadow compare reports zero mismatches over a week of dogfood** (counter in Settings > About diagnostics: counts only); cold start time unchanged within noise (benchmark); corrupt/timeout/newer-schema tests pass. |
-| R2 **Data** | S3 (backup of workspaces, library, exclusions), S4 (per-layout lens library, preset rework), S5 (favourite/frequent lenses), S7 (exclusions wired, legacy stores mirrored) | classic | Round-trip backup tests; manual restore on a second device; hidden apps and hide rules behave identically before and after S7 (golden tests); no UI change for users. |
-| R3 **Preview (internal/beta only)** | S8, S9, S10 (per-lens query contract, workspace additions, dock overrides), S13 to S16 (Settings pages, privacy), S17 (placed-items cut-over) behind a beta-only `PlacedItemsOwner` switch | classic; workspaces opt-in in Settings in beta builds | Standard-mode checklist (`standard-launcher-mode.md`) passes with workspaces ON and OFF; accessibility and reduced-motion pass (2.8); screenshot tests green at compact and unfolded; **the S17 rollback drill (9.7) executed once on a beta device**; manual home-edit regression (9.4). |
-| R4 **Default** | S18, S19 (legacy reconciliation, flip). Placed items owned by workspaces (S17 on for everyone **iff** staging option C or B below, else R5) with the **legacy mirror still written** | **workspaces ON**; Classic one tap away, permanently | All items in "Flip criteria" below. |
-| R5 **Settle** | S20 after one full release at R4: stop mirroring placed items back into `HomeLayoutSet` (the one-release rollback path ends); delete `WorkspaceMenuFeature`, dead mode code, unused settings UI; keep codec fields. **The classic path is not removed** (Q2). | on | Zero unexplained `Classic(error)` and zero shadow mismatches in beta/dogfood across R4. |
+1. **S1 and S2** give a debug build with workspaces drawn from a stored blob and the existing home hosted as
+   the home page (9.9): nothing about the owner's placed items changes yet. Dogfood it.
+2. **Before S4 (pool cut-over)**: Settings > Backup > Export on the phone, and keep the file. The migration of
+   `HomeLayoutSet` into the pool (9.9) runs once, idempotently. Check by eye that every icon, folder and widget is
+   where it was. If it is wrong: **reset and re-place by hand, or restore the backup export** on the previous
+   build. The migration round-trip unit test (7.1) is the only automated guard; there is no shadow period.
+3. **Flip** (S9): delete the developer toggle, retire the mode UI. Fix forward.
 
-**Staging of the placed-items cut-over: options.** The owner wants placed items in workspaces now. There
-is a genuine trade-off in *when* relative to the default flip, because two risky changes landing in one
-release cannot be told apart in the field:
+**Revert story.** git (revert the slice), plus the backup export (restore replaces everything, with Undo, 5).
+Destructive resets are acceptable for: the workspace blob at any time; the owner's `HomeLayoutSet` at S4 *only after
+a backup export*; exclusion rules at S6 (hidden apps and hide rules are re-creatable in minutes).
 
-| Option | What ships when | For | Against |
-| --- | --- | --- | --- |
-| A. Flip first, cut over next release | R4: workspaces default-on while `HomeLayoutSet` still owns placed items (shadow-written). R5: cut over. | Smallest blast radius per release; the cheap revert survives the flip. | Two releases; owner's "now" slips by one release; `home.grid` adapter must exist for R4 anyway (it does in every option). |
-| B. Together, no shadow | R4 does both at once, no R1 shadow period. | One release. | A migration bug loses placed items on the first launch of the default build. No evidence before shipping. **Not recommended.** |
-| **C. Shadow now, then together (recommended)** | Ship S11/S12 invisibly in R1 (placed items written into workspace form on every save and compared, never drawn), run them through dogfood and beta; then in R4 flip the default **and** make workspace placed items the source of truth, still mirroring writes back into `HomeLayoutSet` for one release. | Respects "now" (the data move starts in R1, the cut-over is at the flip); the migration is proven on real layouts before it is authoritative; rollback is real (9.7). | Needs the shadow period to be honest: if compare finds mismatches, fall back to option A without redesign (the slices are the same, only the flip order changes). |
-
-Recommendation: **C, with A as the pre-agreed fallback** if the shadow compare is not at zero mismatches
-by the R3 checkpoint. Listed as new open question N1.
-
-**Flip criteria (R3 to R4).** Every one must be true:
-
-1. WS6 menu, WS7 editor, WS8 presets (at least Nova-style and the existing three migrated workspaces)
-   are merged, and the editor and presets have the saved-lens rework of section 4 (S4).
-2. `./gradlew verify deviceVerify` green, including the migration golden tests (workspaces **and placed
-   items**) and the standard-mode regression (home, drawer, dock, settings reachable) with workspaces ON,
-   OFF (classic), and corrupt.
-3. A user on the shipped Library-only build upgrades with no change in what they see on first launch
-   (the migrated shown-mode workspace equals the current screen, **including every placed icon, folder,
-   widget and its position**) - verified manually and by a golden test using
-   `libraryOnlyLauncherViewModeAvailability` data.
-4. Backup from an R3 build restores into an R4 build and vice versa (older app ignores the new keys and
-   still restores layouts, settings and hidden apps from the unchanged legacy keys, section 5).
-5. The Calendar/notification permission rules are unchanged: nothing new prompts at launch.
-5a. Every `SourceId` that migration output or any preset references has a registered source (a test
-   over `WorkspaceMigration.migrate` fixtures and `WorkspacePresets`): in particular `home.grid` (until
-   section 9 replaces it, an id only, no adapter exists today). With Q19 the migrated Favourites and
-   Frequent pages map to `apps.all`/`apps.recent` lenses (section 12), so `apps.favourite` and
-   `apps.frequent` are no longer referenced and are **not** flip blockers.
-5b. The default a fresh install gets and the default a missing layout reads as are the same workspace
-   (section 8, item 1).
-6. Rollback tested (two kinds): flipping the default back to classic in a build leaves installs that did
-   not touch the toggle on classic and installs that did keep their choice; **and** the S17 rollback drill
-   (9.7): a build with the placed-items owner switched back restores every placed item from the mirror.
-7. Shadow compare (R1) at zero mismatches across the dogfood and beta population for the agreed window
-   (proposal: two weeks, at least N real layouts; N is a beta-size question, see N1).
-
-**Revert, as revised.** Four levels, cheapest first: (a) user: Settings > Workspaces > Advanced >
-Classic: draws the classic rendering over the **same** stored data, so nothing is lost and nothing needs
-reverting (section 10). (b) release: change the default constant to `CLASSIC` for users with `mode`
-unset. (c) data, placed items: a build that switches `PlacedItemsOwner` back to `LEGACY` re-reads
-`HomeLayoutSet`, which was mirrored on every write during R4 (9.7). (d) data, workspaces: deleting the
-workspace blob alone returns to a working classic launcher **only while the mirror is on**; after R5 it
-does not, because the blob then holds the only copy of placed items, so from R5 the blob has a
-`workspaces_prev` generation and the backup (section 5) as its safety nets, and R5 must not ship until the
-mirror has had a full release without mismatches.
-
-Q1: preview is internal and beta builds only, one release at most (owner decision).
+**"It works on my device" checklist before moving past S4 and again before S9:** home, drawer, dock, settings
+reachable; every icon/folder/widget in place after a force-stop and a reboot; add, move, resize, remove a
+widget; create a folder; switch workspace via the dock menu; fold/rotate keeps you in place; calendar
+permission flow shows rationale before any system dialog; backup export then restore round-trips.
 
 ---
 
@@ -306,8 +243,8 @@ accessibility, Apps & content, Permissions/privacy & backup. Proposal, keeping t
 
 | Group | Entry | Notes |
 | --- | --- | --- |
-| Home & layout | **Workspaces** (new, first row) | Switch, presets, rename, clone, delete, reset, copy to other layout, per-workspace **Dock** and **Start page** rows, Advanced (Classic toggle, permanent). |
-| Home & layout | Layout | Slimmed: grid, labels, dock-adjacent geometry, **"Returning to Home" (Restore / First page / Start page, default Restore; Q7, 3.2)**, "New apps" (placement, 9.5). No mode, no template (section 3). |
+| Home & layout | **Workspaces** (new, first row) | Switch, presets, rename, clone, delete, reset, copy to other layout, per-workspace **Dock** and **Start page** rows, Advanced (restore previous copy; the developer toggle lives under Settings > Developer, 1.4). |
+| Home & layout | Layout | Slimmed: grid, labels, dock-adjacent geometry, **"Returning to Home" (Restore / First page / Start page, default Restore; Q7, 3.2)**, "New apps" (placement, 9.8). No mode, no template (section 3). |
 | Home & layout | Dock | Device-class dock: pins, edge, size, appearance. A workspace may override edge, size, visibility and the dynamic section (section 11); this page shows "Overridden by workspace X" where one applies. |
 | Home & layout | Floating dock | Unchanged. |
 | Apps & content | **Sources** (new) | Replaces "RSS feeds" as a row; RSS becomes a source detail. Old route stays as an alias. Hosts **exclusion rules** (section 14): per-source list plus an "All exclusions" row. |
@@ -340,7 +277,6 @@ This layout can't draw "Index" here, so "Standard" is shown.   (only when FellBa
 
  Copy from other layout…        (unfolded -> this one, replaces this layout's workspaces and saved lenses)
  Advanced
-   Use workspaces                [ on ]        (off = Classic; permanent choice, Q2)
    Restore previous copy         (only if one exists)
 -------------------------------------------------------------
 [ : ] = Rename · Duplicate · Make default · Reset to preset · Start page… · Dock… · Delete
@@ -354,13 +290,14 @@ Appearance (Follow global / theme preset, Q15).
   (additive, section 4.6). Without it the action is hidden, not guessed.
 - **Delete** is disabled on the last workspace (domain rule: `remove` is a no-op) with the reason as
   supporting text, and asks for confirmation with an Undo snackbar. Deleting the default moves the
-  default as `LayoutWorkspaces.remove` does. **Revised for Q16:** a workspace now *owns* its placed items
-  (section 9), so the confirmation states what goes with it ("Deletes this workspace and its 24 placed
-  items, 2 widgets"); Undo is exact (the workspace value is restored whole) and released widget host ids
-  are only deleted after the Undo window closes (9.3).
+  default as `LayoutWorkspaces.remove` does. **Revised for N2:** a workspace's *arrangement* goes with it (section 9), so the confirmation states what is
+  removed and what stays ("N items exist only here and will be removed, M are shared and stay; 2 widgets");
+  Undo is exact (pool and arrangements are one value) and released widget host ids are only deleted after the
+  Undo window closes (9.4).
 - **Copy from other layout** shows what will be replaced ("Replaces your 3 workspaces and 5 saved lenses
-  on this layout"), confirms, and offers Undo (the previous generation blob makes undo exact). Widgets are
-  not copied (9.3); the dialog says how many were left out.
+  on this layout"), confirms, and offers Undo (the previous generation blob makes undo exact). Widgets become
+  placeholders to set up again (9.5), exclusion rules are not replaced (14.6); the dialog says how many widgets
+  need setting up.
 - **New workspace** opens the preset picker (below), then the editor (WS7) if the user chooses Custom.
 
 ### 2.3 Preset picker
@@ -489,23 +426,23 @@ their natural size. Rotation and fold keep the selected row by workspace id.
 
 | Legacy setting | Where (code) | Maps to in workspaces | Disposition |
 | --- | --- | --- | --- |
-| **Home screen** (Home side of the Home/Library pair: Cards or Standard) | `HomeSurfaceModeSetting.kt`, `ModePair`, `SettingsPageContent.kt:212` ("Modes" section) | The active workspace of the layout (Workspaces page) | **Retire.** Hidden today when only Library is available; removed at S18. |
+| **Home screen** (Home side of the Home/Library pair: Cards or Standard) | `HomeSurfaceModeSetting.kt`, `ModePair`, `SettingsPageContent.kt:212` ("Modes" section) | The active workspace of the layout (Workspaces page) | **Retire.** Hidden today when only Library is available; removed at S9. |
 | **Home layout > view mode** | `HomeViewModeSetting`, `SettingsPageContent.kt:191` | Same | **Retire.** `LauncherViewMode` stays as migration input and in `HomeLayoutKey`, not as a user choice. |
 | **Layout template** | `HomeTemplateSetting.kt`, `LauncherTemplateCatalog` | Preset picker (WS8). `LauncherTemplate` already "evolves into workspace templates". | **Retire** the row; the catalog is data WS8 consumes. |
-| `viewModeAvailability` (library only) | `LauncherShellPlatformDependencies.kt:43`, `MainActivityDependencies.kt:108` | n/a | **Retire** at S18 (stored hidden-mode layouts are migrated to workspaces instead of resolving to Library). |
-| Grid (columns, rows, visible dimensions) | `HomeGridSetting`, `HomeLayout.settings.grid` | The grid of each placed-items page (section 9: `LauncherPage.grid`) | **Stays** (Layout page); after S17 it edits the active workspace's placed pages, with the device-class default (`HomeLayoutSettings`) kept as the template for new pages. |
+| `viewModeAvailability` (library only) | `LauncherShellPlatformDependencies.kt:43`, `MainActivityDependencies.kt:108` | n/a | **Retire** at S9 (stored hidden-mode layouts are migrated to workspaces instead of resolving to Library). |
+| Grid (columns, rows, visible dimensions) | `HomeGridSetting`, `HomeLayout.settings.grid` | The grid of each placed-items page (section 9: `ArrangementPage.grid`) | **Stays** (Layout page); after S4 it edits the active workspace's placed pages, with the device-class default (`HomeLayoutSettings`) kept as the template for new pages. |
 | Labels | `HomeLabelSetting`, `settings.labels` | Home grid and icon expressions | **Stays.** |
 | Dock: pins, edge, size, appearance | `DockSetting`, `DockModel` | `DockModel` stays the shared per-device-class base; a workspace may carry a `DockPresentation` **override** of edge, size and visibility (section 11); pins are never per workspace | **Stays** as the base; overrides edited on the workspace page. |
-| Dock: show notification cards, slot count | `DockModel.showNotificationCards`, `notificationSlotCount` | `WorkspaceDock.dynamicSection` (Notifications lens, limit = slots, IconRow), already how migration maps it | **Stays as one row**, rewritten to edit the active workspace's dynamic section: on = Notifications lens; off = `null`. Needs owner decision (3.3, Q5): per workspace or global. |
+| Dock: show notification cards, slot count | `DockModel.showNotificationCards`, `notificationSlotCount` | `WorkspaceDock.dynamicSection` (Notifications lens, limit = slots, IconRow), already how migration maps it | **Stays as one row**, rewritten to edit the active workspace's dynamic section: on = Notifications lens; off = `null`. Per workspace (Q5, decided). |
 | Floating dock | `SettingsPage.FLOATING_DOCK`, `OverlayDockSettings` | None | **Stays.** |
 | After leaving Library (`LibraryReturnTarget`) | `AppDrawerSettings.afterLeavingLibrary`, `LauncherShellLibraryReturn.kt` | `ReturnBehavior` setting in 3.2 (Restore / First page / Start page) | **Replace**; the stored value is ignored, the codec keeps reading and writing it for backup compatibility. |
-| App drawer presentation (list/icons), icon grid columns | `AppDrawerSettings` | The Finder page's expression (`ALPHA_LIST`, `CATEGORIES`, or `ICON_GRID` after the validation widening in 8.3a) (Q6, decided) | **Moves into the Finder page expression**; the row is hidden once the Finder replaces the drawer (S18). Migration: `LIST` maps to `ALPHA_LIST`, `ICONS` to `ICON_GRID`; `iconGridColumns` stays a global setting until expressions have per-expression options. |
+| App drawer presentation (list/icons), icon grid columns | `AppDrawerSettings` | The Finder page's expression (`ALPHA_LIST`, `CATEGORIES`, or `ICON_GRID` after the validation widening in 8.3a) (Q6, decided) | **Moves into the Finder page expression**; the row is hidden once the Finder replaces the drawer (S9). Migration: `LIST` maps to `ALPHA_LIST`, `ICONS` to `ICON_GRID`; `iconGridColumns` stays a global setting until expressions have per-expression options. |
 | Search result presentation | `SearchSettings.resultPresentation` | Search source (#1365) display | **Stays.** |
 | Cards appearance (geometry, glass, colour) | `CardsSettings`, `SettingsPage.ADAPTIVE_STAGE_APPEARANCE` | Appearance of `Card`/`CardStack` expressions | **Stays**, renamed "Card appearance"; shown whenever any workspace uses a card expression, otherwise collapsed under Appearance. |
 | Cards stage selector/spine, thread grouping, folded/unfolded show-all | `CardsSettings` fields | Page-set + dock dynamic section behaviour | **Stays** (dormant fields keep round-tripping); not exposed beyond what Cards appearance shows today. |
 | Contextual behaviour (`ContextualSettings.enabled`) | `SettingsContextualPageContent.kt` | Independent: smart behaviour, not a layout choice | **Stays**; copy clarifies it is separate from workspaces. |
-| Gestures | `GestureSettings`, `LauncherGestureMappings`, `Workspace.gestureBindings` | Global defaults, optional per-workspace overrides | **Stays**; per-workspace overrides are WS7. The dock pull **opens the workspace menu** once modes retire (Q9, decided; 11.5, `gestures.md` change in S18). |
-| Hidden apps | `AppVisibilityRepository`, `SettingsPage.HIDDEN_APPS` | App exclusion rules (section 14) | **Unified** into source exclusion rules; the Hidden apps page stays as a filtered view. Storage keys kept readable and mirrored (14.6). |
+| Gestures | `GestureSettings`, `LauncherGestureMappings`, `Workspace.gestureBindings` | Global defaults, optional per-workspace overrides | **Stays**; per-workspace overrides are WS7. The dock pull **opens the workspace menu** once modes retire (Q9, decided; 11.5, `gestures.md` change in S9). |
+| Hidden apps | `AppVisibilityRepository`, `SettingsPage.HIDDEN_APPS` | App exclusion rules (section 14) | **Unified** into source exclusion rules; the Hidden apps page stays as a filtered view. Per layout, migrated once from the global store (14.6). |
 | Notification hide rules | `NotificationHidingSettings` | Notification exclusion rules (section 14) | **Unified**, same match kinds, migrated without loss. |
 | Motion & haptics, reduced motion | `MotionSettings`, `ReducedMotionPreference` | Global | **Stays.** |
 | RSS feeds page | `SettingsPage.RSS`, `RssSettings` | Source detail (RSS) | **Moves**; storage unchanged; old route aliased. |
@@ -568,7 +505,7 @@ property test that no input ever yields a different `workspaceId`.
 
 ### 3.3 #1324: Standard mode unreachable
 
-Standard is the **Nova-style preset**, which is also the new-install default. After S18 there is no
+Standard is the **Nova-style preset**, which is also the new-install default. After S9 there is no
 "Standard mode" to hide: the Standard arrangement is a workspace anyone can select in Workspaces or the
 dock menu, and the migrated "Standard" workspace is preserved for users who had one. The stored
 `STANDARD_APP_DRAWER` layout is no longer resolved to Library on load. Recorded as the deliberate
@@ -578,7 +515,7 @@ redesign decision that #1324 asked for.
 
 Resolved by the table: Home screen, view mode, template and Modes sections all express "which
 arrangement", so they collapse into the Workspaces page and the preset picker; the Layout page keeps
-grid, labels and the new "Returning to Home" choice. Until S18, the rule from #1325 stands ("hide options that don't apply while only
+grid, labels and the new "Returning to Home" choice. Until S9, the rule from #1325 stands ("hide options that don't apply while only
 one mode is available"), which the code already does for view mode and Modes, but **not** for
 `HomeTemplateSetting`, which renders unconditionally on the Layout page (`SettingsPageContent.kt:198`).
 Quick win independent of this design: hide the template row while a single mode is available.
@@ -736,65 +673,37 @@ If invalid data gets in anyway (restore from a tampered file), the existing `Wor
 after `rehydrate`; an invalid active workspace falls back through `resolveActive` as today, so the
 safety net already exists without changes to `WorkspaceValidation`.
 
-### 4.5 Persistence, codec versioning, migration
+### 4.5 Persistence and in-flight work
 
-- `WorkspaceSetCodec`: set schema `1 -> 2`. Adds, **inside each layout entry** (revised for Q3), a key
-  `"library": {"lenses": [{"id","name","lens","origin"?}]}` and per-binding optional `"ref": "<id>"` next
-  to the existing `"lens"` and `"expression"`. A
-  workspace's own schema version (`CURRENT_WORKSPACE_SCHEMA_VERSION`) can stay at 1 because the
-  addition is optional and ignorable.
-- **Migration from inline: none needed.** A v1 blob decodes with an empty library and `ref = null`
-  everywhere, which is exactly the old meaning. "Inline stays valid" is a property, not a migration
-  step. Promotion is the only way a ref appears.
-- **Downgrade safety.** A v1 decoder ignores `"ref"` and `"library"` and reads the snapshot, so an
-  older app still draws every container correctly (it just loses the sharing). This is also why the
-  snapshot is stored rather than recomputed.
-- Decode order, per layout: decode that layout's library, decode its workspaces, then `rehydrate` (for each
-  ref that resolves **in this layout's library** set `lens := library lens`, library wins; a ref that does
-  not resolve there keeps the snapshot and is reported dangling; a ref that names a lens that only exists
-  in another layout is the same case). A library
-  entry that fails to decode is dropped, which turns its bindings into dangling-with-snapshot rather
-  than data loss.
-- Decode still never throws; the `DecodeReport` (1.5) gains `droppedLenses` and `danglingRefs`.
-- Writes go through `LensLibraryOps` / the editor so the invariant holds; a property test asserts it
-  after random operation sequences (4.8).
-- Item content: the library stores `Lens` only. `Lens` has no item content by construction, and
-  there is still no `Item` codec.
+- `WorkspaceSetCodec`: schema `1 -> 2` adds, **inside each layout entry**, `"library": {"lenses": [...]}` (and, from section 9,
+  `"pool"`), per-binding optional `"ref"`, and a workspace `"preset"` string. All additive. An existing inline binding decodes
+  with `ref = null`, which is its old meaning, so "inline stays valid" is a property, not a migration. No release has written
+  workspaces yet, so schema 2 can simply be the first schema anyone stores.
+- Decode order per layout: library, workspaces, then `rehydrate` (a ref that resolves in **this layout's** library sets
+  `lens := library lens`; otherwise the snapshot is kept and the ref reported dangling). A library entry that fails to decode
+  is dropped, which makes its bindings dangling-with-snapshot rather than lost. Decode never throws.
+- The library stores `Lens` only: no item content, no query text (13.2).
 
-### 4.6 Exact contract changes and sequencing for in-flight PRs
+### 4.6 Contract changes, and the in-flight WS7/WS8 work
 
-All changes are additive with defaults; no existing call site or test must change.
-
-| Area | Change | Impact on in-flight work |
-| --- | --- | --- |
-| WS0 contracts | `LensBinding.ref: LensId? = null`; new `LensId`, `SavedLens` (with optional `origin: LensOrigin?`, 4.9), `LensLibrary`, `LensLibraryOps`; `LayoutWorkspaces.library` default empty (per layout); `Workspace.presetId: String? = null` (for Reset to preset) | Existing `LensBinding(lens, expression)` calls compile unchanged. `data class` `copy` and equality now include `ref`/`library`: tests comparing whole sets need no change when both are default. |
-| WS5 codecs/migration | Set schema 2 with a per-layout `library`; binding `ref`; workspace `"preset"` optional string. Migration (`HomeLayoutWorkspaceMapper`, `MigratedLenses`) untouched: they emit inline. `ensureMigrated(stored, layoutSet)` preserves each stored layout's library: it builds `WorkspaceSet(migrated.layouts + stored.layouts)` (verified in `WorkspaceMigration.kt`), which keeps stored `LayoutWorkspaces` values whole once `library` is a field of `LayoutWorkspaces` (a test pins this, replacing the earlier "must become `stored.copy(...)`" note). `WorkspaceSet.copyFromOtherLayout` is the one function that must change (4.3). | `copyFromOtherLayout` change plus tests. |
-| WS7 editor | **Phase 1 (no dependency):** inline only, as now. **Phase 2:** adds "Use saved lens" and "Save as lens" to its lens step, and the impact list on edit. | WS7 can merge today; phase 2 is a follow-up PR after S4 below. It must route edits through `LensLibraryOps`, not mutate bindings of referenced lenses directly. |
-| WS8 presets (merged, `workspace/preset/`) | **Rework (Q4), small:** see 4.9. The catalog data stays; bindings gain a stable lens key and a display name; `installPreset` and `PresetInstaller` become library-aware and set `Workspace.presetId`. `skinHintId` stays unwritten (section 8, item 7). | Preset tests change in three places (install writes the library, install twice reuses lenses, reset). |
-| WS6 menu | None. It reads `binding.lens` snapshots. Optionally shows nothing about refs. | None. |
-| WS4 hosts/planners | None (snapshot). | None. |
-| Backup | `workspaceSet` already carries the object; each layout's library rides inside it (section 5). | None. |
-
-Recommended merge order to minimise rework: WS6, WS7 (inline) and WS8 (merged) stay as they are -> S4
-(library domain + codec + the small preset rework) -> WS7 phase 2 and S15 (library UI). S4 can also be
-written before those merge because nothing it adds is required by them.
+All additive with defaults: `LensBinding.ref: LensId? = null`; new `LensId`, `SavedLens` (+ `origin`), `LensLibrary`,
+`LensLibraryOps`; `LayoutWorkspaces.library`; `Workspace.presetId`. Existing `LensBinding(lens, expression)` calls compile
+unchanged. `WorkspaceSet.copyFromOtherLayout` is the one function that must change (4.3). `ensureMigrated` keeps stored
+layouts whole (`WorkspaceSet(migrated.layouts + stored.layouts)`, verified in `WorkspaceMigration.kt`), so it keeps libraries.
+WS7 phase 1 stays inline; phase 2 (Use saved lens, Save as lens, impact list) follows S5 and must route edits through
+`LensLibraryOps`. WS8 presets get the small rework in 4.9. WS6 and the hosts read `binding.lens` snapshots and do not change.
 
 ### 4.7 Limits
 
-`MAX_SAVED_LENSES = 100` **per layout**, name 1..40 chars. These follow the bounded-settings convention used by
-`MAX_NOTIFICATION_HIDE_RULES` and `MAX_CONFIGURED_FEEDS`; revisit if a real need appears.
+`MAX_SAVED_LENSES = 100` **per layout**, name 1..40 chars (the bounded-settings convention of `MAX_NOTIFICATION_HIDE_RULES`).
 
 ### 4.8 Tests specific to lenses
 
-Domain: library ops (unique names, cap, no-op rules), `rehydrate` (resolved, dangling, library
-wins), property test of the snapshot invariant after random edit/rename/duplicate/delete/promote/
-detach sequences, `previewEdit` (per-group pairing, dock, page-set, widget), `remove` policies,
-clone shares refs within a layout, **`copyFromOtherLayout` copies referenced lenses with fresh ids and
-rewrites refs (including unreferenced lenses, dangling refs, and a property test that the target never
-holds an id that is also in the source's library)**, a binding cannot resolve against another layout's
-library, preset install/reset (4.9), `ensureMigrated` keeps each layout's library, codec
-golden files (v1 blob decodes unchanged; v2 blob; v2 blob read by a v1-style decode ignoring unknown
-keys; dangling ref; corrupt library entry; hostile ids).
+Library ops (unique names, cap, no-ops); `rehydrate` (resolved, dangling, library wins); a property test of the snapshot
+invariant after random edit/rename/duplicate/delete/promote/detach sequences; `previewEdit` (per-group pairing, dock,
+page-set, widget); `remove` policies; clone shares refs within a layout; `copyFromOtherLayout` copies referenced lenses
+with fresh ids and rewrites refs (target never holds an id that is in the source's library); a binding cannot resolve against
+another layout's library; preset install/reset (4.9); one codec round trip with a dangling ref and a hostile id.
 
 ### 4.9 Presets with saved lenses (Q4)
 
@@ -839,82 +748,50 @@ object PresetInstaller {
   created" shows `previewEdit` impact on every dependent and resets only lenses whose origin matches. A
   workspace without `presetId` has no Reset (hidden, not guessed). A preset-origin lens deleted by the user
   is re-added on reset.
-* **Placed items and presets (Q16).** An installed preset creates its placed-item pages empty (9.6): a
-  preset arrangement never moves or deletes placed items of other workspaces. Reset keeps the placed items
-  of pages that still exist in the preset arrangement and asks before dropping any.
-* **Tests.** `workspaces-presets.md`'s validation list stays true (validates, resolves, round-trips, no
-  item content, needs no permission); three tests change: install writes the expected library entries,
-  install twice reuses entries (workspaces structurally equal apart from ids), reset restores the
-  arrangement and, when asked, only preset-origin lenses.
-* **Merged WS8 impact:** `PresetBindings` call sites (five preset files) pass a `PresetLens` for each lens
-  they already build; `PresetInstaller` gains the library-aware functions beside the existing ones, which
-  stay as thin wrappers for the inline form until S4 removes their last callers.
+* **Placed items and presets (N2).** An installed preset creates its placed-item pages empty: a preset arrangement never
+  moves or deletes pool items or other workspaces' arrangements. Reset keeps the references of pages that still exist
+  in the preset arrangement and asks before dropping any.
+* **Tests.** Install writes the expected library entries, installing twice reuses them (workspaces equal apart from ids), reset
+  restores the arrangement and, when asked, only preset-origin lenses. The five preset files pass a `PresetLens` for each lens
+  they already build.
 
 ---
 
 ## 5. Backup and restore
 
-**As built:** see the table at the top: the document and codec support `workspaces`, but neither export
-nor import is wired. **Proposed:**
+For a solo alpha the backup export **is** the safety net (1.7), so this is the one place worth getting right.
 
-- **Export.** `LauncherBackupExportCoordinator` gets the workspace repository and passes
-  `workspaceSet` (including each layout's library) into `launcherBackupDocument(...)`. Written as today
-  under `"workspaces"`. The set is the in-memory current one, not the possibly stale stored blob.
-  **Revised for Q16 and section 14:** (a) once placed items are owned by workspaces (S17), the placed pages
-  ride inside `"workspaces"`, **and** `"homeLayouts"` keeps being written from the mirror (9.7) for as
-  long as the rollback path exists, so an older app restoring a newer backup still gets its home screen;
-  (b) source exclusion rules are written under a new optional top-level `"exclusions"` key, **and** the
-  legacy `"hiddenApps"` key and the settings' notification hide rules keep being written in their old
-  shape (14.6), so an older app restores hidden apps and hide rules unchanged.
-- **Document version.** Do **not** bump `LAUNCHER_BACKUP_DOCUMENT_VERSION` (an older app requires `== 1`
-  exactly and would reject the whole file; verified in `decodeLauncherBackupDocument`). New data is optional
-  keys (`"workspaces"` contents, `"exclusions"`), versioned by their own schema. An older app restoring a
-  newer backup ignores them and still restores layouts, settings and hidden apps, i.e. the classic data is
-  always complete in the document. This is also what keeps the permanent classic path (section 10)
-  restorable on any build.
-- **Import.** Extend the restore path (`ImportLauncherBackup` -> `withImportedBackup`) with a
-  workspace repository:
-  1. Decode and `rehydrate` the document's set (never throws).
-  2. If it decoded to at least one valid layout: **replace** the stored set (workspaces, every layout's
-     library, and, after S17, their placed items) atomically with it. Exclusion rules are replaced the same
-     way (from `"exclusions"`, else migrated from the legacy keys in the same document, 14.6).
-  3. If `workspaceSet` is absent (a pre-workspace backup) or unusable: **do not keep the existing
-     workspaces** (they describe the previous install's layouts, not the imported ones); rebuild with
-     `WorkspaceMigration.migrate(document.homeLayoutSet)` (which, after section 9, also builds the placed
-     pages from the imported layouts) and empty libraries. Outcome noted in the import summary.
-  4. Keep the previous generation blob so "Undo restore" is exact (Q11: restore is replace **with Undo**;
-     the Undo snackbar stays for the whole session and the previous generation survives until the next
-     changing write). Hosted widget ids are deleted only after the Undo window closes (9.3).
-  5. Re-resolve the active workspace for the current device class; a layout it cannot draw falls back
-     with the usual message.
-- **Conflict policy.** Restore is **replace**, consistent with how layouts, settings and hidden apps
-  already behave (`saveHomeLayoutSet`, `saveLauncherSettings`, `replaceHiddenAppIdentities`). No merge
-  in v1 (merging two libraries needs per-lens conflict UI for little value). The import dialog says
-  what will be replaced and shows counts ("3 workspaces, 5 saved lenses").
-- **Per-source and per-device data.** Disabled sources travel with the set. Permission grants never do
-  (they cannot be restored); sources restored as enabled but ungranted show "Needs permission" and
-  nothing prompts, per the Calendar policy.
-- **Validation.** `isImportableBackup` stays about the classic data. Workspace problems never reject a
-  backup; they downgrade to step 3.
-- **Never item content.** Backups carry lens definitions, workspaces, settings, feed *configuration*
-  (as today), never items, article cache (`FeedArticleCacheDocument` is separate and not backed up),
-  notification content, calendar events or media state.
-- **Tokenised URLs are excluded (decided).** Feed and ICS URLs that embed a token are bearer secrets: the
-  backup carries the feed *configuration without such URLs* and the Sources page shows "Re-enter the
-  address" for them after restore. Concretely, any configured external-source URL that contains userinfo,
-  a query string or a long opaque path segment is treated as tokenised and omitted (the rule is a pure
-  function with a test over hostile samples; erring on the side of omission). Today's RSS feed backup
-  behaviour is unchanged for plain URLs. Placed items contain no URLs.
-- **Widgets in a backup (as built, flagged).** `HomeWidgetJsonCodec` encodes `WidgetItem.appWidgetId`, a
-  host-local integer that is meaningless on another device, and `WidgetItem` carries no provider
-  component, so there is nothing to rebind from. I found no rebind step in the import path (searched
-  `LauncherBackupImportCoordinator`/`LauncherBackupImportValidator`); verify on a device. Section 9.3
-  specifies the placed-items behaviour (restored widgets are shown as "re-add" placeholders), which is no
-  worse than today and must be tested.
-- **Single-workspace export/import: deferred (Q10, decided).** Not designed further here. The only
-  constraint kept: workspaces still encode standalone and carry snapshots, so the feature can be added
-  later without a model change. Section 9 makes this slightly harder (a workspace now owns placed items
-  and widgets that cannot be shared), which is a further reason to defer.
+**As built:** the document type and codec support a `"workspaces"` object, but neither export nor import is wired
+(`launcherBackupDocument()` / `LauncherBackupExportCoordinator` do not pass it; `withImportedBackup` applies only
+layouts, settings and hidden apps; `isImportableBackup` ignores it). `decodeLauncherBackupDocument` requires
+`version == 1` exactly. `HomeWidgetJsonCodec.encodeWidget` writes `appWidgetId`, a host-local integer.
+
+**Proposed (S8):**
+
+- **Export** passes the in-memory `WorkspaceSet` (workspaces, **pool and arrangements**, per-layout lens libraries)
+  under `"workspaces"`, and the per-layout exclusion rules under a new optional `"exclusions"` key. Keep the document
+  version at 1 (bumping would make an older build reject the file, and that costs nothing to avoid). While
+  `HomeLayoutSet` still exists (before S4 completes) it continues to be written under `"homeLayouts"` as today.
+  After S4 `"homeLayouts"` is not written; a pre-S4 backup is imported through the migration (9.9). Nothing else is kept
+  for old readers: there are none.
+- **Import** is **replace**, with Undo (Q11), consistent with layouts, settings and hidden apps today: decode (never
+  throws), replace the stored set atomically (pool and arrangements are one value, so they cannot diverge), replace
+  exclusions, keep the previous blob for Undo, re-resolve the active workspace. A document with no usable
+  `"workspaces"` is rebuilt with `WorkspaceMigration.migrate(document.homeLayoutSet)` (9.9) and empty libraries.
+  Workspace problems never reject a backup. The import dialog shows counts ("3 workspaces, 5 saved lenses").
+- **Widgets in a backup (9.6).** Host ids are meaningless on another device (and after "clear data" on this one).
+  Export writes each widget's provider and size; import marks every widget as an **unbound placeholder** unless
+  `WidgetHostGateway.isHostedWidgetBoundTo(id, provider)` says the id is still bound to that provider on this
+  device. Placeholders keep their cell and span; "Set up widget" runs the normal add flow.
+- **Never item content**: lens definitions, workspaces, pool entries (app identities, labels, folder entries, widget
+  providers), exclusion rules and settings; never feed articles, notifications, events, media state or search
+  queries. Disabled sources travel with the set; permission grants never do (sources restore as enabled but
+  ungranted and show "Needs permission", nothing prompts).
+- **Tokenised URLs are excluded (decided).** A feed or ICS URL with userinfo, a query string or a long opaque path
+  segment is omitted from the backup and the Sources page shows "Re-enter the address" after restore (a small pure
+  function with a test over hostile samples). Plain URLs behave as today.
+- **Single-workspace export/import: deferred (Q10).** The shared pool makes it harder (a workspace's items may be
+  shared with others and widgets cannot travel), which is a further reason to defer.
 
 ---
 
@@ -979,129 +856,68 @@ source detail page.
 
 ---
 
-## 7. Implementation slices (re-sequenced 2026-10-01)
+## 7. Implementation slices (re-sequenced for a solo alpha)
 
-> Superseded: the earlier S1 to S12 list (one "container cut-over is not part of WS10" note, a global
-> library, an optional dock slice, a locked-device rule, no exclusions or per-lens queries). The new list
-> has 20 slices because the owner pulled placed items, dock overrides, per-lens queries and exclusions
-> into scope. Each slice is small, independently shippable, and states what gates it. "Gate" = what keeps
-> it invisible or safe until its turn. "Pure" means domain-only, no app wiring, JVM tests only.
+> Superseded: the earlier S1 to S20 list and the R0 to R5 stages. Twelve slices remain, ordered so that a
+> **runnable debug build exists after S1 and S2** and every later slice is run on the owner's phone before the next
+> one builds on it. "Pure" means domain-only, JVM tests, no app wiring.
 
-| ID | Slice | Depends on | Gate / ships as | Rollout |
-| --- | --- | --- | --- | --- |
-| S1 | **Bootstrap (domain).** `WorkspaceBootstrap`, `DecodeReport`, `BootstrapOutcome`, newer-schema read-only rule, fall-through rules; default unification (8.1: `defaultFor` delegates to the Nova preset, migration marks a single `AllApps` page `FINDER`). Pure. Unit + golden tests. | WS5 | Not called yet. | R1 |
-| S2 | **Storage and startup (app).** `WorkspaceRepository` over the existing `DataStoreWorkspaceStore` with write-behind and one previous generation; bounded startup read; shadow `ensureMigrated` writes; `WorkspaceRollout`; outcome counters. Nothing drawn. | S1 | Rollout = classic. | R1 |
-| S3 | **Backup wiring.** Export passes `workspaceSet` (with libraries, and placed pages after S17); optional `"exclusions"` key; legacy keys still written; import applies/rebuilds with Undo; tokenised-URL omission; import summary; golden backup fixtures. | S2 (S4, S7 extend it) | Independent of UI. Fixes the existing gap (section 5). | R2 |
-| S4 | **Per-layout lens library (domain) and preset rework.** `LensId`, `SavedLens` (+ `origin`), `LensLibrary`, `LensBinding.ref`, `LayoutWorkspaces.library`, `LensLibraryOps`, set schema 2, `copyFromOtherLayout` copies lenses, `Workspace.presetId`, `PresetLens`/library-aware `PresetInstaller` (4.9). All additive. | WS0, WS5 | Pure; no UI. Parallel with S1-S3. | R2 |
-| S5 | **Favourite and frequent lenses.** Migration maps `FAVOURITES`/`FREQUENTLY_USED` pages to lenses over existing app sources (section 12); apps adapters emit the `launcher.pinned` flag; golden tests. No new adapters. | S1 | Removes the old flip blocker. | R2 |
-| S6 | **Source exclusion engine (domain).** `SourceExclusionRule`, matchers, `SourceExclusions.apply`, legacy-to-unified migration (hidden apps, hide rules), codec, golden tests (section 14). Pure. | WS0 | Not called yet. | R1 |
-| S7 | **Exclusions wired (app).** `SourceExclusionRepository`, first step in `SourceBackedLensResultProvider`, legacy consumers (drawer/search/badges/dock cards) moved onto the engine, **write-through mirror** to `AppVisibilityRepository` and `NotificationHidingSettings`. Behaviour identical (golden). | S6, S2 | No UI change. | R2 |
-| S8 | **Per-lens query contract (WS0, additive).** `ParameterizedItemSource`, `LensSourceParam`/binding, `SearchQueryHolder` as default value, query-bearing container expression (section 13). A thin first implementation: one search box container feeding named query slots. | #1365 (merged), WS0 | Additive; no stored query. Independent of S1-S7. | R3 |
-| S9 | **Workspace additions.** `Workspace.startPageId`, Finder out of the pager, `FINDER_EXPRESSIONS` widened to `ICON_GRID` (8.3a), `skinOverrideId` = theme preset, `ReturnBehavior` + `WorkspaceReturnReducer`, drawer-presentation migration (Q6). Additive codec keys. | S1, S4 pattern | Return reducer pure first; UI in S13. | R3 |
-| S10 | **Per-workspace dock overrides.** `WorkspaceDock.presentation` (`DockPresentation`), `DockModel.applying(...)`, codec, resolver in `HomeDockHost`, validation (`DockHiddenWithoutMenuEntry`), preset updates (Niagara, unfolded TimeScape), migration (none needed), tests (section 11). | S1, S9 (menu trigger) | Overrides default to null = follow. | R3 |
-| S11 | **Placed items A: domain.** `PlacedItemsPage` page host, `PlacedPage` value over `LauncherPage`, engine adapters (`PlacedItemsEditor` reusing `GridPlacementEngine`, `FolderEngine`, `WidgetEngine`, `HomePageEngine`), `HomeLayoutWorkspaceMapper` emits placed pages with items, idempotent migration, golden tests (section 9). Pure. | S1 | Not drawn. | R1 |
-| S12 | **Placed items B: shadow.** Every `HomeLayoutSet` save also writes the workspace form (write-behind), a compare job reports mismatches (counts only); nothing is drawn from workspaces. | S11, S2 | Diagnostics only. | R1 |
-| S13 | **Workspaces settings page.** Planner + page + Advanced toggle, fallback message, copy-to-layout, undo, per-workspace Dock and Start page rows, "Returning to Home" row, "New apps" row. | S2, S9, S10, WS6, WS8 | Behind rollout = classic until R3. | R3 |
-| S14 | **Sources page and exclusions UI.** `SourcesPlanner`, status rows, permission actions via existing flows, enable/disable (+ `LensAvailability.OFF`), Notifications and RSS detail (RSS page moved, route aliased), exclusion rule list/edit/disable/delete with match counts, **contextual "Hide ..." item action** with Undo (section 14.7), Hidden apps as a filtered view. | S2, S7, WS1; #1365 | Same gate. | R3 |
-| S15 | **Saved lenses page + editor integration.** Per-layout library list/detail, used-by, delete policies, "Copy to layout", impact list on edit (WS7 phase 2). | S4, WS7 phase 2 | Same gate. | R3 |
-| S16 | **Privacy controls.** Per-source content level, optional screenshot/recents flag (default off), Privacy page. **No locked-device rule (Q8).** | S14 | Defaults equal today. | R3 |
-| S17 | **Placed items C: cut-over.** Workspace placed pages become the source of truth; home edit mode, drag, folders and widget add/remove operate on them via the adapter; `HomeLayoutSet` becomes a **derived mirror** written on every change (9.7); `PlacedItemsOwner` switch (`WORKSPACE` / `LEGACY`) for the rollback drill; "pages appear as you fill them" and "New apps" placement setting (9.5). | S11, S12 (zero mismatches), S9, S2 | Beta-only switch in R3, on for all in R4 (option C). | R3 beta, R4 |
-| S18 | **Legacy reconciliation.** Remove Home screen/view mode/template/Modes UI, drawer presentation row, `afterLeavingLibrary` row; dock pull opens the workspace menu (`gestures.md`, `dock.md` updates, a11y action, Ctrl+arrow); retire `libraryOnly...Availability`; hide template row early as a quick win. Closes #1323, #1324, #1325. | S13, S9, S10, WS8 | Flips with S19. | R4 |
-| S19 | **Flip the default.** New-install preset (Nova with Finder), non-blocking first-run chooser, `WorkspaceRolloutMode.ON` default, release notes, Play declaration check (7.2). | S1-S18, WS6, WS7, WS8; flip criteria 1.7 | **R4.** | R4 |
-| S20 | **Settle.** After one release at R4 with zero shadow/mirror mismatches: stop mirroring placed items to `HomeLayoutSet` and exclusions to the legacy stores (keep the codecs and the **backup legacy keys**), delete `WorkspaceMenuFeature`, dead mode code, unused settings UI. **The classic path is kept** (section 10). | S19 + one release | R5. | R5 |
+| ID | Slice | Depends on | Notes |
+| --- | --- | --- | --- |
+| **S1** | **Runnable debug build.** `WorkspaceBootstrap` (pure, 1.2/1.5), `WorkspaceRepository` over the existing `DataStoreWorkspaceStore` (write-behind, one previous generation), bounded startup read, developer toggle "Use workspaces" (1.4), the shell **draws the active workspace** with the WS6 menu enabled and the WS7 editor reachable from it, Nova preset for fresh data (default unification, 8.1), **the existing home surface hosted as the workspace's home page** (placed items still `HomeLayoutSet`, 9.9). Calendar/notification sources use today's explicit permission flows. | WS4, WS5, WS6, WS7, WS8 (merged) | **First dogfood build.** Nothing about placed items changes. |
+| **S2** | **Settings basics.** Workspaces page (switch, preset picker, rename/duplicate/delete/reset, copy from other layout), Sources page (status rows, permission actions through the existing flows, `OFF`, 2.4). | S1 | Completes the dogfood build: everything reachable without code changes. |
+| S3 | **Shared pool (domain).** `PlacedItemPool`, `PoolItem`, arrangement pages, `PoolOps` (references, remove, remove-everywhere, add-reference, clone-widget plan, make-independent, delete-workspace, copy-arrangement, prune-uninstalled), `PoolIndex` (derived), validation, `PlacedItemsAdapter`, `HomeLayoutSet` to pool mapper (9). Pure. | WS5 | Can be built in parallel with S1/S2. |
+| **S4** | **Pool cut-over (app).** Home edit, drag, folders and widgets operate on the pool through the adapter; widget lifecycle (deferred host-id deletion, provider backfill, placeholders); uninstall pruning; `HomeLayoutSet` is no longer written (**backup first**, 1.7). Sharing actions ("Also show in...", share-mode duplicate) may follow the cut-over. | S1, S3 | The risky slice (9.10). |
+| S5 | **Per-layout lens library and preset rework** (4), plus recency and favourite lenses (12, N3). Library UI (Saved lenses page, WS7 phase 2) can follow. | WS5, WS8 | Domain part is pure and parallel. |
+| S6 | **Per-layout exclusions** (14): engine (pure), store, copy of the owner's hidden apps and hide rules into every layout's set, provider pre-step, legacy consumers moved, Sources exclusions UI, contextual "Hide" action. | S2 for UI; engine now | Channel/thread/calendar-id keys slip (N5). |
+| S7 | **Workspace additions.** Start page, Finder out of the pager, `FINDER_EXPRESSIONS` plus `ICON_GRID` (8.3), Return setting and `WorkspaceReturnReducer` (3.2), skin override (8.7), **dock overrides** with the hidden-dock validation and `OPEN_WORKSPACE_MENU` gesture (11), New apps per preset and `autoPages` (9.8). | S1; S4 for 9.8 | Several small independent PRs. |
+| S8 | **Backup wiring** (5): export/import of workspaces, pool, exclusions; widget placeholders; tokenised-URL omission; Undo. | S1, S4, S6 | Do before relying on the phone for anything else. |
+| **S9** | **Legacy reconciliation and flip.** Remove Home screen/view mode/template/Modes UI, drawer-presentation and `afterLeavingLibrary` rows; dock pull opens the workspace menu (`gestures.md`, `dock.md`, a11y action, Ctrl+arrow); retire `libraryOnlyLauncherViewModeAvailability`; delete `WorkspaceMenuFeature` and the developer toggle. Closes #1323, #1324, #1325. | S2, S4, S7 | After this the workspace path is the only path. |
+| S10 | Per-lens search queries (13). | #1365 | Slips freely. |
+| S11 | Privacy controls: content level per source, screenshot/recents flag (6). | S6 | Slips freely. |
+| S12 | ICS recurrence through a library: spike, then the ICS source (15.2). | external-sources scaffolding | Slips indefinitely. |
+| S-C | *Only if the owner confirms full-parity Classic:* the second navigation style (10.3). | S9 | Not in the default plan. |
 
-Dependency summary (arrows are "must land before"):
-`S1 -> S2 -> S3`; `S1 -> S5, S9, S11`; `S11 -> S12 -> S17`; `S6 -> S7 -> S14`; `S4 -> S15`;
-`S9, S10 -> S13`; `S9 -> S10`; `S13, S14, S15, S16 -> S18 -> S19 -> S20`; `S17 -> S19` (option C);
-`S8` has no incoming edge beyond merged work and can land any time before R3 closes.
+Dependency summary ("must land before"): `S1 -> S2`; `S1, S3 -> S4`; `S4 -> S8`; `S6 -> S8`; `S2, S4, S7 -> S9`.
+Three chains can start immediately: S1 then S2; S3 (pure); S5 domain and S6 engine (pure).
 
-Parallelism: three independent chains can start now: (S1 -> S2 -> S3, then S5), (S4), and (S6 -> S7).
-S11/S12 start after S1 and are the **critical path** because S17 needs a clean shadow period before R4.
-S8, S9 and S10 are independent of one another except S10 needing S9's menu entry for the hidden dock rule.
+**Cut line.** *Needed to use workspaces daily:* S1, S2, S4, S6, S8, S9. *Can slip past the flip, indefinitely:* S10,
+S11, S12, channel/thread/calendar-id exclusion keys, the sharing-creation UI (the model and `PoolOps` still ship in
+S3/S4, so nothing is rebuilt later), `autoPages`, the first-run chooser, the Saved lenses page UI, per-workspace skin
+override, favourite (as opposed to recency) lens polish.
 
-### 7.1 Test and validation plan (revised)
+### 7.1 Test and validation plan
 
-**Domain (JVM, no device).** Bootstrap decision table (every row of 1.5 including timeout, corrupt,
-partial, newer schema, capability fallback); `ensureMigrated` idempotence and library preservation;
-library ops and the snapshot invariant (4.8); `WorkspaceReturnReducer` (the 3.2 table, a regression test
-per #1323 scenario, and "never changes workspace id"); planners for Workspaces/Sources/Lenses pages (rows,
-disabled reasons, last workspace cannot be deleted, status mapping incl. `OFF`); backup import decision
-(valid set, absent set, corrupt set, old-app backup) and "never item content" (assert the encoded document
-has no item fields); privacy ceiling (`project` intersection never widens; `SENSITIVE` always wins);
-exclusions (14.9); per-lens parameter binding (13.7); dock override resolution (11.7); favourite/frequent
-lens evaluation against fake sources (12).
+Tests are kept where they guard **real logic**; fixtures and goldens that only protect other people's stored data
+are dropped (the owner's own layout is covered by the migration round-trip test and the by-eye check, 1.7).
 
-**Migration golden tests (extended).** Fixture `HomeLayoutSet`s: new install, Library only (current
-shipped), Standard, Cards, all three modes, multiple device classes, a stored hidden-mode layout,
-preferred-mode map only, mode ring legacy data. Golden expected `WorkspaceSet` JSON checked in; golden
-blobs for schema v1 (no library) decoding unchanged under v2 code, and a v2 blob decoded by v1-style rules.
-**New:**
-* *Placed-items goldens* (S11): for each fixture, an expected placed-pages JSON including every item type
-  (app, shortcut with `AppShortcutId`, folder with children, widget with `HostedWidgetId` and
-  `WidgetResizeConstraints`), positions and spans, page order, `selectedPageId`, pinned pages,
-  generated pages, a page with `generatedContentOverflowCount`, multi-page, tablet grid, dock panel page
-  (`DockModel.panel`), duplicate page ids across modes (the Q12 collision case). Migration run twice gives
-  byte-identical output (idempotent); `HomeLayoutSet -> workspace form -> HomeLayoutSet` round trip is
-  **exactly equal** for every fixture (the lossless property; this is also the mirror's correctness).
-* *Real-fixture sweep*: a test over every `HomeLayoutSet` JSON fixture in `app/src/test` and
-  `app/src/androidTest` asserting the round trip and answering Q12.
-* *Per-layout library goldens* (S4): copy-from-layout with referenced, unreferenced and dangling lenses;
-  preset install into a layout with a clashing user lens name; install twice; reset with and without lens
-  reset; a layout-A blob whose binding refs a lens that only layout B has (dangling with snapshot).
-* *Dock override goldens* (S10): Niagara ("no dock") and unfolded TimeScape (left edge) resolve to the
-  expected effective `DockModel`; unknown override keys are ignored by a v1 decoder; override over a
-  device-class dock with `isEnabled=false` stays hidden.
-* *Exclusion goldens* (S6): a settings blob with 200 hide rules of every kind and a 60-app hidden set
-  migrate to the expected rule list; the unified evaluator yields item-for-item the same notifications and
-  apps as `NotificationHideRuleFilter` and `withHiddenApps` on a shared fixture corpus (equivalence test);
-  mirror write-through reproduces the original legacy encodings byte-for-byte.
+**Domain (JVM).** Bootstrap decision table (1.5); pool: derived references, GC on last-reference removal, widget
+single-placement rule, clone-widget consent plan, deletion and Undo restore the exact value, `copyArrangement`
+id-map (sharing preserved inside the copy, nothing shared across layouts), uninstall pruning only on a real
+removal, `validate` self-healing (dangling, orphan, multiply-placed widget, duplicate reference in one
+arrangement); **adapter**: engine-assigned ids are remapped to pool-unique ids, shared-folder edits write the pool item
+once; **differential test**: random edit sequences run through the legacy engines on a `HomeLayout` and through
+`PlacedItemsAdapter`+`PoolOps` give equal results; **migration round trip** `HomeLayoutSet -> pool -> HomeLayoutSet`
+equal for fixtures with every item kind (widgets, folders, shortcuts, dock panel) and idempotent; lens library
+snapshot invariant (4.8); `WorkspaceReturnReducer` table and "never changes workspace id"; dock `applying` and the
+stranding validation; exclusions (14.9); per-lens parameter leak sentinel (13.4); backup import decision (valid,
+absent, corrupt).
 
-**Screenshot tests (WS9 harness).** Workspaces page, preset picker, Sources page (each status), exclusions
-list, Saved lenses page (with dependents, with a would-break list), fallback banner, privacy page, dock
-override rows ("Overridden by workspace"); compact and unfolded; light/dark; 200% font scale; reduced motion
-on. Fakes only.
+**Instrumented (`deviceVerify`, existing emulator CI).** Keep the existing standard-mode suite green; add startup
+with a corrupt blob; widget add/move/resize/remove and folder create then restart-and-compare against the pool;
+backup export then import round trip including widget placeholders.
 
-**Instrumented (`deviceVerify`).** Standard-mode regression with workspaces ON, **classic**, and corrupt
-blob: home, drawer, dock, settings reachable; startup with blob absent/corrupt/huge; backup export/import
-round trip including placed items and exclusions; posture change keeps the selected page; no permission
-prompt at launch (calendar and notification access); **placed-items edit regression** (add/move/resize
-widget, create folder, drag between pages, delete page) against the workspace-owned store, then restart and
-compare; **classic-mode parity** smoke (see 10.3); mirror check: after each edit sequence the derived
-`HomeLayoutSet` equals the legacy-engine result.
+**Screenshots (WS9 harness).** Only the new pages (Workspaces, preset picker, Sources, exclusions list) at compact
+size, fakes only. No matrices.
 
-**Manual device checklist (documented in each UI PR).**
-1. Upgrade from the shipped Library-only build: first launch looks identical, **every icon, folder and
-   widget in the same cell**; Settings shows Workspaces; Standard is selectable.
-2. Fresh install: Nova-style home with Finder, first-run chooser skippable, Home role flow unaffected.
-3. Fold/unfold mid-use: no flicker to a different workspace, fallback message appears only when real; a
-   workspace with a left-edge dock override shows it only on the layout that has it.
-4. Corrupt the blob (debug action): launcher still starts, notice shown, Restore previous works.
-5. Turn Classic on and off repeatedly with edits in each: no data loss; Home/drawer/dock fine in both;
-   items placed in Classic appear in the workspace and vice versa (10.2).
-6. Sources: each needs-permission source shows rationale before any system dialog; deny, deny
-   permanently, revoke in system settings, return: states correct, nothing prompts by itself.
-7. Saved lens: create, use in two containers, edit (clean), edit (breaks one container), delete used;
-   copy a workspace to the other layout and confirm its lenses came along and are independent.
-8. Backup on device A, restore on device B and on an older build (hidden apps and hide rules still restore).
-9. TalkBack: traverse the new pages, perform every action without drag (including "Hide this app" from the
-   item actions); font 200%; reduced motion; switch access.
-10. Quiet-profile redaction with sensitive notifications and a private calendar event. (No locked-device
-    case: removed, Q8.)
-11. Hide the dock on a workspace and confirm the workspace menu is reachable by gesture, TalkBack action and
-    Ctrl+arrow (11.4).
-12. **Rollback drill (S17):** edit placed items with the workspace owner on, switch the build to the legacy
-    owner, confirm every placed item is present, repeat in the other direction.
+**Manual (the "works on my device" checklist, 1.7)**, plus TalkBack through the new pages and the contextual Hide
+action, 200% font, and hiding the dock on a workspace with the gesture, TalkBack action and Ctrl+arrow all working.
 
-### 7.2 PR checklist additions
+### 7.2 Play declarations
 
-Every PR that adds a permission or a new data class (a new source kind, a new stored setting that holds user
-text, a new network use) must carry this line in its description, **owned by the owner**:
-
-`- [ ] Play Console data-safety and privacy declarations reviewed/updated by the owner for this change (or N/A: no new permission or data class).`
-
-Applies in particular to S8 (query handling: text stays in memory, so likely N/A, state why), S14
-(exclusion rules hold user text), the ICS and JSON Feed sources (network use), and S16 (secure flag).
-
+Not tracked during the solo alpha. If the app is ever published, the permissions and data classes added here
+(calendar and notification access, stored exclusion text, external feed/ICS network use, the secure-window flag)
+need a data-safety and privacy-policy review first.
 ---
 
 ## 8. Findings from the presets (WS8) that bear on default-on
@@ -1127,7 +943,7 @@ were answered differently from the original recommendation and are now designed 
      marks the single `AllApps` page of a layout `PageRole.FINDER` (an `AllApps` page is the drawer
      and already AlphaList), so the Finder entry exists for migrated users too. A layout with two
      `AllApps` pages marks none. Covered by a golden test.
-   Slice: folded into S1 (small change plus tests); no stored data changes.
+   Slice: folded into S1 (small change plus a test); no stored data changes.
 2. **Dock edge, size, pins and "no dock" are `DockModel`, not `Workspace`.** *(Superseded by Q17.)* The
    earlier recommendation was "out of scope". The owner decided on per-workspace overrides; the design
    (override-only `DockPresentation`, pins stay shared) is section 11.
@@ -1144,21 +960,14 @@ were answered differently from the original recommendation and are now designed 
      (Today, Home, Library with role Finder) and only changes in that the Home page now *owns* its items.
    - **8.3a Finder expression widening (Q6).** `ContainerValidation.FINDER_EXPRESSIONS` is
      `{CATEGORIES, ALPHA_LIST}` (verified). Moving the drawer's presentation into the Finder page needs the
-     drawer's "Icons" choice, so add `ICON_GRID` to the set (a validation change with a golden test; no
+     drawer's "Icons" choice, so add `ICON_GRID` to the set (a validation change with a test; no
      stored data changes, existing Finders stay valid). `iconGridColumns` stays a global setting.
-4. **No master/detail link between containers** (unfolded TimeScape: the Index picks which group the
-   CardStack shows). Deferred; not a configuration concern. When designed, keep lenses static and
-   saved-lens friendly: the detail container's filter is composed at evaluation time as
-   `AllOf(lens.filter, GroupKeyIs(selected))` from a runtime selection, never by writing a selection into
-   a stored or saved lens. (Section 13 adds lens *parameter bindings* for search queries only; a master/detail
-   selection stays runtime composition and does not use that mechanism.)
-5. **Search and query.** *(Superseded by the per-lens query decision.)* The original text kept the query
-   outside lenses entirely. The owner wants per-lens queries now: section 13 specifies the additive WS0
-   hook. What is **kept**: the query text is never persisted, logged or backed up, and a saved lens stores
-   no query text, only a parameter *binding*.
-6. **`apps.favourite` / `apps.frequent` have no adapter.** *(Superseded by Q19.)* The owner decided on
-   lenses over the existing app sources with no new adapters, so there is **no flip blocker**: the ids stay
-   reserved but unused. Definitions and the migration mapping are section 12.
+4. **No master/detail link between containers** (unfolded TimeScape: the Index picks the group the CardStack shows). Deferred.
+   When designed, compose the detail filter at evaluation time as `AllOf(lens.filter, GroupKeyIs(selected))` from a runtime
+   selection, never by writing a selection into a stored lens.
+5. **Search and query.** *(Superseded by per-lens queries, section 13.)* Kept: the query text is never persisted, logged or
+   backed up; a saved lens stores a parameter *binding*, not text.
+6. **`apps.favourite` / `apps.frequent` have no adapter.** *(Superseded by Q19: lenses, section 12.)* No flip blocker.
 7. **Skin model.** `skinOverrideId` exists (null follows global) and presets carry placeholder
    `skinHintId`s, but **no skin ids exist in the repo**. The only appearance catalog is
    `LauncherThemePreset` (`AppearanceSettings.themePreset`, default `MATERIAL`). Proposal: a skin is a
@@ -1167,300 +976,341 @@ were answered differently from the original recommendation and are now designed 
    "Follow global / <preset>". Preset `skinHintId`s are mapped to a `LauncherThemePreset` or dropped
    (hints only; installing a preset still never changes the theme). Owner decision (Q15) plus a small
    WS8 follow-up replacing the placeholders.
-8. **Long-term ownership of placed items.** *(Superseded by Q16.)* The original proposal kept `HomeLayout`
-   as owner "through the flip and until a separate placed-items container project", which is what made
-   revert cheap. The owner decided placed items move into workspaces now. The design, migration, staging
-   and rollback are section 9; the escape-hatch consequence is section 10.
+8. **Long-term ownership of placed items.** *(Superseded twice: Q16 moved them into workspaces, N2 made them a shared pool
+   with per-workspace arrangements. Section 9.)*
 
 ---
 
-## 9. Placed items move into workspaces (Q16)
+## 9. Placed items: a shared pool per layout with per-workspace arrangements (N2)
 
-This is the largest change in this revision. It is written as a design addendum with the same split as the
-rest of the document.
+> Superseded: the first revision made each workspace *own* its placed pages (`PlacedItemsPage(page: LauncherPage)`)
+> and rejected a shared pool. The owner chose the pool (N2). That design was never built and is deleted rather than
+> kept; the engine-reuse idea survives (9.7).
 
 ### 9.1 As built today (verified)
 
-* `HomeLayoutSet` holds one `HomeLayout` per `HomeLayoutKey(viewMode, deviceClass)`, plus one shared
-  `DockModel` per device class, `preferredModesByDeviceClass`, `modePairsByDeviceClass` and
-  `libraryDockEdgesByDeviceClass` (`core/domain/.../home/HomeLayoutSet.kt`).
-* A `HomeLayout` is `(viewMode, pages: List<LauncherPage>, selectedPageId, dock, templateId, settings,
-  editMode)`. A `LauncherPage` is `(id: LauncherPageId, type: LauncherPageType, grid: GridDimensions,
-  items: List<LauncherItem>, generatedContentOverflowCount, isPinned)`. Items are
-  `AppShortcutItem(appIdentity, label, appShortcutId?)`, `FolderItem(items: List<AppShortcutItem>)` and
-  `WidgetItem(appWidgetId: HostedWidgetId, resizeConstraints)`, each with an optional `GridPlacement`
-  (`LauncherItem.kt`). All plain Kotlin; none depends on Compose or Android types.
-* Behaviour lives in pure engines operating on those values: `GridPlacementEngine` (place, move with and
-  without anchor shifting, resize, remove; bounds and collisions), `FolderEngine` (create, rename, add and
-  remove shortcuts), `WidgetEngine` (add to page or dock panel, resize against `WidgetResizeConstraints`),
-  `HomePageEngine` (add, select, delete, duplicate, move, retype, resize grid, pin, edit mode),
-  `GridReflowEngine`, `HomeLayoutAppMembership`. Edit mode is `HomeEditMode` (`Browsing`, `EditingPage`,
-  `ManagingPages`) on the layout itself. Drag is app-layer (`HomeGridItems.kt`, `HomeDragPlaceholderState`,
-  `HomeGridDragPreview`) and ends in an engine call.
-* Persistence: `HomeLayoutSetJsonCodec` (`app/.../launcher/`), `HomeWidgetJsonCodec`, `HomeShortcutJsonCodec`;
-  `WriteBehindHomeLayoutRepository` (in-memory authoritative, debounced writes, flushed in `onStop`);
-  startup read `loadHomeLayoutSetAtStartup`. Backup writes `"homeLayouts"`.
-* Widgets: `WidgetItem.appWidgetId` is an `AppWidgetHost` id allocated through
-  `WidgetHostGateway.allocateHostedWidgetId`, bound with `bindHostedWidget`, and released with
-  `deleteHostedWidgetId`, which `LauncherShellViewModel` calls when a widget, a page with widgets, or a dock
-  widget is removed.
+* `HomeLayoutSet` holds one `HomeLayout` per `HomeLayoutKey(viewMode, deviceClass)` and one shared `DockModel` per
+  device class (`core/domain/.../home/HomeLayoutSet.kt`). A `HomeLayout` is `(pages, selectedPageId, dock,
+  templateId, settings, editMode)`; a `LauncherPage` is `(id, type, grid, items, generatedContentOverflowCount,
+  isPinned)` (`HomeLayout.kt`, `LauncherPage.kt`).
+* **Items fuse identity, content and position.** `AppShortcutItem`, `FolderItem` (holds its `AppShortcutItem`
+  children) and `WidgetItem` each carry their own `placement: GridPlacement?` (`LauncherItem.kt`). Engine-assigned
+  ids look like `app:<profile>:<package>/<activity>:<ordinal>`, where the ordinal counts same-app items **in that
+  layout** (`HomeShortcutEngine.kt`), so ids are unique per layout, not globally.
+* **The honest reading of "HomeLayout is already a pool".** Every item is held by exactly one layout and the only
+  shared object is the per-device-class dock. So today the structure is "a pool in which every item has exactly
+  one reference, one arrangement per (mode x device class)". That is what makes migration simple (9.9): each
+  stored `HomeLayout` becomes one arrangement and its items become pool entries with one reference each. No
+  sharing exists in the data today and the migration creates none.
+* `HomePageEngine.duplicatePage` clones items with fresh ids and **rejects pages containing widgets**
+  (`CANNOT_DUPLICATE_PAGE_WITH_WIDGETS`). `GridPlacementEngine`, `FolderEngine`, `WidgetEngine`, `HomeShortcutEngine`,
+  `HomePageEngine`, `GridReflowEngine` and `HomeLayoutAppMembership` operate on `HomeLayout`/`LauncherPage` values,
+  plain Kotlin with no Compose or Android types.
+* Widgets: `WidgetItem.appWidgetId` (`HostedWidgetId`) is an `AppWidgetHost` allocation made through
+  `WidgetHostGateway.allocateHostedWidgetId`, released with `deleteHostedWidgetId` (called from
+  `LauncherShellViewModel` when a widget, a page with widgets or a dock widget is removed). `WidgetItem` records
+  resize constraints but **no provider component**; the gateway can answer `isHostedWidgetBoundTo(id, provider)`;
+  `WidgetProviderIdentity` is a plain domain type (`core/domain/.../widgets/InstalledWidgetProvider.kt`).
+* Uninstall: no pruning of home items was found by searching `app/src/main` and `core/domain` (UNVERIFIED beyond
+  the search); `HomeScreenLibraryCompaction.kt` notes that "a hidden or uninstalled app's shortcut stays in the
+  layout until something prunes it" and rendering filters it.
+* Backup: `HomeWidgetJsonCodec` writes `appWidgetId`; no rebind step was found in the import path.
 * Workspaces reference placed items only through the `home.grid` source id plus `GroupKeyIs(pageId)`
-  (`HomeLayoutWorkspaceMapper.homeGridLens`); **no `home.grid` adapter exists**, and presets reference only
-  page `home`.
-* No auto-placement of new apps and no "pages appear as you fill them" behaviour exists in `core/domain`.
+  (`HomeLayoutWorkspaceMapper.homeGridLens`); no `home.grid` adapter exists.
+* No auto-placement of new apps and no "pages appear as you fill them" exist in `core/domain`.
 
-### 9.2 Proposed model
+### 9.2 Model
 
-Principle: **reuse the existing engines and value types; change who owns the value and where it is stored.**
-Do not reinvent grid placement, collisions, folders or widgets.
+Principle: **split an item into what it is (pool) and where it sits (arrangement)**, reuse the existing engines and
+value types through an adapter (9.7), and derive everything else.
 
 ```kotlin
-// workspace package: a new page host that OWNS a placed page (reusing LauncherPage as the value)
-data class PlacedItemsPage(
-    override val id: ContainerId,
-    val page: LauncherPage,                  // items, grid, type, isPinned, generatedContentOverflowCount: unchanged
-    val role: PageRole = PageRole.STANDARD,  // never FINDER
-    val expression: ExpressionKind = ExpressionKind.ICON_GRID,   // IconGrid (home) or List (Niagara "Pinned")
-) : PageHost {
-    override val ownedAxes: Set<GestureAxis> get() = emptySet()  // the grid pager owns horizontal paging; items own long-press/drag
-}
+// workspace package. One pool per layout (device class), stored in LayoutWorkspaces next to the lens library,
+// so pool and arrangements are always written together (one DataStore edit, one backup object).
+@JvmInline value class PoolItemId(val value: String)            // random or migration-deterministic; never reused
 
-// Replaces `PageContainer(content = Bound(home.grid lens))` for home pages. One per home page.
+sealed interface PoolItem { val id: PoolItemId }
+data class PoolApp(                                              // an app or an app shortcut
+    override val id: PoolItemId, val appIdentity: AppIdentity, val label: String,
+    val appShortcutId: AppShortcutId? = null,
+) : PoolItem
+data class PoolFolder(
+    override val id: PoolItemId, val label: String,
+    val entries: List<FolderEntry>,                              // value entries, not pool items: no nested references
+) : PoolItem
+data class FolderEntry(val appIdentity: AppIdentity, val label: String, val appShortcutId: AppShortcutId? = null)
+data class PoolWidget(
+    override val id: PoolItemId, val label: String, val resizeConstraints: WidgetResizeConstraints,
+    val provider: WidgetProviderIdentity?,                       // NEW: needed to clone, restore and rebind; null = unknown (legacy)
+    val hostedId: HostedWidgetId?,                               // null = unbound placeholder (restored, copied, or provider gone)
+) : PoolItem
+
+data class PlacedItemPool(val items: Map<PoolItemId, PoolItem> = emptyMap())
+
+// One reference: "this item sits here". GridPlacement is the existing cell+span type.
+data class Placement(val item: PoolItemId, val at: GridPlacement)
+
+/** A page of an arrangement: LauncherPage minus the items, plus references. */
+data class ArrangementPage(
+    val id: LauncherPageId, val type: LauncherPageType, val grid: GridDimensions,
+    val placements: List<Placement>, val generatedContentOverflowCount: Int = 0, val isPinned: Boolean = false,
+)
+
+/** Replaces PageContainer(Bound(home.grid ...)). One per home page of a workspace: the workspace's ARRANGEMENT is its list of these. */
+data class PlacedItemsPage(
+    override val id: ContainerId, val page: ArrangementPage,
+    val role: PageRole = PageRole.STANDARD,                     // never FINDER
+    val expression: ExpressionKind = ExpressionKind.ICON_GRID,  // IconGrid (home) or List (Niagara "Pinned")
+) : PageHost { override val ownedAxes: Set<GestureAxis> get() = emptySet() }
+
+data class LayoutWorkspaces(/* existing fields */ val library: LensLibrary = LensLibrary(),
+                            val pool: PlacedItemPool = PlacedItemPool())   // NEW, additive, default empty
 ```
 
-Decisions inside the model:
+The dock stays outside the pool: `DockModel` (pins, `panel`) is already "one object per layout shared by every
+workspace" (11.1), so it is a pool with no arrangement. Its panel widgets still take part in the widget uniqueness
+check (9.3).
 
-1. **A placed-items container per page, owned by its workspace.** The `LauncherPage` value moves *whole*
-   into the container, so every existing engine keeps working on a `LauncherPage`. Each workspace has its
-   own placed pages: **per-workspace arrangements** are "different workspaces have different home pages and
-   contents", exactly what a migrated Standard/Library/Cards trio already is today (one `HomeLayout` each).
-   Ownership by workspace (not a shared pool referenced by many workspaces) is chosen because it is what the
-   data already is (no migration merges anything), widgets are single-instance, and a shared pool would need
-   its own reference-counting, lifetime and conflict rules for no stored-data benefit. Alternative
-   considered, **shared pool with per-workspace arrangements** (placed items live in a device-class pool and
-   workspaces hold only positions): rejected for now because it changes the item identity model and makes
-   "delete workspace" and "duplicate workspace" reference-count problems; see N2.
-2. **The engines are reused through a thin adapter, not forked.** An adapter presents the *active
-   workspace's placed pages* to the engines as a `HomeLayout`:
-   ```kotlin
-   /** Pure. Lens between a workspace's placed pages and the HomeLayout the engines edit. */
-   object PlacedItemsAdapter {
-       fun toHomeLayout(ws: Workspace, settings: HomeLayoutSettings, dock: DockModel,
-                        selectedPageId: LauncherPageId, edit: HomeEditMode): HomeLayout
-       fun fromHomeLayout(ws: Workspace, edited: HomeLayout): Workspace   // writes pages back, keeps non-placed containers
-   }
-   ```
-   `GridPlacementEngine`, `FolderEngine`, `WidgetEngine` and `HomePageEngine` are called exactly as today on the
-   adapted layout; the result is written back with `fromHomeLayout`. This means the whole existing engine test
-   suite keeps its meaning, and the classic UI (which consumes a `HomeLayout`) keeps working unchanged (section
-   10). Non-placed containers of the workspace (a Finder, a notifications page-set, widget grids) are left
-   untouched by the adapter and are not editable through the home-edit engines (they have WS7).
-3. **Edit mode and drag.** Edit mode stays `HomeEditMode`, held in UI state as today (it is a transient mode
-   of the *shell*, not stored workspace data; `HomeLayout.editMode` remains the field the engines read, filled
-   by the adapter from shell state). Dragging an item calls `GridPlacementEngine.moveItem(...)` on the adapted
-   layout; cross-page drag across placed pages works as today. Dragging onto a non-placed page (Finder or
-   page-set) is not a drop target. Entering edit mode on a workspace with no placed page offers "Add a home
-   page" (creates a `PlacedItemsPage`). WS7 editing of non-placed containers remains the editor; the two
-   editors do not overlap (placed pages: home edit mode; everything else: WS7 editor).
-4. **Dock panel and pins.** `DockModel` (pins, `panel`, appearance) stays per device class (11.1); the dock
-   panel page remains a `LauncherPage` inside `DockModel` and keeps using `WidgetEngine.addWidgetToDockPanel`.
-   Placed items on home pages and dock pins stay consistent through the existing `HomeLayoutAppMembership`
-   helpers.
-5. **Selected page.** Today `HomeLayout.selectedPageId`; after the move, selection is shell state keyed by
-   container id (already how page-sets work, `PageSetSelection`), persisted as `LayoutWorkspaces`-level
-   "last page per workspace" (`Map<WorkspaceId, ContainerId>`, additive codec key `"lastPage"`) so Restore
-   (3.2) works across process death.
-6. **`home.grid` retires as a *model* concept.** It is replaced by `PlacedItemsPage`. The source id stays
-   reserved (never renamed) and a decoder still understands pages that reference it: such a page, found
-   in stored data, is **upgraded on decode** by looking up `GroupKeyIs(pageId)` in the layout's mirror
-   (while the mirror exists) and otherwise drawn as an empty placed page with a notice. This also **moots
-   Q12**: ownership is inside the container, so page-id collisions across modes cannot occur; the
-   real-fixture sweep (7.1) still runs as a safety net for the migration.
+**Invariants (enforced by `PoolOps`, re-established on decode by `validate`):**
 
-### 9.3 Ownership of widgets and folders
+1. Every `Placement.item` resolves in the layout's pool (no dangling references).
+2. A pool item is referenced **at most once per arrangement** (so `LauncherItemId == PoolItemId` is unique within
+   any materialised `HomeLayout`, which the engines assume; two *different* pool apps for the same application
+   are fine, exactly as today where the ordinal exists for that reason).
+3. A `PoolWidget` is referenced by **at most one placement in the whole layout** and its `hostedId` is not
+   used by any other `PoolWidget` or dock panel widget (9.3).
+4. Reference counts are **derived, never stored** (9.4). Every pool item has at least one reference after any
+   `PoolOps` call (no orphans), except inside an open Undo window.
 
-* **Folders** are `FolderItem` values inside the page (no external id): they move with the page, are
-  duplicated with fresh `LauncherItemId`s by the existing `HomePageEngine.duplicate` path, and cost nothing
-  extra.
-* **Widgets** are the sharp edge. A `HostedWidgetId` is a live `AppWidgetHost` allocation owned by *this
-  app installation*. Rules (all follow behaviour that already exists):
-  - The workspace that holds the `WidgetItem` owns the host id. Exactly one `WidgetItem` may reference an id
-    across the whole `WorkspaceSet` (a uniqueness check in `WorkspaceValidation`; a duplicate is reported and
-    the later one is dropped from drawing, never both bound).
-  - **Never cloned.** Duplicate workspace, copy-from-other-layout and preset install **do not copy widgets**
-    (precedent: `HomePageEngine.duplicatePage` already rejects pages with widgets). The user is told how many
-    widgets were left out ("2 widgets weren't copied; add them again from the widget picker").
-  - **Delete workspace/page** with widgets: the host ids are *queued* for deletion, and
-    `deleteHostedWidgetId` runs only when the Undo window closes or the next changing write commits
-    (today it is immediate on removal; the workspace-level Undo makes deferral necessary). A crash before the
-    queue drains leaks an id at worst (host ids are reclaimed by `AppWidgetHost.deleteHost` on reinstall and
-    `deleteAppWidgetId` sweeps; add a startup reconciliation that deletes host ids not referenced by any
-    stored workspace or mirror, bounded and idempotent).
-  - **Backup/restore:** see 5 (widgets in a backup, flagged as an existing gap): restored `WidgetItem`s whose
-    id is not bound on this device are shown as "re-add" placeholders in their cell (retaining position and
-    span) rather than dropped, so a restore never silently loses layout. This is no worse than today and gets
-    its own test.
-  - **Switching workspaces keeps widgets bound** (the host keeps all allocated ids; only visibility changes),
-    so there is no rebinding cost on a switch. Memory cost of N workspaces with widgets is the cost of N
-    bound widgets, which the host already pays for multi-page home screens; the shell should not inflate
-    views for off-screen workspaces (it composes only the active one).
+### 9.3 What may be shared, and the widget rule
 
-### 9.4 What the move changes in behaviour, honestly
+| Kind | In several arrangements? | Rule and reason |
+| --- | --- | --- |
+| App / app shortcut (`PoolApp`) | **Yes.** | Stateless: sharing is invisible apart from "remove everywhere". Cheap; this is the natural use of the pool. |
+| Folder (`PoolFolder`) | **Yes, by explicit action.** | One folder, edits (rename, add, remove entry) show everywhere it is placed; edit mode shows "Shared with N workspaces". "Make independent" clones it. Never shared implicitly (copy operations clone, 9.5). |
+| Widget (`PoolWidget`) | **No: one placement in the layout.** | An `AppWidgetHost` id is a single live instance with its own state and configuration; two placements would share state and double-bind. Moving a widget between workspaces **moves** its single placement (host id kept). |
+| Widget "in two workspaces" | **Clone with explicit consent.** | Action "Add a separate copy here" explains: "A widget can't be in two places. This adds a new copy that you configure separately." It allocates a new host id (via the gateway) for the same `provider` and starts the normal bind/configure flow. A provider-less legacy widget cannot be cloned (action hidden, with the reason). |
 
-* Deleting a workspace now deletes its placed items (previously "never"): confirmation + Undo (2.2).
-* "Duplicate workspace" and "Copy from other layout" copy apps, folders and shortcuts but not widgets.
-* Two workspaces on one layout are independent home screens; placing an app in both is allowed (as today
-  across modes).
-* `HomeLayoutSettings` (grid dimensions, labels) is per layout today; it stays a per-device-class default
-  used when creating pages, and each placed page carries its own `GridDimensions` (already true).
+`validate` enforces rule 3 by keeping the first placement (by workspace order) and dropping later ones with a notice:
+never two bound views of one host id.
 
-### 9.5 iOS-style behaviours and the Finder (Q14: "pages appear as you fill them", new-app placement)
+### 9.4 References, GC, deletion and Undo
 
-* **Pages appear as you fill them.** New behaviour in the home-edit flow, expressed as a pure rule in a
-  `PlacedItemsAutoPaging` helper over the adapted layout: when an item is dropped or placed and *every*
-  placed page of the workspace is full (no free cell for the item's span, by `GridPlacementEngine`), a new
-  empty `PlacedItemsPage` is appended and the item goes there; an empty trailing page is removed when
-  leaving edit mode if it has no items and there is at least one other page (never the last page). It is a
-  **per-workspace flag** `autoPages: Boolean` (default true for iOS-style, false for Nova-style, matching
-  those launchers). Additive codec key.
-* **"New apps go to Home or Library only" (a setting).** On install of an app, `NewAppPlacement` decides:
-  `FINDER_ONLY` (default: nothing placed, the app appears in the Finder/All apps only, which is today's
-  behaviour) or `HOME_AND_FINDER` (also placed in the first free cell of the first placed page, creating a
-  page if `autoPages`). Setting in Settings > Home & layout > Layout > "New apps", **global**, with a
-  per-workspace override later if asked. Because no auto-placement exists today, `FINDER_ONLY` as the default
-  is a zero-change default (Settings/default behaviour considered). It needs an app-install signal; the
-  existing package-change handling that feeds the installed-app repository is the hook; the placement itself
-  is a pure function (`PlacedItemsEditor.placeNewApp`).
-* **Finder = All apps as Categories at the end (iOS).** Unchanged from 8.3: the Finder is a `FINDER`-role page
-  (Categories for iOS-style, AlphaList for Nova-style) that is not in the pager; the Finder never owns placed
-  items, so "Library" cannot hold home icons. A placed icon is just a launcher for an app that is *also* in
-  the Finder: the relation is the shared app identity, not a link (removing an icon from Home never uninstalls
-  or hides the app, as today).
+* **Reference counts are derived**: `PoolIndex = PoolOps.references(layout)` scans every arrangement page once
+  (a launcher holds a few hundred placements) and returns `Map<PoolItemId, List<ReferenceSite>>`. Nothing is
+  stored, so counters cannot drift, which is the usual reference-counting bug. The index is rebuilt after each
+  mutation and cached in memory.
+* **GC rule.** `PoolOps` finishes every mutation with `collect(layout)`, which removes pool items with zero
+  references. Folder entries go with their folder. A collected `PoolWidget` with a `hostedId` adds that id to
+  `PoolEdit.releasedHostIds`.
+* **Deletion semantics.**
+  - *Remove from this workspace* (the normal remove, today's remove icon): drops the placement. If other
+    arrangements still reference the item it stays; if it was the last reference it is collected.
+  - *Remove everywhere* (offered only when references > 1, with the count in the confirmation): drops every
+    placement across arrangements.
+  - *Delete workspace*: drops its arrangement; the confirmation says "N items exist only here and will be removed,
+    M are shared and stay; 2 widgets will be removed".
+  - There is no user-visible "unplaced items" tray: an app is always reachable from the Finder, so a zero-reference
+    pool item has no value to keep.
+* **Undo.** `PoolOps` functions return `PoolEdit(layout: LayoutWorkspaces, releasedHostIds: Set<HostedWidgetId>,
+  summary)`. Because pool and arrangements are one immutable value, Undo restores the previous `LayoutWorkspaces`
+  exactly. The app layer holds `releasedHostIds` in a deferred queue and calls `deleteHostedWidgetId` only after
+  the Undo window closes or the next changing write commits (today the delete is immediate, which workspace-level
+  Undo forbids). Startup reconciliation deletes host ids that are referenced by neither the stored blob nor
+  `workspaces_prev`, bounded and idempotent, which also covers a crash inside the window.
 
-### 9.6 Migration from `HomeLayoutSet` (idempotent, lossless, golden-tested)
+### 9.5 Copy semantics
 
-Pure function in `core/domain`, extending `HomeLayoutWorkspaceMapper`: `Home` pages become
-`PlacedItemsPage(page = layoutPage)`, a `LauncherPage` copied **by value** (items, placements, spans, grid,
-`isPinned`, `generatedContentOverflowCount`, host ids). Other page types map as in the existing table (the
-generated pages become lens pages as today; `AllApps` becomes the Finder when it is the only one, 8.1).
+Rule of thumb: **copies clone, sharing is always an explicit choice.** That keeps "duplicate to try a variation"
+from silently editing the original.
 
-* **Idempotent:** deterministic ids (`page:<pageId>` as today, `ws:<deviceclass>:<mode>`); `ensureMigrated`
-  never overwrites a workspace that exists; running it twice is identical (byte-equal golden).
-* **Lossless:** the round-trip property `toHomeLayoutSet(migrate(x)) == x` for the placed data (pages, items,
-  placements, selected page, pinned flags, dock panel), with the per-mode layouts, `preferredModes` and
-  `modePairs` kept in the mirror (the mirror is exactly the unmigrated remainder). Verified by golden
-  fixtures plus a property test over generated layouts using `GridPlacementEngine` itself to build them.
-* **Order of operations on first run (R1):** migrate, write workspace form, **do not draw it**; every
-  `HomeLayoutSet` save after that re-derives the placed pages and compares (shadow, S12). The compare is on
-  canonical encodings; a mismatch increments a counter and records the *kind* (page count, item count, a
-  placement), never item text or labels.
-* **Hidden-mode layouts and the Library-only shipped build:** the shipped build stores layouts per mode but
-  resolves everything to Library; the migration creates workspaces for every stored mode (as today), so a
-  user's Standard-mode home stays recoverable as the "Standard" workspace even though it is not currently
-  shown. Which one is active is `shownMode` (existing), unchanged.
-* **Failure:** a layout that fails to decode keeps the classic path for that device class (bootstrap
-  `Classic(reason)`), never an empty home.
+| Operation | Apps/shortcuts | Folders | Widgets |
+| --- | --- | --- | --- |
+| **Duplicate workspace** (`LayoutWorkspaces.duplicate`) | Cloned (new `PoolApp`s). | Cloned (independent). | **Placeholders**: same cell, span and provider, `hostedId = null`; a banner "2 widgets need setting up" offers the add flow per widget. |
+| Duplicate workspace, option "Keep items shared" | Shared references. | Shared references. | Placeholders (never shared). |
+| **Duplicate page** (`HomePageEngine.duplicatePage`, in one arrangement) | Cloned (the engine already gives fresh ids). | Cloned. | Still rejected (existing behaviour). |
+| **Copy from other layout** | Cloned into the **target pool** with fresh ids. | Cloned. | Placeholders. |
+| **Preset install** | Preset arrangements start with empty placed pages; nothing is moved or deleted in other workspaces. | n/a | n/a |
 
-### 9.7 The loss of cheap revert, and the staged approach
+*Copy from other layout* replaces the target layout's workspaces, library **and pool** (the pool is part of the layout,
+like the library); the replaced widgets' host ids go to `releasedHostIds` (deferred, Undo exact). References never cross
+layouts, so the copy applies an old-id to new-id map like the lens copy (4.3): items that two *copied* workspaces shared
+stay shared in the target (via the map), sharing with anything outside the copied set is not possible. Exclusion rules
+are separate and are **not** replaced (14.6).
 
-Today revert is one line because `HomeLayoutSet` is untouched. After the cut-over the workspace blob is the
-only copy unless we keep one. Design:
+### 9.6 Uninstall, restore and backup
 
-1. **Shadow (R1, S12).** Workspace form written and compared; nothing reads it. Zero risk to users; produces
-   the evidence.
-2. **Dual-write after cut-over (R4, S17).** Placed pages are authoritative in the workspace blob. Every
-   change **also derives and writes `HomeLayoutSet`** (the mirror: `toHomeLayoutSet(workspaceSet)`), through
-   the existing `WriteBehindHomeLayoutRepository` so the mirror costs one extra write per debounce, not per
-   gesture. The mirror is what an older build, the `LEGACY` owner and the legacy backup key read.
-3. **Read-through safety.** At startup, if the workspace blob is missing or fails to decode but the mirror
-   exists, the bootstrap rebuilds workspaces from the mirror (this is exactly today's `ensureMigrated`), so
-   the first fallback is automatic.
-4. **`PlacedItemsOwner` (`WORKSPACE` | `LEGACY`).** One persisted switch (and a build constant) selecting
-   which store the *shell* edits. `LEGACY` is the rollback: the home draws from `HomeLayoutSet` and writes
-   it, and the workspace form is re-derived from it (shadow again). The rollback drill (7.1 item 12) flips
-   it both ways with edits in between and asserts equality.
-5. **One-release rollback window.** The mirror is kept for the whole of R4 and removed only in R5 (S20),
-   after a release with zero mismatches. A downgrade to a pre-R4 build during R4 therefore opens with every
-   placed item intact.
-6. **After R5.** The blob is the only copy; safety nets are the `workspaces_prev` generation (1.5) and
-   backup, plus the legacy `"homeLayouts"` backup key, which **stays written** from a derived view for as long
-   as the classic path is supported (section 10), so a backup is always restorable on a classic-only build.
+* **Uninstall.** On a confirmed *package removed* event (not "absent from a snapshot", and not a work-profile pause,
+  because the installed-app snapshot starts empty and profiles disappear temporarily, the same caution
+  `HomeScreenLibraryCompaction.kt` documents), run `PoolOps.pruneUninstalled(layout, identity)`: drop every placement
+  of every `PoolApp` with that identity and every folder entry, remove folders left empty, collect. Until the event,
+  unresolvable apps are hidden at render time, as today. Dock pins are not in the pool and are handled by the same
+  event in the dock path (verify; not found today).
+* **Restore.** Pool and arrangements arrive together. All widgets are unbound placeholders unless
+  `isHostedWidgetBoundTo(id, provider)` confirms the id on this device (5). A placeholder keeps its cell and span and
+  offers "Set up widget"; a widget whose provider is not installed offers "Remove".
+* **Legacy widgets without a provider.** The migration cannot fill `provider` (pure code). A one-time app-layer
+  backfill reads `AppWidgetManager` info for each bound host id and writes `provider`; ids it cannot resolve stay
+  `provider = null` (not cloneable, not rebindable after a restore: shown as "Widget unavailable, remove").
 
-**What is risky.** (a) Migration bugs losing a placed item or a widget binding: mitigated by lossless
-golden/property tests and the shadow compare, but only real layouts find the odd cases, hence the beta
-shadow window. (b) Write amplification and ordering between two stores (blob and mirror): both go through
-write-behind; the mirror is derived deterministically from the blob so it can always be regenerated, and a
-crash between the two is repaired at next start by re-deriving (blob wins while the owner is `WORKSPACE`).
-(c) Widget host-id lifetime with Undo and workspace deletion (9.3). (d) Cold-start cost: the blob now holds
-all placed items (bounded by the home grid sizes; benchmark in R1 against today's layout read). (e)
-Any in-flight work that edits `HomeLayout` directly (home grid UI) must go through the adapter or it will
-desync the mirror: enforce by making the workspace store the only writer once `WORKSPACE` is on and the
-legacy repository write-only.
+### 9.7 Reusing the existing engines through an adapter; the effect on `home.grid`
 
-**Recommendation on sequencing** is option C in 1.7 (shadow in R1, cut over together with the default flip in
-R4, mirror kept for one release), with option A as the fallback. It respects "now" by starting the data move
-immediately while keeping the first release in which anything is read from the new store behind evidence.
+```kotlin
+/** Pure. Presents ONE arrangement to the engines as the HomeLayout they already edit, and writes the result back. */
+object PlacedItemsAdapter {
+    fun toHomeLayout(layout: LayoutWorkspaces, workspace: WorkspaceId, settings: HomeLayoutSettings,
+                     dock: DockModel, selectedPageId: LauncherPageId, edit: HomeEditMode): HomeLayout
+    /** Diff-based: placement moves become placement edits; changed folder content/widget constraints edit the pool item;
+     *  new ids become new pool items; vanished ids drop a reference; then collect(). */
+    fun fromHomeLayout(before: LayoutWorkspaces, workspace: WorkspaceId, edited: HomeLayout): PoolEdit
+}
+```
+
+* `toHomeLayout` joins each `Placement` with its `PoolItem` into the `AppShortcutItem` / `FolderItem` / `WidgetItem`
+  the engines expect (`LauncherItemId = PoolItemId.value`; an unbound widget gets `HostedWidgetId(0)`, Android's
+  `INVALID_APPWIDGET_ID`, which the host draws as the placeholder). The engines (`GridPlacementEngine`,
+  `FolderEngine`, `WidgetEngine`, `HomeShortcutEngine`, `HomePageEngine`) are called **unchanged**, so their existing
+  tests keep their meaning.
+* **Id collision (new, found by reading `HomeShortcutEngine`).** Engines mint ids from an ordinal counted in the
+  adapted layout, which contains only *one* arrangement, so a new id can equal an id already used by an item in
+  another arrangement. `fromHomeLayout` therefore treats every id absent from the adapted input as new and assigns a
+  fresh pool-unique `PoolItemId`; it never trusts an engine id as pool-global.
+* **Edits to shared folders** change the one pool item (visible everywhere) by design; dragging an app *out of* a shared
+  folder creates a new `PoolApp` in the arrangement and removes the entry from the shared folder.
+* Edit mode (`HomeEditMode`) and drag stay shell state as today; dropping on a non-placed page (Finder, page-set) is not a
+  target. WS7 edits non-placed containers; the home-edit engines edit placed pages; they do not overlap.
+* **`home.grid`** retires as a *model* concept: `PlacedItemsPage` replaces `PageContainer(Bound(home.grid ...))`. The source
+  id stays reserved (never renamed); a stored page that still references it is upgraded on decode from `HomeLayoutSet`
+  while that exists, else drawn as an empty placed page with a notice. **Q12** (page-id uniqueness across modes) is
+  mooted: page ids only need to be unique inside one workspace, and pool item ids are unique per layout by construction.
+* **Selected page** is shell state keyed by container id, persisted as `LayoutWorkspaces`-level "last page per
+  workspace" (`Map<WorkspaceId, ContainerId>`, key `"lastPage"`) so Restore (3.2) survives process death.
+
+### 9.8 iOS-style behaviours and new apps (N9)
+
+* **Pages appear as you fill them.** `PlacedItemsAutoPaging` (pure, over the adapted layout): when an item is placed and
+  every placed page of the workspace is full, append a new empty page; remove an empty trailing page on leaving edit mode
+  (never the last page). Per-workspace flag `autoPages: Boolean` (default true for iOS-style, false for Nova-style).
+  It is arrangement-only; the pool is untouched.
+* **New apps (N9).** `NewAppPlacement { FINDER_ONLY, HOME_AND_FINDER }` is a **setting stored per workspace**
+  (`Workspace.newAppPlacement`), **defaulted by the preset** (Nova-style `FINDER_ONLY`, iOS-style `HOME_AND_FINDER`,
+  migrated workspaces `FINDER_ONLY`, which is today's behaviour), edited in Settings > Home & layout > Layout > "New
+  apps" for the active workspace. On an install event (the existing package-change hook feeding the installed-app
+  repository) create **one `PoolApp`** and reference it from the first free cell of every workspace of the current
+  layout whose setting is `HOME_AND_FINDER` (creating a page when `autoPages`); this is the pool doing what it is for.
+  The placement is a pure function (`PlacedItemsEditor.placeNewApp`). Removing the icon from one workspace leaves the
+  others (9.4).
+* **Finder = All apps as Categories at the end (iOS).** Unchanged (8.3): the Finder is a `FINDER`-role page outside the
+  pager and never owns placed items. A placed icon and the Finder entry are related only through the app identity.
+
+### 9.9 Migration from `HomeLayoutSet`, and what to do with the owner's data
+
+Pure function in `core/domain`, extending `HomeLayoutWorkspaceMapper`: for each device class, the pool is the union of
+the items of all its stored mode layouts; each `HomeLayout` becomes the arrangement of its migrated workspace
+(`ws:<deviceclass>:<mode>`); `Home` pages become `PlacedItemsPage`; other page types map as before (generated pages
+become lens pages, an `AllApps` page becomes the Finder when it is the only one, 8.1).
+
+* **Deterministic and idempotent:** `PoolItemId = "pi:<deviceclass>:<mode>:<LauncherItemId>"`, so running it twice gives the
+  same value and `ensureMigrated` never overwrites an existing workspace. **No de-duplication across modes**: two modes
+  holding "the same" app create two pool entries with one reference each (this is what they were; no sharing is created
+  that the user never asked for).
+* **Lossless where it matters:** one round-trip unit test, `toHomeLayoutSet(migrate(x)) == x` for placed data (pages,
+  items, placements, selected page, pinned flags, dock panel) over fixtures with every item kind, plus a property test over
+  layouts built with `GridPlacementEngine`. When sharing exists the reverse mapping materialises a shared item into each
+  layout; the round trip then equals the original *up to flattening sharing*, which is why the reverse mapping is only
+  used for the one-time migration check and for importing old backups, never as a live mirror.
+* **The owner's data (solo alpha, 1.7):** export a backup, run the migration, check by eye. A destructive reset and
+  re-placing icons by hand is an acceptable outcome if the migration misbehaves; no shadow period is run.
+* **Library-only shipped build:** the build resolves every layout to Library but stores layouts per mode; migration
+  creates workspaces for every stored mode, so the Standard-mode home stays recoverable. Which is active is `shownMode`.
+* **Failure:** a layout that fails to decode is rebuilt from the built-in default for that device class.
+* **Before S4** the home page is the existing surface reading `HomeLayoutSet` (9.7/S1), so nothing needs migrating for the
+  S1/S2 dogfood build.
+
+### 9.10 New risks the shared pool introduces
+
+| Risk | Mitigation | Test |
+| --- | --- | --- |
+| **Dangling reference** (a placement whose item is missing: bad edit, partial restore, bug) | Placement is dropped at decode with a notice; the cell renders empty, never a crash; all mutations go through `PoolOps` | `validate` self-heals every case; property test: after random `PoolOps` sequences invariants 1-4 hold |
+| **Orphan / leak** (zero-reference item, or a widget host id never released) | `collect` after every mutation; startup reconciliation of host ids against blob and `workspaces_prev` | GC on last-reference removal; reconciliation is idempotent |
+| **Widget ownership** (two bound views of one host id, wrong id deleted on remove) | Invariant 3 in `validate`; moves keep the single placement; clone allocates a new id; deletion only via `releasedHostIds` after Undo | multiply-placed widget keeps first; clone creates distinct id; remove-everywhere releases exactly the referenced ids |
+| **Reference-counting bugs** (premature collect, stale count) | Counts are derived from the arrangements, never stored | removing one of two references keeps the item; removing the last collects it |
+| **Surprise sharing** (editing a folder "in one place" changes another workspace) | Sharing only by explicit action; copies clone; "Shared with N" label; "Make independent" | duplicate workspace yields independent folders; shared-folder edit visible in both |
+| **Adapter desync / id collision** between engine ids and pool ids | Remap every new id; differential test against the legacy engines | engine-assigned id equal to another arrangement's id is remapped |
+| **Undo vs host ids** | Deferred deletion queue; Undo restores the immutable value | delete workspace with widget then Undo: widget still bound |
 
 ---
 
-## 10. The classic path is permanent (Q2)
+## 10. Classic (N7)
 
-**As built:** classic is simply how the launcher works today (home from `HomeLayoutSet`, drawer, dock);
-workspaces are not wired to the shell yet (`WorkspaceMenuFeature.enabled = false`).
+> Superseded: the first revision defined Classic as standard-launcher parity only, a frozen UI over the same data,
+> supported permanently (Q2). The owner then decided Classic gets **every feature, including the editor and the menu**
+> (N7), and later described the project as a solo alpha. Both are handled below: the default plan is the cheap one, and
+> full parity is an explicit option with its cost.
 
-**Decision:** "Use workspaces / Classic" stays in Settings > Workspaces > Advanced permanently.
+**As built:** "classic" is simply how the launcher works today (home from `HomeLayoutSet`, drawer, dock);
+workspaces are not wired to the shell (`WorkspaceMenuFeature.enabled = false`).
 
-### 10.1 What "classic" means once placed items move
+### 10.1 The tension, stated plainly
 
-Classic must **not** be a second copy of the user's data (that would diverge, double the backup and migration
-surface, and make "turn it off and on" lossy). Define it as a **rendering mode over the same stored data**:
+If Classic has every feature it shares **all the data and all the engines** with the workspace path: bootstrap, the
+pool, exclusions, the lens library, dock overrides, the editor. A bug in any of those is a bug in Classic too. So
+full-parity Classic is **no longer a lower-risk fallback from workspace bugs**. What it can still protect against is
+only a bug in the *navigation chrome* (workspace menu surface, pager, dock-pull handling). A decode or bootstrap
+failure already falls back to the built-in default workspace in either style (1.5), so Classic adds nothing there.
+This is not an argument against the decision; it is what the escape hatch can honestly promise.
 
-* The data is the workspace blob (placed pages, dock, settings, exclusions, library). `ClassicProjection`
-  is a pure function that selects the layout's **classic workspace** (the default workspace, usually
-  "Standard") and presents its placed pages through `PlacedItemsAdapter.toHomeLayout` as the `HomeLayout` the
-  existing classic UI consumes, with the drawer drawn by the existing app drawer surface instead of the
-  Finder page, and the dock drawn as the device-class `DockModel` with no workspace override applied.
-* Classic edits (place an icon, make a folder, add a widget, change the dock pins) go through the same
-  engines and are written back through `PlacedItemsAdapter.fromHomeLayout`, i.e. into the workspace blob,
-  so **an icon placed in Classic is on the home screen when the user turns workspaces back on**, and vice
-  versa. Only one workspace is visible in Classic; the others are untouched and still there.
-* Classic ignores everything that is not classic: other pages (Finder, page-sets, widget grids, lens
-  pages), dock overrides, per-lens queries, the workspace menu. It does honour exclusion rules (they are
-  data preferences, not arrangements) and the return behaviour setting.
-* Before S17 (placed items still owned by `HomeLayoutSet`) classic is literally today's path. After S17 the
-  `LEGACY` owner (9.7) plus the mirror give the same behaviour for a rollback, and `ClassicProjection`
-  replaces it as the steady state; S20 removes the mirror, not the classic rendering.
+### 10.2 Default plan (recommended): a developer toggle, then dropped
 
-### 10.2 What it costs
+* S1 adds **Settings > Developer > "Use workspaces"** (debug builds, 1.4). Off draws the existing home from
+  `HomeLayoutSet` (which exists until S4); after S4 it draws the layout's default workspace's placed pages as a plain home
+  with the drawer and no menu. Purpose: "is this a workspace bug or a launcher bug?" while building. It is not a user
+  feature, has no migration or backup surface, and is not part of the test matrix.
+* S9 deletes the toggle. **Standard launcher parity** (home, drawer/search, dock, folders, widgets, wallpaper, grid
+  editing, settings, backup, profiles, hidden apps, notification indicators, `standard-launcher-mode.md`) becomes a
+  requirement on the **default Nova-style workspace**, tested once, instead of on a second mode.
+* What this protects: nothing for end users (there are none); for the owner it protects the ability to bisect.
+  What it does not: data bugs. Revert is git and a backup export (1.7).
 
-* **Two rendering paths** over one data path: the classic home surface (`StandardHome`, the existing
-  `ImmediateHomePager`, app drawer, dock host) stays compiled and maintained alongside the workspace shell.
-* **A test matrix dimension**: every standard-launcher behaviour must hold in both. The existing standard-mode
-  checklist (`standard-launcher-mode.md`) already is that matrix; it simply runs twice.
-* **Feature gating.** New workspace features must degrade in classic by being absent, never by erroring
-  (a lens-only page does not exist in classic).
-* **Support surface:** bug reports need "which mode" (the diagnostics outcome code includes
-  `Classic(userChoice)`).
+### 10.3 Option: full-parity Classic, if the owner confirms
 
-### 10.3 How to bound it
+**What it would be.** Not a second copy of the data and not a different launcher, but an alternative **navigation
+style** over the same workspace data, stored as one per-install value (`NavigationStyle`), never in the workspace blob:
 
-1. **One data path.** Classic has no storage of its own after S17 (the whole point of 10.1). The only
-   classic-only persisted thing is the `WorkspaceRolloutMode` flag.
-2. **A contract, not a promise.** Classic supports exactly the **standard-launcher parity list** in
-   `AGENTS.md` and `standard-launcher-mode.md`: home screens, drawer/search, dock, folders, widgets,
-   wallpaper, grid editing, settings, backup/restore, profiles, hidden apps, notification indicators. New
-   features are not required to exist in classic.
-3. **Bounded test matrix.** Domain tests are shared (the engines are the same). UI tests: the full
-   standard-mode instrumented suite runs in both modes (`deviceVerify`), everything else (editor, presets,
-   page-sets, dock overrides, queries) runs workspaces-only. Screenshot tests for classic are limited to the
-   existing set and are not extended.
-4. **Frozen classic UI.** Classic surfaces take bug fixes, platform changes and accessibility fixes only; no
-   feature work. A CI check lists the classic entry points so a PR touching them states why.
-5. **Shared engines.** Because both renderings call the same engines through `PlacedItemsAdapter`, a fix to
-   collision or folder logic benefits both and cannot fork.
-6. **Review point.** The decision is permanent, but the *cost* is measured: counters of `Classic(userChoice)`
-   in dogfood/beta diagnostics and the classic-only defect count are reviewed at R5; if classic usage is tiny
-   and defects cluster there, the owner can decide to narrow the contract (never to delete data).
+| | Workspace navigation | Home-and-drawer navigation |
+| --- | --- | --- |
+| Data | the same workspaces, pool, library, exclusions, dock overrides, queries | identical |
+| Dock pull / dock menu | opens the workspace menu (11.5) | opens the same menu from an explicit dock button and the bound gesture; the pull keeps its standard-launcher meaning |
+| Pages | pager across the workspace's pages; Finder via menu entry or gesture | placed pages in the pager; **Finder as the full-screen drawer** (swipe up); lens pages and page-sets appear as extra pager pages in workspace order |
+| Editor, presets, saved lenses | via the menu and Settings | **the same**, reachable from the menu and Settings (N7: every feature) |
+| Hidden dock | validated (11.4) | same validation |
+
+**What the setting switches:** navigation chrome only: where the Finder lives, whether the dock pull is the menu, how
+non-placed pages are reached. It never changes, copies or hides data.
+
+**What it still protects against:** a defect specific to one chrome (menu surface, pager, pull handling). **Not**
+against: bootstrap, decode, pool, exclusion, library, editor or source bugs (shared).
+
+**What it costs (the honest list):**
+* two navigation shells compiled and maintained; every UI slice (S2, S6 contextual actions, S7 dock overrides and start
+  page, S9 gestures) needs an entry point and a design for both;
+* a test matrix: engine and domain tests run once (shared); the standard-mode instrumented suite, the new-page
+  screenshot tests and the manual checklist run **in both styles**;
+* accessibility work twice (TalkBack actions for "Workspace menu" and "All apps" in each style);
+* every new feature must state its behaviour in each style (a lens page in the drawer style is "an extra pager page");
+* the risk of drift between styles, which is the main long-term cost for one developer.
+
+**Effect on the plan if chosen:** adds slice S-C after S9; "works on my device" gains "...in both styles"; the revert
+story is unchanged (git and backup) with one more cheap lever (switch style) for chrome bugs only; risk register
+adds the two-styles maintenance risk (16).
+
+### 10.4 Recommendation on the name
+
+**Do not call it "Classic."** With full parity it is no longer the old launcher, and "Classic" promises a safe
+fallback that it cannot give (10.1). If the option is ever built, name the setting by what it changes: **Settings >
+Navigation style: "Home and drawer" / "Workspace menu"**. If the owner accepts the default plan, nothing user-visible
+is named at all. Recommendation: **default plan now, revisit the option only if the workspace navigation proves
+unpleasant to live with.**
 
 ---
 
@@ -1506,7 +1356,7 @@ fun DockModel.applying(p: DockPresentation?): DockModel =
 
 The dynamic section already is per workspace (`dynamicSection`); Q5 (notification cards per workspace)
 stays as designed: the Dock row edits the active workspace's dynamic section. `DockModel.showNotificationCards`
-remains for classic (10.1) and as the migration input.
+remains as the migration input and for a bare home without workspaces (10.2).
 
 Codec: optional key `"presentation": {"hidden"?, "edge"?, "iconSize"?}` inside the workspace's dock, additive
 (a v1 decoder ignores it and draws the shared dock). Workspace schema version stays 1.
@@ -1520,7 +1370,7 @@ workspace. The two behaviour changes are preset-side: Niagara sets `hidden = tru
 ### 11.4 Layering, accessibility, and the dock-pull menu trigger
 
 * **Resolution order** (pure, `EffectiveDock`): device-class `DockModel` -> workspace `presentation` ->
-  (classic ignores the override). `HomeDockHost` and `reservedExtent`/`dockInteractionRegionExtentDp` read
+  (the developer toggle's plain home ignores the override). `HomeDockHost` and `reservedExtent`/`dockInteractionRegionExtentDp` read
   the effective dock, so reserved space follows the override (a hidden dock reserves nothing, a left-edge
   dock reserves width), and `resolveDockPosition` takes the effective `position`.
 * **Switching workspace changes the dock.** Transitions are the existing dock re-orientation animation;
@@ -1545,30 +1395,29 @@ workspace. The two behaviour changes are preset-side: Niagara sets `hidden = tru
 
 ### 11.5 Dock pull opens the workspace menu (Q9) and the `gestures.md` change
 
-Once the mode pair retires (S18) the dock pull has no Home/Library to switch. Decision: the same pull (a drag
+Once the mode pair retires (S9) the dock pull has no Home/Library to switch. Decision: the same pull (a drag
 away from the dock edge, same claim rules, thresholds and `DockPullTransitionController` direction logic)
 **opens the workspace menu**; the explicit dock affordance WS6 proposes stays as the discoverable control and
 the accessibility action and Ctrl+arrow equivalent are the ones that already exist. `gestures.md` changes:
 "Mode transitions" becomes "Workspace menu"; the dock-pull row and "Dock body" rows say "opens the workspace
 menu"; "No dock, no pull" gains "(the menu stays reachable through the surface action and the bound gesture,
 11.4)"; the plan-revision banner gets a 2026-10-01 note. `dock.md` loses the Home/Library re-orientation text
-and gains the override layering. Until S18 the pull stays the mode switch and nothing in those docs
-changes. These doc edits are part of S18, not of this PR (this PR changes only this document and the
-external-sources note). Interaction with a dock override: the pull needs a visible dock, so with `hidden` the
+and gains the override layering. Until S9 the pull stays the mode switch and nothing in those docs
+changes. These doc edits are part of S9, not of the design PRs. Interaction with a dock override: the pull needs a visible dock, so with `hidden` the
 bound gesture is the trigger; with a moved edge the pull direction follows the effective edge.
 
 ### 11.6 Effect on presets
 
 Niagara: `presentation = DockPresentation(hidden = true)` plus a swipe-up binding to `OPEN_WORKSPACE_MENU`.
 Unfolded TimeScape: `presentation = DockPresentation(edge = DockPosition.LEFT)`. Compact TimeScape, Nova,
-iOS, Kvaesitso: `null`. `workspaces-presets.md` gaps 2 and 9 close; the presets doc is updated by S10.
+iOS, Kvaesitso: `null`. `workspaces-presets.md` gaps 2 and 9 close; the presets doc is updated by S7.
 
 ### 11.7 Tests
 
 Resolver (`applying`) table; `hidden` + stranding validation (hidden without a bound gesture is invalid; the
 a11y/keyboard paths do not count as the *gesture*, they are always there but the editor still requires one so
 touch users are not stranded); codec round trip and v1-decoder ignore; reserved extent follows the effective
-dock; Niagara/TimeScape preset goldens; classic ignores overrides; switching workspaces changes the effective
+dock; Niagara/TimeScape presets resolve to the expected effective dock; switching workspaces changes the effective
 dock but never `DockModel.items`.
 
 ---
@@ -1581,7 +1430,7 @@ usage data is `RecentAppUsage(package, lastUsedAtMillis)` only. `LensSort(pinned
 `launcher.pinned`, which no adapter sets. `HomeLayoutWorkspaceMapper` maps them to the reserved ids
 `apps.favourite`/`apps.frequent`, which have no adapter.
 
-**Decision:** lenses over the existing built-in app sources; **no new adapters**, so no flip blocker.
+**Decision:** lenses over the existing built-in app sources; **no new adapters**, so nothing blocks making workspaces the default.
 
 | Page | Definition | Lens | Expression |
 | --- | --- | --- | --- |
@@ -1592,13 +1441,13 @@ Honest limits: (1) "pinned" needs `launcher.pinned` set. That is an additive cha
 apps adapters (an ext flag, not an adapter): `apps.all` items for apps present in the dock or on placed
 pages get `Flag(true)`, computed from `DockModel`/placed pages through the existing
 `HomeLayoutAppMembership` helpers. (2) "Frequent" is a **recency** proxy because there is no launch counter;
-true frequency needs a counter (new stored data and a Play-declaration line), see N3. (3) The "usage stats
+true frequency needs a counter (new stored data; N3: counter later, only on demand). (3) The "usage stats
 unavailable" case stays: `apps.recent` reports `PermissionRequired`/empty exactly as the Recents page does,
 and the page says so (no new prompt).
 
 **Migration mapping:** a migrated `Generated(FAVOURITES)` page becomes the Favourites lens above, a
-`Generated(FREQUENTLY_USED)` page the Frequent lens; the golden tests change accordingly (they currently
-expect `apps.favourite`/`apps.frequent`). Because those pages produced no items before, no user sees a
+`Generated(FREQUENTLY_USED)` page the Frequent lens; the migration test changes accordingly (it currently
+expects `apps.favourite`/`apps.frequent`). Because those pages produced no items before, no user sees a
 regression, and they start working. Presets still do not use them (Niagara's pinned list is its placed
 page). Flip criterion 5a no longer mentions them. Old stored workspaces that already reference
 `apps.favourite`/`apps.frequent` (none exist outside tests) read `UNAVAILABLE`, as today.
@@ -1704,28 +1553,15 @@ data class Lens(
 Exclusion rules (14) apply to a parameterised source's results exactly like any other (they are the first step
 after the source emits). A search source set `OFF` yields nothing for every slot, and no upstream exists.
 
-### 13.6 Compatibility
+### 13.6 Compatibility and slice (S10)
 
-A stored lens with no `parameters` key decodes with `emptyMap()`: today's meaning. A v1 decoder ignores the
-key and draws the lens using the shared query (acceptable degradation: a slot-bound lens follows the default
-query). `SearchQueryHolder` stays as the `Default` slot's backing store, so #1365's adapter and tests keep
-passing.
-
-### 13.7 Proposed small implementation slice (S8)
-
-1. `ParameterSlot`, `ParameterBinding`, `ParameterKind`, `ParameterValue`, `ParameterizedItemSource`,
-   `Lens.parameters` (default empty), codec key `"params"` (additive), `ParameterStore` interface with an
-   in-memory implementation whose `Default` slot delegates to `SearchQueryHolder`. Pure, JVM tests only.
-2. `SharedSourceRegistry` keyed on `(source, parameter key)` for sources implementing
-   `ParameterizedItemSource`; unchanged for all others (a test pins that existing sources are untouched).
-3. The search adapter implements `ParameterizedItemSource` (its current `subscribe(observer)` becomes the
-   `Default`-bound call), still no network.
-4. `SearchBoxContainer` and its host (a text field that writes the store, debounced, with an a11y label and a
-   clear action); editor option "Search box" and "Bind to slot" in the lens step.
-5. Tests: two lenses with two slots receive different results from one fake source; same slot shares one
-   upstream; unbound lens uses the default holder; sentinel-text leak tests (13.4); cap of live upstreams;
-   codec round trip and v1-ignore.
-No Settings page, no stored query, no new permission; Play declaration line: N/A (text stays in memory).
+A stored lens with no `parameters` key decodes with `emptyMap()`: today's meaning; `SearchQueryHolder` stays as the `Default`
+slot's backing store, so #1365's adapter and tests keep passing. Slice S10 (slips freely): the types above, codec key
+`"params"`, `ParameterStore` (in-memory, `Default` delegating to `SearchQueryHolder`), `SharedSourceRegistry` keyed on
+`(source, parameter key)` for `ParameterizedItemSource` only, the search adapter implementing it, `SearchBoxContainer` and
+its host (a11y label, clear action), editor options "Search box" and "Bind to slot". Tests: two slots receive different
+results from one fake source; same slot shares one upstream; unbound lens uses the default holder; sentinel-text leak
+tests (13.4); the live-upstream cap; codec round trip. No Settings page, no stored query, no new permission.
 
 ---
 
@@ -1816,7 +1652,7 @@ re-emit the shared stream for everyone and the Settings "hides N items" count co
 the shared upstream stays raw (still one subscription per source), a rule edit just re-runs evaluation for
 observers of that source, and counts are computed from the same raw items. It also keeps the step **pure and
 unit-tested in the domain** and keeps adapters unaware of exclusions (they stop calling
-`withHiddenApps`/`NotificationHideRuleFilter` after S7, with the equivalence tests in 14.9 proving no
+`withHiddenApps`/`NotificationHideRuleFilter` after S6, with the equivalence tests in 14.9 proving no
 behaviour change). Non-lens consumers (the app drawer and search, notification badges and the dock cards
 planner, which today call the legacy helpers) call the same `SourceExclusionEngine` through two thin helpers
 (`SourceExclusions.isAppHidden(identity)` and the notification variant), so there is one definition of
@@ -1854,55 +1690,78 @@ are never shown, see Sources". A property test: for random lenses and rules, `le
 * **Dock dynamic section.** The dock's dynamic section is a lens binding evaluated through the same provider,
   so exclusions apply there automatically, as do the notification badges and dock notification cards, which
   today use `NotificationHideRuleFilter` (`NotificationCounterState`, `DockNotificationCardPlanner`) and move
-  to the engine in S7. Dock overrides (11) do not interact.
+  to the engine in S6. Dock overrides (11) do not interact.
 * **Per-lens queries (13).** Applied to a parameterised source's results like any other.
 * **Privacy content level (6.2 item 1)** is a *projection ceiling* applied after the lens; exclusions are
   removal before it. They compose and do not overlap.
 
-### 14.6 Scope: global, not per layout (proposal)
+### 14.6 Scope: per layout (N4)
 
-The lens library is per layout (Q3) because a lens is part of an *arrangement*. Exclusions are a statement
-about **the data the person does not want to see**, like hidden apps and hide rules today (both global).
-Per-layout exclusion would let a hidden app reappear when the person unfolds the phone, which reads as a
-bug, and would make "Hide this app" ambiguous. **Recommendation: one set of rules per install, applied on every
-layout and in classic.** Storage: a `source_exclusions` key in the workspace DataStore, **separate from the
-workspace blob** (so a corrupt workspace blob never loses hiding, and hiding survives "Reset workspaces"),
-with the same `_prev` generation. The rule type carries no layout field; if per-layout is later wanted it is an
-additive optional `layouts: Set<HomeLayoutDeviceClass>?` (null = all). Question N4.
+> Superseded: the first revision proposed one global rule set and argued that per-layout would make a hidden app
+> reappear when the phone is unfolded. The owner decided **per layout** and accepts that consequence: **hidden things may
+> reappear on another layout, by design.** This section makes that safe and visible.
 
-**Migration and compatibility (no loss):**
+**Model.** Each layout has its own rule set. The rule type (14.2) is unchanged and carries no layout field; membership in a
+set is the scope. Evaluation order is unchanged: the provider takes the rule set of the layout being drawn, applies source
+exclusions first, then the lens filter. Non-lens consumers (app drawer and search, notification badges, dock cards) use
+the rule set of the **current** layout.
 
-* **Hidden apps** -> `SourceExclusionRule(source = apps.all, App(package, profile), origin =
-  MIGRATED_HIDDEN_APP)` with id `mig:app:<profile>:<package>/<activity>`. Hidden apps are keyed by
-  `AppIdentity` (package + activity + profile), so a package-and-profile matcher would be *wider* than the
-  stored identity for an app with several launcher activities. To stay behaviour-compatible the `App`
-  matcher carries an optional `activityName` (see the sketch in 14.2): migrated rules and the contextual
-  "Hide this app" set it, an explicit "Hide all of this app" leaves it null.
-* **Notification hide rules** -> same-source rules with the same kind/value/mode: `APP` -> `App`; `TITLE`/`BODY`
-  -> `Text(field, value, mode, app = App(package, profile))`; `EMPTY_CONTENT` -> `EmptyContent(app)`. Id
-  `mig:notif:<ruleId>`. Existing semantics (rules scoped to one app) are preserved exactly.
-* **Idempotent and mirrored.** Migration runs on every start like `ensureMigrated` and never duplicates (ids
-  are deterministic). Until R5 the legacy stores stay the **mirror**: every rule change that corresponds to a
-  legacy shape is written through to `AppVisibilityRepository` and `NotificationHidingSettings` (so a
-  downgrade or an older build sees its own data, and the backup keeps writing `"hiddenApps"` and the settings'
-  hide rules unchanged). After R5 the mirror write stays only for **backup compatibility** (an older app
-  restoring a newer backup must still get its hidden apps), not for runtime. New rule kinds with no legacy
-  shape (Group, ItemKey, SourceKey, Text on other sources) live only in `"exclusions"` and an older app
-  ignores them (the data they hide reappears there, an acceptable degradation).
-* **Backup:** rules back up as definitions (they hold user-authored text and app/feed identifiers, never item
-  content), under optional `"exclusions"`; restore is replace with Undo like everything else (5). Rules never
-  embed a URL.
-* **Diagnostics:** counts only (rules per source, hidden count), never match text, labels, packages or feed ids.
+**What "layout" means for exclusions (needs a decision, N10).** The layout is derived from the window size at runtime
+(`HomeLayoutDeviceClassClassifier`: `PHONE`, `PHONE_LANDSCAPE`, `FOLDABLE`, `TABLET`, `DESKTOP`), so a phone rotated to
+landscape is a different layout and, taken literally, un-hides everything. Recommendation: key the rule sets by an
+`ExclusionScope` = device class with `PHONE_LANDSCAPE` folded into `PHONE` (rotation never changes what is hidden; folding or
+using a tablet does). Workspaces, pool and lens library keep the plain device class. Everything below says "layout" for
+"exclusion scope".
+
+**Storage.** A separate `source_exclusions` key in the workspace DataStore holding `Map<ExclusionScope, List<SourceExclusionRule>>`,
+**not** inside the workspace blob or `LayoutWorkspaces`. Reason: hiding is a privacy statement, so resetting workspaces,
+a corrupt blob, "Copy from other layout" or a restore of a workspace-only backup must never un-hide something. Rules have no
+dependents (unlike lenses), so nothing is gained by storing them with the library. Same `_prev` generation as the blob.
+(Considered and rejected: a field next to the lens library; atomic with workspace copy, but exactly the coupling that makes
+reset un-hide things.)
+
+**Migration (the owner's data; lossless, idempotent).** Hidden apps (`AppVisibilityRepository`) and `NotificationHideRule`s
+are global today. On first start of S6 they are **copied into every scope's rule set**: a hidden app becomes `App(package, profile,
+activityName)` on `apps.all` (the activity name keeps it exactly as narrow as the stored `AppIdentity`); a hide rule keeps
+its kind, value and mode (`APP` -> `App`, `TITLE`/`BODY` -> `Text(field, value, mode, app)`, `EMPTY_CONTENT` ->
+`EmptyContent(app)`), always scoped to its one app as today. Ids are deterministic
+(`mig:<scope>:app:<profile>:<package>/<activity>`, `mig:<scope>:notif:<ruleId>`) so a second run changes nothing, and
+**exempt from the rule cap**. Importing a backup that predates this (`"hiddenApps"` and the settings' hide rules) runs the same
+function. Nothing is mirrored back to the legacy stores (no older reader exists): after migration `AppVisibilityRepository` is a
+thin adapter over the current scope's rules so un-converted callers still compile, and the legacy stores are ignored. A
+destructive reset of exclusions is acceptable (re-creatable in minutes, 1.7).
+
+**Making the consequence obvious.**
+* Every exclusion surface carries the layout: Sources > exclusions and Hidden apps show layout tabs (the same device tabs as
+  Settings > Workspaces) and the header "Rules for Phone". A rule row that has no equal rule on another layout shows
+  "Only on this layout".
+* The contextual **Hide** snackbar says where it applied: "Hidden on Phone. Undo | Manage | Hide on all layouts".
+* **Apply to all layouts** exists on a rule and as a bulk action ("Copy these rules to the other layouts"); it adds copies
+  with fresh ids, de-duplicated by matcher equality, so it is idempotent.
+* Settings > Privacy states "Hiding rules apply to one layout at a time".
+
+**Copy from other layout (workspaces and pool replaced, 9.5).** Exclusion rules are **not** replaced (a copy must not
+un-hide). The confirm dialog has an unchecked option "Also add the hiding rules from <layout>", which **adds** them
+(union, de-duplicated, fresh ids). "Reset workspaces" keeps rules.
+
+**Backup.** Optional top-level `"exclusions": {"<scope>": [...]}`, restored as replace with Undo (5). Rules hold user-authored
+text and app/feed identifiers, never item content or URLs.
+
+**Diagnostics.** Counts only (rules per source per layout), never match text, labels, packages or feed ids.
+
+Tests: scope mapping (`PHONE_LANDSCAPE` -> `PHONE`); migration copies into every scope, twice gives the same value, cap exempt;
+isolation (a rule in one scope never hides in another); layered invariant per scope; copy-from-layout leaves rules untouched and
+the optional merge de-duplicates; apply-to-all de-duplicates; the `AppVisibilityRepository` adapter reflects the current scope.
 
 ### 14.7 Authoring
 
 * **Contextual** (like notification hide rules today): every item surface offers a **Hide** action in its
   item actions/overflow or long-press menu: "Hide this app", "Hide this feed", "Hide this event type", "Hide
   notifications like this", with the exact vocabulary in 14.4. Tapping creates the rule **immediately and
-  visibly**: the item disappears with a snackbar "Hidden: <what>. Undo | Manage" (never silent). Broad rules
+  visibly**: the item disappears with a snackbar "Hidden on <layout>: <what>. Undo | Manage | Hide on all layouts" (never silent). Broad rules
   show a one-line confirmation first (a text rule shorter than 3 characters is rejected; "Hide this app" is
   not confirmed because Undo is one tap).
-* **Settings > Sources:** a list per source and an "All exclusions" page. Each row shows what it matches
+* **Settings > Sources:** a list per source and an "All exclusions" page, **for the layout shown in the layout tab** (14.6). Each row shows what it matches
   in words ("Notifications from Slack (Work)", "Feed: Example blog", "Title contains 'sale'"), the current
   hidden count (computed from live source items, shown "-" when the source is off or has no permission), an
   enable/disable switch, edit (change mode, value) and delete with Undo. Hidden apps appears as the "Apps"
@@ -1918,117 +1777,144 @@ additive optional `layouts: Set<HomeLayoutDeviceClass>?` (null = all). Question 
   `SourceExclusions.add(rule)`, called from a use-case that always returns the `Undo` token and the summary
   string; there is no background or heuristic creation.
 
-### 14.8 Slices
+### 14.8 Slice
 
-S6 (engine, migration, codec, goldens; pure), S7 (store, provider pre-step, legacy consumers moved, mirror),
-S14 (Sources UI, contextual action, Hidden apps view). S3 carries backup. Channel/thread and calendar-id keys
-are an additive follow-up (N5).
+All of section 14 is slice S6 (engine and migration first and pure; store, provider pre-step, legacy consumers and UI
+after S2). Backup carries it in S8. Channel/thread and calendar-id keys are an additive follow-up after the flip (N5).
 
 ### 14.9 Tests
 
-Engine truth table per matcher and match mode (EXACT/CONTAINS/WILDCARD semantics lifted from
-`NotificationHideRule` and tested against it); **equivalence tests**: on a shared fixture corpus the unified
-engine returns exactly what `NotificationHideRuleFilter` and `withHiddenApps` returned; migration goldens (a
-settings blob with all rule kinds and 200 rules, a 60-app hidden set, a pre-existing mixed state, running
-twice); mirror byte-equality; layered invariant property test (lens output never contains an excluded item);
-redaction invariants (`Text` never matches `SENSITIVE`; counts never include sensitive content);
-dock/badge consumers parity; `OFF` keeps rules; disabled rule does not hide; add/edit/delete/Undo use-case;
-cap behaviour with migrated rules exempt; codec tolerance (unknown matcher kind dropped, never throws);
-backup old-app compatibility (legacy keys still written); a11y action present (UI test) and screenshot test of
-the rule list.
+Engine truth table per matcher and match mode (EXACT/CONTAINS/WILDCARD semantics lifted from `NotificationHideRule` and
+tested against `NotificationHideRuleFilter` and `withHiddenApps` on one shared corpus, which is the equivalence test that
+catches real regressions); the per-layout tests of 14.6; layered invariant property test (lens output never contains an
+excluded item); redaction invariants (`Text` never matches `SENSITIVE`; counts never include sensitive content); `OFF` keeps
+rules; a disabled rule does not hide; add/edit/delete/Undo use-case; codec tolerance (unknown matcher kind dropped, never
+throws); a11y action present on the contextual Hide (UI test).
 
 ---
 
-## 15. External items in the dock, and ICS full recurrence (owner decisions; not WS10 implementation)
+## 15. External items in the dock, and ICS recurrence through a library (owner decisions; not WS10 implementation)
 
-Recorded here because both change constraints this design depends on; the external-sources doc carries the
-matching "Owner decisions" note.
+### 15.1 External items in the dock (decided; the earlier recommendation was "containers only")
 
-* **External-source items may appear in the dock's dynamic section (decided; the earlier recommendation was
-  "containers only").** Trust model: the trust rules in `workspaces-external-sources.md` section 4 (plain
-  data, `Open`-only actions, target allowlist, provenance, `SENSITIVE`-capable) were written for containers;
-  the dock adds constraints: (1) the dock is always visible, so spoofed or noisy external items get maximal
-  exposure: external items are ordered **after** built-in items in the dynamic section (the existing
-  "built-ins ahead of external" rule becomes a hard rule here), and an item may show only icon plus count
-  (the dock dynamic section is IconRow today; no title/body is drawn there, so the exposure is the icon);
-  (2) **dock budget**: the dynamic section already has a slot budget (`notificationSlotCount`, 1..5); external
-  items **share** that budget, they never extend it, and an optional per-source cap (proposal: external
-  sources together may occupy at most half the slots, at least one slot always reserved for built-ins when
-  any exist); (3) provenance must be reachable from a dock icon (long-press shows "From <app name>", an a11y
-  custom action); (4) exclusions (14) and `OFF` (Q13) apply; (5) `PRIVACY_SENSITIVE` external items show icon
-  only; (6) no auto-launch on tap inside the dock beyond the single explicit tap, same as containers. These
-  become validation rules (`DockPairing` plus a source-trust check) in the slice that adds the first external
-  source; nothing in WS10 ships an external source.
-* **ICS recurrence: full support (decided; the earlier assumption was a documented RRULE subset).** Scope is
-  larger: RFC 5545 `RRULE` expansion (`FREQ` including `YEARLY`/`MONTHLY` with `BYDAY`/`BYMONTHDAY`/`BYSETPOS`,
-  `INTERVAL`, `COUNT`/`UNTIL`), `EXDATE`/`RDATE`, `RECURRENCE-ID` overrides, all-day versus timed, **time
-  zones** (`VTIMEZONE` and DST), and bounded expansion windows (a source asks for the next N days, never an
-  unbounded expansion; hard cap on instances per refresh). Implications: a correctness-heavy pure
-  component with its own test corpus (RFC examples), a decision on an in-repo implementation versus a
-  dependency (new dependency means supply-chain and size review, Play-side none), and it moves the
-  "ICS source" from a small slice to a medium one. Open question N8. Outside WS10; sequenced after the
-  external-scaffolding step in `workspaces-external-sources.md` section 8.
+Trust model: the rules in `workspaces-external-sources.md` section 4 (plain data, `Open`-only actions, target allowlist,
+provenance, `SENSITIVE`-capable) were written for containers; the dock adds constraints: (1) the dock is always visible, so
+external items are ordered **after** built-in items (a hard rule here) and draw as icon plus count only (the dynamic section
+is an IconRow); (2) **dock budget**: external items **share** the dynamic section's slot budget (`notificationSlotCount`,
+1..5), never extend it; proposal: external sources together at most half the slots, one slot always kept for built-ins when
+any exist; (3) provenance reachable from a dock icon (long-press "From <app name>", an a11y custom action); (4) exclusions (14)
+and `OFF` (Q13) apply; (5) `PRIVACY_SENSITIVE` external items show the icon only; (6) no auto-launch beyond the single
+explicit tap. These become validation rules (`DockPairing` plus a source-trust check) in the slice that adds the first
+external source; nothing in WS10 ships one.
+
+### 15.2 ICS full recurrence: use a library (N8, decided; the earlier assumption was an RRULE subset)
+
+Scope (unchanged by the choice): `RRULE` (`FREQ` including `YEARLY`/`MONTHLY` with `BYDAY`/`BYMONTHDAY`/`BYSETPOS`,
+`INTERVAL`, `COUNT`/`UNTIL`), `EXDATE`/`RDATE`, `RECURRENCE-ID` overrides, all-day versus timed, time zones (`VTIMEZONE`,
+DST), bounded expansion (the source asks for a window and an instance cap, never an unbounded expansion). Slice S12; slips
+indefinitely, but the choice is recorded now so the contract is shaped for it.
+
+**Selection criteria.** (1) Licence compatible with this project (MIT, `LICENSE`): permissive (Apache-2.0, BSD, MIT). (2) Size
+and method count acceptable for an app that R8 shrinks; transitive dependencies listed and none Android-hostile (a second
+logging or collections stack, reflection-only loading, Java 8 time back-ports that conflict with the platform; **minSdk is
+31, so `java.time` is available and a `threetenbp`-style back-port would be a defect**). (3) Maintenance: a release in the last
+two years and an active tracker. (4) Correctness against the RFC 5545 example corpus (below), especially `EXDATE`/`RDATE`,
+`BYSETPOS`, and time zones/DST. (5) Can be isolated behind an interface so it is swappable (15.3). (6) Android evidence
+(a real Android app uses it).
+
+**Shortlist.** Facts marked **VERIFIED** were read on 2026-10-01 from Maven Central metadata/POMs and the project READMEs;
+everything else is **UNVERIFIED** and must be settled in the spike.
+
+| Library | Licence | Latest (Maven Central) | Size, dependencies | Notes |
+| --- | --- | --- | --- | --- |
+| **ical4j** `org.mnode.ical4j:ical4j` | BSD-3-Clause (VERIFIED, README) | 4.3.0, 2026-06-27 (VERIFIED); eight recent versions 4.1.1 to 4.3.0 listed | jar 1,675,672 bytes; compile deps `slf4j-api`, `commons-codec`, `commons-lang3`, `threeten-extra`; optional `caffeine`, `jparsec`, `groovy` (VERIFIED, POM). README: 4.x needs Java 11+, 3.x Java 8+ (VERIFIED) | Parser **and** recurrence engine in one; README references RFC 5545 and non-Gregorian rules but does not itemise `BYSETPOS`/`EXDATE`/`VTIMEZONE` (UNVERIFIED in detail). Used by the Android app jtx Board for RRULE/RDATE/EXDATE expansion (VERIFIED by search result; DAVx5's use of ical4j is UNVERIFIED). Largest of the three; Java 11 bytecode on Android needs a D8/desugaring check (UNVERIFIED). |
+| **lib-recur** `org.dmfs:lib-recur` | Apache-2.0 (VERIFIED, POM) | 0.17.1, 2024-04-07 (VERIFIED) | jar 164,789 bytes; deps `rfc5545-datetime` 0.3, `jems2` 2.23.1 (VERIFIED, POM) | Recurrence **only** (no iCalendar parser, so a bounded parser of our own or another library is still needed). README: `EXDATE`/`RDATE` lists via `OfList`, time zones in recurrence sets, four calendar scales incl. RSCALE (VERIFIED); `BYSETPOS` not mentioned in the README (UNVERIFIED). README says the API "is not finalized yet and subject to change" (VERIFIED). Last release over two years old on the day of writing: weakest on criterion 3. |
+| **biweekly** `net.sf.biweekly:biweekly` | BSD-2-Clause ("FreeBSD", VERIFIED, POM) | 0.6.8, 2024-01-07 (VERIFIED) | jar 639,121 bytes; deps `vinnie`, `jackson-core` (compile), `jackson-databind` (optional) (VERIFIED, POM); Java 1.6 target (VERIFIED) | iCalendar parser/writer; README states Android compatibility (VERIFIED). Whether and how well it **expands** RRULE (its recurrence iterator) is UNVERIFIED: the wiki pages could not be read. Last release over two years old. |
+
+**Recommended pick: ical4j 4.x**, with lib-recur as the documented fallback. Reasons: it is the only one of the three
+with a recent release, it covers parser, time zones and recurrence in one dependency (so no bounded parser of our own to
+get wrong), and it has Android precedent. Costs to accept: the largest size (R8 will shrink it; irrelevant for a personal
+build), four compile dependencies, and a Java 11 target that must be proven on-device. If the spike fails criteria 2 or 4,
+use lib-recur for expansion plus a small bounded parser.
+
+**Spike plan (before S12 writes any source code; about a day, JVM plus one device run).**
+1. Add the library to a throw-away module. Confirm it builds with the project's toolchain, check the APK size delta and
+   that R8 keeps it working (run the corpus once on a release-shrunk build on the phone).
+2. **Acceptance corpus** (a JUnit parameter table of ICS snippets with expected instance lists, each case cross-checked by
+   hand against the RFC text): every example in RFC 5545 section 3.8.5.3 (daily/weekly/monthly/yearly with `COUNT`,
+   `UNTIL`, `INTERVAL`, `BYDAY` with ordinals, `BYMONTHDAY`, `BYYEARDAY`, `BYWEEKNO`, **`BYSETPOS`** such as "last weekday of the
+   month" and "second-to-last weekday", `WKST` effects), `EXDATE` and `RDATE` (including `RDATE` with `PERIOD`, and `EXDATE` of
+   an instance that is also in `RDATE`), `RECURRENCE-ID` overrides (moved and cancelled instances), all-day (`VALUE=DATE`)
+   versus floating versus UTC versus `TZID`, `UNTIL` as date vs UTC date-time, **DST transitions** (a daily 02:30 event on
+   a spring-forward day, a 01:30 event on a fall-back day, a zone that changed its rules), an infinite `RRULE` with the
+   window and instance cap (must stop at the cap), an invalid rule (must fail closed with a reason, never loop), and a hostile
+   feed (huge `COUNT`, deeply nested, oversized). Note the RFC's example list has published errata: use the errata-corrected
+   expectations (which entries are affected is UNVERIFIED; check while writing the table).
+3. Record per case pass/fail for each candidate, expansion time for a 10 000-instance window, and heap. Decide with the
+   criteria above; write the result into this section.
+
+### 15.3 Isolation behind a domain interface
+
+The domain never imports the library. In `core/domain` (pure):
+
+```kotlin
+/** A calendar feed's events with recurrence expanded for a bounded window. No library types cross this boundary. */
+interface IcsEngine {
+    fun expand(source: IcsDocument, window: TimeWindow, maxInstances: Int): IcsExpansion
+}
+@JvmInline value class IcsDocument(val bytes: ByteArray)               // size-capped by the caller
+data class TimeWindow(val from: Instant, val to: Instant)              // java.time (minSdk 31)
+data class IcsInstance(val uid: String, val start: ZonedDateTime?, val end: ZonedDateTime?, val allDay: Boolean,
+                       val title: String, val recurrenceId: String?)
+sealed interface IcsExpansion {
+    data class Ok(val instances: List<IcsInstance>, val truncated: Boolean) : IcsExpansion
+    data class Failed(val reason: IcsFailure) : IcsExpansion           // PARSE, RULE_INVALID, TOO_LARGE; never a message with content
+}
+```
+
+The implementation lives in its own Gradle module (for example `external-ics-ical4j`) that is the **only** module depending on
+the library; the app wires it through the source registry. The acceptance corpus is written against `IcsEngine`, so the same
+tests run against any implementation, and swapping to lib-recur plus a bounded parser (or an in-repo engine later) is a module
+swap with a green corpus as the gate. The source built on it maps `IcsInstance` to `Item`s with the `calendar.*` ext keys,
+applies exclusions (14) and never stores event content.
 
 ---
 
-## 16. Risk register
+## 16. Risk register (solo alpha)
 
-Likelihood (L) and impact (I): H/M/L. "Owner" is the slice or doc section that carries the mitigation.
+L = likelihood, I = impact (H/M/L). Only the risks that matter for one developer on one device.
 
 | # | Risk | L | I | Mitigation | Where |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **Placed-items migration loses or moves an item, or breaks a widget binding** (the data move that Q16 makes mandatory) | M | H | Lossless round-trip property and golden fixtures including widgets, folders, dock panel and the id-collision case; **shadow compare at zero mismatches** before anything reads the new store; real-fixture sweep; dual-write mirror; rollback drill executed on a beta device before R4; option A fallback if the shadow is not clean | 9.6, 9.7, S11, S12, S17 |
-| 2 | **Cheap revert is gone; a bad cut-over cannot be undone** | M | H | `PlacedItemsOwner` switch, mirror kept through R4, `workspaces_prev`, legacy backup key, bootstrap rebuild-from-mirror, R5 gated on a clean release | 9.7, 1.7 |
-| 3 | **Permanent classic path doubles maintenance** (two renderings, test matrix, drift) | H | M | Classic as a *rendering* over one data path, frozen UI contract, shared engines, standard-mode suite runs in both modes only, defect/usage review at R5 | section 10 |
-| 4 | **Dock overrides interact badly with the shared dock model** (reserved extent, pull direction, a hidden dock stranding the menu, per-class vs per-workspace confusion, classic ignoring overrides) | M | M | Override-only type, pure `applying`, stranding validation with an always-on a11y/keyboard path, effective-dock used by host and extent code, golden presets, classic ignores overrides | 11 |
-| 5 | **Scope growth**: 20 slices, five new subsystems (placed items, library per layout, dock overrides, per-lens queries, exclusions) landing while WS6/WS7/WS8 are in flight | H | H | Strict slice dependencies, R1-R3 invisible to users, parallel chains with one critical path (S11 -> S12 -> S17), per-slice gates; **cut line**: S8 (per-lens queries), the channel/thread exclusion keys and the `autoPages`/`NewAppPlacement` settings can slip past R4 without blocking the flip | 7 |
-| 6 | **Widget host-id lifetime** (Undo, workspace deletion, restore, switching) leaks or double-binds ids | M | M | Single-owner uniqueness validation, deferred deletion queue, startup reconciliation, restore placeholders, never clone | 9.3 |
-| 7 | **Write amplification and cold start** (larger blob, mirror write, exclusions) | M | M | Write-behind for both stores, bounded read with timeout and `Classic(timeout)`, benchmark gate in R1, separate keys for exclusions | 1.2, 9.7 |
-| 8 | **Exclusion unification changes hiding behaviour** (hidden apps, hide rules; badges, drawer, search, dock cards) | M | M | Equivalence tests against the legacy helpers, migration goldens, mirror byte-equality, backup legacy keys, same match semantics | 14 |
-| 9 | **Per-lens query leaks text** (log, backup, diagnostics, `toString`) | L | H | Redacting `toString`, sentinel leak tests, store never persisted, key hashed in memory only, review checklist line | 13.4 |
-| 10 | **Per-layout lens library drifts and surprises** (two copies of "the same" lens) | M | L | Explicit "Copy to layout", clear UI ("only this layout"), copy-from-layout copies lenses | 4 |
-| 11 | **Backup of widgets and tokenised URLs** (existing gap; secrets) | M | M | Placeholders, token-omission rule with tests, owner-run Play declarations | 5, 7.2 |
-| 12 | **Return behaviour regressions** (#1323/#1176 re-opened by a third rule) | L | M | Pure reducer with the full table and property test (never changes workspace) | 3.2 |
+| 1 | **Too much agent-written code that has never run on a device.** Workspaces, menu, editor, hosts and presets are merged but not wired into the shell; adding a pool, exclusions and dock overrides on top multiplies the unknowns. | H | H | S1 and S2 first (a runnable debug build), one slice at a time with the "works on my device" checklist before the next, developer toggle to bisect, existing `deviceVerify` suite kept green | 1.7, 7 |
+| 2 | **Scope sprawl**: five subsystems (pool, per-layout library, per-layout exclusions, dock overrides, per-lens queries) plus ICS and a possible second navigation style | H | M | 12 slices with an explicit cut line; S10, S11, S12 and the sharing-creation UI slip indefinitely; Classic parity is opt-in (S-C) | 7, 10 |
+| 3 | **Shared-pool bugs: dangling references, widget ownership, reference counting.** A widget host id bound twice or released while still placed; an item collected too early; a folder edited "in one place" changing another workspace | M | H | Reference counts derived, never stored; invariants enforced and self-healed by `validate`; widget single-placement rule and clone-with-consent; deferred host-id deletion with Undo; sharing only by explicit action; differential test of the adapter against the legacy engines | 9.2 to 9.10 |
+| 4 | **Data loss on the owner's own layout** at the pool cut-over (S4) and exclusion migration (S6) | M | M | Backup export first; one round-trip unit test; by-eye check; destructive reset explicitly acceptable; git for code | 1.7, 9.9 |
+| 5 | **Two navigation styles drift apart** (only if full-parity Classic is chosen, S-C) | M | M | Default plan avoids it (developer toggle, then dropped); if chosen: shared data and engines, chrome-only difference, matrix of UI tests, name it "Navigation style" | 10 |
+| 6 | **Per-layout exclusions surprise the owner**: hidden items reappear on rotation, fold or tablet | M | L | Scope folds landscape into portrait (N10); layout label on every surface; "Hide on all layouts"; copy-from-layout never un-hides | 14.6 |
 
 ---
 
 ## Open questions for the owner
 
-### Decided (2026-10-01)
-
-Q1 to Q19 are answered in the banner at the top; the table is not repeated here. Q12 is not a decision (it
-became a test and is mooted by section 9). The extension-API, tokenised-URL, dock-external-items, ICS, Play
-declaration, per-lens query and exclusion decisions are in the same banner.
-
-### New questions raised by the changed scope
-
-Kept tight; each has a recommendation, and none blocks starting S1 to S7.
+Decided: Q1 to Q19 and N1 to N9 (banners at the top). The first revision's questions N1 to N9 are answered and removed. New
+questions raised by the second revision; each has a recommendation and none blocks S1 to S3.
 
 | # | Question | Recommendation |
 | --- | --- | --- |
-| N1 | **Staging of the placed-items cut-over relative to the default flip** (1.7 options A, B, C). | **C**: shadow now (R1), cut over together with the flip (R4) with the mirror kept for a release, and **A** as the pre-agreed fallback if shadow compare is not clean. Also decide the clean-shadow bar: proposal is zero mismatches for two weeks across the beta population. |
-| N2 | **Ownership of placed items: workspace-owned (9.2) versus a shared per-layout pool with per-workspace arrangements.** | Workspace-owned: it matches the data as it is today, keeps widgets single-owner, and avoids reference counting. Revisit only if users ask to share one home between workspaces. Consequence to accept: duplicating a workspace or copying a layout does **not** copy widgets (they are re-added), and deleting a workspace deletes its placed items (with Undo). |
-| N3 | **What does "frequent" mean?** Today only last-used time exists, so the lens (section 12) is a recency list. True frequency needs a launch counter (new stored data, Play declaration line). | Ship the recency lens now, named "Recently used" in the UI where it would mislead; add a counter later only on demand. |
-| N4 | **Exclusion scope: global (14.6) or per layout?** | Global, separate store from the workspace blob. Per layout would resurface hidden apps when unfolding. Leave an additive optional per-layout restriction for later. |
-| N5 | **Notification channel/thread and calendar-id exclusion keys** need new platform fields and ext keys (not available today). In S7 or after? | After the flip (cut line, risk 5): app, title/body and empty-content rules already cover today's hide rules; add channel/thread/calendar-id as an additive follow-up. |
-| N6 | **Hidden dock and the menu entry** (11.4): require a bound gesture for a workspace that hides its dock? | Yes, enforced by validation, plus the always-on TalkBack action and Ctrl+arrow, so no touch user is stranded. Niagara ships a swipe-up binding. |
-| N7 | **How much of classic do we promise** (10.3)? | The standard-launcher parity list only, frozen UI, standard-mode suite in both modes; review cost at R5. Never delete classic data. |
-| N8 | **ICS full recurrence: in-repo implementation or a dependency?** | Evaluate once, before the ICS slice, with the RFC examples as the acceptance corpus; prefer in-repo if the dependency is large or pulls Android-unfriendly parts. Out of WS10. |
-| N9 | **Default for "New apps"** (9.5): Finder only (today's behaviour) or Home and Finder? | Finder only for Nova-style (unchanged behaviour), Home and Finder for iOS-style, as a setting with that per-preset default. |
+| N10 | **Exclusion scope under rotation.** The layout is derived from window size, so a phone in landscape is `PHONE_LANDSCAPE`, a different layout. Per-layout exclusions taken literally un-hide everything on rotate (and the same already holds for workspaces and the pool). | Fold `PHONE_LANDSCAPE` into `PHONE` for exclusions (14.6); consider doing the same for workspaces, pool and lens library, since a landscape phone having its own home is surprising. Confirm. |
+| N11 | **Classic (N7).** Confirm the default plan: a debug-only developer toggle that is deleted at S9, with full-parity Classic as the option in 10.3. | Default plan. If a second navigation style is ever wanted, build it as "Navigation style", not "Classic". |
+| N12 | **New apps in a pool world (9.8).** With several `HOME_AND_FINDER` workspaces, place the new app in all of them (one shared `PoolApp`) or only the active one? | All opted-in workspaces of the layout, so no workspace silently lacks the app. |
+| N13 | **Sharing creation UI.** Duplicate workspace clones by default (9.5); "Also show in...", "Keep items shared" and "Add a separate copy" are explicit actions. Ship them with the pool cut-over, or after it works? | After. The model and `PoolOps` ship in S3/S4; the UI actions follow once the cut-over has run on the phone. |
 
 ## Known limitations of this design
 
-- Calendar selection, per-source scheduling and non-RSS/Search external sources are out of scope here
-  (#1366 covers other sources; #1374 covers RSS refresh).
-- Recents' and Media's exact permission actions are declared by their adapters (`SourceAccess`) and
-  were not enumerated here; the Sources page must read them from the adapters, and S14 must verify each
+- Calendar selection, per-source scheduling and non-RSS/Search external sources are out of scope (#1366, #1374).
+- Recents' and Media's exact permission actions are declared by their adapters (`SourceAccess`); S2 must verify each
   against the existing explicit flows.
-- The widget-in-backup behaviour (5) is flagged from reading the codec and the import path; it needs a
-  device check before S3 and S17 rely on the placeholder design.
-- Section 9 specifies the placed-items move at design level; engine adapter signatures are sketches and will
-  be settled in S11. The shadow period is what turns the lossless claim from a design property into
-  evidence, so it is not skippable.
-- Dock override fidelity for presets depends on the S9/S10 gesture binding (`OPEN_WORKSPACE_MENU` does not
-  exist in `LauncherGestureAction` today and must be added).
-- Nothing in this document has been compiled or run; claims about code were checked by reading the files
-  cited (Gradle is unavailable in the authoring sandbox).
+- Widget-in-backup behaviour (5, 9.6) is from reading the codec and import path; check on the device before S4 and S8 rely on
+  the placeholder design. Dock pin handling on uninstall (9.6) was not found in the code and must be verified.
+- Section 9 is design level; adapter and `PoolOps` signatures are sketches to be settled in S3.
+- ICS library facts marked UNVERIFIED (15.2) are settled only by the spike.
+- Nothing in this document has been compiled or run; claims about code were checked by reading the files cited (Gradle is
+  unavailable in the authoring sandbox).
