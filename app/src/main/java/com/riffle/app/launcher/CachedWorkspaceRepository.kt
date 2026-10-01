@@ -69,6 +69,22 @@ class CachedWorkspaceRepository(
 
     override fun load(): WorkspaceSet? = cached
 
+    /** The in-memory set, else what is stored (for the backup flow); null when none. */
+    suspend fun currentOrStored(): WorkspaceSet? = cached ?: store.read()
+
+    /**
+     * Replaces the set from a backup. While the workspace system has not initialised this process the value
+     * is only written to the store (so the next [initialize] reads it and fills any gaps); afterwards it is a
+     * normal [save], so observers refresh.
+     */
+    fun replaceFromBackup(set: WorkspaceSet) {
+        if (cached != null) {
+            save(set)
+        } else if (persistenceEnabled) {
+            scope.launch { writeLock.withLock { store.write(set) } }
+        }
+    }
+
     override fun save(set: WorkspaceSet) {
         cached = set
         mutableVersion.update { it + 1 }

@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.workspace.LensSort
 import com.riffle.core.domain.launcher.workspace.LensSortField
 import com.riffle.core.domain.launcher.workspace.SortDirection
 import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.SourceParameter
 
 /** The small set of lens shapes the Source step offers first. Anything else is reachable through the custom builder. */
 enum class LensPreset(
@@ -53,11 +54,31 @@ data class LensDraft(
     val sort: LensSort = LensSort(),
     val limit: Int? = null,
     val project: Set<ItemField> = ItemField.ALL,
+    val parameters: Map<SourceId, SourceParameter> = emptyMap(),
 ) {
-    /** Null until at least one source is chosen (a lens needs one). */
-    fun toLens(): Lens? = if (sources.isEmpty()) null else Lens(sources.distinct(), filter, group, sort, limit, project)
+    /** Null until at least one source is chosen (a lens needs one). Parameters of unchosen sources are dropped. */
+    fun toLens(): Lens? =
+        if (sources.isEmpty()) {
+            null
+        } else {
+            Lens(sources.distinct(), filter, group, sort, limit, project, parameters.filterKeys { it in sources })
+        }
 
-    fun toggleSource(id: SourceId): LensDraft = copy(sources = if (id in sources) sources - id else sources + id)
+    /** Sets (or, for blank [text], clears) the query for [id]; only sources that take one are accepted. */
+    fun withQuery(
+        id: SourceId,
+        text: String,
+    ): LensDraft {
+        val parameter = SourceParameter.query(text)
+        return when {
+            !LensQueryEdits.supportsQuery(id) -> this
+            parameter == null -> copy(parameters = parameters - id)
+            else -> copy(parameters = parameters + (id to parameter))
+        }
+    }
+
+    fun toggleSource(id: SourceId): LensDraft =
+        if (id in sources) copy(sources = sources - id, parameters = parameters - id) else copy(sources = sources + id)
 
     fun withPreset(preset: LensPreset): LensDraft =
         copy(
@@ -86,7 +107,16 @@ data class LensDraft(
                 LensPreset.entries.firstOrNull {
                     it.filter == lens.filter && it.group == lens.group && it.sort == lens.sort && it.limit == lens.limit
                 }
-            return LensDraft(lens.sources, preset, lens.filter, lens.group, lens.sort, lens.limit, lens.project)
+            return LensDraft(
+                lens.sources,
+                preset,
+                lens.filter,
+                lens.group,
+                lens.sort,
+                lens.limit,
+                lens.project,
+                lens.parameters.filterKeys { it in lens.sources },
+            )
         }
 
         /** Presets for the [chosen] sources; grouped ones are disabled when a source cannot be grouped. */

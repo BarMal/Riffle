@@ -29,9 +29,11 @@ import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntryId
 import com.riffle.core.domain.launcher.workspace.ItemExtValue
 import com.riffle.core.domain.launcher.workspace.ItemSource
 import com.riffle.core.domain.launcher.workspace.ItemTarget
+import com.riffle.core.domain.launcher.workspace.ParameterizedItemSource
 import com.riffle.core.domain.launcher.workspace.SourceCapability
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
+import com.riffle.core.domain.launcher.workspace.SourceParameter
 import com.riffle.core.domain.launcher.workspace.SourceState
 import com.riffle.core.domain.launcher.workspace.sources.FeedItemMapper
 import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
@@ -265,5 +267,43 @@ class FeedAndSearchSourcesTest {
         assertTrue(SourceCapability.SEARCHABLE in capabilities)
         assertTrue(SourceCapability.LIVE in capabilities)
         assertFalse(SourceCapability.PRIVACY_SENSITIVE in capabilities)
+    }
+
+    private fun parameterized(): ParameterizedItemSource = source(SourceIds.SEARCH) as ParameterizedItemSource
+
+    private fun queryOf(text: String) = SourceParameter.query(text)!!
+
+    @Test
+    fun aLensQueryDrivesItsOwnResultsAndLeavesTheSharedQueryAlone() {
+        val search = parameterized()
+        var lensState: SourceState = SourceState.Loading
+        var defaultState: SourceState = SourceState.Loading
+        search.subscribe(queryOf("cam")) { lensState = it }
+        search.subscribe { defaultState = it }
+
+        assertEquals(listOf("Camera"), (lensState as SourceState.Ready).items.map { it.title })
+        assertEquals(emptyList<Any>(), (defaultState as SourceState.Ready).items)
+
+        query.set("display")
+        assertEquals(listOf("settings"), (defaultState as SourceState.Ready).items.map { it.groupKey })
+        assertEquals(listOf("Camera"), (lensState as SourceState.Ready).items.map { it.title })
+    }
+
+    @Test
+    fun aLensQueryStreamQueriesNothingOnceItsObserversLeave() {
+        val search = parameterized()
+        val subscription = search.subscribe(queryOf("cam")) { }
+        val reads = snapshotReads
+        subscription.cancel()
+        query.set("x")
+        assertEquals(reads, snapshotReads)
+    }
+
+    @Test
+    fun thePerLensQueryIsNotPartOfTheSourcesStringForm() {
+        val search = parameterized()
+        search.subscribe(queryOf("zq-sentinel")) { }
+        assertFalse("zq-sentinel" in search.toString())
+        assertFalse("zq-sentinel" in queryOf("zq-sentinel").toString())
     }
 }

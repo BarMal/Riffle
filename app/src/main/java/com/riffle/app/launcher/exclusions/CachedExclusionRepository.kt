@@ -79,6 +79,19 @@ internal class CachedExclusionRepository(
         if (read.isSuccess && migrated != stored && persistenceEnabled) write(migrated)
     }
 
+    /** The in-memory rules, else what is stored (a suspend read for the backup flow); null when none. */
+    suspend fun currentOrStored(): LayoutExclusionRules? = cached ?: store.read()
+
+    /**
+     * Replaces the rules from a backup: always written to the store, and the in-memory copy is replaced when
+     * [initialize] has already run. Before it has, the next [initialize] reads what was written (and does not
+     * copy the legacy hide rules again when the restored value says it already did).
+     */
+    suspend fun replaceFromBackup(rules: LayoutExclusionRules) {
+        store.write(rules)
+        if (cached != null) cached = rules
+    }
+
     /** The rule set of [deviceClass]; empty before [initialize]. */
     fun rules(deviceClass: HomeLayoutDeviceClass): ExclusionRuleSet =
         cached?.forLayout(deviceClass) ?: ExclusionRuleSet.EMPTY

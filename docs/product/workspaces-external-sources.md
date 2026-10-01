@@ -417,7 +417,9 @@ Answers recorded on #1363; the design consequences for configuration are in
    swapped. Selection criteria, a web-verified shortlist (ical4j, lib-recur, biweekly), the recommended pick
    (ical4j 4.x, lib-recur as fallback) and the spike plan with the RFC 5545 acceptance corpus are in
    [`workspaces-configuration.md`](workspaces-configuration.md) section 15.2 and 15.3. Raises the ICS slice
-   from small to medium.
+   from small to medium. **Spike result (#1395): ical4j 4.3.0 chosen, confined behind the domain
+   `RecurrenceExpander` seam; the device calendar source keeps using `CalendarContract.Instances` and does not
+   need it.** See [`workspaces-ics-recurrence.md`](workspaces-ics-recurrence.md).
 5. Play data-safety and privacy declarations: the **owner** updates them; every PR that adds a permission or
    a data class carries a checklist line (configuration doc, 7.2).
 6. Per-lens search queries are in scope now (configuration doc, section 13); this does not affect the

@@ -19,9 +19,15 @@ import com.riffle.core.domain.launcher.rss.NoConfiguredFeedSource
 import com.riffle.core.domain.launcher.search.LauncherSearchProvider
 import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntry
 import com.riffle.core.domain.launcher.workspace.Item
+import com.riffle.core.domain.launcher.workspace.ItemSource
+import com.riffle.core.domain.launcher.workspace.ParameterizedItemSource
 import com.riffle.core.domain.launcher.workspace.SourceCapability
+import com.riffle.core.domain.launcher.workspace.SourceDescriptor
 import com.riffle.core.domain.launcher.workspace.SourceIds
+import com.riffle.core.domain.launcher.workspace.SourceObserver
+import com.riffle.core.domain.launcher.workspace.SourceParameter
 import com.riffle.core.domain.launcher.workspace.SourceState
+import com.riffle.core.domain.launcher.workspace.SourceSubscription
 import com.riffle.core.domain.launcher.workspace.sources.FeedArticleContent
 import com.riffle.core.domain.launcher.workspace.sources.FeedItemMapper
 import com.riffle.core.domain.launcher.workspace.sources.SearchItemMapper
@@ -68,23 +74,61 @@ internal fun feedSource(deps: BuiltInSourceDependencies): SharedSourceStream =
         SourceState.Ready(feedItems(deps.feeds))
     }
 
-/** Searchable and live on the query holder: it re-queries when the text changes and never otherwise. */
-internal fun searchSource(deps: BuiltInSourceDependencies): SharedSourceStream =
-    stream(
-        deps,
-        SourceIds.SEARCH,
-        setOf(SourceCapability.SEARCHABLE),
-        SourceChangeSource { onChanged -> deps.search.query.observe(onChanged) },
-    ) {
-        val query = deps.search.query.current()
-        if (query.isEmpty()) {
-            SourceState.Ready(emptyList())
-        } else {
-            deps.apps.installedApps.snapshot()
-                ?.let { snapshot -> SourceState.Ready(searchItems(deps, query, snapshot)) }
-                ?: SourceState.Unavailable
-        }
+/**
+ * Searchable and live on the query holder: it re-queries when the text changes and never otherwise. It also
+ * takes a lens-supplied query ([ParameterizedItemSource]), so two lenses can search for different things; a
+ * lens without one keeps reading the shared holder.
+ */
+internal fun searchSource(deps: BuiltInSourceDependencies): ItemSource {
+    val default =
+        stream(
+            deps,
+            SourceIds.SEARCH,
+            setOf(SourceCapability.SEARCHABLE),
+            SourceChangeSource { onChanged -> deps.search.query.observe(onChanged) },
+        ) { searchState(deps, deps.search.query.current()) }
+    val perQuery = { query: String ->
+        stream(
+            deps,
+            SourceIds.SEARCH,
+            setOf(SourceCapability.SEARCHABLE),
+            deps.apps.changes,
+        ) { searchState(deps, query) }
     }
+    return ParameterizedSearchSource(default, perQuery)
+}
+
+/** An empty query is `Ready(empty)`, as in `LauncherSearchProvider.search`; no platform answer is `Unavailable`. */
+private fun searchState(
+    deps: BuiltInSourceDependencies,
+    query: String,
+): SourceState =
+    if (query.isEmpty()) {
+        SourceState.Ready(emptyList())
+    } else {
+        deps.apps.installedApps.snapshot()
+            ?.let { snapshot -> SourceState.Ready(searchItems(deps, query, snapshot)) }
+            ?: SourceState.Unavailable
+    }
+
+/**
+ * The search source: [default] reads the shared query holder; [subscribe] with a parameter uses a stream of
+ * its own for that query. The registry shares one such stream per distinct query (and bounds how many), so a
+ * stream here is only created per subscription and holds nothing once its observers leave.
+ */
+internal class ParameterizedSearchSource(
+    private val default: ItemSource,
+    private val perQuery: (String) -> ItemSource,
+) : ParameterizedItemSource {
+    override val descriptor: SourceDescriptor get() = default.descriptor
+
+    override fun subscribe(observer: SourceObserver): SourceSubscription = default.subscribe(observer)
+
+    override fun subscribe(
+        parameter: SourceParameter,
+        observer: SourceObserver,
+    ): SourceSubscription = perQuery(parameter.text).subscribe(observer)
+}
 
 private fun searchItems(
     deps: BuiltInSourceDependencies,
