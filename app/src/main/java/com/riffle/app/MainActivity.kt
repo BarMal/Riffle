@@ -104,11 +104,15 @@ class MainActivity : ComponentActivity() {
             onEnabledChanged = { enabled -> WorkspaceMenuFeature.enabled = enabled },
         )
     }
+    /** Built on first use (the preview switch on) and kept, so toggling the preview never leaks another one. */
+    private val workspaceRuntime by lazy {
+        dependencies.workspaceRuntime { shellViewModel.state.value.launcherSettings }
+    }
     private val workspacePreviewHost by lazy {
         WorkspacePreviewHost(
             controller = workspacePreviewController,
             workspaceVersion = dependencies.workspaceRepository.version,
-            runtime = { dependencies.workspaceRuntime { shellViewModel.state.value.launcherSettings } },
+            runtime = { workspaceRuntime },
             onRequestSourceAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
         )
     }
