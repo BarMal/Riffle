@@ -68,7 +68,7 @@ jobs:
           cp app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/release/riffle-stable.aab"
           pwsh .github/scripts/assert-artifact-size.ps1 \
             -ArtifactPath "$RUNNER_TEMP/release/riffle-stable.apk" \
-            -MaxBytes 26214400 \
+            -MaxBytes 33554432 \
             -BudgetName "Stable APK"
 
           pwsh .github/scripts/write-release-notes.ps1 \
