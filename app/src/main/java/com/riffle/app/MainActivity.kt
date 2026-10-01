@@ -111,12 +111,14 @@ class MainActivity : ComponentActivity() {
     private val workspaceRuntime by lazy {
         dependencies.workspaceRuntime { shellViewModel.state.value.launcherSettings }
     }
+    private val poolRuntime by lazy { dependencies.poolRuntime() }
     private val workspacePreviewHost by lazy {
         WorkspacePreviewHost(
             controller = workspacePreviewController,
             workspaceVersion = dependencies.workspaceRepository.version,
             runtime = { workspaceRuntime },
             onRequestSourceAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
+            pool = { poolRuntime },
         )
     }
 
