@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
+import com.riffle.app.launcher.workspace.WorkspaceBootstrap
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -198,7 +199,7 @@ class LauncherShellViewModel(
         val workspaces = platformDependencies.workspaceRepository
         if (workspaces != null && WorkspaceMenuFeature.enabled) {
             viewModelScope.launch {
-                workspaces.initialize(mutableState.value.homeLayoutSet)
+                workspaces.initialize(WorkspaceBootstrap::seed)
                 workspaceMenu.refresh()
             }
         }
