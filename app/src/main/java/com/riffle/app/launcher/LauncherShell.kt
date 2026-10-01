@@ -42,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.workspace.NeverEnabled
 import com.riffle.app.launcher.workspace.NoWorkspaceVersion
+import com.riffle.app.launcher.workspace.SourcesSettingsController
 import com.riffle.app.launcher.workspace.WorkspacePreviewHost
 import com.riffle.app.launcher.workspace.WorkspacePreviewLayer
 import com.riffle.app.launcher.workspace.WorkspacesSettingsController
@@ -153,7 +154,7 @@ private fun rememberWorkspacePreviewSetting(
     }
 
 /**
- * The Workspaces settings page's view of the runtime. Null (so the page does not exist) unless the
+ * The Workspaces and Sources settings pages' view of the runtime. Null (so neither page exists) unless the
  * preview switch is on; the runtime it reads is the one the preview layer already shares.
  */
 @Composable
@@ -174,9 +175,16 @@ private fun rememberWorkspaceSettingsHost(
                         repository = runtime.repository,
                         onChanged = { viewModel.workspaceMenu.refresh() },
                     ),
+                sources =
+                    SourcesSettingsController(
+                        monitorFor = runtime::sourceStatusMonitor,
+                        enablement = runtime.enablement,
+                        descriptors = { runtime.registry.descriptors() },
+                    ),
                 version = host.workspaceVersion,
                 currentLayout = currentLayout,
                 onEdit = { id -> host.controller.onEffect(WorkspaceMenuEffect.EditWorkspace(id)) },
+                onRequestSourceAccess = host.onRequestSourceAccess,
             )
         }
     }

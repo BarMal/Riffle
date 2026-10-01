@@ -5,16 +5,22 @@ import com.riffle.app.launcher.settingsLayoutDeviceTabs
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
+import com.riffle.core.domain.launcher.workspace.SourceDescriptor
+import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePreset
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import com.riffle.core.domain.launcher.workspace.settings.LayoutFallbackNotice
+import com.riffle.core.domain.launcher.workspace.settings.SourceRow
+import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
+import com.riffle.core.domain.launcher.workspace.settings.SourcesSettingsPlanner
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsModel
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsPlanner
 
-/** Fixed workspaces for the Settings > Workspaces screenshots (fakes only). */
+/** Fixed workspaces and sources for the Settings > Workspaces and Settings > Sources screenshots (fakes only). */
 internal object WorkspacesSettingsFixtures {
     val phone = HomeLayoutDeviceClass.PHONE
     val foldable = HomeLayoutDeviceClass.FOLDABLE
@@ -72,4 +78,26 @@ internal object WorkspacesSettingsFixtures {
             current = phone,
             available = available,
         )
+
+    // ---- Sources ----
+
+    private val statuses =
+        mapOf(
+            SourceIds.ALL_APPS to SourceStatus.READY,
+            SourceIds.RECENT_APPS to SourceStatus.NEEDS_PERMISSION,
+            SourceIds.QUICK_ACTIONS to SourceStatus.READY,
+            SourceIds.NOTIFICATIONS to SourceStatus.NEEDS_PERMISSION,
+            SourceIds.MEDIA to SourceStatus.NEEDS_PERMISSION,
+            SourceIds.RSS to SourceStatus.READY,
+            SourceIds.SEARCH to SourceStatus.LOADING,
+        )
+
+    val sources: List<SourceRow> =
+        SourcesSettingsPlanner.plan(
+            descriptors = SourceIds.BUILT_IN.map { SourceDescriptor(it) },
+            statuses = statuses,
+            disabled = setOf(SourceIds.CALENDAR),
+        )
+
+    val sourceIds: List<SourceId> = sources.map { it.id }
 }

@@ -93,6 +93,7 @@ internal fun SettingsPageContent(
             SettingsPage.HIDDEN_APPS -> SettingsHiddenAppsPageContent(state = state, onAction = onAction)
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state)
             SettingsPage.WORKSPACES -> SettingsWorkspacesPageContent(state = state, onAction = onAction)
+            SettingsPage.SOURCES -> SettingsSourcesPageContent(state = state)
         }
     }
 }

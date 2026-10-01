@@ -13,7 +13,7 @@ import com.riffle.core.domain.launcher.workspace.LensResult
  * expressions never see a source's own state, so whoever hosts one (a container) maps the source
  * state it observes onto this.
  *
- * [Ready] with an empty result draws the empty message; [Loading] and [Unavailable] replace the
+ * [Ready] with an empty result draws the empty message; [Loading], [Unavailable] and [Off] replace the
  * content entirely.
  */
 sealed interface ExpressionState {
@@ -23,6 +23,16 @@ sealed interface ExpressionState {
 
     /** The data cannot be shown (for example a permission is missing); [message] says why. */
     data class Unavailable(val message: String) : ExpressionState
+
+    /**
+     * The user turned the source off in Settings > Sources. [message] says so and the action labelled
+     * [actionLabel] runs [onEnable] to turn it back on: an explicit user action, never automatic.
+     */
+    data class Off(
+        val message: String,
+        val actionLabel: String,
+        val onEnable: () -> Unit,
+    ) : ExpressionState
 }
 
 /**

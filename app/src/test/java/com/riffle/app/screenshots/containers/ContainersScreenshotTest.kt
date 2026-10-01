@@ -62,6 +62,11 @@ class ContainersScreenshotTest {
     }
 
     @Test
+    fun widgetOff() {
+        renderWidget(ContainerServices(StaticLensResultProvider(LensOutput.Off), services.environment))
+    }
+
+    @Test
     fun boundPageCompact() {
         renderBoundPage()
     }
@@ -120,6 +125,11 @@ class ContainersScreenshotTest {
     @Test
     fun pageSetUnavailable() {
         renderPageSet(ContainerServices(StaticLensResultProvider(LensOutput.Unavailable), services.environment))
+    }
+
+    @Test
+    fun pageSetOff() {
+        renderPageSet(ContainerServices(StaticLensResultProvider(LensOutput.Off), services.environment))
     }
 
     private fun renderWidget(with: ContainerServices = services) {

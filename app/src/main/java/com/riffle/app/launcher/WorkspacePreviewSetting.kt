@@ -36,12 +36,17 @@ internal fun SettingsWorkspacePreviewSection(onPageSelected: (SettingsPage) -> U
                 subtitle = "Leave it any time with Exit preview or the Back button.",
                 onClick = setting.onOpen,
             )
-            // The page exists only while the preview is on (and only where a host provides it).
+            // The two pages exist only while the preview is on (and only where a host provides them).
             if (LocalWorkspaceSettingsHost.current != null) {
                 SettingsClickableRow(
                     title = WorkspacesSettingsText.WORKSPACES_TITLE,
                     subtitle = "Switch, rename, duplicate, delete, presets and copying between layouts",
                     onClick = { onPageSelected(SettingsPage.WORKSPACES) },
+                )
+                SettingsClickableRow(
+                    title = SourcesSettingsText.TITLE,
+                    subtitle = "What each source shows, its status and an on/off switch",
+                    onClick = { onPageSelected(SettingsPage.SOURCES) },
                 )
             }
         }

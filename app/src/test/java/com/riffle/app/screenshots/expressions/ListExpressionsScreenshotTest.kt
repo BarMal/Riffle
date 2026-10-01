@@ -1,10 +1,14 @@
 package com.riffle.app.screenshots.expressions
 
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import com.riffle.app.launcher.expressions.ExpressionState
 import com.riffle.app.launcher.expressions.ListExpression
 import com.riffle.app.screenshots.ScreenshotDevices
 import com.riffle.core.domain.launcher.workspace.LensResult
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,6 +60,22 @@ class ListExpressionsScreenshotTest {
     @Test
     fun listUnavailable() {
         render(state = ExpressionState.Unavailable("Notification access is off"))
+    }
+
+    @Test
+    fun listOff() {
+        render(state = ExpressionState.Off("This source is turned off", "Turn on") {})
+    }
+
+    @Test
+    fun listOffTurnOnButtonRunsTheEnableAction() {
+        var enabled = 0
+        render(state = ExpressionState.Off("This source is turned off", "Turn on") { enabled++ })
+
+        composeRule.onNodeWithText("This source is turned off").assertIsDisplayed()
+        composeRule.onNodeWithText("Turn on").performClick()
+
+        assertEquals(1, enabled)
     }
 
     private fun render(

@@ -25,6 +25,29 @@ class ContainerServicesTest {
     }
 
     @Test
+    fun offOutputsDrawTheOffStateWhoseActionTurnsTheSourceOn() {
+        var enabled = 0
+
+        val state = LensOutput.Off.toExpressionState { enabled++ }
+
+        assertTrue(state is ExpressionState.Off)
+        state as ExpressionState.Off
+        assertEquals(ContainerText.OFF, state.message)
+        assertEquals("This source is turned off", state.message)
+        assertEquals(ContainerText.ENABLE, state.actionLabel)
+        state.onEnable()
+        assertEquals(1, enabled)
+    }
+
+    @Test
+    fun offIsNeverTheUnavailableMessage() {
+        val off = LensOutput.Off.toExpressionState()
+        val unavailable = LensOutput.Unavailable.toExpressionState()
+
+        assertTrue(off is ExpressionState.Off && unavailable is ExpressionState.Unavailable)
+    }
+
+    @Test
     fun notReadyOutputsDrawAnEmptyFlatResult() {
         val result = LensOutput.Loading.resultOrEmpty()
 

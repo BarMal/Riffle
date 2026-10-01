@@ -58,6 +58,11 @@ class CardExpressionsScreenshotTest {
         render(state = ExpressionState.Unavailable("Notification access is off"))
     }
 
+    @Test
+    fun cardOff() {
+        render(state = ExpressionState.Off("This source is turned off", "Turn on") {})
+    }
+
     private fun render(
         result: LensResult = ExpressionFixtures.singleCard(),
         state: ExpressionState = ExpressionState.Ready,

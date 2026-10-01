@@ -58,6 +58,11 @@ class CardStackExpressionsScreenshotTest {
         render(state = ExpressionState.Unavailable("Notification access is off"))
     }
 
+    @Test
+    fun cardStackOff() {
+        render(state = ExpressionState.Off("This source is turned off", "Turn on") {})
+    }
+
     private fun render(
         result: LensResult = ExpressionFixtures.flatMessages(),
         state: ExpressionState = ExpressionState.Ready,
