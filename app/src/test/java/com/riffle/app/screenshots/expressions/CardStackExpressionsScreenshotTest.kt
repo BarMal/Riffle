@@ -48,12 +48,25 @@ class CardStackExpressionsScreenshotTest {
         render(result = LensResult.Flat(emptyList()))
     }
 
-    private fun render(result: LensResult = ExpressionFixtures.flatMessages()) {
+    @Test
+    fun cardStackLoading() {
+        render(state = ExpressionState.Loading)
+    }
+
+    @Test
+    fun cardStackUnavailable() {
+        render(state = ExpressionState.Unavailable("Notification access is off"))
+    }
+
+    private fun render(
+        result: LensResult = ExpressionFixtures.flatMessages(),
+        state: ExpressionState = ExpressionState.Ready,
+    ) {
         composeRule.renderExpression {
             CardStackExpression(
                 result = result,
                 onItemClick = {},
-                state = ExpressionState.Ready,
+                state = state,
                 environment = ExpressionFixtures.environment,
             )
         }

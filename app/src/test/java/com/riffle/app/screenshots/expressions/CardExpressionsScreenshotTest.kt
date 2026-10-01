@@ -48,12 +48,25 @@ class CardExpressionsScreenshotTest {
         render(result = LensResult.Flat(emptyList()))
     }
 
-    private fun render(result: LensResult = ExpressionFixtures.singleCard()) {
+    @Test
+    fun cardLoading() {
+        render(state = ExpressionState.Loading)
+    }
+
+    @Test
+    fun cardUnavailable() {
+        render(state = ExpressionState.Unavailable("Notification access is off"))
+    }
+
+    private fun render(
+        result: LensResult = ExpressionFixtures.singleCard(),
+        state: ExpressionState = ExpressionState.Ready,
+    ) {
         composeRule.renderExpression {
             CardExpression(
                 result = result,
                 onItemClick = {},
-                state = ExpressionState.Ready,
+                state = state,
                 environment = ExpressionFixtures.environment,
             )
         }

@@ -404,7 +404,7 @@ Provisional defaults adopted in WS0; revisit by editing this section.
    drawn as Categories or AlphaList. At most one per workspace.
 3. **Skin.** Global default with an optional per-workspace override (`skinOverrideId`; null follows
    global).
-4. **Windowed launch.** Still open; answered by the WS9 spike.
+4. **Windowed launch.** Provisionally answered: see [windowed-launch-spike.md](windowed-launch-spike.md) (adjacent best-effort on large screens, freeform only where enabled; device tests pending).
 
 ## WS1 source adapters (as built)
 
