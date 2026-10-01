@@ -23,6 +23,11 @@ data class Workspace(
     val gestureBindings: Map<String, String> = emptyMap(),
     /** Null follows the global skin. */
     val skinOverrideId: String? = null,
+    /**
+     * The catalog id of the preset this workspace was installed from, when known: only so Settings can offer
+     * "Reset to preset". Never inferred; null for workspaces migrated or created before it was recorded.
+     */
+    val presetId: String? = null,
 )
 
 /** Pinned dock entries stay in `DockModel`; the workspace only adds the dynamic section's lens. */
