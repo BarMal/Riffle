@@ -230,7 +230,7 @@ group's `CardStack`, Now widgets and Recents alongside, dock on the left edge.
 1. Gesture arbitration with nested scrollers inside pagers inside dock surfaces. Mitigation:
    containers declare axes; no new hand-rolled pointer loops (ADR 0002).
 2. Editing complexity. Mitigation: pick source, pick expression, pick container; presets; validity
-   filtering; progressive disclosure.
+   filtering; progressive disclosure. See `workspaces-editor.md`.
 3. Performance. Shared, cached, replayed source streams; one subscription per source, not per widget;
    lens evaluation off the main thread; bounded composition depth.
 4. Privacy. Sensitive item content is redacted at the lens `project` step and never persisted.
