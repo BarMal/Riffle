@@ -422,4 +422,16 @@ class ExclusionsSettingsTest {
         assertFalse(change.applied)
         assertEquals(ExclusionsMessage.CannotHide, change.message)
     }
+
+    @Test
+    fun `the add button maps a valid draft to the add action and is disabled otherwise`() {
+        val valid =
+            TextRuleDraft(SourceIds.NOTIFICATIONS, ExclusionTextField.TITLE, ExclusionMatchMode.CONTAINS, "abc sale")
+        assertEquals(
+            ExclusionsSettingsAction.AddText(valid),
+            TextRuleValidator.actionFor(valid, ExclusionRuleSet.EMPTY),
+        )
+        assertNull(TextRuleValidator.actionFor(valid.copy(value = "ab"), ExclusionRuleSet.EMPTY))
+        assertNull(TextRuleValidator.actionFor(valid.copy(value = "sale"), ExclusionRuleSet(listOf(rule("t", text)))))
+    }
 }

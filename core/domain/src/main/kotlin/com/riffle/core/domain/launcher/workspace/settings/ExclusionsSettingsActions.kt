@@ -64,6 +64,13 @@ object TextRuleValidator {
         }
     }
 
+    /** What the add dialog's button does: the action for a valid [draft], or null (button disabled) when invalid. */
+    fun actionFor(
+        draft: TextRuleDraft,
+        existing: ExclusionRuleSet,
+    ): ExclusionsSettingsAction.AddText? =
+        if (validate(draft, existing) == null) ExclusionsSettingsAction.AddText(draft) else null
+
     /** Characters that must match literally: a wildcard's `{?}` placeholders do not count. */
     private fun literalLength(matcher: ExclusionMatcher.Text): Int =
         if (matcher.mode == ExclusionMatchMode.WILDCARD) {

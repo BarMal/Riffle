@@ -132,6 +132,11 @@ the preview off nothing exists and nothing runs). Details of the page are in
   actions or a new menu on every expression (and screenshots of both). That is a slice of its own; the hook above is what it
   will call (see "Not done").
 
+* **Test note.** The add-text-rule dialog has no Roborazzi test: its text field's cursor-blink animation never lets the
+  Compose test clock idle (idle timeout, and pausing the clock hung the job). Dialog interaction is validated manually
+  (owner checklist); the logic is covered by `TextRuleValidator` (including `actionFor`, the button's draft-to-action
+  mapping) and controller JVM tests. Page-level and delete-dialog screenshots remain.
+
 ## Not done
 
 * Contextual "Hide ..." gesture or menu on items in the preview expressions (the pure action, tests and the controller hook

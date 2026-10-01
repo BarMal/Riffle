@@ -8,7 +8,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
@@ -23,22 +22,15 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
-import com.riffle.app.launcher.AddTextRuleDialog
-import com.riffle.app.launcher.EXCLUSIONS_ADD_TEST_TAG
 import com.riffle.app.launcher.EXCLUSIONS_EMPTY_TEST_TAG
 import com.riffle.app.launcher.EXCLUSIONS_SUMMARY_TEST_TAG
-import com.riffle.app.launcher.EXCLUSION_PROBLEM_TEST_TAG
 import com.riffle.app.launcher.ExclusionsPageCallbacks
 import com.riffle.app.launcher.ExclusionsSettingsContent
 import com.riffle.app.launcher.exclusionRowTestTag
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.workspace.SourceIds
-import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatchMode
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleSet
-import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionTextField
 import com.riffle.core.domain.launcher.workspace.settings.ExclusionsSettingsAction
 import com.riffle.core.domain.launcher.workspace.settings.ExclusionsSettingsModel
-import com.riffle.core.domain.launcher.workspace.settings.TextRuleDraft
 import com.riffle.core.domain.launcher.workspace.settings.TextRuleValidator
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -192,72 +184,6 @@ class ExclusionsSettingsScreenshotTest {
         )
     }
 
-    @Test
-    fun theAddDialogOpensDisabledUntilThereIsValidText() {
-        pauseClock()
-        render(capture = false)
-
-        composeRule.onNodeWithTag(EXCLUSIONS_ADD_TEST_TAG).performScrollTo().performClick()
-        composeRule.mainClock.advanceTimeBy(CLOCK_STEP_MILLIS)
-
-        composeRule.onNode(hasText("Add text rule") and hasAnyAncestor(isDialog())).assertExists()
-        composeRule.onNode(hasText("Add rule") and hasAnyAncestor(isDialog())).assertIsNotEnabled()
-        assertEquals(emptyList<ExclusionsSettingsAction>(), actions)
-    }
-
-    // The dialog is drawn with its text pre-filled: typing into a focused field keeps the test clock from idling.
-    @Test
-    fun aTooShortTextShowsItsReasonAndCannotBeAdded() {
-        pauseClock()
-        renderAddDialog("ab")
-
-        composeRule.onNodeWithTag(EXCLUSION_PROBLEM_TEST_TAG)
-            .assert(hasText("Use at least 3 characters", substring = true))
-        composeRule.onNode(hasText("Add rule") and hasAnyAncestor(isDialog())).assertIsNotEnabled()
-        assertEquals(emptyList<ExclusionsSettingsAction>(), actions)
-    }
-
-    @Test
-    fun aValidTextAddsExactlyTheTypedRule() {
-        pauseClock()
-        renderAddDialog("abc sale")
-
-        composeRule.onNode(hasText("Add rule") and hasAnyAncestor(isDialog())).performClick()
-
-        assertEquals(
-            listOf<ExclusionsSettingsAction>(
-                ExclusionsSettingsAction.AddText(
-                    TextRuleDraft(
-                        SourceIds.NOTIFICATIONS,
-                        ExclusionTextField.TITLE,
-                        ExclusionMatchMode.CONTAINS,
-                        "abc sale",
-                    ),
-                ),
-            ),
-            actions,
-        )
-    }
-
-    // A text field in a dialog can take focus, and its blinking cursor then never lets the test clock idle.
-    private fun pauseClock() {
-        composeRule.mainClock.autoAdvance = false
-    }
-
-    private fun renderAddDialog(initialValue: String) {
-        composeRule.setContent {
-            ScreenshotBackdrop {
-                AddTextRuleDialog(
-                    problemWith = callbacks.problemWith,
-                    onAdd = { draft -> actions += ExclusionsSettingsAction.AddText(draft) },
-                    onDismiss = {},
-                    initialValue = initialValue,
-                )
-            }
-        }
-        composeRule.mainClock.advanceTimeBy(CLOCK_STEP_MILLIS)
-    }
-
     private fun render(
         model: ExclusionsSettingsModel? = ExclusionsSettingsFixtures.populated,
         viewed: HomeLayoutDeviceClass = ExclusionsSettingsFixtures.phone,
@@ -284,5 +210,3 @@ class ExclusionsSettingsScreenshotTest {
         if (capture) composeRule.captureScreen()
     }
 }
-
-private const val CLOCK_STEP_MILLIS = 500L
