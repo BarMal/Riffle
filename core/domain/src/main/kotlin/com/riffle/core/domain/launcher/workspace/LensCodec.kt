@@ -41,13 +41,17 @@ internal object LensCodec {
     }
 
     fun encodeBinding(binding: LensBinding): StoredValue.Obj =
-        obj("lens" to encode(binding.lens), "expression" to str(binding.expression.name))
+        obj(
+            "lens" to encode(binding.lens),
+            "expression" to str(binding.expression.name),
+            "ref" to binding.ref?.let { str(it.value) },
+        )
 
     /** An unknown expression falls back to the plainest drawable one rather than losing the container. */
     fun decodeBinding(value: StoredValue.Obj?): LensBinding? {
         val lens = decode(value?.fields?.get("lens")) ?: return null
         val expression = enumOrNull<ExpressionKind>(value?.string("expression")) ?: ExpressionKind.LIST
-        return LensBinding(lens, expression)
+        return LensBinding(lens, expression, value?.string("ref")?.let(::LensId))
     }
 
     private fun decodeProjection(root: StoredValue.Obj): Set<ItemField> =
