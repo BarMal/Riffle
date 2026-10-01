@@ -1,6 +1,8 @@
 package com.riffle.core.domain.launcher.workspace
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.pool.PoolCodec
+import com.riffle.core.domain.launcher.workspace.pool.PoolValidation
 
 const val CURRENT_WORKSPACE_SET_SCHEMA_VERSION = 2
 
@@ -15,7 +17,8 @@ const val CURRENT_WORKSPACE_SET_SCHEMA_VERSION = 2
  *
  * Schema 2 adds, per layout, an optional `library` (saved lenses) and, per binding, an optional `ref`; a
  * schema 1 blob has neither and decodes unchanged. Every ref-carrying binding also stores its lens inline,
- * so a reader that ignores both keys still draws every container.
+ * so a reader that ignores both keys still draws every container. Schema 2 also adds an optional per-layout
+ * `pool` (placed items), which decodes safely, see [PoolCodec].
  */
 object WorkspaceSetCodec {
     fun encode(set: WorkspaceSet): StoredValue.Obj =
@@ -44,6 +47,7 @@ object WorkspaceSetCodec {
             "default" to str(layout.defaultId.value),
             "workspaces" to arr(layout.workspaces.map(WorkspaceCodec::encode)),
             "library" to layout.library.takeIf { it.lenses.isNotEmpty() }?.let(LensLibraryCodec::encode),
+            "pool" to layout.pool.takeUnless { it.isEmpty }?.let(PoolCodec::encode),
         )
 
     private fun decodeLayout(root: StoredValue.Obj): Pair<HomeLayoutDeviceClass, LayoutWorkspaces>? {
@@ -60,6 +64,10 @@ object WorkspaceSetCodec {
                 library = LensLibraryCodec.decode(root.obj("library")),
             )
         // A ref that resolves in this layout's library takes the library's lens; others keep their snapshot.
-        return layout?.let { deviceClass to LensLibraryOps.rehydrate(it).layout }
+        return layout?.let { deviceClass to LensLibraryOps.rehydrate(it.withDecodedPool(root.obj("pool"))).layout }
     }
+
+    /** Missing or unreadable pool data is an empty pool; arrangements of unknown workspaces are dropped. */
+    private fun LayoutWorkspaces.withDecodedPool(value: StoredValue.Obj?): LayoutWorkspaces =
+        copy(pool = PoolValidation.retainWorkspaces(PoolCodec.decode(value).pool, workspaces.map { it.id }.toSet()))
 }
