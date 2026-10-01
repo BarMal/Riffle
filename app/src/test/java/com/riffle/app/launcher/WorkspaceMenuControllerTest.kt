@@ -34,7 +34,7 @@ class WorkspaceMenuControllerTest {
                 PageContainer(ContainerId("$id-page"), PageContent.Bound(LensBinding(lens, ExpressionKind.LIST))),
                 PageContainer(
                     ContainerId("$id-finder"),
-                    PageContent.Bound(LensBinding(lens, ExpressionKind.CATEGORIES)),
+                    PageContent.Bound(LensBinding(lens, ExpressionKind.ALPHA_LIST)),
                     PageRole.FINDER,
                 ),
             ),
