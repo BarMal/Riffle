@@ -64,6 +64,7 @@ import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -385,6 +386,10 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectSearchResultPresentation",
                     LauncherShellAction.SelectSearchResultPresentation(SearchResultPresentation.LIST),
+                ),
+                settings(
+                    "SelectReturnBehavior",
+                    LauncherShellAction.SelectReturnBehavior(ReturnBehavior.START_PAGE),
                 ),
                 settings(
                     "SelectAppDrawerPresentation",
