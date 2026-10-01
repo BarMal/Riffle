@@ -21,6 +21,8 @@ import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.exclusions.SourceExclusionRule
 import com.riffle.core.domain.launcher.workspace.testing.FakeItemSource
 import com.riffle.core.domain.launcher.workspace.testing.FakeSourceRegistry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -123,4 +125,57 @@ class ExclusionsAppLayerTest {
         assertEquals(listOf("a", "b"), ids(workspaceLensProvider(registry, direct)))
         assertEquals(listOf("b"), ids(workspaceLensProvider(registry, direct, exclusions = { rules })))
     }
+
+    @Test
+    fun updateIsRefusedBeforeInitializeAndAfterwardsPersistsNotifiesAndBumpsTheVersion() =
+        runBlocking {
+            val store = FakeStore()
+            val repository = CachedExclusionRepository(store, CoroutineScope(Dispatchers.Unconfined))
+            assertNull(repository.update { it })
+
+            var notified = 0
+            val subscription = repository.observe { notified++ }
+            repository.initialize(emptySet(), emptyList())
+            assertEquals(1, notified)
+            val version = repository.version.value
+
+            val mine = SourceExclusionRule(ExclusionRuleId("mine"), SourceIds.RSS, ExclusionMatcher.Group("g"))
+            val next = repository.update { it.update(phone) { set -> set.add(mine) } }
+
+            assertEquals(listOf(mine), next?.forLayout(phone)?.rules)
+            assertEquals(2, notified)
+            assertEquals(version + 1, repository.version.value)
+            assertEquals(next, store.stored)
+
+            // An update that changes nothing is not a change.
+            repository.update { it }
+            assertEquals(2, notified)
+            assertEquals(version + 1, repository.version.value)
+
+            subscription.cancel()
+            repository.update { it.update(phone) { set -> set.remove(mine.id) } }
+            assertEquals(2, notified)
+        }
+
+    @Test
+    fun aFailedReadNeverLetsAnUpdateOverwriteWhatIsOnDisk() =
+        runBlocking {
+            val stored = LayoutExclusionRules(legacyMigrated = true)
+            val store = FakeStore(stored, failRead = true)
+            val repository = CachedExclusionRepository(store, CoroutineScope(Dispatchers.Unconfined))
+            repository.initialize(emptySet(), emptyList())
+
+            repository.update {
+                it.update(
+                    phone,
+                ) { set ->
+                    set.add(
+                        SourceExclusionRule(ExclusionRuleId("a"), SourceIds.RSS, ExclusionMatcher.Group("g")),
+                    )
+                }
+            }
+
+            assertEquals(1, repository.rules(phone).rules.size)
+            assertTrue(store.writes.isEmpty())
+        }
 }

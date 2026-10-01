@@ -20,10 +20,14 @@ import com.riffle.core.domain.launcher.workspace.lens.LensEvaluationContext
  * in-flight evaluation and guarantees no later callback.
  *
  * [context] is asked for a fresh evaluation context each time so age filters see the current time.
+ * [contextChanges] (optional) tells the provider that something [context] reads has changed (the layout's
+ * exclusion rules): every live observation then re-evaluates its latest source states without touching the
+ * sources, so a rule edit shows at once. It is detached with the observation.
  */
 class SourceBackedLensResultProvider(
     registry: SourceRegistry,
     private val evaluator: AsyncLensEvaluator,
+    private val contextChanges: ContextChanges? = null,
     private val context: () -> LensEvaluationContext,
 ) : LensResultProvider {
     private val sources = SharedSourceRegistry(registry)
@@ -41,6 +45,7 @@ class SourceBackedLensResultProvider(
         private val sourceIds = lens.sources.distinct()
         private val states = HashMap<SourceId, SourceState>()
         private val subscriptions = ArrayList<SourceSubscription>()
+        private var changes: SourceSubscription? = null
         private var inFlight: LensEvaluation? = null
         private var issued = 0L
         private var delivered = 0L
@@ -50,6 +55,13 @@ class SourceBackedLensResultProvider(
         fun start() {
             synchronized(lock) { sourceIds.forEach { id -> states[id] = SourceState.Loading } }
             sourceIds.forEach { id -> attach(id) }
+            contextChanges?.observe { refresh() }?.let { watching ->
+                val stale =
+                    synchronized(lock) {
+                        closed.also { isClosed -> if (!isClosed) changes = watching }
+                    }
+                if (stale) watching.cancel()
+            }
             synchronized(lock) { started = true }
             refresh()
         }
@@ -121,16 +133,28 @@ class SourceBackedLensResultProvider(
         override fun cancel() {
             val toCancel: List<SourceSubscription>
             val pending: LensEvaluation?
+            val watching: SourceSubscription?
             synchronized(lock) {
                 if (closed) return
                 closed = true
                 toCancel = subscriptions.toList()
                 subscriptions.clear()
+                watching = changes
+                changes = null
                 pending = inFlight
                 inFlight = null
             }
             pending?.cancel()
+            watching?.cancel()
             toCancel.forEach { it.cancel() }
         }
     }
+}
+
+/**
+ * A signal that the context lens evaluation reads has changed. [observe] returns a handle that detaches the
+ * listener; [onChange] may be called from any thread and must be cheap.
+ */
+fun interface ContextChanges {
+    fun observe(onChange: () -> Unit): SourceSubscription
 }

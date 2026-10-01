@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
 import com.riffle.app.launcher.workspace.SourcesSettingsController
 import com.riffle.app.launcher.workspace.WorkspacesSettingsController
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -21,7 +22,8 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * [version] changes whenever the stored workspaces do (an edit, a menu switch), so the page re-plans.
  * [currentLayout] is the layout this device is showing now: the only one the editor can open. [onEdit] opens
- * the existing editor through the menu's Edit route; [onRequestSourceAccess] is the existing explicit
+ * the existing editor through the menu's Edit route; [exclusions] drives Settings > Hidden items and rules (null
+ * where the runtime has no exclusion repository, which then shows the page as not loaded); [onRequestSourceAccess] is the existing explicit
  * user-initiated flow for a source (never called except from a tap).
  */
 internal class WorkspaceSettingsHost(
@@ -31,6 +33,7 @@ internal class WorkspaceSettingsHost(
     val currentLayout: HomeLayoutDeviceClass,
     val onEdit: (WorkspaceId) -> Unit,
     val onRequestSourceAccess: (SourceId) -> Unit,
+    val exclusions: ExclusionsSettingsController? = null,
 )
 
 internal val LocalWorkspaceSettingsHost = staticCompositionLocalOf<WorkspaceSettingsHost?> { null }

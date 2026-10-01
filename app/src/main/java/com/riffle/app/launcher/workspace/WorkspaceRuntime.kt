@@ -3,14 +3,18 @@ package com.riffle.app.launcher.workspace
 import androidx.compose.foundation.layout.PaddingValues
 import com.riffle.app.launcher.CachedWorkspaceRepository
 import com.riffle.app.launcher.containers.ContainerServices
+import com.riffle.app.launcher.exclusions.CachedExclusionRepository
+import com.riffle.app.launcher.exclusions.ExclusionMatchCounter
 import com.riffle.app.launcher.expressions.ExpressionEnvironment
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceRegistry
+import com.riffle.core.domain.launcher.workspace.container.ContextChanges
 import com.riffle.core.domain.launcher.workspace.container.LensResultProvider
 import com.riffle.core.domain.launcher.workspace.container.SourceBackedLensResultProvider
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoice
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoices
+import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleId
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleSet
 import com.riffle.core.domain.launcher.workspace.lens.AsyncLensEvaluator
 import com.riffle.core.domain.launcher.workspace.lens.LensEvaluationContext
@@ -23,6 +27,7 @@ import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import java.time.ZoneId
 import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 
 /**
  * Everything the workspace preview needs at runtime, assembled once and shared by the preview surface and
@@ -31,7 +36,8 @@ import java.util.concurrent.Executor
  * thread, the [imageLoader] and the item [actions].
  *
  * [prepareExclusions] loads the layout's source exclusion rules, which lens evaluation applies before every
- * lens; until it has run nothing is excluded.
+ * lens; until it has run nothing is excluded. [exclusions] is the repository behind them (the management page
+ * edits it, and the lens provider re-evaluates when it changes).
  *
  * Nothing here starts work: sources subscribe only when a lens is observed, which only happens while a
  * container is composed, so with the preview off no source runs.
@@ -46,6 +52,7 @@ internal class WorkspaceRuntime(
     private val sourceAccess: () -> Map<SourceId, SourceAccess> = { emptyMap() },
     private val exclusionLoader: suspend () -> Unit = {},
     private val sourceControls: SourceControls = SourceControls(registry),
+    val exclusions: CachedExclusionRepository? = null,
 ) {
     /** Loads the per-layout exclusion rules (migrating the legacy ones once); called when the preview is on. */
     suspend fun prepareExclusions() = exclusionLoader()
@@ -56,6 +63,17 @@ internal class WorkspaceRuntime(
     /** A status monitor over every registered source; the caller starts it and stops it when the page closes. */
     fun sourceStatusMonitor(onChange: (Map<SourceId, SourceStatus>) -> Unit): SourceStatusMonitor =
         SourceStatusMonitor(sourceControls.statusRegistry, registry.descriptors().map { it.id }, onChange)
+
+    /**
+     * The "hides N items" counter of Settings > Hidden items and rules, over the same shared registry the containers
+     * and the Sources page read through (so it adds no upstream). The caller starts and stops it with the page.
+     */
+    fun exclusionMatchCounter(onCounts: (Map<ExclusionRuleId, Int>) -> Unit): ExclusionMatchCounter =
+        ExclusionMatchCounter(sourceControls.statusRegistry, onCounts, countExecutor)
+
+    private val countExecutor: Executor by lazy {
+        Executors.newSingleThreadExecutor { task -> Thread(task, "riffle-exclusion-counts").apply { isDaemon = true } }
+    }
 
     /** The editor's source choices: every registered source with the access it currently has (never prompts). */
     fun sourceChoices(): List<SourceChoice> = SourceChoices.build(registry.descriptors(), sourceAccess())
@@ -103,9 +121,11 @@ internal fun workspaceLensProvider(
     nowEpochMillis: () -> Long = System::currentTimeMillis,
     zone: () -> ZoneId = ZoneId::systemDefault,
     exclusions: () -> ExclusionRuleSet = { ExclusionRuleSet.EMPTY },
+    exclusionChanges: ContextChanges? = null,
 ): LensResultProvider =
     SourceBackedLensResultProvider(
         registry = registry,
         evaluator = AsyncLensEvaluator(executor),
         context = { LensEvaluationContext(nowEpochMillis(), ZoneDayBucketer(zone()), exclusions = exclusions()) },
+        contextChanges = exclusionChanges,
     )

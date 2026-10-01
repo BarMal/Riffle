@@ -218,6 +218,7 @@ internal class MainActivityDependencies(
                 workspaceLensProvider(
                     shared,
                     lensExecutor,
+                    exclusionChanges = exclusionRepository,
                     exclusions = {
                         exclusionRepository.rules(
                             homeLayoutDeviceClassFromConfiguration(
@@ -244,6 +245,7 @@ internal class MainActivityDependencies(
                 )
             },
             sourceControls = SourceControls(statusRegistry = shared, enablement = enablement),
+            exclusions = exclusionRepository,
         )
     }
 

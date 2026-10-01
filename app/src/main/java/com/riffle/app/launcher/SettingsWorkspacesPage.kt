@@ -151,7 +151,7 @@ internal fun WorkspacesSettingsContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WorkspacesLayoutTabs(
+internal fun WorkspacesLayoutTabs(
     tabs: List<SettingsLayoutDeviceTab>,
     selected: HomeLayoutDeviceClass,
     onSelect: (HomeLayoutDeviceClass) -> Unit,
