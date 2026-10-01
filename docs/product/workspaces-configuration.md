@@ -102,8 +102,9 @@ Rules:
 
 ### 1.3 New installs: preset selection
 
-- The home is drawn immediately from the **Nova-style preset** (WS8), with no gate. Until WS8 lands,
-  `WorkspaceMigration.defaultFor` is the seed, which is already the Standard/Nova arrangement.
+- The home is drawn immediately from the **Nova-style preset** (WS8, merged), with no gate, seeded by
+  `PresetInstaller.withDefaultsFor(set, deviceClasses, ids)` (fills only device classes with nothing
+  stored). See section 8, item 1, for why this must be the single built-in default.
 - Offer a **non-blocking** "Choose your home style" step in the existing first-run flow
   (`FirstRunRepository`; it already asks for the Home role). It is a sheet with the preset cards from
   the picker in section 2, Nova pre-selected; Skip keeps Nova. It must not delay the Home role request,
@@ -193,6 +194,13 @@ This is what makes "Restore previous copy" and undo-after-restore cheap.
    test using `libraryOnlyLauncherViewModeAvailability` data.
 4. Backup from an R3 build restores into an R4 build and vice versa (older app ignores the new keys).
 5. The Calendar/notification permission rules are unchanged: nothing new prompts at launch.
+5a. Every `SourceId` that migration output or any preset references has a registered source (a test
+   over `WorkspaceMigration.migrate` fixtures and `WorkspacePresets`): in particular `home.grid`
+   (no adapter exists today, it is an id only), `apps.favourite` and `apps.frequent`. A page whose
+   source is not registered reads `UNAVAILABLE`, which on a user's migrated Home page is a regression
+   from today. See section 8, items 6 and 8.
+5b. The default a fresh install gets and the default a missing layout reads as are the same workspace
+   (section 8, item 1).
 6. Rollback tested: flipping the default back to classic in a build leaves installs that did not touch
    the toggle on classic, and installs that did keep their choice.
 
@@ -430,10 +438,11 @@ Proposed rule (Needs owner decision, Q7):
 1. App launch then return, or process restart: show the **active workspace** at the **page that was
    showing** (page position is already stored for the home layout as `selectedPageId`; for page-sets,
    by group key).
-2. Home press while already on the launcher: go to the active workspace's **first page**, as a
-   standard launcher does; a second press does nothing (standard).
+2. Home press while already on the launcher: go to the active workspace's **start page** (its first
+   non-Finder page unless the workspace declares one, section 8 item 3), as a standard launcher
+   does; a second press does nothing (standard).
 3. Home press while the Finder (All apps) is open: close the Finder and return to the page it was
-   opened from.
+   opened from (to the start page if the Finder itself is the start page).
 4. Nothing ever changes the active workspace except an explicit user action.
 
 Testable as a pure reducer (`WorkspaceReturnReducer`) with the cases above, closing #1323 with
@@ -618,7 +627,7 @@ All changes are additive with defaults; no existing call site or test must chang
 | WS0 contracts | `LensBinding.ref: LensId? = null`; new `LensId`, `SavedLens`, `LensLibrary`, `LensLibraryOps`; `WorkspaceSet.library` default empty; `Workspace.presetId: String? = null` (for Reset to preset) | Existing `LensBinding(lens, expression)` calls compile unchanged. `data class` `copy` and equality now include `ref`/`library`: tests comparing whole sets need no change when both are default. |
 | WS5 codecs/migration | Set schema 2 with `library`; binding `ref`; workspace `"preset"` optional string. Migration (`HomeLayoutWorkspaceMapper`, `MigratedLenses`) untouched: they emit inline. `ensureMigrated(stored, layoutSet)` preserves `stored.library`: today it builds `WorkspaceSet(migrated.layouts + stored.layouts)`, which would drop a library, so it must become `stored.copy(layouts = ...)`. | One small fix in `WorkspaceMigration.ensureMigrated`, covered by a test. |
 | WS7 editor | **Phase 1 (no dependency):** inline only, as now. **Phase 2:** adds "Use saved lens" and "Save as lens" to its lens step, and the impact list on edit. | WS7 can merge today; phase 2 is a follow-up PR after S4 below. It must route edits through `LensLibraryOps`, not mutate bindings of referenced lenses directly. |
-| WS8 presets | Presets stay inline. Optionally set `Workspace.presetId`. | Zero rework. If WS8 stores presets via `LensBinding(...)` constructors, nothing changes. |
+| WS8 presets (merged, `workspace/preset/`) | Presets stay inline. `WorkspacePresets.installPreset` additionally sets `Workspace.presetId` (needed for Reset to preset; WS8 currently links nothing back to the preset). | Catalog and tests need no change; `installPreset` gains one `copy(presetId = ...)` and its tests an assertion. `skinHintId` stays unwritten (section 8, item 7). |
 | WS6 menu | None. It reads `binding.lens` snapshots. Optionally shows nothing about refs. | None. |
 | WS4 hosts/planners | None (snapshot). | None. |
 | Backup | `workspaceSet` already carries the object; the library rides inside it (section 5). | None. |
@@ -751,7 +760,7 @@ invisible or safe until its turn. Sizes are rough PR counts.
 
 | ID | Slice | Depends on | Gate / ships as |
 | --- | --- | --- | --- |
-| S1 | **Bootstrap (domain).** `WorkspaceBootstrap`, `DecodeReport`, `BootstrapOutcome`, newer-schema read-only rule, fall-through rules; pure. Unit + golden tests. | WS5 | Not called yet. |
+| S1 | **Bootstrap (domain).** `WorkspaceBootstrap`, `DecodeReport`, `BootstrapOutcome`, newer-schema read-only rule, fall-through rules; default unification (8.1: `defaultFor` delegates to the Nova preset, migration marks a single `AllApps` page `FINDER`); pure. Unit + golden tests. | WS5 | Not called yet. |
 | S2 | **Storage and startup (app).** `WorkspaceRepository` implementation over the existing `DataStoreWorkspaceStore` with write-behind and one previous generation; bounded startup read; shadow `ensureMigrated` writes; `WorkspaceRollout`; outcome counters. Nothing drawn. | S1 | Rollout = classic. Ships R1. |
 | S3 | **Backup wiring.** Export passes `workspaceSet`; import applies/rebuilds/undo; import summary; golden backup fixtures. | S2 | Ships R2, independent of UI. Fixes the existing gap. |
 | S4 | **Lens library (domain).** `LensId`, `SavedLens`, `LensLibrary`, `LensBinding.ref`, `WorkspaceSet.library`, `LensLibraryOps`, set schema 2, `ensureMigrated` keeps library, `Workspace.presetId`. All additive. | WS0, WS5 | Pure; no UI. Can be built in parallel with S1-S3 and in-flight WS7/WS8. |
@@ -761,6 +770,7 @@ invisible or safe until its turn. Sizes are rough PR counts.
 | S8 | **Privacy controls.** Per-source content level, locked-device rule, optional screenshot flag, Privacy page. | S6 | Defaults equal today. Can ship before the flip. |
 | S9 | **Legacy reconciliation.** Remove Home screen/view mode/template/Modes UI, add return rule (`WorkspaceReturnReducer`), retire `libraryOnly...Availability`, hide `afterLeavingLibrary`, hide template row early as a quick win. Closes #1323, #1324, #1325. | S5, WS8 | Flips with S10. |
 | S10 | **Flip the default.** New-install preset (Nova), non-blocking first-run chooser, `WorkspaceRolloutMode.ON` default, release notes. | S1-S9, WS6, WS7, WS8; flip criteria 1.7 | R4. |
+| S12 | **Optional workspace additions** (8.2, 8.3, 8.7): `Workspace.startPageId`, Finder out of the pager, `skinOverrideId` = theme preset, optional `DockPresentation`. Additive codec keys. | S4 pattern, owner Q14, Q15, Q17 | `startPageId` and Finder-out-of-pager should land before S10 (the return rule uses them); the rest can follow. |
 | S11 | **Cleanup.** Delete `WorkspaceMenuFeature`, dead mode code, unused settings UI; keep codec fields. | one release after S10 | R5. |
 
 Parallelism: S1->S2->S3 is a chain that can start now; S4 is independent of that chain; S5/S6/S7/S8
@@ -807,6 +817,105 @@ notification access), per the existing policy.
 
 ---
 
+## 8. Findings from the presets (WS8) that bear on default-on
+
+The merged presets doc (`workspaces-presets.md`, "Gaps") lists limits of the current model. Each is
+addressed here as in scope for WS10, deferred, or owner-decided. Nothing below changes behaviour in the
+flip except items 1, 3 and 8.
+
+1. **Two different built-in defaults.** `PresetInstaller.newInstallLayout`/`withDefaultsFor` seeds the
+   Nova-style workspace **with a Finder page** (Home + a `FINDER` AlphaList page).
+   `WorkspaceMigration.defaultFor` (what `WorkspaceSet.workspacesFor` returns for a layout with nothing
+   stored) maps `HomeLayoutDefaults.standard` through the mapper and has **no** `FINDER` page: an
+   `AllApps` page keeps `PageRole.STANDARD`. The dock menu hides its Finder entry when there is no
+   `FINDER` page, so a migrated Standard user would have no Finder entry while a new install does.
+   Rule proposed:
+   - **Fresh install** gets `WorkspacePresets.defaultFor` (Nova-style with Finder) through
+     `PresetInstaller.withDefaultsFor`.
+   - **Missing layout read** (`workspacesFor` fallback) returns the same Nova default:
+     `WorkspaceMigration.defaultFor` delegates to `WorkspacePresets.defaultFor`, so there is one
+     built-in default and a fresh install is never different from "nothing stored".
+   - **Migrated existing install** still uses the mapper (it must reproduce the user's own pages) but
+     marks the single `AllApps` page of a layout `PageRole.FINDER` (an `AllApps` page is the drawer
+     and already AlphaList), so the Finder entry exists for migrated users too. A layout with two
+     `AllApps` pages marks none. Covered by a golden test.
+   Slice: folded into S1 (small change plus tests); no stored data changes.
+2. **Dock edge, size, pins and "no dock" are `DockModel`, not `Workspace`.** A workspace owns only the
+   dynamic section, so Niagara ("no dock") and unfolded TimeScape ("dock on the left edge") are not
+   expressible. Proposal: **out of scope for WS10.** Pins must stay shared across workspaces
+   (`dock.md`: one dock per device class) and standard-launcher parity does not need a per-workspace
+   dock. If wanted later, add an *override only* type, never a second pin list:
+   ```kotlin
+   data class WorkspaceDock(
+       val dynamicSection: LensBinding? = null,
+       val presentation: DockPresentation? = null,     // NEW, null = follow the device class dock
+   )
+   data class DockPresentation(val visible: Boolean = true, val edge: DockPosition? = null)
+   ```
+   (codec: optional `"presentation"` key, additive like `ref`.) Optional slice S12.
+3. **No start page; the Finder is a pager page.** A workspace cannot say which page it opens on, and a
+   `FINDER` page sits in the pager (the WS6 menu already excludes it from Jump to page). Proposal, both
+   additive:
+   - `Workspace.startPageId: ContainerId? = null` (null = first non-Finder page; an id that does not
+     exist is ignored, never an error; codec key `"start"`). It may name the Finder, which is how
+     Kvaesitso opens on search.
+   - **The shell excludes the Finder page from the pager** and opens it only through the Finder entry
+     or the gesture bound to it, unless it is the start page. This matches standard-launcher parity
+     (the drawer is not a home page) and keeps page indicators honest; it is a UI rule with no model
+     change. The start page feeds the return rule in 3.2.
+   Owner decision (Q14).
+4. **No master/detail link between containers** (unfolded TimeScape: the Index picks which group the
+   CardStack shows). Deferred; not a configuration concern. When designed, keep lenses static and
+   saved-lens friendly: the detail container's filter is composed at evaluation time as
+   `AllOf(lens.filter, GroupKeyIs(selected))` from a runtime selection, never by parameterising a
+   stored or saved lens or writing a selection into it. Recorded so the library never grows lens
+   parameters.
+5. **Search and query.** `LensFilter` has no text predicate and `SourceIds.SEARCH` has no adapter yet.
+   PR #1370 (RSS/Search, domain slice) proposes a transient, never-persisted `SearchQueryHolder` that
+   the search box writes and the search source observes, with no change to `Lens`. WS10 aligns:
+   - A saved lens over `search` stores **no query**, ever; the query is runtime state (consistent with
+     "lenses hold definitions only" and with queries never being logged).
+   - The Sources page shows Search as a source with provider settings only; the query is typed in the
+     existing search UI.
+   - If #1370's open question (per-lens queries) is answered yes later, the query lives in the binding
+     at runtime, not in the library.
+6. **`apps.favourite` / `apps.frequent` have no adapter.** They are reserved ids that migrated
+   `Generated(FAVOURITES/FREQUENTLY_USED)` pages already reference (`WorkspaceSourceIds`). Until an
+   adapter is registered those pages are `UNAVAILABLE`. WS10 treats this as a **flip blocker**
+   (criterion 5a) with two acceptable outcomes: register thin adapters over the existing favourites
+   and usage data (preferred, small), or have migration map such pages to a lens over `apps.all` with
+   the closest filter, recorded in the golden test. The Sources page lists only registered sources, so
+   it never shows one that cannot work.
+7. **Skin model.** `skinOverrideId` exists (null follows global) and presets carry placeholder
+   `skinHintId`s, but **no skin ids exist in the repo**. The only appearance catalog is
+   `LauncherThemePreset` (`AppearanceSettings.themePreset`, default `MATERIAL`). Proposal: a skin is a
+   theme preset; `skinOverrideId` stores the `LauncherThemePreset` name (a stored contract, never
+   renamed; unknown ids read as "follow global"). Settings: per workspace an Appearance row
+   "Follow global / <preset>". Preset `skinHintId`s are mapped to a `LauncherThemePreset` or dropped
+   (hints only; installing a preset still never changes the theme). Owner decision (Q15) plus a small
+   WS8 follow-up replacing the placeholders.
+8. **Long-term ownership of placed items.** Presets cannot create `HomeLayout` pages and reference only
+   page `home` through `home.grid` + `GroupKeyIs("home")`; migrated pages use their own page ids.
+   `home.grid` has **no adapter yet**, and `HomeLayoutSet` still keeps one `HomeLayout` per mode per
+   device class. Proposed for the default-on world:
+   - **`HomeLayout` remains the owner of placed items** (apps, folders, widgets, shortcuts, pins,
+     selected page) through the flip and until a separate placed-items container project; workspaces
+     reference them, never copy them. This is also why revert is cheap (1.7) and why backup already
+     contains them.
+   - After the flip each device class has **one canonical `HomeLayout` for placed items**: the layout
+     of the mode it showed at migration (that workspace is already active and default). Migrated
+     workspaces that came from other modes keep reading their own `HomeLayout`s; `home.grid` takes its
+     layout from a layout key carried with the page binding (`GroupKeyIs(pageId)` stays), so there is
+     no collision even if page ids repeat across layouts. Q12 asks the narrower question whether ids
+     are unique; the key makes the answer irrelevant.
+   - **Creating a page** in the editor (WS7) creates the `HomeLayout` page in the workspace's
+     canonical layout and then the container referencing it. **Deleting a workspace never deletes
+     `HomeLayout` pages or placed items** (it removes only the arrangement); an unreferenced page stays
+     in `HomeLayout` and can be re-added.
+   - New-install presets: `HomeLayoutDefaults.standard` always has page `home`, so a Nova, iOS or
+     Niagara install shows the user's placed items from the first frame.
+   Owner confirmation needed (Q16) because it fixes the long-term ownership boundary.
+
 ## Open questions for the owner
 
 | # | Question | Recommendation |
@@ -824,6 +933,12 @@ notification access), per the existing policy.
 | Q11 | **Restore policy:** replace (this design) or offer merge of saved lenses and workspaces? | Replace, with Undo restore. Merge is a later feature if people ask. |
 | Q12 | **`home.grid` source and page ids:** the migrated Home pages reference `HomeLayout` pages by `GroupKeyIs(pageId)`. Since modes retire from the UI but three `HomeLayout`s still exist, are page ids unique across a device class's layouts? If not, `home.grid` needs the layout key. | Verify with a test over real fixtures before S10; add the layout key to the source if any collision is possible. This is the main correctness risk of the flip. |
 | Q13 | **Source disabled state:** add `OFF` to `LensAvailability` (this design) versus reusing `UNAVAILABLE` with a settings-derived message. | Add `OFF`; reuse of `UNAVAILABLE` would show a misleading "unavailable". |
+| Q14 | **Start page and Finder in the pager (8.3):** add `Workspace.startPageId` and hide the Finder page from the pager, opening it only from the Finder entry or gesture unless it is the start page? | Yes to both: the drawer is not a home page in standard launchers; additive and codec-safe. |
+| Q15 | **Skin model (8.7):** skin = existing `LauncherThemePreset`; per-workspace override, null follows global; placeholder `skinHintId`s mapped or dropped. | Adopt. No separate skin catalog until a second skin concept exists. |
+| Q16 | **Placed-items ownership (8.8):** `HomeLayout` stays the owner through the flip; one canonical layout per device class; `home.grid` carries a layout key; deleting a workspace never deletes placed items. | Adopt; revisit only with a dedicated placed-items container project. |
+| Q17 | **Workspace-level dock (8.2):** in scope? | No for WS10; optional override-only `DockPresentation` later. Niagara and unfolded TimeScape dock fidelity is a preset limitation, not a parity issue. |
+| Q18 | **Default unification (8.1):** one built-in default (Nova with Finder); migration marks a single `AllApps` page `FINDER`. | Adopt; golden tests in S1. |
+| Q19 | **`apps.favourite`/`apps.frequent` (8.6):** register adapters or map migrated pages to `apps.all` lenses? | Adapters (small), as a flip blocker; the mapping only if adapters slip. |
 
 ## Known limitations of this design
 
