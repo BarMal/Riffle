@@ -1,6 +1,6 @@
 # Workspaces: the shared placed-items pool (WS10 S3, as built)
 
-Status: **domain only, not wired**. Slice S3 of `docs/product/workspaces-configuration.md` section 9 (owner decisions N2, N9,
+Status: **domain, now wired read-only behind the preview switch by S4 (see [`workspaces-pool-cutover.md`](workspaces-pool-cutover.md))**. The text below describes the S3 state. Slice S3 of `docs/product/workspaces-configuration.md` section 9 (owner decisions N2, N9,
 N12, N13). Nothing in `app/` uses it, no runtime behaviour changes, and `HomeLayoutSet` is still the source of truth for
 the home screen. Code: `core/domain/.../launcher/workspace/pool/`. Tracking: #1363, slice issue #1383.
 

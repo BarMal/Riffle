@@ -49,6 +49,8 @@ import com.riffle.app.launcher.containers.PageContainerHost
 import com.riffle.app.launcher.containers.PageSetContainerHost
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.pool.PlacedHomeContent
+import com.riffle.app.launcher.pool.PoolHomePage
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageContent
@@ -57,11 +59,13 @@ import com.riffle.core.domain.launcher.workspace.PageSetContainer
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceDock
 import com.riffle.core.domain.launcher.workspace.WorkspaceSourceIds
+import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 
 internal const val WORKSPACE_PREVIEW_TEST_TAG = "workspace-preview"
 internal const val WORKSPACE_PREVIEW_EXIT_TEST_TAG = "workspace-preview-exit"
 internal const val WORKSPACE_PREVIEW_HOME_PLACEHOLDER_TEST_TAG = "workspace-preview-home-placeholder"
 internal const val WORKSPACE_PREVIEW_DOCK_TEST_TAG = "workspace-preview-dock"
+internal const val WORKSPACE_PREVIEW_REIMPORT_TEST_TAG = "workspace-preview-reimport"
 
 private val PreviewBarHeight: Dp = 56.dp
 private val DockBarHeight: Dp = 72.dp
@@ -73,7 +77,8 @@ private val DockBarHeight: Dp = 72.dp
  *
  * [servicesFor] builds the container services for the content padding this surface computes from the window
  * insets, so expressions never draw under the bars. [workspace] is null while workspaces are still loading.
- * Pages that reference `home.grid` have no adapter yet and draw an honest placeholder.
+ * Pages that reference `home.grid` draw the user's real placed items read-only through [placedHome] (the pool),
+ * or an honest placeholder when there is no [placedHome] or the page is not a single bound home page.
  */
 @Suppress("LongParameterList")
 @Composable
@@ -86,6 +91,7 @@ internal fun WorkspacePreviewSurface(
     onNavigationConsumed: (PreviewNavigation) -> Unit,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
+    placedHome: PlacedHomeContent? = null,
 ) {
     BackHandler(onBack = onExit)
     val direction = LocalLayoutDirection.current
@@ -109,11 +115,11 @@ internal fun WorkspacePreviewSurface(
                 )
             } else {
                 key(workspace.id) {
-                    WorkspacePager(workspace, services, reducedMotion, navigation, onNavigationConsumed)
+                    WorkspacePager(workspace, services, reducedMotion, navigation, onNavigationConsumed, placedHome)
                 }
                 DockBar(workspace.dock, services, Modifier.align(Alignment.BottomCenter))
             }
-            PreviewTopBar(workspace?.name, onExit, Modifier.align(Alignment.TopCenter))
+            PreviewTopBar(workspace?.name, onExit, placedHome?.onReimport, Modifier.align(Alignment.TopCenter))
             if (menu != null) {
                 WorkspaceMenuLayer(
                     host = menu,
@@ -133,6 +139,7 @@ private fun WorkspacePager(
     reducedMotion: Boolean,
     navigation: PreviewNavigation?,
     onNavigationConsumed: (PreviewNavigation) -> Unit,
+    placedHome: PlacedHomeContent?,
 ) {
     val pageCount by rememberUpdatedState(workspace.pages.size)
     val pagerState = rememberPagerState(pageCount = { pageCount })
@@ -154,7 +161,7 @@ private fun WorkspacePager(
         modifier = Modifier.fillMaxSize(),
         key = { index -> workspace.pages.getOrNull(index)?.id?.value ?: index },
     ) { index ->
-        workspace.pages.getOrNull(index)?.let { page -> PreviewPage(page, services) }
+        workspace.pages.getOrNull(index)?.let { page -> PreviewPage(page, services, placedHome) }
     }
 }
 
@@ -162,8 +169,11 @@ private fun WorkspacePager(
 private fun PreviewPage(
     page: PageHost,
     services: ContainerServices,
+    placedHome: PlacedHomeContent?,
 ) {
     when {
+        placedHome != null && PoolHomeView.isPlacedHomePage(page) ->
+            PoolHomePage(placedHome.resolve(page), placedHome, services.environment.contentPadding)
         page.referencesHomeGrid() -> HomeGridPlaceholder(services.environment.contentPadding)
         page is PageSetContainer -> PageSetContainerHost(page, services, Modifier.fillMaxSize())
         page is PageContainer -> PageContainerHost(page, services, Modifier.fillMaxSize())
@@ -200,6 +210,7 @@ private fun HomeGridPlaceholder(contentPadding: PaddingValues) {
 private fun PreviewTopBar(
     workspaceName: String?,
     onExit: () -> Unit,
+    onReimport: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val barInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
@@ -220,6 +231,11 @@ private fun PreviewTopBar(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            if (onReimport != null) {
+                TextButton(onClick = onReimport, modifier = Modifier.testTag(WORKSPACE_PREVIEW_REIMPORT_TEST_TAG)) {
+                    Text(WorkspacePreviewText.REIMPORT)
+                }
+            }
             TextButton(onClick = onExit, modifier = Modifier.testTag(WORKSPACE_PREVIEW_EXIT_TEST_TAG)) {
                 Text(WorkspacePreviewText.EXIT)
             }
