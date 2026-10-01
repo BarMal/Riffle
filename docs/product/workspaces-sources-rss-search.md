@@ -84,7 +84,10 @@ query); wiring it to the settings-backed feed source, the article cache and a se
 slices, as for the other sources. A pure test asserts that every `SourceIds.BUILT_IN` id has a
 registered source and nothing else is registered.
 
-## Open question
+## Open question (resolved)
+
+Resolved by [workspaces-lens-queries.md](workspaces-lens-queries.md): lenses carry their own query.
+
 
 Do lenses need their own query (two search boxes on one page)? If so, the minimal additive hook is an
 optional interface `ParameterizedItemSource { fun subscribe(parameters, observer) }` plus a lens source

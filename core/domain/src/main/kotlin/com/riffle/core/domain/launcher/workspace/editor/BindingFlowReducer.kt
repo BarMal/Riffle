@@ -18,6 +18,12 @@ object BindingFlowReducer {
             is BindingFlowAction.SetGroup -> onLens(state, context) { it.withGroup(action.group) }
             is BindingFlowAction.SetSort -> onLens(state, context) { it.withSort(action.sort) }
             is BindingFlowAction.SetLimit -> onLens(state, context) { it.withLimit(action.limit) }
+            is BindingFlowAction.SetQuery ->
+                if (action.source in state.draft.sources) {
+                    onLens(state, context) { it.withQuery(action.source, action.text) }
+                } else {
+                    state
+                }
             is BindingFlowAction.PickExpression -> onExpression(state, action, context)
             is BindingFlowAction.PickContainer -> onContainer(state, action, context)
             BindingFlowAction.Next -> next(state, context)

@@ -13,11 +13,16 @@ data class Lens(
     val sort: LensSort = LensSort(),
     val limit: Int? = null,
     val project: Set<ItemField> = ItemField.ALL,
+    /** Per-source parameters (for example a search query). Empty means every source uses its default. */
+    val parameters: Map<SourceId, SourceParameter> = emptyMap(),
 ) {
     init {
         require(sources.isNotEmpty()) { "A lens needs at least one source." }
         require(limit == null || limit > 0) { "A lens limit must be positive." }
     }
+
+    /** The parameter for [id], or null when the lens does not set one (the source default applies). */
+    fun parameterFor(id: SourceId): SourceParameter? = parameters[id]?.takeIf { id in sources }
 
     /** Result shapes this lens can produce. A flat lens limited to one item is also [ResultShape.SINGLE]. */
     val resultShapes: Set<ResultShape>
