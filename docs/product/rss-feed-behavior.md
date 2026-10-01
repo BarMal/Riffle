@@ -21,6 +21,8 @@ contract; this page summarizes the parts relevant to manual device validation.
 - Metered-network and battery-saver state are expected to suppress any non-user-triggered refresh
   once scheduled refresh ships; this settings slice adds no exception to that rule.
 
+User-triggered refresh is built; see [rss-refresh.md](rss-refresh.md). Background refresh is not.
+
 ## Offline behaviour
 
 - Cached articles remain available and readable when the device is offline or a refresh fails;

@@ -108,16 +108,20 @@ class FeedRefreshCoordinator(
     fun refreshBlocking(scope: FeedRefreshScope): FeedRefreshReport? =
         if (running.compareAndSet(false, true)) runAndRelease(scope) else null
 
-    fun statusOf(feedId: FeedId): FeedRefreshStatus {
-        val state = synchronized(lock) { states[feedId] }
-        val cachedAt =
-            (cache.loadFeed(feedId) as? FeedCacheResult.Available)?.snapshot?.feed?.fetchedAtEpochMillis
-        return FeedRefreshStatus(
-            refreshing = synchronized(lock) { feedId in inFlight },
-            lastUpdatedAtEpochMillis = state?.lastSuccessAtEpochMillis ?: cachedAt,
-            lastFailure = state?.lastFailure,
-        )
-    }
+    /** In-memory status for a settings row; cheap and safe to call from any thread, including main. */
+    fun statusOf(feedId: FeedId): FeedRefreshStatus =
+        synchronized(lock) {
+            val state = states[feedId]
+            FeedRefreshStatus(
+                refreshing = feedId in inFlight,
+                lastUpdatedAtEpochMillis = state?.lastSuccessAtEpochMillis,
+                lastFailure = state?.lastFailure,
+            )
+        }
+
+    /** When [feedId] was last stored in the cache, surviving restarts. Reads the cache: call off the main thread. */
+    fun lastCachedAtMillis(feedId: FeedId): Long? =
+        (cache.loadFeed(feedId) as? FeedCacheResult.Available)?.snapshot?.feed?.fetchedAtEpochMillis
 
     private fun runAndRelease(scope: FeedRefreshScope): FeedRefreshReport =
         try {
@@ -213,16 +217,16 @@ class FeedRefreshCoordinator(
     private fun previousDigests(feedId: FeedId): Set<String> =
         (cache.loadFeed(feedId, Long.MAX_VALUE) as? FeedCacheResult.Available)
             ?.snapshot?.feed?.articles?.map(CachedFeedArticle::digest)?.toSet().orEmpty()
-
-    private fun FeedItem.toCached(feed: FeedConfiguration) =
-        CachedFeedArticle(
-            digest = FeedItemIntentDigest.forItem(feed, this).value,
-            title = title,
-            author = author,
-            publishedAtEpochMillis = publishedAt?.toEpochMilli(),
-            summary = summary,
-            canonicalUrl = canonicalUrl,
-            imageUrl = imageUrl,
-            sourceOrder = sourceOrder,
-        )
 }
+
+private fun FeedItem.toCached(feed: FeedConfiguration) =
+    CachedFeedArticle(
+        digest = FeedItemIntentDigest.forItem(feed, this).value,
+        title = title,
+        author = author,
+        publishedAtEpochMillis = publishedAt?.toEpochMilli(),
+        summary = summary,
+        canonicalUrl = canonicalUrl,
+        imageUrl = imageUrl,
+        sourceOrder = sourceOrder,
+    )

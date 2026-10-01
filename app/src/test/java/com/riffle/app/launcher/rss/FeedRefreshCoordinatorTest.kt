@@ -211,11 +211,16 @@ class FeedRefreshCoordinatorTest {
     }
 
     @Test
-    fun statusFallsBackToTheCacheFetchTimeAfterARestart() {
+    fun statusIsInMemoryAndTheCacheTimeSurvivesRestarts() {
         assertNull(coordinator.statusOf(feedA.id).lastUpdatedAtEpochMillis)
+        assertNull(coordinator.lastCachedAtMillis(feedA.id))
         cache.replaceFeed(feedA.id, listOf(cached(1)))
 
-        assertEquals(cache.fetchedAt, coordinator.statusOf(feedA.id).lastUpdatedAtEpochMillis)
+        assertEquals(cache.fetchedAt, coordinator.lastCachedAtMillis(feedA.id))
+        assertNull(coordinator.statusOf(feedA.id).lastUpdatedAtEpochMillis)
+
+        coordinator.refreshBlocking(FeedRefreshScope.All)
+        assertEquals(now, coordinator.statusOf(feedA.id).lastUpdatedAtEpochMillis)
     }
 
     private fun feed(
