@@ -391,6 +391,36 @@ Explicitly not building (and why):
 - **Smart-home/IoT clients, Health Connect, Wear**: reach only via future extension apps; no direct
   integration in the launcher.
 
+### Owner decisions (2026-10-01)
+
+Answers recorded on #1363; the design consequences for configuration are in
+[`workspaces-configuration.md`](workspaces-configuration.md) (sections 14 and 15).
+
+1. Third-party extension API: **not yet**, only on demand. The handshake, signing and sample-app questions
+   (4, 6, 7) are parked; stop at step 3 of the build order.
+2. Tokenised ICS/feed URLs in backup: **no**; re-enter after restore. A tokenised URL is omitted from the
+   backup (a pure rule with tests in the configuration doc, section 5).
+3. External items in the dock's dynamic section: **allowed** (this differs from the recommendation below,
+   which was "containers only at first"). Trust-model and dock-budget implications, to be enforced when the
+   first external source ships:
+   - the dock is always visible, so external items are ordered **after** built-in items (the "built-ins
+     ahead" ordering rule becomes mandatory in the dock) and draw as icon plus count only;
+   - external items **share** the dynamic section's slot budget (`notificationSlotCount`, 1 to 5) and never
+     extend it; proposal: external sources together occupy at most half the slots and at least one slot is
+     kept for built-ins when any exist;
+   - provenance ("From <app name>") must be reachable from a dock icon (long-press and a TalkBack action);
+   - source exclusion rules and the `OFF` status apply; `PRIVACY_SENSITIVE` items show the icon only.
+4. ICS recurrence: **full recurrence support** (this differs from the "documented RRULE subset" assumed in
+   the build order and in question 5). Scope: RFC 5545 `RRULE` expansion, `EXDATE`/`RDATE`,
+   `RECURRENCE-ID` overrides, time zones including DST, bounded expansion windows and an instance cap; an
+   in-repo implementation versus a dependency is open (N8 in the configuration doc). Raises the ICS slice
+   from small to medium.
+5. Play data-safety and privacy declarations: the **owner** updates them; every PR that adds a permission or
+   a data class carries a checklist line (configuration doc, 7.2).
+6. Per-lens search queries are in scope now (configuration doc, section 13); this does not affect the
+   external-source contract except that a future searchable external source would use the same parameter
+   binding.
+
 ### Open questions for the owner
 
 1. Is a third-party extension API in scope for v1 of workspaces, or should the roadmap stop at URL sources and

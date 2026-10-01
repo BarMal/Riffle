@@ -1149,9 +1149,9 @@ were answered differently from the original recommendation and are now designed 
 4. **No master/detail link between containers** (unfolded TimeScape: the Index picks which group the
    CardStack shows). Deferred; not a configuration concern. When designed, keep lenses static and
    saved-lens friendly: the detail container's filter is composed at evaluation time as
-   `AllOf(lens.filter, GroupKeyIs(selected))` from a runtime selection, never by parameterising a
-   stored or saved lens or writing a selection into it. Recorded so the library never grows lens
-   parameters.
+   `AllOf(lens.filter, GroupKeyIs(selected))` from a runtime selection, never by writing a selection into
+   a stored or saved lens. (Section 13 adds lens *parameter bindings* for search queries only; a master/detail
+   selection stays runtime composition and does not use that mechanism.)
 5. **Search and query.** *(Superseded by the per-lens query decision.)* The original text kept the query
    outside lenses entirely. The owner wants per-lens queries now: section 13 specifies the additive WS0
    hook. What is **kept**: the query text is never persisted, logged or backed up, and a saved lens stores
@@ -1314,7 +1314,7 @@ Decisions inside the model:
 * `HomeLayoutSettings` (grid dimensions, labels) is per layout today; it stays a per-device-class default
   used when creating pages, and each placed page carries its own `GridDimensions` (already true).
 
-### 9.5 iOS-style behaviours and the Finder (Q14, and your questions about "pages appear as you fill them")
+### 9.5 iOS-style behaviours and the Finder (Q14: "pages appear as you fill them", new-app placement)
 
 * **Pages appear as you fill them.** New behaviour in the home-edit flow, expressed as a pure rule in a
   `PlacedItemsAutoPaging` helper over the adapted layout: when an item is dropped or placed and *every*
