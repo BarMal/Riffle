@@ -9,6 +9,7 @@ class LauncherBackupExportCoordinator(
     private val appVisibilityRepository: AppVisibilityRepository,
     private val currentState: () -> LauncherShellState,
     private val epochMillisProvider: EpochMillisProvider = SystemEpochMillisProvider,
+    private val workspaceBackup: WorkspaceBackupPort? = null,
 ) {
     fun currentBackupDocument(): LauncherBackupDocument =
         currentState().let { state ->
@@ -18,6 +19,8 @@ class LauncherBackupExportCoordinator(
                 launcherSettings = state.launcherSettings,
                 hiddenAppIdentities = appVisibilityRepository.hiddenAppIdentities(),
                 exportedAtEpochMillis = epochMillisProvider.nowEpochMillis(),
+                workspaceSet = workspaceBackup?.let { runCatching(it::currentWorkspaceSet).getOrNull() },
+                exclusions = workspaceBackup?.let { runCatching(it::currentExclusions).getOrNull() },
             )
         }
 }

@@ -427,7 +427,11 @@ class MainActivity : ComponentActivity() {
                                         ).show()
                                 }
                             },
-                            exportBackup = { createBackupDocument.launch(BACKUP_DOCUMENT_NAME) },
+                            exportBackup = {
+                                // Starts reading stored workspace data while the file picker is open.
+                                backupDocumentHandler.prepareExport()
+                                createBackupDocument.launch(BACKUP_DOCUMENT_NAME)
+                            },
                             importBackup = { openBackupDocument.launch(BACKUP_DOCUMENT_OPEN_MIME_TYPES) },
                         ),
                 ),
