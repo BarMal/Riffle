@@ -196,13 +196,31 @@ menu cannot open and nothing is drawn or blocked: standard launcher mode is unaf
 **Enabling.** The menu is off by default behind `WorkspaceMenuFeature.enabled` (app layer), separate
 from `DockShelfExpansion.enabled`. Off, the dock pull and the dock behave exactly as today.
 
-**Proposed doc change (open question for review).** The dock pull away from the dock edge is today
-the Home <-> Library mode switch, and the arbitration table in `gestures.md` reserves it. "Pull the
-dock up opens the menu" therefore cannot ship while modes exist without taking that gesture from the
-mode switch. Proposal: while both exist, the menu opens from an explicit dock affordance (a button on
-the dock, plus a dock accessibility action "Workspace menu") that reuses the shelf's composables but
-not its swipe; once workspaces replace the mode pair, the dock pull opens the menu, with the same
-accessibility action and Ctrl+arrow equivalent. No new pointer loop is added either way.
+**Trigger (decided).** The dock pull away from the dock edge is the Home <-> Library mode switch and
+stays so (`gestures.md` reserves it), so while the mode pair exists the menu does **not** take that
+gesture. It opens from an explicit dock affordance and from a dock accessibility action "Workspace
+menu" (added next to "Switch to Library/Home" on the dock body; `HomeDockPullBinding`), reusing the
+shelf's composables but not its swipe. Once workspaces replace the mode pair, the dock pull opens the
+menu, with the same accessibility action and a Ctrl+arrow equivalent. No new pointer loop is added
+either way. Horizontal dock swipes to switch workspace stay parked.
+
+**Shell wiring.** `WorkspaceMenuController` (app) owns the open state and runs `WorkspaceMenuReducer`;
+`LauncherShellViewModel.workspaceMenu` exposes it and `workspaceMenuEffects` carries the effects the
+shell does not perform itself (jump to page, Finder, Edit: the pager host and the editor collect
+them; Edit only emits `EditWorkspace`). Switching workspace is persisted through the repository
+before it is emitted. `LauncherShell` passes a `WorkspaceMenuHost` down to `HomeDestination` only when
+`WorkspaceMenuFeature.enabled` and a model exists, so a disabled menu adds no semantics, surface or
+dock change.
+
+**Repository wiring.** `CachedWorkspaceRepository` adapts the suspend `DataStoreWorkspaceStore`
+(through `WorkspaceStorePort`) to the synchronous `WorkspaceRepository`: `load()` is null until
+`initialize(layoutSet)`, which runs `WorkspaceMigration.ensureMigrated(stored, layoutSet)` and so only
+fills device classes with nothing stored; it never writes by itself (the migration is deterministic
+and is re-derived until the first `save`). The wiring point is
+`MainActivityDependencies.workspaceRepository` -> `LauncherShellPlatformDependencies.workspaceRepository`;
+the view model initializes it only when the feature is enabled. A blob that fails to decode reads as
+"nothing stored", so the first save after that would replace it; this is a known limitation of the
+store's null-on-failure contract.
 
 ## Worked example: folded "TimeScape" workspace
 

@@ -78,6 +78,14 @@ fun LauncherShell(
     var adaptiveStageContext by rememberSaveable(stateSaver = AdaptiveStageInteractionContextSaver) {
         mutableStateOf(AdaptiveStageInteractionContext())
     }
+    // Absent while the feature is off or no workspaces are loaded, so nothing downstream composes it.
+    val menuState by viewModel.workspaceMenu.state.collectAsState()
+    val workspaceMenu =
+        if (WorkspaceMenuFeature.enabled && viewModel.workspaceMenu.isAvailable()) {
+            WorkspaceMenuHost(state = menuState, onAction = viewModel.workspaceMenu::dispatch)
+        } else {
+            null
+        }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LauncherShellContent(
@@ -89,6 +97,7 @@ fun LauncherShell(
             adaptiveStageWindowLayout = adaptiveStageWindowLayout,
             adaptiveStageContext = adaptiveStageContext,
             onAdaptiveStageContextChanged = { adaptiveStageContext = it },
+            workspaceMenu = workspaceMenu,
             onAction = onAction,
             onSetupCardDismissed = viewModel::onSetupCardDismissed,
             onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
@@ -109,6 +118,7 @@ fun LauncherShellContent(
     onDockEditFeedbackDismissed: () -> Unit = {},
     adaptiveStageContext: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
+    workspaceMenu: WorkspaceMenuHost? = null,
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
 
@@ -158,6 +168,7 @@ fun LauncherShellContent(
                 adaptiveStageContext = adaptiveStageContext,
                 onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 haptics = haptics,
+                workspaceMenu = workspaceMenu,
                 onAction = onAction,
             )
             if (state.destination == ShellDestination.HOME && state.shouldShowSetupCard) {
@@ -420,6 +431,7 @@ private fun LauncherDestination(
     adaptiveStageContext: AdaptiveStageInteractionContext,
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
     haptics: LauncherHaptics,
+    workspaceMenu: WorkspaceMenuHost?,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val settingsPageActionRouter = rememberSettingsPageActionRouter(onAction)
@@ -441,6 +453,7 @@ private fun LauncherDestination(
                 adaptiveStageContext = adaptiveStageContext,
                 onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 haptics = haptics,
+                workspaceMenu = workspaceMenu,
                 onAction = settingsPageActionRouter.onAction,
             )
 
