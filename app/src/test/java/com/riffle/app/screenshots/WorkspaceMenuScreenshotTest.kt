@@ -72,7 +72,7 @@ class WorkspaceMenuScreenshotTest {
 
     private val now = page("now")
     private val inbox = PageSetContainer(ContainerId("inbox"), LensBinding(grouped, ExpressionKind.CARD_STACK))
-    private val finder = page("finder", ExpressionKind.CATEGORIES, PageRole.FINDER)
+    private val finder = page("finder", ExpressionKind.ALPHA_LIST, PageRole.FINDER)
 
     private val groups =
         mapOf(ContainerId("inbox") to listOf(PageSetGroupRef("mail", "Mail"), PageSetGroupRef("chat", "Chat")))
