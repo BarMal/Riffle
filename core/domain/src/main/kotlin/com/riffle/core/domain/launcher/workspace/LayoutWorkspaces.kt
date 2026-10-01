@@ -1,5 +1,7 @@
 package com.riffle.core.domain.launcher.workspace
 
+import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
+
 /**
  * The workspaces one layout (device class) holds: its list in display order, which one is active and
  * which is the default the resolver falls back to.
@@ -13,6 +15,8 @@ data class LayoutWorkspaces(
     val workspaces: List<Workspace>,
     val activeId: WorkspaceId,
     val defaultId: WorkspaceId,
+    /** Placed items shared by this layout's workspaces (WS10 S3). Empty until the pool is wired in. */
+    val pool: PlacedItemPool = PlacedItemPool(),
 ) {
     init {
         require(workspaces.isNotEmpty()) { "A layout needs at least one workspace." }
