@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import com.riffle.core.domain.launcher.workspace.preset.PresetLensInstaller
+import com.riffle.core.domain.launcher.workspace.preset.PresetPosture
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 
 /** What happened, for the confirmation the page announces. Wording is the UI's. */
@@ -146,10 +148,9 @@ sealed interface WorkspacesSettingsAction {
             return if (workspace == null || preset == null) {
                 set.unchanged(WorkspacesSettingsMessage.NoKnownPreset)
             } else {
-                val fresh = WorkspacePresets.installPreset(preset, layout, ids).copy(presetId = preset.id)
                 val message = WorkspacesSettingsMessage.Reset(workspace.name, preset.name)
                 set.edit(layout, { message }, undoable = true) { stored ->
-                    stored.replace(id) { fresh.copy(name = it.name) }
+                    PresetLensInstaller.reset(stored, id, preset, PresetPosture.of(layout), ids = ids)
                 }
             }
         }
@@ -164,11 +165,10 @@ sealed interface WorkspacesSettingsAction {
         ): WorkspacesSettingsChange {
             val preset = WorkspacePresets.byId(presetId) ?: return set.unchanged(WorkspacesSettingsMessage.NothingToDo)
             val stored = set.workspacesFor(layout)
-            val installed =
-                WorkspacePresets.installPreset(preset, layout, ids)
-                    .copy(name = uniqueName(preset.name, stored), presetId = preset.id)
-            return set.edit(layout, { WorkspacesSettingsMessage.Installed(installed.name) }) {
-                it.add(installed, activate)
+            val name = uniqueName(preset.name, stored)
+            return set.edit(layout, { WorkspacesSettingsMessage.Installed(name) }) { current ->
+                val installed = PresetLensInstaller.install(current, preset, PresetPosture.of(layout), ids, activate)
+                installed.layout.replace(installed.workspaceId) { it.copy(name = name, presetId = preset.id) }
             }
         }
     }
