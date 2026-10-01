@@ -54,6 +54,9 @@ private fun RssFeedSettings(
                     "is saved.",
         )
         RssRefreshIntervalSetting(selected = settings.refreshInterval, onAction = onAction)
+        LocalFeedRefreshCoordinator.current?.let { coordinator ->
+            RssRefreshAllSetting(coordinator = coordinator, feeds = settings.feeds)
+        }
         RssFeedListSetting(feeds = settings.feeds, onAction = onAction)
         RssAddFeedSetting(onAction = onAction)
     }
@@ -92,8 +95,9 @@ private fun RssFeedListSetting(
         title = "Configured feeds",
         subtitle = feeds.feedCountLabel(),
     )
+    val coordinator = LocalFeedRefreshCoordinator.current
     feeds.forEach { feed ->
-        RssFeedRow(feed = feed, onAction = onAction)
+        RssFeedRow(feed = feed, statusText = rssFeedStatusText(coordinator, feed), onAction = onAction)
     }
 }
 
@@ -107,6 +111,7 @@ private fun List<FeedConfiguration>.feedCountLabel(): String =
 @Composable
 private fun RssFeedRow(
     feed: FeedConfiguration,
+    statusText: String?,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Row(
@@ -117,7 +122,12 @@ private fun RssFeedRow(
         SettingsTextColumn(
             modifier = Modifier.weight(1f),
             title = feed.url.value,
-            subtitle = if (feed.enabled) "Enabled" else "Disabled",
+            subtitle =
+                if (feed.enabled) {
+                    statusText?.let { status -> "Enabled. $status" } ?: "Enabled"
+                } else {
+                    "Disabled"
+                },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(

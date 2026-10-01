@@ -30,8 +30,8 @@ import com.riffle.core.domain.launcher.workspace.sources.SharedSourceStream
 
 /**
  * What the RSS source reads: the user's configured feeds and the offline article cache. There is no network
- * here by design (see docs/product/workspaces-sources-rss-search.md); a refresh path that fills the cache
- * reports through [changes], which is what would make the source `LIVE`.
+ * here by design (see docs/product/workspaces-sources-rss-search.md); the user-triggered refresh (#1374)
+ * fills the cache and reports through [changes], which is what makes the source `LIVE`.
  */
 internal class FeedSourceDependencies(
     val configuredFeeds: ConfiguredFeedSource,
@@ -59,7 +59,10 @@ internal class ContentSourceDependencies(
     val search: SearchSourceDependencies = SearchSourceDependencies(),
 )
 
-/** Groupable only: the cache has no change notification until a refresh path exists. Never touches the network. */
+/**
+ * Groupable, and `LIVE` only when [FeedSourceDependencies.changes] can report cache changes (the user-triggered
+ * refresh does). It reads the cache and never touches the network itself.
+ */
 internal fun feedSource(deps: BuiltInSourceDependencies): SharedSourceStream =
     stream(deps, SourceIds.RSS, setOf(SourceCapability.GROUPABLE), deps.feeds.changes) {
         SourceState.Ready(feedItems(deps.feeds))

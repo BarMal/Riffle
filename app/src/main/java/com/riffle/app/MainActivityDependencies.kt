@@ -45,7 +45,10 @@ import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnectio
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
+import com.riffle.app.launcher.rss.AndroidFeedParser
+import com.riffle.app.launcher.rss.AndroidFeedTransport
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
+import com.riffle.app.launcher.rss.FeedRefreshCoordinator
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.sources.ContentSourceDependencies
 import com.riffle.app.launcher.sources.FeedSourceDependencies
@@ -91,6 +94,23 @@ internal class MainActivityDependencies(
     val exclusionRepository by lazy { CachedExclusionRepository(DataStoreExclusionStore(activity)) }
     val appVisibilityRepository by lazy { SharedPreferencesAppVisibilityRepository(activity) }
     val feedArticleCacheRepository by lazy { DataStoreFeedArticleCacheRepository(activity) }
+
+    /**
+     * User-triggered RSS refresh (#1374). Constructing it does no I/O and starts nothing; the network is touched
+     * only when a refresh is requested, on its own background thread. Feeds are read from the saved settings.
+     */
+    val feedRefreshCoordinator by lazy {
+        FeedRefreshCoordinator(
+            transport = AndroidFeedTransport(),
+            parser = AndroidFeedParser(),
+            cache = feedArticleCacheRepository,
+            configuredFeeds = { launcherSettingsRepository.loadLauncherSettings()?.rss?.feeds.orEmpty() },
+            executor =
+                Executors.newSingleThreadExecutor { task ->
+                    Thread(task, "riffle-feed-refresh").apply { isDaemon = true }
+                },
+        )
+    }
 
     /**
      * The explicit wiring point from the DataStore workspace store to the shell (#1351). Built lazily and
@@ -174,6 +194,7 @@ internal class MainActivityDependencies(
                             FeedSourceDependencies(
                                 configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
                                 cache = feedArticleCacheRepository,
+                                changes = feedRefreshCoordinator.cacheChanges,
                             ),
                     ),
             )

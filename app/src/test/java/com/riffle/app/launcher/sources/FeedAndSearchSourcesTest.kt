@@ -6,6 +6,7 @@ import com.riffle.app.launcher.rss.CachedFeedArticle
 import com.riffle.app.launcher.rss.CachedFeedSnapshot
 import com.riffle.app.launcher.rss.FeedArticleCacheRepository
 import com.riffle.app.launcher.rss.FeedCacheResult
+import com.riffle.app.launcher.rss.FeedChangeSignal
 import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -51,6 +52,7 @@ class FeedAndSearchSourcesTest {
     private var statuses: Map<AppProfileId, FeedProfileStatus> = emptyMap()
     private var cached: Map<FeedId, CachedFeed> = emptyMap()
     private var freshness = CacheFreshness.FRESH
+    private var feedChanges: SourceChangeSource = SourceChangeSource.NONE
     private val query = SearchQueryHolder()
 
     private val cache: FeedArticleCacheRepository =
@@ -91,7 +93,7 @@ class FeedAndSearchSourcesTest {
                         changes = SourceChangeSource.NONE,
                         hideRules = { emptyList() },
                     ),
-                feeds = FeedSourceDependencies(ConfiguredFeedSource { feeds }, cache, { statuses }),
+                feeds = FeedSourceDependencies(ConfiguredFeedSource { feeds }, cache, { statuses }, feedChanges),
                 search =
                     SearchSourceDependencies(
                         query,
@@ -208,6 +210,24 @@ class FeedAndSearchSourcesTest {
     @Test
     fun rssDescriptorIsGroupableOnly() {
         assertEquals(setOf(SourceCapability.GROUPABLE), source(SourceIds.RSS).descriptor.capabilities)
+    }
+
+    @Test
+    fun rssBecomesLiveAndReloadsWhenARefreshReportsCacheChanges() {
+        val signal = FeedChangeSignal()
+        feedChanges = signal
+        feeds = listOf(feed("news"))
+        val rss = source(SourceIds.RSS)
+        assertEquals(
+            setOf(SourceCapability.GROUPABLE, SourceCapability.LIVE),
+            rss.descriptor.capabilities,
+        )
+        rss.subscribe { }
+        assertEquals(1, cacheLoads)
+
+        signal.notifyChanged()
+
+        assertEquals(2, cacheLoads)
     }
 
     @Test
