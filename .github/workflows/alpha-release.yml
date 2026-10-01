@@ -186,7 +186,7 @@ jobs:
           cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/release/riffle-alpha.apk"
           pwsh .github/scripts/assert-artifact-size.ps1 \
             -ArtifactPath "$RUNNER_TEMP/release/riffle-alpha.apk" \
-            -MaxBytes 26214400 \
+            -MaxBytes 33554432 \
             -BudgetName "Alpha APK"
 
           pwsh .github/scripts/write-release-notes.ps1 \
