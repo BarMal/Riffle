@@ -56,3 +56,44 @@ edit leaves the session untouched. Item content never enters any of this: previe
 Unit tests per piece, plus seeded property tests: random edit sequences (valid and invalid) never produce a
 workspace failing `WorkspaceValidation`, and for random flow action sequences every container option is enabled
 exactly when its edit is accepted and the expression step equals `compatibleExpressions`.
+
+## UI (slice 2)
+
+Package `app/.../launcher/editor/`. `EditorEntry` is the route; `EditorScreen` is its stateless body and
+`WorkspaceEditorReducer` its JVM-tested state machine (`(state, action) -> state + effect`). Composables only render
+state and forward actions; every validity decision is the domain's.
+
+- Overview: name, pages (move up/down, change content, remove), widgets in grid pages (move left/right/up/down,
+  change content, remove), dock section, Undo/Redo/Revert, Done. Every reorder and move is a labelled button.
+- Flow: one pane per step with Back/Next, a step counter, and a live preview built from the same expressions and
+  containers the workspace uses (`LensBoundExpression`, `PageSetContainerHost`) over the caller's `ContainerServices`
+  (the real provider in the app, `StaticLensResultProvider` in tests). Previews are transient and evaluate off the
+  main thread inside those hosts; no bitmap decoding happens in the editor.
+- Layout: below 600 dp one pane (preview above the flow); at 600 dp and wider (unfolded foldables, tablets) two panes,
+  with the preview beside the steps. Content respects `WindowInsets.safeDrawing`.
+- Accessibility and motion: disabled choices stay visible with their reason and cannot be selected; rows are the
+  whole 48 dp touch target; notices are polite live regions; the step change cross-fades with `RiffleMotion.standard`
+  (a snap under reduced motion). Only design tokens (`RiffleSpacing/Shapes/Elevation/Motion`) are used.
+- Permissions: a source whose access is `REQUIRED` shows "Needs access" with a rationale and a "Review access"
+  button. The editor never prompts; the button calls `onRequestSourceAccess(sourceId)`.
+
+### Integration contract (for the workspace menu / shell, WS6)
+
+1. On `WorkspaceMenuEffect.EditWorkspace(id)`, load that workspace from the layout's `LayoutWorkspaces`.
+2. Build `sources = SourceChoices.build(registry.descriptors(), access)` where `access` maps gated sources to
+   `SourceAccess` (read from the existing status holders; reading never prompts).
+3. Show `EditorEntry(workspace, sources, services, onSave, onClose, capabilities = layoutCapabilities,
+   onRequestSourceAccess = { id -> if (id == SourceIds.CALENDAR) dispatch(LauncherShellAction.RequestCalendarAccess) })`.
+4. `onSave` receives the committed `Workspace`: replace it with `LayoutWorkspaces.replace(id) { saved }` and persist
+   through `WorkspaceRepository`. `onClose` follows every exit, saved or not.
+
+The editor is not wired into the shell in this slice (that is WS6's area); there is no settings/dev entry yet, because
+a dev entry needs the shell to own the workspace and registry. Skin override has a domain edit
+(`WorkspaceEdit.SetSkinOverride`) but no UI yet: the skin id vocabulary belongs to the skin settings.
+
+### Manual validation
+
+On a device or emulator with the editor hosted: add a notifications page-set and a calendar widget; confirm the
+calendar shows "Needs access" and no system dialog appears until "Review access" is tapped; reorder pages with the
+buttons only; undo, redo, revert; close with changes and confirm the discard prompt; repeat with TalkBack on, with
+"Remove animations" on, rotated, and on an unfolded foldable (two panes).
