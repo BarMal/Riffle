@@ -22,12 +22,14 @@ article order.
 | `timeEpochMillis` | published time from the stage item, absent when undated |
 | `image` | `ItemImageKeys.feedArtwork(digest)` when the article has an image URL; resolves from the offline image cache only |
 | `target` | `DeepLink(canonicalUrl)`, or `None` when the article has no URL |
-| `ext` | `rss.author` (text, when known), `rss.read` (flag), `rss.stale` (flag) |
+| `ext` | `rss.author` (text, when known), `rss.stale` (flag) |
 | `privacy` | `VISIBLE` |
 
 Rules inherited from the planner: profile-locked feeds expose nothing, removed-profile feeds are absent, a
 stale feed keeps its cached articles (flagged `rss.stale`), loading and failed feeds contribute no items,
-and an article whose cached content is gone (evicted, cleared, dismissed) is skipped.
+and an article whose cached content is gone (evicted, cleared) is skipped. Read and dismissed state is not
+applied: no existing surface applies it yet, and the cache answers it one digest at a time by decoding the
+whole cache document, which is too costly per article. Left for the slice that adds dismissal UI.
 
 **Capabilities**: `GROUPABLE` only.
 

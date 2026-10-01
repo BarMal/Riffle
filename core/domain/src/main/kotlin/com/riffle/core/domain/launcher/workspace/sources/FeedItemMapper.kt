@@ -28,7 +28,6 @@ data class FeedArticleContent(
     val canonicalUrl: String? = null,
     /** An image URL was cached for the article; resolving the pixels stays a lazy platform concern. */
     val hasImage: Boolean = false,
-    val read: Boolean = false,
 )
 
 /**
@@ -87,7 +86,6 @@ class FeedItemMapper {
     private fun FeedArticleContent.extras(stale: Boolean): Map<ItemExtKey, ItemExtValue> =
         buildMap {
             author?.takeIf(String::isNotBlank)?.let { name -> put(AUTHOR_KEY, ItemExtValue.Text(name)) }
-            put(READ_KEY, ItemExtValue.Flag(read))
             put(STALE_KEY, ItemExtValue.Flag(stale))
         }
 
@@ -106,7 +104,6 @@ class FeedItemMapper {
 
         private const val DEFAULT_LABEL = "Feed"
         val AUTHOR_KEY = ItemExtKey("rss.author")
-        val READ_KEY = ItemExtKey("rss.read")
         val STALE_KEY = ItemExtKey("rss.stale")
     }
 }
