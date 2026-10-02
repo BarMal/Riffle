@@ -154,6 +154,7 @@ internal object EditorText {
             SourceIds.CALENDAR -> "Calendar"
             SourceIds.RSS -> "Feeds"
             SourceIds.SEARCH -> "Search"
+            SourceIds.ICS -> "Calendar feeds"
             else -> id.value
         }
 
