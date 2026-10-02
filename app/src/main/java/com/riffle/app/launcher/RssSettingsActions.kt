@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.withAddedFeed
+import com.riffle.core.domain.launcher.settings.withBackgroundChargingOnly
+import com.riffle.core.domain.launcher.settings.withBackgroundWifiOnly
 import com.riffle.core.domain.launcher.settings.withFeedEnabled
 import com.riffle.core.domain.launcher.settings.withRefreshInterval
 import com.riffle.core.domain.launcher.settings.withoutFeed
@@ -16,6 +18,8 @@ private fun RssSettings.withRssSettingsAction(action: LauncherShellAction): RssS
         is LauncherShellAction.RemoveRssFeed -> withoutFeed(action.feedId)
         is LauncherShellAction.SetRssFeedEnabled -> withFeedEnabled(feedId = action.feedId, enabled = action.enabled)
         is LauncherShellAction.SelectRssRefreshInterval -> withRefreshInterval(action.option)
+        is LauncherShellAction.SetRssBackgroundWifiOnly -> withBackgroundWifiOnly(action.enabled)
+        is LauncherShellAction.SetRssBackgroundChargingOnly -> withBackgroundChargingOnly(action.enabled)
         else -> this
     }
 

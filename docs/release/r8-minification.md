@@ -41,8 +41,8 @@ Findings:
   `com.riffle.app` 18,363 plus `com.riffle.core.domain` 8,790 (20%); the rest is AndroidX core,
   lifecycle, window, emoji2, coroutines and Kotlin stdlib.
 - No `material-icons-extended`: only `material-icons-core` is declared, and the app uses 10 core
-  icons. Nothing to gain there. No image-loading library, no Room, no WorkManager, no Gson/Moshi/
-  kotlinx.serialization. There is no `profileinstaller` dependency or baseline-profile module (a
+  icons. Nothing to gain there. No image-loading library, no Gson/Moshi/kotlinx.serialization, and no
+  Room of its own (WorkManager, added in #1393, bundles one; see the keep-rule review). There is no `profileinstaller` dependency or baseline-profile module (a
   7 KB profile arrives from libraries only).
 - Native libs total 0.06 MiB across four ABIs. ABI splits would save about 0.04 MiB. Not worth it.
 - `app/src/main/res` holds one string; `res/` is 13 KB. `resources.arsc` (0.40 MiB) is library
@@ -74,7 +74,8 @@ dependency list:
 | Risk area | Finding | Needed rule? |
 | --- | --- | --- |
 | Manifest components (`MainActivity`, `RiffleNotificationListenerService`, `OverlayDockService`) | Kept automatically by AAPT2-generated rules. | No. A defensive explicit keep for the notification listener is in `proguard-rules.pro`, because the system matches it by component name against the enabled-listeners setting. |
-| BroadcastReceiver / AppWidgetProvider / WorkManager / ContentProvider | None declared. Widget hosting uses the platform `AppWidgetHost`/`AppWidgetManager` and hosts other apps' providers, which are never in our dex. | No |
+| BroadcastReceiver / AppWidgetProvider / ContentProvider | None declared. Widget hosting uses the platform `AppWidgetHost`/`AppWidgetManager` and hosts other apps' providers, which are never in our dex. | No |
+| WorkManager (`FeedRefreshWorker`, #1393) | `androidx.work:work-runtime` ships consumer rules (keeps the `(Context, WorkerParameters)` constructor of every `ListenableWorker`). WorkManager stores the worker class name in its database and instantiates it by name, so the name must be stable across releases. | One defensive `-keepnames` for `FeedRefreshWorker` in `proguard-rules.pro`. VERIFY on a minified build: enable a background interval, then `adb shell cmd jobscheduler run -f com.riffle.app <job id>` (see rss-refresh.md). |
 | `NotificationListenerService`, `AccessibilityService` | Listener: see above. No AccessibilityService. | No |
 | Enums persisted by name (settings/layout/notification JSON codecs: `valueOf(...)` and `enumValues<T>().firstOrNull { it.name == ... }`) | Names come from the `Enum` name string passed to the enum constructor, which R8 keeps for `name`, `valueOf` and `values()`. Both access paths are direct, not reflective. Unknown or missing values are already handled with `runCatching`/`firstOrNull`. | No. High-priority on-device check: backup import and upgrade-in-place with existing data (checklist below). |
 | `org.json` | Platform classes on device, not bundled; unit tests use `org.json:json` as `testImplementation` only. | No |

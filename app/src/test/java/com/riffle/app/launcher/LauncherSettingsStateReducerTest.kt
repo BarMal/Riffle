@@ -458,11 +458,26 @@ class LauncherSettingsStateReducerTest {
         val updatedState =
             reducer.reduce(
                 state = LauncherShellState(),
-                action = LauncherShellAction.SelectRssRefreshInterval(FeedRefreshIntervalOption.MINUTES_30),
+                action = LauncherShellAction.SelectRssRefreshInterval(FeedRefreshIntervalOption.HOURS_1),
             )
 
-        assertEquals(FeedRefreshIntervalOption.MINUTES_30, updatedState.launcherSettings.rss.refreshInterval)
+        assertEquals(FeedRefreshIntervalOption.HOURS_1, updatedState.launcherSettings.rss.refreshInterval)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsRssBackgroundConstraintToggles() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+
+        val wifiOff =
+            reducer.reduce(LauncherShellState(), LauncherShellAction.SetRssBackgroundWifiOnly(enabled = false))
+        val chargingOn =
+            reducer.reduce(wifiOff, LauncherShellAction.SetRssBackgroundChargingOnly(enabled = true))
+
+        assertEquals(false, chargingOn.launcherSettings.rss.backgroundWifiOnly)
+        assertEquals(true, chargingOn.launcherSettings.rss.backgroundChargingOnly)
+        assertEquals(chargingOn.launcherSettings, repository.savedSettings)
     }
 
     @Test

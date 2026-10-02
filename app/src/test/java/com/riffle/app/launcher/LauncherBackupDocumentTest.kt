@@ -113,7 +113,7 @@ class LauncherBackupDocumentTest {
                 homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
                 launcherSettings =
                     LauncherSettings(
-                        rss = RssSettings(feeds = listOf(feed), refreshInterval = FeedRefreshIntervalOption.MINUTES_60),
+                        rss = RssSettings(feeds = listOf(feed), refreshInterval = FeedRefreshIntervalOption.HOURS_3),
                     ),
             )
 

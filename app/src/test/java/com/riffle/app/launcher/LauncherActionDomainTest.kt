@@ -414,7 +414,12 @@ class LauncherActionDomainTest {
                 ),
                 settings(
                     "SelectRssRefreshInterval",
-                    LauncherShellAction.SelectRssRefreshInterval(FeedRefreshIntervalOption.MINUTES_30),
+                    LauncherShellAction.SelectRssRefreshInterval(FeedRefreshIntervalOption.HOURS_1),
+                ),
+                settings("SetRssBackgroundWifiOnly", LauncherShellAction.SetRssBackgroundWifiOnly(enabled = false)),
+                settings(
+                    "SetRssBackgroundChargingOnly",
+                    LauncherShellAction.SetRssBackgroundChargingOnly(enabled = true),
                 ),
                 settings(
                     "AddNotificationHideRule",

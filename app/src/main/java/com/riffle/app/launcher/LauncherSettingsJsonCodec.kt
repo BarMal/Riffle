@@ -944,6 +944,8 @@ private fun encodeRssSettings(settings: RssSettings): JSONObject =
     JSONObject()
         .put("feeds", JSONArray(settings.feeds.map(::encodeFeedConfiguration)))
         .put("refreshInterval", settings.refreshInterval.name)
+        .put("backgroundWifiOnly", settings.backgroundWifiOnly)
+        .put("backgroundChargingOnly", settings.backgroundChargingOnly)
 
 private fun encodeFeedConfiguration(feed: FeedConfiguration): JSONObject =
     JSONObject()
@@ -963,7 +965,10 @@ private fun JSONObject.toRssSettings(defaults: RssSettings): RssSettings =
                         .mapNotNull { index -> entries.optJSONObject(index)?.toFeedConfiguration() }
                 }
                 ?: defaults.feeds,
+        // Names written before #1393 (MINUTES_*) no longer exist and fall back to Off: nobody is opted in.
         refreshInterval = enumOrDefault("refreshInterval", defaults.refreshInterval),
+        backgroundWifiOnly = optBoolean("backgroundWifiOnly", defaults.backgroundWifiOnly),
+        backgroundChargingOnly = optBoolean("backgroundChargingOnly", defaults.backgroundChargingOnly),
     )
 
 /**

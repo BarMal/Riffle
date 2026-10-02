@@ -16,11 +16,13 @@ import com.riffle.core.domain.launcher.rss.FeedRefreshPlanner
 import com.riffle.core.domain.launcher.rss.FeedRefreshScope
 import com.riffle.core.domain.launcher.rss.FeedRefreshSkip
 import com.riffle.core.domain.launcher.rss.FeedRefreshState
+import com.riffle.core.domain.launcher.rss.FeedRefreshTrigger
 import com.riffle.core.domain.launcher.rss.FeedTransport
 import com.riffle.core.domain.launcher.rss.FeedTransportResult
 import com.riffle.core.domain.launcher.rss.FeedValidators
 import com.riffle.core.domain.launcher.rss.after
 import com.riffle.core.domain.launcher.rss.toRefreshFailure
+import com.riffle.core.domain.launcher.settings.FeedBackgroundRunRecord
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
@@ -64,9 +66,12 @@ class FeedChangeSignal : SourceChangeSource {
  * timers, no observers of settings or the cache; the network is touched only inside [refresh] /
  * [refreshBlocking], and [refresh] hops to [executor] first. Only one refresh runs at a time.
  *
- * Validators, backoff counters and last errors are in-memory only; article content lives only in [cache].
- * Failures are reported as typed reasons, never as URLs, response bodies or exception messages.
+ * Validators, backoff counters and last errors are kept in memory and persisted to [cache] after every run
+ * (and merged back in before the next one), so they survive process death and are shared with the background
+ * worker's own coordinator. Article content lives only in [cache]. Failures are reported as typed reasons,
+ * never as URLs, response bodies or exception messages.
  */
+@Suppress("TooManyFunctions") // One small public surface plus private run steps; splitting would scatter shared state.
 class FeedRefreshCoordinator(
     private val transport: FeedTransport,
     private val parser: FeedParser,
@@ -100,13 +105,27 @@ class FeedRefreshCoordinator(
         onComplete: (FeedRefreshReport) -> Unit = {},
     ): Boolean {
         if (!running.compareAndSet(false, true)) return false
-        executor.execute { onComplete(runAndRelease(scope)) }
+        executor.execute { onComplete(runAndRelease(scope, FeedRefreshTrigger.USER, 0)) }
         return true
     }
 
     /** Runs a refresh on the calling thread (which must not be the main thread); null when one is running. */
     fun refreshBlocking(scope: FeedRefreshScope): FeedRefreshReport? =
-        if (running.compareAndSet(false, true)) runAndRelease(scope) else null
+        if (running.compareAndSet(false, true)) runAndRelease(scope, FeedRefreshTrigger.USER, 0) else null
+
+    /**
+     * The background run: only due feeds, obeying backoff and [minFeedGapMillis]. Blocking, so call it from a
+     * worker thread; null when a refresh is already running.
+     */
+    fun refreshScheduledBlocking(minFeedGapMillis: Long): FeedRefreshReport? =
+        if (running.compareAndSet(false, true)) {
+            runAndRelease(FeedRefreshScope.All, FeedRefreshTrigger.SCHEDULED, minFeedGapMillis)
+        } else {
+            null
+        }
+
+    /** The last background run, surviving restarts. Reads the cache: call off the main thread. */
+    fun lastBackgroundRun(): FeedBackgroundRunRecord? = cache.loadBackgroundRun()
 
     /** In-memory status for a settings row; cheap and safe to call from any thread, including main. */
     fun statusOf(feedId: FeedId): FeedRefreshStatus =
@@ -123,16 +142,25 @@ class FeedRefreshCoordinator(
     fun lastCachedAtMillis(feedId: FeedId): Long? =
         (cache.loadFeed(feedId) as? FeedCacheResult.Available)?.snapshot?.feed?.fetchedAtEpochMillis
 
-    private fun runAndRelease(scope: FeedRefreshScope): FeedRefreshReport =
+    private fun runAndRelease(
+        scope: FeedRefreshScope,
+        trigger: FeedRefreshTrigger,
+        minGapMillis: Long,
+    ): FeedRefreshReport =
         try {
-            run(scope)
+            run(scope, trigger, minGapMillis)
         } finally {
             running.set(false)
             statusChanges.notifyChanged()
         }
 
-    private fun run(scope: FeedRefreshScope): FeedRefreshReport {
+    private fun run(
+        scope: FeedRefreshScope,
+        trigger: FeedRefreshTrigger,
+        minGapMillis: Long,
+    ): FeedRefreshReport {
         val feeds = configuredFeeds.configuredFeeds()
+        synchronized(lock) { adoptNewerStates(states, cache.loadRefreshStates()) }
         val plan =
             planner.plan(
                 feeds = feeds,
@@ -140,6 +168,8 @@ class FeedRefreshCoordinator(
                 states = usableStates(feeds),
                 profileStatuses = profileStatuses(),
                 nowEpochMillis = clock(),
+                trigger = trigger,
+                scheduledMinGapMillis = minGapMillis,
             )
         synchronized(lock) { inFlight += plan.requests.map { it.configuration.id } }
         statusChanges.notifyChanged()
@@ -154,7 +184,14 @@ class FeedRefreshCoordinator(
             }
             statusChanges.notifyChanged()
         }
+        persistStates(outcomes.keys)
         return FeedRefreshReport(outcomes, plan.skipped)
+    }
+
+    private fun persistStates(attempted: Set<FeedId>) {
+        if (attempted.isEmpty()) return
+        val snapshot = synchronized(lock) { states.filterKeys { it in attempted } }
+        cache.saveRefreshStates(snapshot)
     }
 
     /** Validators are only honoured while the cache still holds the content they describe. */
