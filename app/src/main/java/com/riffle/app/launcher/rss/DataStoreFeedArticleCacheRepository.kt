@@ -28,6 +28,7 @@ internal const val RSS_ARTICLE_CACHE_DATASTORE_NAME = "riffle_rss_article_cache"
 
 private val Context.rssArticleCacheDataStore by preferencesDataStore(name = RSS_ARTICLE_CACHE_DATASTORE_NAME)
 
+@Suppress("TooManyFunctions") // Implements the cache and refresh-state interfaces; one method per contract entry.
 class DataStoreFeedArticleCacheRepository(
     context: Context,
     private val epochMillisProvider: EpochMillisProvider = SystemEpochMillisProvider,
