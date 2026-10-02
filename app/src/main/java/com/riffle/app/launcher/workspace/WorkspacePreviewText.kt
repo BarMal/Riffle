@@ -11,4 +11,7 @@ internal object WorkspacePreviewText {
     const val HOME_GRID_BODY = "Home items are not migrated into this preview yet."
     const val REIMPORT = "Refresh home items"
     const val DOCK_PLACEHOLDER = "Dock placeholder: the standard dock is not part of this preview."
+    const val DOCK_EMPTY = "Nothing pinned to the dock"
+    const val DOCK_HIDDEN = "Dock is hidden in Settings"
+    const val CLOSE = "Close"
 }

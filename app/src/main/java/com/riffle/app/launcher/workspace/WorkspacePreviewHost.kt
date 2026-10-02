@@ -18,9 +18,11 @@ import com.riffle.app.launcher.WorkspaceMenuHost
 import com.riffle.app.launcher.pool.PlacedHomeContent
 import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.home.dockFor
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
+import com.riffle.core.domain.launcher.workspace.dock.PreviewDock
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -113,6 +115,8 @@ private fun WorkspacePreviewContent(
             { padding: PaddingValues -> runtime.services(reducedMotion, padding) }
         }
     val placedHome = rememberPlacedHome(host, state, workspace?.id)
+    val layoutSet = state.homeLayoutSet
+    val dockPins = remember(layoutSet, deviceClass) { PreviewDock.from(layoutSet.dockFor(deviceClass)) }
     WorkspacePreviewTheme(state) {
         WorkspacePreviewSurface(
             workspace = workspace,
@@ -126,6 +130,7 @@ private fun WorkspacePreviewContent(
             onReturnConsumed = host.controller::returnConsumed,
             onExit = host.controller::close,
             placedHome = placedHome,
+            dockPins = dockPins,
         )
     }
 }
