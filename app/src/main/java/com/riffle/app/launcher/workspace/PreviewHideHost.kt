@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.exclusions.ExclusionsFeedback
@@ -47,23 +48,22 @@ internal object PreviewHideText {
     const val HIDE_ON_ALL_LAYOUTS = "Hide on all layouts"
 }
 
-/**
- * Space kept clear below the snackbar for the preview's dock bar, so the snackbar never covers it. Kept here rather
- * than read from the surface so the surface stays untouched; it only needs to be at least the dock's height.
- */
-private val DockClearance = 88.dp
+/** Gap between the dock bar and the snackbar. */
+private val DockGap = 8.dp
 
 /**
  * Gives every expression under [content] its "Hide" handler and shows the result in a snackbar: "Hidden on <layout>:
  * <fixed phrase>" with Undo and, after a hide on one layout, "Hide on all layouts". [controller] is null when the
  * runtime has no exclusion rules, in which case this draws [content] alone and no expression shows any Hide
- * affordance. The snackbar is announced politely (TalkBack reads it); nothing here stores or logs item content,
+ * affordance. The snackbar sits [dockBarHeight] above the bottom inset, clear of the dock. It is announced
+ * politely (TalkBack reads it); nothing here stores or logs item content,
  * and the controller keeps the hidden item only until the snackbar ends.
  */
 @Composable
 internal fun PreviewHideHost(
     controller: ExclusionsSettingsController?,
     layout: HomeLayoutDeviceClass,
+    dockBarHeight: Dp,
     content: @Composable () -> Unit,
 ) {
     if (controller == null) {
@@ -83,7 +83,7 @@ internal fun PreviewHideHost(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .windowInsetsPadding(WindowInsets.safeDrawing)
-                        .padding(bottom = DockClearance),
+                        .padding(bottom = dockBarHeight + DockGap),
             ) { data -> HideSnackbar(data.visuals, controller, data::performAction) }
         }
     }

@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.LauncherShellViewModel
@@ -18,9 +19,11 @@ import com.riffle.app.launcher.WorkspaceMenuHost
 import com.riffle.app.launcher.pool.PlacedHomeContent
 import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.home.dockFor
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
+import com.riffle.core.domain.launcher.workspace.dock.PreviewDock
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -114,8 +117,14 @@ private fun WorkspacePreviewContent(
         }
     val placedHome = rememberPlacedHome(host, state, workspace?.id)
     val hideController = remember(runtime) { runtime.hideController() }
+    val layoutSet = state.homeLayoutSet
+    val dockPins = remember(layoutSet, deviceClass) { PreviewDock.from(layoutSet.dockFor(deviceClass)) }
     WorkspacePreviewTheme(state) {
-        PreviewHideHost(hideController, deviceClass) {
+        PreviewHideHost(
+            hideController,
+            deviceClass,
+            (dockPins?.barHeightDp ?: PreviewDock.MIN_BAR_HEIGHT_DP).dp,
+        ) {
             WorkspacePreviewSurface(
                 workspace = workspace,
                 servicesFor = servicesFor,
@@ -128,6 +137,7 @@ private fun WorkspacePreviewContent(
                 onReturnConsumed = host.controller::returnConsumed,
                 onExit = host.controller::close,
                 placedHome = placedHome,
+                dockPins = dockPins,
             )
         }
     }

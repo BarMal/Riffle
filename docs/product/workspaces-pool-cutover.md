@@ -88,7 +88,7 @@ placed-items pool. With the switch off nothing here is constructed, read or writ
 ## Not done
 
 * **Editing.** No drag, place, remove, copy or share in the pool; `Pool*` operations remain unused by the app.
-* **Dock.** Not in the pool; the preview dock is still a placeholder.
+* **Dock.** Not in the pool; the preview draws it read-only from `HomeLayoutSet` (see [`workspaces-dock.md`](workspaces-dock.md)).
 * **Per-workspace arrangements** for presets, auto-paging, `NewAppPlacement` setting, new-app placement, uninstall pruning
   (`PoolRemoval.pruneUninstalled` has no event source), startup host-id reconciliation.
 * **Live sync with `HomeLayoutSet`.** One-time import plus manual Refresh only (decision 3).

@@ -54,6 +54,7 @@ import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.pool.PlacedHomeContent
 import com.riffle.app.launcher.pool.PoolHomePage
+import com.riffle.app.launcher.workspaceMenuActionModifier
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageContent
@@ -63,7 +64,10 @@ import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceDock
 import com.riffle.core.domain.launcher.workspace.WorkspaceSourceIds
+import com.riffle.core.domain.launcher.workspace.dock.PreviewDock
+import com.riffle.core.domain.launcher.workspace.dock.PreviewDockModel
 import com.riffle.core.domain.launcher.workspace.finderPage
+import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import com.riffle.core.domain.launcher.workspace.pagerPages
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 
@@ -76,13 +80,12 @@ internal const val WORKSPACE_PREVIEW_FINDER_CLOSE_TEST_TAG = "workspace-preview-
 internal const val WORKSPACE_PREVIEW_REIMPORT_TEST_TAG = "workspace-preview-reimport"
 
 private val PreviewBarHeight: Dp = 56.dp
-private val DockBarHeight: Dp = 72.dp
 private val FinderBarHeight: Dp = 48.dp
 
 /**
- * The Workspaces (preview) screen: a platform pager over the workspace's pages, a clearly marked dock
- * placeholder (the dock's dynamic section when the workspace has one), the workspace menu and an always
- * present Exit action. System Back also exits (the menu, when open, closes first).
+ * The Workspaces (preview) screen: a platform pager over the workspace's pages, a read-only dock (the pinned
+ * items from [dockPins] and the workspace's dynamic section; a marked placeholder while there is no pool), the
+ * workspace menu and an always present Exit action. System Back also exits (the menu, when open, closes first).
  *
  * The pager swipes through the workspace's pages except the Finder, which opens as its own surface over the
  * pager (from the menu's Finder entry, or as the start page) and closes with its Close button or Back. The page
@@ -109,12 +112,14 @@ internal fun WorkspacePreviewSurface(
     returnRequest: ReturnRequest? = null,
     onReturnConsumed: (ReturnRequest) -> Unit = {},
     placedHome: PlacedHomeContent? = null,
+    dockPins: PreviewDockModel? = null,
 ) {
     BackHandler(onBack = onExit)
+    val dockBarHeight = (dockPins?.barHeightDp ?: PreviewDock.MIN_BAR_HEIGHT_DP).dp
     val direction = LocalLayoutDirection.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val top = insets.calculateTopPadding() + PreviewBarHeight
-    val bottom = insets.calculateBottomPadding() + DockBarHeight
+    val bottom = insets.calculateBottomPadding() + dockBarHeight
     val start = insets.calculateStartPadding(direction)
     val end = insets.calculateEndPadding(direction)
     val services =
@@ -144,14 +149,22 @@ internal fun WorkspacePreviewSurface(
                         placedHome = placedHome,
                     )
                 }
-                DockBar(workspace.dock, services, Modifier.align(Alignment.BottomCenter))
+                DockBar(
+                    dock = workspace.dock,
+                    services = services,
+                    pins = dockPins,
+                    home = placedHome,
+                    height = dockBarHeight,
+                    onOpenMenu = menu?.let { host -> { host.onAction(WorkspaceMenuAction.Open) } },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
             PreviewTopBar(workspace?.name, onExit, placedHome?.onReimport, Modifier.align(Alignment.TopCenter))
             if (menu != null) {
                 WorkspaceMenuLayer(
                     host = menu,
                     dockEdge = DockPosition.BOTTOM,
-                    dockExtent = DockBarHeight,
+                    dockExtent = dockBarHeight,
                     reducedMotion = reducedMotion,
                 )
             }
@@ -358,26 +371,40 @@ private fun PreviewTopBar(
     }
 }
 
-/** The dock stand-in: the workspace's dynamic section when it has one, otherwise a marked placeholder. */
+/**
+ * The preview dock: the pinned items and the workspace's dynamic section when both [pins] and [home] are present
+ * (the pool is wired), else the marked placeholder (or just the dynamic section) as before. It carries the
+ * "Workspace menu" accessibility action when the menu is on; the visible handle stays in the menu layer.
+ */
 @Composable
 private fun DockBar(
     dock: WorkspaceDock,
     services: ContainerServices,
+    pins: PreviewDockModel?,
+    home: PlacedHomeContent?,
+    height: Dp,
+    onOpenMenu: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val dockServices =
         remember(services) { services.copy(environment = services.environment.copy(contentPadding = PaddingValues())) }
     val barInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
     Surface(
-        modifier = modifier.fillMaxWidth().testTag(WORKSPACE_PREVIEW_DOCK_TEST_TAG),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .testTag(WORKSPACE_PREVIEW_DOCK_TEST_TAG)
+                .then(workspaceMenuActionModifier(onOpenMenu)),
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Box(
-            modifier = Modifier.windowInsetsPadding(barInsets).height(DockBarHeight),
+            modifier = Modifier.windowInsetsPadding(barInsets).height(height),
             contentAlignment = Alignment.Center,
         ) {
             val dynamicSection = dock.dynamicSection
-            if (dynamicSection == null) {
+            if (pins != null && home != null) {
+                PreviewDockContent(pins, home, dynamicSection, dockServices)
+            } else if (dynamicSection == null) {
                 Text(
                     text = WorkspacePreviewText.DOCK_PLACEHOLDER,
                     style = MaterialTheme.typography.labelMedium,

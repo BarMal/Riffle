@@ -137,7 +137,7 @@ the preview off nothing exists and nothing runs). Details of the page are in
     ...) on the same rows and cards. Icon-only cells (Icon row, Icon grid, Categories icons) have no room for a button, so
     they get a **long press** (a labelled long-click action, the only other gesture there is a scroll) and the same custom
     actions. Cards behind the focused card in a stack carry neither button nor actions.
-  * **Snackbar.** `PreviewHideHost` owns a `SnackbarHostState` above the dock bar (88 dp clearance, safe-drawing insets) and
+  * **Snackbar.** `PreviewHideHost` owns a `SnackbarHostState` above the dock bar (8 dp above the dock bar height the surface computes from the dock settings, safe-drawing insets) and
     shows `ExclusionsSettingsController.feedback`: the polite live-region message, **Undo**, and, after a hide on one layout,
     **Hide on all layouts**. `ExclusionsSettingsController.hide(...)` keeps the hidden `Item` in memory only until the
     announcement ends (dismissed, undone, replaced, another change, leaving the preview) so `hideOnAllLayouts()` can repeat
