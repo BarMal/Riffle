@@ -211,6 +211,31 @@ class LensSessionOpsTest {
         assertEquals(2, LensScope(others = listOf(home, work)).layoutWith(home).workspaces.size)
     }
 
+    @Test
+    fun theScopeChangeWritesOnlyWhatChangedAndAppliesToTheLayout() {
+        val layout = LayoutWorkspaces(listOf(home, work), home.id, home.id)
+        val base = LensScope.of(layout, home.id)
+        assertTrue(base.changeFrom(base).isEmpty)
+
+        val saved = assertIs<FlowCommit.Applied>(saveAs(WorkspaceEditSession(home, scope = base)))
+        val adopted = LensSessionOps.adopt(saved.session, assertNotNull(saved.offer).id)
+        val change = adopted.scope.changeFrom(base)
+        assertNotNull(change.library)
+        assertEquals(listOf(work.id), change.others.map { it.id })
+
+        val written = change.applyTo(layout.replace(home.id) { adopted.draft })
+        assertEquals(adopted.scope.library, written.library)
+        assertTrue(LensLibraryOps.danglingRefs(written).isEmpty())
+        assertEquals(0, LensAdoption.identical(written, written.library.lenses.single().id).size)
+        // The active and default workspaces and the order are untouched.
+        assertEquals(layout.workspaces.map { it.id }, written.workspaces.map { it.id })
+        assertEquals(layout.activeId, written.activeId)
+        // A library-only change leaves the other workspaces out of the write.
+        val only = saved.session.scope.changeFrom(base)
+        assertNotNull(only.library)
+        assertEquals(emptyList(), only.others)
+    }
+
     private fun lensesOf(layout: LayoutWorkspaces) =
         layout.workspaces.map { ws ->
             ws.id to WorkspaceBindings.sites(ws).map { it.binding.lens to it.binding.expression }

@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.containers.ContainerServices
@@ -40,7 +41,11 @@ import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageSetContainer
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.Workspace
+import com.riffle.core.domain.launcher.workspace.editor.LensScope
+import com.riffle.core.domain.launcher.workspace.editor.LensScopeChange
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoice
+
+internal const val EDITOR_OFFER_TEST_TAG = "editor-adopt-offer"
 
 /** Windows at least this wide (an unfolded foldable, a tablet) show the editor and its preview side by side. */
 private val TwoPaneMinWidth: Dp = 600.dp
@@ -53,7 +58,10 @@ private val CompactPreviewHeight: Dp = 220.dp
  * up the workspace, build [sources] from the registry (with each source's access, read without prompting), and
  * show this composable full screen. See docs/product/workspaces-editor.md for the integration contract.
  *
- * - [onSave] receives the committed workspace when the user taps Done with changes; [onClose] follows every exit.
+ * - [onSave] receives the committed workspace when the user taps Done with changes, with what changed outside it
+ *   (the layout's saved lenses and the other workspaces that adopted one); [onClose] follows every exit.
+ * - [scope] is the layout's saved lenses and its other workspaces, for "Use a saved lens", Save as lens and the offer
+ *   to use it in identical containers; leave it empty for a host without saved lenses.
  * - [onRequestSourceAccess] is called only when the user taps a source's "Review access" button; map it to the
  *   existing explicit flow (for the calendar, `LauncherShellAction.RequestCalendarAccess`). The editor never
  *   requests a permission itself.
@@ -67,21 +75,22 @@ fun EditorEntry(
     workspace: Workspace,
     sources: List<SourceChoice>,
     services: ContainerServices,
-    onSave: (Workspace) -> Unit,
+    onSave: (Workspace, LensScopeChange) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     capabilities: LayoutCapabilities = LayoutCapabilities(),
     onRequestSourceAccess: (SourceId) -> Unit = {},
+    scope: LensScope = LensScope(),
 ) {
     val environment = remember(sources, capabilities) { EditorEnvironment(sources, capabilities) }
     val reducer = remember(environment) { WorkspaceEditorReducer(environment) }
-    var state by remember(workspace, reducer) { mutableStateOf(reducer.start(workspace)) }
+    var state by remember(workspace, scope, reducer) { mutableStateOf(reducer.start(workspace, scope)) }
     val dispatch: (EditorAction) -> Unit = { action ->
         val transition = reducer.reduce(state, action)
         state = transition.state
         when (val effect = transition.effect) {
             is EditorEffect.Save -> {
-                onSave(effect.workspace)
+                onSave(effect.workspace, effect.change)
                 onClose()
             }
             EditorEffect.Close -> onClose()
@@ -114,7 +123,20 @@ internal fun EditorScreen(
             Column(modifier = Modifier.fillMaxSize().padding(horizontal = RiffleSpacing.l)) {
                 EditorTopBar(state, dispatch)
                 state.message?.let {
-                    EditorNotice(messageText(it), onDismiss = { dispatch(EditorAction.DismissMessage) })
+                    EditorNotice(
+                        messageText(it),
+                        onDismiss = { dispatch(EditorAction.DismissMessage) },
+                        error = messageIsError(it),
+                    )
+                }
+                state.offer?.let {
+                    EditorOfferNotice(
+                        text = EditorLensMessages.offer(it),
+                        actionLabel = EditorLensText.OFFER_ACTION,
+                        onAction = { dispatch(EditorAction.AdoptIdentical) },
+                        onDismiss = { dispatch(EditorAction.DismissOffer) },
+                        modifier = Modifier.testTag(EDITOR_OFFER_TEST_TAG),
+                    )
                 }
                 if (twoPane) {
                     Row(
@@ -146,9 +168,9 @@ private fun EditorBody(
 ) {
     val flow = state.flow
     if (flow == null) {
-        EditorOverview(state.session.draft, dispatch, modifier)
+        EditorOverview(state.session.draft, state.session.scope.library, dispatch, modifier)
     } else {
-        val context = environment.flowContext(state.session.draft, flow.mode)
+        val context = environment.flowContext(state.session, flow.mode)
         Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m)) {
             if (inlinePreview) {
                 EditorPreview(
@@ -179,7 +201,7 @@ private fun EditorPreviewPane(
 ) {
     val flow = state.flow
     if (flow != null) {
-        val context = environment.flowContext(state.session.draft, flow.mode)
+        val context = environment.flowContext(state.session, flow.mode)
         EditorPreview(previewTargetFor(flow.state, context), services, modifier)
     } else {
         when (val page = state.session.draft.pages.firstOrNull()) {

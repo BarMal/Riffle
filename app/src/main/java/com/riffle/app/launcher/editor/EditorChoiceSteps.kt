@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.workspace.editor.BindingFlowContext
 import com.riffle.core.domain.launcher.workspace.editor.BindingFlowState
 import com.riffle.core.domain.launcher.workspace.editor.ContainerChoice
 import com.riffle.core.domain.launcher.workspace.editor.ContainerKind
+import com.riffle.core.domain.launcher.workspace.editor.SavedLensFlow
 import com.riffle.core.domain.launcher.workspace.editor.WidgetTarget
 
 /**
@@ -102,11 +103,14 @@ internal fun widgetTargetLabel(
     return if (target.pageId == null || index < 0) "On a new widget page" else "On page ${index + 1}"
 }
 
-/** Step 4: a plain summary of what will be added. Nothing changes until the user confirms. */
+/**
+ * Step 4: a plain summary of what will be added, and Save as lens. Nothing changes until the user confirms.
+ */
 @Composable
 internal fun EditorConfirmStep(
     state: BindingFlowState,
     context: BindingFlowContext,
+    onFlowAction: (BindingFlowAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {
@@ -121,6 +125,7 @@ internal fun EditorConfirmStep(
                 Text(value, style = MaterialTheme.typography.bodyLarge)
             }
         }
+        SaveAsLensBlock(state, context, onFlowAction)
     }
 }
 
@@ -132,6 +137,7 @@ internal fun confirmSummary(
     buildList {
         add("From" to state.draft.sources.joinToString(", ") { EditorText.sourceLabel(it) })
         add("Showing" to (state.draft.preset?.let { EditorText.presetLabel(it) } ?: EditorText.CUSTOM_LENS))
+        SavedLensFlow.current(state, context)?.let { add(EditorLensText.SAVED_LENS_FIELD to it.name) }
         state.expression?.let { add("Look" to EditorText.expressionLabel(it)) }
         state.container?.let { kind ->
             val where =

@@ -33,11 +33,32 @@ data class LensScope(
         return others.filter { before[it.id] != it }
     }
 
+    /** What a save writes besides the edited workspace: the library if it changed, and the workspaces that did. */
+    fun changeFrom(base: LensScope): LensScopeChange =
+        LensScopeChange(library.takeIf { it != base.library }, changedOthers(base))
+
     companion object {
         /** The scope of [layout] around workspace [id]: its library and every other workspace. */
         fun of(
             layout: LayoutWorkspaces,
             id: WorkspaceId,
         ): LensScope = LensScope(layout.library, layout.workspaces.filter { it.id != id })
+    }
+}
+
+/**
+ * The part of a saved editor session that lies outside the edited workspace, so the host writes only what changed
+ * and leaves the rest of the layout as it is. Empty for a session that never touched a saved lens.
+ */
+data class LensScopeChange(
+    val library: LensLibrary? = null,
+    val others: List<Workspace> = emptyList(),
+) {
+    val isEmpty: Boolean get() = library == null && others.isEmpty()
+
+    /** [layout] with the new library and the changed workspaces written; workspaces that vanished are skipped. */
+    fun applyTo(layout: LayoutWorkspaces): LayoutWorkspaces {
+        val withOthers = others.fold(layout) { acc, other -> acc.replace(other.id) { other } }
+        return if (library == null) withOthers else withOthers.copy(library = library)
     }
 }

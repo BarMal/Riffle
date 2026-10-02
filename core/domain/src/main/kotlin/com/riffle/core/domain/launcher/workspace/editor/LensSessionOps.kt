@@ -2,6 +2,7 @@ package com.riffle.core.domain.launcher.workspace.editor
 
 import com.riffle.core.domain.launcher.workspace.LensId
 import com.riffle.core.domain.launcher.workspace.LibraryProblem
+import com.riffle.core.domain.launcher.workspace.SavedLens
 
 /** The offer made after Save as lens: [count] other containers hold exactly the lens that was just saved as [name]. */
 data class AdoptOffer(
@@ -74,6 +75,12 @@ object LensSessionOps {
         session: WorkspaceEditSession,
         id: LensId,
     ): WorkspaceEditSession = session.applyLayout(LensAdoption.adopt(session.scope.layoutWith(session.draft), id))
+
+    /** The saved lens the binding at [target] uses, or null when it is inline or its reference no longer resolves. */
+    fun savedLensAt(
+        session: WorkspaceEditSession,
+        target: FlowMode,
+    ): SavedLens? = FlowEdits.existingBinding(session.draft, target)?.ref?.let(session.scope.library::find)
 
     /** How many other containers [adopt] would take over now (0 when there is nothing to offer). */
     fun identicalCount(

@@ -23,6 +23,7 @@ internal object EditorText {
     const val APPLY_CHANGES = "Apply changes"
     const val CANCEL = "Cancel"
     const val DISMISS = "Dismiss"
+    const val NOT_NOW = "Not now"
     const val DISCARD_TITLE = "Discard changes?"
     const val DISCARD_BODY = "Your edits to this workspace have not been saved."
     const val DISCARD = "Discard"
