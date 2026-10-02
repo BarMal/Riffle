@@ -575,7 +575,14 @@ sealed interface LauncherShellAction {
         val enabled: Boolean,
     ) : LauncherShellAction
 
+    /** Opt-in background refresh interval; [FeedRefreshIntervalOption.OFF] (the default) means no background work. */
     data class SelectRssRefreshInterval(val option: FeedRefreshIntervalOption) : LauncherShellAction
+
+    /** Background refresh runs only on an unmetered network. */
+    data class SetRssBackgroundWifiOnly(val enabled: Boolean) : LauncherShellAction
+
+    /** Background refresh runs only while charging. */
+    data class SetRssBackgroundChargingOnly(val enabled: Boolean) : LauncherShellAction
 
     /** Adds a durable rule that hides future notifications matching [kind]/[matchMode]/[value] for the source app. */
     data class AddNotificationHideRule(

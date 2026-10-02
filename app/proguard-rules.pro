@@ -23,3 +23,8 @@
 # VERIFY in the first CI run: delete these two lines if R8 does not need them.
 -dontwarn androidx.window.extensions.**
 -dontwarn androidx.window.sidecar.**
+
+# WorkManager stores the worker's class name in its database and instantiates it reflectively from that name,
+# so the name must survive minification and stay stable across releases (FeedRefreshWorker, issue #1393).
+# WorkManager's consumer rules keep the (Context, WorkerParameters) constructor; this keeps the name.
+-keepnames class com.riffle.app.launcher.rss.FeedRefreshWorker
