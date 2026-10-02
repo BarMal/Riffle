@@ -1,6 +1,6 @@
 # Workspaces: ICS recurrence spike (S12, decision N8)
 
-Status: spike complete, library chosen, seam and tests merged-ready; the ICS feed source itself is not built.
+Status: spike complete, library chosen, seam and tests merged. The ICS feed source that consumes it is built in [`workspaces-ics-source.md`](workspaces-ics-source.md) (#1409); `:app` now depends on the module (sizes, R8 and packaging recorded there).
 Issue: #1395 (part of #1363). Decision N8 and the selection criteria are in
 [`workspaces-configuration.md`](workspaces-configuration.md) section 15.2; the source it feeds is in
 [`workspaces-external-sources.md`](workspaces-external-sources.md) (ICS subscribe-by-URL).
@@ -121,7 +121,7 @@ Nothing here is on-device evidence: see section 5.
   corpus and must pass the same table.
 * `gradle/libs.versions.toml`: `ical4j = "4.3.0"`, `libs.ical4j`. The module is registered in `settings.gradle.kts`, so
   `verify` runs its `check`, `ktlintCheck` and `detekt` automatically.
-* **`:app` does not depend on the module.** No APK change, no permission, no network, no background work.
+* **Update (#1409): `:app` now depends on the module** for the ICS feed source; see `workspaces-ics-source.md` for the measured size delta, the R8 `-dontwarn` lines and the packaging excludes. The source uses an in-repo bounded parser (decision 1 there) and ical4j only for `Recur`.
 
 The section 15.3 sketch named a broader `IcsEngine` (parse plus expand, one module `external-ics-ical4j`). This slice built
 the narrower recurrence seam first, because that is what the spike could verify. `IcsEngine` can later be a thin layer over

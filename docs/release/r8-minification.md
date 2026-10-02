@@ -47,9 +47,10 @@ Findings:
 - Native libs total 0.06 MiB across four ABIs. ABI splits would save about 0.04 MiB. Not worth it.
 - `app/src/main/res` holds one string; `res/` is 13 KB. `resources.arsc` (0.40 MiB) is library
   string tables in every locale (Material 3, activity, core, emoji2, window).
-- `:core:recurrence-ical4j` is not an `:app` dependency (confirmed in `app/build.gradle.kts`), so
-  ical4j adds nothing today. It will matter when the ICS source lands: ical4j pulls in a large
-  dependency graph and needs its own R8 review at that point.
+- `:core:recurrence-ical4j` became an `:app` dependency with the ICS feed source (#1409, see
+  [`workspaces-ics-source.md`](../product/workspaces-ics-source.md)). MEASURED on that PR (CI run 36989803449):
+  unminified 27.88 MiB (about +2.2 MiB over the 25.66 MiB above), minified 4.68 MiB (about +0.3 MiB), R8 completed
+  with the extra `-dontwarn` lines below and the emulator smoke passed.
 
 ### Estimated savings per lever
 
@@ -84,7 +85,7 @@ dependency list:
 | DataStore Preferences | Bundles lite protobuf; the library ships consumer rules for its generated messages. Used by five DataStore-backed stores. | No (verify via the on-device persistence checks) |
 | `androidx.window` (1.4.0) | Loads its OEM extensions reflectively and compiles against stubs. Ships its own rules. | Defensive `-dontwarn` for `androidx.window.extensions.**` and `androidx.window.sidecar.**` only, marked VERIFY: delete if R8 does not need them. |
 | coroutines, emoji2, lifecycle, activity, palette, core | Ship consumer rules. | No |
-| ical4j | Not in `:app`. Re-review when ICS lands. | n/a |
+| ical4j (`Recur` only, via `core/recurrence-ical4j`) | No reflection on the used path: the calendar parser, `TimeZoneRegistry` and the `ServiceLoader` factories are never called. The jar names optional Groovy classes, the JDK-only `java.beans.Transient`, `java.time.zone.ZoneRulesProvider` (not in the Android SDK), and, through threeten-extra, `org.joda.convert.*`. | `-dontwarn` for those four (see below); no keep rule. Time-zone resources, the `ZoneRulesProvider` service entry and the Groovy extension descriptor are excluded from the APK with `packaging.resources.excludes`. |
 | Roborazzi, Robolectric, Compose test, junit | `testImplementation`/`androidTestImplementation`/`debugImplementation` only; not in the release variant. | No |
 | `allowBackup` / `data_extraction_rules` | Reference a DataStore file path, not class names. | No |
 
@@ -95,6 +96,7 @@ Rules in `app/proguard-rules.pro` and why:
 | `-keepattributes SourceFile,LineNumberTable` and `-renamesourcefileattribute SourceFile` | Keeps stack traces mappable with the retained `mapping.txt`. No size or behaviour effect of note. |
 | `-keep class ...RiffleNotificationListenerService { *; }` | Defensive and redundant with the manifest rule; protects the name-matched system binding from future refactors. |
 | `-dontwarn androidx.window.extensions.**`, `...sidecar.**` | Classes that exist only on device; prevents a missing-class build failure under full mode. VERIFY. |
+| `-dontwarn groovy.**`, `-dontwarn java.beans.Transient`, `-dontwarn java.time.zone.ZoneRulesProvider`, `-dontwarn org.joda.convert.**` | ical4j (ICS source, #1409): classes named by the jar that are absent from Android or not dependencies, and are not on the `Recur` path. Found by the first CI run (R8 reported the last two as missing). |
 
 The goal is a small rule file. Blanket keeps (for example `-keep class com.riffle.** { *; }`) would
 defeat the purpose and are not used.
@@ -145,7 +147,7 @@ Rollback is the same one-line revert; no data format changes.
 ### Stage 3: follow-ups
 
 - Dex compression decision (see below) and a `:baselineprofile` module (#1268).
-- Re-review keep rules when ICS/ical4j, RSS parsing, or any serialization library is added.
+- Re-review keep rules when RSS parsing or any serialization library is added (ical4j: reviewed with #1409).
 
 ## Owner device checklist (before the flip)
 

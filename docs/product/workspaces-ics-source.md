@@ -82,12 +82,19 @@ except the APK contents.
 
 ## Size, R8 and packaging (preconditions of `workspaces-ics-recurrence.md` section 5)
 
-See the PR description and the table below for the CI numbers.
+MEASURED by the non-publishing Minified Release Check on PR #1414 (run 36989803449, same commit for both builds):
+unminified 29,238,738 bytes (27.88 MiB, dex 27.16 MiB over 3 files), R8-minified 4,907,657 bytes (4.68 MiB, dex
+4.26 MiB), emulator smoke passed. The baseline is the same check's last published figure (PR #1407: unminified
+25.66 MiB, minified 4.38 MiB), so the delta is **about +2.2 MiB unminified and +0.3 MiB minified**: under the 3 MiB
+stop condition and well under the 32 MiB cap (4.1 MiB of headroom). Caveat: that baseline is from an earlier
+commit, other merges since may have moved it either way; a `workflow_dispatch` run on `main` (run 36990674651) was
+started to get a same-day figure, and its minified artifact was 6,841,246 bytes against 7,122,012 for the PR
+(about +0.28 MB zipped), consistent with the minified delta above.
 
 | Precondition | Status |
 | --- | --- |
-| APK size delta | CI_SIZE_PLACEHOLDER |
-| D8/R8 `-dontwarn` needs | `-dontwarn groovy.**` and `-dontwarn java.beans.Transient` in `app/proguard-rules.pro`, with a justification comment. CI_R8_PLACEHOLDER |
+| APK size delta | Measured, about +2.2 MiB unminified, +0.3 MiB minified (above). Gate passed. |
+| D8/R8 `-dontwarn` needs | `-dontwarn groovy.**` and `-dontwarn java.beans.Transient` in `app/proguard-rules.pro`, with a justification comment. R8 first failed on two more missing classes, `java.time.zone.ZoneRulesProvider` (the Android SDK does not expose it; ical4j's `DefaultZoneRulesProvider` extends it) and `org.joda.convert.*` (named by threeten-extra), so `-dontwarn java.time.zone.ZoneRulesProvider` and `-dontwarn org.joda.convert.**` were added; the second run succeeded and the emulator smoke passed. |
 | `ZoneRulesProvider` service entry | Excluded from the APK with `packaging.resources.excludes` together with `zoneinfo/**`, `zoneinfo-global/**` and `META-INF/groovy/**` (none is read by `Recur`). Android's `ZoneRulesProvider` is the platform one and does not load service entries from the APK. |
 | On-device corpus run | **NOT DONE** (needs a device or an instrumented run): see the owner checklist. |
 
