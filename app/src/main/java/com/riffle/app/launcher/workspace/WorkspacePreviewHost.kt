@@ -113,20 +113,23 @@ private fun WorkspacePreviewContent(
             { padding: PaddingValues -> runtime.services(reducedMotion, padding) }
         }
     val placedHome = rememberPlacedHome(host, state, workspace?.id)
+    val hideController = remember(runtime) { runtime.hideController() }
     WorkspacePreviewTheme(state) {
-        WorkspacePreviewSurface(
-            workspace = workspace,
-            servicesFor = servicesFor,
-            menu = menu,
-            reducedMotion = reducedMotion,
-            navigation = navigation,
-            onNavigationConsumed = host.controller::navigationConsumed,
-            returnBehavior = state.launcherSettings.home.returnBehavior,
-            returnRequest = returnRequest,
-            onReturnConsumed = host.controller::returnConsumed,
-            onExit = host.controller::close,
-            placedHome = placedHome,
-        )
+        PreviewHideHost(hideController, deviceClass) {
+            WorkspacePreviewSurface(
+                workspace = workspace,
+                servicesFor = servicesFor,
+                menu = menu,
+                reducedMotion = reducedMotion,
+                navigation = navigation,
+                onNavigationConsumed = host.controller::navigationConsumed,
+                returnBehavior = state.launcherSettings.home.returnBehavior,
+                returnRequest = returnRequest,
+                onReturnConsumed = host.controller::returnConsumed,
+                onExit = host.controller::close,
+                placedHome = placedHome,
+            )
+        }
     }
 }
 

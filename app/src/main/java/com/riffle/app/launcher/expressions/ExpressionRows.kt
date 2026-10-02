@@ -53,12 +53,14 @@ internal fun ItemRow(
     onClick: (Item) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val hideMenu = rememberItemHideMenu(item)
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
                 .heightIn(min = ExpressionMinTouchTarget)
                 .clickable(role = Role.Button) { onClick(item) }
+                .hideCustomActions(hideMenu)
                 .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
         horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
         verticalAlignment = Alignment.CenterVertically,
@@ -88,6 +90,7 @@ internal fun ItemRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        ItemHideButton(hideMenu)
     }
 }
 
@@ -123,6 +126,7 @@ internal fun IndexRow(
 ) {
     val titleColor = MaterialTheme.colorScheme.onSurface
     val snippetColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val hideMenu = rememberItemHideMenu(item)
     val title = item.displayTitle()
     val snippet = item.body?.trim()?.takeIf { it.isNotEmpty() }
     val text =
@@ -138,6 +142,7 @@ internal fun IndexRow(
                 .fillMaxWidth()
                 .heightIn(min = ExpressionMinTouchTarget)
                 .clickable(role = Role.Button) { onClick(item) }
+                .hideCustomActions(hideMenu)
                 .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
         horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
         verticalAlignment = Alignment.CenterVertically,
@@ -157,5 +162,6 @@ internal fun IndexRow(
                 color = snippetColor,
             )
         }
+        ItemHideButton(hideMenu)
     }
 }

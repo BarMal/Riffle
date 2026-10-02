@@ -130,6 +130,34 @@ internal object EditorScreenshotFixtures {
             listOf(EditorAction.StartFlow(FlowMode.Add), flow(BindingFlowAction.ToggleSource(SourceIds.CALENDAR))),
         )
 
+    /** A second environment that also lists the Search source, so the Source step can show its query field. */
+    val searchEnvironment =
+        EditorEnvironment(
+            sources =
+                SourceChoices.build(
+                    descriptors + SourceDescriptor(SourceIds.SEARCH, setOf(SourceCapability.SEARCHABLE)),
+                    emptyMap(),
+                ),
+            ids = WorkspaceIdFactory { "search-fixture-${nextId++}" },
+        )
+
+    /**
+     * The Source step with Search chosen and [query] already applied through the flow action. The field is drawn
+     * unfocused and pre-filled from the draft: nothing types into it, so no cursor animation ever runs.
+     */
+    fun searchQuery(query: String): WorkspaceEditorUiState {
+        val searchReducer = WorkspaceEditorReducer(searchEnvironment)
+        val actions =
+            listOf(
+                EditorAction.StartFlow(FlowMode.Add),
+                flow(BindingFlowAction.ToggleSource(SourceIds.SEARCH)),
+                flow(BindingFlowAction.SetQuery(SourceIds.SEARCH, query)),
+            )
+        return actions.fold(searchReducer.start(workspace)) { state, action ->
+            searchReducer.reduce(state, action).state
+        }
+    }
+
     private fun flow(action: BindingFlowAction): EditorAction = EditorAction.Flow(action)
 
     private fun run(

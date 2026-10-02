@@ -120,17 +120,30 @@ the preview off nothing exists and nothing runs). Details of the page are in
   they are dropped on close. A rule row shows only the generated description: an app is a package (with profile or launcher
   entry), a group is the feed or group key, an item rule is "One specific item" (its key is never shown), a text rule shows
   the pattern the user authored.
-* **Contextual "Hide this" (pure action and hook; no gesture yet).** `ExclusionHideActions.choicesFor(item)` lists what an
-  item supports (app, feed or group, item, like this, empty content), with the design's per-source vocabulary ("Hide
-  notifications from this app", "Hide this feed", "Hide this article", ...), built on the existing `ExclusionRuleBuilders`
-  (so sensitive items offer only the structural ones). `ExclusionHideActions.apply(rules, layout, item, kind, allLayouts)`
-  returns an undoable `ExclusionsChange` whose message is "Hidden on <layout>: <fixed phrase>" (never item text); hiding
-  something whose rule exists but is switched off turns it back on; an equal enabled rule is a no-op ("Already hidden").
-  `ExclusionsSettingsController.hide(...)` runs it with the snackbar and Undo. **Not wired to a gesture:** item actions are the
-  items' own `Item.actions` rendered as card buttons by the expressions (and a `WorkspaceItemActions` that handles only Open and
-  Dismiss), and the preview has no long-press menu or snackbar host, so adding Hide would mean source mappers emitting new
-  actions or a new menu on every expression (and screenshots of both). That is a slice of its own; the hook above is what it
-  will call (see "Not done").
+* **Contextual "Hide this" (as built, issue #1410).** `ExclusionHideActions.choicesFor(item)` lists what an item supports
+  (app, feed or group, item, like this, empty content), with the design's per-source vocabulary ("Hide notifications from
+  this app", "Hide this feed", "Hide this article", ...), built on the existing `ExclusionRuleBuilders` (so sensitive items
+  offer only the structural ones and "like this" needs text of at least 3 characters). `menuChoicesFor(item)` is what the
+  menu shows: the same list without empty-content (the four choices of the design's menu).
+  `ExclusionHideActions.apply(rules, layout, item, kind, allLayouts)` returns an undoable `ExclusionsChange` whose message is
+  "Hidden on <layout>: <fixed phrase>" (never item text, and the domain has no app label, so the phrase names the kind of
+  thing hidden, for example "notifications from this app"); hiding something whose rule exists but is switched off turns it
+  back on; an equal enabled rule is a no-op ("Already hidden").
+  * **Where it is offered.** Only in the Workspaces preview, only when the runtime has exclusion rules (otherwise
+    `PreviewHideHost` draws its content alone). Expressions read `LocalItemHider` (default null: nothing extra is drawn, so
+    the editor's draft previews and every existing screenshot are unchanged). ADR 0002 prefers platform primitives over new
+    gesture arbitration, so the primary affordance is an ordinary **"More options" button** (48 dp, a plain click) on List,
+    Index, Alpha list, Card and the focused Card stack card, plus a **TalkBack custom action per choice** ("Hide this feed",
+    ...) on the same rows and cards. Icon-only cells (Icon row, Icon grid, Categories icons) have no room for a button, so
+    they get a **long press** (a labelled long-click action, the only other gesture there is a scroll) and the same custom
+    actions. Cards behind the focused card in a stack carry neither button nor actions.
+  * **Snackbar.** `PreviewHideHost` owns a `SnackbarHostState` above the dock bar (88 dp clearance, safe-drawing insets) and
+    shows `ExclusionsSettingsController.feedback`: the polite live-region message, **Undo**, and, after a hide on one layout,
+    **Hide on all layouts**. `ExclusionsSettingsController.hide(...)` keeps the hidden `Item` in memory only until the
+    announcement ends (dismissed, undone, replaced, another change, leaving the preview) so `hideOnAllLayouts()` can repeat
+    it for every layout (equal rules are not duplicated; it has its own Undo). Item content is never stored, logged or put in
+    a message. The preview builds its own controller over the shared `CachedExclusionRepository` (`WorkspaceRuntime.hideController()`);
+    the Undo guard (repository version) makes it safe next to the Settings page's controller.
 
 * **Test note.** The add-text-rule dialog has no Roborazzi test: its text field's cursor-blink animation never lets the
   Compose test clock idle (idle timeout, and pausing the clock hung the job). Dialog interaction is validated manually
@@ -139,9 +152,10 @@ the preview off nothing exists and nothing runs). Details of the page are in
 
 ## Not done
 
-* Contextual "Hide ..." gesture or menu on items in the preview expressions (the pure action, tests and the controller hook
-  exist), with the "Manage" and "Hide on all layouts" snackbar actions and the TalkBack custom action "Hide Slack
-  notifications" (needs the app label, which the domain does not have).
+* Contextual Hide: the snackbar's "Manage" action (it needs a way to open Settings > Hidden items and rules from the preview)
+  and the app-label wording of the TalkBack action ("Hide Slack notifications": the domain has no app label, so the actions
+  say "Hide notifications from this app"); the Empty-content choice has no menu entry; hiding from the editor's draft
+  previews is not offered on purpose. Not validated on a device (see the dogfood checklist).
 * Editing a rule (change mode or value) and the live preview of matching items while typing; naming a rule (`label`).
 * Optional app narrowing for a typed text rule; the "Copy these rules to the other layouts" bulk action and the
   "Also add the hiding rules" option of Copy from other layout.

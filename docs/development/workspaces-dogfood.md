@@ -55,6 +55,14 @@ overwritten (seeded layouts are saved only when you edit something).
 - [ ] Notification cards need notification access (Settings > Permissions); recents need Usage
       access. Check each shows an honest "Allow access to show this" state until granted.
 - [ ] Tap an app item (launches it) and a notification card's Dismiss.
+- [ ] Hide: on a notification row open **More options**, choose Hide this notification (or the app); it disappears and the
+      snackbar says "Hidden on <layout>: ..." with Undo and Hide on all layouts. Undo brings it back; Hide on all layouts then
+      check the other layout in Settings > Hidden items and rules. Long-press an app icon in an icon grid for the same menu.
+      With TalkBack on, the actions menu of a row lists the Hide choices and the snackbar is read out. The menu never shows
+      item text, and a sensitive (redacted) notification offers no "like this".
+- [ ] Editor, Source step, choose Search: type a query (the preview updates after a short pause, not per key), clear it with
+      the X, type 130 characters and confirm the counter stops at 128, tap Next quickly after typing and confirm the query
+      kept. Rotate and dismiss the keyboard (Done) and check nothing is lost.
 - [ ] TalkBack: the dock offers the action **Workspace menu**; the menu, Exit preview and the editor
       are reachable and read sensibly.
 - [ ] Reduced motion (Settings > Motion, or the system animation scale): jumps snap, no animation.
@@ -68,7 +76,11 @@ overwritten (seeded layouts are saved only when you edit something).
   [`workspaces-pool-cutover.md`](../product/workspaces-pool-cutover.md)): apps, shortcuts, folders and widgets from a
   one-time import of your standard home. They go stale when you rearrange Home; use **Refresh home items** in the preview
   bar. No editing, and the dock is still a placeholder.
-- **No search box UI**: the search source exists but nothing writes a query yet.
+- **Search text:** a Search lens can have its own text in the editor (Source step; empty uses the shared text), but there is
+  still no shared search box on pages that would write the shared text.
+- **Hide from the preview:** items have a "More options" button (long press on icon-only cells, TalkBack actions on both)
+  with Hide this app / feed or group / item / items like this; the snackbar offers Undo and "Hide on all layouts". There is
+  no "Manage" shortcut from the snackbar yet.
 - **RSS shows cached articles only** (no refresh path; see #1374); with no cache it is empty.
 - **Calendar events appear only after access is granted**, and only then.
 - Artwork images for feed articles and notification large icons are not loaded (placeholder is
