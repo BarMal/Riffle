@@ -60,8 +60,9 @@ The editor's lens step was entangled only by its action type, so the logic was e
   Source step's body. `EditorSourceStep` is now a thin wrapper. `SourceChoice.status` (additive, default null) lets a host show a source's
   status in words; the editor leaves it null and is unchanged.
 - `previewTargetFor(lens, EditContext)` (`PreviewTarget.kt`) builds the live preview for a lens on its own; `EditorPreview` draws it.
-- `LensSession` / `LensSourceChoices` (domain `settings`) are the host side used by this page; `LensLibraryEditor` (use / save as / detach)
-  remains the domain operation set for `BindingFlow`, whose wiring is not part of this slice.
+- `LensSession` / `LensSourceChoices` (domain `settings`) are the host side used by this page. `LensLibraryEditor` (use / save as / detach)
+  is the domain operation set the editor flow builds on; the flow is wired in issue #1423 (see
+  [`workspaces-editor.md`](workspaces-editor.md) "Saved lenses in the flow"), through `LensSessionOps` because its draft is a session.
 
 ## Decisions to confirm
 
@@ -72,9 +73,16 @@ The editor's lens step was entangled only by its action type, so the logic was e
 5. Detail changes ask "Discard changes?" on Back; the system Back leaves the lens first, then the page.
 6. The preview is live over real data (same provider as the containers), so it can show private items on screen; it stores nothing.
 
+7. In the editor flow, changing the lens of a binding that references a saved lens means Detach first (or changing it here); the flow
+   has no inline "edit the saved lens" (it would duplicate this page's dry-run preview and the three-way Save choice).
+8. "Use it in the N other containers" counts only inline bindings whose lens is exactly equal (not those already using another saved
+   lens, even an identical one), regardless of their expression.
+
 ## Not done
 
-- "Use saved lens" / "Save as lens" in the editor `BindingFlow`, and "use it in the N other containers with an identical lens".
+- (Done in #1423) "Use saved lens" / "Save as lens" in the editor `BindingFlow`, and "use it in the N other containers with an identical lens".
+  The editor does not edit a saved lens in place: for a referenced binding it asks to detach first, and this page is where a shared
+  lens is changed, with the impact preview and the detach / save-as-new / cancel choice (decision to confirm below).
 - Reordering lenses (the list is sorted by name; `LensLibrary.move` is unused here), per-container deep links, search in the list.
 - Dangling-ref notice ("Saved lens 'X' is missing") and Make independent on this page.
 - Roborazzi goldens were not generated here (CI records them); `./gradlew verify` was not run locally, only the scratch checks below.
@@ -98,3 +106,5 @@ font, unfolded, empty, builder, breaks dialog; no typing, no dialog with a text 
 - [ ] Rename, Duplicate (unique "copy" name), Copy to another layout (counts, one-time), Delete (detach vs replace) and Undo each.
 - [ ] 100 lenses / 40 characters: the messages are clear. TalkBack: rows read as one item with actions; announcements are polite.
 - [ ] Large font, rotation (the lens being built survives), unfolded two panes, reduced motion.
+- [ ] Editor (Edit workspace) with preview on: see "Saved lenses in the editor" in
+      [`workspaces-dogfood.md`](../development/workspaces-dogfood.md) for the device checklist of use, Save as lens, the offer and Detach.

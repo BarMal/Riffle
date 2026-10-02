@@ -98,7 +98,35 @@ library lens. Every ref-carrying binding also stores its lens, so a v1 reader th
 * `detach(...)`, and `editSavedLens(layout, id, newLens, policy, context)` (gated by `previewEdit`).
 * `bindingFor(layout, id, expression)` builds a binding for `FlowMode.Add`, whose container choice stays with the flow.
 
-No `BindingFlow` state or app code changed; the library management UI is a Settings slice.
+### Editor flow (as built, issue #1423)
+
+The operations above are wired into the workspace editor flow; see [`workspaces-editor.md`](workspaces-editor.md)
+("Saved lenses in the flow") for the user-facing behaviour. What was added to the domain (all in the `editor` package,
+pure Kotlin):
+
+* `LensScope(library, others)`: what a saved-lens operation touches besides the edited workspace (the layout's library
+  and its other workspaces). `scope.layoutWith(draft)` builds the `LayoutWorkspaces` the library operations work on;
+  `LensScope.of(layout, id)` splits one back. `WorkspaceEditSession` carries it (`scope`, `committedScope`) and every
+  undo/redo snapshot holds it, so Save as lens and adoption are one exact undo step; `isDirty` includes it.
+  `scope.changeFrom(base)` / `LensScopeChange.applyTo(layout)` give the host exactly what to write: the library if it
+  changed and the other workspaces that changed, in the same single save as the edited workspace.
+* `BindingFlowState` gained `ref` (the saved lens in use; while set the draft equals that library lens), `choosingSaved`
+  and `saveAs`; `BindingFlowContext` gained `scope`. `SavedLensFlow` (choices with `SavedLensBlock` reasons, `use`,
+  `canSaveAs`, `startSaveAs`, `plan`, `reconcile`) and the reducer actions `ShowSavedLenses`, `ShowBuilder`, `UseSavedLens`,
+  `DetachSavedLens`, `StartSaveAsLens`, `CancelSaveAsLens`, `SetSaveAsName`. Lens edits are ignored while a reference is
+  held. `BindingFlow.confirm` returns `FlowOutcome.Ready(edit, result, saved)`; the binding it builds carries the new or
+  existing `ref`, and a reference that no longer resolves is never written (`SavedLensFlow.current`).
+* `LensAdoption.identical(layout, id)` / `adopt(layout, id)`: the "N other containers with an identical lens" rule.
+  A container qualifies when its binding is inline (`ref == null`) and its `Lens` equals the saved lens exactly
+  (sources, filter, group, sort, limit, projection and per-source parameters). Adopting only sets `ref`, so nothing a
+  container draws changes and none can become invalid. A binding that already uses another saved lens is left alone,
+  even if that lens is identical. The expression need not match.
+* `LensSessionOps`: `commit(session, flowState, context)` (the flow's edit plus the new library entry as one session step,
+  with an `AdoptOffer` only when N > 0), `adopt`, `detach` (through `LensLibraryEditor.detach`), `savedLensAt`,
+  `identicalCount`.
+
+`LensLibraryEditor.useSavedLens` / `saveAsLens` are still the operations for hosts that edit a stored `LayoutWorkspaces`
+directly; the editor goes through `LensSessionOps` because its draft is a session, not a layout.
 
 ## Tests
 
@@ -110,9 +138,11 @@ ids, copy-from-layout shares no ids and keeps drawing the same lenses, codec rou
 ## Not done
 
 * The library UI is built: Settings "Saved lenses" with the lens builder, "Used by" and Copy to layout, see
-  [`workspaces-saved-lenses-page.md`](workspaces-saved-lenses-page.md). Still not done: wiring the editor operations into
-  `BindingFlow` (a "Use saved lens" step and "Save as lens" on Confirm); the reusable `LensBuilder` / `LensDraftReducer` are ready for it.
-* "Use it in the N other containers with an identical lens" after Save as lens (exact-equality dependents).
+  [`workspaces-saved-lenses-page.md`](workspaces-saved-lenses-page.md), and the editor flow uses it (use a saved lens,
+  Save as lens, the identical-containers offer, Detach): see "Editor flow" above.
+* Changing the lens of a referenced binding inside the editor flow: it asks to detach first, or to change the saved lens
+  in Settings > Saved lenses (which shows the dry-run impact). An in-flow "edit the saved lens" with the impact preview was not
+  built (decision to confirm, see [`workspaces-editor.md`](workspaces-editor.md)).
 * `Workspace.presetId` and a "Reset to preset" menu entry; the dry-run impact preview of `restoreLenses` is available
   through `previewEdit` per lens but `reset` itself applies with `DETACH_BROKEN` and does not ask.
 * Placed-item (section 9) handling in reset; backup/restore of the library (section 5) beyond the workspace set codec.
