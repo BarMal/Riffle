@@ -64,10 +64,12 @@ overwritten (seeded layouts are saved only when you edit something).
 
 ## Known gaps
 
-- **Home pages show your real home items, read-only** (S4, see
-  [`workspaces-pool-cutover.md`](../product/workspaces-pool-cutover.md)): apps, shortcuts, folders and widgets from a
-  one-time import of your standard home. They go stale when you rearrange Home; use **Refresh home items** in the preview
-  bar. No editing, and the dock is still a placeholder.
+- **Home pages show your real home items and can be edited** (S4/S5, see
+  [`workspaces-pool-cutover.md`](../product/workspaces-pool-cutover.md) and
+  [`workspaces-pool-editing.md`](../product/workspaces-pool-editing.md)): a one-time import of your standard home. Use
+  **Edit** to move, remove, add apps and pages, with Undo. Edits change the preview only, never the standard home, and
+  they go stale against it; **Refresh home items** (asks first) replaces the preview with a fresh import. Folder sharing,
+  widget resize and the workspace-menu entry are not built; the dock is still a placeholder.
 - **No search box UI**: the search source exists but nothing writes a query yet.
 - **RSS shows cached articles only** (no refresh path; see #1374); with no cache it is empty.
 - **Calendar events appear only after access is granted**, and only then.
