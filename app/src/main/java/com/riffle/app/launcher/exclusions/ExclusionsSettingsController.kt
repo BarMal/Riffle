@@ -29,6 +29,8 @@ internal data class ExclusionsFeedback(
     val id: Long,
     val message: String,
     val canUndo: Boolean,
+    /** True for a contextual Hide that touched one layout: the snackbar then also offers "Hide on all layouts". */
+    val canHideEverywhere: Boolean = false,
 )
 
 /**
@@ -52,7 +54,11 @@ internal class ExclusionsSettingsController(
 ) {
     private class UndoOffer(val change: ExclusionsChange, val version: Int)
 
+    /** What the last contextual Hide hid, kept only while its snackbar is on offer (memory only, never stored). */
+    private class HideRequest(val layout: HomeLayoutDeviceClass, val item: Item, val kind: HideKind)
+
     private var offer: UndoOffer? = null
+    private var lastHide: HideRequest? = null
     private var announcements = 0L
     private var counter: ExclusionMatchCounter? = null
     private var observing: SourceSubscription? = null
@@ -118,19 +124,37 @@ internal class ExclusionsSettingsController(
 
     /**
      * The contextual Hide action's hook: hides what [kind] describes for [item] on [layout] (every layout with
-     * [allLayouts]) and announces it with Undo. Nothing calls it from a gesture yet.
+     * [allLayouts]) and announces it with Undo. A hide on one layout also offers [hideOnAllLayouts] until the
+     * announcement ends; the [item] is held in memory for that long only and never stored or logged.
      */
     fun hide(
         layout: HomeLayoutDeviceClass,
         item: Item,
         kind: HideKind,
         allLayouts: Boolean = false,
-    ): Boolean = applyChange { current -> ExclusionHideActions.apply(current, layout, item, kind, allLayouts) }
+    ): Boolean {
+        val applied = applyChange { current -> ExclusionHideActions.apply(current, layout, item, kind, allLayouts) }
+        if (applied && !allLayouts) {
+            lastHide = HideRequest(layout, item, kind)
+            mutableFeedback.value = mutableFeedback.value?.copy(canHideEverywhere = true)
+        }
+        return applied
+    }
+
+    /**
+     * The snackbar's "Hide on all layouts": repeats the last contextual Hide for every layout (rules that exist
+     * are left alone, so it is safe after any other change) and announces it with its own Undo.
+     */
+    fun hideOnAllLayouts(): Boolean {
+        val request = lastHide ?: return false
+        return hide(request.layout, request.item, request.kind, allLayouts = true)
+    }
 
     /** Puts back what the last destructive change replaced, if its Undo is still on offer and still safe. */
     fun undo() {
         val pending = offer ?: return
         offer = null
+        lastHide = null
         if (repository.version.value != pending.version) {
             announce(ExclusionsAnnouncements.CANNOT_UNDO, canUndo = false)
             return
@@ -144,6 +168,7 @@ internal class ExclusionsSettingsController(
         if (mutableFeedback.value?.id == id) {
             mutableFeedback.value = null
             offer = null
+            lastHide = null
         }
     }
 
@@ -151,9 +176,11 @@ internal class ExclusionsSettingsController(
     fun leave() {
         mutableFeedback.value = null
         offer = null
+        lastHide = null
     }
 
     private fun applyChange(compute: (LayoutExclusionRules) -> ExclusionsChange): Boolean {
+        lastHide = null
         var computed: ExclusionsChange? = null
         repository.update { current -> compute(current).also { computed = it }.after }
         val change = computed ?: return false

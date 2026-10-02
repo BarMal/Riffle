@@ -52,6 +52,8 @@ object ExpressionText {
     const val LOADING = "Loading"
     const val EMPTY = "Nothing to show"
     const val HIDDEN_TITLE = "Hidden content"
+    const val MORE_OPTIONS = "More options"
+    const val HIDE_LONG_PRESS_LABEL = "Show hide options"
 }
 
 /** Minimum touch target edge, the same as the largest spacing token (48 dp). */

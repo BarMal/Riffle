@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.LauncherShellViewModel
@@ -115,23 +116,30 @@ private fun WorkspacePreviewContent(
             { padding: PaddingValues -> runtime.services(reducedMotion, padding) }
         }
     val placedHome = rememberPlacedHome(host, state, workspace?.id)
+    val hideController = remember(runtime) { runtime.hideController() }
     val layoutSet = state.homeLayoutSet
     val dockPins = remember(layoutSet, deviceClass) { PreviewDock.from(layoutSet.dockFor(deviceClass)) }
     WorkspacePreviewTheme(state) {
-        WorkspacePreviewSurface(
-            workspace = workspace,
-            servicesFor = servicesFor,
-            menu = menu,
-            reducedMotion = reducedMotion,
-            navigation = navigation,
-            onNavigationConsumed = host.controller::navigationConsumed,
-            returnBehavior = state.launcherSettings.home.returnBehavior,
-            returnRequest = returnRequest,
-            onReturnConsumed = host.controller::returnConsumed,
-            onExit = host.controller::close,
-            placedHome = placedHome,
-            dockPins = dockPins,
-        )
+        PreviewHideHost(
+            hideController,
+            deviceClass,
+            (dockPins?.barHeightDp ?: PreviewDock.MIN_BAR_HEIGHT_DP).dp,
+        ) {
+            WorkspacePreviewSurface(
+                workspace = workspace,
+                servicesFor = servicesFor,
+                menu = menu,
+                reducedMotion = reducedMotion,
+                navigation = navigation,
+                onNavigationConsumed = host.controller::navigationConsumed,
+                returnBehavior = state.launcherSettings.home.returnBehavior,
+                returnRequest = returnRequest,
+                onReturnConsumed = host.controller::returnConsumed,
+                onExit = host.controller::close,
+                placedHome = placedHome,
+                dockPins = dockPins,
+            )
+        }
     }
 }
 

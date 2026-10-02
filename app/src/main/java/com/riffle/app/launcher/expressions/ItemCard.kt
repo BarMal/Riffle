@@ -39,7 +39,8 @@ internal fun ItemAction.label(): String =
 /**
  * The face shared by the Card and CardStack expressions: optional artwork, icon, title, subtitle,
  * body snippet, time and up to [MAX_CARD_ACTIONS] actions. The whole face is one tap target for
- * [onItemClick]; action buttons keep their own (Material) minimum target size.
+ * [onItemClick]; action buttons keep their own (Material) minimum target size. [hideEnabled] false hides the Hide
+ * button and its accessibility actions (the stack passes it for every card but the focused one).
  */
 @Composable
 internal fun ItemCard(
@@ -48,7 +49,9 @@ internal fun ItemCard(
     onItemClick: (Item) -> Unit,
     onAction: (Item, ItemAction) -> Unit,
     modifier: Modifier = Modifier,
+    hideEnabled: Boolean = true,
 ) {
+    val hideMenu = rememberItemHideMenu(item).takeIf { hideEnabled }
     Surface(
         modifier = modifier,
         shape = RiffleShapes.large,
@@ -61,6 +64,7 @@ internal fun ItemCard(
                 Modifier
                     .fillMaxWidth()
                     .clickable(role = Role.Button) { onItemClick(item) }
+                    .hideCustomActions(hideMenu)
                     .padding(RiffleSpacing.l),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         ) {
@@ -73,7 +77,7 @@ internal fun ItemCard(
                     fillWidth = true,
                 )
             }
-            CardHeader(item = item, environment = environment)
+            CardHeader(item = item, environment = environment, hideMenu = hideMenu)
             item.body?.takeIf { it.isNotBlank() }?.let { body ->
                 Text(
                     text = body,
@@ -93,6 +97,7 @@ private val CardArtworkHeight = RiffleSpacing.xxxl * 2
 private fun CardHeader(
     item: Item,
     environment: ExpressionEnvironment,
+    hideMenu: ItemHideMenu?,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
@@ -125,6 +130,7 @@ private fun CardHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        ItemHideButton(hideMenu)
     }
 }
 

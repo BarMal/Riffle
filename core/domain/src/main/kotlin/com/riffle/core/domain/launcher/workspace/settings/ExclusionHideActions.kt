@@ -45,6 +45,16 @@ object ExclusionHideActions {
             if (build(builders, item, kind) == null) null else choice(kind, item.sourceId)
         }
 
+    /**
+     * The choices a context menu or overflow button shows: [choicesFor] without empty-content, which has no menu
+     * entry. Sensitive items only offer the structural ones, and "like this" needs a title or text of at least the
+     * rule minimum, because both come from the same builders [apply] uses.
+     */
+    fun menuChoicesFor(
+        item: Item,
+        builders: ExclusionRuleBuilders = ExclusionRuleBuilders(),
+    ): List<HideChoice> = choicesFor(item, builders).filter { it.kind != HideKind.EMPTY_CONTENT }
+
     /** Hides what [kind] describes for [item] on [layout] (and every layout when [allLayouts]). */
     fun apply(
         rules: LayoutExclusionRules,

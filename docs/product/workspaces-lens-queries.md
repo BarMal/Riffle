@@ -86,8 +86,16 @@ All through existing validation and Undo; no new `WorkspaceEdit` type.
 - Which sources take a query is `LensQueryEdits.supportsQuery`, currently `SourceIds.SEARCH` only (a stored contract:
   ids are only added). The apps source is `SEARCHABLE` too but has no per-lens query, so it is not offered.
 - Flow: `BindingFlowAction.SetQuery(source, text)` and `LensDraft.parameters` (carried by `toLens` and `from`,
-  dropped when the source is unselected). Only applies at the Source step for a selected source. No Compose UI field is
-  added.
+  dropped when the source is unselected). Only applies at the Source step for a selected source.
+- UI (issue #1410): `SourceQueryField` (`editor/EditorSearchQueryField.kt`) under a selected source that
+  `LensQueryEdits.supportsQuery` (Search) at the Source step. Its rules are pure in `SearchQueryInput` (JVM-tested): input is
+  capped at 128 characters (without splitting a surrogate pair), the counter reads "n / 128" (error colour at the limit),
+  blank means no query ("Leave empty to use the shared search text"), and `needsApply` compares the normalised text with the
+  draft. Typing is **debounced 400 ms** (each keystroke restarts the wait, so a burst is one `SetQuery` and never more
+  than one per pause); Done on the keyboard and the clear button ("X", "Clear search text") apply at once; `PendingQueryFlush`
+  makes Next and Cancel apply a pending edit first, because the flow accepts a query only at the Source step. The query goes
+  into the flow draft only (the flow's own `LensDraft.parameters`, preview, no `WorkspaceEdit`, nothing stored until the flow
+  is confirmed like any other lens setting).
 - `LensExpressionValidity` is unchanged: a query changes neither projected fields nor result shapes.
 
 ## Tests
@@ -103,11 +111,12 @@ the same sources.
 
 ## Not done
 
-- A Compose text field in the editor Source step (the flow action and draft are ready).
 - A visible "Type to search" hint / `NeedsInput` state.
 - Slot bindings, `ParameterStore`, `SearchBoxContainer` (section 13); a text box that drives several lenses.
 - Source exclusion rules and parameters together are untested beyond ordering (exclusions run on a source's output).
-- Debouncing typed edits: each applied query is its own edit and its own stream, so a UI should apply on
-  commit or debounce.
+- Editing the query of an already placed binding outside the flow (`LensQueryEdits.setQuery` has no UI; the field edits the
+  draft of a flow, including a re-bind flow).
+- The field is validated manually only (a focused text field is never typed into by a Roborazzi test: the cursor blink never
+  idles the Compose clock). The JVM tests cover `SearchQueryInput`; screenshots show the field pre-filled and unfocused.
 - Manual validation on a device: with the preview on, give two pages the Search source, set different queries and
   confirm each lists its own results, then clear one and confirm it falls back to the shared query.
