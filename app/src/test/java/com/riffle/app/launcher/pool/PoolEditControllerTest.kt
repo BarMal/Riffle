@@ -22,7 +22,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
-import com.riffle.core.domain.launcher.workspace.HomeLayoutWorkspaceMapper
+import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.PoolApp
@@ -67,7 +67,7 @@ class PoolEditControllerTest {
 
     private val phone = HomeLayoutDeviceClass.PHONE
     private val provider = WidgetProviderIdentity(AppPackageName("w.pkg"), WidgetProviderClassName("w.Clock"))
-    private val workspace = HomeLayoutWorkspaceMapper.workspaceId(phone, LauncherViewMode.HOME_SCREEN_LIBRARY)
+    private val workspace = WorkspaceId("ws:phone:home_screen_library")
     private val page = LauncherPageId("home")
     private val target = PoolHomeTarget(workspace, page)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
