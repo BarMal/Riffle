@@ -10,8 +10,13 @@ import org.junit.Test
  */
 class SettingsDeveloperPagesTest {
     private val developerPages =
-        setOf(SettingsPage.WORKSPACES, SettingsPage.SOURCES, SettingsPage.EXCLUSIONS, SettingsPage.ICS_FEEDS) +
-            SourceDetailPages.pages
+        setOf(
+            SettingsPage.WORKSPACES,
+            SettingsPage.SOURCES,
+            SettingsPage.EXCLUSIONS,
+            SettingsPage.ICS_FEEDS,
+            SettingsPage.LENSES,
+        ) + SourceDetailPages.pages
 
     @Test
     fun theMainPageEntriesDoNotListThem() {
@@ -23,7 +28,7 @@ class SettingsDeveloperPagesTest {
         val queries =
             listOf(
                 "workspaces", "sources", "preset", "source", "lens",
-                "hidden items", "exclusion", "rules", "calendar feeds", "ics",
+                "hidden items", "exclusion", "rules", "calendar feeds", "ics", "saved lenses",
                 "notifications source", "rss feeds source", "search source", "apps source", "used by",
             )
         queries.forEach { query ->
@@ -43,5 +48,6 @@ class SettingsDeveloperPagesTest {
         assertEquals("Sources", SettingsPage.SOURCES.title)
         assertEquals("Hidden items and rules", SettingsPage.EXCLUSIONS.title)
         assertEquals("Calendar feeds (ICS)", SettingsPage.ICS_FEEDS.title)
+        assertEquals("Saved lenses", SettingsPage.LENSES.title)
     }
 }

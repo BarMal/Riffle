@@ -143,7 +143,8 @@ bar and cutout insets from the Settings surface, two panes from 600 dp. Tokens o
   Layout ("Returning to Home", default Restore).
 - **Drawer presentation (Q6)** moves into the Finder page expression later; the App drawer page is unchanged.
 - **New apps per preset (N9)**: needs the shared pool; no row.
-- Saved lenses, per-workspace Dock and Start page rows, backup of the disabled-source set (it is
+- Saved lenses are built since: see [`workspaces-saved-lenses-page.md`](workspaces-saved-lenses-page.md) (Settings > Developer >
+  Saved lenses, `SettingsPage.LENSES`). Not here: per-workspace Dock and Start page rows, backup of the disabled-source set (it is
   device-local preferences, not part of the workspace blob).
 - The editor closes back to the preview, not to Settings (Exit preview returns to Settings).
 

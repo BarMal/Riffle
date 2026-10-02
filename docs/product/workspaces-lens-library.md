@@ -109,8 +109,9 @@ ids, copy-from-layout shares no ids and keeps drawing the same lenses, codec rou
 
 ## Not done
 
-* The library UI (Settings "Saved lenses" page, "Used by" list, Copy to layout), and the lens builder wiring of the
-  editor operations into `BindingFlow` (a "Use saved lens" step and "Save as lens" on Confirm).
+* The library UI is built: Settings "Saved lenses" with the lens builder, "Used by" and Copy to layout, see
+  [`workspaces-saved-lenses-page.md`](workspaces-saved-lenses-page.md). Still not done: wiring the editor operations into
+  `BindingFlow` (a "Use saved lens" step and "Save as lens" on Confirm); the reusable `LensBuilder` / `LensDraftReducer` are ready for it.
 * "Use it in the N other containers with an identical lens" after Save as lens (exact-equality dependents).
 * `Workspace.presetId` and a "Reset to preset" menu entry; the dry-run impact preview of `restoreLenses` is available
   through `previewEdit` per lens but `reset` itself applies with `DETACH_BROKEN` and does not ask.

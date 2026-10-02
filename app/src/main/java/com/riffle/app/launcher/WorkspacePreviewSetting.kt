@@ -36,8 +36,9 @@ internal fun SettingsWorkspacePreviewSection(onPageSelected: (SettingsPage) -> U
                 subtitle = "Leave it any time with Exit preview or the Back button.",
                 onClick = setting.onOpen,
             )
-            // The two pages exist only while the preview is on (and only where a host provides them).
-            if (LocalWorkspaceSettingsHost.current != null) {
+            // The pages exist only while the preview is on (and only where a host provides them).
+            val settingsHost = LocalWorkspaceSettingsHost.current
+            if (settingsHost != null) {
                 SettingsClickableRow(
                     title = WorkspacesSettingsText.WORKSPACES_TITLE,
                     subtitle = "Switch, rename, duplicate, delete, presets and copying between layouts",
@@ -48,6 +49,13 @@ internal fun SettingsWorkspacePreviewSection(onPageSelected: (SettingsPage) -> U
                     subtitle = "What each source shows, its status and an on/off switch",
                     onClick = { onPageSelected(SettingsPage.SOURCES) },
                 )
+                if (settingsHost.lenses != null) {
+                    SettingsClickableRow(
+                        title = LensesSettingsText.TITLE,
+                        subtitle = LensesSettingsText.DEVELOPER_SUBTITLE,
+                        onClick = { onPageSelected(SettingsPage.LENSES) },
+                    )
+                }
             }
         }
     }

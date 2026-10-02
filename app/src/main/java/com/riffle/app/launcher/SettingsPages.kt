@@ -29,6 +29,7 @@ enum class SettingsPage(
     SOURCES("Sources"),
     EXCLUSIONS("Hidden items and rules"),
     ICS_FEEDS("Calendar feeds (ICS)"),
+    LENSES("Saved lenses"),
 
     /** Per-source detail pages, opened from a Sources row (see [SourceDetailPages]). Developer pages too. */
     SOURCE_APPS("Apps source"),
