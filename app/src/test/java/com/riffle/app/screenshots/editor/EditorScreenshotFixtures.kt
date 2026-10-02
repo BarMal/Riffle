@@ -254,7 +254,7 @@ internal object EditorScreenshotFixtures {
     /** After confirming Save as lens: the offer to use it in the two other containers with the identical lens. */
     fun adoptOffer(): WorkspaceEditorUiState = runFrom(confirmSaveAs(), EditorAction.ConfirmFlow)
 
-    /** The overview with a page, a widget and the dock using saved lenses (and one inline), each with Detach. */
+    /** The overview with a page-set and a widget using saved lenses (and an inline page), each with Detach. */
     fun overviewWithSavedLenses(): WorkspaceEditorUiState {
         val perAppBound = binding(SourceIds.NOTIFICATIONS, ExpressionKind.CARD_STACK, LensGroup.ByGroupKey)
         val bound =
