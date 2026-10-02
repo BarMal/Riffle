@@ -61,6 +61,33 @@ page per workspace) from `workspaces-configuration.md` (sections 3.2 and 8.3). R
   a per-page content description) on the others. It goes through `EditorAction.Apply`, so it validates and has Undo.
   The first page counts as the start page when none is set.
 
+### Standard shell (Refs #1417)
+
+The same setting now applies to the real home screen, with no workspace involved.
+
+* `HomeReturn.landingPage` / `LauncherShellState.homeReturnTarget` (`core/domain`, pure): runs
+  `WorkspaceReturnResolver` over a stand-in workspace holding the active layout's pages in order (no start page, no
+  Finder). **Start page in the standard shell is the first page of the active layout**, because standard layouts have
+  no start page of their own; it is also the page a Home press has always opened. Result is the page to select or
+  null for "leave it".
+* `HomeReturnEffect` (`app`, one call in `LauncherShell`): a lifecycle observer (stop then start, i.e. back from an
+  app, Recents, a notification) plus one first-open pass (kept across rotation). It dispatches the ordinary
+  `SelectHomePage`, so the pager follows with its existing animation, or an instant scroll under reduced motion. No
+  new `LauncherShellAction`. Skipped while the Workspaces preview is open (it applies the setting itself).
+
+  | Moment | Restore (default) | First page | Start page |
+  | --- | --- | --- | --- |
+  | First open / back from an app (Recents, Back, notification) | stays | first page | first page |
+  | Home button (any moment) | first page | first page | first page |
+
+* **Default Restore changes nothing**: a Return resolves to the selected page, so no action is dispatched. The Home
+  button keeps its existing `OpenDefaultHome` path (first page, closes the drawer, search and any open overlay, as
+  before), so a Home press from another app also lands on the first page, as it always did; the setting does not
+  make that vary. This is why a "Home press only when already resumed" split is not needed in the standard shell.
+* Only the top level moves: Home is the destination and the layout is being browsed. The drawer, search,
+  notifications, Settings and the page editing modes are never touched, so Back and Home close them as today.
+* No TalkBack announcement: the standard pager does not announce page changes today, so none is added.
+
 ## Decisions
 
 1. **Return lives in a new `home` settings group**, not in `AppDrawerSettings`, matching the doc's
@@ -83,7 +110,10 @@ page per workspace) from `workspaces-configuration.md` (sections 3.2 and 8.3). R
   action exists.
 * The Finder gesture binding and the Finder as the dock-menu-only entry for real home pages: the preview opens it
   from the menu entry only. No change to the standard shell, which still uses the drawer.
-* Return/Home-press landing in the standard (non-preview) shell. The pool/WorkspaceRuntime cut-over owns that.
+* A Return/Home-press landing that follows a real start page in the standard shell: the standard layout has no start
+  page concept (see below), so Start page there is the first page. The pool/WorkspaceRuntime cut-over owns real ones.
+* A Return landing while a folder or widget drag is open inside Home (those are local to the Home composable).
+* The setting row is still only shown in Settings > Workspaces, which exists only while the preview switch is on.
 * Persisting the last visited page across process death (`selectedPageId` durability, 3.2). Not needed while the
   preview is never persisted open.
 * A "reset start page to first page" control; moving the start page to page 1 is equivalent.
@@ -108,3 +138,17 @@ page per workspace) from `workspaces-configuration.md` (sections 3.2 and 8.3). R
    start page.
 9. TalkBack: "Set as start page: Page N" and "Start page: Page N" are announced; the Close Finder button is 48dp.
 10. With the preview off nothing above exists; the standard launcher behaves as before.
+
+### Standard shell (preview off; set the option while the preview switch is on, then switch it off)
+
+1. Default (Restore): swipe to page 2, open an app, come back with Back or Recents: still page 2. Press Home from
+   the launcher: first page (unchanged).
+2. Set Returning to Home to First page. On page 2, open an app, return with Back/Recents: lands on page 1. Swipe to
+   page 3, open the recent-apps screen and come back: page 1.
+3. Same with Start page: page 1.
+4. With First page set, open the app drawer (or search, Settings) on page 3, go to another app and back: the drawer
+   or search is still open, untouched; Back then closes it and shows the page it was on.
+5. Reduced motion on (Settings > Motion): the move to page 1 is instant; off: it animates.
+6. Rotate on page 2 with First page set: stays on page 2 (rotation is not a first open).
+7. Kill the launcher from Recents and reopen it with First page set: opens on page 1; with Restore on the last page.
+8. Single-page layout, any setting: nothing visibly changes.

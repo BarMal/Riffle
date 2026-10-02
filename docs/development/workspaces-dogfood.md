@@ -68,6 +68,10 @@ overwritten (seeded layouts are saved only when you edit something).
 - [ ] TalkBack: the dock offers the action **Workspace menu**; the menu, Exit preview and the editor
       are reachable and read sensibly.
 - [ ] Reduced motion (Settings > Motion, or the system animation scale): jumps snap, no animation.
+- [ ] Returning to Home (Settings > Workspaces) also applies to your normal Home with the preview off: with First page
+      or Start page, going to an app and coming back with Back or Recents lands on page 1 (Restore, the default, keeps
+      your page). Home press always opens page 1. An open drawer, search or Settings is left alone. See
+      [`workspaces-start-page.md`](../product/workspaces-start-page.md).
 - [ ] Rotate, and fold/unfold if you have a foldable: layout respects the system bars and cutout,
       nothing is drawn under them, and the right device class's workspace is shown.
 - [ ] Turn the switch off again and confirm Home, drawer, dock and Settings behave as before.
