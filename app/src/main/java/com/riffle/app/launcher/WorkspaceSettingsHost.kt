@@ -7,8 +7,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.containers.ContainerServices
+import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
 import com.riffle.app.launcher.ics.IcsFeedsController
 import com.riffle.app.launcher.workspace.LensesSettingsController

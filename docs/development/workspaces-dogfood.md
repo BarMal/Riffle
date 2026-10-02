@@ -78,6 +78,9 @@ overwritten (seeded layouts are saved only when you edit something).
       [`workspaces-start-page.md`](../product/workspaces-start-page.md).
 - [ ] Rotate, and fold/unfold if you have a foldable: layout respects the system bars and cutout,
       nothing is drawn under them, and the right device class's workspace is shown.
+- [ ] Saved lenses (Settings > Developer > Saved lenses): follow the checklist in
+      [`workspaces-saved-lenses-page.md`](../product/workspaces-saved-lenses-page.md) (list, builder, validity choices, Used by,
+      duplicate, copy to layout, delete with Undo).
 - [ ] Turn the switch off again and confirm Home, drawer, dock and Settings behave as before.
 
 ## Known gaps

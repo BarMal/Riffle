@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
@@ -22,25 +20,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.containers.ContainerServices
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.workspace.LensesSettingsController
 import com.riffle.app.launcher.workspace.SourcesSettingsController
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.Lens
 import com.riffle.core.domain.launcher.workspace.LensId
 import com.riffle.core.domain.launcher.workspace.LibraryProblem
 import com.riffle.core.domain.launcher.workspace.SavedLens
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.editor.LensDraftAction
+import com.riffle.core.domain.launcher.workspace.settings.BrokenUse
 import com.riffle.core.domain.launcher.workspace.settings.LensCopyTarget
 import com.riffle.core.domain.launcher.workspace.settings.LensDetailModel
-import com.riffle.core.domain.launcher.workspace.settings.LensRow
 import com.riffle.core.domain.launcher.workspace.settings.LensesSettingsAction
 import com.riffle.core.domain.launcher.workspace.settings.LensesSettingsModel
 
@@ -49,7 +44,32 @@ internal const val LENSES_EMPTY_TEST_TAG = "lenses-empty"
 internal const val LENSES_HEADING_TEST_TAG = "lenses-heading"
 internal const val LENSES_DETAIL_PLACEHOLDER_TEST_TAG = "lenses-detail-placeholder"
 
+/** The dialogs the Saved lenses page can have open. Each confirms before anything is changed. */
+internal sealed interface LensDialog {
+    data class Rename(val id: LensId, val name: String) : LensDialog
+
+    data class ConfirmDelete(val id: LensId, val name: String, val usedBy: Int) : LensDialog
+
+    data class CopyTo(val id: LensId, val name: String, val target: LensCopyTarget) : LensDialog
+
+    /** Leaving the builder with changes that were not saved. */
+    data object DiscardChanges : LensDialog
+
+    /**
+     * Saving would break containers: choose between detaching them and saving a new lens. [id], [name] and [lens] are
+     * the draft; [copyName] is what a new lens would be called.
+     */
+    data class SaveChoice(
+        val id: LensId,
+        val name: String,
+        val lens: Lens,
+        val broken: List<BrokenUse>,
+        val copyName: String,
+    ) : LensDialog
+}
+
 /** What the page asks the host to do. A plain bundle of the page's events so the stateless page needs no controller. */
+@Suppress("LongParameterList") // One bundle of the page's events, like the settings host.
 internal class LensesPageCallbacks(
     val onSelectLayout: (HomeLayoutDeviceClass) -> Unit = {},
     val onOpen: (LensId) -> Unit = {},
@@ -320,72 +340,5 @@ private fun LensListSection(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun LensesHeading(model: LensesSettingsModel) {
-    Column(
-        modifier = Modifier.padding(horizontal = RiffleSpacing.s),
-        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
-    ) {
-        Text(
-            modifier =
-                Modifier
-                    .testTag(LENSES_HEADING_TEST_TAG)
-                    .semantics {
-                        heading()
-                        liveRegion = LiveRegionMode.Polite
-                    },
-            text = LensesSettingsText.listHeading(model.layout, model.rows.size),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Text(
-            text = LensesSettingsText.EXPLAINER,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun NewLensButton(
-    model: LensesSettingsModel,
-    callbacks: LensesPageCallbacks,
-) {
-    Column(
-        modifier = Modifier.padding(horizontal = RiffleSpacing.s),
-        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
-    ) {
-        Button(
-            onClick = callbacks.onNew,
-            enabled = !model.isFull,
-            modifier = Modifier.heightIn(min = RiffleSpacing.xxxl).testTag(LENSES_NEW_TEST_TAG),
-        ) { Text("+ ${LensesSettingsText.NEW}") }
-        if (model.isFull) {
-            Text(
-                text = LensesSettingsText.FULL_HINT,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-    }
-}
-
-/** What each overflow-menu or TalkBack action on a lens row does. Delete and Rename only open their dialogs. */
-private fun runLensRowAction(
-    row: LensRow,
-    action: LensRowAction,
-    callbacks: LensesPageCallbacks,
-    openDialog: (LensDialog) -> Unit,
-) {
-    when (action.kind) {
-        LensRowActionKind.RENAME -> openDialog(LensDialog.Rename(row.id, row.name))
-        LensRowActionKind.DUPLICATE -> callbacks.onDispatch(LensesSettingsAction.Duplicate(row.id))
-        LensRowActionKind.COPY ->
-            callbacks.queries.copyTargets(row.id).firstOrNull { it.layout == action.layout }?.let { target ->
-                openDialog(LensDialog.CopyTo(row.id, row.name, target))
-            }
-        LensRowActionKind.DELETE -> openDialog(LensDialog.ConfirmDelete(row.id, row.name, row.usedIn))
     }
 }

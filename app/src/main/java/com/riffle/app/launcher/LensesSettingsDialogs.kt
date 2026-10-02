@@ -24,36 +24,8 @@ import androidx.compose.ui.semantics.semantics
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.editor.EditorChoiceRow
 import com.riffle.core.domain.launcher.workspace.BreakPolicy
-import com.riffle.core.domain.launcher.workspace.Lens
-import com.riffle.core.domain.launcher.workspace.LensId
 import com.riffle.core.domain.launcher.workspace.RemovePolicy
-import com.riffle.core.domain.launcher.workspace.settings.BrokenUse
-import com.riffle.core.domain.launcher.workspace.settings.LensCopyTarget
 import com.riffle.core.domain.launcher.workspace.settings.LensesSettingsAction
-
-/** The dialogs the Saved lenses page can have open. Each confirms before anything is changed. */
-internal sealed interface LensDialog {
-    data class Rename(val id: LensId, val name: String) : LensDialog
-
-    data class ConfirmDelete(val id: LensId, val name: String, val usedBy: Int) : LensDialog
-
-    data class CopyTo(val id: LensId, val name: String, val target: LensCopyTarget) : LensDialog
-
-    /** Leaving the builder with changes that were not saved. */
-    data object DiscardChanges : LensDialog
-
-    /**
-     * Saving would break containers: choose between detaching them and saving a new lens. [id], [name] and [lens] are
-     * the draft; [copyName] is what a new lens would be called.
-     */
-    data class SaveChoice(
-        val id: LensId,
-        val name: String,
-        val lens: Lens,
-        val broken: List<BrokenUse>,
-        val copyName: String,
-    ) : LensDialog
-}
 
 internal const val LENS_DELETE_DETACH_TEST_TAG = "lens-delete-detach"
 internal const val LENS_DELETE_REPLACE_TEST_TAG = "lens-delete-replace"
@@ -216,7 +188,10 @@ private fun DeleteLensDialog(
                         }
                         picked?.let { id ->
                             Text(
-                                text = LensesDialogText.replacementImpact(callbacks.queries.replacementImpact(dialog.id, id)),
+                                text =
+                                    LensesDialogText.replacementImpact(
+                                        callbacks.queries.replacementImpact(dialog.id, id),
+                                    ),
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                             )

@@ -1,11 +1,15 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,16 +27,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import com.riffle.app.launcher.designsystem.RiffleShapes
+import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.LensId
 import com.riffle.core.domain.launcher.workspace.LibraryProblem
 import com.riffle.core.domain.launcher.workspace.settings.LensRow
+import com.riffle.core.domain.launcher.workspace.settings.LensesSettingsAction
+import com.riffle.core.domain.launcher.workspace.settings.LensesSettingsModel
 
 internal enum class LensRowActionKind {
     RENAME,
@@ -177,5 +187,72 @@ private fun LensActionLabel(action: LensRowAction) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+internal fun LensesHeading(model: LensesSettingsModel) {
+    Column(
+        modifier = Modifier.padding(horizontal = RiffleSpacing.s),
+        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
+    ) {
+        Text(
+            modifier =
+                Modifier
+                    .testTag(LENSES_HEADING_TEST_TAG)
+                    .semantics {
+                        heading()
+                        liveRegion = LiveRegionMode.Polite
+                    },
+            text = LensesSettingsText.listHeading(model.layout, model.rows.size),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text(
+            text = LensesSettingsText.EXPLAINER,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+internal fun NewLensButton(
+    model: LensesSettingsModel,
+    callbacks: LensesPageCallbacks,
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = RiffleSpacing.s),
+        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
+    ) {
+        Button(
+            onClick = callbacks.onNew,
+            enabled = !model.isFull,
+            modifier = Modifier.heightIn(min = RiffleSpacing.xxxl).testTag(LENSES_NEW_TEST_TAG),
+        ) { Text("+ ${LensesSettingsText.NEW}") }
+        if (model.isFull) {
+            Text(
+                text = LensesSettingsText.FULL_HINT,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+/** What each overflow-menu or TalkBack action on a lens row does. Delete and Rename only open their dialogs. */
+internal fun runLensRowAction(
+    row: LensRow,
+    action: LensRowAction,
+    callbacks: LensesPageCallbacks,
+    openDialog: (LensDialog) -> Unit,
+) {
+    when (action.kind) {
+        LensRowActionKind.RENAME -> openDialog(LensDialog.Rename(row.id, row.name))
+        LensRowActionKind.DUPLICATE -> callbacks.onDispatch(LensesSettingsAction.Duplicate(row.id))
+        LensRowActionKind.COPY ->
+            callbacks.queries.copyTargets(row.id).firstOrNull { it.layout == action.layout }?.let { target ->
+                openDialog(LensDialog.CopyTo(row.id, row.name, target))
+            }
+        LensRowActionKind.DELETE -> openDialog(LensDialog.ConfirmDelete(row.id, row.name, row.usedIn))
     }
 }
