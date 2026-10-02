@@ -29,6 +29,17 @@ enum class SettingsPage(
     SOURCES("Sources"),
     EXCLUSIONS("Hidden items and rules"),
     ICS_FEEDS("Calendar feeds (ICS)"),
+
+    /** Per-source detail pages, opened from a Sources row (see [SourceDetailPages]). Developer pages too. */
+    SOURCE_APPS("Apps source"),
+    SOURCE_RECENTS("Recent apps source"),
+    SOURCE_SHORTCUTS("Quick actions source"),
+    SOURCE_NOTIFICATIONS("Notifications source"),
+    SOURCE_MEDIA("Media source"),
+    SOURCE_CALENDAR("Calendar source"),
+    SOURCE_RSS("RSS feeds source"),
+    SOURCE_SEARCH("Search source"),
+    SOURCE_ICS("Calendar feeds source"),
 }
 
 internal enum class SettingsPageGroup(

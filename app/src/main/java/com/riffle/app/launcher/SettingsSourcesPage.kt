@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -7,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -20,6 +20,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -38,6 +39,7 @@ import com.riffle.app.launcher.workspace.sourceAccessRouteFor
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.settings.SourceRow
 import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
+import com.riffle.core.domain.launcher.workspace.settings.SourceUsage
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -62,6 +64,11 @@ internal fun SettingsSourcesPageContent(
         val statuses by controller.statuses.collectAsState()
         val disabled by controller.disabled.collectAsState()
         val rows = remember(controller, statuses, disabled) { controller.rows(statuses, disabled) }
+        val version by host.version.collectAsState()
+        val usage =
+            remember(host, version, state.availableLayoutDeviceClasses) {
+                host.workspaces.sourceUsage(state.availableLayoutDeviceClasses)
+            }
         val icsFeeds = host.icsFeeds
         if (icsFeeds != null) {
             DisposableEffect(icsFeeds) {
@@ -76,6 +83,10 @@ internal fun SettingsSourcesPageContent(
             onToggle = controller::setEnabled,
             onAllow = host.onRequestSourceAccess,
             onOpenHiddenItems = { onPageSelected(SettingsPage.EXCLUSIONS) },
+            usage = usage,
+            onOpenSource = { id -> SourceDetailPages.pageFor(id)?.let(onPageSelected) },
+            onAddRssFeed = { onPageSelected(SettingsPage.SOURCE_RSS) },
+            onAddCalendarFeed = { onPageSelected(SettingsPage.ICS_FEEDS) },
             calendarFeeds = icsState.takeIf { icsFeeds != null },
             onRefreshCalendarFeeds = { icsFeeds?.refreshAll() },
             onOpenCalendarFeeds = { onPageSelected(SettingsPage.ICS_FEEDS) },
@@ -83,7 +94,10 @@ internal fun SettingsSourcesPageContent(
     }
 }
 
-/** The page itself, with no controller. At medium and expanded widths the rows run in two columns. */
+/**
+ * The page itself, with no controller. At medium and expanded widths the rows run in two columns. [usage] is null
+ * until the workspaces have loaded (rows then show no Used by line).
+ */
 @Suppress("LongParameterList") // Fixed-state page content: rows, callbacks and the optional feed section.
 @Composable
 internal fun SourcesSettingsContent(
@@ -93,6 +107,10 @@ internal fun SourcesSettingsContent(
     onAllow: (SourceId) -> Unit,
     modifier: Modifier = Modifier,
     onOpenHiddenItems: () -> Unit = {},
+    usage: SourceUsage? = null,
+    onOpenSource: (SourceId) -> Unit = {},
+    onAddRssFeed: () -> Unit = {},
+    onAddCalendarFeed: () -> Unit = {},
     calendarFeeds: IcsFeedsUiState? = null,
     onRefreshCalendarFeeds: () -> Unit = {},
     onOpenCalendarFeeds: () -> Unit = {},
@@ -114,11 +132,34 @@ internal fun SourcesSettingsContent(
                     Column(modifier = Modifier.weight(1f)) {
                         SettingsSection(title = if (index == 0) SourcesSettingsText.TITLE else "More sources") {
                             part.forEach { row ->
-                                SourceListItem(row, calendarAccess, onToggle, onAllow)
+                                SourceListItem(
+                                    row = row,
+                                    calendarAccess = calendarAccess,
+                                    usedByCount = usage?.countOf(row.id),
+                                    onToggle = onToggle,
+                                    onAllow = onAllow,
+                                    onOpen = onOpenSource,
+                                )
                             }
                         }
                     }
                 }
+            }
+        }
+        SettingsSection(title = SourceDetailText.ADD_SOURCE_TITLE) {
+            SettingsClickableRow(
+                modifier = Modifier.testTag(ADD_RSS_ROW_TEST_TAG),
+                title = SourceDetailText.ADD_RSS,
+                subtitle = SourceDetailText.ADD_RSS_BODY,
+                onClick = onAddRssFeed,
+            )
+            if (calendarFeeds != null) {
+                SettingsClickableRow(
+                    modifier = Modifier.testTag(ADD_CALENDAR_FEED_ROW_TEST_TAG),
+                    title = SourceDetailText.ADD_CALENDAR_FEED,
+                    subtitle = SourceDetailText.ADD_CALENDAR_FEED_BODY,
+                    onClick = onAddCalendarFeed,
+                )
             }
         }
         if (calendarFeeds != null) {
@@ -145,6 +186,14 @@ internal fun SourcesSettingsContent(
 
 internal const val HIDDEN_ITEMS_ROW_TEST_TAG = "sources-hidden-items-row"
 internal const val ICS_FEEDS_ROW_TEST_TAG = "sources-ics-feeds-row"
+internal const val ADD_RSS_ROW_TEST_TAG = "sources-add-rss-row"
+internal const val ADD_CALENDAR_FEED_ROW_TEST_TAG = "sources-add-calendar-feed-row"
+
+internal fun sourceRowTestTag(id: SourceId): String = "source-row-${id.value}"
+
+internal fun sourceSwitchTestTag(id: SourceId): String = "source-switch-${id.value}"
+
+internal fun sourceUsedByTestTag(id: SourceId): String = "source-used-by-${id.value}"
 
 private val NoIcsFeeds = MutableStateFlow(IcsFeedsUiState())
 
@@ -156,46 +205,61 @@ internal fun <T> List<T>.chunkedBy(columns: Int): List<List<T>> {
 }
 
 /**
- * One source: name, what it shows, its status as text, an Allow button with its rationale when it needs
- * permission (only ever a tap away, never automatic) and the switch. The whole row is one toggle for TalkBack.
+ * One source: name, what it shows, its status as text, how many places use it, an Allow button with its rationale
+ * when it needs permission (only ever a tap away, never automatic) and the switch. The text part opens the
+ * source's detail page; the switch is its own 48 dp control, so TalkBack reads two elements per row.
  */
+@Suppress("LongParameterList")
 @Composable
 private fun SourceListItem(
     row: SourceRow,
     calendarAccess: CalendarAccessStatus,
+    usedByCount: Int?,
     onToggle: (SourceId, Boolean) -> Unit,
     onAllow: (SourceId) -> Unit,
+    onOpen: (SourceId) -> Unit,
 ) {
-    ListItem(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(RiffleShapes.medium)
-                .toggleable(
-                    value = row.enabled,
-                    role = Role.Switch,
-                    onValueChange = { enabled -> onToggle(row.id, enabled) },
-                )
-                .semantics {
-                    contentDescription =
-                        SourcesSettingsText.statusDescription(row.title, row.status) + ". " + row.description
-                },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        headlineContent = { Text(text = row.title, style = MaterialTheme.typography.bodyLarge) },
-        supportingContent = { SourceDetails(row = row, calendarAccess = calendarAccess, onAllow = onAllow) },
-        trailingContent = { Switch(checked = row.enabled, onCheckedChange = null) },
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ListItem(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .clip(RiffleShapes.medium)
+                    .testTag(sourceRowTestTag(row.id))
+                    .clickable(
+                        onClickLabel = SourceDetailText.OPEN_DETAILS,
+                        role = Role.Button,
+                        onClick = { onOpen(row.id) },
+                    )
+                    .semantics { contentDescription = SourceDetailText.rowSpoken(row, usedByCount) },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            headlineContent = { Text(text = row.title, style = MaterialTheme.typography.bodyLarge) },
+            supportingContent = {
+                SourceDetails(row = row, calendarAccess = calendarAccess, usedByCount = usedByCount, onAllow = onAllow)
+            },
+        )
+        Switch(
+            modifier =
+                Modifier
+                    .padding(end = RiffleSpacing.s)
+                    .testTag(sourceSwitchTestTag(row.id))
+                    .semantics { contentDescription = "${SourceDetailText.USE_THIS_SOURCE}: ${row.title}" },
+            checked = row.enabled,
+            onCheckedChange = { enabled -> onToggle(row.id, enabled) },
+        )
+    }
 }
 
 @Composable
 private fun SourceDetails(
     row: SourceRow,
     calendarAccess: CalendarAccessStatus,
+    usedByCount: Int?,
     onAllow: (SourceId) -> Unit,
 ) {
-    val route = sourceAccessRouteFor(row.id)
-    val needsPermission = row.enabled && row.status == SourceStatus.NEEDS_PERMISSION
-    val allowLabel = SourcesSettingsText.allowLabel(route, calendarAccess).takeIf { needsPermission }
     Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs)) {
         Text(
             text = row.description,
@@ -203,27 +267,46 @@ private fun SourceDetails(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         SourceStatusChip(row.status)
-        if (allowLabel != null) {
-            SourcesSettingsText.rationale(route, calendarAccess)?.let { rationale ->
-                Text(
-                    text = rationale,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            FilledTonalButton(
-                onClick = { onAllow(row.id) },
-                modifier = Modifier.heightIn(min = RiffleSpacing.xxxl),
-            ) {
-                Text(text = allowLabel)
-            }
+        if (usedByCount != null) {
+            Text(
+                modifier = Modifier.testTag(sourceUsedByTestTag(row.id)),
+                text = SourceDetailText.usedBy(usedByCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
+        SourceAccessAffordance(row = row, calendarAccess = calendarAccess, onAllow = onAllow)
+    }
+}
+
+/** The Allow button and its rationale, shown only when an enabled source needs permission; never automatic. */
+@Composable
+internal fun SourceAccessAffordance(
+    row: SourceRow,
+    calendarAccess: CalendarAccessStatus,
+    onAllow: (SourceId) -> Unit,
+) {
+    val route = sourceAccessRouteFor(row.id)
+    val needsPermission = row.enabled && row.status == SourceStatus.NEEDS_PERMISSION
+    val allowLabel = SourcesSettingsText.allowLabel(route, calendarAccess).takeIf { needsPermission } ?: return
+    SourcesSettingsText.rationale(route, calendarAccess)?.let { rationale ->
+        Text(
+            text = rationale,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    FilledTonalButton(
+        onClick = { onAllow(row.id) },
+        modifier = Modifier.heightIn(min = RiffleSpacing.xxxl),
+    ) {
+        Text(text = allowLabel)
     }
 }
 
 /** The status as words in a small chip: never colour alone. */
 @Composable
-private fun SourceStatusChip(status: SourceStatus) {
+internal fun SourceStatusChip(status: SourceStatus) {
     val color =
         when (status) {
             SourceStatus.READY -> MaterialTheme.colorScheme.secondaryContainer

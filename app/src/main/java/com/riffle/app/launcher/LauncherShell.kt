@@ -185,6 +185,7 @@ private fun rememberWorkspaceSettingsHost(
                         descriptors = { runtime.registry.descriptors() },
                     ),
                 icsFeeds = runtime.icsFeeds,
+                globalSearchQuery = runtime.searchQuery,
                 version = host.workspaceVersion,
                 currentLayout = currentLayout,
                 onEdit = { id -> host.controller.onEffect(WorkspaceMenuEffect.EditWorkspace(id)) },
