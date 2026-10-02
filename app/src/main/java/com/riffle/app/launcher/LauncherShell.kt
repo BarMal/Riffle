@@ -111,6 +111,8 @@ fun LauncherShell(
     val previewSetting = rememberWorkspacePreviewSetting(workspacePreview, previewEnabled)
     val settingsHost = rememberWorkspaceSettingsHost(workspacePreview, previewEnabled, deviceClass, viewModel)
 
+    HomeReturnEffect(state = state, suppressed = previewOpen, onAction = onAction)
+
     Box(modifier = Modifier.fillMaxSize()) {
         CompositionLocalProvider(
             LocalWorkspacePreviewSetting provides previewSetting,
