@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.workspace.editor
 import com.riffle.core.domain.launcher.workspace.SourceCapability
 import com.riffle.core.domain.launcher.workspace.SourceDescriptor
 import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 
 /**
@@ -15,6 +16,12 @@ data class SourceChoice(
     val descriptor: SourceDescriptor,
     val badges: List<SourceCapability>,
     val access: SourceAccess,
+    /**
+     * What Settings > Sources would say about the source right now (Ready, Needs permission, Off...), for hosts that
+     * know it; null where the host does not (the editor). Only informs the UI: [selectable] and [needsPermission]
+     * stay derived from [access].
+     */
+    val status: SourceStatus? = null,
 ) {
     val id: SourceId get() = descriptor.id
 

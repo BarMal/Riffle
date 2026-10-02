@@ -12,49 +12,26 @@ object BindingFlowReducer {
         context: BindingFlowContext,
     ): BindingFlowState =
         when (action) {
-            is BindingFlowAction.ToggleSource -> onSource(state, action, context)
-            is BindingFlowAction.ApplyPreset -> onPreset(state, action, context)
-            is BindingFlowAction.SetFilter -> onLens(state, context) { it.withFilter(action.filter) }
-            is BindingFlowAction.SetGroup -> onLens(state, context) { it.withGroup(action.group) }
-            is BindingFlowAction.SetSort -> onLens(state, context) { it.withSort(action.sort) }
-            is BindingFlowAction.SetLimit -> onLens(state, context) { it.withLimit(action.limit) }
-            is BindingFlowAction.SetQuery ->
-                if (action.source in state.draft.sources) {
-                    onLens(state, context) { it.withQuery(action.source, action.text) }
-                } else {
-                    state
-                }
             is BindingFlowAction.PickExpression -> onExpression(state, action, context)
             is BindingFlowAction.PickContainer -> onContainer(state, action, context)
             BindingFlowAction.Next -> next(state, context)
             BindingFlowAction.Back -> state.copy(step = previous(state, context))
+            else -> action.toDraftAction()?.let { onLens(state, context, it) } ?: state
         }
 
-    private fun onSource(
-        state: BindingFlowState,
-        action: BindingFlowAction.ToggleSource,
-        context: BindingFlowContext,
-    ): BindingFlowState {
-        val removing = action.id in state.draft.sources
-        val allowed = removing || context.sources.any { it.id == action.id && it.selectable }
-        return if (allowed) onLens(state, context) { it.toggleSource(action.id) } else state
-    }
-
-    private fun onPreset(
-        state: BindingFlowState,
-        action: BindingFlowAction.ApplyPreset,
-        context: BindingFlowContext,
-    ): BindingFlowState {
-        val enabled = BindingFlow.presetChoices(state, context).firstOrNull { it.preset == action.preset }?.enabled
-        return if (enabled == true) onLens(state, context) { it.withPreset(action.preset) } else state
-    }
-
+    /** Lens edits are only accepted at the Source step; the draft rules are [LensDraftReducer]'s. */
     private fun onLens(
         state: BindingFlowState,
         context: BindingFlowContext,
-        change: (LensDraft) -> LensDraft,
-    ): BindingFlowState =
-        if (state.step == EditorStep.SOURCE) reconcile(state.copy(draft = change(state.draft)), context) else state
+        action: LensDraftAction,
+    ): BindingFlowState {
+        val draft = LensDraftReducer.reduce(state.draft, action, context.sources)
+        return if (state.step == EditorStep.SOURCE && draft != state.draft) {
+            reconcile(state.copy(draft = draft), context)
+        } else {
+            state
+        }
+    }
 
     /** Drops any selection the new lens no longer allows. */
     private fun reconcile(
