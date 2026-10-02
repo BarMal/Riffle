@@ -20,7 +20,7 @@ import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 
 @Composable
-@Suppress("CyclomaticComplexMethod")
+@Suppress("CyclomaticComplexMethod", "LongMethod")
 internal fun SettingsPageContent(
     modifier: Modifier,
     state: SettingsSurfaceState,

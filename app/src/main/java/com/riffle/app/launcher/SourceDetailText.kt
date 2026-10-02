@@ -103,8 +103,7 @@ internal object SourceDetailText {
     fun placeLabel(
         place: SourcePlace,
         layoutName: String?,
-    ): String =
-        placeParts(place, layoutName).joinToString(separator = " > ")
+    ): String = placeParts(place, layoutName).joinToString(separator = " > ")
 
     /** The same place for TalkBack: commas instead of arrows. */
     fun placeSpoken(
@@ -137,7 +136,7 @@ internal object SourceDetailText {
         buildString {
             append(SourcesSettingsText.statusDescription(row.title, row.status))
             if (usedByCount != null) append(". ").append(usedBy(usedByCount))
-            append(". ").append(row.description)
+            append(". ").append(row.description.trimEnd('.'))
             append(". Double tap for details")
         }
 }
