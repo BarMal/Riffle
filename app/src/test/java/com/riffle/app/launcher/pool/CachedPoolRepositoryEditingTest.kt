@@ -27,7 +27,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The repository's editing surface: in-memory update, one atomic debounced write, never overwriting on read failure. */
+/** The repository editing surface: in-memory update, one atomic debounced write, no overwrite after a read failure. */
 class CachedPoolRepositoryEditingTest {
     private class FakeStore(
         var stored: PoolStoreState? = null,

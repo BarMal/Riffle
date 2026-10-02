@@ -56,6 +56,7 @@ import com.riffle.app.launcher.pool.POOL_EDIT_ENTER_TEST_TAG
 import com.riffle.app.launcher.pool.PlacedHomeContent
 import com.riffle.app.launcher.pool.PoolEditOverlay
 import com.riffle.app.launcher.pool.PoolEditText
+import com.riffle.app.launcher.pool.PoolEditUi
 import com.riffle.app.launcher.pool.PoolHomePage
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.workspace.PageContainer
@@ -154,7 +155,7 @@ internal fun WorkspacePreviewSurface(
                 onExit,
                 placedHome?.onReimport,
                 Modifier.align(Alignment.TopCenter),
-                onEdit = placedHome?.edit?.let { ui -> { ui.enter() } },
+                onEdit = placedHome?.edit?.let { ui -> editAction(ui) },
             )
             placedHome?.let { home ->
                 home.edit?.let { PoolEditOverlay(it, home.iconLoader, topInset = top, bottomInset = bottom) }
@@ -425,3 +426,6 @@ internal fun PageHost.referencesHomeGrid(): Boolean =
                         body.placements.all { WorkspaceSourceIds.HOME_GRID in it.widget.binding.lens.sources }
             }
     }
+
+/** The top bar's Edit action: starts edit mode and ignores whether there was anything to edit. */
+private fun editAction(ui: PoolEditUi): () -> Unit = { ui.enter() }

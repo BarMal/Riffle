@@ -183,7 +183,6 @@ private fun rememberPlacedHome(
                         pool = placed,
                         workspaceId = editWorkspace,
                         installedApps = installedApps,
-                        iconLoader = runtime.iconLoader,
                         standardHostIds = { PoolHostIds.standardHome(layoutSet) },
                         onReimportConfirmed = { scope.launch { runtime.reimport(layoutSet) } },
                     ),
