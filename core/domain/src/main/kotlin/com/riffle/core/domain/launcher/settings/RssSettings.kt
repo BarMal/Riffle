@@ -16,28 +16,37 @@ import java.util.UUID
 data class RssSettings(
     val feeds: List<FeedConfiguration> = emptyList(),
     val refreshInterval: FeedRefreshIntervalOption = FeedRefreshIntervalOption.DEFAULT,
+    /** Background refresh runs only on an unmetered network (Wi-Fi). On by default. */
+    val backgroundWifiOnly: Boolean = true,
+    /** Background refresh runs only while the device is charging. Off by default. */
+    val backgroundChargingOnly: Boolean = false,
 )
 
 /**
- * User-configurable minimum refresh interval. The ADR calls for "a configurable minimum refresh
- * interval, with a conservative default." Refresh itself remains user-triggered until a later
- * scheduler slice ships, so this setting only bounds how soon a future scheduled/allowed refresh
- * may run; it never causes a refresh to happen on its own.
+ * Opt-in background refresh interval (issue #1393). [OFF] is the default: Riffle makes no automatic network
+ * requests unless the user picks a nonzero interval. Earlier builds stored a never-acted-on interval
+ * (`MINUTES_30` .. `MINUTES_360`); those names no longer decode and fall back to [OFF], so nobody is opted
+ * in by a setting they never saw take effect.
  */
 enum class FeedRefreshIntervalOption(
     val minutes: Int,
 ) {
-    MINUTES_30(30),
-    MINUTES_60(60),
-    MINUTES_180(180),
-    MINUTES_360(360),
+    OFF(0),
+    HOURS_1(60),
+    HOURS_3(180),
+    HOURS_6(360),
+    HOURS_12(720),
+    HOURS_24(1440),
     ;
+
+    /** True when the user opted in to background refresh. */
+    val isEnabled: Boolean get() = this != OFF
 
     fun next(): FeedRefreshIntervalOption = entries[(ordinal + 1) % entries.size]
 
     companion object {
-        /** Conservative default: favors battery/network conservatism over freshness. */
-        val DEFAULT = MINUTES_180
+        /** Privacy first: nothing runs in the background until the user asks for it. */
+        val DEFAULT = OFF
     }
 }
 
@@ -72,3 +81,7 @@ fun RssSettings.withFeedEnabled(
 ): RssSettings = copy(feeds = feeds.map { feed -> if (feed.id == feedId) feed.copy(enabled = enabled) else feed })
 
 fun RssSettings.withRefreshInterval(option: FeedRefreshIntervalOption): RssSettings = copy(refreshInterval = option)
+
+fun RssSettings.withBackgroundWifiOnly(enabled: Boolean): RssSettings = copy(backgroundWifiOnly = enabled)
+
+fun RssSettings.withBackgroundChargingOnly(enabled: Boolean): RssSettings = copy(backgroundChargingOnly = enabled)

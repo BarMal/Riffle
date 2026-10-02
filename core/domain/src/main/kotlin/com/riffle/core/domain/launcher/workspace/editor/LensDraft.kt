@@ -77,6 +77,9 @@ data class LensDraft(
         }
     }
 
+    /** The query set for [id], or "" when it has none (the source then uses its global default). */
+    fun queryFor(id: SourceId): String = parameters[id]?.text.orEmpty()
+
     fun toggleSource(id: SourceId): LensDraft =
         if (id in sources) copy(sources = sources - id, parameters = parameters - id) else copy(sources = sources + id)
 

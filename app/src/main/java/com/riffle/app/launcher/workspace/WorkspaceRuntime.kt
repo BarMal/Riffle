@@ -2,9 +2,11 @@ package com.riffle.app.launcher.workspace
 
 import androidx.compose.foundation.layout.PaddingValues
 import com.riffle.app.launcher.CachedWorkspaceRepository
+import com.riffle.app.launcher.WorkspacesSettingsText
 import com.riffle.app.launcher.containers.ContainerServices
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.exclusions.ExclusionMatchCounter
+import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
 import com.riffle.app.launcher.expressions.ExpressionEnvironment
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
 import com.riffle.app.launcher.ics.IcsFeedsController
@@ -76,6 +78,21 @@ internal class WorkspaceRuntime(
     private val countExecutor: Executor by lazy {
         Executors.newSingleThreadExecutor { task -> Thread(task, "riffle-exclusion-counts").apply { isDaemon = true } }
     }
+
+    /**
+     * The controller behind the preview's contextual Hide (overflow button, long press, TalkBack action), or null
+     * when this runtime has no exclusion rules. It shares [exclusions] with the management page, so a hide changes
+     * the rules everywhere at once; it never opens the page's counter.
+     */
+    fun hideController(): ExclusionsSettingsController? =
+        exclusions?.let { repository ->
+            ExclusionsSettingsController(
+                repository = repository,
+                counterFor = ::exclusionMatchCounter,
+                disabledSources = { enablement.disabledIds() },
+                layoutName = WorkspacesSettingsText::layoutName,
+            )
+        }
 
     /** The editor's source choices: every registered source with the access it currently has (never prompts). */
     fun sourceChoices(): List<SourceChoice> = SourceChoices.build(registry.descriptors(), sourceAccess())

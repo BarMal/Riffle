@@ -14,6 +14,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.riffle.app.launcher.designsystem.RiffleMotion
@@ -63,8 +64,13 @@ internal fun EditorFlowPane(
 ) {
     val state = flow.state
     val onFlowAction: (BindingFlowAction) -> Unit = { onAction(EditorAction.Flow(it)) }
+    val queryFlush = remember { PendingQueryFlush() }
+    val flushThen: (EditorAction) -> Unit = { action ->
+        queryFlush.flush()
+        onAction(action)
+    }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m)) {
-        FlowHeader(flow, onCancel = { onAction(EditorAction.CancelFlow) })
+        FlowHeader(flow, onCancel = { flushThen(EditorAction.CancelFlow) })
         Crossfade(
             targetState = state.step,
             modifier = Modifier.weight(1f),
@@ -74,7 +80,7 @@ internal fun EditorFlowPane(
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 when (step) {
                     EditorStep.SOURCE ->
-                        EditorSourceStep(state, context, onFlowAction, onRequestSourceAccess)
+                        EditorSourceStep(state, context, onFlowAction, onRequestSourceAccess, queryFlush = queryFlush)
                     EditorStep.EXPRESSION -> EditorExpressionStep(state, context, onFlowAction)
                     EditorStep.CONTAINER -> EditorContainerStep(state, context, onFlowAction)
                     EditorStep.CONFIRM -> EditorConfirmStep(state, context)
@@ -84,7 +90,7 @@ internal fun EditorFlowPane(
         nextHint(state, context)?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        FlowButtons(flow, context, onAction)
+        FlowButtons(flow, context, flushThen)
     }
 }
 

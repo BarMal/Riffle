@@ -13,7 +13,8 @@ data class FeedRefreshPlan(
  * Decides which configured feeds a user-triggered refresh may fetch. Pure: the caller supplies the clock and
  * the per-feed [FeedRefreshState]. Disabled, locked-profile and unsafe-host feeds never produce a request.
  * A minimum interval protects every feed from repeat taps; failed feeds also back off exponentially, but an
- * explicit "refresh this feed" request skips the backoff (not the minimum interval).
+ * explicit "refresh this feed" request skips the backoff (not the minimum interval). A scheduled (background)
+ * plan is always an "all" plan with a larger minimum gap, so it never skips the backoff.
  */
 class FeedRefreshPlanner(
     private val minIntervalMillis: Long = DEFAULT_MIN_INTERVAL_MILLIS,
@@ -32,19 +33,29 @@ class FeedRefreshPlanner(
         states: Map<FeedId, FeedRefreshState>,
         profileStatuses: Map<AppProfileId, FeedProfileStatus>,
         nowEpochMillis: Long,
+        trigger: FeedRefreshTrigger = FeedRefreshTrigger.USER,
+        scheduledMinGapMillis: Long = 0,
     ): FeedRefreshPlan {
+        // Background runs fetch only what is due: they never use the per-feed "refresh now" path.
+        val effectiveScope = if (trigger == FeedRefreshTrigger.SCHEDULED) FeedRefreshScope.All else scope
+        val minGap =
+            if (trigger == FeedRefreshTrigger.SCHEDULED) {
+                maxOf(minIntervalMillis, scheduledMinGapMillis)
+            } else {
+                minIntervalMillis
+            }
         val targets =
-            when (scope) {
+            when (effectiveScope) {
                 FeedRefreshScope.All -> feeds
-                is FeedRefreshScope.One -> feeds.filter { it.id == scope.feedId }
+                is FeedRefreshScope.One -> feeds.filter { it.id == effectiveScope.feedId }
             }
         val requests = mutableListOf<FeedFetchRequest>()
         val skipped = linkedMapOf<FeedId, FeedRefreshSkip>()
         for (feed in targets) {
             val state = states[feed.id] ?: FeedRefreshState()
-            val skip = skipReason(feed, state, scope, profileStatuses, nowEpochMillis)
+            val skip = skipReason(feed, state, effectiveScope, profileStatuses, nowEpochMillis, minGap)
             if (skip == null) {
-                requests += FeedFetchRequest(feed, state.validators, FeedRefreshTrigger.USER)
+                requests += FeedFetchRequest(feed, state.validators, trigger)
             } else {
                 skipped[feed.id] = skip
             }
@@ -65,22 +76,24 @@ class FeedRefreshPlanner(
         scope: FeedRefreshScope,
         profileStatuses: Map<AppProfileId, FeedProfileStatus>,
         nowEpochMillis: Long,
+        minGapMillis: Long,
     ): FeedRefreshSkip? {
         return availabilitySkip(feed.availability(profileStatuses))
             ?: FeedRefreshSkip.UNSAFE_URL.takeUnless { FeedHostSafety.isPublicHost(hostOf(feed.url)) }
-            ?: timingSkip(state, scope, nowEpochMillis)
+            ?: timingSkip(state, scope, nowEpochMillis, minGapMillis)
     }
 
     private fun timingSkip(
         state: FeedRefreshState,
         scope: FeedRefreshScope,
         nowEpochMillis: Long,
+        minGapMillis: Long,
     ): FeedRefreshSkip? {
         // A clock that moved backwards must not freeze the feed, so a negative elapsed time never skips.
         val elapsed = state.lastAttemptAtEpochMillis?.let { nowEpochMillis - it }?.takeIf { it >= 0 }
         return when {
             elapsed == null -> null
-            elapsed < minIntervalMillis -> FeedRefreshSkip.TOO_SOON
+            elapsed < minGapMillis -> FeedRefreshSkip.TOO_SOON
             scope == FeedRefreshScope.All && elapsed < backoffMillis(state.consecutiveFailures) ->
                 FeedRefreshSkip.BACKING_OFF
             else -> null

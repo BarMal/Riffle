@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedUrl
-import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.RssSettings
 
 /**
@@ -46,14 +45,15 @@ private fun RssFeedSettings(
         SettingsTextColumn(
             title = "Privacy",
             subtitle =
-                "Riffle stores only the feed URLs you add, their enabled state, and your refresh " +
-                    "interval; this is the only feed data included in launcher backups. Cached " +
+                "Riffle stores only the feed URLs you add, their enabled state, and your background " +
+                    "refresh options; this is the only feed data included in launcher backups. Cached " +
                     "articles, images, and read/dismiss state stay on this device and are never " +
                     "backed up. Only public https feeds are accepted, embedded credentials are " +
                     "rejected, and tracking-only query parameters are removed before a feed URL " +
-                    "is saved.",
+                    "is saved. Feeds are fetched only when you tap Refresh unless you choose a " +
+                    "background refresh interval; it is Off by default.",
         )
-        RssRefreshIntervalSetting(selected = settings.refreshInterval, onAction = onAction)
+        RssBackgroundRefreshSettings(settings = settings, onAction = onAction)
         LocalFeedRefreshCoordinator.current?.let { coordinator ->
             RssRefreshAllSetting(coordinator = coordinator, feeds = settings.feeds)
         }
@@ -61,30 +61,6 @@ private fun RssFeedSettings(
         RssAddFeedSetting(onAction = onAction)
     }
 }
-
-@Composable
-private fun RssRefreshIntervalSetting(
-    selected: FeedRefreshIntervalOption,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsListRow(
-        title = "Refresh interval",
-        subtitle = selected.refreshIntervalLabel(),
-        trailingContent = {
-            TextButton(onClick = { onAction(LauncherShellAction.SelectRssRefreshInterval(selected.next())) }) {
-                SettingsButtonText(text = "Change")
-            }
-        },
-    )
-}
-
-private fun FeedRefreshIntervalOption.refreshIntervalLabel(): String =
-    when (this) {
-        FeedRefreshIntervalOption.MINUTES_30 -> "Every 30 minutes"
-        FeedRefreshIntervalOption.MINUTES_60 -> "Every hour"
-        FeedRefreshIntervalOption.MINUTES_180 -> "Every 3 hours"
-        FeedRefreshIntervalOption.MINUTES_360 -> "Every 6 hours"
-    }
 
 @Composable
 private fun RssFeedListSetting(

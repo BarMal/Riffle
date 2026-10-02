@@ -1,11 +1,13 @@
 package com.riffle.app.screenshots.editor
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.riffle.app.launcher.editor.EditorEnvironment
 import com.riffle.app.launcher.editor.EditorScreen
 import com.riffle.app.launcher.editor.WorkspaceEditorUiState
 import com.riffle.app.screenshots.ScreenshotDevices
 import com.riffle.app.screenshots.expressions.renderExpression
 import com.riffle.core.domain.launcher.workspace.editor.EditorStep
+import com.riffle.core.domain.launcher.workspace.editor.SearchQueryInput
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,11 +27,14 @@ class EditorScreenshotTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private fun render(state: WorkspaceEditorUiState) {
+    private fun render(
+        state: WorkspaceEditorUiState,
+        environment: EditorEnvironment = EditorScreenshotFixtures.environment,
+    ) {
         composeRule.renderExpression {
             EditorScreen(
                 state = state,
-                environment = EditorScreenshotFixtures.environment,
+                environment = environment,
                 services = EditorScreenshotFixtures.services,
                 dispatch = {},
                 onRequestSourceAccess = {},
@@ -54,6 +59,22 @@ class EditorScreenshotTest {
     @Test
     @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
     fun sourceStepUnfolded() = render(EditorScreenshotFixtures.flowAt(EditorStep.SOURCE))
+
+    /** The per-lens search text field, pre-filled and unfocused (see the fixture): no typing, no cursor blink. */
+    @Test
+    fun sourceStepSearchQueryCompact() =
+        render(
+            EditorScreenshotFixtures.searchQuery("weekend plans"),
+            EditorScreenshotFixtures.searchEnvironment,
+        )
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
+    fun sourceStepSearchQueryAtLimitUnfolded() =
+        render(
+            EditorScreenshotFixtures.searchQuery("q".repeat(SearchQueryInput.MAX_LENGTH)),
+            EditorScreenshotFixtures.searchEnvironment,
+        )
 
     @Test
     fun expressionStepCompact() = render(EditorScreenshotFixtures.flowAt(EditorStep.EXPRESSION))

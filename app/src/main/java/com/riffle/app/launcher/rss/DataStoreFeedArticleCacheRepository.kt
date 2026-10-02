@@ -13,6 +13,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.riffle.app.launcher.EpochMillisProvider
 import com.riffle.app.launcher.SystemEpochMillisProvider
 import com.riffle.core.domain.launcher.rss.FeedId
+import com.riffle.core.domain.launcher.rss.FeedRefreshState
+import com.riffle.core.domain.launcher.settings.FeedBackgroundRunRecord
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -26,6 +28,7 @@ internal const val RSS_ARTICLE_CACHE_DATASTORE_NAME = "riffle_rss_article_cache"
 
 private val Context.rssArticleCacheDataStore by preferencesDataStore(name = RSS_ARTICLE_CACHE_DATASTORE_NAME)
 
+@Suppress("TooManyFunctions") // Implements the cache and refresh-state interfaces; one method per contract entry.
 class DataStoreFeedArticleCacheRepository(
     context: Context,
     private val epochMillisProvider: EpochMillisProvider = SystemEpochMillisProvider,
@@ -67,7 +70,12 @@ class DataStoreFeedArticleCacheRepository(
     override fun clearFeed(feedId: FeedId) {
         mutateCacheDocument(dataStore) { document ->
             val feeds = document.feeds.filterNot { it.feedId == feedId }
-            document.copy(feeds = feeds, images = evictImages(document.images, feeds.referencedDigests()))
+            document.copy(
+                feeds = feeds,
+                images = evictImages(document.images, feeds.referencedDigests()),
+                // Validators describe cached content that no longer exists.
+                refreshStates = document.refreshStates - feedId,
+            )
         }
     }
 
@@ -108,6 +116,20 @@ class DataStoreFeedArticleCacheRepository(
 
     override fun clear() {
         writeCacheDocument(dataStore, FeedArticleCacheDocument.empty())
+    }
+
+    override fun loadRefreshStates(): Map<FeedId, FeedRefreshState> = readCacheDocument(dataStore).refreshStates
+
+    override fun saveRefreshStates(states: Map<FeedId, FeedRefreshState>) {
+        mutateCacheDocument(dataStore) { document ->
+            document.copy(refreshStates = mergeRefreshStates(document.refreshStates, states))
+        }
+    }
+
+    override fun loadBackgroundRun(): FeedBackgroundRunRecord? = readCacheDocument(dataStore).backgroundRun
+
+    override fun saveBackgroundRun(record: FeedBackgroundRunRecord) {
+        mutateCacheDocument(dataStore) { document -> document.copy(backgroundRun = record) }
     }
 }
 

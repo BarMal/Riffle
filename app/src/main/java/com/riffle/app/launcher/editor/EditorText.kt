@@ -64,6 +64,9 @@ internal object EditorText {
     const val MOVE_RIGHT = "Move right"
     const val LIMIT_LABEL = "Show at most"
     const val NO_LIMIT = "No limit"
+    const val QUERY_LABEL = "Search text for this lens"
+    const val QUERY_HELP = "Leave empty to use the shared search text. Applies to this lens only, in the preview."
+    const val QUERY_CLEAR = "Clear search text"
 
     fun stepTitle(step: EditorStep): String =
         when (step) {

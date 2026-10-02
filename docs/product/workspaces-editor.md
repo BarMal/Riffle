@@ -69,6 +69,8 @@ state and forward actions; every validity decision is the domain's.
   containers the workspace uses (`LensBoundExpression`, `PageSetContainerHost`) over the caller's `ContainerServices`
   (the real provider in the app, `StaticLensResultProvider` in tests). Previews are transient and evaluate off the
   main thread inside those hosts; no bitmap decoding happens in the editor.
+- Search text: a Source-step field under a chosen Search source sets that lens's own query (debounced, 128-character cap
+  with counter, clear button, empty means the shared query); see [`workspaces-lens-queries.md`](workspaces-lens-queries.md).
 - Layout: below 600 dp one pane (preview above the flow); at 600 dp and wider (unfolded foldables, tablets) two panes,
   with the preview beside the steps. Content respects `WindowInsets.safeDrawing`.
 - Accessibility and motion: disabled choices stay visible with their reason and cannot be selected; rows are the

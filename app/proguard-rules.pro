@@ -36,3 +36,8 @@
 -dontwarn java.time.zone.ZoneRulesProvider
 # threeten-extra (an ical4j dependency) names the optional Joda-Convert annotations.
 -dontwarn org.joda.convert.**
+
+# WorkManager stores the worker's class name in its database and instantiates it reflectively from that name,
+# so the name must survive minification and stay stable across releases (FeedRefreshWorker, issue #1393).
+# WorkManager's consumer rules keep the (Context, WorkerParameters) constructor; this keeps the name.
+-keepnames class com.riffle.app.launcher.rss.FeedRefreshWorker

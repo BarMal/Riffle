@@ -256,6 +256,8 @@ internal class LauncherSettingsStateReducer(
                 is LauncherShellAction.RemoveRssFeed,
                 is LauncherShellAction.SetRssFeedEnabled,
                 is LauncherShellAction.SelectRssRefreshInterval,
+                is LauncherShellAction.SetRssBackgroundWifiOnly,
+                is LauncherShellAction.SetRssBackgroundChargingOnly,
                 ->
                     state.withRssSettingsAction(
                         action = action,
