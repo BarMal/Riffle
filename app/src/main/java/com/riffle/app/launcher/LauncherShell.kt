@@ -197,6 +197,7 @@ private fun rememberWorkspaceSettingsHost(
                 icsFeeds = runtime.icsFeeds,
                 lenses = lenses,
                 previewServices = { reducedMotion -> runtime.services(reducedMotion) },
+                globalSearchQuery = runtime.searchQuery,
                 version = host.workspaceVersion,
                 currentLayout = currentLayout,
                 onEdit = { id -> host.controller.onEffect(WorkspaceMenuEffect.EditWorkspace(id)) },

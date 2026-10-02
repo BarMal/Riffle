@@ -17,6 +17,7 @@ import com.riffle.app.launcher.workspace.WorkspacesSettingsController
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
+import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
  * [icsFeeds] drives Settings > Calendar feeds (ICS) and the Sources page's feed section (null: neither is shown).
  * [lenses] drives Settings > Saved lenses (null: it shows as not available) and [previewServices] draws its live
  * preview through the same provider the containers use (null: the page says the preview is unavailable).
+ * [globalSearchQuery] is the shared query holder the Search source page reports on (only whether one is set).
  */
 @Suppress("LongParameterList") // One bundle of the preview runtime's settings controllers.
 internal class WorkspaceSettingsHost(
@@ -44,6 +46,7 @@ internal class WorkspaceSettingsHost(
     val icsFeeds: IcsFeedsController? = null,
     val lenses: LensesSettingsController? = null,
     val previewServices: ((reducedMotion: Boolean) -> ContainerServices)? = null,
+    val globalSearchQuery: SearchQueryHolder? = null,
 )
 
 internal val LocalWorkspaceSettingsHost = staticCompositionLocalOf<WorkspaceSettingsHost?> { null }

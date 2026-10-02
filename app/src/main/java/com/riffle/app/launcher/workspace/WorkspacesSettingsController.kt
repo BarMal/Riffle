@@ -4,6 +4,8 @@ import com.riffle.app.launcher.WorkspacesDialogText
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceRepository
+import com.riffle.core.domain.launcher.workspace.settings.SourceUsage
+import com.riffle.core.domain.launcher.workspace.settings.SourceUsagePlanner
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsAction
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsChange
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsModel
@@ -50,6 +52,15 @@ internal class WorkspacesSettingsController(
         available: Collection<HomeLayoutDeviceClass>,
     ): WorkspacesSettingsModel? =
         repository.load()?.let { set -> WorkspacesSettingsPlanner.plan(set, viewed, current, available) }
+
+    /**
+     * Which places read each source across [layouts] (a layout with nothing stored reads as its default workspace,
+     * as the rest of Settings does), or null until the repository has loaded. Reads only; nothing is changed.
+     */
+    fun sourceUsage(layouts: Collection<HomeLayoutDeviceClass>): SourceUsage? =
+        repository.load()?.let { set ->
+            SourceUsagePlanner.plan(layouts.distinct().associateWith { set.workspacesFor(it) })
+        }
 
     /** Applies [action] to [layout] and persists it. False when it changed nothing (the reason is announced). */
     fun dispatch(

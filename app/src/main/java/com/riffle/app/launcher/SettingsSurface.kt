@@ -47,7 +47,7 @@ fun SettingsSurface(
     val snackbarHostState = remember { SnackbarHostState() }
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
-        selectedPage.value = SettingsPage.MAIN
+        selectedPage.value = settingsBackTarget(selectedPage.value)
     }
 
     Surface(
@@ -65,7 +65,7 @@ fun SettingsSurface(
                 title = selectedPage.value.title,
                 appVersionLabel = state.appVersionLabel,
                 showBack = selectedPage.value != SettingsPage.MAIN,
-                onBack = { selectedPage.value = SettingsPage.MAIN },
+                onBack = { selectedPage.value = settingsBackTarget(selectedPage.value) },
                 onAction = onAction,
             )
             Spacer(modifier = Modifier.height(24.dp))

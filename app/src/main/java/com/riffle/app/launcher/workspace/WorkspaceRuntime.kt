@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.workspace.settings.SourceEnablement
 import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
 import com.riffle.core.domain.launcher.workspace.settings.SourceStatusMonitor
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
+import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import java.time.ZoneId
 import java.util.concurrent.Executor
@@ -57,6 +58,8 @@ internal class WorkspaceRuntime(
     private val sourceControls: SourceControls = SourceControls(registry),
     val exclusions: CachedExclusionRepository? = null,
     val icsFeeds: IcsFeedsController? = null,
+    /** The shared search query the Search source reads when a lens has none (memory only; Settings reports on it). */
+    val searchQuery: SearchQueryHolder = SearchQueryHolder(),
 ) {
     /** Loads the per-layout exclusion rules (migrating the legacy ones once); called when the preview is on. */
     suspend fun prepareExclusions() = exclusionLoader()

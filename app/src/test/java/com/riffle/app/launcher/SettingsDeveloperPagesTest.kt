@@ -16,7 +16,7 @@ class SettingsDeveloperPagesTest {
             SettingsPage.EXCLUSIONS,
             SettingsPage.ICS_FEEDS,
             SettingsPage.LENSES,
-        )
+        ) + SourceDetailPages.pages
 
     @Test
     fun theMainPageEntriesDoNotListThem() {
@@ -29,6 +29,7 @@ class SettingsDeveloperPagesTest {
             listOf(
                 "workspaces", "sources", "preset", "source", "lens",
                 "hidden items", "exclusion", "rules", "calendar feeds", "ics", "saved lenses",
+                "notifications source", "rss feeds source", "search source", "apps source", "used by",
             )
         queries.forEach { query ->
             assertTrue(query, settingsMainPageEntriesMatching(query).none { it.page in developerPages })
