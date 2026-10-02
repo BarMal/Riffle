@@ -8,8 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.containers.ContainerServices
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
 import com.riffle.app.launcher.ics.IcsFeedsController
+import com.riffle.app.launcher.workspace.LensesSettingsController
 import com.riffle.app.launcher.workspace.SourcesSettingsController
 import com.riffle.app.launcher.workspace.WorkspacesSettingsController
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -27,6 +29,8 @@ import kotlinx.coroutines.flow.StateFlow
  * user-initiated flow for a source (never called except from a tap). [exclusions] drives Settings > Hidden items
  * and rules (null where the runtime has no exclusion repository, which then shows the page as not loaded).
  * [icsFeeds] drives Settings > Calendar feeds (ICS) and the Sources page's feed section (null: neither is shown).
+ * [lenses] drives Settings > Saved lenses (null: it shows as not available) and [previewServices] draws its live
+ * preview through the same provider the containers use (null: the page says the preview is unavailable).
  */
 @Suppress("LongParameterList") // One bundle of the preview runtime's settings controllers.
 internal class WorkspaceSettingsHost(
@@ -38,6 +42,8 @@ internal class WorkspaceSettingsHost(
     val onRequestSourceAccess: (SourceId) -> Unit,
     val exclusions: ExclusionsSettingsController? = null,
     val icsFeeds: IcsFeedsController? = null,
+    val lenses: LensesSettingsController? = null,
+    val previewServices: ((reducedMotion: Boolean) -> ContainerServices)? = null,
 )
 
 internal val LocalWorkspaceSettingsHost = staticCompositionLocalOf<WorkspaceSettingsHost?> { null }

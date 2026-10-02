@@ -96,6 +96,7 @@ internal fun SettingsPageContent(
             SettingsPage.SOURCES -> SettingsSourcesPageContent(state = state, onPageSelected = onPageSelected)
             SettingsPage.EXCLUSIONS -> SettingsExclusionsPageContent(state = state, onAction = onAction)
             SettingsPage.ICS_FEEDS -> SettingsIcsFeedsPageContent()
+            SettingsPage.LENSES -> SettingsLensesPageContent(state = state, onAction = onAction)
         }
     }
 }

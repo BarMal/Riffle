@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
+import com.riffle.app.launcher.workspace.LensesSettingsController
 import com.riffle.app.launcher.workspace.NeverEnabled
 import com.riffle.app.launcher.workspace.NoWorkspaceVersion
 import com.riffle.app.launcher.workspace.SourcesSettingsController
@@ -171,6 +172,15 @@ private fun rememberWorkspaceSettingsHost(
         null
     } else {
         val runtime = remember(host) { host.runtime() }
+        // Not keyed by the layout: a rotation changes it, and the lens being built must survive that.
+        val lenses =
+            remember(host, runtime) {
+                LensesSettingsController(
+                    repository = runtime.repository,
+                    descriptors = { runtime.registry.descriptors() },
+                    onChanged = { viewModel.workspaceMenu.refresh() },
+                )
+            }
         remember(host, runtime, currentLayout) {
             WorkspaceSettingsHost(
                 workspaces =
@@ -185,6 +195,8 @@ private fun rememberWorkspaceSettingsHost(
                         descriptors = { runtime.registry.descriptors() },
                     ),
                 icsFeeds = runtime.icsFeeds,
+                lenses = lenses,
+                previewServices = { reducedMotion -> runtime.services(reducedMotion) },
                 version = host.workspaceVersion,
                 currentLayout = currentLayout,
                 onEdit = { id -> host.controller.onEffect(WorkspaceMenuEffect.EditWorkspace(id)) },

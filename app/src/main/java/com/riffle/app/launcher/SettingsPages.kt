@@ -29,6 +29,7 @@ enum class SettingsPage(
     SOURCES("Sources"),
     EXCLUSIONS("Hidden items and rules"),
     ICS_FEEDS("Calendar feeds (ICS)"),
+    LENSES("Saved lenses"),
 }
 
 internal enum class SettingsPageGroup(

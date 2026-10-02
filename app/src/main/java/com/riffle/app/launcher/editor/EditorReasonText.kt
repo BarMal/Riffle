@@ -8,9 +8,23 @@ import com.riffle.core.domain.launcher.workspace.ResultShape
 import com.riffle.core.domain.launcher.workspace.WorkspaceIssue
 import com.riffle.core.domain.launcher.workspace.editor.EditRejection
 import com.riffle.core.domain.launcher.workspace.editor.ExpressionChoice
+import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
 
 /** Plain-language reasons for why a choice is not available or an edit was refused. */
 internal object EditorReasonText {
+    const val SOURCE_OFF_NOTE =
+        "Turned off in Settings > Sources. A lens can still use it, and shows nothing until it is on."
+
+    /** The status word a source row shows when its host knows the status (Settings); null for Ready or unknown. */
+    fun sourceStatusLabel(status: SourceStatus?): String? =
+        when (status) {
+            null, SourceStatus.READY -> null
+            SourceStatus.LOADING -> "Checking"
+            SourceStatus.NEEDS_PERMISSION -> EditorText.NEEDS_ACCESS
+            SourceStatus.OFF -> "Off"
+            SourceStatus.UNAVAILABLE -> "Unavailable"
+        }
+
     fun lens(issue: LensIssue): String =
         when (issue) {
             is LensIssue.MissingRequiredField -> "Needs the ${field(issue.field)} of each item"

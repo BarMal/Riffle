@@ -478,6 +478,17 @@ class LensesSettingsTest {
     }
 
     @Test
+    fun saveAsNewUsesTheTypedNameWhenFreeElseACopyName() {
+        assertEquals("Fresh", LensDetailPlanner.copyName(layout, idFlat, " Fresh "))
+        assertEquals("Flat apps copy", LensDetailPlanner.copyName(layout, idFlat, "Flat apps"))
+        assertEquals("Flat apps copy", LensDetailPlanner.copyName(layout, idFlat, "Spare"))
+        assertEquals("Flat apps copy", LensDetailPlanner.copyName(layout, idFlat, ""))
+        val withCopy = LensesSettingsAction.Duplicate(idFlat).applyTo(set, phone, env).set.workspacesFor(phone)
+        assertEquals("Flat apps copy 2", LensDetailPlanner.copyName(withCopy, idFlat, "Flat apps"))
+        assertEquals("Anything", LensDetailPlanner.copyName(layout, null, "Anything"))
+    }
+
+    @Test
     fun theBuildersSourceRowsCarryHonestStatusInTheSourcesPageOrder() {
         val all = descriptors + SourceDescriptor(SourceIds.CALENDAR) + SourceDescriptor(SourceIds.MEDIA)
         val choices =

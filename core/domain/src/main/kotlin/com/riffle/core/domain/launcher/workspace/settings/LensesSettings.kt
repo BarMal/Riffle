@@ -210,6 +210,27 @@ object LensDetailPlanner {
         id: LensId,
     ): List<UsedByRow> = LensLibraryOps.dependents(layout, id).map { row(layout, it) }
 
+    /**
+     * The name "Save as a new lens" gives the copy of [id]: the name typed in the field when it is free and
+     * differs from the saved lens's, else "<name> copy", "<name> copy 2"... (the Duplicate rule).
+     */
+    fun copyName(
+        layout: LayoutWorkspaces,
+        id: LensId?,
+        typed: String,
+    ): String {
+        val saved = id?.let(layout.library::find)
+        val name = typed.trim()
+        val free = name != saved?.name && layout.library.nameProblem(name) == null
+        return if (free) {
+            name
+        } else {
+            LensNames.unique(saved?.name ?: name, LensNames.of(layout.library.lenses)) {
+                if (it == 1) " copy" else " copy $it"
+            }
+        }
+    }
+
     /** The expressions that can draw [lens] here: the whole lens, or (grouped) each group on its own page. */
     fun drawableAs(
         lens: Lens,
