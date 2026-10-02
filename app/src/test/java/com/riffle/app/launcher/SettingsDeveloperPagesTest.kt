@@ -9,7 +9,8 @@ import org.junit.Test
  * the launcher search, so with the preview off nothing about Settings differs.
  */
 class SettingsDeveloperPagesTest {
-    private val developerPages = setOf(SettingsPage.WORKSPACES, SettingsPage.SOURCES, SettingsPage.EXCLUSIONS)
+    private val developerPages =
+        setOf(SettingsPage.WORKSPACES, SettingsPage.SOURCES, SettingsPage.EXCLUSIONS, SettingsPage.ICS_FEEDS)
 
     @Test
     fun theMainPageEntriesDoNotListThem() {
@@ -18,8 +19,12 @@ class SettingsDeveloperPagesTest {
 
     @Test
     fun settingsSearchCannotFindThem() {
-        listOf("workspaces", "sources", "preset", "source", "lens", "hidden items", "exclusion", "rules").forEach {
-                query ->
+        val queries =
+            listOf(
+                "workspaces", "sources", "preset", "source", "lens",
+                "hidden items", "exclusion", "rules", "calendar feeds", "ics",
+            )
+        queries.forEach { query ->
             assertTrue(query, settingsMainPageEntriesMatching(query).none { it.page in developerPages })
         }
         assertTrue(
@@ -35,5 +40,6 @@ class SettingsDeveloperPagesTest {
         assertEquals("Workspaces", SettingsPage.WORKSPACES.title)
         assertEquals("Sources", SettingsPage.SOURCES.title)
         assertEquals("Hidden items and rules", SettingsPage.EXCLUSIONS.title)
+        assertEquals("Calendar feeds (ICS)", SettingsPage.ICS_FEEDS.title)
     }
 }

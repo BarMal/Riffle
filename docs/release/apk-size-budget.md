@@ -34,6 +34,14 @@ Evaluating R8 minification and resource shrinking for release builds is the pref
 reduce size before raising the budget again. It needs on-device validation and keep rules, so it is
 tracked separately from the budget change.
 
+The ICS feed source (#1409) added `:core:recurrence-ical4j` to the app: the shipped (unminified) configuration
+measured 27.88 MiB in the Minified Release Check on that PR (about +2.2 MiB over 25.66 MiB), still under the
+32 MiB cap with about 4.1 MiB of headroom; the minified build measured 4.68 MiB.
+
+Combined with the RSS WorkManager work (#1413, about +1.07 MiB unminified), the merged branch measured
+30,257,219 bytes (28.86 MiB) unminified and 5,172,466 bytes (4.93 MiB) minified in the Minified Release Check
+(run 36993111761): under the 32 MiB cap with about 3.1 MiB of headroom.
+
 An opt-in minified build measured 25.66 MiB down to 4.38 MiB on the same commit (CI run
 36896105589). See [`R8 Minification`](r8-minification.md) for the measured composition, keep-rule
 review, the `riffle.minify` build, and the staged plan to enable it.

@@ -28,6 +28,7 @@ enum class SettingsPage(
     WORKSPACES("Workspaces"),
     SOURCES("Sources"),
     EXCLUSIONS("Hidden items and rules"),
+    ICS_FEEDS("Calendar feeds (ICS)"),
 }
 
 internal enum class SettingsPageGroup(

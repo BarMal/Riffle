@@ -13,8 +13,9 @@ object SourceIds {
     val CALENDAR = SourceId("calendar")
     val RSS = SourceId("rss")
     val SEARCH = SourceId("search")
+    val ICS = SourceId("ics")
 
     /** Every built-in id, in a stable order. */
     val BUILT_IN: List<SourceId> =
-        listOf(ALL_APPS, RECENT_APPS, NOTIFICATIONS, QUICK_ACTIONS, MEDIA, CALENDAR, RSS, SEARCH)
+        listOf(ALL_APPS, RECENT_APPS, NOTIFICATIONS, QUICK_ACTIONS, MEDIA, CALENDAR, RSS, SEARCH, ICS)
 }

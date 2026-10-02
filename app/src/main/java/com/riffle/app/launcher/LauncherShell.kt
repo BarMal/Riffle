@@ -182,6 +182,7 @@ private fun rememberWorkspaceSettingsHost(
                         enablement = runtime.enablement,
                         descriptors = { runtime.registry.descriptors() },
                     ),
+                icsFeeds = runtime.icsFeeds,
                 version = host.workspaceVersion,
                 currentLayout = currentLayout,
                 onEdit = { id -> host.controller.onEffect(WorkspaceMenuEffect.EditWorkspace(id)) },

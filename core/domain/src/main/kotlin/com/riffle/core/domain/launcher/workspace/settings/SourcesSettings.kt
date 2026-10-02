@@ -47,6 +47,8 @@ object SourceCatalog {
             SourceIds.CALENDAR to SourceInfo("Calendar", "Your next events. Private events stay hidden."),
             SourceIds.RSS to SourceInfo("RSS feeds", "Articles from the feeds you added, as last cached."),
             SourceIds.SEARCH to SourceInfo("Search", "Results for the query a search lens carries."),
+            SourceIds.ICS to
+                SourceInfo("Calendar feeds", "Events from the calendar feeds you added, as last refreshed."),
         )
 
     fun infoFor(id: SourceId): SourceInfo = infos[id] ?: SourceInfo(id.value, "Another source.")

@@ -24,6 +24,19 @@
 -dontwarn androidx.window.extensions.**
 -dontwarn androidx.window.sidecar.**
 
+# ical4j (core/recurrence-ical4j, used only for its Recur rule engine by the ICS feed source). Its jar
+# references optional Groovy extension classes (the Groovy runtime is not a dependency) and the JDK-only
+# java.beans.Transient annotation (absent on Android); neither is on the Recur path. Safe to ignore, and
+# no keep rule is needed: there is no reflection on that path (the calendar parser and its ServiceLoader
+# factories are never used). See docs/release/r8-minification.md.
+-dontwarn groovy.**
+-dontwarn java.beans.Transient
+# DefaultZoneRulesProvider extends java.time.zone.ZoneRulesProvider, which the Android SDK does not expose.
+# ical4j only loads it through its (excluded) service entry and its zone registry, neither used here.
+-dontwarn java.time.zone.ZoneRulesProvider
+# threeten-extra (an ical4j dependency) names the optional Joda-Convert annotations.
+-dontwarn org.joda.convert.**
+
 # WorkManager stores the worker's class name in its database and instantiates it reflectively from that name,
 # so the name must survive minification and stay stable across releases (FeedRefreshWorker, issue #1393).
 # WorkManager's consumer rules keep the (Context, WorkerParameters) constructor; this keeps the name.

@@ -38,6 +38,12 @@ import com.riffle.app.launcher.calendar.sourceAccess
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.exclusions.DataStoreExclusionStore
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
+import com.riffle.app.launcher.ics.CachedIcsFeedRepository
+import com.riffle.app.launcher.ics.DataStoreIcsStore
+import com.riffle.app.launcher.ics.ICS_MAX_RESPONSE_BYTES
+import com.riffle.app.launcher.ics.IcsFeedsController
+import com.riffle.app.launcher.ics.IcsRefreshCoordinator
+import com.riffle.app.launcher.ics.defaultIcsEngine
 import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
@@ -58,6 +64,7 @@ import com.riffle.app.launcher.rss.FeedRefreshCoordinator
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.sources.ContentSourceDependencies
 import com.riffle.app.launcher.sources.FeedSourceDependencies
+import com.riffle.app.launcher.sources.IcsSourceDependencies
 import com.riffle.app.launcher.sources.androidCalendarSourceDependencies
 import com.riffle.app.launcher.sources.androidItemSources
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
@@ -125,6 +132,26 @@ internal class MainActivityDependencies(
 
     /** Keeps WorkManager's periodic feed work in step with the RSS settings (#1393); only cancels while Off. */
     val feedBackgroundRefreshScheduler by lazy { FeedBackgroundRefreshScheduler(activity) }
+
+    /**
+     * The ICS calendar feed list and its parsed-event cache (#1409), in a device-local DataStore file that is
+     * never backed up. Created only when the workspace preview runtime is, and it reads nothing else.
+     */
+    val icsFeedRepository by lazy { CachedIcsFeedRepository(DataStoreIcsStore(activity)) }
+    val icsEngine by lazy { defaultIcsEngine() }
+
+    /** User-triggered ICS refresh: no I/O until asked, on its own background thread. */
+    val icsRefreshCoordinator by lazy {
+        IcsRefreshCoordinator(
+            transport = AndroidFeedTransport(maxResponseBytes = ICS_MAX_RESPONSE_BYTES),
+            engine = icsEngine,
+            repository = icsFeedRepository,
+            executor =
+                Executors.newSingleThreadExecutor { task ->
+                    Thread(task, "riffle-ics-refresh").apply { isDaemon = true }
+                },
+        )
+    }
 
     /**
      * The explicit wiring point from the DataStore workspace store to the shell (#1351). Built lazily and
@@ -210,6 +237,13 @@ internal class MainActivityDependencies(
                                 cache = feedArticleCacheRepository,
                                 changes = feedRefreshCoordinator.cacheChanges,
                             ),
+                        ics =
+                            IcsSourceDependencies(
+                                feeds = { icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds },
+                                cachedEvents = { id -> icsFeedRepository.cached(id)?.events },
+                                engine = icsEngine,
+                                changes = icsFeedRepository,
+                            ),
                     ),
             )
         val lensExecutor =
@@ -255,6 +289,7 @@ internal class MainActivityDependencies(
             },
             sourceControls = SourceControls(statusRegistry = shared, enablement = enablement),
             exclusions = exclusionRepository,
+            icsFeeds = IcsFeedsController(icsFeedRepository, icsRefreshCoordinator),
         )
     }
 

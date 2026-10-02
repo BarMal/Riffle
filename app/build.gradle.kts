@@ -46,6 +46,21 @@ android {
         }
     }
 
+    packaging {
+        resources {
+            // ical4j bundles about 2 MB of time-zone definitions and a java.time provider entry that only its
+            // calendar parser and zone registry use. Riffle uses only its Recur rule engine
+            // (docs/product/workspaces-ics-source.md), so none of it is read.
+            excludes +=
+                setOf(
+                    "META-INF/groovy/**",
+                    "META-INF/services/java.time.zone.ZoneRulesProvider",
+                    "zoneinfo-global/**",
+                    "zoneinfo/**",
+                )
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -64,6 +79,7 @@ android {
 
 dependencies {
     implementation(project(":core:domain"))
+    implementation(project(":core:recurrence-ical4j"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

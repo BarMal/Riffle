@@ -7,7 +7,17 @@ class SourceIdsTest {
     @Test
     fun `stored id strings are stable`() {
         assertEquals(
-            listOf("apps.all", "apps.recent", "notifications", "shortcuts", "media", "calendar", "rss", "search"),
+            listOf(
+                "apps.all",
+                "apps.recent",
+                "notifications",
+                "shortcuts",
+                "media",
+                "calendar",
+                "rss",
+                "search",
+                "ics",
+            ),
             SourceIds.BUILT_IN.map { it.value },
         )
     }
