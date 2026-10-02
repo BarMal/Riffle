@@ -85,6 +85,13 @@ fun BindingFlowAction.toDraftAction(): LensDraftAction? =
         is BindingFlowAction.SetQuery -> LensDraftAction.SetQuery(source, text)
         is BindingFlowAction.PickExpression,
         is BindingFlowAction.PickContainer,
+        BindingFlowAction.ShowSavedLenses,
+        BindingFlowAction.ShowBuilder,
+        is BindingFlowAction.UseSavedLens,
+        BindingFlowAction.DetachSavedLens,
+        is BindingFlowAction.StartSaveAsLens,
+        BindingFlowAction.CancelSaveAsLens,
+        is BindingFlowAction.SetSaveAsName,
         BindingFlowAction.Next,
         BindingFlowAction.Back,
         -> null
