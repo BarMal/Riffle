@@ -16,17 +16,50 @@ object BindingFlowReducer {
             is BindingFlowAction.PickContainer -> onContainer(state, action, context)
             BindingFlowAction.Next -> next(state, context)
             BindingFlowAction.Back -> state.copy(step = previous(state, context))
-            else -> action.toDraftAction()?.let { onLens(state, context, it) } ?: state
+            else -> action.toDraftAction()?.let { onLens(state, context, it) } ?: onSavedLens(state, action, context)
         }
 
-    /** Lens edits are only accepted at the Source step; the draft rules are [LensDraftReducer]'s. */
+    /** The saved-lens actions: choosing and detaching on the Source step, Save as lens on Confirm. */
+    private fun onSavedLens(
+        state: BindingFlowState,
+        action: BindingFlowAction,
+        context: BindingFlowContext,
+    ): BindingFlowState {
+        val atSource = state.step == EditorStep.SOURCE
+        return when (action) {
+            BindingFlowAction.ShowSavedLenses -> if (atSource) state.copy(choosingSaved = true) else state
+            BindingFlowAction.ShowBuilder -> if (atSource) state.copy(choosingSaved = false) else state
+            is BindingFlowAction.UseSavedLens ->
+                SavedLensFlow.use(state, action.id, context)?.let { reconcile(it, context) } ?: state
+            BindingFlowAction.DetachSavedLens -> if (atSource && state.ref != null) state.copy(ref = null) else state
+            else -> onSaveAs(state, action, context)
+        }
+    }
+
+    private fun onSaveAs(
+        state: BindingFlowState,
+        action: BindingFlowAction,
+        context: BindingFlowContext,
+    ): BindingFlowState =
+        when (action) {
+            is BindingFlowAction.StartSaveAsLens -> SavedLensFlow.startSaveAs(state, action.base, context)
+            BindingFlowAction.CancelSaveAsLens -> state.copy(saveAs = null)
+            is BindingFlowAction.SetSaveAsName ->
+                if (state.saveAs != null) state.copy(saveAs = SaveAsDraft(action.name)) else state
+            else -> state
+        }
+
+    /**
+     * Lens edits are only accepted at the Source step and while the binding uses no saved lens (detach first); the
+     * draft rules are [LensDraftReducer]'s.
+     */
     private fun onLens(
         state: BindingFlowState,
         context: BindingFlowContext,
         action: LensDraftAction,
     ): BindingFlowState {
         val draft = LensDraftReducer.reduce(state.draft, action, context.sources)
-        return if (state.step == EditorStep.SOURCE && draft != state.draft) {
+        return if (state.step == EditorStep.SOURCE && state.ref == null && draft != state.draft) {
             reconcile(state.copy(draft = draft), context)
         } else {
             state

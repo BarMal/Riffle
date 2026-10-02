@@ -81,6 +81,25 @@ overwritten (seeded layouts are saved only when you edit something).
 - [ ] Saved lenses (Settings > Developer > Saved lenses): follow the checklist in
       [`workspaces-saved-lenses-page.md`](../product/workspaces-saved-lenses-page.md) (list, builder, validity choices, Used by,
       duplicate, copy to layout, delete with Undo).
+- [ ] Saved lenses in the editor (Edit workspace; details in [`workspaces-editor.md`](../product/workspaces-editor.md) "Saved lenses in
+      the flow"):
+  - [ ] With no saved lenses the Source step shows a hint; make one in Settings > Saved lenses (or via Save as lens below).
+  - [ ] Add > Source step > "Use a saved lens (N)": the list shows name, sources, flat/grouped and "used in N places". Re-bind a
+        page-set: a flat lens is listed but disabled with the reason ("A page per group needs a grouped lens"); a lens whose source
+        is gone says so. Disabled rows cannot be selected.
+  - [ ] Pick a saved lens: the builder is replaced by its summary with **Detach**; Next, pick a look and place, confirm. In Settings >
+        Saved lenses, change that lens and confirm the container follows ("Used by" shows it).
+  - [ ] Detach in the flow: the builder returns with the same lens; confirm; the container no longer follows the saved lens.
+  - [ ] Build a new lens, go to Confirm, tick **Save as a lens**: the name is pre-filled and unique; blank or taken names show the reason
+        and disable the button; 41 characters cannot be typed. Confirm: the container is listed in the overview as "Saved lens: Name".
+  - [ ] With another workspace (or another page) holding the same lens inline: a notice offers "Use it in the N other containers with an
+        identical lens?". **Use it there too** applies all at once (overview of the other workspace shows the name); one **Undo** reverts
+        the adoption, the next one the Save as lens. With nothing identical there is no offer; **Not now** or any other action ends it.
+  - [ ] Overview: a page, widget and dock section using a saved lens show "Saved lens: Name" and **Detach**; Detach, then Undo.
+  - [ ] Close with unsaved lens changes: the discard prompt appears; Discard leaves the library and the other workspaces untouched.
+        Done saves them (reopen the editor and Settings > Saved lenses to see them).
+  - [ ] TalkBack: rows read name, sources, shape, use count, any reason and "Saved lens 2 of 5"; the offer and the confirmations are
+        announced; Detach buttons say which container and which lens. Large font, rotation, unfolded two panes, reduced motion.
 - [ ] Turn the switch off again and confirm Home, drawer, dock and Settings behave as before.
 
 ## Known gaps
@@ -91,6 +110,9 @@ overwritten (seeded layouts are saved only when you edit something).
   **Edit** to move, remove, add apps and pages, with Undo. Edits change the preview only, never the standard home, and
   they go stale against it; **Refresh home items** (asks first) replaces the preview with a fresh import. Folder sharing,
   widget resize and the workspace-menu entry are not built; the dock is read-only (see the dock doc).
+- **Saved lenses in the editor:** changing the lens of a binding that uses a saved lens means Detach first, or changing the saved lens in
+  Settings > Saved lenses (there is no in-editor "edit the saved lens"). The editor session, library and other workspaces are written
+  together on Done; nothing happens with the preview off.
 - **Search text:** a Search lens can have its own text in the editor (Source step; empty uses the shared text), but there is
   still no shared search box on pages that would write the shared text.
 - **Hide from the preview:** items have a "More options" button (long press on icon-only cells, TalkBack actions on both)

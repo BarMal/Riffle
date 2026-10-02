@@ -1,6 +1,5 @@
 package com.riffle.core.domain.launcher.workspace.editor
 
-import com.riffle.core.domain.launcher.workspace.ContainerId
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.Lens
 import com.riffle.core.domain.launcher.workspace.LensBinding
@@ -13,7 +12,8 @@ import com.riffle.core.domain.launcher.workspace.LensBinding
 object BindingFlow {
     fun start(context: BindingFlowContext): BindingFlowState {
         val existing = FlowEdits.existingBinding(context) ?: return BindingFlowState()
-        return BindingFlowState(draft = LensDraft.from(existing.lens), expression = existing.expression)
+        val ref = existing.ref?.takeIf { context.scope.library.find(it)?.lens == existing.lens }
+        return BindingFlowState(draft = LensDraft.from(existing.lens), expression = existing.expression, ref = ref)
     }
 
     fun lens(state: BindingFlowState): Lens? = state.draft.toLens()
@@ -26,8 +26,13 @@ object BindingFlow {
     fun expressionChoices(
         state: BindingFlowState,
         context: BindingFlowContext,
+    ): List<ExpressionChoice> = lens(state)?.let { expressionChoicesFor(it, context) }.orEmpty()
+
+    /** The Expression step's options for [lens] (the draft's, or a saved lens being considered). */
+    fun expressionChoicesFor(
+        lens: Lens,
+        context: BindingFlowContext,
     ): List<ExpressionChoice> {
-        val lens = lens(state) ?: return emptyList()
         val acceptedBy: ((ExpressionKind) -> EditResult)? =
             if (context.mode == FlowMode.Add) null else { kind -> tryEdit(context, LensBinding(lens, kind)) }
         return ExpressionOptions.forLens(lens, context.edit, acceptedBy)
@@ -67,32 +72,24 @@ object BindingFlow {
         state: BindingFlowState,
         context: BindingFlowContext,
     ): FlowOutcome {
-        val binding = bindingOf(state)
+        val (saved, problem) = SavedLensFlow.plan(state, context)
+        val ref = saved?.id ?: SavedLensFlow.current(state, context)?.id
+        val binding = bindingOf(state)?.copy(ref = ref)
         val edit =
             when {
-                state.step != EditorStep.CONFIRM || binding == null -> null
-                context.mode == FlowMode.Add -> addEdit(state, binding, context)
+                problem != null || state.step != EditorStep.CONFIRM || binding == null -> null
+                context.mode == FlowMode.Add -> FlowEdits.addEdit(state, binding, context)
                 else -> FlowEdits.editFor(context, binding)
             }
         return when (val result = edit?.let { WorkspaceEditor.apply(context.workspace, it, context.edit) }) {
-            is EditResult.Applied -> FlowOutcome.Ready(checkNotNull(edit), result.workspace)
+            is EditResult.Applied -> FlowOutcome.Ready(checkNotNull(edit), result.workspace, saved)
             is EditResult.Rejected -> FlowOutcome.Blocked(result.reason)
-            null -> FlowOutcome.Blocked(null)
+            null -> FlowOutcome.Blocked(null, problem)
         }
     }
 
     internal fun bindingOf(state: BindingFlowState): LensBinding? {
         val lens = lens(state) ?: return null
-        return state.expression?.let { LensBinding(lens, it) }
+        return state.expression?.let { LensBinding(lens, it, state.ref) }
     }
-
-    private fun addEdit(
-        state: BindingFlowState,
-        binding: LensBinding,
-        context: BindingFlowContext,
-    ): WorkspaceEdit? =
-        state.container?.let { kind ->
-            val pageId = ContainerId(context.ids.next())
-            ContainerEdits.build(kind, binding, state.widgetTarget, pageId, ContainerId(context.ids.next()))
-        }
 }

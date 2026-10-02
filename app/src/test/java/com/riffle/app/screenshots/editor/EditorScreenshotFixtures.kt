@@ -11,6 +11,9 @@ import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.Lens
 import com.riffle.core.domain.launcher.workspace.LensBinding
 import com.riffle.core.domain.launcher.workspace.LensGroup
+import com.riffle.core.domain.launcher.workspace.LensId
+import com.riffle.core.domain.launcher.workspace.LensLibrary
+import com.riffle.core.domain.launcher.workspace.LibraryAdd
 import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageContent
 import com.riffle.core.domain.launcher.workspace.PageSetContainer
@@ -22,6 +25,7 @@ import com.riffle.core.domain.launcher.workspace.WidgetContainer
 import com.riffle.core.domain.launcher.workspace.WidgetPlacement
 import com.riffle.core.domain.launcher.workspace.WidgetSpan
 import com.riffle.core.domain.launcher.workspace.Workspace
+import com.riffle.core.domain.launcher.workspace.WorkspaceDock
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.container.LensOutput
@@ -30,7 +34,9 @@ import com.riffle.core.domain.launcher.workspace.editor.BindingFlowAction
 import com.riffle.core.domain.launcher.workspace.editor.ContainerKind
 import com.riffle.core.domain.launcher.workspace.editor.EditorStep
 import com.riffle.core.domain.launcher.workspace.editor.FlowMode
+import com.riffle.core.domain.launcher.workspace.editor.LensDraft
 import com.riffle.core.domain.launcher.workspace.editor.LensPreset
+import com.riffle.core.domain.launcher.workspace.editor.LensScope
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoices
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 
@@ -157,6 +163,139 @@ internal object EditorScreenshotFixtures {
             searchReducer.reduce(state, action).state
         }
     }
+
+    // Saved lenses. Everything is built with the real reducer and domain, with fixed ids and names.
+
+    private val savedIds =
+        object : WorkspaceIdFactory {
+            private var n = 0
+
+            override fun next(): String = "saved-${n++}"
+        }
+
+    private val newestNotifications =
+        LensDraft(sources = listOf(SourceIds.NOTIFICATIONS)).withPreset(LensPreset.NEWEST_FIRST).toLens()!!
+
+    private val notesByApp = Lens(listOf(SourceIds.NOTIFICATIONS), group = LensGroup.ByGroupKey)
+
+    private val latestApps =
+        LensDraft(sources = listOf(SourceIds.ALL_APPS)).withPreset(LensPreset.LATEST_FIVE).toLens()!!
+
+    private val retiredFeed = Lens(listOf(SourceId("retired.feed")))
+
+    /** Saved lenses of the layout: one grouped, one flat, one that uses a source that is not offered any more. */
+    val savedLibrary: LensLibrary =
+        listOf("Notes by app" to notesByApp, "Latest apps" to latestApps, "Old feed" to retiredFeed)
+            .fold(LensLibrary()) { library, (name, lens) ->
+                (library.tryAdd(name, lens, savedIds) as LibraryAdd.Added).library
+            }
+
+    val notesByAppId: LensId = savedLibrary.lenses.first { it.name == "Notes by app" }.id
+
+    val latestAppsId: LensId = savedLibrary.lenses.first { it.name == "Latest apps" }.id
+
+    val oldFeedId: LensId = savedLibrary.lenses.first { it.name == "Old feed" }.id
+
+    /** Another workspace of the layout holding two containers with the lens a user is about to save. */
+    private val workspaceOfTheSameLayout =
+        Workspace(
+            id = WorkspaceId("work"),
+            name = "Work",
+            pages =
+                listOf(
+                    PageContainer(
+                        ContainerId("work-inbox"),
+                        PageContent.Bound(LensBinding(newestNotifications, ExpressionKind.LIST)),
+                    ),
+                ),
+            dock = WorkspaceDock(LensBinding(newestNotifications, ExpressionKind.ICON_ROW)),
+        )
+
+    val savedScope = LensScope(savedLibrary, listOf(workspaceOfTheSameLayout))
+
+    private fun startSaved(workspace: Workspace = this.workspace) = reducer.start(workspace, savedScope)
+
+    /**
+     * The saved-lens list while re-binding the per-app page-set: the grouped lens can be used, the flat one is visible
+     * with the reason it cannot, and the lens with a source that is gone says so.
+     */
+    fun savedLensList(): WorkspaceEditorUiState =
+        runFrom(
+            startSaved(),
+            EditorAction.StartFlow(FlowMode.EditPage(ContainerId("per-app"))),
+            flow(BindingFlowAction.ShowSavedLenses),
+        )
+
+    /** The Source step after using "Notes by app" for a new container: the builder is replaced by the lens summary. */
+    fun usingSavedLens(): WorkspaceEditorUiState =
+        runFrom(
+            startSaved(),
+            EditorAction.StartFlow(FlowMode.Add),
+            flow(BindingFlowAction.UseSavedLens(notesByAppId)),
+        )
+
+    /** The Confirm step with Save as lens ticked and the suggested name filled in (the field is never focused). */
+    fun confirmSaveAs(name: String? = null): WorkspaceEditorUiState {
+        val toConfirm =
+            listOf(
+                EditorAction.StartFlow(FlowMode.Add),
+                flow(BindingFlowAction.ToggleSource(SourceIds.NOTIFICATIONS)),
+                flow(BindingFlowAction.ApplyPreset(LensPreset.NEWEST_FIRST)),
+                flow(BindingFlowAction.Next),
+                flow(BindingFlowAction.PickExpression(ExpressionKind.LIST)),
+                flow(BindingFlowAction.Next),
+                flow(BindingFlowAction.PickContainer(ContainerKind.PAGE)),
+                flow(BindingFlowAction.Next),
+                flow(BindingFlowAction.StartSaveAsLens("Notifications, newest first")),
+            ) + listOfNotNull(name?.let { flow(BindingFlowAction.SetSaveAsName(it)) })
+        return runFrom(startSaved(), *toConfirm.toTypedArray())
+    }
+
+    /** After confirming Save as lens: the offer to use it in the two other containers with the identical lens. */
+    fun adoptOffer(): WorkspaceEditorUiState = runFrom(confirmSaveAs(), EditorAction.ConfirmFlow)
+
+    /** The overview with a page-set and a widget using saved lenses (and an inline page), each with Detach. */
+    fun overviewWithSavedLenses(): WorkspaceEditorUiState {
+        val perAppBound = binding(SourceIds.NOTIFICATIONS, ExpressionKind.CARD_STACK, LensGroup.ByGroupKey)
+        val bound =
+            workspace.copy(
+                pages =
+                    listOf(
+                        PageContainer(
+                            ContainerId("apps"),
+                            PageContent.Bound(binding(SourceIds.ALL_APPS, ExpressionKind.ICON_GRID)),
+                        ),
+                        PageSetContainer(ContainerId("per-app"), perAppBound.copy(ref = notesByAppId)),
+                        widgetPage.copy(
+                            content =
+                                PageContent.WidgetGrid(
+                                    4,
+                                    6,
+                                    listOf(
+                                        WidgetPlacement(
+                                            inbox.copy(
+                                                binding =
+                                                    LensBinding(
+                                                        latestApps,
+                                                        ExpressionKind.LIST,
+                                                        latestAppsId,
+                                                    ),
+                                            ),
+                                            0,
+                                            0,
+                                        ),
+                                    ),
+                                ),
+                        ),
+                    ),
+            )
+        return startSaved(bound)
+    }
+
+    private fun runFrom(
+        start: WorkspaceEditorUiState,
+        vararg actions: EditorAction,
+    ): WorkspaceEditorUiState = actions.fold(start) { state, action -> reducer.reduce(state, action).state }
 
     private fun flow(action: BindingFlowAction): EditorAction = EditorAction.Flow(action)
 

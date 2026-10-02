@@ -26,6 +26,7 @@ import com.riffle.core.domain.launcher.workspace.editor.BindingFlowContext
 import com.riffle.core.domain.launcher.workspace.editor.BindingFlowState
 import com.riffle.core.domain.launcher.workspace.editor.EditorStep
 import com.riffle.core.domain.launcher.workspace.editor.FlowMode
+import com.riffle.core.domain.launcher.workspace.editor.SavedLensFlow
 
 /** The steps a flow shows: re-binding an existing container skips the Container step. */
 internal fun flowSteps(mode: FlowMode): List<EditorStep> =
@@ -83,7 +84,7 @@ internal fun EditorFlowPane(
                         EditorSourceStep(state, context, onFlowAction, onRequestSourceAccess, queryFlush = queryFlush)
                     EditorStep.EXPRESSION -> EditorExpressionStep(state, context, onFlowAction)
                     EditorStep.CONTAINER -> EditorContainerStep(state, context, onFlowAction)
-                    EditorStep.CONFIRM -> EditorConfirmStep(state, context)
+                    EditorStep.CONFIRM -> EditorConfirmStep(state, context, onFlowAction)
                 }
             }
         }
@@ -134,7 +135,10 @@ private fun FlowButtons(
         }
         if (state.step == EditorStep.CONFIRM) {
             val label = if (flow.mode == FlowMode.Add) EditorText.ADD_TO_WORKSPACE else EditorText.APPLY_CHANGES
-            Button(onClick = { onAction(EditorAction.ConfirmFlow) }) { Text(label) }
+            Button(
+                onClick = { onAction(EditorAction.ConfirmFlow) },
+                enabled = SavedLensFlow.saveAsProblem(state, context) == null,
+            ) { Text(label) }
         } else {
             Button(
                 onClick = { onAction(EditorAction.Flow(BindingFlowAction.Next)) },

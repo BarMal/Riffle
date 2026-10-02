@@ -9,7 +9,8 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.LayoutCapabilities
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
-import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import com.riffle.core.domain.launcher.workspace.editor.LensScope
+import com.riffle.core.domain.launcher.workspace.editor.LensScopeChange
 
 /**
  * The workspace editor over the preview, for the workspace the dock menu's Edit chose. Saving replaces just
@@ -26,14 +27,20 @@ internal fun WorkspaceEditorLayer(
     workspaceId: WorkspaceId,
 ) {
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
-    val workspace =
-        remember(workspaceId, deviceClass) { runtime.repository.load()?.findWorkspace(deviceClass, workspaceId) }
-    if (workspace == null) {
+    // The layout's library and its other workspaces come along, for saved lenses (preview only, like the editor).
+    val loaded =
+        remember(workspaceId, deviceClass) {
+            runtime.repository.load()?.workspacesFor(deviceClass)?.let { layout ->
+                layout.find(workspaceId)?.let { it to LensScope.of(layout, workspaceId) }
+            }
+        }
+    if (loaded == null) {
         LaunchedEffect(workspaceId) { host.controller.closeEditor() }
     } else {
         // Access can change while the editor is open (the user returns from a settings screen).
         val sources =
             remember(state.notificationAccessStatus, state.calendarAccessStatus) { runtime.sourceChoices() }
+        val (workspace, scope) = loaded
         val reducedMotion = state.launcherSettings.motion.reducedMotion
         val services = remember(runtime, reducedMotion) { runtime.services(reducedMotion) }
         WorkspacePreviewTheme(state) {
@@ -41,26 +48,29 @@ internal fun WorkspaceEditorLayer(
                 workspace = workspace,
                 sources = sources,
                 services = services,
-                onSave = { saved -> runtime.saveEdited(deviceClass, workspaceId, saved) },
+                onSave = { saved, change -> runtime.saveEdited(deviceClass, workspaceId, saved, change) },
                 onClose = host.controller::closeEditor,
                 capabilities = LayoutCapabilities(),
                 onRequestSourceAccess = host.onRequestSourceAccess,
+                scope = scope,
             )
         }
     }
 }
 
-private fun WorkspaceSet.findWorkspace(
-    deviceClass: HomeLayoutDeviceClass,
-    id: WorkspaceId,
-): Workspace? = workspacesFor(deviceClass).find(id)
-
-/** Persists [edited] as workspace [id] of [deviceClass]'s layout; every other workspace is untouched. */
+/**
+ * Persists [edited] as workspace [id] of [deviceClass]'s layout. [change] is what the session changed outside it (the
+ * layout's saved lenses, and other workspaces that adopted one): written in the same single save, so a Save as lens
+ * and the references to it can never be stored apart. Everything else is untouched.
+ */
 internal fun WorkspaceRuntime.saveEdited(
     deviceClass: HomeLayoutDeviceClass,
     id: WorkspaceId,
     edited: Workspace,
+    change: LensScopeChange = LensScopeChange(),
 ) {
     val current = repository.load() ?: return
-    repository.save(current.update(deviceClass) { layout -> layout.replace(id) { edited } })
+    repository.save(
+        current.update(deviceClass) { layout -> change.applyTo(layout.replace(id) { edited }) },
+    )
 }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,11 +33,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.riffle.app.launcher.designsystem.RiffleElevation
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.core.domain.launcher.workspace.LensBinding
+import com.riffle.core.domain.launcher.workspace.LensLibrary
 import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageContent
 import com.riffle.core.domain.launcher.workspace.PageHost
@@ -53,6 +57,7 @@ import com.riffle.core.domain.launcher.workspace.effectiveStartPageId
 @Composable
 internal fun EditorOverview(
     workspace: Workspace,
+    library: LensLibrary,
     onAction: (EditorAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -66,13 +71,13 @@ internal fun EditorOverview(
             Text(EditorText.EMPTY_WORKSPACE, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         workspace.pages.forEachIndexed { index, page ->
-            PageCard(page, index, workspace.pages.size, page.id == workspace.effectiveStartPageId, onAction)
+            PageCard(page, index, workspace.pages.size, page.id == workspace.effectiveStartPageId, library, onAction)
         }
         Button(onClick = { onAction(EditorAction.StartFlow(FlowMode.Add)) }) {
             Icon(Icons.Filled.Add, contentDescription = null)
             Text(EditorText.ADD_PAGE, modifier = Modifier.padding(start = RiffleSpacing.s))
         }
-        DockCard(workspace, onAction)
+        DockCard(workspace, library, onAction)
     }
 }
 
@@ -106,6 +111,7 @@ private fun PageCard(
     index: Int,
     count: Int,
     isStartPage: Boolean,
+    library: LensLibrary,
     onAction: (EditorAction) -> Unit,
 ) {
     val name = EditorDescribe.pageName(index)
@@ -116,6 +122,9 @@ private fun PageCard(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (!(page is PageContainer && page.content is PageContent.WidgetGrid)) {
+            SavedLensLine(EditorDescribe.pageBinding(page), library, name, FlowMode.EditPage(page.id), onAction)
+        }
         StartPageAction(page, name, isStartPage, onAction)
         Row(
             horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
@@ -137,7 +146,7 @@ private fun PageCard(
             }
         }
         if (page is PageContainer && page.content is PageContent.WidgetGrid) {
-            GridWidgets(page, page.content as PageContent.WidgetGrid, onAction)
+            GridWidgets(page, page.content as PageContent.WidgetGrid, library, onAction)
         }
     }
 }
@@ -171,11 +180,19 @@ private fun StartPageAction(
 private fun GridWidgets(
     page: PageContainer,
     grid: PageContent.WidgetGrid,
+    library: LensLibrary,
     onAction: (EditorAction) -> Unit,
 ) {
     grid.placements.forEach { placement ->
         val label = EditorDescribe.widget(placement)
         Text(label, style = MaterialTheme.typography.bodyMedium)
+        SavedLensLine(
+            placement.widget.binding,
+            library,
+            label,
+            FlowMode.EditWidget(page.id, placement.widget.id),
+            onAction,
+        )
         Row(
             horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
@@ -210,6 +227,7 @@ private fun GridWidgets(
 @Composable
 private fun DockCard(
     workspace: Workspace,
+    library: LensLibrary,
     onAction: (EditorAction) -> Unit,
 ) {
     val section = workspace.dock.dynamicSection
@@ -220,6 +238,7 @@ private fun DockCard(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        SavedLensLine(section, library, EditorText.DOCK_SECTION, FlowMode.EditDock, onAction)
         Row(horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {
             OutlinedButton(onClick = { onAction(EditorAction.StartFlow(FlowMode.EditDock)) }) {
                 Text(EditorText.SET_DOCK_SECTION)
@@ -232,6 +251,48 @@ private fun DockCard(
         }
     }
 }
+
+/** The saved lens a binding uses, by name, with Detach (48 dp). Shows nothing for an inline binding. */
+@Composable
+private fun SavedLensLine(
+    binding: LensBinding?,
+    library: LensLibrary,
+    where: String,
+    mode: FlowMode,
+    onAction: (EditorAction) -> Unit,
+) {
+    val ref = binding?.ref ?: return
+    val name = library.find(ref)?.name
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+    ) {
+        Text(
+            EditorLensText.overviewLine(name),
+            style = MaterialTheme.typography.labelLarge,
+            color = if (name == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(
+            onClick = { onAction(EditorAction.Detach(mode)) },
+            modifier =
+                Modifier
+                    .heightIn(min = RiffleSpacing.xxxl)
+                    .testTag(detachTestTag(mode))
+                    .semantics { contentDescription = EditorLensText.detachDescription(name, where) },
+        ) { Text(EditorLensText.DETACH) }
+    }
+}
+
+internal fun detachTestTag(mode: FlowMode): String =
+    "editor-detach-" +
+        when (mode) {
+            FlowMode.Add -> "add"
+            FlowMode.EditDock -> "dock"
+            is FlowMode.EditPage -> mode.pageId.value
+            is FlowMode.EditWidget -> mode.widgetId.value
+        }
 
 @Composable
 private fun EditorCard(content: @Composable () -> Unit) {

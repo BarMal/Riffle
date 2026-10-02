@@ -1,7 +1,10 @@
 package com.riffle.app.launcher.editor
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.editor.BindingFlowAction
 import com.riffle.core.domain.launcher.workspace.editor.BindingFlowContext
@@ -21,12 +24,18 @@ internal fun EditorSourceStep(
     modifier: Modifier = Modifier,
     queryFlush: PendingQueryFlush? = null,
 ) {
-    LensBuilder(
-        draft = state.draft,
-        sources = context.sources,
-        onAction = { onFlowAction(it.toFlowAction()) },
-        onRequestSourceAccess = onRequestSourceAccess,
-        modifier = modifier,
-        queryFlush = queryFlush,
-    )
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m)) {
+        if (showsSavedLensStep(state)) {
+            EditorSavedLensStep(state, context, onFlowAction)
+        } else {
+            SavedLensEntry(context, onFlowAction)
+            LensBuilder(
+                draft = state.draft,
+                sources = context.sources,
+                onAction = { onFlowAction(it.toFlowAction()) },
+                onRequestSourceAccess = onRequestSourceAccess,
+                queryFlush = queryFlush,
+            )
+        }
+    }
 }

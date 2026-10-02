@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.editor
 
+import com.riffle.core.domain.launcher.workspace.ContainerId
 import com.riffle.core.domain.launcher.workspace.LensBinding
 import com.riffle.core.domain.launcher.workspace.PageContainer
 import com.riffle.core.domain.launcher.workspace.PageContent
@@ -22,6 +23,17 @@ internal object FlowEdits {
             is FlowMode.EditWidget -> WorkspaceEdit.SetWidgetBinding(mode.pageId, mode.widgetId, binding)
             FlowMode.EditDock -> WorkspaceEdit.SetDockSection(binding)
             FlowMode.Add -> error("Adding has no single edit; the container choice decides it.")
+        }
+
+    /** The edit that adds the container the flow chose, with [binding]; null until a container is picked. */
+    fun addEdit(
+        state: BindingFlowState,
+        binding: LensBinding,
+        context: BindingFlowContext,
+    ): WorkspaceEdit? =
+        state.container?.let { kind ->
+            val pageId = ContainerId(context.ids.next())
+            ContainerEdits.build(kind, binding, state.widgetTarget, pageId, ContainerId(context.ids.next()))
         }
 
     fun existingBinding(context: BindingFlowContext): LensBinding? = existingBinding(context.workspace, context.mode)

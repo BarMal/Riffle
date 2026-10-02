@@ -14,6 +14,13 @@ internal object EditorDescribe {
         "${EditorText.expressionLabel(binding.expression)} of " +
             binding.lens.sources.joinToString(", ") { EditorText.sourceLabel(it) }
 
+    /** The binding a bound page or a page-set draws; null for a grid of widgets (each widget has its own). */
+    fun pageBinding(page: PageHost): LensBinding? =
+        when (page) {
+            is PageSetContainer -> page.binding
+            is PageContainer -> (page.content as? PageContent.Bound)?.binding
+        }
+
     /** "Page 2" (1-based) so unnamed pages can be told apart. */
     fun pageName(index: Int): String = "Page ${index + 1}"
 
