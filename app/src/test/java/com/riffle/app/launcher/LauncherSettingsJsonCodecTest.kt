@@ -1328,7 +1328,13 @@ class LauncherSettingsJsonCodecTest {
             )
         val settings =
             LauncherSettings(
-                rss = RssSettings(feeds = listOf(feed), refreshInterval = FeedRefreshIntervalOption.MINUTES_30),
+                rss =
+                    RssSettings(
+                        feeds = listOf(feed),
+                        refreshInterval = FeedRefreshIntervalOption.HOURS_1,
+                        backgroundWifiOnly = false,
+                        backgroundChargingOnly = true,
+                    ),
             )
 
         val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
@@ -1409,6 +1415,24 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(FeedRefreshIntervalOption.DEFAULT, decodedSettings.rss.refreshInterval)
+    }
+
+    @Test
+    fun legacyRssRefreshIntervalNamesDecodeToOffSoNobodyIsOptedIn() {
+        listOf("MINUTES_30", "MINUTES_60", "MINUTES_180", "MINUTES_360").forEach { legacy ->
+            val decoded = decodeLauncherSettings("""{"rss": {"refreshInterval": "$legacy"}}""")
+
+            assertEquals(FeedRefreshIntervalOption.OFF, decoded.rss.refreshInterval)
+        }
+    }
+
+    @Test
+    fun rssBackgroundRefreshDefaultsToOffWifiOnlyAndNotChargingOnly() {
+        val decoded = decodeLauncherSettings("{}").rss
+
+        assertEquals(FeedRefreshIntervalOption.OFF, decoded.refreshInterval)
+        assertEquals(true, decoded.backgroundWifiOnly)
+        assertEquals(false, decoded.backgroundChargingOnly)
     }
 
     @Test

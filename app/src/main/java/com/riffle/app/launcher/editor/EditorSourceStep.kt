@@ -29,6 +29,7 @@ import com.riffle.core.domain.launcher.workspace.editor.BindingFlow
 import com.riffle.core.domain.launcher.workspace.editor.BindingFlowAction
 import com.riffle.core.domain.launcher.workspace.editor.BindingFlowContext
 import com.riffle.core.domain.launcher.workspace.editor.BindingFlowState
+import com.riffle.core.domain.launcher.workspace.editor.LensQueryEdits
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoice
 
 /**
@@ -43,6 +44,7 @@ internal fun EditorSourceStep(
     onFlowAction: (BindingFlowAction) -> Unit,
     onRequestSourceAccess: (SourceId) -> Unit,
     modifier: Modifier = Modifier,
+    queryFlush: PendingQueryFlush? = null,
 ) {
     var customising by rememberSaveable {
         mutableStateOf(
@@ -53,6 +55,14 @@ internal fun EditorSourceStep(
         EditorSectionTitle(EditorText.SOURCES_HEADING)
         context.sources.forEach { choice ->
             SourceRow(choice, choice.id in state.draft.sources, onFlowAction, onRequestSourceAccess)
+            if (choice.id in state.draft.sources && LensQueryEdits.supportsQuery(choice.id)) {
+                SourceQueryField(
+                    source = choice.id,
+                    applied = state.draft.queryFor(choice.id),
+                    onApply = { text -> onFlowAction(BindingFlowAction.SetQuery(choice.id, text)) },
+                    flush = queryFlush,
+                )
+            }
         }
         EditorSectionTitle(EditorText.LENS_HEADING, Modifier.fillMaxWidth())
         PresetChips(state, context, onFlowAction)

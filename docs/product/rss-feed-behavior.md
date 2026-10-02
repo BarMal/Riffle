@@ -15,13 +15,13 @@ contract; this page summarizes the parts relevant to manual device validation.
 
 ## Network and refresh
 
-- Refresh is user-triggered; opening or rendering a feed stage never performs a network request
-  on its own. The refresh interval setting only bounds how soon a future scheduled/allowed refresh
-  may run once a scheduler ships -- it does not itself start network activity today.
-- Metered-network and battery-saver state are expected to suppress any non-user-triggered refresh
-  once scheduled refresh ships; this settings slice adds no exception to that rule.
+- Refresh is user-triggered by default; opening or rendering a feed stage never performs a network
+  request on its own. Background refresh is opt-in: the interval setting is Off by default, and
+  nothing runs in the background until the user picks 1, 3, 6, 12 or 24 hours.
+- Background refresh defaults to Wi-Fi only (unmetered network), can be limited to charging, never
+  runs under battery saver or with low battery, and re-checks these conditions when it starts.
 
-User-triggered refresh is built; see [rss-refresh.md](rss-refresh.md). Background refresh is not.
+User-triggered and opt-in background refresh are built; see [rss-refresh.md](rss-refresh.md).
 
 ## Offline behaviour
 
@@ -32,7 +32,7 @@ User-triggered refresh is built; see [rss-refresh.md](rss-refresh.md). Backgroun
 
 ## Backup, restore, and privacy
 
-- Backups include only normalized feed URLs, feed identity, enabled state, and refresh interval.
+- Backups include only normalized feed URLs, feed identity, enabled state, and background refresh options (interval, Wi-Fi only, charging only).
   Tracking-only query parameters are stripped before a URL is ever stored or backed up.
 - Backups never include cached article text, images, response headers, credentials, raw
   tracking-bearing URLs, or read/dismiss digests. Restoring a backup validates each feed URL and

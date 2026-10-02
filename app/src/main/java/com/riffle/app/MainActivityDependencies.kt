@@ -53,6 +53,7 @@ import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.app.launcher.rss.AndroidFeedParser
 import com.riffle.app.launcher.rss.AndroidFeedTransport
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
+import com.riffle.app.launcher.rss.FeedBackgroundRefreshScheduler
 import com.riffle.app.launcher.rss.FeedRefreshCoordinator
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.sources.ContentSourceDependencies
@@ -121,6 +122,9 @@ internal class MainActivityDependencies(
                 },
         )
     }
+
+    /** Keeps WorkManager's periodic feed work in step with the RSS settings (#1393); only cancels while Off. */
+    val feedBackgroundRefreshScheduler by lazy { FeedBackgroundRefreshScheduler(activity) }
 
     /**
      * The explicit wiring point from the DataStore workspace store to the shell (#1351). Built lazily and

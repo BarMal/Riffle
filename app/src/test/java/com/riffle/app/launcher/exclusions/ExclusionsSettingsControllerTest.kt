@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemId
+import com.riffle.core.domain.launcher.workspace.ItemPrivacy
 import com.riffle.core.domain.launcher.workspace.ItemTarget
 import com.riffle.core.domain.launcher.workspace.Lens
 import com.riffle.core.domain.launcher.workspace.LensResult
@@ -24,6 +25,7 @@ import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.exclusions.SourceExclusionRule
 import com.riffle.core.domain.launcher.workspace.lens.AsyncLensEvaluator
 import com.riffle.core.domain.launcher.workspace.lens.LensEvaluationContext
+import com.riffle.core.domain.launcher.workspace.settings.ExclusionHideActions
 import com.riffle.core.domain.launcher.workspace.settings.ExclusionsSettingsAction
 import com.riffle.core.domain.launcher.workspace.settings.HideKind
 import com.riffle.core.domain.launcher.workspace.settings.TextRuleDraft
@@ -223,6 +225,79 @@ class ExclusionsSettingsControllerTest {
         HomeLayoutDeviceClass.entries.forEach { assertEquals(1, repository.rules(it).rules.size) }
         assertFalse(controller.hide(phone, article, HideKind.ITEM, allLayouts = true))
         assertEquals("Already hidden: this article", controller.feedback.value?.message)
+    }
+
+    @Test
+    fun `a hide on one layout offers hide on all layouts and that adds equal rules everywhere with undo`() {
+        load()
+        val article = Item(ItemId("rss:f:1"), SourceIds.RSS, ItemTarget.None, title = "Hello world", groupKey = "f")
+
+        assertTrue(controller.hide(phone, article, HideKind.GROUP))
+        assertTrue(controller.feedback.value!!.canHideEverywhere)
+        assertTrue(repository.rules(tablet).isEmpty)
+
+        assertTrue(controller.hideOnAllLayouts())
+        HomeLayoutDeviceClass.entries.forEach { assertEquals(1, repository.rules(it).rules.size) }
+        assertFalse(controller.feedback.value!!.canHideEverywhere)
+        assertEquals("Hidden on phone: this feed", controller.feedback.value?.message)
+
+        controller.undo()
+        assertEquals(1, repository.rules(phone).rules.size)
+        assertTrue(repository.rules(tablet).isEmpty)
+    }
+
+    @Test
+    fun `hide on all layouts is only on offer until the announcement ends or something else changes`() {
+        load()
+        val article = Item(ItemId("rss:f:1"), SourceIds.RSS, ItemTarget.None, title = "Hello world", groupKey = "f")
+
+        assertFalse(controller.hideOnAllLayouts())
+
+        controller.hide(phone, article, HideKind.ITEM)
+        controller.feedbackShown(controller.feedback.value!!.id)
+        assertFalse(controller.hideOnAllLayouts())
+        assertTrue(repository.rules(tablet).isEmpty)
+
+        controller.hide(phone, article, HideKind.GROUP)
+        controller.dispatch(phone, ExclusionsSettingsAction.AddText(contains("sale")))
+        assertFalse(controller.hideOnAllLayouts())
+
+        controller.hide(phone, article, HideKind.ITEM)
+        controller.undo()
+        assertFalse(controller.hideOnAllLayouts())
+    }
+
+    @Test
+    fun `a refused or all layouts hide does not offer hide on all layouts`() {
+        load()
+        val article = Item(ItemId("rss:f:1"), SourceIds.RSS, ItemTarget.None, title = "Hello world", groupKey = "f")
+
+        controller.hide(phone, article, HideKind.GROUP, allLayouts = true)
+        assertFalse(controller.feedback.value!!.canHideEverywhere)
+
+        assertFalse(controller.hide(phone, article, HideKind.GROUP))
+        assertFalse(controller.feedback.value!!.canHideEverywhere)
+    }
+
+    @Test
+    fun `hiding a sensitive item announces only a fixed phrase and stores no item text`() {
+        load()
+        val marker = "UNIQUE-SECRET-MARKER"
+        val sensitive =
+            Item(
+                ItemId("n9"),
+                notifications,
+                ItemTarget.App("chat", "personal"),
+                title = marker,
+                body = marker,
+                privacy = ItemPrivacy.SENSITIVE,
+            )
+
+        assertTrue(controller.hide(phone, sensitive, HideKind.APP))
+
+        assertFalse(controller.feedback.value!!.message.contains(marker))
+        assertFalse(repository.snapshot().toString().contains(marker))
+        assertFalse(HideKind.LIKE_THIS in ExclusionHideActions.menuChoicesFor(sensitive).map { it.kind })
     }
 
     @Test

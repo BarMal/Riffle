@@ -1,6 +1,8 @@
 package com.riffle.app.launcher.rss
 
 import com.riffle.core.domain.launcher.rss.FeedId
+import com.riffle.core.domain.launcher.rss.FeedRefreshState
+import com.riffle.core.domain.launcher.settings.FeedBackgroundRunRecord
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -16,6 +18,10 @@ internal data class FeedArticleCacheDocument(
     val images: List<CachedImage> = emptyList(),
     val readDigests: Set<String> = emptySet(),
     val dismissedDigests: Set<String> = emptySet(),
+    /** Validators, failure counters and timestamps per feed; survives process death (issue #1393). */
+    val refreshStates: Map<FeedId, FeedRefreshState> = emptyMap(),
+    /** The most recent background refresh run, for the settings status line. */
+    val backgroundRun: FeedBackgroundRunRecord? = null,
 ) {
     companion object {
         fun empty(): FeedArticleCacheDocument = FeedArticleCacheDocument()
@@ -31,6 +37,8 @@ internal fun encodeFeedArticleCacheDocument(document: FeedArticleCacheDocument):
         .put("images", JSONArray(document.images.map(::encodeCachedImage)))
         .put("readDigests", JSONArray(document.readDigests.toList()))
         .put("dismissedDigests", JSONArray(document.dismissedDigests.toList()))
+        .put("refreshStates", encodeRefreshStates(document.refreshStates))
+        .putOpt("backgroundRun", document.backgroundRun?.let(::encodeBackgroundRun))
         .toString()
 
 /**
@@ -50,6 +58,9 @@ internal fun decodeFeedArticleCacheDocument(value: String): FeedArticleCacheDocu
             images = json.optJSONArray("images")?.decodeCachedImages() ?: emptyList(),
             readDigests = json.optJSONArray("readDigests")?.decodeDigestSet() ?: emptySet(),
             dismissedDigests = json.optJSONArray("dismissedDigests")?.decodeDigestSet() ?: emptySet(),
+            // Added without a version bump: older documents simply lack the keys and decode to empty.
+            refreshStates = decodeRefreshStates(json.optJSONArray("refreshStates")),
+            backgroundRun = decodeBackgroundRun(json.optJSONObject("backgroundRun")),
         )
     }.getOrNull()
 

@@ -17,7 +17,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -115,15 +118,18 @@ private fun CategoryIcon(
     loader: ExpressionImageLoader,
     onClick: (Item) -> Unit,
 ) {
+    val hideMenu = rememberItemHideMenu(item)
+    var hideOpen by remember { mutableStateOf(false) }
     Box(
         modifier =
             Modifier
                 .size(ExpressionMinTouchTarget)
-                .clickable(role = Role.Button) { onClick(item) }
+                .clickWithHide(hideMenu, onShowMenu = { hideOpen = true }) { onClick(item) }
                 .semantics { contentDescription = item.displayTitle() },
         contentAlignment = Alignment.Center,
     ) {
         ItemImage(handle = item.icon, loader = loader, size = IconCellIconSize, shape = RiffleShapes.medium)
+        if (hideMenu != null) ItemHideDropdown(hideMenu, hideOpen) { hideOpen = false }
     }
 }
 

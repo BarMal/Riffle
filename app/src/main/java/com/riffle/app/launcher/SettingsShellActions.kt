@@ -133,6 +133,8 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.RemoveRssFeed,
         is LauncherShellAction.SetRssFeedEnabled,
         is LauncherShellAction.SelectRssRefreshInterval,
+        is LauncherShellAction.SetRssBackgroundWifiOnly,
+        is LauncherShellAction.SetRssBackgroundChargingOnly,
         is LauncherShellAction.AddNotificationHideRule,
         is LauncherShellAction.RemoveNotificationHideRule,
         -> LauncherSettingsActionRoute.SettingsState(this)

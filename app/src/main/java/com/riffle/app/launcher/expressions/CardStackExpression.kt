@@ -125,6 +125,7 @@ private fun FocusedCardStack(
                 onItemClick = onItemClick,
                 onAction = onAction,
                 modifier = cardModifier.size(width = cardWidth, height = cardHeight).then(semanticsForFocus),
+                hideEnabled = entry.cardIndex == activeIndex,
             )
         }
     }
