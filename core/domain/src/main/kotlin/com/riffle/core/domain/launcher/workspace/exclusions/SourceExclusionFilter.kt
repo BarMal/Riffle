@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.workspace.exclusions
 
 import com.riffle.core.domain.launcher.workspace.Item
+import com.riffle.core.domain.launcher.workspace.SourceId
 
 /**
  * The pre-lens step: drops every item hidden by an enabled rule of the layout's [ExclusionRuleSet], order
@@ -32,6 +33,12 @@ object SourceExclusionFilter {
         items: List<Item>,
     ): Map<ExclusionRuleId, Int> =
         rules.rules.associate { rule -> rule.id to items.count { item -> matches(rule, item) } }
+
+    /** Every source whose items [rules] can hide: each rule's own source and, for family matchers, its family. */
+    fun sourcesFor(rules: ExclusionRuleSet): Set<SourceId> =
+        rules.rules.flatMapTo(mutableSetOf()) { rule ->
+            if (ExclusionMatching.spansFamily(rule.matcher)) ExclusionFamilies.of(rule.source) else setOf(rule.source)
+        }
 
     private fun appliesTo(
         rule: SourceExclusionRule,

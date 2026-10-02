@@ -27,6 +27,7 @@ enum class SettingsPage(
     /** Developer pages: reachable only from the Developer section while Workspaces (preview) is on. */
     WORKSPACES("Workspaces"),
     SOURCES("Sources"),
+    EXCLUSIONS("Hidden items and rules"),
 }
 
 internal enum class SettingsPageGroup(

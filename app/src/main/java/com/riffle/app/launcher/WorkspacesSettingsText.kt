@@ -149,8 +149,6 @@ internal object SourcesSettingsText {
     const val SOURCES_INTRO =
         "Turn a source off to stop Riffle reading it. Pages that use it then say it is turned off, with a " +
             "button to turn it back on. Nothing is deleted."
-    const val HIDDEN_ITEMS_SOON = "Hidden items and rules (coming soon)"
-    const val HIDDEN_ITEMS_SOON_BODY = "Rules to hide items from a source will be managed here."
     const val ALLOW = "Allow"
 
     /** The label of the Allow button for a source's explicit access flow; null when it has none. */

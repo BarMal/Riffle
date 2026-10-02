@@ -78,9 +78,34 @@ itself is unchanged.
   the same `SourceAccessLaunchers` the editor's "Review access" uses. Nothing prompts when the page opens.
 - **Enable/disable** persists in its own preferences file, `riffle_workspace_sources` (a set of disabled source
   ids; nothing else), through `StoredSourceEnablement`. Everything is on until turned off.
-- **Hidden items and rules (coming soon)** is a clearly marked placeholder row; exclusion rules are another
-  slice.
+- **Hidden items and rules** is a row (replacing the earlier "coming soon" placeholder) that opens the page below.
 - Unfolded: the rows run in two columns.
+
+## Hidden items and rules page (issue #1402, as built)
+
+`SettingsPage.EXCLUSIONS`, opened from the Sources page; a Developer page like the other two (never in the main page,
+search or launcher search; with the preview off it does not exist). Domain, controller and change-signal design are in
+[`workspaces-exclusions.md`](workspaces-exclusions.md). The page:
+
+- **Layout selector** (same segmented tabs and `SelectSettingsLayoutDeviceClass` action as the Workspaces page) chooses
+  the layout whose rules are listed; a polite live-region heading says "Rules for Phone (folded): 3 rules". An intro
+  says each layout keeps its own rules and that something hidden on one layout can reappear on another.
+- **Rules grouped by kind**: Apps, Feeds and groups, Single items, Text rules, Items with no content. Each row: a
+  human description (never item content; text rules show the pattern the user typed), chips as words (the source,
+  "From earlier settings" for migrated rules, "Only on this layout"), a status line ("Hides 3 items right now",
+  "Turned off", "Source is off"; nothing while it is still loading), a switch, and an overflow menu (Apply to all
+  layouts, Delete). The whole row is one switch for TalkBack with a spoken summary ("Title contains "sale". Text
+  rules, Notifications. Hides 2 items right now. Rule 4 of 6. On. Double tap to turn off"); Turn on/off, Apply to all
+  layouts and Delete are also custom actions on the row.
+- **Delete** asks first, then announces in the Settings snackbar with **Undo**; Add and Apply to all layouts also offer Undo;
+  any later change ends the offer.
+- **Add text rule...** opens a dialog: source, field, how it matches (exactly, contains, pattern with `{?}`) and the
+  text, with the reason a rule cannot be added shown live (a polite live region) and the button disabled until there is none.
+- **Empty state** when the layout has no rules. When the 500 user-rule cap is reached the add row says so instead.
+- **Counts** are live only while the page is open (a counter reads just the sources the layout's rules can hide from
+  through the shared registry and releases them on close).
+- Unfolded (600 dp and up): the kinds run in two columns, as on the Sources page; rows are the same at any width.
+- A change here re-evaluates the live preview at once (the provider observes the rule repository).
 
 ## OFF status plumbing
 
@@ -113,7 +138,7 @@ bar and cutout insets from the Settings surface, two panes from 600 dp. Tokens o
   Layout ("Returning to Home", default Restore).
 - **Drawer presentation (Q6)** moves into the Finder page expression later; the App drawer page is unchanged.
 - **New apps per preset (N9)**: needs the shared pool; no row.
-- Exclusion rules, saved lenses, per-workspace Dock and Start page rows, backup of the disabled-source set (it is
+- Saved lenses, per-workspace Dock and Start page rows, backup of the disabled-source set (it is
   device-local preferences, not part of the workspace blob).
 - The editor closes back to the preview, not to Settings (Exit preview returns to Settings).
 
@@ -123,11 +148,14 @@ Domain (`core/domain`): `EnablementSourceRegistryTest`, `OffAvailabilityTest`, `
 `WorkspacesSettingsTest` (planner, every action, Undo, last-workspace rule, codec round trip of `presetId`).
 App JVM: `WorkspacesSettingsControllerTest`, `SourcesSettingsControllerTest`, `WorkspaceRowActionsTest` (the
 route table), `WorkspacesSettingsTextTest`, `SourcesSettingsTextTest`, `SettingsDeveloperPagesTest`,
-`ContainerServicesTest` (off mapping), `WorkspaceBootstrapTest`. Screenshots (fakes only, Roborazzi):
+`ContainerServicesTest` (off mapping), `WorkspaceBootstrapTest`, and for the Hidden items page
+`ExclusionsSettingsControllerTest` (incl. a live lens re-evaluating on a rule change), `ExclusionsSettingsTextTest`,
+`ExclusionsAppLayerTest` (repository update and signal), with domain `ExclusionsSettingsTest` and `ContextChangesTest`. Screenshots (fakes only, Roborazzi):
 `WorkspacesSettingsScreenshotTest` and `SourcesSettingsScreenshotTest` at compact (dark, large font) and
 unfolded, the fall-back notice, another layout, the last workspace, and the dialogs; `<expression>Off` in each
 expression test and `widgetOff` / `pageSetOff` in `ContainersScreenshotTest`; the Developer rows in
-`WorkspacePreviewSettingScreenshotTest`.
+`WorkspacePreviewSettingScreenshotTest`; `ExclusionsSettingsScreenshotTest` (compact, dark, large font, unfolded, empty,
+other layout, source off, not loaded, the delete and add dialogs and the row interactions).
 
 ## Checklist for the owner (on the device)
 
@@ -157,3 +185,18 @@ expression test and `widgetOff` / `pageSetOff` in `ContainersScreenshotTest`; th
 - [ ] TalkBack: rows read as one item; row actions are in the actions menu; snackbar messages are read;
       dialogs are reachable. Large font: nothing is cut off. Unfolded: two panes, rotation keeps the selected row.
 - [ ] Turn the preview switch off and confirm both pages are gone and Settings behaves as before.
+- [ ] Hidden items and rules (Sources > Hidden items and rules): the layout tabs switch the list; the heading names the
+      layout and the rule count; migrated hidden apps and notification hide rules appear on every layout as "From
+      earlier settings"; a rule on one layout only reads "Only on this layout".
+- [ ] Turn a rule off and on (tap the row): with the preview open behind (or after reopening it), the hidden item
+      disappears and returns without leaving the page's effect stale; counts read "Hides N items right now" and "Turned
+      off" or "Source is off" where they should; nothing shows an item's title, body or URL.
+- [ ] Delete a rule: a confirmation first, the Undo snackbar, Undo brings it back in place; a second change right after
+      removes the Undo.
+- [ ] Add text rule: the add button stays disabled with a spoken reason for fewer than 3 characters, a pattern of only
+      `{?}`, a duplicate; a valid rule is added, announced, counted and hides matching items in the preview.
+- [ ] Apply to all layouts: switch to another layout tab, the rule is there; doing it again changes nothing.
+- [ ] TalkBack: each rule reads as one item with its summary and position; Turn on/off, Apply to all layouts and
+      Delete are in the actions menu; the snackbar and the rule-count heading are announced politely.
+      Large font: nothing cut off. Unfolded: two columns.
+- [ ] Preview off: neither the page nor its row exists, and nothing else in Settings changed.

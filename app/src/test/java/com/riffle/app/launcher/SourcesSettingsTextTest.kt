@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.exclusions.ExclusionsSettingsText
 import com.riffle.app.launcher.workspace.SourceAccessRoute
 import com.riffle.app.launcher.workspace.sourceAccessRouteFor
 import com.riffle.core.domain.launcher.workspace.SourceId
@@ -7,6 +8,7 @@ import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -71,8 +73,10 @@ class SourcesSettingsTextTest {
     }
 
     @Test
-    fun theExclusionRulesEntryPointIsAClearlyMarkedPlaceholder() {
-        assertEquals("Hidden items and rules (coming soon)", SourcesSettingsText.HIDDEN_ITEMS_SOON)
+    fun theExclusionRulesEntryPointIsTheRealPage() {
+        assertEquals(ExclusionsSettingsText.TITLE, SettingsPage.EXCLUSIONS.title)
+        assertEquals("Hidden items and rules", ExclusionsSettingsText.TITLE)
+        assertFalse(ExclusionsSettingsText.TITLE.contains("soon"))
     }
 
     @Test
