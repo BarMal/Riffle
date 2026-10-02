@@ -84,6 +84,7 @@ internal fun SettingsSourcesPageContent(
 }
 
 /** The page itself, with no controller. At medium and expanded widths the rows run in two columns. */
+@Suppress("LongParameterList") // Fixed-state page content: rows, callbacks and the optional feed section.
 @Composable
 internal fun SourcesSettingsContent(
     rows: List<SourceRow>,

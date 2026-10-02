@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
  * and rules (null where the runtime has no exclusion repository, which then shows the page as not loaded).
  * [icsFeeds] drives Settings > Calendar feeds (ICS) and the Sources page's feed section (null: neither is shown).
  */
+@Suppress("LongParameterList") // One bundle of the preview runtime's settings controllers.
 internal class WorkspaceSettingsHost(
     val workspaces: WorkspacesSettingsController,
     val sources: SourcesSettingsController,

@@ -67,10 +67,10 @@ data class IcsFeedSettings(
         newId: () -> String = { UUID.randomUUID().toString() },
     ): IcsFeedSettings? {
         val url = IcsFeedUrls.parse(rawUrl).getOrNull()
-        val unusable =
-            url == null || IcsFeedUrls.problemWith(rawUrl) != null ||
-                feeds.size >= MAX_ICS_FEEDS || feeds.any { it.url == url }
-        if (unusable || url == null) return null
+        val usable =
+            url != null && IcsFeedUrls.problemWith(rawUrl) == null &&
+                feeds.size < MAX_ICS_FEEDS && feeds.none { it.url == url }
+        if (url == null || !usable) return null
         val feed = IcsFeed(IcsFeedId(newId()), displayName(rawName, url), url)
         return copy(feeds = feeds + feed)
     }

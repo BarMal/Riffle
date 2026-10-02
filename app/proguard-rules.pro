@@ -31,3 +31,8 @@
 # factories are never used). See docs/release/r8-minification.md.
 -dontwarn groovy.**
 -dontwarn java.beans.Transient
+# DefaultZoneRulesProvider extends java.time.zone.ZoneRulesProvider, which the Android SDK does not expose.
+# ical4j only loads it through its (excluded) service entry and its zone registry, neither used here.
+-dontwarn java.time.zone.ZoneRulesProvider
+# threeten-extra (an ical4j dependency) names the optional Joda-Convert annotations.
+-dontwarn org.joda.convert.**
