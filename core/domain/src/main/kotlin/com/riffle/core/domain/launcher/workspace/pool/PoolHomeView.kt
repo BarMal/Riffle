@@ -2,6 +2,7 @@ package com.riffle.core.domain.launcher.workspace.pool
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.workspace.HomeLayoutWorkspaceMapper
 import com.riffle.core.domain.launcher.workspace.LensFilter
@@ -56,14 +57,40 @@ object PoolHomeView {
         pool: PlacedItemPool,
         page: PageHost,
         candidates: List<WorkspaceId>,
-    ): LauncherPage? {
-        val arrangement =
-            candidates.firstNotNullOfOrNull {
-                    id ->
-                pool.arrangements[id]?.takeIf { it.pages.isNotEmpty() }
+    ): LauncherPage? =
+        resolveTarget(pool, page, candidates)?.let { target ->
+            pool.arrangements[target.workspaceId]?.pages?.firstOrNull { it.id == target.pageId }
+                ?.let { ArrangementAdapter.toLauncherPage(it, pool) }
+        }
+
+    /** The arrangement a page edit changes: the first candidate that has pages. Null when there is none. */
+    fun arrangementOf(
+        pool: PlacedItemPool,
+        candidates: List<WorkspaceId>,
+    ): WorkspaceId? = candidates.firstOrNull { pool.arrangements[it]?.pages?.isNotEmpty() == true }
+
+    /**
+     * The arrangement and page [resolve] draws, which is also what an edit on that page changes. A preset workspace
+     * has no arrangement of its own yet, so its edits change the migrated arrangement it shows (decision in
+     * `workspaces-pool-editing.md`).
+     */
+    fun resolveTarget(
+        pool: PlacedItemPool,
+        page: PageHost,
+        candidates: List<WorkspaceId>,
+    ): PoolHomeTarget? {
+        val shown =
+            candidates.firstNotNullOfOrNull { id ->
+                pool.arrangements[id]?.takeIf { it.pages.isNotEmpty() }?.let { id to it }
             }
         val key = pageKey(page)
-        val chosen = arrangement?.pages?.firstOrNull { it.id.value == key } ?: arrangement?.pages?.firstOrNull()
-        return chosen?.let { ArrangementAdapter.toLauncherPage(it, pool) }
+        val chosen = shown?.second?.pages?.let { pages -> pages.firstOrNull { it.id.value == key } ?: pages.first() }
+        return if (shown == null || chosen == null) null else PoolHomeTarget(shown.first, chosen.id)
     }
 }
+
+/** The arrangement and page a preview home page shows and edits. */
+data class PoolHomeTarget(
+    val workspaceId: WorkspaceId,
+    val pageId: LauncherPageId,
+)

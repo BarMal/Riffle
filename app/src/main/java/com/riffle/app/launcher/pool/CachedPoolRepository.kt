@@ -46,6 +46,10 @@ internal class CachedPoolRepository(
 
     @Volatile
     private var persistenceEnabled = true
+
+    /** True while [cached] holds a change that has not been written yet. Guarded by [stateLock]. */
+    private var dirty = false
+    private val stateLock = Any()
     private val lock = Mutex()
     private val mutableVersion = MutableStateFlow(0)
 
@@ -78,17 +82,57 @@ internal class CachedPoolRepository(
         }
     }
 
+    /**
+     * Replaces the pool of [deviceClass] by an edited value (pool editing). In memory and synchronous, so a rapid
+     * sequence of edits stays ordered; the write is [flush]'s, which the caller debounces. Returns false and changes
+     * nothing before [initialize], so an edit can never create state out of nothing.
+     */
+    fun update(
+        deviceClass: HomeLayoutDeviceClass,
+        pool: PlacedItemPool,
+    ): Boolean =
+        synchronized(stateLock) {
+            val current = cached
+            if (current != null) {
+                cached = current.copy(pools = current.pools + (deviceClass to pool))
+                dirty = true
+            }
+            current != null
+        }.also { updated -> if (updated) mutableVersion.update { it + 1 } }
+
+    /**
+     * Writes the latest state if an [update] has not been written yet. Atomic (one DataStore transaction), a failed
+     * write is tolerated and keeps the change pending for the next flush, and nothing is written once a read failure
+     * disabled persistence, so what is on disk is never replaced by a guess. Returns true when nothing is left
+     * unwritten (so a caller may now act on what the pool dropped, such as deleting widget host ids).
+     */
+    suspend fun flush(): Boolean =
+        lock.withLock {
+            val snapshot = synchronized(stateLock) { cached.takeIf { dirty } }
+            when {
+                snapshot == null -> true
+                !persistenceEnabled -> false
+                else -> {
+                    val written =
+                        runCatching { store.write(snapshot) }.onFailure { if (it is CancellationException) throw it }
+                    if (written.isSuccess) synchronized(stateLock) { if (cached === snapshot) dirty = false }
+                    written.isSuccess && synchronized(stateLock) { !dirty }
+                }
+            }
+        }
+
     /** The pool of [deviceClass]; null before [initialize] or when that class has none. */
     fun pool(deviceClass: HomeLayoutDeviceClass): PlacedItemPool? = cached?.poolFor(deviceClass)
 
     private fun publish(state: PoolStoreState) {
-        cached = state
+        synchronized(stateLock) { cached = state }
         mutableVersion.update { it + 1 }
     }
 
     private suspend fun persist(state: PoolStoreState) {
         if (persistenceEnabled) {
-            runCatching { store.write(state) }.onFailure { if (it is CancellationException) throw it }
+            val written = runCatching { store.write(state) }.onFailure { if (it is CancellationException) throw it }
+            if (written.isSuccess) synchronized(stateLock) { if (cached === state) dirty = false }
         }
     }
 }

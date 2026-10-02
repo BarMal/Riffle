@@ -73,6 +73,8 @@ enum class PoolRejection {
     COLLISION,
     NO_AVAILABLE_CELL,
     INVALID_PLACEMENT,
+    PAGE_NOT_EMPTY,
+    LAST_PAGE,
 }
 
 sealed interface PoolResult {

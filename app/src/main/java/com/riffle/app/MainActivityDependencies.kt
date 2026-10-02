@@ -266,6 +266,9 @@ internal class MainActivityDependencies(
             widgetViews = widgetHostGateway,
             actions = PoolItemActions(launchApp = appLauncher::launch, launchShortcut = appLauncher::launchShortcut),
             providerOf = widgetHostGateway::hostedWidgetProvider,
+            releaseHostIds = { ids ->
+                activity.runOnUiThread { ids.forEach(widgetHostGateway::deleteHostedWidgetId) }
+            },
         )
 
     fun packageChangeObserver(onCatalogChanged: (AppCatalogChange) -> Unit): AndroidPackageChangeObserver =
