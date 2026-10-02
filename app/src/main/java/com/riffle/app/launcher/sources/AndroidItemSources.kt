@@ -68,6 +68,7 @@ internal fun androidItemSources(
             calendar = calendar,
             feeds = content.feeds,
             search = content.search,
+            ics = content.ics,
         ),
     )
 }

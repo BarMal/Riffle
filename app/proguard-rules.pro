@@ -23,3 +23,11 @@
 # VERIFY in the first CI run: delete these two lines if R8 does not need them.
 -dontwarn androidx.window.extensions.**
 -dontwarn androidx.window.sidecar.**
+
+# ical4j (core/recurrence-ical4j, used only for its Recur rule engine by the ICS feed source). Its jar
+# references optional Groovy extension classes (the Groovy runtime is not a dependency) and the JDK-only
+# java.beans.Transient annotation (absent on Android); neither is on the Recur path. Safe to ignore, and
+# no keep rule is needed: there is no reflection on that path (the calendar parser and its ServiceLoader
+# factories are never used). See docs/release/r8-minification.md.
+-dontwarn groovy.**
+-dontwarn java.beans.Transient

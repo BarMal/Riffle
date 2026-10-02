@@ -32,11 +32,14 @@ import com.riffle.app.launcher.designsystem.RiffleElevation
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsText
+import com.riffle.app.launcher.ics.IcsFeedsText
+import com.riffle.app.launcher.ics.IcsFeedsUiState
 import com.riffle.app.launcher.workspace.sourceAccessRouteFor
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.settings.SourceRow
 import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Settings > Sources. Reachable only from the Developer section while Workspaces (preview) is on. While it is
@@ -59,12 +62,23 @@ internal fun SettingsSourcesPageContent(
         val statuses by controller.statuses.collectAsState()
         val disabled by controller.disabled.collectAsState()
         val rows = remember(controller, statuses, disabled) { controller.rows(statuses, disabled) }
+        val icsFeeds = host.icsFeeds
+        if (icsFeeds != null) {
+            DisposableEffect(icsFeeds) {
+                icsFeeds.open()
+                onDispose { icsFeeds.close() }
+            }
+        }
+        val icsState by (icsFeeds?.state ?: NoIcsFeeds).collectAsState()
         SourcesSettingsContent(
             rows = rows,
             calendarAccess = state.calendarAccessStatus,
             onToggle = controller::setEnabled,
             onAllow = host.onRequestSourceAccess,
             onOpenHiddenItems = { onPageSelected(SettingsPage.EXCLUSIONS) },
+            calendarFeeds = icsState.takeIf { icsFeeds != null },
+            onRefreshCalendarFeeds = { icsFeeds?.refreshAll() },
+            onOpenCalendarFeeds = { onPageSelected(SettingsPage.ICS_FEEDS) },
         )
     }
 }
@@ -78,6 +92,9 @@ internal fun SourcesSettingsContent(
     onAllow: (SourceId) -> Unit,
     modifier: Modifier = Modifier,
     onOpenHiddenItems: () -> Unit = {},
+    calendarFeeds: IcsFeedsUiState? = null,
+    onRefreshCalendarFeeds: () -> Unit = {},
+    onOpenCalendarFeeds: () -> Unit = {},
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -103,6 +120,17 @@ internal fun SourcesSettingsContent(
                 }
             }
         }
+        if (calendarFeeds != null) {
+            SettingsSection(title = IcsFeedsText.TITLE) {
+                IcsRefreshRow(state = calendarFeeds, onRefresh = onRefreshCalendarFeeds)
+                SettingsClickableRow(
+                    modifier = Modifier.testTag(ICS_FEEDS_ROW_TEST_TAG),
+                    title = IcsFeedsText.TITLE,
+                    subtitle = IcsFeedsText.countLabel(calendarFeeds.rows.size),
+                    onClick = onOpenCalendarFeeds,
+                )
+            }
+        }
         SettingsSection(title = "Hidden items") {
             SettingsClickableRow(
                 modifier = Modifier.testTag(HIDDEN_ITEMS_ROW_TEST_TAG),
@@ -115,6 +143,9 @@ internal fun SourcesSettingsContent(
 }
 
 internal const val HIDDEN_ITEMS_ROW_TEST_TAG = "sources-hidden-items-row"
+internal const val ICS_FEEDS_ROW_TEST_TAG = "sources-ics-feeds-row"
+
+private val NoIcsFeeds = MutableStateFlow(IcsFeedsUiState())
 
 /** Splits [this] into [columns] consecutive parts of near-equal size (one part when [columns] is 1). */
 internal fun <T> List<T>.chunkedBy(columns: Int): List<List<T>> {

@@ -7,12 +7,17 @@
   digests. It must never be included in cloud backup or device-to-device transfer: it is cache
   content, not user configuration, and restoring it would be meaningless without a matching
   refresh (which restore must never trigger automatically). See issue #1010.
+
+  The ICS calendar feed DataStore file ("riffle_ics_feeds") holds feed URLs, which can contain secret
+  tokens, plus parsed events. It is excluded from both for the same reason. See issue #1409.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
+        <exclude domain="file" path="datastore/riffle_ics_feeds.preferences_pb" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
+        <exclude domain="file" path="datastore/riffle_ics_feeds.preferences_pb" />
     </device-transfer>
 </data-extraction-rules>

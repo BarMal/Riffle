@@ -97,6 +97,7 @@ internal class CalendarSourceDependencies(
     }
 }
 
+@Suppress("LongParameterList") // One seam over every built-in source's inputs; each has a default.
 internal class BuiltInSourceDependencies(
     val executor: Executor,
     val nowEpochMillis: () -> Long,
@@ -105,6 +106,7 @@ internal class BuiltInSourceDependencies(
     val calendar: CalendarSourceDependencies = CalendarSourceDependencies.UNAVAILABLE,
     val feeds: FeedSourceDependencies = FeedSourceDependencies.NONE,
     val search: SearchSourceDependencies = SearchSourceDependencies(),
+    val ics: IcsSourceDependencies = IcsSourceDependencies.NONE,
 )
 
 /** A [SourceRegistry] over a fixed set of sources; each id resolves to one shared stream. */
@@ -132,6 +134,7 @@ internal fun builtInSourceRegistry(deps: BuiltInSourceDependencies): SourceRegis
             calendarSource(deps),
             feedSource(deps),
             searchSource(deps),
+            icsSource(deps),
         ),
     )
 

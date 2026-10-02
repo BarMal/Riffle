@@ -63,6 +63,7 @@ internal class SearchSourceDependencies(
 internal class ContentSourceDependencies(
     val feeds: FeedSourceDependencies = FeedSourceDependencies.NONE,
     val search: SearchSourceDependencies = SearchSourceDependencies(),
+    val ics: IcsSourceDependencies = IcsSourceDependencies.NONE,
 )
 
 /**

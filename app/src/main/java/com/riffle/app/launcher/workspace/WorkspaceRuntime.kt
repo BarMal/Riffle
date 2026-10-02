@@ -7,6 +7,7 @@ import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.exclusions.ExclusionMatchCounter
 import com.riffle.app.launcher.expressions.ExpressionEnvironment
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
+import com.riffle.app.launcher.ics.IcsFeedsController
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceRegistry
 import com.riffle.core.domain.launcher.workspace.container.ContextChanges
@@ -53,6 +54,7 @@ internal class WorkspaceRuntime(
     private val exclusionLoader: suspend () -> Unit = {},
     private val sourceControls: SourceControls = SourceControls(registry),
     val exclusions: CachedExclusionRepository? = null,
+    val icsFeeds: IcsFeedsController? = null,
 ) {
     /** Loads the per-layout exclusion rules (migrating the legacy ones once); called when the preview is on. */
     suspend fun prepareExclusions() = exclusionLoader()
