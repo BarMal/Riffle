@@ -55,6 +55,8 @@ overwritten (seeded layouts are saved only when you edit something).
 - [ ] Notification cards need notification access (Settings > Permissions); recents need Usage
       access. Check each shows an honest "Allow access to show this" state until granted.
 - [ ] Tap an app item (launches it) and a notification card's Dismiss.
+- [ ] Dock: pinned apps and folders match the standard dock in order and size; tap an app (launches it) and a
+      folder (lists its apps). With a dynamic section on the workspace it shows beside the pins.
 - [ ] TalkBack: the dock offers the action **Workspace menu**; the menu, Exit preview and the editor
       are reachable and read sensibly.
 - [ ] Reduced motion (Settings > Motion, or the system animation scale): jumps snap, no animation.
@@ -69,14 +71,17 @@ overwritten (seeded layouts are saved only when you edit something).
   [`workspaces-pool-editing.md`](../product/workspaces-pool-editing.md)): a one-time import of your standard home. Use
   **Edit** to move, remove, add apps and pages, with Undo. Edits change the preview only, never the standard home, and
   they go stale against it; **Refresh home items** (asks first) replaces the preview with a fresh import. Folder sharing,
-  widget resize and the workspace-menu entry are not built; the dock is still a placeholder.
+  widget resize and the workspace-menu entry are not built; the dock is read-only (see the dock doc).
 - **No search box UI**: the search source exists but nothing writes a query yet.
 - **RSS shows cached articles only** (no refresh path; see #1374); with no cache it is empty.
 - **Calendar events appear only after access is granted**, and only then.
 - Artwork images for feed articles and notification large icons are not loaded (placeholder is
   drawn); app, shortcut and notification-app icons are.
-- The dock is a marked **placeholder** (or the workspace's dynamic section); the real dock is not
-  part of the preview.
+- **The dock is read-only** (see [`workspaces-dock.md`](../product/workspaces-dock.md)): your pinned apps and folders
+  plus the workspace's dynamic section. It reads the live device-class dock (not the pool snapshot), so pin changes
+  made on Home show without a refresh. No pin editing, reorder, long-press menu or expand shelf, and no per-workspace
+  dock overrides yet. The dock pull is not wired in the preview: the *Workspaces* handle and the TalkBack action open
+  the menu.
 - Jump offers whole pages, not individual groups of a page-set; reply, snooze and custom item
   actions do nothing.
 - A page-set page inside the pager relies on nested-scroll hand-off at its edges; the gesture-axis

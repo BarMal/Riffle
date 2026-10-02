@@ -203,7 +203,7 @@ private fun dockPullActionModifier(
  * menu is off. Custom actions of stacked semantics modifiers are concatenated, so this adds to the
  * mode-switch action rather than replacing it.
  */
-private fun workspaceMenuActionModifier(onOpen: (() -> Unit)?): Modifier =
+internal fun workspaceMenuActionModifier(onOpen: (() -> Unit)?): Modifier =
     if (onOpen == null) {
         Modifier
     } else {
