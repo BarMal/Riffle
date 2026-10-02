@@ -194,21 +194,30 @@ private fun PoolEditBar(
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
     ) {
         Column(modifier = Modifier.padding(horizontal = RiffleSpacing.m)) {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = PoolEditText.EDITING_TITLE,
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(end = RiffleSpacing.s).semantics { heading() },
-                )
-                ActionButton(PoolEditText.UNDO, POOL_EDIT_UNDO_TEST_TAG, enabled = state.canUndo) { controller.undo() }
-                ActionButton(PoolEditText.REDO, POOL_EDIT_REDO_TEST_TAG, enabled = state.canRedo) { controller.redo() }
-                AddAppButton(edit, iconLoader)
-                ActionButton(PoolEditText.ADD_PAGE, POOL_EDIT_ADD_PAGE_TEST_TAG, enabled = edit.workspaceId != null) {
-                    edit.workspaceId?.let(controller::addPage)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = PoolEditText.EDITING_TITLE,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(end = RiffleSpacing.s).semantics { heading() },
+                    )
+                    ActionButton(PoolEditText.UNDO, POOL_EDIT_UNDO_TEST_TAG, enabled = state.canUndo) {
+                        controller.undo()
+                    }
+                    ActionButton(PoolEditText.REDO, POOL_EDIT_REDO_TEST_TAG, enabled = state.canRedo) {
+                        controller.redo()
+                    }
+                    AddAppButton(edit, iconLoader)
+                    ActionButton(
+                        PoolEditText.ADD_PAGE,
+                        POOL_EDIT_ADD_PAGE_TEST_TAG,
+                        enabled = edit.workspaceId != null,
+                    ) { edit.workspaceId?.let(controller::addPage) }
                 }
+                // Done stays on screen however narrow the window is.
                 ActionButton(PoolEditText.DONE, POOL_EDIT_DONE_TEST_TAG) { controller.exit() }
             }
             Text(

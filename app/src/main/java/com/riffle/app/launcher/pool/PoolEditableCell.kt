@@ -71,6 +71,7 @@ internal fun PoolEditableCell(
         modifier =
             Modifier
                 .fillMaxSize()
+                .testTag(POOL_EDIT_ITEM_TEST_TAG_PREFIX + item.id.value)
                 .zIndex(if (dragOffset != Offset.Zero) 1f else 0f)
                 .graphicsLayer {
                     translationX = dragOffset.x
@@ -103,7 +104,6 @@ internal fun PoolEditableCell(
             modifier =
                 Modifier
                     .matchParentSize()
-                    .testTag(POOL_EDIT_ITEM_TEST_TAG_PREFIX + item.id.value)
                     .clickable { controller.select(id.takeUnless { selected }) }
                     .pointerInput(id) {
                         detectDragGesturesAfterLongPress(
