@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleElevation
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.exclusions.ExclusionsSettingsText
 import com.riffle.app.launcher.workspace.sourceAccessRouteFor
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.settings.SourceRow
@@ -41,7 +43,10 @@ import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
  * open each source has one status subscription (shared with the containers); closing it releases them all.
  */
 @Composable
-internal fun SettingsSourcesPageContent(state: SettingsSurfaceState) {
+internal fun SettingsSourcesPageContent(
+    state: SettingsSurfaceState,
+    onPageSelected: (SettingsPage) -> Unit = {},
+) {
     val host = LocalWorkspaceSettingsHost.current
     if (host == null) {
         SettingsPreviewOffNote()
@@ -59,6 +64,7 @@ internal fun SettingsSourcesPageContent(state: SettingsSurfaceState) {
             calendarAccess = state.calendarAccessStatus,
             onToggle = controller::setEnabled,
             onAllow = host.onRequestSourceAccess,
+            onOpenHiddenItems = { onPageSelected(SettingsPage.EXCLUSIONS) },
         )
     }
 }
@@ -71,6 +77,7 @@ internal fun SourcesSettingsContent(
     onToggle: (SourceId, Boolean) -> Unit,
     onAllow: (SourceId) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenHiddenItems: () -> Unit = {},
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -97,13 +104,17 @@ internal fun SourcesSettingsContent(
             }
         }
         SettingsSection(title = "Hidden items") {
-            SettingsListRow(
-                title = SourcesSettingsText.HIDDEN_ITEMS_SOON,
-                subtitle = SourcesSettingsText.HIDDEN_ITEMS_SOON_BODY,
+            SettingsClickableRow(
+                modifier = Modifier.testTag(HIDDEN_ITEMS_ROW_TEST_TAG),
+                title = ExclusionsSettingsText.TITLE,
+                subtitle = ExclusionsSettingsText.ROW_SUBTITLE,
+                onClick = onOpenHiddenItems,
             )
         }
     }
 }
+
+internal const val HIDDEN_ITEMS_ROW_TEST_TAG = "sources-hidden-items-row"
 
 /** Splits [this] into [columns] consecutive parts of near-equal size (one part when [columns] is 1). */
 internal fun <T> List<T>.chunkedBy(columns: Int): List<List<T>> {

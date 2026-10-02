@@ -9,13 +9,6 @@ import kotlinx.coroutines.flow.first
 
 private val Context.exclusionDataStore by preferencesDataStore(name = "riffle_exclusions")
 
-/** Suspend storage for the per-layout exclusion rules; the DataStore-backed store implements it, tests fake it. */
-internal interface ExclusionStorePort {
-    suspend fun read(): LayoutExclusionRules?
-
-    suspend fun write(rules: LayoutExclusionRules)
-}
-
 /**
  * The durable exclusion rules: one JSON blob in its own DataStore file, deliberately apart from the workspace
  * blob so resetting or restoring workspaces can never un-hide anything. A blob that cannot be decoded reads

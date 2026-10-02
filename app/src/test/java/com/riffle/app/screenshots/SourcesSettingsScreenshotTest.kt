@@ -8,10 +8,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.HIDDEN_ITEMS_ROW_TEST_TAG
 import com.riffle.app.launcher.SourcesSettingsContent
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
@@ -37,6 +39,7 @@ class SourcesSettingsScreenshotTest {
 
     private val toggles = mutableListOf<Pair<SourceId, Boolean>>()
     private val allowed = mutableListOf<SourceId>()
+    private var openedHiddenItems = 0
 
     @Test
     fun sourcesCompact() {
@@ -66,7 +69,17 @@ class SourcesSettingsScreenshotTest {
         render()
 
         assertEquals(emptyList<SourceId>(), allowed)
-        composeRule.onNodeWithText("Hidden items and rules (coming soon)").assertExists()
+        composeRule.onNodeWithTag(HIDDEN_ITEMS_ROW_TEST_TAG).assertExists()
+        composeRule.onNodeWithText("Hidden items and rules (coming soon)").assertDoesNotExist()
+    }
+
+    @Test
+    fun theHiddenItemsRowOpensTheRulesPage() {
+        render()
+
+        composeRule.onNodeWithTag(HIDDEN_ITEMS_ROW_TEST_TAG).performScrollTo().performClick()
+
+        assertEquals(1, openedHiddenItems)
     }
 
     @Test
@@ -103,6 +116,7 @@ class SourcesSettingsScreenshotTest {
                         calendarAccess = CalendarAccessStatus.NOT_GRANTED,
                         onToggle = { id, enabled -> toggles += id to enabled },
                         onAllow = { allowed += it },
+                        onOpenHiddenItems = { openedHiddenItems++ },
                     )
                 }
             }

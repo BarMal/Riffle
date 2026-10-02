@@ -93,7 +93,8 @@ internal fun SettingsPageContent(
             SettingsPage.HIDDEN_APPS -> SettingsHiddenAppsPageContent(state = state, onAction = onAction)
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state)
             SettingsPage.WORKSPACES -> SettingsWorkspacesPageContent(state = state, onAction = onAction)
-            SettingsPage.SOURCES -> SettingsSourcesPageContent(state = state)
+            SettingsPage.SOURCES -> SettingsSourcesPageContent(state = state, onPageSelected = onPageSelected)
+            SettingsPage.EXCLUSIONS -> SettingsExclusionsPageContent(state = state, onAction = onAction)
         }
     }
 }

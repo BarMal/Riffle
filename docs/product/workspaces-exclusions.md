@@ -1,7 +1,8 @@
 # Workspaces: source exclusion rules (as built, slice S6)
 
-Design: section 14 of `workspaces-configuration.md`. This file records what is built (issue #1382), the
-vocabulary, the differences from the design, and what is not done. Management UI is a separate slice.
+Design: section 14 of `workspaces-configuration.md`. This file records what is built (issue #1382; the management
+UI is issue #1402, see "Management UI" below), the vocabulary, the differences from the design, and what is not
+done.
 
 ## Model (`core/domain/.../workspace/exclusions/`)
 
@@ -71,14 +72,82 @@ the lens filter, sort, limit, group and project. It reads `LensEvaluationContext
 `WorkspaceRuntime.prepareExclusions()` (called when the preview layer composes) loads and migrates them. The layout is
 derived from the configuration at evaluation time. With the preview off nothing runs. The classic launcher still applies
 hidden apps and hide rules itself; migrated rules are therefore redundant with the adapters' own filtering today.
-Rules are read when a lens is evaluated; a lens is not re-evaluated by a rule change alone yet (no management UI exists).
+Rules are read when a lens is evaluated; since the management UI (below) a rule change also re-evaluates live lenses.
+
+## Management UI (as built, issue #1402)
+
+Settings > Developer > Sources > **Hidden items and rules** (`SettingsPage.EXCLUSIONS`, reached from the row that
+replaced the "coming soon" placeholder on the Sources page; same preview gate as Workspaces and Sources, so with
+the preview off nothing exists and nothing runs). Details of the page are in
+[`workspaces-settings.md`](workspaces-settings.md).
+
+* **Layer split.** Domain (`core/domain/.../workspace/settings/`): `ExclusionsSettingsPlanner` (model: rules grouped by
+  kind APPS, FEEDS_AND_GROUPS, ITEMS, TEXT, EMPTY_CONTENT, with a plain description, "only on this layout", match count),
+  `ExclusionRuleDescriber`, `TextRuleValidator`, `ExclusionsSettingsAction` (`SetEnabled`, `Delete`, `AddText`,
+  `ApplyToAllLayouts`) with `applyTo` returning an `ExclusionsChange` (whole `before`/`after` value, so Undo is putting
+  `before` back), and `ExclusionHideActions` (the contextual Hide, below). App, Compose-free
+  (`app/.../launcher/exclusions/`): `ExclusionsSettingsController` over `CachedExclusionRepository`,
+  `ExclusionMatchCounter`, `ExclusionsSettingsText` / `ExclusionsAnnouncements`. Compose: `SettingsExclusionsPage`,
+  `ExclusionsSettingsRows`, `ExclusionsSettingsDialogs`.
+* **Change signal (the old known limitation).** `CachedExclusionRepository` now owns every change after load:
+  `update(transform)` replaces the cache at once, persists the latest value in order on a scope (writes are disabled for
+  the process if the initial read threw, as before), bumps `version`, and notifies listeners. It is the
+  `ContextChanges` (new `fun interface` next to `SourceBackedLensResultProvider`) that `workspaceLensProvider(...,
+  exclusionChanges = ...)` hands to the provider: each live observation subscribes and, on a change, re-runs its latest
+  source states through the evaluator (fresh `LensEvaluationContext`, so the new rules apply) without re-reading or
+  re-subscribing any source; cancelling the observation detaches it. The first `initialize` also notifies, so a lens
+  that composed before the rules loaded fixes itself. With no signal passed (default) behaviour is unchanged.
+  `SourceBackedLensResultProvider`'s constructor gained `contextChanges` before the trailing `context` lambda.
+* **Per layout and N10.** Rules are viewed and edited for the layout selected in the layout tabs, keyed by the plain
+  device class exactly as stored (N10, folding `PHONE_LANDSCAPE` into `PHONE`, is still **not** applied; the page shows the
+  layout name, and a rule with no equal rule on another listed layout carries "Only on this layout"). "Apply to all
+  layouts" adds a copy (fresh id, user origin, enabled state kept) to every other layout, de-duplicated by source and
+  matcher, so it is idempotent; it is undoable.
+* **Actions.** Switch per rule (the whole row; no Undo, it is its own inverse); Delete asks first, announces in the Settings
+  snackbar (polite live region) with Undo. Add (text rules) and Apply to all layouts also offer Undo. Only the latest
+  undoable change can be undone: any later change, dismissal, leaving the page, or a change to the rules from elsewhere
+  (the repository version moved) ends the offer, so Undo never overwrites something newer.
+* **Text rules.** Source (notifications, media, calendar, RSS, apps), field (title, subtitle, body), mode (exactly,
+  contains, pattern with `{?}`) and the typed text; the value is stored normalised like the evaluator does. Validation is
+  pure and shown live: at least 3 characters that are not wildcards (the same minimum as "hide ones like this"), at most
+  120, a supported source, not a duplicate by source and matcher, the 500 user-rule cap. Optional app narrowing of a typed
+  rule is not offered (migrated and contextual rules keep theirs).
+* **Counts.** `ExclusionMatchCounter` reads (through the same shared, enablement-wrapped registry the containers and the
+  Sources page read through, so no upstream of its own) only the sources the viewed layout's rules can hide from, while the
+  page is open, and computes `SourceExclusionFilter.matchCounts` on a background thread (stale results dropped, at most
+  2,000 items per source). A rule has a count only when it is enabled and its own source is Ready; otherwise the row says
+  "Turned off" or "Source is off" or shows nothing (loading or no permission). Items are never rendered, logged or stored;
+  they are dropped on close. A rule row shows only the generated description: an app is a package (with profile or launcher
+  entry), a group is the feed or group key, an item rule is "One specific item" (its key is never shown), a text rule shows
+  the pattern the user authored.
+* **Contextual "Hide this" (pure action and hook; no gesture yet).** `ExclusionHideActions.choicesFor(item)` lists what an
+  item supports (app, feed or group, item, like this, empty content), with the design's per-source vocabulary ("Hide
+  notifications from this app", "Hide this feed", "Hide this article", ...), built on the existing `ExclusionRuleBuilders`
+  (so sensitive items offer only the structural ones). `ExclusionHideActions.apply(rules, layout, item, kind, allLayouts)`
+  returns an undoable `ExclusionsChange` whose message is "Hidden on <layout>: <fixed phrase>" (never item text); hiding
+  something whose rule exists but is switched off turns it back on; an equal enabled rule is a no-op ("Already hidden").
+  `ExclusionsSettingsController.hide(...)` runs it with the snackbar and Undo. **Not wired to a gesture:** item actions are the
+  items' own `Item.actions` rendered as card buttons by the expressions (and a `WorkspaceItemActions` that handles only Open and
+  Dismiss), and the preview has no long-press menu or snackbar host, so adding Hide would mean source mappers emitting new
+  actions or a new menu on every expression (and screenshots of both). That is a slice of its own; the hook above is what it
+  will call (see "Not done").
+
+* **Test note.** The add-text-rule dialog has no Roborazzi test: its text field's cursor-blink animation never lets the
+  Compose test clock idle (idle timeout, and pausing the clock hung the job). Dialog interaction is validated manually
+  (owner checklist); the logic is covered by `TextRuleValidator` (including `actionFor`, the button's draft-to-action
+  mapping) and controller JVM tests. Page-level and delete-dialog screenshots remain.
 
 ## Not done
 
-* Management and contextual-creation UI, snackbar with Undo, "Hide on all layouts", layout tabs (separate slice).
+* Contextual "Hide ..." gesture or menu on items in the preview expressions (the pure action, tests and the controller hook
+  exist), with the "Manage" and "Hide on all layouts" snackbar actions and the TalkBack custom action "Hide Slack
+  notifications" (needs the app label, which the domain does not have).
+* Editing a rule (change mode or value) and the live preview of matching items while typing; naming a rule (`label`).
+* Optional app narrowing for a typed text rule; the "Copy these rules to the other layouts" bulk action and the
+  "Also add the hiding rules" option of Copy from other layout.
 * Channel, thread and calendar-id keys and the generic `SourceKey` matcher (owner decision N5: after the flip).
 * Moving the classic launcher, drawer, search, badges and dock cards to the engine; `AppVisibilityRepository` as an
-  adapter over the rules; removing `withHiddenApps` and `NotificationHideRuleFilter` from the adapters.
+  adapter over the rules; removing `withHiddenApps` and `NotificationHideRuleFilter` from the adapters. Until then a rule
+  edited here affects the preview and what feeds it; the classic launcher still applies the legacy hidden apps and hide rules.
 * Backup (`"exclusions"` document key) and import of pre-S6 backups through the migration (S8).
-* Notification variant of `isAppHidden` for non-lens consumers; re-evaluation of observers when rules change; the
-  N10 landscape fold.
+* Notification variant of `isAppHidden` for non-lens consumers; the N10 landscape fold.
