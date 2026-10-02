@@ -66,7 +66,9 @@ itself is unchanged.
 - One row per registered built-in source in a stable order: Apps, Recent apps, Quick actions, Notifications,
   Media, Calendar, RSS feeds, Search (from the registry's descriptors, not hard-coded). Each row has a one-line
   "what this source shows", its **status as text** in a chip (Ready, Loading, Needs permission, Off,
-  Unavailable) and a switch. The whole row is one toggle for TalkBack.
+  Unavailable), a "Used by N places" line and a switch. Tapping the text part opens the source's detail page (the
+  switch is its own control), and an **Add a source** section offers Add RSS feed and Add calendar feed. Detail pages,
+  Used by and Add source are described in [`workspaces-source-pages.md`](workspaces-source-pages.md).
 - **Status** comes from the real source states through `SourceStatusMonitor`, built over the same shared
   registry the containers read through (`SharedSourceRegistry`), so the page adds **no upstream of its own**:
   one subscription per source while the page is open, all cancelled when it closes (the page owns
@@ -80,6 +82,9 @@ itself is unchanged.
   ids; nothing else), through `StoredSourceEnablement`. Everything is on until turned off.
 - **Hidden items and rules** is a row (replacing the earlier "coming soon" placeholder) that opens the page below.
 - Unfolded: the rows run in two columns.
+
+Per-source detail pages (issue #1419) are `SettingsPage.SOURCE_*` Developer pages; Back from them, Hidden items and
+Calendar feeds returns to Sources.
 
 ## Hidden items and rules page (issue #1402, as built)
 
@@ -200,3 +205,5 @@ other layout, source off, not loaded, the delete and add dialogs and the row int
       Delete are in the actions menu; the snackbar and the rule-count heading are announced politely.
       Large font: nothing cut off. Unfolded: two columns.
 - [ ] Preview off: neither the page nor its row exists, and nothing else in Settings changed.
+- [ ] Source detail pages, Used by and Add source: see the checklist in
+      [`workspaces-source-pages.md`](workspaces-source-pages.md).

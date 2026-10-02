@@ -20,7 +20,7 @@ import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 
 @Composable
-@Suppress("CyclomaticComplexMethod")
+@Suppress("CyclomaticComplexMethod", "LongMethod")
 internal fun SettingsPageContent(
     modifier: Modifier,
     state: SettingsSurfaceState,
@@ -96,6 +96,22 @@ internal fun SettingsPageContent(
             SettingsPage.SOURCES -> SettingsSourcesPageContent(state = state, onPageSelected = onPageSelected)
             SettingsPage.EXCLUSIONS -> SettingsExclusionsPageContent(state = state, onAction = onAction)
             SettingsPage.ICS_FEEDS -> SettingsIcsFeedsPageContent()
+            SettingsPage.SOURCE_APPS,
+            SettingsPage.SOURCE_RECENTS,
+            SettingsPage.SOURCE_SHORTCUTS,
+            SettingsPage.SOURCE_NOTIFICATIONS,
+            SettingsPage.SOURCE_MEDIA,
+            SettingsPage.SOURCE_CALENDAR,
+            SettingsPage.SOURCE_RSS,
+            SettingsPage.SOURCE_SEARCH,
+            SettingsPage.SOURCE_ICS,
+            ->
+                SettingsSourceDetailPageContent(
+                    page = page,
+                    state = state,
+                    onPageSelected = onPageSelected,
+                    onAction = onAction,
+                )
         }
     }
 }

@@ -33,6 +33,8 @@ import com.riffle.app.launcher.exclusions.ExclusionsAnnouncements
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsText
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleId
 import com.riffle.core.domain.launcher.workspace.settings.ExclusionRuleRow
 import com.riffle.core.domain.launcher.workspace.settings.ExclusionRuleSection
@@ -53,6 +55,7 @@ internal const val EXCLUSIONS_SUMMARY_TEST_TAG = "exclusions-summary"
 internal fun SettingsExclusionsPageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
+    sources: Set<SourceId>? = null,
 ) {
     val host = LocalWorkspaceSettingsHost.current
     val controller = host?.exclusions
@@ -66,7 +69,7 @@ internal fun SettingsExclusionsPageContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     } else {
-        HostedExclusionsPage(controller = controller, state = state, onAction = onAction)
+        HostedExclusionsPage(controller = controller, state = state, onAction = onAction, sources = sources)
     }
 }
 
@@ -75,6 +78,7 @@ private fun HostedExclusionsPage(
     controller: ExclusionsSettingsController,
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
+    sources: Set<SourceId>?,
 ) {
     val viewed = state.selectedLayoutDeviceClass
     val tabs =
@@ -95,6 +99,7 @@ private fun HostedExclusionsPage(
         model = model,
         viewed = viewed,
         tabs = tabs,
+        sources = sources,
         callbacks =
             ExclusionsPageCallbacks(
                 onAction = { action -> controller.dispatch(viewed, action) },
@@ -142,14 +147,18 @@ internal fun ExclusionsSettingsContent(
     tabs: List<SettingsLayoutDeviceTab>,
     callbacks: ExclusionsPageCallbacks,
     modifier: Modifier = Modifier,
+    sources: Set<SourceId>? = null,
 ) {
+    // On a source's own page only that source's rules are listed; text rules can only be added for notifications there.
+    val shown = if (model != null && sources != null) model.forSources(sources) else model
+    val canAddHere = sources == null || SourceIds.NOTIFICATIONS in sources
     var dialog by remember { mutableStateOf<ExclusionDialog?>(null) }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(RiffleSpacing.l),
     ) {
         WorkspacesLayoutTabs(tabs = tabs, selected = viewed, onSelect = callbacks.onSelectLayout)
-        if (model == null) {
+        if (shown == null) {
             Text(
                 modifier = Modifier.padding(horizontal = RiffleSpacing.s),
                 text = ExclusionsSettingsText.NOT_LOADED,
@@ -157,10 +166,10 @@ internal fun ExclusionsSettingsContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            ExclusionsNotes(model)
-            if (model.isEmpty) ExclusionsEmptyState()
-            ExclusionsSections(model = model, callbacks = callbacks, openDialog = { dialog = it })
-            ExclusionsAddSection(model = model, openDialog = { dialog = it })
+            ExclusionsNotes(shown)
+            if (shown.isEmpty) ExclusionsEmptyState()
+            ExclusionsSections(model = shown, callbacks = callbacks, openDialog = { dialog = it })
+            if (canAddHere) ExclusionsAddSection(model = shown, openDialog = { dialog = it })
         }
     }
     dialog?.let { open ->

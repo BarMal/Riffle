@@ -65,6 +65,7 @@ import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.sources.ContentSourceDependencies
 import com.riffle.app.launcher.sources.FeedSourceDependencies
 import com.riffle.app.launcher.sources.IcsSourceDependencies
+import com.riffle.app.launcher.sources.SearchSourceDependencies
 import com.riffle.app.launcher.sources.androidCalendarSourceDependencies
 import com.riffle.app.launcher.sources.androidItemSources
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
@@ -91,6 +92,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
 import com.riffle.core.domain.launcher.workspace.sources.EnablementSourceRegistry
+import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -215,6 +217,7 @@ internal class MainActivityDependencies(
      * platform data. [launcherSettings] supplies the notification hide rules and RSS feeds.
      */
     fun workspaceRuntime(launcherSettings: () -> LauncherSettings): WorkspaceRuntime {
+        val searchQuery = SearchQueryHolder()
         val registry =
             androidItemSources(
                 installedApps = installedAppRepository,
@@ -231,6 +234,7 @@ internal class MainActivityDependencies(
                     ),
                 content =
                     ContentSourceDependencies(
+                        search = SearchSourceDependencies(query = searchQuery),
                         feeds =
                             FeedSourceDependencies(
                                 configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
@@ -290,6 +294,7 @@ internal class MainActivityDependencies(
             sourceControls = SourceControls(statusRegistry = shared, enablement = enablement),
             exclusions = exclusionRepository,
             icsFeeds = IcsFeedsController(icsFeedRepository, icsRefreshCoordinator),
+            searchQuery = searchQuery,
         )
     }
 

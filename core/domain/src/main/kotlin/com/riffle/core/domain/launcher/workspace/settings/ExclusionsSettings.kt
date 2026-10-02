@@ -71,6 +71,19 @@ data class ExclusionsSettingsModel(
     val rows: List<ExclusionRuleRow> get() = sections.flatMap { it.rows }
 
     fun row(id: ExclusionRuleId): ExclusionRuleRow? = rows.firstOrNull { it.id == id }
+
+    /**
+     * Only the rules that apply to [sources] (for a source's own settings page); the rest of the model, such as
+     * whether a rule can be added, is unchanged. Rule order and kinds keep their order.
+     */
+    fun forSources(sources: Set<SourceId>): ExclusionsSettingsModel {
+        val kept =
+            sections.mapNotNull { section ->
+                section.rows.filter { it.sourceId in sources }.takeIf { it.isNotEmpty() }
+                    ?.let { ExclusionRuleSection(section.kind, it) }
+            }
+        return copy(sections = kept, ruleCount = kept.sumOf { it.rows.size })
+    }
 }
 
 /** Plain-language descriptions of rules, used by the page and by announcements. Pure; never reads items. */

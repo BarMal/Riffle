@@ -60,6 +60,10 @@ overwritten (seeded layouts are saved only when you edit something).
       check the other layout in Settings > Hidden items and rules. Long-press an app icon in an icon grid for the same menu.
       With TalkBack on, the actions menu of a row lists the Hide choices and the snackbar is read out. The menu never shows
       item text, and a sensitive (redacted) notification offers no "like this".
+- [ ] Settings > Sources: tap a source row to open its page (Notifications rules, Hidden apps, RSS feeds, Search model,
+      Calendar feeds, status-only pages); the switch alone turns a source off; every row says "Used by N places" and the
+      Used by list opens the workspace in the editor; Add RSS feed and Add calendar feed open the existing add flows
+      (details: [`workspaces-source-pages.md`](../product/workspaces-source-pages.md)).
 - [ ] Editor, Source step, choose Search: type a query (the preview updates after a short pause, not per key), clear it with
       the X, type 130 characters and confirm the counter stops at 128, tap Next quickly after typing and confirm the query
       kept. Rotate and dismiss the keyboard (Done) and check nothing is lost.

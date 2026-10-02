@@ -1,7 +1,14 @@
 package com.riffle.app.launcher.workspace
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.ContainerId
+import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
+import com.riffle.core.domain.launcher.workspace.Lens
+import com.riffle.core.domain.launcher.workspace.LensBinding
+import com.riffle.core.domain.launcher.workspace.PageContainer
+import com.riffle.core.domain.launcher.workspace.PageContent
+import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
@@ -157,5 +164,30 @@ class WorkspacesSettingsControllerTest {
         assertFalse(empty.dispatch(phone, WorkspacesSettingsAction.Activate(WorkspaceId("a"))))
         assertEquals(0, changes)
         assertNull(empty.feedback.value)
+    }
+
+    @Test
+    fun sourceUsageIsNullUntilLoadedAndCountsTheGivenLayoutsOnly() {
+        assertNull(WorkspacesSettingsController(InMemoryWorkspaceRepository()).sourceUsage(listOf(phone)))
+
+        val usage = checkNotNull(controller.sourceUsage(listOf(phone)))
+
+        assertEquals(0, usage.countOf(SourceIds.ALL_APPS))
+        assertTrue(usage.layoutsOf(SourceIds.ALL_APPS).isEmpty())
+    }
+
+    @Test
+    fun sourceUsageReadsTheStoredPagesAndNeverChangesThem() {
+        val binding = LensBinding(Lens(listOf(SourceIds.RSS)), ExpressionKind.LIST)
+        val page = PageContainer(ContainerId("p"), PageContent.Bound(binding))
+        val feeds = Workspace(WorkspaceId("w"), "Feeds", listOf(page))
+        val repo = InMemoryWorkspaceRepository(WorkspaceSet(mapOf(phone to LayoutWorkspaces.single(feeds))))
+        val before = repo.load()
+
+        val usage = checkNotNull(WorkspacesSettingsController(repo).sourceUsage(listOf(phone)))
+
+        assertEquals(1, usage.countOf(SourceIds.RSS))
+        assertEquals("Feeds", usage.placesOf(SourceIds.RSS).single().workspaceName)
+        assertEquals(before, repo.load())
     }
 }
