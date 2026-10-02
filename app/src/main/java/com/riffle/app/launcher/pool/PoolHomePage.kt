@@ -1,8 +1,10 @@
 package com.riffle.app.launcher.pool
 
 import android.view.ViewGroup
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
@@ -25,6 +28,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -58,17 +62,21 @@ import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.workspace.PageHost
+import com.riffle.core.domain.launcher.workspace.pool.PoolHomeTarget
+import com.riffle.core.domain.launcher.workspace.pool.PoolItemId
 import kotlin.math.roundToInt
 
 internal const val POOL_HOME_PAGE_TEST_TAG = "workspace-preview-pool-home"
 internal const val POOL_HOME_EMPTY_TEST_TAG = "workspace-preview-pool-home-empty"
 internal const val POOL_HOME_FOLDER_TEST_TAG = "workspace-preview-pool-home-folder"
+internal const val POOL_HOME_REMOVE_PAGE_TEST_TAG = "workspace-preview-pool-home-remove-page"
 
 internal const val POOL_HOME_EMPTY_TITLE = "No home items found"
 internal const val POOL_HOME_EMPTY_BODY =
     "The standard home has no items for this layout yet. Add some on Home, then use Refresh home items."
 internal const val POOL_HOME_WIDGET_PLACEHOLDER = "Widget placeholder"
 internal const val POOL_HOME_FOLDER_CLOSE = "Close"
+internal const val POOL_HOME_EMPTY_PAGE = "This page is empty."
 
 private const val ICON_CELL_FRACTION = 0.8f
 private val WidgetCorner = 16.dp
@@ -77,7 +85,7 @@ private val FolderRowIcon = 40.dp
 /**
  * The preview's read-only view of the user's real home items. [resolve] maps a `home.grid` page to the pool's
  * page (null when the pool has none), [onOpen] launches an app or shortcut, [onReimport] (when present) catches the
- * pool up with the standard home. Nothing here edits items.
+ * pool up with the standard home. Items are edited only through [edit] (see `PoolHomeEditor`).
  */
 internal class PlacedHomeContent(
     val resolve: (PageHost) -> LauncherPage?,
@@ -86,6 +94,8 @@ internal class PlacedHomeContent(
     val labelSettings: HomeLabelSettings,
     val onOpen: (AppShortcutItem) -> Unit,
     val onReimport: (() -> Unit)? = null,
+    /** Edit mode of the pool (null: the page stays read-only). */
+    val edit: PoolEditUi? = null,
 )
 
 /** One placed home page of the pool, or an honest notice when there is none. */
@@ -116,18 +126,58 @@ internal fun PoolHomePage(
             )
         }
     } else {
-        PoolHomeGrid(page, home, modifier.fillMaxSize().padding(contentPadding))
+        val editState by (home.edit?.controller?.state ?: NoPoolEditState).collectAsState()
+        val chrome =
+            if (editState.editing) {
+                Modifier.padding(
+                    top = PoolEditTopChrome,
+                    bottom = PoolEditBottomChrome,
+                )
+            } else {
+                Modifier
+            }
+        PoolHomeGrid(page, home, modifier.fillMaxSize().padding(contentPadding).then(chrome))
     }
 }
 
+/** What a grid page needs while it is being edited: the editor, where the page sits, and the selected item. */
+private class GridEditing(
+    val ui: PoolEditUi,
+    val target: PoolHomeTarget,
+    val selected: PoolItemId?,
+)
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PoolHomeGrid(
     page: LauncherPage,
     home: PlacedHomeContent,
     modifier: Modifier = Modifier,
 ) {
+    val edit = home.edit
+    val editState by (edit?.controller?.state ?: NoPoolEditState).collectAsState()
+    val workspace = edit?.workspaceId
+    val editing =
+        if (edit != null && workspace != null && editState.editing) {
+            GridEditing(edit, PoolHomeTarget(workspace, page.id), editState.selected)
+        } else {
+            null
+        }
     var openFolder by remember(page.id) { mutableStateOf<FolderItem?>(null) }
-    BoxWithConstraints(modifier = modifier.testTag(POOL_HOME_PAGE_TEST_TAG), contentAlignment = Alignment.Center) {
+    val enterEdit: Modifier =
+        if (edit != null && !editState.editing) {
+            Modifier.combinedClickable(
+                onClick = {},
+                onLongClickLabel = PoolEditText.ENTER_EDIT_LONG_PRESS,
+                onLongClick = { edit.enter() },
+            )
+        } else {
+            Modifier
+        }
+    BoxWithConstraints(
+        modifier = modifier.testTag(POOL_HOME_PAGE_TEST_TAG).then(enterEdit),
+        contentAlignment = Alignment.Center,
+    ) {
         val density = LocalDensity.current
         val cellPx =
             HomeGridLayoutMetrics().cellSizePx(
@@ -138,24 +188,74 @@ private fun PoolHomeGrid(
         val cell = with(density) { cellPx.toDp() }
         Box(modifier = Modifier.requiredSize(cell * page.grid.columns, cell * page.grid.rows)) {
             page.items.forEach { item ->
-                item.placement?.let { at ->
-                    key(item.id.value) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .offset(cell * at.cell.column, cell * at.cell.row)
-                                    .size(cell * at.span.columns, cell * at.span.rows),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            PoolHomeItem(item, cell, home) { openFolder = it }
-                        }
-                    }
+                key(item.id.value) {
+                    PoolGridSlot(item, page, cell, cellPx, home, editing) { openFolder = it }
                 }
             }
+        }
+        if (editing != null && page.items.none { it.placement != null }) {
+            EmptyPageActions(editing.ui, editing.target, Modifier.align(Alignment.Center))
         }
     }
     openFolder?.let { folder ->
         PoolFolderDialog(folder, home, onDismiss = { openFolder = null })
+    }
+}
+
+/** One placed item at its cell: read-only (tap opens, long press starts editing) or editable. */
+@Composable
+private fun PoolGridSlot(
+    item: LauncherItem,
+    page: LauncherPage,
+    cell: Dp,
+    cellPx: Float,
+    home: PlacedHomeContent,
+    editing: GridEditing?,
+    onOpenFolder: (FolderItem) -> Unit,
+) {
+    val at = item.placement ?: return
+    Box(
+        modifier =
+            Modifier
+                .offset(cell * at.cell.column, cell * at.cell.row)
+                .size(cell * at.span.columns, cell * at.span.rows),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (editing != null) {
+            PoolEditableCell(
+                item = item,
+                page = page,
+                cellPx = cellPx,
+                target = editing.target,
+                edit = editing.ui,
+                selected = editing.selected?.value == item.id.value,
+            ) { PoolHomeItem(item, cell, home, null, onOpenFolder) }
+        } else {
+            val ui = home.edit
+            val onLongPress: (() -> Unit)? =
+                ui?.let {
+                    {
+                        if (it.enter()) it.controller.select(PoolItemId(item.id.value))
+                    }
+                }
+            PoolHomeItem(item, cell, home, onLongPress, onOpenFolder)
+        }
+    }
+}
+
+/** An empty page in edit mode says so and can be removed (the last page cannot; the controller says why). */
+@Composable
+private fun EmptyPageActions(
+    edit: PoolEditUi,
+    target: PoolHomeTarget,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(POOL_HOME_EMPTY_PAGE, style = MaterialTheme.typography.bodyMedium)
+        TextButton(
+            onClick = { edit.controller.removePage(target) },
+            modifier = Modifier.heightIn(min = 48.dp).testTag(POOL_HOME_REMOVE_PAGE_TEST_TAG),
+        ) { Text(PoolEditText.REMOVE_PAGE) }
     }
 }
 
@@ -164,17 +264,18 @@ private fun PoolHomeItem(
     item: LauncherItem,
     cell: Dp,
     home: PlacedHomeContent,
+    onLongPress: (() -> Unit)?,
     onOpenFolder: (FolderItem) -> Unit,
 ) {
     val iconSize = minOf(home.labelSettings.iconSizeDp.dp, cell * ICON_CELL_FRACTION)
     when (item) {
         is AppShortcutItem ->
-            ItemColumn(item.label, onClick = { home.onOpen(item) }) {
+            ItemColumn(item.label, onClick = { home.onOpen(item) }, onLongClick = onLongPress) {
                 LauncherAppIcon(item.appIdentity, item.label, home.iconLoader, Modifier.size(iconSize))
                 WallpaperReadableLabel(item.label, home.labelSettings)
             }
         is FolderItem ->
-            ItemColumn(item.label, onClick = { onOpenFolder(item) }) {
+            ItemColumn(item.label, onClick = { onOpenFolder(item) }, onLongClick = onLongPress) {
                 FolderPreviewIcon(item, home.iconLoader, iconSize.value.roundToInt())
                 WallpaperReadableLabel(item.label, home.labelSettings)
             }
@@ -182,14 +283,23 @@ private fun PoolHomeItem(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ItemColumn(
     label: String,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
     content: @Composable () -> Unit,
 ) {
     Column(
-        modifier = Modifier.clickable(onClickLabel = "Open $label", role = Role.Button, onClick = onClick),
+        modifier =
+            Modifier.combinedClickable(
+                onClickLabel = "Open $label",
+                role = Role.Button,
+                onLongClickLabel = onLongClick?.let { PoolEditText.ENTER_EDIT_LONG_PRESS },
+                onLongClick = onLongClick,
+                onClick = onClick,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {

@@ -74,10 +74,12 @@ overwritten (seeded layouts are saved only when you edit something).
 
 ## Known gaps
 
-- **Home pages show your real home items, read-only** (S4, see
-  [`workspaces-pool-cutover.md`](../product/workspaces-pool-cutover.md)): apps, shortcuts, folders and widgets from a
-  one-time import of your standard home. They go stale when you rearrange Home; use **Refresh home items** in the preview
-  bar. No editing.
+- **Home pages show your real home items and can be edited** (S4/S5, see
+  [`workspaces-pool-cutover.md`](../product/workspaces-pool-cutover.md) and
+  [`workspaces-pool-editing.md`](../product/workspaces-pool-editing.md)): a one-time import of your standard home. Use
+  **Edit** to move, remove, add apps and pages, with Undo. Edits change the preview only, never the standard home, and
+  they go stale against it; **Refresh home items** (asks first) replaces the preview with a fresh import. Folder sharing,
+  widget resize and the workspace-menu entry are not built; the dock is read-only (see the dock doc).
 - **Search text:** a Search lens can have its own text in the editor (Source step; empty uses the shared text), but there is
   still no shared search box on pages that would write the shared text.
 - **Hide from the preview:** items have a "More options" button (long press on icon-only cells, TalkBack actions on both)

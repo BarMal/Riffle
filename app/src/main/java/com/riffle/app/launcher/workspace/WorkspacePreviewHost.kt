@@ -17,6 +17,7 @@ import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.WorkspaceMenuHost
 import com.riffle.app.launcher.pool.PlacedHomeContent
+import com.riffle.app.launcher.pool.PoolEditUi
 import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.dockFor
@@ -25,6 +26,7 @@ import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.dock.PreviewDock
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
+import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -161,8 +163,20 @@ private fun rememberPlacedHome(
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
     val shownMode = state.homeLayoutSet.activeKey.viewMode
     val labels = state.homeLayoutSet.activeLayout.settings.labels
-    return remember(pool, version, workspaceId, deviceClass, shownMode, labels) {
+    val installedApps = state.installedApps
+    return remember(pool, version, workspaceId, deviceClass, shownMode, labels, installedApps) {
         pool?.let { runtime ->
+            val candidates = workspaceId?.let { PoolHomeView.candidates(it, deviceClass, shownMode) }
+            val placed = runtime.repository.pool(deviceClass)
+            val editWorkspace =
+                if (candidates == null || placed == null) {
+                    null
+                } else {
+                    PoolHomeView.arrangementOf(
+                        placed,
+                        candidates,
+                    )
+                }
             PlacedHomeContent(
                 resolve = { page ->
                     val candidates = workspaceId?.let { PoolHomeView.candidates(it, deviceClass, shownMode) }
@@ -173,7 +187,18 @@ private fun rememberPlacedHome(
                 widgetViews = runtime.widgetViews,
                 labelSettings = labels,
                 onOpen = { item -> runtime.actions.open(item) },
-                onReimport = { scope.launch { runtime.reimport(layoutSet) } },
+                // Refresh replaces the preview's edits, so it asks first (the dialog is the editor overlay's).
+                onReimport = { runtime.editing.requestReimport() },
+                edit =
+                    PoolEditUi(
+                        controller = runtime.editing,
+                        deviceClass = deviceClass,
+                        pool = placed,
+                        workspaceId = editWorkspace,
+                        installedApps = installedApps,
+                        standardHostIds = { PoolHostIds.standardHome(layoutSet) },
+                        onReimportConfirmed = { scope.launch { runtime.reimport(layoutSet) } },
+                    ),
             )
         }
     }

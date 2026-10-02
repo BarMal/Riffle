@@ -52,7 +52,11 @@ import com.riffle.app.launcher.containers.PageContainerHost
 import com.riffle.app.launcher.containers.PageSetContainerHost
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.pool.POOL_EDIT_ENTER_TEST_TAG
 import com.riffle.app.launcher.pool.PlacedHomeContent
+import com.riffle.app.launcher.pool.PoolEditOverlay
+import com.riffle.app.launcher.pool.PoolEditText
+import com.riffle.app.launcher.pool.PoolEditUi
 import com.riffle.app.launcher.pool.PoolHomePage
 import com.riffle.app.launcher.workspaceMenuActionModifier
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -159,7 +163,16 @@ internal fun WorkspacePreviewSurface(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
-            PreviewTopBar(workspace?.name, onExit, placedHome?.onReimport, Modifier.align(Alignment.TopCenter))
+            PreviewTopBar(
+                workspace?.name,
+                onExit,
+                placedHome?.onReimport,
+                Modifier.align(Alignment.TopCenter),
+                onEdit = placedHome?.edit?.let { ui -> editAction(ui) },
+            )
+            placedHome?.let { home ->
+                home.edit?.let { PoolEditOverlay(it, home.iconLoader, topInset = top, bottomInset = bottom) }
+            }
             if (menu != null) {
                 WorkspaceMenuLayer(
                     host = menu,
@@ -340,6 +353,7 @@ private fun PreviewTopBar(
     onExit: () -> Unit,
     onReimport: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onEdit: (() -> Unit)? = null,
 ) {
     val barInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
     Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
@@ -359,6 +373,11 @@ private fun PreviewTopBar(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+            if (onEdit != null) {
+                TextButton(onClick = onEdit, modifier = Modifier.testTag(POOL_EDIT_ENTER_TEST_TAG)) {
+                    Text(PoolEditText.EDIT)
+                }
+            }
             if (onReimport != null) {
                 TextButton(onClick = onReimport, modifier = Modifier.testTag(WORKSPACE_PREVIEW_REIMPORT_TEST_TAG)) {
                     Text(WorkspacePreviewText.REIMPORT)
@@ -434,3 +453,6 @@ internal fun PageHost.referencesHomeGrid(): Boolean =
                         body.placements.all { WorkspaceSourceIds.HOME_GRID in it.widget.binding.lens.sources }
             }
     }
+
+/** The top bar's Edit action: starts edit mode and ignores whether there was anything to edit. */
+private fun editAction(ui: PoolEditUi): () -> Unit = { ui.enter() }
