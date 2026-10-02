@@ -33,3 +33,7 @@ Release notes continue to include APK and AAB sizes for every published build.
 Evaluating R8 minification and resource shrinking for release builds is the preferred way to
 reduce size before raising the budget again. It needs on-device validation and keep rules, so it is
 tracked separately from the budget change.
+
+An opt-in minified build measured 25.66 MiB down to 4.38 MiB on the same commit (CI run
+36896105589). See [`R8 Minification`](r8-minification.md) for the measured composition, keep-rule
+review, the `riffle.minify` build, and the staged plan to enable it.
