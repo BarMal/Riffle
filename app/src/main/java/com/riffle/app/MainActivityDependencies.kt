@@ -38,6 +38,12 @@ import com.riffle.app.launcher.calendar.sourceAccess
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.exclusions.DataStoreExclusionStore
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
+import com.riffle.app.launcher.ics.CachedIcsFeedRepository
+import com.riffle.app.launcher.ics.DataStoreIcsStore
+import com.riffle.app.launcher.ics.ICS_MAX_RESPONSE_BYTES
+import com.riffle.app.launcher.ics.IcsFeedsController
+import com.riffle.app.launcher.ics.IcsRefreshCoordinator
+import com.riffle.app.launcher.ics.defaultIcsEngine
 import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
@@ -50,12 +56,6 @@ import com.riffle.app.launcher.pool.CachedPoolRepository
 import com.riffle.app.launcher.pool.DataStorePoolStore
 import com.riffle.app.launcher.pool.PoolItemActions
 import com.riffle.app.launcher.pool.PoolRuntime
-import com.riffle.app.launcher.ics.CachedIcsFeedRepository
-import com.riffle.app.launcher.ics.DataStoreIcsStore
-import com.riffle.app.launcher.ics.ICS_MAX_RESPONSE_BYTES
-import com.riffle.app.launcher.ics.IcsFeedsController
-import com.riffle.app.launcher.ics.IcsRefreshCoordinator
-import com.riffle.app.launcher.ics.defaultIcsEngine
 import com.riffle.app.launcher.rss.AndroidFeedParser
 import com.riffle.app.launcher.rss.AndroidFeedTransport
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
