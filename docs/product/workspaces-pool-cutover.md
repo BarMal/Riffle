@@ -43,12 +43,12 @@ placed-items pool. With the switch off nothing here is constructed, read or writ
    titles, feed articles) is not part of the pool model and is never persisted or logged by this slice. A test asserts the
    encoded blob has no notification text.
 
-## Decisions (please confirm)
+## Decisions (confirmed by the owner 2026-10-23, #1363)
 
 1. **Separate store, not the workspace blob.** The pool lives in its own DataStore (`riffle_pool`), not in
    `LayoutWorkspaces.pool` inside `riffle_workspaces`, so resetting or restoring workspaces cannot lose placed items and a
-   corrupt pool blob cannot take the workspace set down. `LayoutWorkspaces.pool` and its codec (S3) stay unused; they can be
-   retired or become the backup shape later.
+   corrupt pool blob cannot take the workspace set down. The never-populated `LayoutWorkspaces.pool` field has since been
+   retired and the pool store is its own backup section (see [`workspaces-backup.md`](workspaces-backup.md)).
 2. **A one-time snapshot, with one flag for all device classes.** The flag is per store, not per class. A class that gets a
    layout in `HomeLayoutSet` later (for example the first time the phone is unfolded) is not imported unless Refresh is used.
 3. **Refresh home items.** Until pool editing exists, the standard home is still edited in `HomeLayoutSet`, so a snapshot goes
@@ -92,8 +92,7 @@ placed-items pool. With the switch off nothing here is constructed, read or writ
 * **Per-workspace arrangements** for presets, auto-paging, `NewAppPlacement` setting, new-app placement, uninstall pruning
   (`PoolRemoval.pruneUninstalled` has no event source), startup host-id reconciliation.
 * **Live sync with `HomeLayoutSet`.** One-time import plus manual Refresh only (decision 3).
-* **Pool in backup and restore.** Another agent owns the backup package; the pool store is not exported or restored yet.
-  After a restore of `HomeLayoutSet`, use Refresh home items.
+* **Pool in backup and restore.** Done: see the `"pool"` section in [`workspaces-backup.md`](workspaces-backup.md).
 * **Widget interaction.** Widgets are drawn, not configurable or resizable; unbound widgets are placeholders.
 * **Notification badges** on icons and the app context menu / shortcuts popup.
 * **Work-profile widget provider profile** (decision 5).

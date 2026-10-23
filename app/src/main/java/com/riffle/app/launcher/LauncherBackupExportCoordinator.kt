@@ -21,6 +21,7 @@ class LauncherBackupExportCoordinator(
                 exportedAtEpochMillis = epochMillisProvider.nowEpochMillis(),
                 workspaceSet = workspaceBackup?.let { runCatching(it::currentWorkspaceSet).getOrNull() },
                 exclusions = workspaceBackup?.let { runCatching(it::currentExclusions).getOrNull() },
+                pool = workspaceBackup?.let { runCatching(it::currentPool).getOrNull() },
             )
         }
 }

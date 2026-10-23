@@ -121,6 +121,32 @@ internal class CachedPoolRepository(
             }
         }
 
+    /** The in-memory state; null before [initialize]. */
+    fun current(): PoolStoreState? = cached
+
+    /** The in-memory state once [initialize] has run, else what is stored (null when nothing is). For backup export. */
+    suspend fun currentOrStored(): PoolStoreState? = cached ?: store.read()
+
+    /**
+     * Replaces the pool from a backup. Before [initialize] the value is only written, so the next start reads it (and,
+     * as the backup kept the import flag, does not import over it); afterwards the in-memory copy is replaced too and
+     * observers refresh, and a failed write stays pending for the next [flush]. A write may throw before [initialize];
+     * the backup flow tolerates that.
+     */
+    suspend fun replaceFromBackup(state: PoolStoreState) =
+        lock.withLock {
+            if (cached != null) {
+                synchronized(stateLock) {
+                    cached = state
+                    dirty = true
+                }
+                mutableVersion.update { it + 1 }
+                persist(state)
+            } else if (persistenceEnabled) {
+                store.write(state)
+            }
+        }
+
     /** The pool of [deviceClass]; null before [initialize] or when that class has none. */
     fun pool(deviceClass: HomeLayoutDeviceClass): PlacedItemPool? = cached?.poolFor(deviceClass)
 

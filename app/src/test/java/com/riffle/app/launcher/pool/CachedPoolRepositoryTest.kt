@@ -183,4 +183,62 @@ class CachedPoolRepositoryTest {
             assertTrue(store.writes.isEmpty())
             assertFalse(repository.version.value > 0)
         }
+
+    @Test
+    fun aBackupRestoreBeforeInitializeIsOnlyWrittenAndTheNextStartDoesNotImportOverIt() =
+        runBlocking {
+            val store = FakeStore()
+            val restored = restoredState("com.restored")
+            val repository = CachedPoolRepository(store)
+            repository.replaceFromBackup(restored)
+            assertNull(repository.pool(phone))
+            assertEquals(listOf(restored), store.writes)
+            assertEquals(0, repository.version.value)
+
+            repository.initialize(layoutSet("com.home"))
+            assertEquals(restored.pools.getValue(phone), repository.pool(phone))
+            assertEquals(1, store.writes.size)
+        }
+
+    @Test
+    fun aBackupRestoreAfterInitializeReplacesTheInMemoryPoolAndPersists() =
+        runBlocking {
+            val store = FakeStore()
+            val repository = CachedPoolRepository(store)
+            repository.initialize(layoutSet("com.a"))
+            val restored = restoredState("com.restored")
+            repository.replaceFromBackup(restored)
+            assertEquals(restored.pools.getValue(phone), repository.pool(phone))
+            assertEquals(restored, store.stored)
+            assertEquals(2, repository.version.value)
+            assertTrue(repository.flush())
+        }
+
+    @Test
+    fun aFailedRestoreWriteAfterInitializeStaysPendingForTheNextFlush() =
+        runBlocking {
+            val failing = CachedPoolRepository(FakeStore(failWrite = true))
+            failing.initialize(layoutSet("com.a"))
+            failing.replaceFromBackup(restoredState("com.restored"))
+            assertEquals(restoredState("com.restored").pools.getValue(phone), failing.pool(phone))
+            assertFalse(failing.flush())
+        }
+
+    @Test
+    fun currentOrStoredReadsTheStoreUntilInitializedThenTheMemoryCopy() =
+        runBlocking {
+            val stored = restoredState("com.stored")
+            val store = FakeStore(stored = stored)
+            val repository = CachedPoolRepository(store)
+            assertNull(repository.current())
+            assertEquals(stored, repository.currentOrStored())
+            repository.initialize(layoutSet("com.a"))
+            assertEquals(stored, repository.current())
+            assertEquals(stored, repository.currentOrStored())
+        }
+
+    private fun restoredState(pkg: String): PoolStoreState {
+        val migrated = runBlocking { CachedPoolRepository(FakeStore()).also { it.initialize(layoutSet(pkg)) } }
+        return checkNotNull(migrated.current())
+    }
 }

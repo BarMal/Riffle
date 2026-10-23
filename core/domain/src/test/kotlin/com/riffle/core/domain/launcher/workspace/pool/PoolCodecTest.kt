@@ -133,7 +133,7 @@ class PoolCodecTest {
     }
 
     @Test
-    fun theWorkspaceSetBlobCarriesThePoolAndOldBlobsDecodeWithAnEmptyOne() {
+    fun aLegacyPoolKeyInTheWorkspaceSetBlobIsIgnored() {
         val workspace =
             Workspace(
                 WorkspaceId("w1"),
@@ -145,24 +145,14 @@ class PoolCodecTest {
                     ),
                 ),
             )
-        val layout = LayoutWorkspaces.single(workspace).copy(pool = rich)
-        val set = WorkspaceSet(mapOf(HomeLayoutDeviceClass.PHONE to layout))
-        val decoded = assertNotNull(WorkspaceSetCodec.decode(WorkspaceSetCodec.encode(set)))
-        // W2's arrangement belongs to no stored workspace, so decoding drops it (and what only it referenced).
-        assertEquals(setOf(W1), decoded.layouts.getValue(HomeLayoutDeviceClass.PHONE).pool.arrangements.keys)
-        val withoutPool = WorkspaceSet(mapOf(HomeLayoutDeviceClass.PHONE to LayoutWorkspaces.single(workspace)))
-        val encoded = WorkspaceSetCodec.encode(withoutPool)
-        assertFalse(
-            "pool" in ((encoded.fields["layouts"] as StoredValue.Arr).items.single() as StoredValue.Obj).fields,
-            "empty pools are not written",
-        )
-        assertEquals(withoutPool, WorkspaceSetCodec.decode(encoded))
-        assertEquals(
-            PlacedItemPool(),
-            WorkspaceSetCodec.decode(
-                encoded.copy(fields = encoded.fields + ("version" to StoredValue.Num(1))),
-            )?.layouts?.values?.single()?.pool,
-        )
+        val set = WorkspaceSet(mapOf(HomeLayoutDeviceClass.PHONE to LayoutWorkspaces.single(workspace)))
+        val encoded = WorkspaceSetCodec.encode(set)
+        val layout = (encoded.fields["layouts"] as StoredValue.Arr).items.single() as StoredValue.Obj
+        assertFalse("pool" in layout.fields, "placed items live in the pool store, not the workspace blob")
+        // Earlier schema 2 blobs could carry a `pool` key; it decodes to the same set.
+        val legacyLayout = layout.copy(fields = layout.fields + ("pool" to PoolCodec.encode(rich)))
+        val legacy = encoded.copy(fields = encoded.fields + ("layouts" to StoredValue.Arr(listOf(legacyLayout))))
+        assertEquals(set, WorkspaceSetCodec.decode(legacy))
     }
 
     private fun items(root: StoredValue.Obj) = (root.fields.getValue("items") as StoredValue.Arr).items

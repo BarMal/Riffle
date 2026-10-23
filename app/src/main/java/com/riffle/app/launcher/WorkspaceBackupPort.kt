@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
+import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
 
 /**
  * The backup flow's view of the stored workspace data, kept as an interface so the flow stays testable
@@ -16,7 +17,12 @@ interface WorkspaceBackupPort {
 
     fun currentExclusions(): LayoutExclusionRules?
 
+    /** The placed-items pool store (apps, folders, widget providers; never item content). */
+    fun currentPool(): PoolStoreState?
+
     fun restoreWorkspaceSet(set: WorkspaceSet)
 
     fun restoreExclusions(rules: LayoutExclusionRules)
+
+    fun restorePool(state: PoolStoreState)
 }

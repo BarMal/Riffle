@@ -15,7 +15,7 @@ the home screen. Code: `core/domain/.../launcher/workspace/pool/`. Tracking: #13
 | Validation | `PoolValidation.kt` | `repair` re-establishes the invariants on outside data and reports what it dropped. |
 | Migration | `PoolMigration.kt` | `HomeLayoutSet` to one pool per device class. |
 | Codec | `PoolCodec.kt` (+ item encode/decode) | Additive `pool` entry per layout in the workspace set blob. |
-| Hook into existing types | `LayoutWorkspaces.pool` (default empty), `WorkspaceSetCodec` | Schema version 1 to 2. An empty pool is not written, so existing blobs are byte-identical. |
+| Hook into existing types | ~~`LayoutWorkspaces.pool`~~ (removed: the pool store owns placed items), `WorkspaceSetCodec` | Schema version 1 to 2. A legacy `pool` key in a workspace blob is ignored on decode. |
 
 ## Decisions
 
@@ -86,8 +86,10 @@ operation; after each step an independent invariant check, repair finds nothing,
 
 ## Not done
 
-* **App wiring.** Nothing constructs a pool at runtime; `LayoutWorkspaces.pool` is always empty. No bootstrap, repository,
-  or backup integration.
+* **App wiring.** Since built: the pool lives in its own store (`riffle_pool`, see
+  [`workspaces-pool-cutover.md`](workspaces-pool-cutover.md)) and is backed up as its own section
+  ([`workspaces-backup.md`](workspaces-backup.md)). The `LayoutWorkspaces.pool` field this slice added was never populated
+  and has been removed.
 * **Home-surface rendering and the HomeLayout adapter.** The page-level adapter exists; the `HomeLayout`-level wrapper
   (settings, dock, selected page, edit mode) belongs with the wiring.
 * **Sharing UI** (N13): "Also show in...", "Keep items shared", "Add a separate copy". The operations exist.
