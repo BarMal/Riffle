@@ -9,9 +9,6 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
-import com.riffle.core.domain.launcher.workspace.WorkspaceSet
-import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
-import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
 
 fun launcherBackupDocument(
     storedLayoutSet: HomeLayoutSet?,
@@ -19,9 +16,6 @@ fun launcherBackupDocument(
     launcherSettings: LauncherSettings,
     hiddenAppIdentities: Set<AppIdentity> = emptySet(),
     exportedAtEpochMillis: Long? = null,
-    workspaceSet: WorkspaceSet? = null,
-    exclusions: LayoutExclusionRules? = null,
-    pool: PoolStoreState? = null,
 ): LauncherBackupDocument =
     LauncherBackupDocument(
         homeLayoutSet =
@@ -30,9 +24,6 @@ fun launcherBackupDocument(
         launcherSettings = launcherSettings,
         hiddenAppIdentities = hiddenAppIdentities,
         exportedAtEpochMillis = exportedAtEpochMillis,
-        workspaceSet = workspaceSet,
-        exclusions = exclusions,
-        pool = pool,
     )
 
 fun LauncherShellState.withImportedBackup(

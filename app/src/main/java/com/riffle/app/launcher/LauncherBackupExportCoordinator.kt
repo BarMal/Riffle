@@ -19,6 +19,7 @@ class LauncherBackupExportCoordinator(
                 launcherSettings = state.launcherSettings,
                 hiddenAppIdentities = appVisibilityRepository.hiddenAppIdentities(),
                 exportedAtEpochMillis = epochMillisProvider.nowEpochMillis(),
+            ).copy(
                 workspaceSet = workspaceBackup?.let { runCatching(it::currentWorkspaceSet).getOrNull() },
                 exclusions = workspaceBackup?.let { runCatching(it::currentExclusions).getOrNull() },
                 pool = workspaceBackup?.let { runCatching(it::currentPool).getOrNull() },
