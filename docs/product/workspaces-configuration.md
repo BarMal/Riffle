@@ -1905,14 +1905,23 @@ L = likelihood, I = impact (H/M/L). Only the risks that matter for one developer
 
 ## Open questions for the owner
 
-Decided: Q1 to Q19 and N1 to N9 (banners at the top). The first revision's questions N1 to N9 are answered and removed. New
-questions raised by the second revision; each has a recommendation and none blocks S1 to S3.
+Decided: Q1 to Q19 and N1 to N9 (banners at the top), and N10 to N12 (owner, 2026-10-23, #1363):
+
+| # | Question | Decision |
+| --- | --- | --- |
+| N10 | **Scope under rotation.** A phone in landscape is `PHONE_LANDSCAPE`, a different layout. | **Fold `PHONE_LANDSCAPE` into `PHONE`** for every per-layout value (workspaces, lens library, pool, exclusions). Rotation affects geometry only. Not built yet. |
+| N11 | **Classic (N7).** | **Default plan**: a developer toggle, deleted at S9. Full-parity Classic (10.3, slice S-C) is **not planned**; the default Nova workspace carries the parity contract. Any future second style is named "Navigation style". |
+| N12 | **New apps in a pool world (9.8).** | **Every opted-in workspace** of the layout (one shared `PoolApp`). |
+
+Also confirmed on 2026-10-23: the pool's separate store (and its own backup section), one import flag for all device
+classes, manual "Refresh home items" instead of live sync before S4, presets borrowing the migrated arrangement until
+per-workspace arrangements exist, the work-profile widget provider assumption, the stored per-lens query text (13), and,
+for the lens library, shared refs on duplicate and refreshing untouched preset lenses on reinstall.
+
+Still open:
 
 | # | Question | Recommendation |
 | --- | --- | --- |
-| N10 | **Exclusion scope under rotation.** The layout is derived from window size, so a phone in landscape is `PHONE_LANDSCAPE`, a different layout. Per-layout exclusions taken literally un-hide everything on rotate (and the same already holds for workspaces and the pool). | Fold `PHONE_LANDSCAPE` into `PHONE` for exclusions (14.6); consider doing the same for workspaces, pool and lens library, since a landscape phone having its own home is surprising. Confirm. |
-| N11 | **Classic (N7).** Confirm the default plan: a debug-only developer toggle that is deleted at S9, with full-parity Classic as the option in 10.3. | Default plan. If a second navigation style is ever wanted, build it as "Navigation style", not "Classic". |
-| N12 | **New apps in a pool world (9.8).** With several `HOME_AND_FINDER` workspaces, place the new app in all of them (one shared `PoolApp`) or only the active one? | All opted-in workspaces of the layout, so no workspace silently lacks the app. |
 | N13 | **Sharing creation UI.** Duplicate workspace clones by default (9.5); "Also show in...", "Keep items shared" and "Add a separate copy" are explicit actions. Ship them with the pool cut-over, or after it works? | After. The model and `PoolOps` ship in S3/S4; the UI actions follow once the cut-over has run on the phone. |
 
 ## Known limitations of this design
