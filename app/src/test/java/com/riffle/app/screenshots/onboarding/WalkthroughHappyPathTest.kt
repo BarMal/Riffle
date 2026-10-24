@@ -5,14 +5,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import com.riffle.app.launcher.onboarding.FakeWalkthroughStores
 import com.riffle.app.launcher.onboarding.OnboardingOfferCard
 import com.riffle.app.launcher.onboarding.WALKTHROUGH_PRIMARY_TEST_TAG
+import com.riffle.app.launcher.onboarding.WALKTHROUGH_STEP_LIST_TEST_TAG
 import com.riffle.app.launcher.onboarding.WalkthroughApplier
 import com.riffle.app.launcher.onboarding.WalkthroughContexts
 import com.riffle.app.launcher.onboarding.WalkthroughFixtures
@@ -76,6 +79,8 @@ class WalkthroughHappyPathTest {
         composeRule.waitForIdle()
         // The goals step: multi-select cards with their state.
         composeRule.onNodeWithText("My apps").assertIsOn()
+        // Quick actions is near the end of the list: the lazy list composes it only once scrolled into view.
+        composeRule.onNodeWithTag(WALKTHROUGH_STEP_LIST_TEST_TAG).performScrollToNode(hasText("Quick actions"))
         composeRule.onNodeWithText("Quick actions").assertIsOff().performClick()
         composeRule.onNodeWithText("Quick actions").assertIsOn().performClick()
         composeRule.onNodeWithText("Quick actions").assertIsOff()

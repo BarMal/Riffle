@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.riffle.app.launcher.designsystem.RiffleSpacing
@@ -49,11 +50,13 @@ import com.riffle.core.domain.launcher.workspace.wizard.SourcePermission
 import com.riffle.core.domain.launcher.workspace.wizard.WalkthroughAction
 import com.riffle.core.domain.launcher.workspace.wizard.WalkthroughFlow
 
+internal const val WALKTHROUGH_STEP_LIST_TEST_TAG = "walkthrough-step-list"
+
 /** Every step scrolls on its own, so the top and bottom bars (Back, Skip, Next) always stay reachable. */
 @Composable
 private fun StepList(content: LazyListScope.() -> Unit) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().testTag(WALKTHROUGH_STEP_LIST_TEST_TAG),
         verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         content = content,
     )
