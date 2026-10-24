@@ -112,6 +112,9 @@ internal class MainActivityDependencies(
         )
     }
     val exclusionRepository by lazy { CachedExclusionRepository(DataStoreExclusionStore(activity)) }
+
+    /** One pool repository shared by the preview and backup; building it reads nothing (see `initialize`). */
+    private val poolRepository by lazy { CachedPoolRepository(DataStorePoolStore(activity)) }
     val appVisibilityRepository by lazy { SharedPreferencesAppVisibilityRepository(activity) }
     val feedArticleCacheRepository by lazy { DataStoreFeedArticleCacheRepository(activity) }
 
@@ -305,7 +308,7 @@ internal class MainActivityDependencies(
      */
     fun poolRuntime(): PoolRuntime =
         PoolRuntime(
-            repository = CachedPoolRepository(DataStorePoolStore(activity)),
+            repository = poolRepository,
             iconLoader = appIconLoader,
             widgetViews = widgetHostGateway,
             actions = PoolItemActions(launchApp = appLauncher::launch, launchShortcut = appLauncher::launchShortcut),
@@ -351,11 +354,12 @@ internal class MainActivityDependencies(
             workspaceBackup = workspaceBackupPort,
         )
 
-    /** Workspaces and exclusion rules in the backup: reads/writes only what the stores hold (see docs). */
+    /** Workspaces, exclusions and placed items in the backup: reads/writes only what the stores hold (see docs). */
     private val workspaceBackupPort by lazy {
         AndroidWorkspaceBackupPort(
             workspaces = workspaceRepository,
             exclusions = exclusionRepository,
+            pool = poolRepository,
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
         )
     }

@@ -50,6 +50,7 @@ class LauncherBackupDocumentHandler(
         val port = workspaceBackup ?: return
         document.workspaceSet?.let { set -> runCatching { port.restoreWorkspaceSet(set) } }
         document.exclusions?.let { rules -> runCatching { port.restoreExclusions(rules) } }
+        document.pool?.let { state -> runCatching { port.restorePool(state) } }
     }
 }
 

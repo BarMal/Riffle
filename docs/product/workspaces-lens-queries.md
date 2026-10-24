@@ -13,7 +13,7 @@ Two lenses over the Search source can now carry different query texts, so two pa
 different searches at once. A lens without a query behaves exactly as before: it reads the shared
 `SearchQueryHolder`.
 
-## Decision that differs from section 13 (please confirm)
+## Decision that differs from section 13 (confirmed by the owner 2026-10-23, #1363)
 
 Section 13 sketched `ParameterBinding` slots with the query text never persisted. This slice follows the newer
 instruction instead: **the query text is user-authored lens configuration and is stored in the lens**; search

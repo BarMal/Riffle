@@ -2,12 +2,15 @@ package com.riffle.app.launcher
 
 import com.riffle.app.launcher.exclusions.decodeExclusionRules
 import com.riffle.app.launcher.exclusions.encodeExclusionRules
+import com.riffle.app.launcher.pool.decodePoolStore
+import com.riffle.app.launcher.pool.encodePoolStore
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.backup.WorkspaceBackup
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
+import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -21,6 +24,8 @@ data class LauncherBackupDocument(
     val workspaceSet: WorkspaceSet? = null,
     /** Per-layout source exclusion rules (rule text only). Absent in backups written before they existed. */
     val exclusions: LayoutExclusionRules? = null,
+    /** Placed items (apps, folders, widget providers; never a host id). Absent in backups written before them. */
+    val pool: PoolStoreState? = null,
 )
 
 fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
@@ -36,6 +41,8 @@ fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
                 ?.let { set -> json.put("workspaces", JSONObject(encodeWorkspaceSet(set))) }
             WorkspaceBackup.exportExclusions(document.exclusions)
                 ?.let { rules -> json.put("exclusions", JSONObject(encodeExclusionRules(rules))) }
+            WorkspaceBackup.exportPool(document.pool)
+                ?.let { state -> json.put("pool", JSONObject(encodePoolStore(state))) }
         }
         .toString()
 
@@ -65,6 +72,7 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
             // Workspace sections are best effort: a malformed or empty one reads as absent, never as a failure.
             workspaceSet = json.optWorkspaceSet(),
             exclusions = json.optExclusions(),
+            pool = json.optPool(),
         )
     }.getOrElse { error ->
         when (error) {
@@ -93,6 +101,14 @@ private fun JSONObject.optExclusions(): LayoutExclusionRules? =
         optJSONObject("exclusions")
             ?.let { decodeExclusionRules(it.toString()) }
             ?.let(WorkspaceBackup::restoreExclusions)
+    }.getOrNull()
+
+private fun JSONObject.optPool(): PoolStoreState? =
+    runCatching {
+        optJSONObject("pool")
+            ?.let { decodePoolStore(it.toString()) }
+            ?.let(WorkspaceBackup::restorePool)
+            ?.state
     }.getOrNull()
 
 private fun JSONObject.optHiddenAppIdentities(): Set<AppIdentity> =

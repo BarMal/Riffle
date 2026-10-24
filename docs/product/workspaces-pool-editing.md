@@ -41,7 +41,9 @@ says why in the snackbar. A one-line notice in the edit bar says edits change th
   Done, only after the final write succeeded, and **never if the standard home still holds the id** (migrated widgets
   share their id with the standard home's widget, which is only read). Undo forgets ids that are live again.
 
-## Decisions (please confirm)
+## Decisions
+
+Decisions 1 and 2 were confirmed by the owner on 2026-10-23 (#1363); 3 to 5 are still to confirm.
 
 1. **Edits go to the arrangement shown.** Preset workspaces have no arrangement yet and show the migrated Library home, so
    editing one edits that arrangement (shared by every preset that borrows it). Per-workspace arrangements (fork on first
@@ -61,7 +63,7 @@ says why in the snackbar. A one-line notice in the edit bar says edits change th
 * Drag between pages; the pager does not follow a moved item.
 * Edit entry from the workspace menu; per-workspace arrangements; edits on the Finder page.
 * A host id queued when the process dies in edit mode is leaked, not deleted (startup reconciliation not built).
-* Pool in backup/restore (unchanged).
+* Pool in backup/restore: done separately, see [`workspaces-backup.md`](workspaces-backup.md).
 * Screenshot and device tests were not run locally (CI only).
 
 ## Verification

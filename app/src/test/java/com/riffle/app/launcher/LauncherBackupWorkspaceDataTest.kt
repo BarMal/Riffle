@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.workspace.pool.ArrangementPage
 import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.Placement
 import com.riffle.core.domain.launcher.workspace.pool.PoolItemId
+import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
 import com.riffle.core.domain.launcher.workspace.pool.PoolWidget
 import org.json.JSONArray
 import org.json.JSONObject
@@ -48,8 +49,10 @@ class LauncherBackupWorkspaceDataTest {
             exportedAtEpochMillis = 1L,
         )
 
-    private fun workspaceSetWithWidget(): WorkspaceSet {
-        val migrated = WorkspaceMigration.migrate(layoutSet)
+    private fun workspaceSet(): WorkspaceSet = WorkspaceMigration.migrate(layoutSet)
+
+    private fun poolWithWidget(): PoolStoreState {
+        val migrated = workspaceSet()
         val deviceClass = migrated.layouts.keys.first()
         val layout = migrated.layouts.getValue(deviceClass)
         val widget =
@@ -81,7 +84,7 @@ class LauncherBackupWorkspaceDataTest {
                             ),
                     ),
             )
-        return migrated.withLayout(deviceClass, layout.copy(pool = pool))
+        return PoolStoreState(migrated = true, pools = mapOf(deviceClass to pool))
     }
 
     private fun exclusions() =
@@ -92,7 +95,7 @@ class LauncherBackupWorkspaceDataTest {
         val plain = encodeLauncherBackupDocument(base)
         val withEmptySections =
             encodeLauncherBackupDocument(
-                base.copy(workspaceSet = WorkspaceSet(), exclusions = LayoutExclusionRules()),
+                base.copy(workspaceSet = WorkspaceSet(), exclusions = LayoutExclusionRules(), pool = PoolStoreState()),
             )
 
         assertEquals(plain, withEmptySections)
@@ -101,30 +104,35 @@ class LauncherBackupWorkspaceDataTest {
 
     @Test
     fun exportWritesSectionsAndNeverAHostId() {
-        val json = exportWith(FakePort(set = workspaceSetWithWidget(), rules = exclusions()))
+        val json = exportWith(FakePort(set = workspaceSet(), rules = exclusions(), pool = poolWithWidget()))
 
         val root = JSONObject(json)
         assertTrue(root.has("workspaces"))
         assertTrue(root.has("exclusions"))
-        assertFalse(root.getJSONObject("workspaces").toString().contains("\"host\""))
+        assertTrue(root.has("pool"))
+        assertFalse(root.getJSONObject("workspaces").has("pool"))
+        assertFalse(root.getJSONObject("pool").toString().contains("\"host\""))
         assertEquals(1, root.getInt("version"))
     }
 
     @Test
     fun roundTripRestoresWidgetsAsPlaceholders() {
-        val port = FakePort(set = workspaceSetWithWidget(), rules = exclusions())
+        val port = FakePort(set = workspaceSet(), rules = exclusions(), pool = poolWithWidget())
         val decoded = decodeLauncherBackupDocument(exportWith(port))
 
-        val widgets =
-            decoded.workspaceSet!!.layouts.values.flatMap { it.pool.items.values }.filterIsInstance<PoolWidget>()
+        val pool = decoded.pool!!
+        val widgets = pool.pools.values.flatMap { it.items.values }.filterIsInstance<PoolWidget>()
         assertEquals(1, widgets.size)
         assertNull(widgets.single().hostedId)
+        assertEquals(poolWithWidget().pools.values.single().arrangements, pool.pools.values.single().arrangements)
+        assertTrue(pool.migrated)
+        assertEquals(workspaceSet(), decoded.workspaceSet)
         assertEquals(exclusions(), decoded.exclusions)
     }
 
     @Test
     fun olderBackupWithoutSectionsLeavesCurrentWorkspaceDataUntouched() {
-        val port = FakePort(set = workspaceSetWithWidget(), rules = exclusions())
+        val port = FakePort(set = workspaceSet(), rules = exclusions(), pool = poolWithWidget())
 
         val result = handler(port).importBackup { encodeLauncherBackupDocument(base).byteInputStream() }
 
@@ -135,7 +143,7 @@ class LauncherBackupWorkspaceDataTest {
     @Test
     fun importReplacesOnlyTheSectionsPresent() {
         val port = FakePort()
-        val document = base.copy(workspaceSet = workspaceSetWithWidget())
+        val document = base.copy(workspaceSet = workspaceSet())
 
         handler(port).importBackup { encodeLauncherBackupDocument(document).byteInputStream() }
 
@@ -143,9 +151,21 @@ class LauncherBackupWorkspaceDataTest {
     }
 
     @Test
+    fun aPoolOnlyBackupRestoresOnlyThePool() {
+        val port = FakePort()
+        val document = base.copy(pool = poolWithWidget())
+
+        handler(port).importBackup { encodeLauncherBackupDocument(document).byteInputStream() }
+
+        assertEquals(listOf("pool"), port.restores)
+        val widgets = port.restoredPool!!.pools.values.single().items.values.filterIsInstance<PoolWidget>()
+        assertNull(widgets.single().hostedId)
+    }
+
+    @Test
     fun aFailingStoreNeverFailsTheImport() {
         val port = FakePort(failRestore = true)
-        val document = base.copy(workspaceSet = workspaceSetWithWidget(), exclusions = exclusions())
+        val document = base.copy(workspaceSet = workspaceSet(), exclusions = exclusions(), pool = poolWithWidget())
 
         val result = handler(port).importBackup { encodeLauncherBackupDocument(document).byteInputStream() }
 
@@ -166,12 +186,14 @@ class LauncherBackupWorkspaceDataTest {
                 JSONObject(encodeLauncherBackupDocument(base))
                     .put("workspaces", sample)
                     .put("exclusions", sample)
+                    .put("pool", sample)
 
             val decoded = decodeLauncherBackupDocument(json.toString())
 
             assertEquals(layoutSet, decoded.homeLayoutSet)
             assertNull(decoded.workspaceSet)
             assertNull(decoded.exclusions)
+            assertNull(decoded.pool)
         }
     }
 
@@ -183,6 +205,7 @@ class LauncherBackupWorkspaceDataTest {
                 JSONObject(encodeLauncherBackupDocument(base))
                     .put("workspaces", hostile(random, 0))
                     .put("exclusions", hostile(random, 0))
+                    .put("pool", hostile(random, 0))
 
             val decoded = decodeLauncherBackupDocument(json.toString())
 
@@ -201,7 +224,7 @@ class LauncherBackupWorkspaceDataTest {
             3 -> JSONArray().also { array -> repeat(random.nextInt(4)) { array.put(hostile(random, depth + 1)) } }
             else ->
                 JSONObject().also { obj ->
-                    listOf("layouts", "deviceClass", "workspaces", "pool", "library", "rules", "items", "version")
+                    HOSTILE_KEYS
                         .shuffled(random)
                         .take(random.nextInt(5))
                         .forEach { key -> obj.put(key, hostile(random, depth + 1)) }
@@ -232,14 +255,18 @@ class LauncherBackupWorkspaceDataTest {
     private class FakePort(
         private val set: WorkspaceSet? = null,
         private val rules: LayoutExclusionRules? = null,
+        private val pool: PoolStoreState? = null,
         private val failRead: Boolean = false,
         private val failRestore: Boolean = false,
     ) : WorkspaceBackupPort {
         val restores = mutableListOf<String>()
+        var restoredPool: PoolStoreState? = null
 
         override fun currentWorkspaceSet(): WorkspaceSet? = if (failRead) error("read") else set
 
         override fun currentExclusions(): LayoutExclusionRules? = if (failRead) error("read") else rules
+
+        override fun currentPool(): PoolStoreState? = if (failRead) error("read") else pool
 
         override fun restoreWorkspaceSet(set: WorkspaceSet) {
             if (failRestore) error("write")
@@ -249,6 +276,12 @@ class LauncherBackupWorkspaceDataTest {
         override fun restoreExclusions(rules: LayoutExclusionRules) {
             if (failRestore) error("write")
             restores += "exclusions"
+        }
+
+        override fun restorePool(state: PoolStoreState) {
+            if (failRestore) error("write")
+            restores += "pool"
+            restoredPool = state
         }
     }
 
@@ -268,3 +301,6 @@ class LauncherBackupWorkspaceDataTest {
         override fun showApp(identity: AppIdentity) = Unit
     }
 }
+
+private val HOSTILE_KEYS =
+    listOf("layouts", "deviceClass", "workspaces", "pool", "library", "rules", "items", "version", "migrated")

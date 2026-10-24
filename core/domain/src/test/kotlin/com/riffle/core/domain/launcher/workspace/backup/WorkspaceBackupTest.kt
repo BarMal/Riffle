@@ -22,8 +22,9 @@ import com.riffle.core.domain.launcher.workspace.llBinding
 import com.riffle.core.domain.launcher.workspace.llCounter
 import com.riffle.core.domain.launcher.workspace.llLens
 import com.riffle.core.domain.launcher.workspace.llPage
-import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.PoolItemId
+import com.riffle.core.domain.launcher.workspace.pool.PoolStoreCodec
+import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
 import com.riffle.core.domain.launcher.workspace.pool.PoolWidget
 import com.riffle.core.domain.launcher.workspace.pool.W1
 import com.riffle.core.domain.launcher.workspace.pool.add
@@ -34,6 +35,7 @@ import com.riffle.core.domain.launcher.workspace.pool.poolWidget
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -51,17 +53,30 @@ class WorkspaceBackupTest {
         WorkspaceDock(llBinding(ExpressionKind.ICON_ROW)),
     )
 
-    private fun layoutWithLibraryAndPool(): LayoutWorkspaces {
+    private fun layoutWithLibrary(): LayoutWorkspaces {
         val added = LensLibrary().tryAdd("Shared", llLens(), llCounter("lib")) as LibraryAdd.Added
-        val pool =
-            emptyPool(listOf(W1))
-                .add(poolApp("a"), ws = W1, cell = at(0, 0))
-                .add(poolWidget("w", host = 41), ws = W1, cell = at(1, 0, 2, 1))
         return LayoutWorkspaces.single(workspace(llBinding(ExpressionKind.LIST, llLens(), added.id)))
-            .copy(library = added.library, pool = pool)
+            .copy(library = added.library)
     }
 
-    private fun set() = WorkspaceSet(mapOf(phone to layoutWithLibraryAndPool()))
+    private fun set() = WorkspaceSet(mapOf(phone to layoutWithLibrary()))
+
+    private fun poolState(migrated: Boolean = true) =
+        PoolStoreState(
+            migrated = migrated,
+            pools =
+                mapOf(
+                    phone to
+                        emptyPool(listOf(W1))
+                            .add(poolApp("a"), ws = W1, cell = at(0, 0))
+                            .add(poolWidget("w", host = 41), ws = W1, cell = at(1, 0, 2, 1)),
+                ),
+        )
+
+    private fun poolRoundTrip(state: PoolStoreState): PoolRestore? {
+        val encoded = PoolStoreCodec.encode(WorkspaceBackup.exportPool(state)!!)
+        return WorkspaceBackup.restorePool(PoolStoreCodec.decode(encoded).state)
+    }
 
     private fun roundTrip(set: WorkspaceSet): WorkspaceSet? =
         WorkspaceBackup.restoreSet(
@@ -71,33 +86,57 @@ class WorkspaceBackupTest {
         }?.set
 
     @Test
-    fun `round trip keeps workspaces, library, refs and pool but unbinds widgets`() {
+    fun `round trip keeps workspaces, library and refs`() {
         val restored = roundTrip(set())!!.layouts.getValue(phone)
         val original = set().layouts.getValue(phone)
         assertEquals(original.workspaces, restored.workspaces)
         assertEquals(original.library, restored.library)
-        assertEquals(original.pool.arrangements, restored.pool.arrangements)
-        val widget = restored.pool.items.getValue(PoolItemId("w")) as PoolWidget
-        assertNull(widget.hostedId)
-        assertEquals(original.pool.items.getValue(PoolItemId("w")).let { (it as PoolWidget).provider }, widget.provider)
-        assertEquals(original.pool.items[PoolItemId("a")], restored.pool.items[PoolItemId("a")])
     }
 
     @Test
-    fun `export never writes a host id`() {
-        val exported = WorkspaceBackup.exportSet(set())!!
-        val widgets = exported.layouts.getValue(phone).pool.items.values.filterIsInstance<PoolWidget>()
-        assertTrue(widgets.isNotEmpty() && widgets.all { it.hostedId == null })
-        assertTrue(!WorkspaceSetCodec.encode(exported).toString().contains("\"host\""))
-    }
-
-    @Test
-    fun `restore counts and reports placeholders`() {
+    fun `restore counts workspaces and saved lenses`() {
         val restore = WorkspaceBackup.restoreSet(set())!!
         assertEquals(1, restore.workspaceCount)
         assertEquals(1, restore.savedLensCount)
-        assertEquals(1, restore.widgetPlaceholderCount)
         assertEquals(0, restore.repairedRefCount)
+    }
+
+    @Test
+    fun `pool round trip keeps items, arrangements and the import flag but unbinds widgets`() {
+        val original = poolState()
+        val restore = poolRoundTrip(original)!!
+        val restored = restore.state.pools.getValue(phone)
+        val before = original.pools.getValue(phone)
+        assertTrue(restore.state.migrated)
+        assertEquals(before.arrangements, restored.arrangements)
+        val widget = restored.items.getValue(PoolItemId("w")) as PoolWidget
+        assertNull(widget.hostedId)
+        assertEquals((before.items.getValue(PoolItemId("w")) as PoolWidget).provider, widget.provider)
+        assertEquals(before.items[PoolItemId("a")], restored.items[PoolItemId("a")])
+        assertEquals(1, restore.widgetPlaceholderCount)
+        assertFalse(poolRoundTrip(poolState(migrated = false))!!.state.migrated)
+    }
+
+    @Test
+    fun `pool export never writes a host id`() {
+        val exported = WorkspaceBackup.exportPool(poolState())!!
+        val widgets = exported.pools.getValue(phone).items.values.filterIsInstance<PoolWidget>()
+        assertTrue(widgets.isNotEmpty() && widgets.all { it.hostedId == null })
+        assertFalse(PoolStoreCodec.encode(exported).toString().contains("\"host\""))
+    }
+
+    @Test
+    fun `pool arrangements are kept even when no restored workspace has their id`() {
+        // Migrated arrangements are keyed by migrated workspace ids that preset workspaces borrow.
+        val restored = WorkspaceBackup.restorePool(poolState())!!.state.pools.getValue(phone)
+        assertEquals(setOf(W1), restored.arrangements.keys)
+    }
+
+    @Test
+    fun `the workspace set no longer carries placed items`() {
+        val legacy = WorkspaceSetCodec.encode(set())
+        val layouts = legacy.fields.getValue("layouts") as StoredValue.Arr
+        assertFalse(layouts.items.any { "pool" in (it as StoredValue.Obj).fields })
     }
 
     @Test
@@ -131,6 +170,10 @@ class WorkspaceBackupTest {
         assertNull(WorkspaceBackup.exportExclusions(null))
         assertNull(WorkspaceBackup.exportExclusions(LayoutExclusionRules()))
         assertNull(WorkspaceBackup.restoreExclusions(null))
+        assertNull(WorkspaceBackup.exportPool(null))
+        assertNull(WorkspaceBackup.exportPool(PoolStoreState()))
+        assertNull(WorkspaceBackup.restorePool(null))
+        assertNotNull(WorkspaceBackup.exportPool(PoolStoreState(migrated = true)))
     }
 
     @Test
@@ -149,7 +192,7 @@ class WorkspaceBackupTest {
     }
 
     @Test
-    fun `a future schema section is read best effort and an older one without pool or library decodes`() {
+    fun `a future schema section is read best effort and an older one without a library decodes`() {
         val encoded = WorkspaceSetCodec.encode(WorkspaceBackup.exportSet(set())!!)
         val future =
             encoded.copy(
@@ -158,7 +201,7 @@ class WorkspaceBackupTest {
         assertNotNull(WorkspaceBackup.restoreSet(WorkspaceSetCodec.decode(future)))
         val old = WorkspaceSetCodec.encode(WorkspaceSet(mapOf(phone to LayoutWorkspaces.single(workspace()))))
         val restored = WorkspaceBackup.restoreSet(WorkspaceSetCodec.decode(old))!!
-        assertEquals(PlacedItemPool(), restored.set.layouts.getValue(phone).pool)
+        assertEquals(LensLibrary(), restored.set.layouts.getValue(phone).library)
     }
 
     @Test
@@ -171,6 +214,7 @@ class WorkspaceBackupTest {
                 assertTrue(layout.workspaces.isNotEmpty())
                 assertEquals(emptyList(), LensLibraryOps.danglingRefs(layout))
             }
+            WorkspaceBackup.restorePool(PoolStoreCodec.decode(hostile(random, 0)).state)
             val rules = WorkspaceBackup.restoreExclusions(ExclusionRulesCodec.decode(hostile(random, 0)))
             assertTrue(
                 rules == null ||
@@ -230,5 +274,5 @@ class WorkspaceBackupTest {
 private val HOSTILE_KEYS =
     listOf(
         "layouts", "deviceClass", "workspaces", "pool", "library",
-        "rules", "items", "ref", "id", "version", "active",
+        "rules", "items", "ref", "id", "version", "active", "migrated",
     )

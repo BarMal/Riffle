@@ -149,9 +149,10 @@ ids, copy-from-layout shares no ids and keeps drawing the same lenses, codec rou
 * Preset catalog files still build inline lenses; promotion is derived from container part ids rather than declared
   `PresetLens` data. Declaring them per preset would let one lens be shared between two containers.
 
-## Open questions
+## Owner decisions (2026-10-23, #1363)
 
-* Within-layout workspace duplicate shares refs (design 4.3) rather than copying lenses with fresh ids. If the owner
-  wants the clone independent, `duplicate` can call `makeIndependent` or copy entries; one-line change plus tests.
-* Should reinstalling a preset whose catalog lens changed in a newer release update the user's untouched entry?
-  Today an entry is reused as is; only `reset(restoreLenses = true)` refreshes it.
+* **Duplicate shares refs** (as built, design 4.3). Per-binding Detach stays available for an independent copy.
+* **Reinstalling a preset refreshes untouched entries.** When a preset's catalog lens changed in a newer release, an
+  entry the user never edited takes the new definition; an edited entry is left alone. Not built yet: today an entry is
+  reused as is and only `reset(restoreLenses = true)` refreshes it, and "untouched" needs tracking (for example the
+  catalog lens an entry was installed from).
