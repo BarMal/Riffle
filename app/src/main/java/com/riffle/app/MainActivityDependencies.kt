@@ -220,38 +220,37 @@ internal class MainActivityDependencies(
     private fun workspaceItemSources(
         launcherSettings: () -> LauncherSettings,
         searchQuery: SearchQueryHolder,
-    ) =
-        androidItemSources(
-            installedApps = installedAppRepository,
-            appVisibility = appVisibilityRepository,
-            recentApps = recentAppRepository,
-            notificationRepository = activeNotificationRepository,
-            notificationAccess = notificationAccessGateway,
-            hideRules = { launcherSettings().notificationHiding.rules },
-            calendar =
-                androidCalendarSourceDependencies(
-                    contentResolver = activity.contentResolver,
-                    access = calendarAccessGateway,
-                    accessChanges = calendarAccessChanges,
-                ),
-            content =
-                ContentSourceDependencies(
-                    search = SearchSourceDependencies(query = searchQuery),
-                    feeds =
-                        FeedSourceDependencies(
-                            configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
-                            cache = feedArticleCacheRepository,
-                            changes = feedRefreshCoordinator.cacheChanges,
-                        ),
-                    ics =
-                        IcsSourceDependencies(
-                            feeds = { icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds },
-                            cachedEvents = { id -> icsFeedRepository.cached(id)?.events },
-                            engine = icsEngine,
-                            changes = icsFeedRepository,
-                        ),
-                ),
-        )
+    ) = androidItemSources(
+        installedApps = installedAppRepository,
+        appVisibility = appVisibilityRepository,
+        recentApps = recentAppRepository,
+        notificationRepository = activeNotificationRepository,
+        notificationAccess = notificationAccessGateway,
+        hideRules = { launcherSettings().notificationHiding.rules },
+        calendar =
+            androidCalendarSourceDependencies(
+                contentResolver = activity.contentResolver,
+                access = calendarAccessGateway,
+                accessChanges = calendarAccessChanges,
+            ),
+        content =
+            ContentSourceDependencies(
+                search = SearchSourceDependencies(query = searchQuery),
+                feeds =
+                    FeedSourceDependencies(
+                        configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
+                        cache = feedArticleCacheRepository,
+                        changes = feedRefreshCoordinator.cacheChanges,
+                    ),
+                ics =
+                    IcsSourceDependencies(
+                        feeds = { icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds },
+                        cachedEvents = { id -> icsFeedRepository.cached(id)?.events },
+                        engine = icsEngine,
+                        changes = icsFeedRepository,
+                    ),
+            ),
+    )
 
     /**
      * The workspace preview's runtime (debug-only experience). Call it only once the preview is switched on:
