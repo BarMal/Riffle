@@ -20,11 +20,24 @@ internal class PoolHomePreference(context: Context) {
         preferences.edit().putBoolean(KEY_ENABLED, enabled).apply()
     }
 
+    /** True the first time it is called with [damaged] after a clean start (then false until a clean start again). */
+    fun takeRecoveryNotice(damaged: Boolean): Boolean =
+        runCatching {
+            val shown = preferences.getBoolean(KEY_RECOVERY_NOTICE_SHOWN, false)
+            if (damaged != shown) preferences.edit().putBoolean(KEY_RECOVERY_NOTICE_SHOWN, damaged).apply()
+            damaged && !shown
+        }.getOrDefault(false)
+
     private companion object {
         const val PREFERENCES_NAME = "riffle_pool_home"
         const val KEY_ENABLED = "enabled"
+        const val KEY_RECOVERY_NOTICE_SHOWN = "recovery_notice_shown"
     }
 }
+
+/** Shown once when part of the saved home could not be read. Names the way back; no item content. */
+internal const val POOL_HOME_RECOVERY_NOTICE =
+    "Riffle couldn't read part of your saved home screen. To restore it, import a backup: Settings > Backup."
 
 /**
  * The switch as the settings row sees it: the stored choice ([enabled]) and whether this process actually renders

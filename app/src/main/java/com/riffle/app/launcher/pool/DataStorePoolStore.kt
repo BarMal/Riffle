@@ -23,6 +23,8 @@ internal class DataStorePoolStore(context: Context) : PoolStorePort {
             decodePoolStore(value) ?: throw UndecodablePoolException()
         }
 
+    override suspend fun hasQuarantine(): Boolean = dataStore.data.first()[PoolDataStoreKeys.corrupt] != null
+
     override suspend fun quarantine() {
         dataStore.edit { preferences ->
             val raw = preferences[PoolDataStoreKeys.pool]

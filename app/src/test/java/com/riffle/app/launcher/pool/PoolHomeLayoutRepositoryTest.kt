@@ -207,8 +207,11 @@ class PoolHomeLayoutRepositoryTest {
     @Test
     fun theFirstEditAfterAFreshInstallIsKeptAcrossARestart() {
         layouts.stored = null
-        val (repository, _) = start()
-        assertEquals(null, repository.loadHomeLayoutSet())
+        val pool = CachedPoolRepository(pools).also { currentPool = it }
+        runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        // Nothing shown yet: the shell starts from its own default set.
+        val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(null) }
+        assertEquals(null, repository.loadHomeLayoutSet()?.activeLayout?.homeItems()?.takeIf { it.isNotEmpty() })
         val default = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
         val widget =
             WidgetItem(LauncherItemId("widget-1"), HostedWidgetId(71), "Notes", placement = PoolHomeFixture.at(0, 0))
@@ -302,5 +305,26 @@ class PoolHomeLayoutRepositoryTest {
         // Another writer of the same repository (the preview's editor) flushes first.
         runBlocking { currentPool.flush() }
         assertEquals(listOf(setOf(HostedWidgetId(42))), released)
+    }
+
+    @Test
+    fun theSnapshotCatchesUpWithAnotherWritersPoolWrite() {
+        val pool = CachedPoolRepository(pools)
+        val opening = runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        poolHomeRepository(WriteThroughHomeLayouts(layouts), pool, snapshots = layouts).also { it.open(opening.stored) }
+        // The preview's editor removes "maps" and flushes; the home never commits.
+        val phone = pool.pool(HomeLayoutDeviceClass.PHONE)!!
+        val ws = PoolHomeSync.workspaceOf(PoolHomeFixture.key)
+        val mapsId = phone.items.keys.first { it.value.endsWith("maps") }
+        pool.update(HomeLayoutDeviceClass.PHONE, (PoolRemoval.remove(phone, ws, mapsId) as PoolResult.Done).edit.pool)
+        runBlocking { pool.flush() }
+        val deadline = System.currentTimeMillis() + 5_000
+        while (layouts.snapshot!!.activeLayout.homeItems().size != 2 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(10)
+        }
+        assertEquals(
+            listOf("mail", "clock"),
+            layouts.snapshot!!.activeLayout.homeItems().map { it.id.value.legacyId() },
+        )
     }
 }

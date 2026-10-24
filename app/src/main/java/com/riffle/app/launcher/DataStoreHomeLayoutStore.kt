@@ -82,6 +82,22 @@ internal class DataStoreHomeLayoutStore(context: Context) : HomeLayoutCutoverSto
             }
         }
     }
+
+    /** One DataStore transaction: a start can never find the snapshot beside a set that still has the old ids. */
+    override suspend fun writeCutover(
+        stored: HomeLayoutSet,
+        snapshot: HomeLayoutSet,
+    ) {
+        val encodedStored = encodeHomeLayoutSet(stored)
+        val encodedSnapshot = encodeHomeLayoutSet(snapshot)
+        dataStore.edit { preferences ->
+            preferences[HomeLayoutDataStoreKeys.prePoolSnapshot] = encodedSnapshot
+            preferences[HomeLayoutDataStoreKeys.homeLayout] = encodedStored
+        }
+    }
+
+    override suspend fun hasQuarantinedSnapshot(): Boolean =
+        dataStore.data.first()[HomeLayoutDataStoreKeys.prePoolSnapshotCorrupt] != null
 }
 
 /**
@@ -94,8 +110,17 @@ internal class HomeLayoutRuntime(
     val poolHome: PoolHomeLayoutRepository?,
     val pool: CachedPoolRepository,
     val poolHomeSwitch: PoolHomeSwitch,
+    private val preference: PoolHomePreference,
+    /** Part of the saved home could not be read this start (see `HomeLayoutOpening.damaged`). */
+    private val damaged: Boolean,
 ) : DefaultLifecycleObserver {
     val repository: HomeLayoutRepository = poolHome ?: writeBehind
+
+    /**
+     * True once per damage: the first start that finds part of the saved home unreadable (the quarantined copies are
+     * never overwritten, so it stays found) gets the notice; a clean start resets it for a later incident.
+     */
+    fun takeRecoveryNotice(): Boolean = preference.takeRecoveryNotice(damaged)
 
     override fun onStop(owner: LifecycleOwner) {
         poolHome?.let { flushPoolHomeBlocking(it) }
@@ -137,7 +162,8 @@ internal object HomeLayoutRepositories {
         val writeBehind =
             WriteBehindHomeLayoutRepository(
                 initialLayoutSet = opening.stored,
-                persist = { layoutSet -> store.write(layoutSet) },
+                // A store that could not be read is never written this process (what is on disk is kept).
+                persist = { layoutSet -> if (opening.persist) store.write(layoutSet) },
                 scope = scope,
                 onWriteFailed = { failure -> Log.w(HOME_LAYOUT_STORE_LOG_TAG, "Home layout write failed", failure) },
             )
@@ -153,7 +179,14 @@ internal object HomeLayoutRepositories {
             } else {
                 null
             }
-        return HomeLayoutRuntime(writeBehind, poolHome, pool, PoolHomeSwitch(preference, opening.poolHome))
+        return HomeLayoutRuntime(
+            writeBehind = writeBehind,
+            poolHome = poolHome,
+            pool = pool,
+            poolHomeSwitch = PoolHomeSwitch(preference, opening.poolHome),
+            preference = preference,
+            damaged = opening.damaged,
+        )
     }
 
     /** The provider a widget host id is bound to (read-only), for migrating widgets into the pool. */

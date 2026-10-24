@@ -2,7 +2,16 @@ package com.riffle.app.launcher.pool
 
 import com.riffle.app.launcher.pool.PoolHomeFixture.homeItems
 import com.riffle.app.launcher.pool.PoolHomeFixture.legacyId
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.workspace.pool.PoolApp
+import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
+import com.riffle.core.domain.launcher.workspace.pool.PoolItemId
+import com.riffle.core.domain.launcher.workspace.pool.PoolPlacement
+import com.riffle.core.domain.launcher.workspace.pool.PoolResult
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,7 +38,8 @@ class PoolHomeStartupTest {
         val pools = DiskPoolStore()
         val (opening, pool) = open(layouts, pools)
         assertTrue(opening.poolHome)
-        assertEquals(legacy, opening.stored)
+        assertTrue("the stripped set is written with the snapshot", opening.stored!!.activeLayout.homeItems().isEmpty())
+        assertEquals(opening.stored, layouts.stored)
         assertEquals(
             "the snapshot is the pool's projection: every item",
             legacy.activeLayout.homeItems().map { it.id.value },
@@ -179,19 +189,95 @@ class PoolHomeStartupTest {
     }
 
     @Test
-    fun aPoolThatCannotBeReadRunsTheLegacyPathFromTheSnapshotAndCutsOverCleanlyNextTime() {
+    fun aFallbackSessionsAdditionsAreKeptAndThePoolStaysPreferred() {
         val (layouts, pools) = cutOverStores()
+        // The pool is newer than the snapshot: an app the snapshot never saw.
+        val newer = CachedPoolRepository(pools).also { runBlocking { it.initialize(layouts.snapshot!!) } }
+        val ws = PoolHomeSync.workspaceOf(PoolHomeFixture.key)
+        val phone = newer.pool(HomeLayoutDeviceClass.PHONE)!!
+        val withNewer =
+            PoolPlacement.addNew(
+                phone,
+                ws,
+                PoolHomeFixture.home,
+                PoolApp(PoolItemId("pool-newer"), PoolHomeFixture.identity("n"), "n"),
+                PoolHomeFixture.at(3, 0),
+            )
+        newer.update(HomeLayoutDeviceClass.PHONE, (withNewer as PoolResult.Done).edit.pool)
+        runBlocking { newer.flush() }
+
         pools.failRead = true
-        val (opening, _) = open(layouts, pools)
-        assertFalse(opening.poolHome)
-        assertEquals(3, opening.stored!!.activeLayout.homeItems().size)
+        val (fallback, _) = open(layouts, pools)
+        assertFalse(fallback.poolHome)
         assertEquals("the full set is written back, never stripped", 3, layouts.stored!!.activeLayout.homeItems().size)
-        assertNull("the marker is removed", layouts.snapshot)
+        assertNotNull("the marker stays", layouts.snapshot)
+        // The fallback session adds an app and a widget (the legacy path writes full sets).
+        val session = layouts.stored!!
+        val widget =
+            WidgetItem(
+                LauncherItemId("widget-8"),
+                HostedWidgetId(88),
+                "Notes",
+                placement = PoolHomeFixture.at(2, 3, 2, 1),
+            )
+        val added = listOf(PoolHomeFixture.app("added", 2), widget)
+        layouts.stored =
+            session.withActiveLayout(
+                session.activeLayout.copy(
+                    pages =
+                        session.activeLayout.pages.map { page ->
+                            if (page.type == LauncherPageType.Home) page.copy(items = page.items + added) else page
+                        },
+                ),
+            )
 
         pools.failRead = false
         val (next, pool) = open(layouts, pools)
         assertTrue(next.poolHome)
         val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(next.stored) }
-        assertEquals(3, repository.loadHomeLayoutSet()!!.activeLayout.homeItems().size)
+        val items = repository.loadHomeLayoutSet()!!.activeLayout.homeItems().map { it.id.value }
+        assertTrue(items.toString(), "added" in items && "widget-8" in items && "pool-newer" in items)
+        assertTrue(repository.isHostIdReferenced(HostedWidgetId(88)))
+        runBlocking { repository.flushNow() }
+        val (again, againPool) = open(layouts, pools)
+        val restarted = poolHomeRepository(WriteThroughHomeLayouts(layouts), againPool).also { it.open(again.stored) }
+        assertEquals(items, restarted.loadHomeLayoutSet()!!.activeLayout.homeItems().map { it.id.value })
+    }
+
+    @Test
+    fun anUndecodablePoolAndAnUnreadableSnapshotMigrateNothingAndWriteNothing() {
+        val (layouts, pools) = cutOverStores()
+        pools.corrupt = true
+        layouts.snapshotUnreadable = true
+        val poolWrites = pools.writes
+        val layoutWrites = layouts.writes
+        val (opening, pool) = open(layouts, pools)
+        assertFalse(opening.poolHome)
+        assertTrue(opening.damaged)
+        assertNull("no pool was derived from the stripped set", pool.current())
+        assertEquals(poolWrites, pools.writes)
+        assertTrue("the original pool blob is kept", pools.corrupt && pools.quarantined)
+        assertEquals(layoutWrites, layouts.writes)
+        assertTrue(layouts.snapshotUnreadable && layouts.snapshotQuarantined)
+    }
+
+    @Test
+    fun aHomeLayoutStoreThatCannotBeReadRunsTheLegacyPathAndWritesNothing() {
+        val layouts = DiskHomeLayoutStore(stored = legacy, failRead = true)
+        val pools = DiskPoolStore()
+        val (opening, pool) = open(layouts, pools)
+        assertFalse(opening.poolHome)
+        assertFalse(opening.persist)
+        assertTrue(opening.damaged)
+        assertNull(opening.stored)
+        assertNull(pool.current())
+        assertEquals(0, pools.writes)
+        assertEquals(0, layouts.writes)
+    }
+
+    @Test
+    fun aCleanStartIsNotDamaged() {
+        val (layouts, pools) = cutOverStores()
+        assertFalse(open(layouts, pools).first.damaged)
     }
 }
