@@ -24,8 +24,14 @@ internal class PoolHomePreference(context: Context) {
     fun takeRecoveryNotice(damaged: Boolean): Boolean =
         runCatching {
             val shown = preferences.getBoolean(KEY_RECOVERY_NOTICE_SHOWN, false)
-            if (damaged != shown) preferences.edit().putBoolean(KEY_RECOVERY_NOTICE_SHOWN, damaged).apply()
-            damaged && !shown
+            val step = recoveryNoticeStep(alreadyShown = shown, damaged = damaged)
+            if (step.shownAfter != shown) {
+                preferences.edit().putBoolean(
+                    KEY_RECOVERY_NOTICE_SHOWN,
+                    step.shownAfter,
+                ).apply()
+            }
+            step.show
         }.getOrDefault(false)
 
     private companion object {

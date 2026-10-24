@@ -30,9 +30,6 @@ internal interface PoolStorePort {
      * losing it; never over an earlier copy. Throws when the copy could not be made.
      */
     suspend fun quarantine() = Unit
-
-    /** True when a quarantined copy exists (it is never overwritten; a backup import is how to recover from it). */
-    suspend fun hasQuarantine(): Boolean = false
 }
 
 /** A pool value is stored but cannot be decoded (corrupt, truncated, or a future schema). */
@@ -139,11 +136,13 @@ internal class CachedPoolRepository(
             true
         }
 
-    /** Whether the store keeps a quarantined (undecodable) copy; false when that cannot be read. */
-    suspend fun hasQuarantine(): Boolean =
-        runCatching { store.hasQuarantine() }.onFailure { if (it is CancellationException) throw it }.getOrDefault(
-            false,
-        )
+    /**
+     * Never writes again this process (a read-only home, see `ReadOnlyHomeLayoutRepository`): the in-memory pool may
+     * still be read and edited by the preview, but nothing reaches the store.
+     */
+    fun freeze() {
+        persistenceEnabled = false
+    }
 
     /** False once a read failed: nothing will be written this process, so nothing may depend on a write landing. */
     val isPersistent: Boolean

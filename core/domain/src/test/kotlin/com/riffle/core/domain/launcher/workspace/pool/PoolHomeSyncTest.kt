@@ -637,22 +637,4 @@ class PoolHomeSyncTest {
         assertFalse(PoolCutover.holdsHome(empty), "arrangements and a dock, but nothing in them")
         assertTrue(PoolCutover.holdsHome(opened.state))
     }
-
-    @Test
-    fun openingAFallbackSessionsSetAddsItsItemsAndKeepsThePools() {
-        val opened = open()
-        val session =
-            opened.shown.withActiveLayout(
-                opened.shown.activeLayout.withPage(
-                    opened.shown.activeLayout.page(second).copy(items = listOf(app("added", "added", 0, 0))),
-                ),
-            )
-        val result = PoolHomeSync.open(opened.state, session, ids)
-        val items = result.shown.activeLayout.homeItems().map { it.id.value.legacyId() }
-        assertEquals(
-            listOf("mail", "folder", "clock", "maps", "added"),
-            items,
-            "pool kept (maps too), the addition on top",
-        )
-    }
 }

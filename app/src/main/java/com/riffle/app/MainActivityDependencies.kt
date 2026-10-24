@@ -15,6 +15,7 @@ import com.riffle.app.launcher.CachedWorkspaceRepository
 import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
 import com.riffle.app.launcher.DataStoreWorkspaceStore
 import com.riffle.app.launcher.HomeLayoutRepositories
+import com.riffle.app.launcher.HomeLayoutRuntime
 import com.riffle.app.launcher.HostedWidgetAddAction
 import com.riffle.app.launcher.HostedWidgetAddCompletionResult
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
@@ -212,28 +213,19 @@ internal class MainActivityDependencies(
                     screenHeightDp = activity.resources.configuration.screenHeightDp,
                 ),
             viewModeAvailability = libraryOnlyLauncherViewModeAvailability(),
-            deleteHostedWidgetId = ::deleteHostedWidgetIdUnlessReferenced,
+            deleteHostedWidgetId = hostIdDeletion::unlessReferenced,
             feedArticleCacheRepository = feedArticleCacheRepository,
             workspaceRepository = workspaceRepository,
         )
     }
 
-    /**
-     * Once the home renders from the pool, a widget removed from one workspace may still be shown by another (the same
-     * instance), so the shell's "delete the removed widget's host id" goes through this check: an id any arrangement,
-     * the dock or the shell's set still references is kept. On the legacy path the shell deletes as before.
-     */
-    private fun deleteHostedWidgetIdUnlessReferenced(hostedWidgetId: HostedWidgetId) {
-        val poolHome = homeLayoutRuntime.poolHome
-        if (poolHome == null || !poolHome.isHostIdReferenced(hostedWidgetId)) {
-            widgetHostGateway.deleteHostedWidgetId(hostedWidgetId)
-        }
-    }
+    /** Every widget host id delete of the process goes through these checks (see [HostIdDeletion]). */
+    val hostIdDeletion by lazy { HostIdDeletion({ homeLayoutRuntime }, widgetHostGateway::deleteHostedWidgetId) }
 
     /** Host ids the pool released after its write landed: deleted on the main thread, rechecked there. */
     private fun attachHostIdReleaser() {
         homeLayoutRuntime.poolHome?.hostIdReleaser = { ids ->
-            activity.runOnUiThread { ids.forEach(::deleteHostedWidgetIdUnlessReferenced) }
+            activity.runOnUiThread { ids.forEach(hostIdDeletion::unlessReferenced) }
         }
     }
 
@@ -246,6 +238,7 @@ internal class MainActivityDependencies(
         val poolState = poolRepository.current()
         val poolHome = homeLayoutRuntime.poolHome
         return when {
+            !homeLayoutRuntime.allowsHostIdDeletion -> HostedWidgetIdReferenceState.Unknown
             poolHome != null && poolState == null -> HostedWidgetIdReferenceState.Unknown
             layoutSet == null && poolState == null -> HostedWidgetIdReferenceState.Unknown
             PoolHostIds.isReferenced(hostedWidgetId, poolState, layoutSet) -> HostedWidgetIdReferenceState.Referenced
@@ -326,7 +319,7 @@ internal class MainActivityDependencies(
             actions = PoolItemActions(launchApp = appLauncher::launch, launchShortcut = appLauncher::launchShortcut),
             providerOf = widgetHostGateway::hostedWidgetProvider,
             releaseHostIds = { ids ->
-                activity.runOnUiThread { ids.forEach(::deleteHostedWidgetIdUnlessReferenced) }
+                activity.runOnUiThread { ids.forEach(hostIdDeletion::unlessReferenced) }
             },
         )
 
@@ -386,7 +379,7 @@ internal class MainActivityDependencies(
             selectedGrid = selectedGrid,
             windowSize = widgetAddWindowSizeProvider::windowSize,
             completeWidgetAdd = completeWidgetAdd,
-            deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
+            deleteHostedWidgetId = hostIdDeletion::ifAllowed,
         )
 }
 
@@ -426,3 +419,24 @@ private fun MainActivityDependencies.workspaceItemSources(
                 ),
         ),
 )
+
+/**
+ * The widget host id deletes of the process. Nothing is deleted while the process is read-only or damaged
+ * ([HomeLayoutRuntime.allowsHostIdDeletion]). Once the home renders from the pool, a widget removed from one workspace
+ * may still be shown by another (the same instance), so [unlessReferenced] keeps an id any arrangement, the dock or the
+ * shell's set still references; on the legacy path the shell deletes as before.
+ */
+internal class HostIdDeletion(
+    private val runtime: () -> HomeLayoutRuntime,
+    private val delete: (HostedWidgetId) -> Unit,
+) {
+    fun unlessReferenced(hostedWidgetId: HostedWidgetId) {
+        val poolHome = runtime().poolHome
+        if (poolHome == null || !poolHome.isHostIdReferenced(hostedWidgetId)) ifAllowed(hostedWidgetId)
+    }
+
+    /** Deletes [hostedWidgetId] (a freshly allocated id the platform refused) unless deletes are off. */
+    fun ifAllowed(hostedWidgetId: HostedWidgetId) {
+        if (runtime().allowsHostIdDeletion) delete(hostedWidgetId)
+    }
+}

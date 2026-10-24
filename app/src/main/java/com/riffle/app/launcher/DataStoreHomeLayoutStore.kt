@@ -12,10 +12,13 @@ import androidx.lifecycle.LifecycleOwner
 import com.riffle.app.launcher.pool.CachedPoolRepository
 import com.riffle.app.launcher.pool.DataStorePoolStore
 import com.riffle.app.launcher.pool.HomeLayoutCutoverStore
+import com.riffle.app.launcher.pool.HomeLayoutOpening
 import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.app.launcher.pool.PoolHomePreference
 import com.riffle.app.launcher.pool.PoolHomeSwitch
 import com.riffle.app.launcher.pool.PrePoolSnapshot
+import com.riffle.app.launcher.pool.ReadOnlyHomeLayoutRepository
+import com.riffle.app.launcher.pool.UndecodableHomeLayoutException
 import com.riffle.app.launcher.pool.openHomeLayouts
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -27,6 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 private val Context.homeLayoutDataStore by preferencesDataStore(
     name = "riffle_home_layout",
@@ -47,8 +51,18 @@ internal class DataStoreHomeLayoutStore(context: Context) : HomeLayoutCutoverSto
     private val dataStore = context.homeLayoutDataStore
 
     override suspend fun read(): HomeLayoutSet? =
-        dataStore.data.first()[HomeLayoutDataStoreKeys.homeLayout]
-            ?.let { value -> runCatching { decodeHomeLayoutSet(value) }.getOrNull() }
+        dataStore.data.first()[HomeLayoutDataStoreKeys.homeLayout]?.let { value ->
+            runCatching { decodeHomeLayoutSet(value) }.getOrNull() ?: throw UndecodableHomeLayoutException()
+        }
+
+    override suspend fun quarantine() {
+        dataStore.edit { preferences ->
+            val raw = preferences[HomeLayoutDataStoreKeys.homeLayout]
+            if (raw != null && preferences[HomeLayoutDataStoreKeys.homeLayoutCorrupt] == null) {
+                preferences[HomeLayoutDataStoreKeys.homeLayoutCorrupt] = raw
+            }
+        }
+    }
 
     override suspend fun write(layoutSet: HomeLayoutSet) {
         val encoded = encodeHomeLayoutSet(layoutSet)
@@ -95,32 +109,31 @@ internal class DataStoreHomeLayoutStore(context: Context) : HomeLayoutCutoverSto
             preferences[HomeLayoutDataStoreKeys.homeLayout] = encodedStored
         }
     }
-
-    override suspend fun hasQuarantinedSnapshot(): Boolean =
-        dataStore.data.first()[HomeLayoutDataStoreKeys.prePoolSnapshotCorrupt] != null
 }
 
 /**
  * The home layout repositories of the process, opened once. [repository] is what the shell talks to: the
- * [PoolHomeLayoutRepository] when the standard home renders from the placed-items pool, else [writeBehind] itself.
- * As a lifecycle observer it makes both durable on `onStop` (the pool first).
+ * [PoolHomeLayoutRepository] when the standard home renders from the placed-items pool, the
+ * [ReadOnlyHomeLayoutRepository] when the store was cut over but the pool cannot be used this process, else
+ * [writeBehind] itself. As a lifecycle observer it makes both durable on `onStop` (the pool first).
  */
 internal class HomeLayoutRuntime(
     val writeBehind: WriteBehindHomeLayoutRepository,
     val poolHome: PoolHomeLayoutRepository?,
+    val readOnlyHome: ReadOnlyHomeLayoutRepository?,
     val pool: CachedPoolRepository,
     val poolHomeSwitch: PoolHomeSwitch,
     private val preference: PoolHomePreference,
-    /** Part of the saved home could not be read this start (see `HomeLayoutOpening.damaged`). */
-    private val damaged: Boolean,
+    /** How the home opened this process (read-only, damaged). */
+    private val opening: HomeLayoutOpening,
 ) : DefaultLifecycleObserver {
-    val repository: HomeLayoutRepository = poolHome ?: writeBehind
+    /** See `HomeLayoutOpening.allowsHostIdDeletion`. */
+    val allowsHostIdDeletion: Boolean = opening.allowsHostIdDeletion
 
-    /**
-     * True once per damage: the first start that finds part of the saved home unreadable (the quarantined copies are
-     * never overwritten, so it stays found) gets the notice; a clean start resets it for a later incident.
-     */
-    fun takeRecoveryNotice(): Boolean = preference.takeRecoveryNotice(damaged)
+    val repository: HomeLayoutRepository = poolHome ?: readOnlyHome ?: writeBehind
+
+    /** True once per incident: this start found damage and the notice has not been shown since the last clean start. */
+    fun takeRecoveryNotice(): Boolean = preference.takeRecoveryNotice(opening.damaged)
 
     override fun onStop(owner: LifecycleOwner) {
         poolHome?.let { flushPoolHomeBlocking(it) }
@@ -162,8 +175,8 @@ internal object HomeLayoutRepositories {
         val writeBehind =
             WriteBehindHomeLayoutRepository(
                 initialLayoutSet = opening.stored,
-                // A store that could not be read is never written this process (what is on disk is kept).
-                persist = { layoutSet -> if (opening.persist) store.write(layoutSet) },
+                // A read-only process never writes (what is on disk is kept).
+                persist = { layoutSet -> if (!opening.readOnly) store.write(layoutSet) },
                 scope = scope,
                 onWriteFailed = { failure -> Log.w(HOME_LAYOUT_STORE_LOG_TAG, "Home layout write failed", failure) },
             )
@@ -179,13 +192,35 @@ internal object HomeLayoutRepositories {
             } else {
                 null
             }
+        val readOnlyHome =
+            if (opening.readOnly) {
+                pool.freeze()
+                ReadOnlyHomeLayoutRepository(
+                    initial = opening.stored,
+                    // The recovery the notice names: the backup becomes the full set and the next start cuts over.
+                    restore = { restored ->
+                        scope.launch {
+                            runCatching {
+                                store.write(restored)
+                                store.writePrePoolSnapshot(null)
+                            }.onFailure {
+                                    failure ->
+                                Log.w(HOME_LAYOUT_STORE_LOG_TAG, "Home layout restore failed", failure)
+                            }
+                        }
+                    },
+                )
+            } else {
+                null
+            }
         return HomeLayoutRuntime(
             writeBehind = writeBehind,
             poolHome = poolHome,
+            readOnlyHome = readOnlyHome,
             pool = pool,
             poolHomeSwitch = PoolHomeSwitch(preference, opening.poolHome),
             preference = preference,
-            damaged = opening.damaged,
+            opening = opening,
         )
     }
 
@@ -210,4 +245,5 @@ private object HomeLayoutDataStoreKeys {
     val homeLayout = stringPreferencesKey("home_layout")
     val prePoolSnapshot = stringPreferencesKey("home_layout_pre_pool")
     val prePoolSnapshotCorrupt = stringPreferencesKey("home_layout_pre_pool_corrupt")
+    val homeLayoutCorrupt = stringPreferencesKey("home_layout_corrupt")
 }
