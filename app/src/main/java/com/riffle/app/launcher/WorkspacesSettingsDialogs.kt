@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.editor.EditorChoiceRow
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import com.riffle.core.domain.launcher.workspace.settings.CopySource
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsAction
@@ -55,6 +56,10 @@ internal fun WorkspacesDialogs(
                 confirm = WorkspacesDialogText.RESET_CONFIRM,
                 onDismiss = onDismiss,
             ) { apply(WorkspacesSettingsAction.ResetToPreset(dialog.id)) }
+        is WorkspaceDialog.PickSkin ->
+            SkinPickerDialog(dialog.skin, onDismiss) { skin ->
+                apply(WorkspacesSettingsAction.SetSkin(dialog.id, skin))
+            }
         WorkspaceDialog.PickPreset ->
             PresetPickerDialog(onDismiss) { presetId, activate ->
                 apply(WorkspacesSettingsAction.InstallPreset(presetId, activate))
@@ -106,6 +111,43 @@ private fun ConfirmDialog(
         title = { Text(title) },
         text = { Text(body) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(confirm) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(WorkspacesSettingsText.CANCEL) } },
+    )
+}
+
+/**
+ * Follow the global appearance, or one theme preset for this workspace (Q15). Radio rows, the current choice
+ * pre-selected; nothing changes until Save.
+ */
+@Composable
+private fun SkinPickerDialog(
+    current: LauncherThemePreset?,
+    onDismiss: () -> Unit,
+    onSave: (LauncherThemePreset?) -> Unit,
+) {
+    var chosen by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(WorkspacesSettingsText.APPEARANCE_TITLE) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+            ) {
+                Text(text = WorkspacesSettingsText.APPEARANCE_BODY, style = MaterialTheme.typography.bodyMedium)
+                (listOf<LauncherThemePreset?>(null) + LauncherThemePreset.entries).forEach { option ->
+                    EditorChoiceRow(
+                        title = WorkspacesSettingsText.skinLabel(option),
+                        selected = option == chosen,
+                        enabled = true,
+                        onClick = { chosen = option },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(chosen) }) { Text(WorkspacesSettingsText.SAVE) }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text(WorkspacesSettingsText.CANCEL) } },
     )
 }

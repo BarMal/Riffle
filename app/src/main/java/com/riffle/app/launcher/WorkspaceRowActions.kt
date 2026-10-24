@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.settings.WorkspaceRow
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsAction
@@ -12,6 +13,7 @@ internal enum class WorkspaceRowActionKind {
     MAKE_DEFAULT,
     MOVE_UP,
     MOVE_DOWN,
+    APPEARANCE,
     RESET,
     INSTALL_PRESET,
     DELETE,
@@ -49,6 +51,7 @@ internal fun workspaceRowActions(
         WorkspaceRowAction(WorkspaceRowActionKind.MAKE_DEFAULT, WorkspacesSettingsText.MAKE_DEFAULT, !row.isDefault),
         WorkspaceRowAction(WorkspaceRowActionKind.MOVE_UP, WorkspacesSettingsText.MOVE_UP, row.canMoveUp),
         WorkspaceRowAction(WorkspaceRowActionKind.MOVE_DOWN, WorkspacesSettingsText.MOVE_DOWN, row.canMoveDown),
+        WorkspaceRowAction(WorkspaceRowActionKind.APPEARANCE, WorkspacesSettingsText.APPEARANCE),
         row.presetName
             ?.let { WorkspaceRowAction(WorkspaceRowActionKind.RESET, WorkspacesSettingsText.resetLabel(it)) }
             ?: WorkspaceRowAction(WorkspaceRowActionKind.INSTALL_PRESET, WorkspacesSettingsText.INSTALL_PRESET),
@@ -68,14 +71,17 @@ internal sealed interface WorkspaceDialog {
 
     data class ConfirmReset(val id: WorkspaceId, val name: String, val presetName: String) : WorkspaceDialog
 
+    /** The workspace's appearance: follow the global theme preset, or override it with one. */
+    data class PickSkin(val id: WorkspaceId, val name: String, val skin: LauncherThemePreset?) : WorkspaceDialog
+
     data object PickPreset : WorkspaceDialog
 
     data object PickCopySource : WorkspaceDialog
 }
 
 /**
- * Runs the chosen row action: non-destructive ones apply at once; Rename, Reset, Delete and the preset picker
- * open their dialog (Reset and Delete confirm and offer Undo); Edit goes to the existing editor route.
+ * Runs the chosen row action: non-destructive ones apply at once; Rename, Appearance, Reset, Delete and the preset
+ * picker open their dialog (Reset and Delete confirm and offer Undo); Edit goes to the existing editor route.
  */
 internal fun WorkspacesPageCallbacks.runRowAction(
     row: WorkspaceRow,
@@ -90,6 +96,7 @@ internal fun WorkspacesPageCallbacks.runRowAction(
         WorkspaceRowActionKind.MAKE_DEFAULT -> onAction(WorkspacesSettingsAction.MakeDefault(id))
         WorkspaceRowActionKind.MOVE_UP -> onAction(WorkspacesSettingsAction.Move(id, -1))
         WorkspaceRowActionKind.MOVE_DOWN -> onAction(WorkspacesSettingsAction.Move(id, 1))
+        WorkspaceRowActionKind.APPEARANCE -> openDialog(WorkspaceDialog.PickSkin(id, row.name, row.skin))
         WorkspaceRowActionKind.RESET ->
             openDialog(WorkspaceDialog.ConfirmReset(id, row.name, row.presetName.orEmpty()))
         WorkspaceRowActionKind.INSTALL_PRESET -> openDialog(WorkspaceDialog.PickPreset)

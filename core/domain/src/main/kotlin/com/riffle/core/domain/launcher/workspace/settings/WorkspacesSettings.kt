@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.workspace.settings
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.LayoutCapabilities
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
@@ -9,6 +10,7 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIssue
 import com.riffle.core.domain.launcher.workspace.WorkspaceResolution
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import com.riffle.core.domain.launcher.workspace.WorkspaceSkin
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 
 /** One workspace of the layout being shown, with what its row may offer. */
@@ -23,6 +25,8 @@ data class WorkspaceRow(
     val canDelete: Boolean,
     val canMoveUp: Boolean,
     val canMoveDown: Boolean,
+    /** The theme preset this workspace overrides the global one with; null follows Settings > Appearance. */
+    val skin: LauncherThemePreset? = null,
 ) {
     val canReset: Boolean get() = presetName != null
 }
@@ -96,6 +100,7 @@ object WorkspacesSettingsPlanner {
         canDelete = layout.workspaces.size > 1,
         canMoveUp = index > 0,
         canMoveDown = index < layout.workspaces.size - 1,
+        skin = WorkspaceSkin.overrideOf(workspace),
     )
 
     /** The preset [workspace] records as its origin; never guessed from its name or content. */
