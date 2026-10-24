@@ -395,4 +395,23 @@ class PoolHomeLayoutRepositoryTest {
         repository.placeNewApp(repository.shown(), other, "Other", set, AppArrival.UPDATED)
         assertEquals(before, currentPool.current())
     }
+
+    @Test
+    fun whileTheWorkspacesLoadAnItemEditIsHeldAndNothingReachesThePool() {
+        val (repository, _) = start()
+        repository.awaitWorkspaces()
+        val shownBefore = repository.shown()
+        val poolBefore = currentPool.current()
+
+        val held = repository.edit { layout -> layout.mapHome { it.copy(items = emptyList()) } }
+
+        assertEquals("the edit is refused", shownBefore.activeLayout.homeItems(), held.activeLayout.homeItems())
+        assertEquals(poolBefore, currentPool.current())
+
+        // Once the workspaces are known the hold ends and the same edit lands.
+        repository.retarget(workspacesWith(nova), repository.shown())
+        assertFalse(repository.awaitingWorkspaces)
+        val edited = repository.edit { layout -> layout.mapHome { it.copy(items = emptyList()) } }
+        assertTrue(edited.activeLayout.homeItems().isEmpty())
+    }
 }

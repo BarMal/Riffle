@@ -50,7 +50,8 @@ object PoolCopy {
                             (old, new) ->
                         old != new
                     }.mapNotNull { (old, new) -> pool.items[old]?.let { clone(it, new) } }
-                val copy = remap(source) { map[it] }
+                // A copy remembers the arrangement it came from (the source's own origin when that is a copy too).
+                val copy = remap(source) { map[it] }.copy(forkedFrom = source.forkedFrom ?: from)
                 PoolResult.Done(
                     PoolGc.finish(
                         pool,

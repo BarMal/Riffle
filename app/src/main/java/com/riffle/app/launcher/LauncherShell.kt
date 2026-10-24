@@ -103,6 +103,8 @@ fun LauncherShell(
     val workspaceVersion by (workspacePreview?.workspaceVersion ?: NoWorkspaceVersion).collectAsState()
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
     val menuAvailable = remember(workspaceVersion, deviceClass) { viewModel.workspaceMenu.isAvailable() }
+    // While the workspaces load the dock pull is inert (it must not switch modes; the menu is not there yet).
+    val workspacesLoading = remember(workspaceVersion) { workspacePreview != null && !viewModel.workspacesLoaded() }
     val workspaceMenu =
         if (menuAvailable) {
             WorkspaceMenuHost(state = menuState, onAction = viewModel.workspaceMenu::dispatch)
@@ -122,6 +124,8 @@ fun LauncherShell(
             LocalPoolHomeSetting provides poolHomeSetting,
             LocalWorkspaceSettingsHost provides settingsHost,
             LocalWorkspaceHomePages provides workspaceHome?.pages,
+            LocalHomeSelectionRequests provides viewModel.homeSelectionRequests,
+            LocalDockModePullEnabled provides !workspacesLoading,
         ) {
             PreviewHideHost(workspaceHome?.hideController, deviceClass.workspaceLayoutClass(), 0.dp) {
                 LauncherShellContent(

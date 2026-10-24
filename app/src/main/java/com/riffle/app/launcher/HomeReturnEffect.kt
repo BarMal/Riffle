@@ -14,6 +14,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.homeReturnTarget
+import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 
 /**
  * Applies the Returning to Home setting (Restore, First page, Start page) to the standard Home pager.
@@ -43,7 +44,12 @@ internal fun HomeReturnEffect(
     val latestStartPage = rememberUpdatedState(startPage)
     val apply: () -> Unit = {
         if (!latestSuppressed.value) {
-            latestState.value.homeReturnTarget(startPageId = latestStartPage.value())?.let { page ->
+            val state = latestState.value
+            // Restore keeps whatever is showing; the other choices name their page even when it is already the
+            // selected one, so they also leave a workspace lens page (which is never selected, S9).
+            val includeSelected = state.launcherSettings.home.returnBehavior != ReturnBehavior.RESTORE
+            state.homeReturnTarget(startPageId = latestStartPage.value(), includeSelected = includeSelected)?.let {
+                    page ->
                 latestOnAction.value(LauncherShellAction.SelectHomePage(page))
             }
         }

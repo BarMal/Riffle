@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import com.riffle.core.domain.launcher.workspace.HomeLayoutWorkspaceMapper
 import com.riffle.core.domain.launcher.workspace.HomeShownWorkspace
 import com.riffle.core.domain.launcher.workspace.HomeShownWorkspaces
+import com.riffle.core.domain.launcher.workspace.WorkspaceHome
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
@@ -189,7 +190,6 @@ object PoolHomeSync {
         ids: WorkspaceIdFactory,
         workspaces: HomeShownWorkspaces = HomeShownWorkspaces.Migrated,
     ): PoolHomeCommit {
-        val activeMode = shown.activeKey.viewMode
         val pools =
             state.pools.mapValues { (layoutClass, pool) ->
                 if (!workspaceSet.hasLayout(layoutClass)) {
@@ -202,7 +202,7 @@ object PoolHomeSync {
                         ids = ids,
                         layout = workspaceSet.workspacesFor(layoutClass),
                         arrival = arrival,
-                    ) { id -> PoolHomeView.candidates(id, layoutClass, activeMode) }.edit.pool
+                    ) { id -> WorkspaceHome.borrowCandidates(id, layoutClass) }.edit.pool
                 }
             }
         val placed = if (pools == state.pools) state else state.copy(pools = pools)

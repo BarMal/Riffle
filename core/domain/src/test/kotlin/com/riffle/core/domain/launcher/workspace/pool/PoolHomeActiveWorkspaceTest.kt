@@ -350,4 +350,77 @@ class PoolHomeActiveWorkspaceTest {
             )
         assertEquals(opened.state, notPlaced.state)
     }
+
+    @Test
+    fun aDetourThroughTheMigratedStandardWorkspaceNeverChangesWhatNovaBorrowsOrItsMode() {
+        val pool = cutOver().pools.getValue(HomeLayoutDeviceClass.PHONE)
+        val migratedStandard = Workspace(WorkspaceHome.migratedId(standard), "Standard")
+        val phone = HomeLayoutDeviceClass.PHONE
+
+        // Library home, Nova unforked: Library. The detour selects Standard, which is then the stored mode.
+        assertEquals(
+            LauncherViewMode.HOME_SCREEN_LIBRARY,
+            WorkspaceHome.homeModeFor(nova, phone, pool, LauncherViewMode.HOME_SCREEN_LIBRARY),
+        )
+        assertEquals(
+            LauncherViewMode.STANDARD_APP_DRAWER,
+            WorkspaceHome.homeModeFor(migratedStandard, phone, pool, LauncherViewMode.HOME_SCREEN_LIBRARY),
+        )
+        // Back to Nova with Standard stored: still Library, and it still borrows the Library arrangement.
+        assertEquals(
+            LauncherViewMode.HOME_SCREEN_LIBRARY,
+            WorkspaceHome.homeModeFor(nova, phone, pool, LauncherViewMode.STANDARD_APP_DRAWER),
+        )
+        val shownOnStandard = WorkspaceHome.shown(setWith(nova), standard, LauncherViewMode.STANDARD_APP_DRAWER)
+        assertEquals(migrated, PoolHomeView.arrangementOf(pool, shownOnStandard.candidates.drop(1)))
+    }
+
+    @Test
+    fun aForkedNovaKeepsTheModeOfTheArrangementItForkedFromAcrossARestart() {
+        val shown = WorkspaceHome.shownWorkspaces(setWith(nova))
+        val forked =
+            open(shown).edit(shown) { current ->
+                current.copy(
+                    pages =
+                        current.pages.map {
+                            it.copy(
+                                items =
+                                    it.items.filterNot {
+                                            item ->
+                                        item is WidgetItem
+                                    },
+                            )
+                        },
+                )
+            }
+        val phone = HomeLayoutDeviceClass.PHONE
+        assertEquals(migrated, forked.phonePool().arrangements.getValue(nova.id).forkedFrom)
+
+        val decoded = PoolStoreCodec.decode(PoolStoreCodec.encode(forked.state)).state!!.pools.getValue(phone)
+        assertEquals(migrated, decoded.arrangements.getValue(nova.id).forkedFrom)
+        for (stored in LauncherViewMode.entries) {
+            assertEquals(
+                LauncherViewMode.HOME_SCREEN_LIBRARY,
+                WorkspaceHome.homeModeFor(nova, phone, decoded, stored),
+                "$stored",
+            )
+        }
+    }
+
+    @Test
+    fun aForkOfAForkKeepsTheOriginAndANonForkEncodesAsBefore() {
+        val pool = cutOver().pools.getValue(HomeLayoutDeviceClass.PHONE)
+        val first = PoolArrangements.fork(pool, nova.id, listOf(nova.id, migrated), ids).done().pool
+        val second =
+            PoolArrangements.fork(
+                first,
+                WorkspaceId("copy"),
+                listOf(WorkspaceId("copy"), nova.id),
+                ids,
+            ).done().pool
+
+        assertEquals(migrated, second.arrangements.getValue(WorkspaceId("copy")).forkedFrom)
+        assertEquals(null, pool.arrangements.getValue(migrated).forkedFrom)
+        assertFalse(PoolStoreCodec.encode(cutOver()).toString().contains("forkedFrom"))
+    }
 }

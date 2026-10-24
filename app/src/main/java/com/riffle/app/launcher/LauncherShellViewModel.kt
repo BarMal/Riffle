@@ -68,6 +68,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class LauncherShellViewModel(
@@ -178,11 +179,20 @@ class LauncherShellViewModel(
         )
 
     /**
-     * Packages installed since the last installed-app refresh (S9, N9): placed by [placePendingInstalls] once the
-     * refreshed app list holds them. Only a confirmed package-added event fills it, never an update or a profile
-     * becoming available.
+     * Packages installed and not placed yet (S9, N9): placed by [placePendingInstalls] once the refreshed app list
+     * holds them and the workspaces have loaded. Only a confirmed package-added event fills it, never an update or a
+     * profile becoming available.
      */
-    private val pendingInstalls = LinkedHashSet<Pair<AppPackageName, AppProfile>>()
+    private val pendingInstalls = PendingInstalls()
+
+    private val mutableHomeSelectionRequests = MutableStateFlow(0)
+
+    /**
+     * Counts every explicit request to show the selected home page (S9): a Home press (`OpenDefaultHome`) and every
+     * `SelectHomePage`, even of the page already selected. The pager scrolls to the selected page on each one, so a
+     * Home press, a Return or a menu jump also leaves a workspace lens page (which is never the selected page).
+     */
+    val homeSelectionRequests: StateFlow<Int> = mutableHomeSelectionRequests.asStateFlow()
 
     internal val refreshActions =
         LauncherShellRefreshActions(
@@ -214,9 +224,13 @@ class LauncherShellViewModel(
         val workspaces = platformDependencies.workspaceRepository
         if (workspaces != null) {
             // Design 1.2: one bounded read before the first frame, so the home opens on the active workspace rather
-            // than on the migrated home for a moment. On a timeout the launch below finishes the load.
-            loadWorkspacesAtStartup(workspaces)
-            followActiveWorkspace()
+            // than on the migrated home for a moment. On a timeout the load finishes in the background, and until
+            // then home edits are held (the arrangement they belong to is not known yet).
+            if (loadWorkspacesAtStartup(workspaces)) {
+                followActiveWorkspace()
+            } else {
+                (homeLayoutRepository as? PoolHomeLayoutRepository)?.awaitWorkspaces()
+            }
             viewModelScope.launch {
                 workspaces.initialize(WorkspaceBootstrap::seed)
                 workspaceMenu.refresh()
@@ -256,15 +270,19 @@ class LauncherShellViewModel(
      */
     internal fun followActiveWorkspace() {
         val set = platformDependencies.workspaceRepository?.load() ?: return
-        (homeLayoutRepository as? PoolHomeLayoutRepository)?.let { poolHome ->
-            val current = mutableState.value
-            val retargeted = poolHome.retarget(set, current.homeLayoutSet.withActiveLayout(current.homeLayout))
-            mutableState.value = current.copy(homeLayout = retargeted.activeLayout, homeLayoutSet = retargeted)
-        }
+        val poolHome = homeLayoutRepository as? PoolHomeLayoutRepository
+        // The mode first, derived from the placed items (what the workspace forked from or borrows), never from what
+        // a migrated workspace selected before; then which arrangement each key shows.
         val state = mutableState.value
         val deviceClass = state.homeLayoutSet.activeKey.deviceClass
         val workspace = WorkspaceHome.activeWorkspace(set, deviceClass)
-        val mode = WorkspaceHome.homeModeFor(workspace, deviceClass, state.homeLayout.viewMode)
+        val mode =
+            WorkspaceHome.homeModeFor(
+                workspace,
+                deviceClass,
+                poolHome?.poolFor(deviceClass),
+                state.homeLayout.viewMode,
+            )
         if (mode != state.homeLayout.viewMode) {
             mutableState.value =
                 state
@@ -275,7 +293,16 @@ class LauncherShellViewModel(
                         targetDeviceClass = deviceClass,
                     ).withHomeScreenLibraryApps(homeLayoutRepository)
         }
+        poolHome?.let {
+            val current = mutableState.value
+            val retargeted = it.retarget(set, current.homeLayoutSet.withActiveLayout(current.homeLayout))
+            mutableState.value = current.copy(homeLayout = retargeted.activeLayout, homeLayoutSet = retargeted)
+        }
+        placePendingInstalls()
     }
+
+    /** Whether the stored workspaces have loaded (the shell keeps the dock pull inert until they have). */
+    internal fun workspacesLoaded(): Boolean = platformDependencies.workspaceRepository?.load() != null
 
     /** The home page the active workspace starts on (its start page, when that is a placed page), or null. */
     internal fun workspaceStartPage(): LauncherPageId? {
@@ -294,22 +321,32 @@ class LauncherShellViewModel(
         packageName: AppPackageName,
         profile: AppProfile,
     ) {
-        pendingInstalls += packageName to profile
+        pendingInstalls.add(packageName, profile)
         refreshActions.refreshInstalledApps()
     }
 
+    /**
+     * Places queued installs whose apps the app list now holds. Kept queued while the workspaces have not loaded (an
+     * install is never dropped for being early); dropped only once placed, or when this home cannot place icons at
+     * all (the legacy or read-only home).
+     */
     private fun placePendingInstalls() {
         val state = mutableState.value
-        val arrived = state.installedApps.filter { (it.identity.packageName to it.identity.profile) in pendingInstalls }
-        pendingInstalls.removeAll(arrived.map { it.identity.packageName to it.identity.profile }.toSet())
+        val arrived = pendingInstalls.arrived(state.installedApps)
+        if (arrived.isEmpty()) return
         val poolHome = homeLayoutRepository as? PoolHomeLayoutRepository
         val workspaces = platformDependencies.workspaceRepository?.load()
-        if (arrived.isNotEmpty() && poolHome != null && workspaces != null) {
-            val placed =
-                arrived.fold(state.homeLayoutSet.withActiveLayout(state.homeLayout)) { set, app ->
-                    poolHome.placeNewApp(set, app.identity, app.label, workspaces)
-                }
-            mutableState.value = state.copy(homeLayout = placed.activeLayout, homeLayoutSet = placed)
+        when {
+            poolHome == null -> pendingInstalls.done(arrived)
+            workspaces == null || poolHome.awaitingWorkspaces -> Unit
+            else -> {
+                val placed =
+                    arrived.fold(state.homeLayoutSet.withActiveLayout(state.homeLayout)) { set, app ->
+                        poolHome.placeNewApp(set, app.identity, app.label, workspaces)
+                    }
+                pendingInstalls.done(arrived)
+                mutableState.value = state.copy(homeLayout = placed.activeLayout, homeLayoutSet = placed)
+            }
         }
     }
 
@@ -484,6 +521,9 @@ class LauncherShellViewModel(
             return
         }
 
+        if (action is LauncherShellAction.SelectHomePage || action == LauncherShellAction.OpenDefaultHome) {
+            mutableHomeSelectionRequests.update { it + 1 }
+        }
         val previousState = mutableState.value
         val removedHostedWidgetIds =
             when (action) {

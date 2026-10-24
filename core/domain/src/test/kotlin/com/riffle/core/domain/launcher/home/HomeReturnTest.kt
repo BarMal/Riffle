@@ -80,6 +80,21 @@ class HomeReturnTest {
     }
 
     @Test
+    fun includeSelectedNamesTheSelectedPageTooSoALensPageCanBeLeft() {
+        assertEquals(
+            LauncherPageId("p0"),
+            HomeReturn.landingPage(layout(4, 0), ReturnBehavior.FIRST_PAGE, includeSelected = true),
+        )
+        assertEquals(
+            LauncherPageId("p2"),
+            HomeReturn.landingPage(layout(4, 2), ReturnBehavior.RESTORE, includeSelected = true),
+        )
+        assertNull(
+            HomeReturn.landingPage(layout(4, 0), ReturnBehavior.FIRST_PAGE, atTopLevel = false, includeSelected = true),
+        )
+    }
+
+    @Test
     fun alreadyOnTheFirstPageIsANoOp() {
         assertNull(land(layout(4, 0), ReturnBehavior.FIRST_PAGE))
         assertNull(land(layout(4, 0), ReturnBehavior.START_PAGE))

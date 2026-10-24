@@ -18,26 +18,34 @@ the migrated one.
 | --- | --- |
 | Which workspace | `WorkspaceSet.resolveActive(layout)` for the shown layout (N10: a rotated phone is the phone layout). A switch from the workspace menu or Settings > Workspaces changes the home at once (`LauncherShellViewModel.followActiveWorkspace`). |
 | Placed pages | The standard home (`StandardHome`, all its engines: drag, folders, widgets add/resize/configure/remove, pages, dock editing) over `PoolHomeSync`'s projection of **that workspace's arrangement**. Domain: `WorkspaceHome.shownWorkspaces` (a `HomeShownWorkspaces` resolver) threaded through every `PoolHomeSync` call. |
-| A workspace with no arrangement yet (the seeded Nova default, a new preset) | Shows the arrangement it borrows (`PoolHomeView.candidates`: itself, then the migrated workspace of the shown mode, then Library, Standard, Cards), so **the default renders the migrated home identically**. Its **first edit forks** (`PoolArrangements.fork`): apps and widget instances shared by reference, folders cloned (their ids remapped before the edit is ingested), and the edit lands in the fork. The migrated arrangement is left as it was, a recovery copy. |
-| A migrated workspace (`ws:<layout>:<mode>`) | The home you had in that mode: the shell switches to its mode (`WorkspaceHome.homeModeFor`) and shows its arrangement, exactly as S4 did. |
+| A workspace with no arrangement yet (the seeded Nova default, a new preset) | Shows the arrangement it borrows (`WorkspaceHome.borrowCandidates`: itself, then the migrated arrangements in a **fixed** order, Library, Standard, Cards, never "the mode shown now"), so **the default renders the migrated home identically** (the alpha showed every layout as Library). Its **first edit forks** (`PoolArrangements.fork`): apps and widget instances shared by reference, folders cloned (their ids remapped before the edit is ingested), and the edit lands in the fork. The migrated arrangement is left as it was, a recovery copy. Every copy records where it came from (`Arrangement.forkedFrom`, additive codec key `"forkedFrom"`, a copy of a copy keeps the origin). |
+| Which mode the home shows | `WorkspaceHome.homeModeFor`, derived from the placed items and never from what was shown last: a migrated workspace's own mode; a fork's origin's mode; a borrower's borrowed arrangement's mode; an arrangement of unknown origin (an older fork, an adopted page) takes the first migrated arrangement in the fixed order. So a detour through the migrated Standard workspace and back leaves Nova on Library, before and after its fork, across a restart. Only with no pool (the developer fallback) does it keep the stored mode. |
+| A migrated workspace (`ws:<layout>:<mode>`) | The home you had in that mode: the shell switches to its mode and shows its arrangement, exactly as S4 did. |
 | A workspace with no home-grid page (TimeScape, Kvaesitso) | Borrows nothing: no placed items (one empty stand-in page) plus its lens pages. |
-| Lens and container pages | Drawn by the existing container hosts (`PageContainerHost`, `PageSetContainerHost`) as extra pages of the same pager, **after** the placed pages, in workspace order (`WorkspaceHome.extraPages`, `WorkspaceHomePages`). They are never a selected page (the stored selection stays on a placed page). Only for non-migrated workspaces: a migrated workspace's lens pages are its layout's generated pages, already drawn. Hidden while editing. Their items offer the S6 Hide menu (`PreviewHideHost` around the shell). |
+| Lens and container pages | Drawn by the existing container hosts (`PageContainerHost`, `PageSetContainerHost`) as extra pages of the same pager, **after** the placed pages, in workspace order (`WorkspaceHome.extraPages`, `WorkspaceHomePages`). They are never a selected page (the stored selection stays on a placed page), so every Home press and `SelectHomePage` (a Return, a menu jump), even of the page already selected, counts as a selection request (`LauncherShellViewModel.homeSelectionRequests`) that scrolls the pager back from a lens page; Return's First page and Start page name their page even when it is selected (`HomeReturn.landingPage(includeSelected)`), Restore leaves a lens page on screen. Only for non-migrated workspaces: a migrated workspace's lens pages are its layout's generated pages, already drawn. Hidden while editing. Their items offer the S6 Hide menu (`PreviewHideHost` around the shell). |
 | Finder | The app drawer (`OpenAppDrawer`), from the menu's Finder entry and every existing entry point. Search is unchanged. |
 | Dock | The pool's shared dock with the workspace's override (`withWorkspaceHome` -> `EffectiveDock`, after the stranding rule). Render only: Settings > Dock edits the shared dock. |
 | Gestures | Global home gestures with the workspace's `gestureBindings` on top (`WorkspaceHome.gestures`; launch actions, which need a target, are ignored). Render only: Settings > Gestures shows the global ones. |
 | Skin | `WorkspaceSkin.resolve(global, workspace)` for the whole launcher theme (home, drawer, search, Settings). |
 | Start page and Return | `HomeReturn` takes the workspace's start page when it is a placed page (`WorkspaceHome.startPageOf`). A Home press goes to the first page, then to the start page. A Return follows the setting (Restore / First page / Start page). |
 | Dock pull | Opens the workspace menu (Q9), same claim rules; Ctrl+arrow and the "Workspace menu" accessibility action (dock and home root) too. See `gestures.md`. |
-| New apps | A package-added event (`AppCatalogChange.PackageAdded`, `LauncherApps.Callback.onPackageAdded`, an install only) refreshes the app list and then calls `PoolNewApps.placeNewApp(..., AppArrival.INSTALLED)` for every layout (`PoolHomeSync.placeNewApp`, `PoolHomeLayoutRepository.placeNewApp`). A profile becoming available, an update or a restore are other events and place nothing. Only workspaces whose New apps setting is "Also add an icon" (iOS-style by default) get one. |
+| New apps | A package-added event (`AppCatalogChange.PackageAdded`, `LauncherApps.Callback.onPackageAdded`, an install only) refreshes the app list and then calls `PoolNewApps.placeNewApp(..., AppArrival.INSTALLED)` for every layout (`PoolHomeSync.placeNewApp`, `PoolHomeLayoutRepository.placeNewApp`). The install stays queued (`PendingInstalls`) until it is placed: one that arrives before the workspaces load is placed when they do. A profile becoming available, an update or a restore are other events and place nothing. Only workspaces whose New apps setting is "Also add an icon" (iOS-style by default) get one. |
 | Privacy | Content levels apply to the home's lens pages (same lens provider). The Privacy page always shows the controls. The screenshot switch is unchanged. |
 | Settings | A "Workspaces" section at the top of Settings (Workspaces, Sources, Saved lenses); Settings > Layout keeps grid, labels and gains "Returning to Home"; a "Developer" section keeps one switch (below). |
 
 ### Startup (design 1.2)
 
-The view model reads the workspace store **once, bounded to 500 ms**, before the first frame
-(`loadWorkspacesAtStartup`), seeding the Nova default for a layout with nothing stored (`WorkspaceBootstrap.seed`),
-then retargets the home. On a timeout the asynchronous load finishes the job and the home shows the migrated
-workspace until then (an edit made in that window lands in the migrated arrangement; nothing is lost).
+The view model reads the workspace store **once, with a hard 500 ms cap**, before the first frame
+(`loadWorkspacesAtStartup`, `WorkspaceStartupLoad.kt`): the read, decode and Nova seed (`WorkspaceBootstrap.seed`)
+run on `Dispatchers.Default` and the main thread waits at most the cap, even for work that cannot be interrupted. In
+time, the home is retargeted before the first frame. On a timeout the load keeps running and fills the repository
+like any other load; until then:
+
+- the home shows the migrated workspace and **holds item edits** (`PoolHomeLayoutRepository.awaitingWorkspaces`): a
+  commit that would change placed items is refused (selection and other non-item changes are kept), so an edit can
+  never land in the wrong workspace's arrangement; uninstall pruning and restores still apply;
+- the dock pull is **inert** (`LocalDockModePullEnabled`): no workspace menu yet, and it must not switch modes;
+- installs stay queued.
 
 ### Data safety
 
@@ -74,9 +82,11 @@ the legacy path in the release after the owner's device has run S9 for a while.
 
 ## Decisions to confirm
 
-1. **Mode follows a migrated workspace only.** Presets keep the stored mode (Library on the owner's phone, Standard on
-   a fresh install). So the Nova default on the owner's phone is the Library home it borrows, with Library's
-   automatic placement of every app; switching to the migrated Standard workspace shows the Standard home.
+1. **A preset's mode comes from its placed items** (what it forked from or borrows), and it borrows in a fixed order:
+   Library, Standard, Cards. So the Nova default on the owner's phone is the Library home, with Library's automatic
+   placement of every app, whatever was selected before; switching to the migrated Standard workspace shows the
+   Standard home and switching back shows Library again. A user whose Standard arrangement holds their real home
+   would see Library for an unforked preset (not the owner's case: the alpha showed every layout as Library).
 2. **Lens pages follow the placed pages** in the pager (an iOS Today page is not to the left). Page indicator dots
    include them.
 3. **The Finder is the app drawer.** A workspace's Finder expression is not drawn; the drawer presentation setting
@@ -85,9 +95,12 @@ the legacy path in the release after the owner's device has run S9 for a while.
 5. **A borrower forks on its first edit, including the Library relayout** that re-places apps after an install or a
    refresh. That relayout is an edit of the Library arrangement it shows.
 6. **The dock pull opens the menu on the claim** (past touch slop), not on a travel threshold.
-7. **A Home press lands on the start page** after the first-page reset; with the drawer open it closes the drawer and
-   goes to the start page (design: the page the Finder was opened from).
-8. **Keep "Home from placed items"** for one more release (above).
+7. **A Home press lands on the start page** after the first-page reset, also from a lens page; with the drawer open
+   it closes the drawer and goes to the start page (design: the page the Finder was opened from).
+8. **Item edits are held while the workspaces load** (only after a timed-out startup read, normally for well under a
+   second); a widget added in that window may leave its host id allocated until the next orphan check. No notice is
+   shown.
+9. **Keep "Home from placed items"** for one more release (above).
 
 ## Not done
 
@@ -100,7 +113,7 @@ the legacy path in the release after the owner's device has run S9 for a while.
 - Deleting the preview surface, its preview grid and pool editor (`WorkspacePreviewSurface`, `PoolHomePage`,
   `PoolEditController`, `MainActivityDependencies.poolRuntime`): unreachable now, kept for their screenshot tests.
 - Renaming the `WorkspacePreview*` classes.
-- Deleting the legacy path and "Home from placed items" (decision 8).
+- Deleting the legacy path and "Home from placed items" (decision 9).
 - `PoolAutoPages.trimTrailingEmpty` on leaving edit mode.
 - Per-workspace `selectedPageId` persistence ("last page per workspace", 9.7).
 
@@ -120,16 +133,24 @@ Domain (`core/domain`, JVM, all run here):
   (Niagara, hostile names, launch actions ignored), `withWorkspaceHome` (Niagara's hidden dock and swipe up, the
   stranding fallback, a left edge).
 - `HomeReturnTest`: a workspace start page for Start page and Home press, ignored by Restore and First page, a stale
-  one falls back.
+  one falls back; `includeSelected` names the selected page too.
+- `PoolHomeActiveWorkspaceTest` (review fixes): a detour through the migrated Standard workspace changes neither
+  Nova's mode nor what it borrows; a forked Nova keeps its origin's mode for every stored mode across a codec round
+  trip; a fork of a fork keeps the origin; arrangements that are not copies encode without `forkedFrom`.
 
-App (JVM): `PoolHomeLayoutRepositoryTest` adds the Nova default showing the migrated home with its first edit forking
+App (JVM): `WorkspaceStartupLoadTest` (a quick read loads and seeds; a blocking read is cut off at the cap and its
+result still arrives), `PendingInstallsTest` (an install stays queued until done; profiles are distinct),
+`PoolHomeLayoutRepositoryTest` adds an item edit held while the workspaces load (nothing reaches the pool) and landing
+once they have, and the Nova default showing the migrated home with its first edit forking
 and surviving a restart, and an installed app placed in an opted-in workspace (not written to `HomeLayoutSet`, nothing
 on `UPDATED`) (run here with the other Android-free pool tests); `MainActivityCatalogChangeTest` (an install reaches
 the install handler); `LauncherShellLibraryReturnTest` rewritten (no trigger switches mode under either stored value);
 `SettingsWorkspacesSectionScreenshotTest` replaces the preview-switch screenshot test.
 
 Instrumented (`deviceVerify`, CI only): `DockPullWorkspaceMenuTest` (pull up opens the menu and switches no mode, a pull
-into the edge or along the run opens nothing, the dock offers "Workspace menu" and no "Switch to Library");
+into the edge or along the run opens nothing, the pull is inert while the workspaces load, the dock offers "Workspace
+menu" and no "Switch to Library"); `WorkspaceLensPageReturnTest` (a selection request brings the pager back from a
+lens page);
 `LibraryBackReturnTest` rewritten (Back never leaves Library); `StandardTemplateValidationTest` drives the template
 through its action now that the row is gone. `DockPullInteractionTest` still covers the mode pull where no menu exists.
 
@@ -152,7 +173,8 @@ reviewed by hand.
 - [ ] Home, drawer, dock and Settings are reachable. Settings has a "Workspaces" section at the top and no
       "Workspaces (preview)" switch; Settings > Layout has no Mode, Template or Modes rows, and has "Returning to Home".
 - [ ] Every icon, folder and widget is where it was (the Nova default shows your migrated home). Force-stop and reopen:
-      still there, and the home does not flash another layout on start. Reboot: still there.
+      still there, and the home does not flash another layout on start. Reboot: still there. Right after a reboot,
+      pull the dock at once: it opens the menu or does nothing, never switches to another mode.
 - [ ] Move an icon: it moves. Force-stop, reopen: still moved. (This first edit gave the workspace its own copy.)
 - [ ] Add a widget, move, resize, configure (if it offers it), remove it; add another and leave it; force-stop, reopen:
       live.
@@ -163,11 +185,16 @@ reviewed by hand.
 - [ ] Menu: switch to another workspace (for example install TimeScape or iOS from Settings > Workspaces): the home
       changes at once; lens pages follow the home pages and scroll; a jump entry lands on its page; Finder opens the
       drawer. Switch back: your home is exactly as you left it.
-- [ ] Switch to the migrated "Standard" workspace (if listed): the Standard home shows; back to Nova: Library again.
+- [ ] Switch to the migrated "Standard" workspace (if listed): the Standard home shows; back to Nova: Library again,
+      with your icons. Force-stop and reopen on Nova: still Library. Move an icon on Nova, then do the round trip
+      again: Nova keeps the moved icon and Library.
+- [ ] On a workspace with a lens page (iOS Today, TimeScape), swipe to the lens page, press Home: back to the home
+      page. Swipe to it again, open an app and come back with Returning to Home on First page: the first page.
 - [ ] Niagara (dock hidden, swipe up bound): no dock, swipe up opens the menu. A workspace with a left-edge dock: the
       dock is on the left. A workspace with an Appearance override: the launcher uses that theme.
 - [ ] Settings > Workspaces > iOS > New apps: "Also add an icon". Install an app from the store: its icon appears on
       that workspace's home (switch to it). Update an app, or pause and unpause a work profile: no new icons.
+      Install one while Riffle is starting (right after a reboot): the icon still appears once the home is ready.
 - [ ] Returning to Home: Restore keeps your page after an app; First page and Start page go to page 1 or the
       workspace's start page; a Home press goes to the start page. Leaving an app never changes the workspace.
 - [ ] Settings > Privacy: content levels are listed; "App icons only" for Notifications hides text on lens pages.

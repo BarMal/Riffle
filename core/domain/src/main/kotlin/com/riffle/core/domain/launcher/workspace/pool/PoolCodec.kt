@@ -61,6 +61,8 @@ object PoolCodec {
         obj(
             "workspace" to str(id.value),
             "newApps" to str(arrangement.newAppPlacement.name),
+            // Absent for every arrangement that is not a fork, so those encode exactly as before.
+            "forkedFrom" to arrangement.forkedFrom?.let { str(it.value) },
             "pages" to arr(arrangement.pages.map(::encodePage)),
         )
 
@@ -93,6 +95,7 @@ object PoolCodec {
                         pages = root.array("pages").mapNotNull { (it as? StoredValue.Obj)?.let(::decodePage) },
                         newAppPlacement =
                             enumOrNull<NewAppPlacement>(root.string("newApps")) ?: NewAppPlacement.FINDER_ONLY,
+                        forkedFrom = root.string("forkedFrom")?.takeIf { it.isNotBlank() }?.let(::WorkspaceId),
                     )
             }
         }

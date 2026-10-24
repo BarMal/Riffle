@@ -579,8 +579,8 @@ class MainActivity : ComponentActivity() {
             // workspace's start page when it has one on a placed page (design 3.2, E2). It never changes the mode
             // or the workspace (#1323).
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
+            // Even when it is already selected: the pager may be on a workspace lens page and must come back.
             shellViewModel.workspaceStartPage()
-                ?.takeIf { page -> page != shellViewModel.state.value.homeLayout.selectedPageId }
                 ?.let { page -> launcherActionRouter.handle(LauncherShellAction.SelectHomePage(page)) }
         }
     }

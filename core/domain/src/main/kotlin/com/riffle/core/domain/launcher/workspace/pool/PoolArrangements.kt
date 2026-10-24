@@ -10,7 +10,8 @@ object PoolArrangements {
      * of [candidates] with pages, as [PoolHomeView.arrangementOf] resolves it; pass `PoolHomeView.candidates(...)`).
      * Apps and widget instances are shared by reference (one host id, one configuration), folders are cloned (the
      * fork's folders are independent), pages are copied with their ids, grids and pinned flags, and the new-app setting
-     * is copied. The dock is not touched (it is the layout's, not a workspace's).
+     * is copied. The dock is not touched (it is the layout's, not a workspace's). The fork records where it came from
+     * ([Arrangement.forkedFrom]: the source's own origin when the source is itself a fork).
      *
      * Idempotent: a workspace that already has an arrangement is returned unchanged (`Done` with the same pool).
      * Refused with [PoolRejection.NOTHING_TO_FORK] when no candidate other than [workspaceId] has pages.

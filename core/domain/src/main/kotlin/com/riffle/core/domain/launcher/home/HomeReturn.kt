@@ -33,6 +33,9 @@ object HomeReturn {
      * showing, so the system's Back and Home handling owns the screen), when the layout has no pages, or when
      * the rule names the page already selected. With [ReturnBehavior.RESTORE] a [ReturnEvent.RETURN] is
      * therefore always null: the default changes nothing.
+     *
+     * [includeSelected] returns the page even when it is the one already selected (S9): the pager may be showing one
+     * of the workspace's lens pages, which are never the selected page, and must still be brought back.
      */
     fun landingPage(
         layout: HomeLayout,
@@ -40,6 +43,7 @@ object HomeReturn {
         event: ReturnEvent = ReturnEvent.RETURN,
         atTopLevel: Boolean = layout.editMode == HomeEditMode.Browsing,
         startPageId: LauncherPageId? = null,
+        includeSelected: Boolean = false,
     ): LauncherPageId? {
         if (!atTopLevel || layout.pages.isEmpty()) return null
         val standIn = standIn(layout, startPageId)
@@ -49,7 +53,7 @@ object HomeReturn {
         return layout.pages
             .getOrNull(index)
             ?.id
-            ?.takeIf { it != layout.selectedPageId }
+            ?.takeIf { includeSelected || it != layout.selectedPageId }
     }
 
     // Stand-in page ids are by position, so a blank or duplicated LauncherPageId cannot break the stand-in.
@@ -80,6 +84,7 @@ object HomeReturn {
 fun LauncherShellState.homeReturnTarget(
     event: ReturnEvent = ReturnEvent.RETURN,
     startPageId: LauncherPageId? = null,
+    includeSelected: Boolean = false,
 ): LauncherPageId? =
     HomeReturn.landingPage(
         layout = homeLayout,
@@ -87,4 +92,5 @@ fun LauncherShellState.homeReturnTarget(
         event = event,
         atTopLevel = destination == ShellDestination.HOME && homeLayout.editMode == HomeEditMode.Browsing,
         startPageId = startPageId,
+        includeSelected = includeSelected,
     )
