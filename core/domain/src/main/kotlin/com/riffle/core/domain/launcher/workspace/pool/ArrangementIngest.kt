@@ -13,7 +13,8 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
  *
  * Engines mint ids from an ordinal counted in the one arrangement they were shown (`HomeShortcutEngine`), so a
  * minted id can equal an id used by an item of another arrangement. Every id that was not in the input is therefore
- * treated as NEW and gets a fresh pool-unique [PoolItemId]; an engine id is never trusted as pool-global. Items that
+ * treated as NEW and gets a pool-unique [PoolItemId] ([PoolIds.derived]: the engine's text when no pool item uses it,
+ * else a `#n` suffix); an engine id is never trusted as pool-global. Items that
  * vanished lose their reference and are collected. Edits to a folder or widget that was in the input change the
  * single pool item (visible wherever it is placed, by design).
  */
@@ -66,7 +67,7 @@ object ArrangementIngest {
                 if (text in known) {
                     PoolItemId(text)
                 } else {
-                    PoolIds.fresh(taken, ids).also { taken += it }
+                    PoolIds.derived(text, taken, ids).also { taken += it }
                 }
         }
     }
@@ -137,4 +138,22 @@ internal object PoolIds {
         while (candidate in taken) candidate = PoolItemId(ids.next())
         return candidate
     }
+
+    /**
+     * The id for an item an engine just minted as [text]: [text] itself when no pool item uses it, else the first free
+     * `text#n` (n from 2), as the migration suffixes repeats. Deterministic and prefix-keeping, so an id whose prefix
+     * means something to the standard home (`library-app:`) keeps it, and a relayout that re-mints the same text lands
+     * on the same id. A [text] with more than [MAX_SUFFIX] taken variants falls back to [fresh].
+     */
+    fun derived(
+        text: String,
+        taken: Set<PoolItemId>,
+        ids: WorkspaceIdFactory,
+    ): PoolItemId {
+        if (PoolItemId(text) !in taken) return PoolItemId(text)
+        return (2..MAX_SUFFIX).asSequence().map { PoolItemId("$text#$it") }.firstOrNull { it !in taken }
+            ?: fresh(taken, ids)
+    }
+
+    private const val MAX_SUFFIX = 1000
 }

@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.allItems
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 
@@ -215,11 +216,12 @@ object PoolHomeEditing {
 
 /** Host ids the standard home (`HomeLayoutSet`) holds, which pool editing must never delete. */
 object PoolHostIds {
-    /** Every bound widget host id in every stored layout of [layoutSet]. */
+    /** Every bound widget host id in every stored layout of [layoutSet], its pages and docks (panels included). */
     fun standardHome(layoutSet: HomeLayoutSet): Set<HostedWidgetId> =
-        layoutSet.layouts.values
-            .flatMap { it.pages }
-            .flatMap { it.items }
+        (
+            layoutSet.layouts.values.flatMap { it.allItems() } +
+                layoutSet.docks.values.flatMap { it.items + it.panel?.items.orEmpty() }
+        )
             .filterIsInstance<WidgetItem>()
             .map { it.appWidgetId }
             .filter { it != ArrangementAdapter.UNBOUND_HOST_ID }
@@ -257,4 +259,17 @@ object PoolHostIds {
         pending: Set<HostedWidgetId> = emptySet(),
     ): Set<HostedWidgetId> =
         allocated - referencedHostIds(state) - standardHome - pending - ArrangementAdapter.UNBOUND_HOST_ID
+
+    /**
+     * Whether anything still references [hostedWidgetId]: an arrangement or dock of the pool store [state], or the
+     * standard home set [standardHome] (pages and docks). The check before deleting a host id once the standard home
+     * renders from the pool, where removing a widget from one workspace must not delete the instance another shows.
+     */
+    fun isReferenced(
+        hostedWidgetId: HostedWidgetId,
+        state: PoolStoreState?,
+        standardHome: HomeLayoutSet?,
+    ): Boolean =
+        (state != null && hostedWidgetId in referencedHostIds(state)) ||
+            (standardHome != null && hostedWidgetId in standardHome(standardHome))
 }

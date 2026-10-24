@@ -43,7 +43,18 @@ class ArrangementIngestTest {
         val created = edit.pool.items.getValue(edit.createdItemIds.single()) as PoolApp
         assertEquals("Fresh", created.label)
         assertNotEquals(PoolItemId("other"), created.id)
+        assertEquals(PoolItemId("other#2"), created.id, "deterministic suffix, prefix kept")
         assertInvariants(edit.pool)
+    }
+
+    @Test
+    fun aFreeEngineIdIsKeptSoARepeatedRelayoutLandsOnTheSameId() {
+        val minted = AppShortcutItem(LauncherItemId("library-app:z"), appIdentity("z"), "Z")
+        val placed = engine.placeItemInFirstAvailableCell(pages().first(), minted) as PlaceLauncherItemResult.Placed
+        val edit = ArrangementIngest.ingest(pool, W1, listOf(placed.page, pages()[1]), counterIds()).done()
+        assertEquals(listOf(PoolItemId("library-app:z")), edit.createdItemIds)
+        val again = ArrangementIngest.ingest(edit.pool, W1, listOf(placed.page, pages()[1]), counterIds()).done()
+        assertEquals(edit.pool, again.pool, "re-minting the same text is not a new item")
     }
 
     @Test

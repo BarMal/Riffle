@@ -17,8 +17,8 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
  *
  * Id rule: a projected `LauncherItemId` IS the `PoolItemId` text (no prefix, no stripping), so an edit round-trips
  * without re-minting. [ingest] trusts an id only if `before` showed it and the pool holds it in this arrangement or the
- * dock; every other id (an engine-minted one, which may collide with an id another arrangement uses) gets a fresh pool
- * id from the factory.
+ * dock; every other id (an engine-minted one, which may collide with an id another arrangement uses) gets a pool id
+ * of its own ([PoolIds.derived]: the engine's text when free, else a `#n` suffix).
  */
 object PoolHomeProjection {
     /**
@@ -59,8 +59,8 @@ object PoolHomeProjection {
      * are not the pool's and are ignored), the dock's pins, panel and settings become the pool's dock (Library's edge,
      * which `DockModel` does not carry, is kept). Placements that moved are placement edits; changed folder content,
      * labels and widget constraints edit the single pool item (visible wherever it is placed); ids new in [after]
-     * become new pool items with fresh ids; vanished ids lose their reference here and are collected only when nothing
-     * else references them, so a widget another workspace still shows keeps its host id.
+     * become new pool items ([PoolIds.derived]); vanished ids lose their reference here and are collected only when
+     * nothing else references them, so a widget another workspace still shows keeps its host id.
      *
      * Dock items stay exclusive to the dock: an item that enters the dock while another arrangement still shows it is
      * cloned for the dock when it is an app or folder; a widget instance moves into the dock and leaves the other
