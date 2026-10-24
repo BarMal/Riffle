@@ -56,6 +56,7 @@ import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withStagePreferences
 import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuEffect
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -169,7 +170,7 @@ class LauncherShellViewModel(
     internal val workspaceMenu =
         WorkspaceMenuController(
             repository = platformDependencies.workspaceRepository,
-            deviceClass = { mutableState.value.homeLayoutSet.activeKey.deviceClass },
+            deviceClass = { mutableState.value.homeLayoutSet.activeKey.deviceClass.workspaceLayoutClass() },
             onEffect = { effect -> mutableWorkspaceMenuEffects.tryEmit(effect) },
         )
     internal val refreshActions =

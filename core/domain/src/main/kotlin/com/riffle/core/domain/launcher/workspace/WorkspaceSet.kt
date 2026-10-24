@@ -8,17 +8,23 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
  *
  * A device class with no stored entry reads as the built-in default workspace
  * ([WorkspaceMigration.defaultFor]), so every layout always has a drawable workspace.
+ *
+ * Every accessor keys by [workspaceLayoutClass] (N10): `PHONE_LANDSCAPE` reads and writes `PHONE`, so rotation
+ * never changes which workspaces are shown. Stored data is folded once on load ([WorkspaceLayoutFold]).
  */
 data class WorkspaceSet(
     val layouts: Map<HomeLayoutDeviceClass, LayoutWorkspaces> = emptyMap(),
 ) {
     fun workspacesFor(deviceClass: HomeLayoutDeviceClass): LayoutWorkspaces =
-        layouts[deviceClass] ?: WorkspaceMigration.defaultFor(deviceClass)
+        deviceClass.workspaceLayoutClass().let { layout -> layouts[layout] ?: WorkspaceMigration.defaultFor(layout) }
+
+    /** Whether [deviceClass]'s layout has stored workspaces (rather than reading as the built-in default). */
+    fun hasLayout(deviceClass: HomeLayoutDeviceClass): Boolean = deviceClass.workspaceLayoutClass() in layouts
 
     fun withLayout(
         deviceClass: HomeLayoutDeviceClass,
         workspaces: LayoutWorkspaces,
-    ): WorkspaceSet = copy(layouts = layouts + (deviceClass to workspaces))
+    ): WorkspaceSet = copy(layouts = layouts + (deviceClass.workspaceLayoutClass() to workspaces))
 
     /** Applies [edit] to [deviceClass]'s workspaces (materializing the default if none are stored). */
     fun update(
@@ -36,7 +42,7 @@ data class WorkspaceSet(
         target: HomeLayoutDeviceClass,
         ids: WorkspaceIdFactory = WorkspaceIdFactory.Random,
     ): WorkspaceSet {
-        if (source == target) return this
+        if (source.workspaceLayoutClass() == target.workspaceLayoutClass()) return this
         val from = workspacesFor(source)
         // Refs cannot cross layouts: the library is copied with fresh ids and every ref rewritten.
         val library = LensLibraryCopy.copy(from.library, ids)

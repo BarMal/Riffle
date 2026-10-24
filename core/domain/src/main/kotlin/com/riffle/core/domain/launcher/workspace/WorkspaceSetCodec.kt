@@ -17,6 +17,9 @@ const val CURRENT_WORKSPACE_SET_SCHEMA_VERSION = 2
  * schema 1 blob has neither and decodes unchanged. Every ref-carrying binding also stores its lens inline,
  * so a reader that ignores both keys still draws every container.
  *
+ * A `PHONE_LANDSCAPE` layout (written before N10) is folded into `PHONE` on decode ([WorkspaceLayoutFold]):
+ * it becomes the phone layout when that has none, else it is dropped.
+ *
  * Placed items are not written here: the pool store (`PoolStoreCodec`) owns them. Earlier schema 2 blobs may
  * carry a per-layout `pool` key, which was never populated at runtime; decoding ignores it.
  */
@@ -34,7 +37,7 @@ object WorkspaceSetCodec {
             root.array("layouts")
                 .mapNotNull { (it as? StoredValue.Obj)?.let(::decodeLayout) }
                 .toMap()
-        return WorkspaceSet(layouts)
+        return WorkspaceLayoutFold.fold(WorkspaceSet(layouts))
     }
 
     private fun encodeLayout(

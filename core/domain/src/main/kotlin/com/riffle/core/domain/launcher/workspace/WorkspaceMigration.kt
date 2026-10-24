@@ -14,6 +14,11 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
  * docs/product/workspaces-sources-lenses.md ("Migration mapping") for the table. Pure and
  * deterministic, so running it again yields the same result; [ensureMigrated] never overwrites
  * workspaces that already exist.
+ *
+ * Only Workspaces layout classes are created ([workspaceLayoutClass], N10): the landscape phone layouts of
+ * [HomeLayoutSet] are geometry and never become a workspace layout of their own. The phone layout's shown mode
+ * is the portrait one; when the device was in landscape at migration time it is the remembered portrait mode,
+ * else the landscape one.
  */
 object WorkspaceMigration {
     /** The default workspace a layout gets when nothing is stored: the Standard (Nova-style) home. */
@@ -38,7 +43,11 @@ object WorkspaceMigration {
         layoutSet: HomeLayoutSet,
     ): WorkspaceSet {
         val migrated = migrate(layoutSet)
-        return if (stored == null) migrated else WorkspaceSet(migrated.layouts + stored.layouts)
+        return if (stored == null) {
+            migrated
+        } else {
+            WorkspaceSet(migrated.layouts + WorkspaceLayoutFold.fold(stored).layouts)
+        }
     }
 
     private fun deviceClassesOf(layoutSet: HomeLayoutSet): List<HomeLayoutDeviceClass> =
@@ -46,7 +55,7 @@ object WorkspaceMigration {
             layoutSet.layouts.keys.map { it.deviceClass } +
                 layoutSet.activeKey.deviceClass +
                 layoutSet.preferredModesByDeviceClass.keys
-        ).distinct().sorted()
+        ).map { it.workspaceLayoutClass() }.distinct().sorted()
 
     private fun migrateDeviceClass(
         layoutSet: HomeLayoutSet,
@@ -69,6 +78,8 @@ object WorkspaceMigration {
     ): LauncherViewMode =
         when (deviceClass) {
             layoutSet.activeKey.deviceClass -> layoutSet.activeKey.viewMode
+            layoutSet.activeKey.deviceClass.workspaceLayoutClass() ->
+                layoutSet.preferredModesByDeviceClass[deviceClass] ?: layoutSet.activeKey.viewMode
             else -> layoutSet.preferredModesByDeviceClass[deviceClass] ?: LauncherViewMode.STANDARD_APP_DRAWER
         }
 }

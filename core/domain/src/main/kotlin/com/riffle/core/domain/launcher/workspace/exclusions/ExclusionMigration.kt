@@ -4,9 +4,11 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.workspace.SourceIds
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 
 /**
- * Copies the legacy, global hidden apps and [NotificationHideRule]s into EVERY layout's rule set, once.
+ * Copies the legacy, global hidden apps and [NotificationHideRule]s into EVERY layout's rule set, once. The
+ * layouts are [WorkspaceLayoutClasses.entries] (N10: no separate `PHONE_LANDSCAPE` set).
  *
  * Deterministic: ids are `mig:<layout>:app:<profile>:<package>/<activity>` and `mig:<layout>:notif:<ruleId>`
  * and the output order follows a stable sort of the inputs, so the same inputs give the same value.
@@ -29,7 +31,7 @@ object ExclusionMigration {
                 }, { it.packageName.value }, { it.activityName.value }),
             )
         val migrated =
-            HomeLayoutDeviceClass.entries.fold(existing) { acc, layout ->
+            WorkspaceLayoutClasses.entries.fold(existing.folded()) { acc, layout ->
                 val rules = sortedApps.map { appRule(layout, it) } + hideRules.map { hideRule(layout, it) }
                 acc.update(layout) { set -> rules.fold(set) { s, rule -> s.addMigrated(rule) } }
             }

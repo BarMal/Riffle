@@ -6,7 +6,9 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.PoolCutover
+import com.riffle.core.domain.launcher.workspace.pool.PoolLayoutFold
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +38,9 @@ internal interface PoolStorePort {
  * [reimport] replaces the pools with a fresh import of the current `HomeLayoutSet`. Until pool editing exists
  * the standard home is still edited in `HomeLayoutSet`, so this is how the preview catches up with it.
  *
+ * Pools are keyed by the Workspaces layout class (N10): a landscape phone reads and edits the phone pool, and a
+ * stored or restored landscape pool is folded into it once ([PoolLayoutFold]).
+ *
  * Nothing here stores or logs item content: the pool holds apps, folders and widget providers only.
  */
 internal class CachedPoolRepository(
@@ -63,10 +68,10 @@ internal class CachedPoolRepository(
         if (cached == null) {
             val read = runCatching { store.read() }.onFailure { if (it is CancellationException) throw it }
             if (read.isFailure) persistenceEnabled = false
-            val stored = read.getOrNull()
+            val stored = read.getOrNull()?.let(PoolLayoutFold::fold)
             val result = PoolCutover.ensureMigrated(stored, layoutSet, providerOf)
             publish(result.state)
-            if (result.changed) persist(result.state)
+            if (result.changed || stored != read.getOrNull()) persist(result.state)
         }
     }
 
@@ -94,7 +99,7 @@ internal class CachedPoolRepository(
         synchronized(stateLock) {
             val current = cached
             if (current != null) {
-                cached = current.copy(pools = current.pools + (deviceClass to pool))
+                cached = current.copy(pools = current.pools + (deviceClass.workspaceLayoutClass() to pool))
                 dirty = true
             }
             current != null
@@ -135,20 +140,21 @@ internal class CachedPoolRepository(
      */
     suspend fun replaceFromBackup(state: PoolStoreState) =
         lock.withLock {
+            val folded = PoolLayoutFold.fold(state)
             if (cached != null) {
                 synchronized(stateLock) {
-                    cached = state
+                    cached = folded
                     dirty = true
                 }
                 mutableVersion.update { it + 1 }
-                persist(state)
+                persist(folded)
             } else if (persistenceEnabled) {
-                store.write(state)
+                store.write(folded)
             }
         }
 
     /** The pool of [deviceClass]; null before [initialize] or when that class has none. */
-    fun pool(deviceClass: HomeLayoutDeviceClass): PlacedItemPool? = cached?.poolFor(deviceClass)
+    fun pool(deviceClass: HomeLayoutDeviceClass): PlacedItemPool? = cached?.poolFor(deviceClass.workspaceLayoutClass())
 
     private fun publish(state: PoolStoreState) {
         synchronized(stateLock) { cached = state }

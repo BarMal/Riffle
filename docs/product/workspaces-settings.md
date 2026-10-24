@@ -19,7 +19,8 @@ shell provides only while the preview is on; without it each page shows "Turn on
 - **Layout selector** (the existing segmented device tabs; it drives the existing
   `SelectSettingsLayoutDeviceClass` action) chooses which layout's workspaces are listed and edited. A note
   always says which layout is being edited and whether it is the one this device is showing now.
-  Human names: Phone (folded), Phone (landscape), Foldable (unfolded), Tablet, Desktop.
+  Human names: Phone (folded), Foldable (unfolded), Tablet, Desktop. There is no landscape layout: a rotated phone
+  shows and edits the phone layout (N10, `workspaces-configuration.md` section 17).
 - **List** of that layout's workspaces in order. The row marks *Active* and *Default*, the preset it came from
   and the page count. Compact: tapping a row switches to it (the same `activate` the dock menu uses) and a
   per-row menu holds the rest; the same actions are TalkBack custom actions on the row. Unfolded (width of

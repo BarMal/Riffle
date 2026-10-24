@@ -16,6 +16,7 @@ import com.riffle.core.domain.launcher.workspace.RemovePolicy
 import com.riffle.core.domain.launcher.workspace.SourceDescriptor
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 /** What happened, for the announcement the page makes. Wording is the UI's. */
 sealed interface LensesSettingsMessage {
@@ -275,8 +276,9 @@ sealed interface LensesSettingsAction {
         ): LensesSettingsChange {
             val saved = set.workspacesFor(layout).library.find(id)
             val destination = set.workspacesFor(target)
+            val sameLayout = target.workspaceLayoutClass() == layout.workspaceLayoutClass()
             val copied =
-                saved?.takeIf { target != layout }?.let {
+                saved?.takeIf { !sameLayout }?.let {
                     destination.library.addCopy(
                         it.copy(origin = null),
                         env.ids,
@@ -284,7 +286,7 @@ sealed interface LensesSettingsAction {
                 }
             return when {
                 saved == null -> set.refused(LensesSettingsMessage.Refused(UNKNOWN))
-                target == layout -> set.refused(LensesSettingsMessage.NothingToDo)
+                sameLayout -> set.refused(LensesSettingsMessage.NothingToDo)
                 copied == null -> set.refused(LensesSettingsMessage.Refused(LibraryProblem.LIBRARY_FULL))
                 else ->
                     set.changed(

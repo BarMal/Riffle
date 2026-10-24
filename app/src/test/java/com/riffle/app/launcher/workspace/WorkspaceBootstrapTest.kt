@@ -3,6 +3,7 @@ package com.riffle.app.launcher.workspace
 import com.riffle.app.launcher.CachedWorkspaceRepository
 import com.riffle.app.launcher.WorkspaceStorePort
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,10 +31,10 @@ class WorkspaceBootstrapTest {
     private val phone = HomeLayoutDeviceClass.PHONE
 
     @Test
-    fun seedingAnEmptyStoreGivesEveryDeviceClassADefault() {
+    fun seedingAnEmptyStoreGivesEveryWorkspacesLayoutADefault() {
         val seeded = WorkspaceBootstrap.seed(null)
 
-        assertEquals(HomeLayoutDeviceClass.entries.toSet(), seeded.layouts.keys)
+        assertEquals(WorkspaceLayoutClasses.entries.toSet(), seeded.layouts.keys)
         seeded.layouts.values.forEach { assertTrue(it.workspaces.isNotEmpty()) }
     }
 
@@ -45,7 +46,7 @@ class WorkspaceBootstrapTest {
 
         assertEquals(stored.layouts.getValue(phone), seeded.layouts.getValue(phone))
         assertEquals("Mine", seeded.workspacesFor(phone).active.name)
-        assertEquals(HomeLayoutDeviceClass.entries.toSet(), seeded.layouts.keys)
+        assertEquals(WorkspaceLayoutClasses.entries.toSet(), seeded.layouts.keys)
     }
 
     @Test
@@ -81,7 +82,7 @@ class WorkspaceBootstrapTest {
 
             repository.initialize(WorkspaceBootstrap::seed)
             val seeded = checkNotNull(repository.load())
-            assertEquals(HomeLayoutDeviceClass.entries.toSet(), seeded.layouts.keys)
+            assertEquals(WorkspaceLayoutClasses.entries.toSet(), seeded.layouts.keys)
 
             repository.save(seeded.update(phone) { it.rename(it.activeId, "Edited") })
 
@@ -96,7 +97,7 @@ class WorkspaceBootstrapTest {
 
             repository.initialize(WorkspaceBootstrap::seed)
 
-            assertEquals(HomeLayoutDeviceClass.entries.toSet(), repository.load()?.layouts?.keys)
+            assertEquals(WorkspaceLayoutClasses.entries.toSet(), repository.load()?.layouts?.keys)
         }
 
     @Test
