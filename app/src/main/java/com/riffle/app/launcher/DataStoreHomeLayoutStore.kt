@@ -130,6 +130,9 @@ internal class HomeLayoutRuntime(
     /** See `HomeLayoutOpening.allowsHostIdDeletion`. */
     val allowsHostIdDeletion: Boolean = opening.allowsHostIdDeletion
 
+    /** Nothing was stored when this process started (and nothing was damaged): one half of "fresh install". */
+    val nothingStoredAtStart: Boolean = opening.nothingStored && !opening.readOnly && !opening.damaged
+
     val repository: HomeLayoutRepository = poolHome ?: readOnlyHome ?: writeBehind
 
     /** True once per incident: this start found damage and the notice has not been shown since the last clean start. */

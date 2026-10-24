@@ -42,6 +42,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
+import com.riffle.app.launcher.onboarding.LocalWalkthroughLauncher
+import com.riffle.app.launcher.onboarding.OnboardingHost
+import com.riffle.app.launcher.onboarding.OnboardingLayer
 import com.riffle.app.launcher.workspace.LensesSettingsController
 import com.riffle.app.launcher.workspace.LocalWorkspaceHomePages
 import com.riffle.app.launcher.workspace.NoWorkspaceVersion
@@ -85,6 +88,7 @@ fun LauncherShell(
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
     workspacePreview: WorkspacePreviewHost? = null,
+    onboarding: OnboardingHost? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val storedState by viewModel.state.collectAsState()
@@ -126,6 +130,7 @@ fun LauncherShell(
             LocalWorkspaceHomePages provides workspaceHome?.pages,
             LocalHomeSelectionRequests provides viewModel.homeSelectionRequests,
             LocalDockModePullEnabled provides !workspacesLoading,
+            LocalWalkthroughLauncher provides onboarding?.controller?.let { controller -> controller::rerun },
         ) {
             PreviewHideHost(workspaceHome?.hideController, deviceClass.workspaceLayoutClass(), 0.dp) {
                 LauncherShellContent(
@@ -148,6 +153,10 @@ fun LauncherShell(
         // Loads the workspaces and draws the workspace editor over the home while it is open.
         if (workspacePreview != null) {
             WorkspaceLayer(workspacePreview, state, viewModel)
+        }
+        // The first-time walkthrough and the existing-user offer, after the Home-role card (see OnboardingLayer).
+        if (onboarding != null) {
+            OnboardingLayer(onboarding, state, workspacesLoaded = !workspacesLoading, onAction = onAction)
         }
     }
 }

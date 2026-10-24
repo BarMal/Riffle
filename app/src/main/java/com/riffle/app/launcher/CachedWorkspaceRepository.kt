@@ -51,6 +51,14 @@ class CachedWorkspaceRepository(
     /** Increases every time [load] starts returning something different. */
     val version: StateFlow<Int> = mutableVersion.asStateFlow()
 
+    /**
+     * Whether the first [initialize] found a stored set: null before it ran, true when one was stored or the read
+     * failed (never guess "nothing stored"), false only when the store was readable and empty. For onboarding.
+     */
+    @Volatile
+    var foundStored: Boolean? = null
+        private set
+
     suspend fun initialize(layoutSet: HomeLayoutSet) =
         initialize { stored -> WorkspaceMigration.ensureMigrated(stored, layoutSet) }
 
@@ -59,6 +67,7 @@ class CachedWorkspaceRepository(
         if (cached != null) return
         val read = runCatching { store.read() }.onFailure { if (it is CancellationException) throw it }
         if (read.isFailure) persistenceEnabled = false
+        if (foundStored == null) foundStored = read.isFailure || read.getOrNull() != null
         val loaded = bootstrap(read.getOrNull())
         // A save that raced the read wins: it is newer than anything the store held.
         if (cached == null) {

@@ -53,6 +53,8 @@ import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.launchNotificationListenerSettings
+import com.riffle.app.launcher.onboarding.androidOnboardingHost
+import com.riffle.app.launcher.onboarding.flowSource
 import com.riffle.app.launcher.overlay.AndroidUsageAccessSettingsAction
 import com.riffle.app.launcher.pool.POOL_HOME_RECOVERY_NOTICE
 import com.riffle.app.launcher.pool.showBlockedHomeEdits
@@ -132,6 +134,22 @@ class MainActivity : ComponentActivity() {
                         .show()
                 }
             },
+        )
+    }
+
+    /**
+     * The first-time walkthrough and the existing-user offer. Permissions go only through [sourceAccessLaunchers] (the
+     * existing explicit flows), from the walkthrough's "Continue" tap.
+     */
+    private val onboardingHost by lazy {
+        androidOnboardingHost(
+            context = this,
+            homeLayoutRuntime = dependencies.homeLayoutRuntime,
+            workspaces = dependencies.workspaceRepository,
+            runtime = { workspaceRuntime },
+            icsFeeds = { dependencies.icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds.orEmpty() },
+            launchPermission = { permission -> sourceAccessLaunchers.request(permission.flowSource()) },
+            onApplied = { shellViewModel.workspaceMenu.refresh() },
         )
     }
     private val homeRoleGateway get() = dependencies.homeRoleGateway
@@ -544,6 +562,7 @@ class MainActivity : ComponentActivity() {
                                 ),
                             adaptiveStageWindowLayout = adaptiveStageWindowLayout,
                             workspacePreview = workspacePreviewHost,
+                            onboarding = onboardingHost,
                             onAction = launcherActionRouter::handle,
                         )
                     }

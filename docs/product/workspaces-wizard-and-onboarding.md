@@ -239,6 +239,181 @@ throws; unknown values read as defaults; no value reads as "not decided", so the
 it in its own preference (suggested `riffle_onboarding`), not in the workspace blob: it describes this install, and a
 restore onto a new phone brings the workspaces the walkthrough made, so asking again there would only duplicate them.
 
+## As built (UI): the walkthrough and onboarding
+
+Status: **walkthrough UI, offer card, onboarding store and Settings entry built; not compiled here and never run on a
+device** (Compose and the Android wiring were reviewed by hand; the Android-free parts were compiled and tested, see
+Verification below). Package `app/.../launcher/onboarding/`. It uses only the walkthrough's own `WalkthroughFlow` /
+`WalkthroughReducer` APIs (per-goal options included) and nothing from the content wizard UI (`launcher/wizard/`); a
+later pass can share rows between them.
+
+| File | What |
+| --- | --- |
+| `OnboardingStore.kt`, `SharedPreferencesOnboardingStore.kt` | `OnboardingStorePort`; `OnboardingCodec` as JSON in the `riffle_onboarding` preferences file (key `state`), read lazily; an in-memory store for tests |
+| `OnboardingController.kt` | `OnboardingSurface` (`None`, `Offer`, `Walkthrough(origin, firstRun)`) and the state holder over `Onboarding`: `decideAtLaunch`, `dismissOffer`, `acceptOffer`, `rerun`, `walkthroughCancelled`, `walkthroughCompleted` |
+| `WalkthroughSession.kt` | One run: `WalkthroughUi(state, context)`, `dispatch`, the permission round trip, `reopenReview` |
+| `WalkthroughContexts.kt` | `WalkthroughInputs` -> `WalkthroughContext` (suggested apps and dock, feeds, gestures); the picker app list; `SourcePermission.flowSource()` |
+| `WalkthroughApplier.kt`, `RepositoryWalkthroughStores.kt` | `WalkthroughApply` over the workspace and pool repositories, the two home guards, Undo |
+| `WalkthroughScreen.kt`, `WalkthroughSteps.kt`, `WalkthroughComponents.kt` | The stateless screens (`WalkthroughScreen(model, onAction)`) |
+| `OnboardingOfferCard.kt` | The existing-user card |
+| `OnboardingLayer.kt`, `OnboardingHost.kt` | The shell glue (`LauncherShell(onboarding = ...)`), the process-wide controller, the platform wiring |
+| `WalkthroughText.kt` | The copy of section 5 |
+
+Shared files, additive only: `LauncherShell.kt` (an `onboarding` parameter, the layer after the workspace editor, the
+Settings launcher local), `MainActivity.kt` (builds the host), `SettingsWorkspacesSection.kt` (the row),
+`SettingsLauncherSearchEntries.kt` (the search entry), `CachedWorkspaceRepository.kt` (`foundStored`),
+`pool/PoolHomeStartup.kt` (`HomeLayoutOpening.nothingStored`), `DataStoreHomeLayoutStore.kt`
+(`HomeLayoutRuntime.nothingStoredAtStart`), `res/xml/backup_rules.xml` and `data_extraction_rules.xml` (exclude
+`riffle_onboarding.xml`).
+
+### At launch, and the order with the first-run flow
+
+1. The process opens the home (`openHomeLayouts`) and reads the workspaces with S9's bounded startup read. Nothing about
+   onboarding is read before the first frame.
+2. **The Home-role card first** ("Set up Riffle", `shouldShowSetupCard`). Onboarding waits while it is shown and while a
+   Home-role request is in flight (`FirstRunStatus.REQUESTING_HOME_ROLE`), so the two never stack and the Home-role
+   request is never delayed. The card goes when Riffle is the Home app or the user taps "Not now".
+3. Then, once per process (`OnboardingProcess` holds one controller), `decideAtLaunch` reads `riffle_onboarding` on
+   `Dispatchers.IO` and calls `Onboarding.atLaunch`. **Fresh install** = the home layout store held nothing and had no
+   recovery snapshot at this start (`HomeLayoutOpening.nothingStored`, and the start was neither read-only nor damaged)
+   **and** the workspace store was readable and empty (`CachedWorkspaceRepository.foundStored == false`). A failed read
+   never counts as fresh. It is asked only while the origin is undecided.
+4. `RUN_WALKTHROUGH`: the walkthrough opens full screen over whatever is shown (`Onboarding.started` is stored, so an
+   interrupted run comes back at the next launch). `SHOW_OFFER`: the card at the top of the home, on the home only; it
+   was recorded as shown at this launch, so it is not shown at another one. `NONE`: nothing.
+5. Settings > Workspaces > **Set up your home again** (`Onboarding.rerun`, `firstRun = false`) opens it at any time over
+   Settings; launcher search finds it under "walkthrough", "setup", "set up" and "onboarding" (the entry opens the main
+   Settings page, whose Workspaces section holds the row). A walkthrough opened from Settings is never replaced by the
+   launch decision.
+
+### The screens
+
+- **Layout.** Full-screen `Surface` inside `WindowInsets.safeDrawing`. Top: "Step n of m" (from `WalkthroughFlow.steps`,
+  so Options and Permissions count only when shown), "Skip set-up" (every step; it keeps the home as it is), a linear
+  progress bar and the step's name. Bottom: Back ("Skip for now" on Welcome) and the primary action ("Get started",
+  "Next", "Build my home"). The step body scrolls on its own (`LazyColumn`), so the bars stay reachable at any font
+  size. At 600 dp and wider (an unfolded foldable, a tablet) a step list sits beside the step (done steps ticked, the
+  current one selected) and the content is at most 720 dp wide.
+- **Steps.** Welcome; Goals (`goalChoices`: multi-select cards, "Needs access" badge, disabled ones visible with their
+  reason); Arrange (per goal: Move up / Move down within its block, a Page / Widget segmented button when
+  `rolesFor` offers both, "Open on this page", and "Open on the first page"); Options (one goal at a time with "n of m":
+  its filters, apps / feeds / search text pickers, `looksFor` looks, the setup problem as a polite notice); Dock (pins up
+  to `dockCapacity`, "Hide the dock" only when `canHideDock`, otherwise with the reason); Permissions (below); Review
+  (`review`: pages, widgets, dock, "Needs access: ...", replaces / keeps / updates).
+- **Accessibility.** Every choice is one target of at least 56 dp that reads title, description and state as one
+  sentence, with its role (checkbox, radio button, switch) and selected state; disabled options stay focusable; Move up
+  and Move down name their goal; problems and statuses are polite live regions; the step name is a polite live region
+  outside the cross-fade, so every step change is announced. Back is the system Back too (one step; on Welcome it
+  leaves). Step changes cross-fade with `RiffleMotion.standard` and snap under reduced motion.
+
+### Permissions
+
+"Allow" sends `ExplainPermission` (the rationale and what Android will show next are on screen); "Continue" sends
+`RequestPermission`, and the session then calls the host, from that tap, with the permission. The host runs the
+existing explicit flow through `SourceAccessLaunchers.request` for the permission's source (`flowSource()`: the calendar
+dialog via `CalendarAccessCoordinator`, the notification listener settings, the Usage access settings). Nothing is ever
+requested at startup or without the tap.
+
+The result is reported as `PermissionResult` when the launcher comes back: the session waits for a pause (the dialog or
+the settings screen covers it) and then a resume, re-reads access (`WorkspaceRuntime.sourceChoices()`, never the flow's
+own answer), rebuilds the context and reports granted or denied. For a flow that could not open (no pause), the row
+shows "Check again", which reports what access is now. "Not now" skips; leaving the step skips the rest. A granted row
+stays listed as "Allowed". Skipped and denied content is built anyway and shows "Needs access" with "Review access".
+
+**Domain fix in this slice:** once every permission is granted the Permissions step leaves `WalkthroughFlow.steps`
+while the user is still on it, and Next went back to Welcome. `WalkthroughNavigation.next` and `back` now move by step
+order, not by index (identical for every listed step; `WalkthroughNavigationTest`).
+
+### Applying and Undo
+
+On "Build my home" the layer calls `WalkthroughApplier.apply` with the layout shown now (N10: the phone layout when
+rotated):
+
+- **Read-only home** (`HomeLayoutRuntime.readOnlyHome`): refused, nothing written; the Review step shows the existing
+  notice (`READ_ONLY_HOME_NOTICE`) and "Build my home" is disabled.
+- **Edits held while loading** (workspaces not loaded, or `PoolHomeLayoutRepository.awaitingWorkspaces`): "Build my
+  home" is disabled with "Your home is still loading" and re-checked every 250 ms and on every workspace change; an apply
+  that races it is refused and nothing is written.
+- Otherwise `WalkthroughApply.apply` with `WorkspaceHome.borrowCandidates(WalkthroughFlow.WORKSPACE_ID, layout)` (S9's
+  fixed borrow order). The pool goes first (`CachedPoolRepository.update`, in memory; the home sees it as an external
+  change and re-projects; the pool-backed home's `flushNow` writes it, releases host ids and refreshes the recovery
+  snapshot), then the workspace set (`CachedWorkspaceRepository.save`; the home re-targets to "My home"). Then
+  `Onboarding.completed`, the workspace menu refreshes, the home is shown and a snackbar says "Your home is ready" with
+  **Undo**, which writes `undo.pool` (only when the pool was written) and `undo.layout` back. A refused apply returns
+  to Review with every choice kept.
+
+### Decisions (UI, to confirm)
+
+1. **The Home-role card comes first**; the walkthrough or the offer follows it in the same launch.
+2. **Fresh install needs both stores empty** at start (home layouts and workspaces). An existing user who never had
+   workspaces stored still has a home layout, so they get the offer, never a replacing walkthrough.
+3. **The onboarding file is excluded from Auto Backup and device transfer** too (not only from Riffle's backup): a new
+   phone restored from Auto Backup gets the workspaces and is treated as an existing user (the offer, once).
+4. **Undo restores the layout's workspaces and pool as they were** before the walkthrough; an edit made to that layout
+   in the seconds the snackbar shows is undone with it. Undo does not reopen the walkthrough or reset onboarding.
+5. **A walkthrough interrupted by a process death** restarts from Welcome (its choices are not saved); a fresh install
+   gets it again at the next launch.
+6. The walkthrough draws in the global theme (not the active workspace's skin).
+
+### Tests (app)
+
+- JVM, Android-free (run here): `OnboardingControllerTest` (fresh install runs full screen and stores STARTED; once per
+  process; an interrupted run comes back; completed or skipped is not asked again; an existing user gets the offer once;
+  Not now and Set up; Settings re-runs never replace and a cancelled re-run keeps the completion; a re-run before the
+  decision wins; freshness asked only while undecided; no write when nothing changed), `OnboardingStoreTest` (round
+  trip, garbage and unknown values read as undecided, field names only, excluded from Auto Backup and transfer),
+  `WalkthroughSessionTest` (forwards and back, Back on Welcome and Skip leave, goals toggle, explain then request
+  through the host once, a resume that is not a return reports nothing, granted and denied returns, Check again, skip
+  everything, granting everything still moves on to Review, a refused apply reopens Review),
+  `WalkthroughApplierTest` (fresh install replaces the seed and Undo restores both stores, an existing user keeps every
+  workspace, applying twice updates in place, read-only and loading refuse and write nothing, no pool, Undo refused on a
+  read-only home), `WalkthroughContextsTest` (picker apps, dock suggestions, feeds, re-runs never replace, the
+  Permissions step, each permission maps to the Settings > Sources flow), `FreshInstallSignalsTest` (both store signals),
+  `SettingsPagesTest` (the search entry).
+- Robolectric (CI): `WalkthroughScreenshotTest` (every step compact, light and dark; Review while loading and on a
+  read-only home; the offer card light and dark; Goals at the largest font), `WalkthroughUnfoldedScreenshotTest` (every
+  step unfolded, light and dark), `WalkthroughHappyPathTest` (Get started, toggle a goal, explain and skip access, build,
+  apply and Undo; Skip set-up; Back; Continue opens the flow and Check again reports "Not allowed"; the offer's buttons).
+- Domain: `WalkthroughNavigationTest`.
+
+### Verification (UI slice)
+
+Run here in a scratch Gradle project on Maven Central: the whole `:core:domain` suite (230 classes, 2014 tests, all
+pass), the Android-free onboarding files with the pool and workspace repositories they use (6 classes, 43 tests, all
+pass), ktlint on domain main and test and on every changed app file, detekt over domain and app (main and test), clean.
+**Not run:** the Compose and Android code (`WalkthroughScreen`, `WalkthroughSteps`, `WalkthroughComponents`,
+`OnboardingOfferCard`, `OnboardingLayer`, `OnboardingHost`, `SharedPreferencesOnboardingStore`, `LauncherShell`,
+`MainActivity`, the Settings section) was not compiled, and the Robolectric screenshot and UI tests and
+`SettingsPagesTest` did not run (dl.google.com is blocked here); CI runs `verify deviceVerify`.
+
+### Not done (walkthrough UI)
+
+- Sharing rows with the content wizard UI (`launcher/wizard/`); a live preview of each page beside the steps.
+- Saving the walkthrough's choices across a process death.
+- Drag to reorder on Arrange (Move up / Move down only).
+- An instrumented test of the real permission flows (the system screens cannot be driven in a JVM test).
+
+### Owner device checklist (walkthrough UI)
+
+- [ ] Fresh install: Settings > Apps > Riffle > Clear storage (or install on a clean device), open Riffle. The "Set up
+      Riffle" card shows first; set Riffle as the Home app. The walkthrough then opens by itself.
+- [ ] Walk through: pick goals (TalkBack reads each card's state), arrange (Move up, Page / Widget, Open on this page),
+      options, dock. On Allow access tap Allow then Continue for one permission and say no in the system screen: the row
+      says "Not allowed". Tap "Not now" on the other. Review says "Needs access: ...". Build my home.
+- [ ] The new home shows; the skipped content says "Needs access", and "Review access" opens the rationale first. Tap
+      Undo on the snackbar: the starting home is back. Force-stop and reopen: no walkthrough (it was completed).
+- [ ] Clear storage again, open Riffle, tap "Skip set-up": the starting home stays; reopen: no walkthrough.
+- [ ] Clear storage again and force-stop Riffle mid-walkthrough: the next launch opens the walkthrough again.
+- [ ] Update over an existing install: the "Set up your home" card appears once on the home. Restart Riffle: it does
+      not come back (whether or not you tapped it). On another install tap "Set up": your other workspaces and your home
+      are untouched after Build my home.
+- [ ] Settings > Workspaces > Set up your home again runs it (also found by searching "walkthrough"); running it twice
+      updates "My home" rather than adding a second one.
+- [ ] Notification access from the walkthrough: Continue opens the system list; turn Riffle on, come back: "Allowed".
+      Usage access the same. Calendar: the system dialog.
+- [ ] TalkBack: every step change is announced; Remove animations: steps snap; rotate and fold/unfold mid-walkthrough:
+      the step and choices stay; on the unfolded screen the step list is beside the step.
+
 ## 5. Copy (Material 3: sentence case, short, second person; one primary action per screen)
 
 ### Wizard

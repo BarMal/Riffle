@@ -67,6 +67,8 @@ internal data class HomeLayoutOpening(
     val readOnly: Boolean = false,
     /** Damage found at THIS start (an unreadable snapshot or set, an undecodable pool): the recovery notice. */
     val damaged: Boolean = false,
+    /** Nothing was stored before this start (no `HomeLayoutSet`, no snapshot): a fresh install, for onboarding. */
+    val nothingStored: Boolean = false,
 ) {
     /**
      * False in a read-only or damaged process: no widget host id is deleted there (the shell's removals, released ids,
@@ -121,7 +123,8 @@ internal suspend fun openHomeLayouts(
                 if (enabled) cutOver(store, pool, stored, providerOf) else HomeLayoutOpening(stored, poolHome = false)
         }
     val damaged = snapshot is PrePoolSnapshot.Unreadable || pool.wasCorruptOnLoad
-    return if (damaged) opening.copy(damaged = true) else opening
+    val fresh = stored == null && snapshot == PrePoolSnapshot.Absent
+    return if (damaged) opening.copy(damaged = true) else opening.copy(nothingStored = fresh)
 }
 
 private suspend fun openPoolHome(
