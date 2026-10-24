@@ -4,13 +4,6 @@ import com.riffle.app.launcher.pool.PoolHomeFixture.homeItems
 import com.riffle.app.launcher.pool.PoolHomeFixture.legacyId
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.home.AppShortcutItem
-import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
-import com.riffle.core.domain.launcher.workspace.Workspace
-import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
-import com.riffle.core.domain.launcher.workspace.WorkspaceSet
-import com.riffle.core.domain.launcher.workspace.pool.AppArrival
-import com.riffle.core.domain.launcher.workspace.pool.NewAppPlacement
-import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -19,12 +12,19 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
+import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
+import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
+import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import com.riffle.core.domain.launcher.workspace.pool.AppArrival
+import com.riffle.core.domain.launcher.workspace.pool.NewAppPlacement
 import com.riffle.core.domain.launcher.workspace.pool.PoolArrangements
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
 import com.riffle.core.domain.launcher.workspace.pool.PoolRemoval
 import com.riffle.core.domain.launcher.workspace.pool.PoolResult
+import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -338,6 +338,8 @@ class PoolHomeLayoutRepositoryTest {
 
     private val nova = WorkspacePresets.defaultFor(HomeLayoutDeviceClass.PHONE)
 
+    private fun phonePool() = currentPool.current()!!.pools.getValue(HomeLayoutDeviceClass.PHONE)
+
     private fun workspacesWith(workspace: Workspace) =
         WorkspaceSet(mapOf(HomeLayoutDeviceClass.PHONE to LayoutWorkspaces.single(workspace)))
 
@@ -347,8 +349,8 @@ class PoolHomeLayoutRepositoryTest {
         val migratedHome = repository.shown().activeLayout.homeItems()
 
         val retargeted = repository.retarget(workspacesWith(nova), repository.shown())
-        assertEquals("S9: the default workspace renders the migrated home", migratedHome, retargeted.activeLayout.homeItems())
-        assertFalse(PoolArrangements.ownsArrangement(currentPool.current()!!.pools.getValue(HomeLayoutDeviceClass.PHONE), nova.id))
+        assertEquals("S9: the default renders the migrated home", migratedHome, retargeted.activeLayout.homeItems())
+        assertFalse(PoolArrangements.ownsArrangement(phonePool(), nova.id))
 
         val savesBefore = legacy.saved.size
         repository.edit { layout ->
@@ -361,8 +363,7 @@ class PoolHomeLayoutRepositoryTest {
                 )
             }
         }
-        val pool = currentPool.current()!!.pools.getValue(HomeLayoutDeviceClass.PHONE)
-        assertTrue("the edit landed in the workspace's own copy", PoolArrangements.ownsArrangement(pool, nova.id))
+        assertTrue("the edit landed in its own copy", PoolArrangements.ownsArrangement(phonePool(), nova.id))
         assertEquals("HomeLayoutSet is not written for a moved item", savesBefore, legacy.saved.size)
         runBlocking { repository.flushNow() }
 
@@ -370,7 +371,8 @@ class PoolHomeLayoutRepositoryTest {
         val (restarted, _) = start()
         assertEquals(migratedHome, restarted.shown().activeLayout.homeItems())
         val again = restarted.retarget(workspacesWith(nova), restarted.shown())
-        assertEquals(PoolHomeFixture.at(3, 4), again.activeLayout.homeItems().first { it.id.value.endsWith("mail") }.placement)
+        val mail = again.activeLayout.homeItems().first { it.id.value.endsWith("mail") }
+        assertEquals(PoolHomeFixture.at(3, 4), mail.placement)
     }
 
     @Test
@@ -383,15 +385,14 @@ class PoolHomeLayoutRepositoryTest {
 
         val placed = repository.placeNewApp(repository.shown(), PoolHomeFixture.identity("new.app"), "New", set)
 
-        assertTrue(
-            placed.activeLayout.homeItems().any { (it as? AppShortcutItem)?.appIdentity == PoolHomeFixture.identity("new.app") },
-        )
+        val newApp = PoolHomeFixture.identity("new.app")
+        assertTrue(placed.activeLayout.homeItems().any { (it as? AppShortcutItem)?.appIdentity == newApp })
         assertEquals(placed, repository.shown())
         assertEquals("the icon lives in the pool, not in HomeLayoutSet", savesBefore, legacy.saved.size)
         // An update or a profile coming back places nothing.
         val before = currentPool.current()
-        repository.placeNewApp(repository.shown(), PoolHomeFixture.identity("other.app"), "Other", set, AppArrival.UPDATED)
+        val other = PoolHomeFixture.identity("other.app")
+        repository.placeNewApp(repository.shown(), other, "Other", set, AppArrival.UPDATED)
         assertEquals(before, currentPool.current())
     }
 }
-

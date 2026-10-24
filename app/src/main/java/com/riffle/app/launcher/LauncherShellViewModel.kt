@@ -69,8 +69,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 
 class LauncherShellViewModel(
     private val firstRunRepository: FirstRunRepository,
@@ -247,17 +245,6 @@ class LauncherShellViewModel(
                 val reprojected = poolHome.reproject(current.homeLayoutSet.withActiveLayout(current.homeLayout))
                 mutableState.value = current.copy(homeLayout = reprojected.activeLayout, homeLayoutSet = reprojected)
             }
-        }
-    }
-
-    /**
-     * Blocks the main thread for at most [WORKSPACE_STARTUP_READ_MILLIS] (the launcher's one other blocking startup
-     * read is the home layout's). A read that fails is handled by the repository (it holds the defaults and stops
-     * writing); a timeout leaves the asynchronous load to finish, and the home shows the migrated workspace until then.
-     */
-    private fun loadWorkspacesAtStartup(workspaces: CachedWorkspaceRepository) {
-        runBlocking {
-            withTimeoutOrNull(WORKSPACE_STARTUP_READ_MILLIS) { workspaces.initialize(WorkspaceBootstrap::seed) }
         }
     }
 
@@ -1060,6 +1047,3 @@ internal fun HomeShortcutEngine.applyEdit(
 
         else -> HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
     }
-
-/** How long the launcher waits for the stored workspaces before its first frame (design 1.2). */
-private const val WORKSPACE_STARTUP_READ_MILLIS = 500L
