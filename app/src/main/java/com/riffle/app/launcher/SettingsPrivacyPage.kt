@@ -44,10 +44,10 @@ internal fun contentLevelTestTag(
 ): String = "content-level-${id.value}-${level.storedId}"
 
 /**
- * Settings > Privacy (design section 6). A main page: the screenshot and recents switch works with or without the
- * Workspaces preview. The content levels and the links to Hidden items and Sources live on Workspaces pages, so they
- * appear only while the preview is on; with it off the page says where they are. Adds no permission, prompt or
- * background work.
+ * Settings > Privacy (design section 6). A main page: the screenshot and recents switch, the content level of each
+ * privacy-sensitive source (S9: applied on the launcher's home, whose lens pages read them) and links to Hidden items
+ * and Sources. Without a workspace host (tests, nothing loaded) only the switch and a note show. Adds no permission,
+ * prompt or background work.
  */
 @Composable
 internal fun SettingsPrivacyPageContent(

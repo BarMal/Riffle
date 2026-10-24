@@ -93,7 +93,7 @@ internal class LensesPageQueries(
     val copyTargets: (LensId) -> List<LensCopyTarget> = { emptyList() },
 )
 
-/** Settings > Saved lenses. Reachable only from the Developer section while Workspaces (preview) is on. */
+/** Settings > Saved lenses. Reachable from the Workspaces section of Settings (S9). */
 @Composable
 internal fun SettingsLensesPageContent(
     state: SettingsSurfaceState,

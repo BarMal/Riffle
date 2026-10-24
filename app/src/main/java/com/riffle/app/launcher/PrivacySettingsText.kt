@@ -18,9 +18,7 @@ internal object PrivacySettingsText {
     const val LEVELS_NOTE =
         "Applies to every page, widget and dock section that shows the source, on every layout, and takes effect at " +
             "once. Kept on this device; not part of a backup. Hide rules still remove items completely."
-    const val LEVELS_PREVIEW_OFF =
-        "Content levels apply to Workspaces (preview) pages. Turn on Workspaces (preview) in Settings > Developer " +
-            "to choose them."
+    const val LEVELS_PREVIEW_OFF = "Content levels appear here once your workspaces have loaded."
     const val LEVELS_NONE = "No source that can show private content is available in this build."
 
     const val HIDDEN_TITLE = "Hidden items"

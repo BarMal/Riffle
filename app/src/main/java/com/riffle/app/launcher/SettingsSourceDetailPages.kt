@@ -37,8 +37,8 @@ internal const val SOURCE_USED_BY_EMPTY_TAG = "source-used-by-empty"
 internal fun sourcePlaceTestTag(index: Int): String = "source-place-$index"
 
 /**
- * A source's detail page (Settings > Sources > a source). Developer pages like the Sources page: only reachable
- * while Workspaces (preview) is on. While open it holds the same status subscriptions the Sources page does and
+ * A source's detail page (Settings > Sources > a source). Reached from the Sources page
+ * (S9: always available). While open it holds the same status subscriptions the Sources page does and
  * releases them on close. It adds no permission, prompt or background work: every action is an existing flow.
  */
 @Composable

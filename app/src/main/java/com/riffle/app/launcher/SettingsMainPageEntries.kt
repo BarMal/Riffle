@@ -15,13 +15,14 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
     listOf(
         SettingsPageEntry(
             label = "Layout",
-            subtitle = "Home mode, grid, pages, and labels",
+            subtitle = "Grid, labels, and returning to Home",
             page = SettingsPage.LAYOUT,
             group = SettingsPageGroup.HOME,
             searchAliases =
                 listOf(
                     "home layout",
-                    "home mode",
+                    "returning to home",
+                    "start page",
                     "grid columns",
                     "grid rows",
                     "show labels",

@@ -48,9 +48,9 @@ internal const val EXCLUSIONS_ADD_TEST_TAG = "exclusions-add-text-rule"
 internal const val EXCLUSIONS_SUMMARY_TEST_TAG = "exclusions-summary"
 
 /**
- * Settings > Sources > Hidden items and rules. Reachable only from the Sources page while Workspaces (preview) is
- * on. While it is open the sources the viewed layout's rules can hide from are read to count what each rule hides;
- * closing the page releases them.
+ * Settings > Sources > Hidden items and rules. Reachable from the Sources page (S9: always available). While it
+ * is open the sources the viewed layout's rules can hide from are read to count what each rule hides; closing the
+ * page releases them.
  */
 @Composable
 internal fun SettingsExclusionsPageContent(

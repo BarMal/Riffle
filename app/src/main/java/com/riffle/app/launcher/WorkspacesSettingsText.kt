@@ -13,7 +13,7 @@ import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 /** User-visible wording for the Workspaces and Sources settings pages. Plain strings so JVM tests can check them. */
 internal object WorkspacesSettingsText {
     const val WORKSPACES_TITLE = "Workspaces"
-    const val PREVIEW_OFF = "Turn on Workspaces (preview) in Settings to use this page."
+    const val PREVIEW_OFF = "Your workspaces are not loaded yet. Go back and open this page again."
     const val NOT_LOADED = "Workspaces are still loading. Open this page again in a moment."
     const val ACTIVE = "Active"
     const val DEFAULT = "Default"

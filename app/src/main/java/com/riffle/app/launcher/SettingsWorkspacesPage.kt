@@ -46,7 +46,7 @@ import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsActi
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsModel
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
-/** Settings > Workspaces. Reachable only from the Developer section while Workspaces (preview) is on. */
+/** Settings > Workspaces. Reachable from the Workspaces section of Settings (S9). */
 @Composable
 internal fun SettingsWorkspacesPageContent(
     state: SettingsSurfaceState,
@@ -95,10 +95,7 @@ private fun HostedWorkspacesPage(
                     },
                 ),
         )
-        SettingsReturnBehaviorSection(
-            current = state.settings.home.returnBehavior,
-            onSelect = { behavior -> onAction(LauncherShellAction.SelectReturnBehavior(behavior)) },
-        )
+        // "Returning to Home" moved to Settings > Layout at S9 (design 3.2).
     }
 }
 

@@ -132,7 +132,7 @@ private fun SettingsMainPageContent(
         firstRunStatus = state.firstRunStatus,
         onAction = onAction,
     )
-    SettingsWorkspacePreviewSection(onPageSelected = onPageSelected)
+    SettingsWorkspacesSection(onPageSelected = onPageSelected)
     AppSearchField(
         modifier = Modifier.fillMaxWidth(),
         query = settingsQuery.value,
@@ -211,21 +211,10 @@ private fun SettingsLayoutPageContent(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsDeviceConfigurationTabs(state = state, onAction = onAction)
+    // S9 (design 3.1, #1325): the mode, layout template and Home screen choices are gone. Which arrangement is on
+    // screen is the active workspace (Settings > Workspaces, the workspace menu); this page keeps what tunes the
+    // standard home: grid, labels and where a return lands.
     SettingsSection(title = "Home layout") {
-        if (state.availableLauncherViewModes.size > 1) {
-            HomeViewModeSetting(
-                viewMode = state.homeLayout.viewMode,
-                availableViewModes = state.availableLauncherViewModes,
-                onAction = onAction,
-            )
-        }
-        HomeTemplateSetting(
-            selectedViewMode = state.homeLayout.viewMode,
-            selectedTemplateId = state.homeLayout.templateId,
-            availableViewModes = state.availableLauncherViewModes,
-            deviceClass = state.selectedLayoutDeviceClass,
-            onAction = onAction,
-        )
         HomeGridSetting(
             grid = state.homeLayout.settings.grid,
             visibleDimensions = state.homeLayout.workspaceGrid,
@@ -233,21 +222,16 @@ private fun SettingsLayoutPageContent(
             onAction = onAction,
         )
     }
-    if (homeSurfaceModeOptions(state.availableLauncherViewModes).size > 1) {
-        SettingsSection(title = "Modes") {
-            HomeSurfaceModeSetting(
-                pair = state.modePair,
-                availableViewModes = state.availableLauncherViewModes,
-                onAction = onAction,
-            )
-        }
-    }
     SettingsSection(title = "Labels") {
         HomeLabelSetting(
             settings = state.homeLayout.settings.labels,
             onAction = onAction,
         )
     }
+    SettingsReturnBehaviorSection(
+        current = state.settings.home.returnBehavior,
+        onSelect = { behavior -> onAction(LauncherShellAction.SelectReturnBehavior(behavior)) },
+    )
 }
 
 @Composable
