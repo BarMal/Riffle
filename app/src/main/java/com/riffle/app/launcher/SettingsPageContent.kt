@@ -56,6 +56,8 @@ internal fun SettingsPageContent(
             SettingsPage.CONTEXTUAL -> SettingsContextualPageContent(state = state, onAction = onAction)
             SettingsPage.MOTION -> SettingsMotionPageContent(state = state, onAction = onAction)
             SettingsPage.PERMISSIONS -> SettingsPermissionsPageContent(state = state, onAction = onAction)
+            SettingsPage.PRIVACY ->
+                SettingsPrivacyPageContent(state = state, onPageSelected = onPageSelected, onAction = onAction)
             SettingsPage.APPS ->
                 {
                     SettingsAppDrawerSection(state = state, onAction = onAction)

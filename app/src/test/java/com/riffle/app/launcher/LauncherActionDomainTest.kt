@@ -392,6 +392,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectReturnBehavior(ReturnBehavior.START_PAGE),
                 ),
                 settings(
+                    "SetScreenContentProtection",
+                    LauncherShellAction.SetScreenContentProtection(enabled = true),
+                ),
+                settings(
                     "SelectAppDrawerPresentation",
                     LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.ICONS),
                 ),

@@ -417,6 +417,11 @@ sealed interface LauncherShellAction {
         val presentation: SearchResultPresentation,
     ) : LauncherShellAction
 
+    /** Settings > Privacy: hide launcher content in screenshots and recents (off by default). */
+    data class SetScreenContentProtection(
+        val enabled: Boolean,
+    ) : LauncherShellAction
+
     data class SelectAppDrawerPresentation(
         val presentation: AppDrawerPresentation,
     ) : LauncherShellAction

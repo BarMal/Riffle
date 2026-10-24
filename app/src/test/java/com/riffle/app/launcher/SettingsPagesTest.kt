@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.search.LauncherSearchProvider
 import com.riffle.core.domain.launcher.search.LauncherSearchResultType
+import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntryId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -31,6 +32,7 @@ class SettingsPagesTest {
                 "App drawer" to SettingsPage.APPS,
                 "RSS feeds" to SettingsPage.RSS,
                 "Permissions" to SettingsPage.PERMISSIONS,
+                "Privacy" to SettingsPage.PRIVACY,
                 "Backup" to SettingsPage.BACKUP,
                 "About" to SettingsPage.VERSION,
             ),
@@ -95,6 +97,23 @@ class SettingsPagesTest {
             listOf(SettingsPage.APPEARANCE),
             settingsMainPageEntriesMatching("theme colours").map { entry -> entry.page },
         )
+    }
+
+    @Test
+    fun privacyPageIsFoundByItsControlsAndSitsWithPermissionsAndBackup() {
+        listOf("screenshots", "recents", "redact", "content level", "titles only", "work profile").forEach { query ->
+            assertEquals(query, listOf(SettingsPage.PRIVACY), settingsMainPageEntriesMatching(query).map { it.page })
+        }
+        assertEquals(
+            listOf(SettingsPage.RSS, SettingsPage.PRIVACY),
+            settingsMainPageEntriesMatching("privacy").map { entry -> entry.page },
+        )
+        assertEquals(
+            SettingsPageGroup.SYSTEM,
+            settingsMainPageEntries().single { it.page == SettingsPage.PRIVACY }.group,
+        )
+        assertEquals(SettingsPage.PRIVACY, LauncherSearchSettingsEntryId("privacy").settingsPage())
+        assertEquals(SettingsPage.MAIN, settingsBackTarget(SettingsPage.PRIVACY))
     }
 
     @Test

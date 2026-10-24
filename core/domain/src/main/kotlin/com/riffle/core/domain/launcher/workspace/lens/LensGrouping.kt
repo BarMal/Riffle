@@ -2,8 +2,8 @@ package com.riffle.core.domain.launcher.workspace.lens
 
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemExtValue
+import com.riffle.core.domain.launcher.workspace.ItemField
 import com.riffle.core.domain.launcher.workspace.ItemGroup
-import com.riffle.core.domain.launcher.workspace.ItemPrivacy
 import com.riffle.core.domain.launcher.workspace.LensGroup
 
 /**
@@ -11,8 +11,9 @@ import com.riffle.core.domain.launcher.workspace.LensGroup
  *
  * Groups appear in order of their first member in the sorted list, so group order follows the lens sort
  * (for example `TIME` descending puts the most recent day first). Items with no key for the grouping (no
- * group key, no time, no ext value, or a SENSITIVE item under `ByExt`, whose ext is redacted) go to one
- * trailing group with key [UNGROUPED_KEY] and a null label. Labels fall back to the key.
+ * group key, no time, no ext value, or, under `ByExt`, an item whose ext is redacted because it is SENSITIVE
+ * or its source content level hides it) go to one trailing group with key [UNGROUPED_KEY] and a null label.
+ * Labels fall back to the key.
  */
 internal object LensGrouping {
     /** Key of the trailing group that holds items the grouping cannot place. Never a real key. */
@@ -47,8 +48,15 @@ internal object LensGrouping {
             LensGroup.ByGroupKey -> item.groupKey?.takeIf { it.isNotBlank() }
             LensGroup.ByDay -> item.timeEpochMillis?.let(context.dayBucketer::dayKey)
             is LensGroup.ByExt ->
-                item.ext[group.key].takeIf { item.privacy != ItemPrivacy.SENSITIVE }?.let(::extText)
+                item.ext[group.key]
+                    .takeIf { extVisible(item, context) }
+                    ?.let(::extText)
         }?.takeIf { it != UNGROUPED_KEY }
+
+    private fun extVisible(
+        item: Item,
+        context: LensEvaluationContext,
+    ): Boolean = ItemField.EXT in LensProjection.visibleFields(item, ItemField.ALL, context.contentLevels)
 
     private fun extText(value: ItemExtValue): String =
         when (value) {

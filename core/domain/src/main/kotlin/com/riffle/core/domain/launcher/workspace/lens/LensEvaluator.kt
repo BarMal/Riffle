@@ -38,7 +38,9 @@ fun interface LensEvaluator {
  *    For grouped results it is a total across all groups, not per group, so `limit = n` never yields
  *    more than n items whatever the shape, and it matches `Lens.resultShapes` (limit 1 means SINGLE).
  * 7. **Group** (see [LensGrouping]).
- * 8. **Project and redact** (see [LensProjection]); the only place redaction happens.
+ * 8. **Project and redact** (see [LensProjection]); the only place redaction happens. The lens's `project`
+ *    is capped by each item's source content level (`context.contentLevels`), and sort keys and `ByExt` group
+ *    keys are read through the same view, so neither can leak a field the level removes.
  */
 object DefaultLensEvaluator : LensEvaluator {
     override fun evaluate(
@@ -50,10 +52,10 @@ object DefaultLensEvaluator : LensEvaluator {
             LensMerge.merge(lens.sources, SourceExclusionFilter.apply(context.exclusions, items), context.maxInputItems)
                 .filter { LensFilterEvaluator.matches(lens.filter, it.item, context) }
         val limited =
-            LensSorting.sort(filtered, lens.sort).map { it.item }.let { sorted ->
+            LensSorting.sort(filtered, lens.sort, context.contentLevels).map { it.item }.let { sorted ->
                 lens.limit?.let(sorted::take) ?: sorted
             }
-        val redact = { item: Item -> LensProjection.redact(item, lens.project) }
+        val redact = { item: Item -> LensProjection.redact(item, lens.project, context.contentLevels) }
         return if (lens.group == LensGroup.None) {
             LensResult.Flat(limited.map(redact))
         } else {

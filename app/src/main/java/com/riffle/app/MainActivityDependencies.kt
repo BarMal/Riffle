@@ -76,6 +76,7 @@ import com.riffle.app.launcher.widgets.PersistentWidgetAddTransactionStore
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import com.riffle.app.launcher.workspace.AndroidExpressionImageLoader
 import com.riffle.app.launcher.workspace.AndroidItemLaunchPort
+import com.riffle.app.launcher.workspace.SharedPreferencesContentLevelStore
 import com.riffle.app.launcher.workspace.SharedPreferencesDisabledSourcesStore
 import com.riffle.app.launcher.workspace.SourceControls
 import com.riffle.app.launcher.workspace.WorkspaceItemActions
@@ -90,6 +91,7 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.hostsWidget
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
+import com.riffle.core.domain.launcher.workspace.settings.StoredSourceContentPrivacy
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
 import com.riffle.core.domain.launcher.workspace.sources.EnablementSourceRegistry
 import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
@@ -260,6 +262,8 @@ internal class MainActivityDependencies(
         // A source the user turned off emits Off without reading its repository; the shared registry on top
         // gives containers and the Sources page one connection per source.
         val enablement = StoredSourceEnablement(SharedPreferencesDisabledSourcesStore(activity))
+        // Per-source content levels (Settings > Privacy), applied at lens projection; device-local like enablement.
+        val contentPrivacy = StoredSourceContentPrivacy(SharedPreferencesContentLevelStore(activity))
         val shared = SharedSourceRegistry(EnablementSourceRegistry(registry, enablement))
         return WorkspaceRuntime(
             repository = workspaceRepository,
@@ -269,6 +273,7 @@ internal class MainActivityDependencies(
                     shared,
                     lensExecutor,
                     exclusionChanges = exclusionRepository,
+                    contentPrivacy = contentPrivacy,
                     exclusions = {
                         exclusionRepository.rules(
                             homeLayoutDeviceClassFromConfiguration(
@@ -294,7 +299,8 @@ internal class MainActivityDependencies(
                         if (recentAppRepository.canReadRecentApps()) SourceAccess.GRANTED else SourceAccess.REQUIRED,
                 )
             },
-            sourceControls = SourceControls(statusRegistry = shared, enablement = enablement),
+            sourceControls =
+                SourceControls(statusRegistry = shared, enablement = enablement, contentPrivacy = contentPrivacy),
             exclusions = exclusionRepository,
             icsFeeds = IcsFeedsController(icsFeedRepository, icsRefreshCoordinator),
             searchQuery = searchQuery,

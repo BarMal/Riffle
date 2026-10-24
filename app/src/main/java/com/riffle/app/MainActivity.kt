@@ -59,6 +59,7 @@ import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.rss.startFeedBackgroundSync
+import com.riffle.app.launcher.startScreenContentProtectionSync
 import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.startWallpaperOffsetSync
 import com.riffle.app.launcher.widgets.PendingWidgetAddStep
@@ -519,6 +520,7 @@ class MainActivity : ComponentActivity() {
         refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)
+        startScreenContentProtectionSync(shellViewModel.state)
         startFeedBackgroundSync(shellViewModel.state, dependencies.feedBackgroundRefreshScheduler)
         startWallpaperOffsetSync(
             state = shellViewModel.state,

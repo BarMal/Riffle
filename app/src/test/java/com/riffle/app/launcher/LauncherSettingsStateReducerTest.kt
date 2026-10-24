@@ -80,6 +80,21 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
+    fun persistsScreenContentProtectionAndDefaultsToOff() {
+        val repository = FakeLauncherSettingsRepository()
+        assertEquals(false, LauncherShellState().launcherSettings.privacy.protectScreenContent)
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SetScreenContentProtection(enabled = true),
+            )
+
+        assertEquals(true, updatedState.launcherSettings.privacy.protectScreenContent)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
     fun persistsAppDrawerPresentationAndCoercesGridColumns() {
         val repository = FakeLauncherSettingsRepository()
         val reducer = reducer(launcherSettingsRepository = repository)

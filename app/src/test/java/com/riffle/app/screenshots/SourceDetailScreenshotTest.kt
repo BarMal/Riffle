@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -26,12 +27,14 @@ import com.riffle.app.launcher.SOURCE_OPEN_ALL_RULES_TAG
 import com.riffle.app.launcher.SOURCE_SEARCH_GLOBAL_TAG
 import com.riffle.app.launcher.SOURCE_SEARCH_MODEL_TAG
 import com.riffle.app.launcher.SOURCE_USED_BY_EMPTY_TAG
+import com.riffle.app.launcher.SourceContentLevelSection
 import com.riffle.app.launcher.SourceDetailScaffold
 import com.riffle.app.launcher.SourceHiddenAppsIntro
 import com.riffle.app.launcher.SourceIcsSections
 import com.riffle.app.launcher.SourceNotificationsIntro
 import com.riffle.app.launcher.SourceOpenAllRulesRow
 import com.riffle.app.launcher.SourceSearchSections
+import com.riffle.app.launcher.contentLevelTestTag
 import com.riffle.app.launcher.exclusionRowTestTag
 import com.riffle.app.launcher.ics.IcsFeedRow
 import com.riffle.app.launcher.ics.IcsFeedsUiState
@@ -41,6 +44,7 @@ import com.riffle.core.domain.launcher.workspace.ContainerId
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
+import com.riffle.core.domain.launcher.workspace.lens.SourceContentLevel
 import com.riffle.core.domain.launcher.workspace.settings.SourcePlace
 import com.riffle.core.domain.launcher.workspace.settings.SourcePlaceKind
 import com.riffle.core.domain.launcher.workspace.settings.SourceRow
@@ -76,6 +80,7 @@ class SourceDetailScreenshotTest {
     private val edited = mutableListOf<WorkspaceId>()
     private var openedRules = 0
     private var openedFeeds = 0
+    private val levels = mutableListOf<SourceContentLevel>()
 
     private fun place(
         layout: HomeLayoutDeviceClass,
@@ -143,11 +148,18 @@ class SourceDetailScreenshotTest {
     }
 
     @Test
-    fun notificationsShowOnlyNotificationRulesAndAComingLaterContentLevel() {
+    fun notificationsShowOnlyNotificationRulesAndTheContentLevelControl() {
         renderNotifications()
 
         composeRule.onNodeWithTag(SOURCE_CONTENT_LEVEL_TAG).performScrollTo().assertExists()
-        composeRule.onNodeWithText("Coming later", substring = true).assertExists()
+        composeRule.onNodeWithText("Coming later", substring = true).assertDoesNotExist()
+        composeRule.onNodeWithTag(contentLevelTestTag(SourceIds.NOTIFICATIONS, SourceContentLevel.SHOW))
+            .performScrollTo()
+            .assertIsSelected()
+        composeRule.onNodeWithTag(contentLevelTestTag(SourceIds.NOTIFICATIONS, SourceContentLevel.HIDE_TEXT))
+            .performScrollTo()
+            .performClick()
+        assertEquals(listOf(SourceContentLevel.HIDE_TEXT), levels)
         composeRule.onNodeWithTag(exclusionRowTestTag(ExclusionsSettingsFixtures.textRule)).performScrollTo()
             .assertExists()
         composeRule.onNodeWithTag(exclusionRowTestTag(ExclusionsSettingsFixtures.appRule)).assertDoesNotExist()
@@ -283,6 +295,12 @@ class SourceDetailScreenshotTest {
 
     private fun renderNotifications() {
         render(notifications) {
+            SourceContentLevelSection(
+                id = SourceIds.NOTIFICATIONS,
+                sourceTitle = "Notifications",
+                level = SourceContentLevel.SHOW,
+                onSelect = { levels += it },
+            )
             SourceNotificationsIntro()
             ExclusionsSettingsContent(
                 model = ExclusionsSettingsFixtures.populated,

@@ -213,6 +213,25 @@ private fun systemSettingsPageEntries(status: SettingsOverviewStatus): List<Sett
                 ),
         ),
         SettingsPageEntry(
+            label = "Privacy",
+            subtitle = PrivacySettingsText.ENTRY_SUBTITLE,
+            page = SettingsPage.PRIVACY,
+            group = SettingsPageGroup.SYSTEM,
+            searchAliases =
+                listOf(
+                    "privacy",
+                    "screenshots",
+                    "screen recording",
+                    "recents",
+                    "secure",
+                    "redact",
+                    "content level",
+                    "hide content",
+                    "titles only",
+                    "work profile",
+                ),
+        ),
+        SettingsPageEntry(
             label = "Backup",
             subtitle = "Import and export launcher data",
             page = SettingsPage.BACKUP,

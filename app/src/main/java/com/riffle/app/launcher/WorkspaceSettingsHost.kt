@@ -12,6 +12,7 @@ import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
 import com.riffle.app.launcher.ics.IcsFeedsController
 import com.riffle.app.launcher.workspace.LensesSettingsController
+import com.riffle.app.launcher.workspace.SourceContentLevelsController
 import com.riffle.app.launcher.workspace.SourcesSettingsController
 import com.riffle.app.launcher.workspace.WorkspacesSettingsController
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
  * [lenses] drives Settings > Saved lenses (null: it shows as not available) and [previewServices] draws its live
  * preview through the same provider the containers use (null: the page says the preview is unavailable).
  * [globalSearchQuery] is the shared query holder the Search source page reports on (only whether one is set).
+ * [contentLevels] drives the content-level controls of Settings > Privacy and the source pages (null: not shown).
  */
 @Suppress("LongParameterList") // One bundle of the preview runtime's settings controllers.
 internal class WorkspaceSettingsHost(
@@ -47,6 +49,7 @@ internal class WorkspaceSettingsHost(
     val lenses: LensesSettingsController? = null,
     val previewServices: ((reducedMotion: Boolean) -> ContainerServices)? = null,
     val globalSearchQuery: SearchQueryHolder? = null,
+    val contentLevels: SourceContentLevelsController? = null,
 )
 
 internal val LocalWorkspaceSettingsHost = staticCompositionLocalOf<WorkspaceSettingsHost?> { null }
