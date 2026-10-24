@@ -18,7 +18,8 @@ express.
   workspace and container ids (the WS5 copy helper). Clone-and-edit is therefore the same as editing any
   workspace; nothing links an installed workspace back to its preset.
 - `skinHintId` is an opaque suggestion for the UI. It is not written into the installed workspace
-  (`skinOverrideId` stays null).
+  (`skinOverrideId` stays null). The hints name no theme preset yet; the user sets a workspace's skin in
+  Settings > Workspaces > Appearance (S7, [`workspaces-s7.md`](workspaces-s7.md)).
 - Default: `WorkspacePresets.defaultFor(deviceClass)` is the Nova-style workspace.
   `PresetInstaller.newInstallLayout` / `withDefaultsFor` / `addPreset` are the small helpers that put an
   installed preset into the existing `WorkspaceSet` APIs (a minimal integration aid; `WorkspaceMigration`
@@ -90,8 +91,8 @@ Same dock dynamic section.
    select which group the CardStack shows. The two are independent widgets: the Index lists notifications
    grouped by app, the CardStack shows all notifications newest first. The compact Inbox keeps the
    per-app page-set. Needs either a linked-pane container or a selection binding between widgets.
-2. **Dock edge is not part of a workspace.** "Dock on the left edge" for unfolded TimeScape lives in
-   `DockModel`, not `Workspace`; the preset only sets the dynamic section.
+2. ~~**Dock edge is not part of a workspace.**~~ Closed by S7: unfolded TimeScape sets
+   `WorkspaceDock.presentation = DockPresentation(edge = LEFT)` (see `workspaces-s7.md`).
 3. **Dock tap-to-jump** (a dock notification icon jumps to its group's page) is a runtime behaviour of the
    dynamic section, not expressible in the lens binding.
 4. **No search source adapter and no query term in `Lens`.** `SourceIds.SEARCH` has no WS1 adapter and
@@ -108,8 +109,10 @@ Same dock dynamic section.
 8. **Finder is a pager page.** The model stores the Finder as a page with `PageRole.FINDER`, so Nova's
    drawer is also reachable by swiping to it. Whether the shell hides it from the pager and opens it only
    from the dock menu is a UI decision.
-9. **Dock cannot be hidden or restyled by a workspace** (Niagara has no dock); only the dynamic section is
-   workspace-owned.
+9. ~~**Dock cannot be hidden or restyled by a workspace**~~ Closed by S7: Niagara sets
+   `DockPresentation(hidden = true)` and binds a one-finger swipe up to `OPEN_WORKSPACE_MENU` in its
+   `gestureBindings`, so the menu stays reachable. New apps: only iOS-style defaults to a home icon for new apps
+   (with pages added as they fill); see `workspaces-s7.md`.
 10. **Widget grid sizes** are fixed per posture (4 columns compact, 8 expanded); they do not adapt to
     arbitrary window widths.
 

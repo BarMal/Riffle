@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -34,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -43,6 +46,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.WorkspaceMenuHost
 import com.riffle.app.launcher.WorkspaceMenuLayer
@@ -120,19 +124,27 @@ internal fun WorkspacePreviewSurface(
 ) {
     BackHandler(onBack = onExit)
     val dockBarHeight = (dockPins?.barHeightDp ?: PreviewDock.MIN_BAR_HEIGHT_DP).dp
+    // The shown workspace's dock override (11.4): a hidden dock reserves nothing, a side dock reserves width.
+    val dockEdge = dockPins?.edge ?: DockPosition.BOTTOM
+    val dockHidden = dockPins?.isHiddenHere == true
+    val dockExtent = if (dockHidden) 0.dp else dockBarHeight
     val direction = LocalLayoutDirection.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
+    val reserved = PreviewDockReserve(dockEdge, dockExtent, direction)
     val top = insets.calculateTopPadding() + PreviewBarHeight
-    val bottom = insets.calculateBottomPadding() + dockBarHeight
-    val start = insets.calculateStartPadding(direction)
-    val end = insets.calculateEndPadding(direction)
+    val bottom = insets.calculateBottomPadding() + reserved.bottom
+    val start = insets.calculateStartPadding(direction) + reserved.start
+    val end = insets.calculateEndPadding(direction) + reserved.end
+    val onOpenMenu = menu?.let { host -> { host.onAction(WorkspaceMenuAction.Open) } }
     val services =
         remember(servicesFor, top, bottom, start, end) { servicesFor(PaddingValues(start, top, end, bottom)) }
     Surface(
         modifier = modifier.fillMaxSize().testTag(WORKSPACE_PREVIEW_TEST_TAG),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        // Without a dock the "Workspace menu" action moves to the surface, so it exists on every workspace.
+        val surfaceMenuAction = if (dockHidden) workspaceMenuActionModifier(onOpenMenu) else Modifier
+        Box(modifier = Modifier.fillMaxSize().then(surfaceMenuAction)) {
             if (workspace == null) {
                 Text(
                     text = WorkspacePreviewText.LOADING,
@@ -153,15 +165,18 @@ internal fun WorkspacePreviewSurface(
                         placedHome = placedHome,
                     )
                 }
-                DockBar(
-                    dock = workspace.dock,
-                    services = services,
-                    pins = dockPins,
-                    home = placedHome,
-                    height = dockBarHeight,
-                    onOpenMenu = menu?.let { host -> { host.onAction(WorkspaceMenuAction.Open) } },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
+                if (!dockHidden) {
+                    DockBar(
+                        dock = workspace.dock,
+                        services = services,
+                        pins = dockPins,
+                        home = placedHome,
+                        height = dockBarHeight,
+                        edge = dockEdge,
+                        onOpenMenu = onOpenMenu,
+                        modifier = Modifier.align(dockAlignment(dockEdge)),
+                    )
+                }
             }
             PreviewTopBar(
                 workspace?.name,
@@ -176,8 +191,8 @@ internal fun WorkspacePreviewSurface(
             if (menu != null) {
                 WorkspaceMenuLayer(
                     host = menu,
-                    dockEdge = DockPosition.BOTTOM,
-                    dockExtent = dockBarHeight,
+                    dockEdge = dockEdge,
+                    dockExtent = dockExtent,
                     reducedMotion = reducedMotion,
                 )
             }
@@ -395,6 +410,7 @@ private fun PreviewTopBar(
  * (the pool is wired), else the marked placeholder (or just the dynamic section) as before. It carries the
  * "Workspace menu" accessibility action when the menu is on; the visible handle stays in the menu layer.
  */
+@Suppress("LongParameterList")
 @Composable
 private fun DockBar(
     dock: WorkspaceDock,
@@ -402,27 +418,35 @@ private fun DockBar(
     pins: PreviewDockModel?,
     home: PlacedHomeContent?,
     height: Dp,
+    edge: DockPosition,
     onOpenMenu: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val dockServices =
         remember(services) { services.copy(environment = services.environment.copy(contentPadding = PaddingValues())) }
-    val barInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
+    val vertical = edge == DockPosition.LEFT || edge == DockPosition.RIGHT
+    val barInsets =
+        when (edge) {
+            DockPosition.LEFT -> WindowInsets.safeDrawing.only(WindowInsetsSides.Left + WindowInsetsSides.Vertical)
+            DockPosition.RIGHT -> WindowInsets.safeDrawing.only(WindowInsetsSides.Right + WindowInsetsSides.Vertical)
+            else -> WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
+        }
     Surface(
         modifier =
             modifier
-                .fillMaxWidth()
+                .then(if (vertical) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
                 .testTag(WORKSPACE_PREVIEW_DOCK_TEST_TAG)
                 .then(workspaceMenuActionModifier(onOpenMenu)),
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
+        val barSize = if (vertical) Modifier.padding(top = PreviewBarHeight).width(height) else Modifier.height(height)
         Box(
-            modifier = Modifier.windowInsetsPadding(barInsets).height(height),
+            modifier = Modifier.windowInsetsPadding(barInsets).then(barSize),
             contentAlignment = Alignment.Center,
         ) {
             val dynamicSection = dock.dynamicSection
             if (pins != null && home != null) {
-                PreviewDockContent(pins, home, dynamicSection, dockServices)
+                PreviewDockContent(pins, home, dynamicSection, dockServices, vertical = vertical)
             } else if (dynamicSection == null) {
                 Text(
                     text = WorkspacePreviewText.DOCK_PLACEHOLDER,
@@ -452,6 +476,30 @@ internal fun PageHost.referencesHomeGrid(): Boolean =
                     body.placements.isNotEmpty() &&
                         body.placements.all { WorkspaceSourceIds.HOME_GRID in it.widget.binding.lens.sources }
             }
+    }
+
+/**
+ * What the preview's dock takes from the pages: [extent] on its physical [edge] (a top dock is drawn at the bottom),
+ * expressed as bottom, start and end for the content padding in [direction].
+ */
+private class PreviewDockReserve(
+    edge: DockPosition,
+    extent: Dp,
+    direction: LayoutDirection,
+) {
+    private val left = if (edge == DockPosition.LEFT) extent else 0.dp
+    private val right = if (edge == DockPosition.RIGHT) extent else 0.dp
+    val bottom: Dp = if (edge == DockPosition.BOTTOM || edge == DockPosition.TOP) extent else 0.dp
+    val start: Dp = if (direction == LayoutDirection.Ltr) left else right
+    val end: Dp = if (direction == LayoutDirection.Ltr) right else left
+}
+
+/** Where the preview's dock bar sits for [edge] (physical edges; a top dock is drawn at the bottom here). */
+private fun dockAlignment(edge: DockPosition): Alignment =
+    when (edge) {
+        DockPosition.LEFT -> AbsoluteAlignment.CenterLeft
+        DockPosition.RIGHT -> AbsoluteAlignment.CenterRight
+        DockPosition.TOP, DockPosition.BOTTOM -> Alignment.BottomCenter
     }
 
 /** The top bar's Edit action: starts edit mode and ignores whether there was anything to edit. */

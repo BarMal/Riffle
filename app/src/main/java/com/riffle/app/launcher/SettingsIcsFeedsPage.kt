@@ -41,8 +41,8 @@ internal const val ICS_FEEDS_SUMMARY_TEST_TAG = "ics-feeds-summary"
 internal fun icsFeedRowTestTag(id: IcsFeedId): String = "ics-feed-row-${id.value}"
 
 /**
- * Settings > Calendar feeds (ICS). A developer page like Sources: only reachable while Workspaces (preview) is
- * on, because the feeds only feed that preview. While open it follows the feed list and refresh status.
+ * Settings > Calendar feeds (ICS). Reached from Sources like the other source pages (S9: always
+ * available). While open it follows the feed list and refresh status.
  */
 @Composable
 internal fun SettingsIcsFeedsPageContent() {

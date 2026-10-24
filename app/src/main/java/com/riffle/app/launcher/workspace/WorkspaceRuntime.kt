@@ -21,12 +21,17 @@ import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleId
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleSet
 import com.riffle.core.domain.launcher.workspace.lens.AsyncLensEvaluator
 import com.riffle.core.domain.launcher.workspace.lens.LensEvaluationContext
+import com.riffle.core.domain.launcher.workspace.lens.SourceContentLevels
 import com.riffle.core.domain.launcher.workspace.lens.ZoneDayBucketer
+import com.riffle.core.domain.launcher.workspace.settings.InMemoryContentLevelStore
 import com.riffle.core.domain.launcher.workspace.settings.InMemoryDisabledSourcesStore
+import com.riffle.core.domain.launcher.workspace.settings.SourceContentPrivacy
 import com.riffle.core.domain.launcher.workspace.settings.SourceEnablement
 import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
 import com.riffle.core.domain.launcher.workspace.settings.SourceStatusMonitor
+import com.riffle.core.domain.launcher.workspace.settings.StoredSourceContentPrivacy
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
+import com.riffle.core.domain.launcher.workspace.settings.mergedContextChanges
 import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import java.time.ZoneId
@@ -66,6 +71,9 @@ internal class WorkspaceRuntime(
 
     /** Which sources the user turned off; the registry behind [provider] consults it. */
     val enablement: SourceEnablement get() = sourceControls.enablement
+
+    /** How much of each source pages may show (Settings > Privacy); [provider] applies it at projection. */
+    val contentPrivacy: SourceContentPrivacy get() = sourceControls.contentPrivacy
 
     /** A status monitor over every registered source; the caller starts it and stops it when the page closes. */
     fun sourceStatusMonitor(onChange: (Map<SourceId, SourceStatus>) -> Unit): SourceStatusMonitor =
@@ -127,15 +135,18 @@ internal class WorkspaceRuntime(
  * What Settings > Sources needs from the runtime: [enablement] (which sources are turned off; the registry behind
  * the lens provider consults it) and the [statusRegistry] the provider reads through, so the page reads each
  * source's status from the same shared stream the containers use and adds no upstream of its own.
+ * [contentPrivacy] holds the per-source content levels (Settings > Privacy) the lens provider applies.
  */
 internal class SourceControls(
     val statusRegistry: SourceRegistry,
     val enablement: SourceEnablement = StoredSourceEnablement(InMemoryDisabledSourcesStore()),
+    val contentPrivacy: SourceContentPrivacy = StoredSourceContentPrivacy(InMemoryContentLevelStore()),
 )
 
 /**
  * The lens provider over [registry]: it shares one subscription per source and evaluates on [executor], so
- * lens work never runs on the main thread. Each evaluation reads the clock and zone afresh.
+ * lens work never runs on the main thread. Each evaluation reads the clock, zone, exclusions and content levels
+ * afresh; a change to the exclusions or to the content levels ([contentPrivacy]) re-evaluates observed lenses.
  */
 internal fun workspaceLensProvider(
     registry: SourceRegistry,
@@ -144,10 +155,18 @@ internal fun workspaceLensProvider(
     zone: () -> ZoneId = ZoneId::systemDefault,
     exclusions: () -> ExclusionRuleSet = { ExclusionRuleSet.EMPTY },
     exclusionChanges: ContextChanges? = null,
+    contentPrivacy: SourceContentPrivacy? = null,
 ): LensResultProvider =
     SourceBackedLensResultProvider(
         registry = registry,
         evaluator = AsyncLensEvaluator(executor),
-        context = { LensEvaluationContext(nowEpochMillis(), ZoneDayBucketer(zone()), exclusions = exclusions()) },
-        contextChanges = exclusionChanges,
+        context = {
+            LensEvaluationContext(
+                nowEpochMillis(),
+                ZoneDayBucketer(zone()),
+                exclusions = exclusions(),
+                contentLevels = contentPrivacy?.levels() ?: SourceContentLevels.ALL_SHOWN,
+            )
+        },
+        contextChanges = mergedContextChanges(exclusionChanges, contentPrivacy),
     )

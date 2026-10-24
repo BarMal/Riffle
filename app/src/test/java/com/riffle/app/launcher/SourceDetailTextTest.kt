@@ -96,7 +96,7 @@ class SourceDetailTextTest {
     }
 
     @Test
-    fun theNotificationContentLevelIsOnlyAComingLaterNote() {
-        assertTrue(SourceDetailText.CONTENT_LEVEL_LATER.startsWith("Coming later"))
+    fun theContentLevelNotePointsAtThePrivacyPage() {
+        assertTrue(SourceDetailText.CONTENT_LEVEL_NOTE.contains("Settings > Privacy"))
     }
 }

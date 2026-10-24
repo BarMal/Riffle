@@ -1,17 +1,26 @@
 package com.riffle.app.launcher.pool
 
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import com.riffle.core.domain.launcher.workspace.HomeShownWorkspaces
+import com.riffle.core.domain.launcher.workspace.WorkspaceHome
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
+import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import com.riffle.core.domain.launcher.workspace.pool.AppArrival
+import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeCommit
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -78,6 +87,30 @@ internal class PoolHomeLayoutRepository(
         }
     }
 
+    /** Which workspace each key shows (S9: the active one, set by [retarget]); the migrated one until loaded. */
+    @Volatile
+    var shownWorkspaces: HomeShownWorkspaces = HomeShownWorkspaces.Migrated
+        private set
+
+    /**
+     * True from [awaitWorkspaces] until the next [retarget]: the workspaces did not load before the first frame, so
+     * which arrangement an edit belongs to is not known yet. Meanwhile a commit that would change placed items is
+     * refused (the shell keeps what it showed; selection and other non-item changes are kept), so an edit can never
+     * land in the wrong workspace's arrangement. Uninstall pruning and restores still apply (they are not edits).
+     */
+    @Volatile
+    var awaitingWorkspaces: Boolean = false
+        private set
+
+    /** The startup read of the workspaces timed out: hold item edits until [retarget] (see [awaitingWorkspaces]). */
+    fun awaitWorkspaces() {
+        awaitingWorkspaces = true
+    }
+
+    /** The placed items of [deviceClass]'s Workspaces layout as they are now, or null while the pool is not loaded. */
+    fun poolFor(deviceClass: HomeLayoutDeviceClass): PlacedItemPool? =
+        pool.current()?.pools?.get(deviceClass.workspaceLayoutClass())
+
     /** Deletes host ids nothing references any more; set by the platform wiring (it hops to the main thread). */
     @Volatile
     var hostIdReleaser: ((Set<HostedWidgetId>) -> Unit)? = null
@@ -98,7 +131,7 @@ internal class PoolHomeLayoutRepository(
     fun open(stored: HomeLayoutSet?) {
         val state = pool.current() ?: return
         synchronized(lock) { lastStored = stored }
-        if (stored != null) publish(PoolHomeSync.reproject(state, stored, ids), state)
+        if (stored != null) publish(PoolHomeSync.reproject(state, stored, ids, shownWorkspaces), state)
     }
 
     override fun loadHomeLayout(): HomeLayout? = (shown ?: legacy.loadHomeLayoutSet())?.activeLayout
@@ -117,8 +150,22 @@ internal class PoolHomeLayoutRepository(
         val state = pool.current() ?: return layoutSet.also(legacy::saveHomeLayoutSet)
         // Nothing shown yet (a fresh install starts from a default set the pool never showed): the edit is measured
         // against the pool's view of that set, so it is ingested instead of being projected away.
-        val previous = shown ?: PoolHomeSync.projection(state, layoutSet)
-        return publish(PoolHomeSync.commit(state, previous, layoutSet, ids), state)
+        val previous = shown ?: PoolHomeSync.projection(state, layoutSet, shownWorkspaces)
+        val commit = PoolHomeSync.commit(state, previous, layoutSet, ids, shownWorkspaces)
+        return if (!awaitingWorkspaces || commit.state == state) publish(commit, state) else held(state, layoutSet)
+    }
+
+    /**
+     * A commit while [awaitingWorkspaces] that would change placed items: [layoutSet] is projected from the pool as
+     * it is (its item edits dropped, the rest kept) when that writes nothing to the pool; otherwise the shell keeps
+     * what it showed. Nothing reaches the pool either way.
+     */
+    private fun held(
+        state: PoolStoreState,
+        layoutSet: HomeLayoutSet,
+    ): HomeLayoutSet {
+        val kept = PoolHomeSync.reproject(state, layoutSet, ids, shownWorkspaces)
+        return if (kept.state == state) publish(kept, state) else shown ?: layoutSet
     }
 
     override fun withoutRemovedPackage(
@@ -127,13 +174,59 @@ internal class PoolHomeLayoutRepository(
         profile: AppProfile,
     ): HomeLayoutSet {
         val state = pool.current() ?: return layoutSet
-        return publish(PoolHomeSync.pruneUninstalled(state, layoutSet, packageName, profile, ids), state)
+        return publish(
+            PoolHomeSync.pruneUninstalled(state, layoutSet, packageName, profile, ids, shownWorkspaces),
+            state,
+        )
     }
 
     /** [layoutSet] (the shell's) projected again from the pool as it is now, after [externalChanges]. */
     fun reproject(layoutSet: HomeLayoutSet): HomeLayoutSet {
         val state = pool.current() ?: return layoutSet
-        return publish(PoolHomeSync.reproject(state, layoutSet, ids), state)
+        return publish(PoolHomeSync.reproject(state, layoutSet, ids, shownWorkspaces), state)
+    }
+
+    /**
+     * S9: the home shows the active workspace of each layout ([WorkspaceHome.shownWorkspaces] of [workspaces]). Called
+     * when the stored workspaces change (a switch from the workspace menu or Settings, a load). [layoutSet] is the
+     * shell's set; it is re-projected from what the `HomeLayoutSet` store keeps for it (no placed items), so nothing
+     * the previous workspace showed is adopted into the next one. Returns the set the shell keeps.
+     */
+    fun retarget(
+        workspaces: WorkspaceSet?,
+        layoutSet: HomeLayoutSet,
+    ): HomeLayoutSet {
+        val next = WorkspaceHome.shownWorkspaces(workspaces)
+        shownWorkspaces = next
+        awaitingWorkspaces = false
+        val state = pool.current() ?: return layoutSet
+        return publish(PoolHomeSync.reproject(state, layoutSet.withoutHomeItems(state.pools.keys), ids, next), state)
+    }
+
+    /**
+     * N9/N12: a package was installed ([PoolHomeSync.placeNewApp]; only [AppArrival.INSTALLED] places). The icon goes
+     * to every workspace of [workspaces] that opts in; returns the set the shell keeps.
+     */
+    fun placeNewApp(
+        layoutSet: HomeLayoutSet,
+        identity: AppIdentity,
+        label: String,
+        workspaces: WorkspaceSet,
+        arrival: AppArrival = AppArrival.INSTALLED,
+    ): HomeLayoutSet {
+        val state = pool.current() ?: return layoutSet
+        val commit =
+            PoolHomeSync.placeNewApp(
+                state,
+                layoutSet,
+                identity,
+                label,
+                workspaces,
+                arrival,
+                ids,
+                shownWorkspaces,
+            )
+        return publish(commit, state)
     }
 
     /**
@@ -147,7 +240,10 @@ internal class PoolHomeLayoutRepository(
         homeFromPool: Boolean,
     ): HomeLayoutSet {
         val state = pool.current() ?: return homeLayouts.also(legacy::saveHomeLayoutSet)
-        return publish(PoolHomeSync.restore(state, backupPool, homeLayouts, homeFromPool, ids, providerOf), state)
+        return publish(
+            PoolHomeSync.restore(state, backupPool, homeLayouts, homeFromPool, ids, providerOf, shownWorkspaces),
+            state,
+        )
     }
 
     /** Whether anything still shows [hostedWidgetId]; true while the pool is not loaded (never delete on a guess). */
@@ -171,7 +267,16 @@ internal class PoolHomeLayoutRepository(
     private suspend fun refreshSnapshot() {
         val state = pool.current()
         val base = shown
-        val snapshot = if (state == null || base == null) null else PoolHomeSync.projection(state, base)
+        val snapshot =
+            if (state == null || base == null) {
+                null
+            } else {
+                PoolHomeSync.projection(
+                    state,
+                    base,
+                    shownWorkspaces,
+                )
+            }
         val changed =
             snapshot != null && synchronized(lock) { (snapshot != lastSnapshot).also { lastSnapshot = snapshot } }
         if (snapshot != null && changed) {
@@ -222,3 +327,24 @@ internal class PoolHomeLayoutRepository(
         if (deletable.isNotEmpty()) releaser(deletable)
     }
 }
+
+/**
+ * This set with no items on the `Home` pages of the pooled layout classes (the dock is kept as it is): what a
+ * retarget re-projects from, so a workspace that adopts an arrangement adopts nothing another workspace showed.
+ */
+private fun HomeLayoutSet.withoutHomeItems(pooled: Set<HomeLayoutDeviceClass>): HomeLayoutSet =
+    copy(
+        layouts =
+            layouts.mapValues { (key, layout) ->
+                if (key.deviceClass.workspaceLayoutClass() !in pooled) {
+                    layout
+                } else {
+                    layout.copy(
+                        pages =
+                            layout.pages.map { page ->
+                                if (page.type == LauncherPageType.Home) page.copy(items = emptyList()) else page
+                            },
+                    )
+                }
+            },
+    )

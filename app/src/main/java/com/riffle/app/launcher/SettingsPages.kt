@@ -18,13 +18,14 @@ enum class SettingsPage(
     CONTEXTUAL("Contextual"),
     MOTION("Motion & haptics"),
     PERMISSIONS("Permissions"),
+    PRIVACY("Privacy"),
     APPS("App drawer"),
     RSS("RSS feeds"),
     BACKUP("Backup"),
     HIDDEN_APPS("Hidden apps"),
     VERSION("About"),
 
-    /** Developer pages: reachable only from the Developer section while Workspaces (preview) is on. */
+    /** Workspaces pages: reachable from the Workspaces section at the top of Settings (S9). */
     WORKSPACES("Workspaces"),
     SOURCES("Sources"),
     EXCLUSIONS("Hidden items and rules"),

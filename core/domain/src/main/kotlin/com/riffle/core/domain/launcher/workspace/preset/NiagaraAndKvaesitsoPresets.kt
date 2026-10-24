@@ -1,7 +1,11 @@
 package com.riffle.core.domain.launcher.workspace.preset
 
+import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.workspace.DockMenuReachability
+import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.Workspace
+import com.riffle.core.domain.launcher.workspace.WorkspaceDock
 import com.riffle.core.domain.launcher.workspace.homeGridLens
 
 private const val NIAGARA = "niagara"
@@ -9,7 +13,8 @@ private const val KVAESITSO = "kvaesitso"
 
 /**
  * Niagara: list-first and minimal. The user's placed home items drawn as a text List (the pinned list),
- * Recents as a List, and an AlphaList Finder. No widgets, no dynamic dock section.
+ * Recents as a List, and an AlphaList Finder. No widgets, no dynamic dock section, and no dock at all (11.6): the
+ * dock is hidden and a one-finger swipe up opens the workspace menu instead, so the menu stays reachable (11.4).
  */
 internal object NiagaraPreset {
     fun preset() =
@@ -32,6 +37,9 @@ internal object NiagaraPreset {
                 bound(ids, "recents", recentsList().lens, ExpressionKind.LIST),
                 finderPage(ids, ExpressionKind.ALPHA_LIST),
             ),
+            WorkspaceDock(presentation = DockPresentation(hidden = true)),
+        ).copy(
+            gestureBindings = mapOf(HomeGesture.ONE_FINGER_UP.name to DockMenuReachability.WORKSPACE_MENU_ACTION.name),
         )
     }
 }

@@ -3,6 +3,13 @@
 Standard launcher mode is Riffle's default configuration. It keeps the familiar Android
 launcher experience fully usable without contextual pages, cards, or smart behaviour.
 
+> **Since S9 (WS10, [`workspaces-default.md`](workspaces-default.md))** there is no separate "Standard mode": the
+> launcher's home is the active workspace, and the default is the **Nova-style workspace** (home pages plus the app
+> drawer as its Finder). This page's parity contract applies to that default workspace (`workspaces-configuration.md`
+> 10.2): its home pages are drawn and edited by the standard home surface (drag, folders, widgets, pages, dock), the
+> drawer and search are the standard ones, and everything below holds with every workspace feature left alone. Any
+> other workspace (a preset, a lens page) is an optional enhancement in the sense of this page.
+
 ## Default behaviour
 
 - Contextual behaviour and expanded dock notification cards are off by default. They can remain
@@ -37,7 +44,7 @@ Standard surfaces are fully functional without it. See the Calendar access polic
 
 ## Change checklist
 
-When changing a dynamic or smart feature, verify that standard launcher mode still has a
-complete home-to-app-drawer-to-launch flow and that disabled features leave no empty or
-blocked launcher surfaces. Add regression coverage at the domain or UI boundary that owns
+When changing a dynamic or smart feature, verify that the default Nova workspace still has a
+complete home-to-app-drawer-to-launch flow, full home editing (move, folders, widgets, pages,
+dock) and that disabled features leave no empty or blocked launcher surfaces. Add regression coverage at the domain or UI boundary that owns
 the behaviour.

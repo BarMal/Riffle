@@ -131,6 +131,15 @@ wire backup, build the Settings surface, and retire the mode settings that curre
 
 ## 1. Making workspaces the default
 
+> **As built (S9, [`workspaces-default.md`](workspaces-default.md)).** Workspaces are the default and the only path:
+> the home is the active workspace of the shown layout, drawn by the standard home surface over the pool's
+> projection of that workspace's arrangement (borrowed until its first edit, which forks). Lens pages follow the
+> placed pages, drawn by the container hosts; the Finder is the app drawer. 1.2: one bounded (500 ms) read of the
+> workspace store before the first frame, seeding Nova for a layout with nothing stored. 1.3: the Nova seed is
+> built; the first-run chooser is not (the preset picker is in Settings > Workspaces). 1.4: the developer toggle,
+> `WorkspaceMenuFeature` and `libraryOnlyLauncherViewModeAvailability` are deleted; one developer fallback stays
+> ("Home from placed items", the S4 hand-back, see the S9 doc). 1.7: the owner device checklist is in the S9 doc.
+
 ### 1.1 What "default" means
 
 On every launch: the active layout's workspace is **resolved** (`WorkspaceSet.resolveActive(deviceClass,
@@ -422,6 +431,14 @@ their natural size. Rotation and fold keep the selected row by workspace id.
 ---
 
 ## 3. Legacy settings reconciliation
+
+> **As built (S9).** Removed: Home screen (Modes), view mode, Layout template rows, "After leaving Library" (the stored
+> value is kept, read and ignored), `libraryOnlyLauncherViewModeAvailability`. Every mode is available, so no stored
+> layout resolves to Library (#1324); a migrated workspace brings its own mode, any other workspace keeps the stored
+> one (`LauncherViewMode` is migration input). No return switches mode or workspace: cold start, Home press, app
+> launch and Back no longer leave Library (#1323); "Returning to Home" moved to Settings > Layout. The drawer
+> presentation row stays (the drawer is still the Finder). Gestures: the dock pull opens the workspace menu (11.5).
+> Details and the decisions to confirm: [`workspaces-default.md`](workspaces-default.md).
 
 ### 3.1 Inventory and mapping
 
@@ -800,6 +817,14 @@ layouts, settings and hidden apps; `isImportableBackup` ignores it). `decodeLaun
 
 ## 6. Privacy
 
+> **As built (S11):** items 1 and 3 of 6.2 exist, on Settings > Privacy (a main page in Permissions, privacy &
+> backup) and on each privacy-sensitive source's page. Content level `SHOW` / `HIDE_BODY` / `HIDE_TEXT` is a per-source
+> ceiling inside `LensProjection` (still the only redaction point; sort and `ByExt` group keys read the same view),
+> default `SHOW`, device-local and not in the backup document (like source enablement). The screenshot switch is
+> `LauncherSettings.privacy.protectScreenContent` (off; in backups) and secures the window on every destination
+> except Settings, plus `setRecentsScreenshotEnabled(false)` on API 33+. Details, tests and the device checklist:
+> [`workspaces-privacy.md`](workspaces-privacy.md).
+
 ### 6.1 As built
 
 - `Item.privacy` is `VISIBLE` / `SENSITIVE`; the lens `project` step is the **only** redaction point
@@ -875,7 +900,7 @@ source detail page.
 | S6 | **Per-layout exclusions** (14): engine (pure), store, copy of the owner's hidden apps and hide rules into every layout's set, provider pre-step, legacy consumers moved, Sources exclusions UI, contextual "Hide" action. | S2 for UI; engine now | Channel/thread/calendar-id keys slip (N5). |
 | S7 | **Workspace additions.** Start page, Finder out of the pager, `FINDER_EXPRESSIONS` plus `ICON_GRID` (8.3), Return setting and `WorkspaceReturnReducer` (3.2), skin override (8.7), **dock overrides** with the hidden-dock validation and `OPEN_WORKSPACE_MENU` gesture (11), New apps per preset and `autoPages` (9.8). | S1; S4 for 9.8 | Several small independent PRs. |
 | S8 | **Backup wiring** (5): export/import of workspaces, pool, exclusions; widget placeholders; tokenised-URL omission; Undo. | S1, S4, S6 | Do before relying on the phone for anything else. |
-| **S9** | **Legacy reconciliation and flip.** Remove Home screen/view mode/template/Modes UI, drawer-presentation and `afterLeavingLibrary` rows; dock pull opens the workspace menu (`gestures.md`, `dock.md`, a11y action, Ctrl+arrow); retire `libraryOnlyLauncherViewModeAvailability`; delete `WorkspaceMenuFeature` and the developer toggle. Closes #1323, #1324, #1325. | S2, S4, S7 | After this the workspace path is the only path. |
+| **S9** | **Legacy reconciliation and flip.** Remove Home screen/view mode/template/Modes UI, drawer-presentation and `afterLeavingLibrary` rows; dock pull opens the workspace menu (`gestures.md`, `dock.md`, a11y action, Ctrl+arrow); retire `libraryOnlyLauncherViewModeAvailability`; delete `WorkspaceMenuFeature` and the developer toggle. Closes #1323, #1324, #1325. | S2, S4, S7 | After this the workspace path is the only path. **As built** ([`workspaces-default.md`](workspaces-default.md)): all of it except the drawer-presentation row (kept, the drawer is the Finder) and the "Home from placed items" fallback (kept one more release, to confirm); also the S7/S11 shell wiring (skin, per-workspace gestures, dock overrides, install event, content levels on the home). |
 | S10 | Per-lens search queries (13). | #1365 | Slips freely. |
 | S11 | Privacy controls: content level per source, screenshot/recents flag (6). | S6 | Slips freely. |
 | S12 | ICS recurrence through a library: spike, then the ICS source (15.2). | external-sources scaffolding | Slips indefinitely. |
@@ -1205,6 +1230,14 @@ object PlacedItemsAdapter {
   layout whose setting is `HOME_AND_FINDER` (creating a page when `autoPages`); this is the pool doing what it is for.
   The placement is a pure function (`PlacedItemsEditor.placeNewApp`). Removing the icon from one workspace leaves the
   others (9.4).
+* **As built (S7, [`workspaces-s7.md`](workspaces-s7.md) section 4).** The setting is stored on the **workspace**
+  (`Workspace.newApps: WorkspaceNewApps?`, codec key `"newApps"`, additive; null follows the preset), not on the pool
+  arrangement: `NewAppDefaults.resolve` = own choice, else `forPreset(presetId)` (only iOS-style opts in, with
+  `autoPages = true`), else `FINDER_ONLY`/no pages. `Arrangement.newAppPlacement` stays stored but is superseded.
+  `PoolNewApps.placeNewApp(pool, identity, label, ids, layout, arrival, candidatesOf)` is the install-event entry
+  point: only `AppArrival.INSTALLED` places (never a work-profile unpause, update or restore); a borrowing workspace
+  forks first; `PoolAutoPages.appendPage` / `trimTrailingEmpty` implement `autoPages`. Settings > Workspaces >
+  row > "New apps..." edits it. The install event is not wired yet.
 * **Finder = All apps as Categories at the end (iOS).** Unchanged (8.3): the Finder is a `FINDER`-role page outside the
   pager and never owns placed items. A placed icon and the Finder entry are related only through the app identity.
 
@@ -1271,7 +1304,7 @@ This is not an argument against the decision; it is what the escape hatch can ho
   `HomeLayoutSet` (which exists until S4); after S4 it draws the layout's default workspace's placed pages as a plain home
   with the drawer and no menu. Purpose: "is this a workspace bug or a launcher bug?" while building. It is not a user
   feature, has no migration or backup surface, and is not part of the test matrix.
-* S9 deletes the toggle. **Standard launcher parity** (home, drawer/search, dock, folders, widgets, wallpaper, grid
+* S9 deletes the toggle (**as built**: the "Workspaces (preview)" switch is gone; no Navigation style exists). **Standard launcher parity** (home, drawer/search, dock, folders, widgets, wallpaper, grid
   editing, settings, backup, profiles, hidden apps, notification indicators, `standard-launcher-mode.md`) becomes a
   requirement on the **default Nova-style workspace**, tested once, instead of on a second mode.
 * What this protects: nothing for end users (there are none); for the owner it protects the ability to bisect.
@@ -1366,6 +1399,12 @@ remains as the migration input and for a bare home without workspaces (10.2).
 Codec: optional key `"presentation": {"hidden"?, "edge"?, "iconSize"?}` inside the workspace's dock, additive
 (a v1 decoder ignores it and draws the shared dock). Workspace schema version stays 1.
 
+**As built (S7, [`workspaces-s7.md`](workspaces-s7.md) section 3).** `WorkspaceDock.presentation: DockPresentation?`
+and `"presentation"` codec key as above (follow is stored as no key). The shared dock is now the pool's `PoolDock`
+(S4), so resolution is `resolveDock(poolDock, workspace, globalGestureActions)` / `EffectiveDock.apply` over
+`PoolDockSettings` (and over `DockModel` for the preview, which still reads the home layout's dock). Library's edge
+is not overridden.
+
 ### 11.3 Migration
 
 None needed for stored data: `presentation = null` is "follow", which is today's behaviour for every migrated
@@ -1398,6 +1437,13 @@ workspace. The two behaviour changes are preset-side: Niagara sets `hidden = tru
 * **Floating dock** (`OverlayDockSettings`, over other apps) is unrelated and is **not** overridden per
   workspace.
 
+**As built (S7).** `DockMenuReachability`: hidden is allowed only when a home gesture (global, or the workspace's
+`gestureBindings`, which stores action ids by enum name) is bound to `LauncherGestureAction.OPEN_WORKSPACE_MENU`. The issue
+`WorkspaceIssue.DockHiddenWithoutMenuEntry` is reported by `DockMenuReachability.issue`, not by
+`WorkspaceValidation.validate` (it depends on global settings, and a violation must draw the dock, not fall back to
+another workspace). `EffectiveDock.presentationFor` applies the fallback (`strandedFallback = true`). The Settings
+"Dock..." dialog lists Hidden disabled with the reason; the action refuses it too.
+
 ### 11.5 Dock pull opens the workspace menu (Q9) and the `gestures.md` change
 
 Once the mode pair retires (S9) the dock pull has no Home/Library to switch. Decision: the same pull (a drag
@@ -1410,6 +1456,10 @@ menu"; "No dock, no pull" gains "(the menu stays reachable through the surface a
 and gains the override layering. Until S9 the pull stays the mode switch and nothing in those docs
 changes. These doc edits are part of S9, not of the design PRs. Interaction with a dock override: the pull needs a visible dock, so with `hidden` the
 bound gesture is the trigger; with a moved edge the pull direction follows the effective edge.
+
+**As built (S9).** The pull opens the menu on the mode pull's claim (`DockMenuPull.kt`); the dock and the home root
+carry the "Workspace menu" action; Ctrl+arrow opens it; "Switch to Library/Home" is gone where a menu exists.
+`gestures.md` and `dock.md` are updated.
 
 ### 11.6 Effect on presets
 

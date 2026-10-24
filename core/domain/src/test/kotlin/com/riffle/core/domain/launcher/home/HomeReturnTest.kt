@@ -58,6 +58,43 @@ class HomeReturnTest {
     }
 
     @Test
+    fun aWorkspaceStartPageIsWhereStartPageAndAHomePressLand() {
+        val start = LauncherPageId("p2")
+        val atFirst = layout(4, 0)
+        assertEquals(start, HomeReturn.landingPage(atFirst, ReturnBehavior.START_PAGE, startPageId = start))
+        ReturnBehavior.entries.forEach { behavior ->
+            assertEquals(
+                start,
+                HomeReturn.landingPage(atFirst, behavior, ReturnEvent.HOME_PRESS, startPageId = start),
+                "$behavior",
+            )
+        }
+        // First page and Restore ignore it on a Return.
+        assertNull(HomeReturn.landingPage(atFirst, ReturnBehavior.FIRST_PAGE, startPageId = start))
+        assertNull(HomeReturn.landingPage(layout(4, 3), ReturnBehavior.RESTORE, startPageId = start))
+        // A start page the layout does not have falls back to the first page.
+        assertEquals(
+            LauncherPageId("p0"),
+            HomeReturn.landingPage(layout(4, 3), ReturnBehavior.START_PAGE, startPageId = LauncherPageId("gone")),
+        )
+    }
+
+    @Test
+    fun includeSelectedNamesTheSelectedPageTooSoALensPageCanBeLeft() {
+        assertEquals(
+            LauncherPageId("p0"),
+            HomeReturn.landingPage(layout(4, 0), ReturnBehavior.FIRST_PAGE, includeSelected = true),
+        )
+        assertEquals(
+            LauncherPageId("p2"),
+            HomeReturn.landingPage(layout(4, 2), ReturnBehavior.RESTORE, includeSelected = true),
+        )
+        assertNull(
+            HomeReturn.landingPage(layout(4, 0), ReturnBehavior.FIRST_PAGE, atTopLevel = false, includeSelected = true),
+        )
+    }
+
+    @Test
     fun alreadyOnTheFirstPageIsANoOp() {
         assertNull(land(layout(4, 0), ReturnBehavior.FIRST_PAGE))
         assertNull(land(layout(4, 0), ReturnBehavior.START_PAGE))

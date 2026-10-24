@@ -165,6 +165,11 @@ repository every layout write goes through:
 
 ### Which arrangement a key shows
 
+> **S9 update ([`workspaces-default.md`](workspaces-default.md)).** The active key now shows the **active
+> workspace's** arrangement (borrowed until its first edit, which forks; a migrated active workspace is the rule
+> below): `PoolHomeSync` takes a `HomeShownWorkspaces` resolver, set by `PoolHomeLayoutRepository.retarget`. Keys of
+> other modes keep the rule below.
+
 Every `HomeLayoutSet` key (`deviceClass`, `mode`) shows `ws:<layout class>:<mode>` in the pool of
 `deviceClass.workspaceLayoutClass()` (N10): the landscape phone shows the phone pool's arrangement and dock, so rotating
 changes geometry only. The standard home does not follow the Workspaces preview's active workspace (that stays a

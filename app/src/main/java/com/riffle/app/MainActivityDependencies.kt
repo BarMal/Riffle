@@ -2,6 +2,7 @@ package com.riffle.app
 
 import android.app.Activity
 import android.content.ComponentName
+import android.content.ContentResolver
 import android.service.notification.NotificationListenerService
 import com.riffle.app.launcher.AndroidHomeLayoutDeviceClassObserver
 import com.riffle.app.launcher.AndroidHomeRoleGateway
@@ -36,6 +37,7 @@ import com.riffle.app.launcher.calendar.AndroidCalendarAccessGateway
 import com.riffle.app.launcher.calendar.CalendarAccessChanges
 import com.riffle.app.launcher.calendar.SharedPreferencesCalendarDenialHistory
 import com.riffle.app.launcher.calendar.sourceAccess
+import com.riffle.app.launcher.defaultLauncherViewModeAvailability
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.exclusions.DataStoreExclusionStore
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
@@ -45,7 +47,6 @@ import com.riffle.app.launcher.ics.ICS_MAX_RESPONSE_BYTES
 import com.riffle.app.launcher.ics.IcsFeedsController
 import com.riffle.app.launcher.ics.IcsRefreshCoordinator
 import com.riffle.app.launcher.ics.defaultIcsEngine
-import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
@@ -75,6 +76,7 @@ import com.riffle.app.launcher.widgets.PersistentWidgetAddTransactionStore
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import com.riffle.app.launcher.workspace.AndroidExpressionImageLoader
 import com.riffle.app.launcher.workspace.AndroidItemLaunchPort
+import com.riffle.app.launcher.workspace.SharedPreferencesContentLevelStore
 import com.riffle.app.launcher.workspace.SharedPreferencesDisabledSourcesStore
 import com.riffle.app.launcher.workspace.SourceControls
 import com.riffle.app.launcher.workspace.WorkspaceItemActions
@@ -89,6 +91,7 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
+import com.riffle.core.domain.launcher.workspace.settings.StoredSourceContentPrivacy
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
 import com.riffle.core.domain.launcher.workspace.sources.EnablementSourceRegistry
 import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
@@ -209,7 +212,7 @@ internal class MainActivityDependencies(
                     screenWidthDp = activity.resources.configuration.screenWidthDp,
                     screenHeightDp = activity.resources.configuration.screenHeightDp,
                 ),
-            viewModeAvailability = libraryOnlyLauncherViewModeAvailability(),
+            viewModeAvailability = defaultLauncherViewModeAvailability(),
             deleteHostedWidgetId = hostIdDeletion::unlessReferenced,
             feedArticleCacheRepository = feedArticleCacheRepository,
             workspaceRepository = workspaceRepository,
@@ -250,38 +253,7 @@ internal class MainActivityDependencies(
      */
     fun workspaceRuntime(launcherSettings: () -> LauncherSettings): WorkspaceRuntime {
         val searchQuery = SearchQueryHolder()
-        val registry =
-            androidItemSources(
-                installedApps = installedAppRepository,
-                appVisibility = appVisibilityRepository,
-                recentApps = recentAppRepository,
-                notificationRepository = activeNotificationRepository,
-                notificationAccess = notificationAccessGateway,
-                hideRules = { launcherSettings().notificationHiding.rules },
-                calendar =
-                    androidCalendarSourceDependencies(
-                        contentResolver = activity.contentResolver,
-                        access = calendarAccessGateway,
-                        accessChanges = calendarAccessChanges,
-                    ),
-                content =
-                    ContentSourceDependencies(
-                        search = SearchSourceDependencies(query = searchQuery),
-                        feeds =
-                            FeedSourceDependencies(
-                                configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
-                                cache = feedArticleCacheRepository,
-                                changes = feedRefreshCoordinator.cacheChanges,
-                            ),
-                        ics =
-                            IcsSourceDependencies(
-                                feeds = { icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds },
-                                cachedEvents = { id -> icsFeedRepository.cached(id)?.events },
-                                engine = icsEngine,
-                                changes = icsFeedRepository,
-                            ),
-                    ),
-            )
+        val registry = workspaceItemSources(activity.contentResolver, launcherSettings, searchQuery)
         val lensExecutor =
             Executors.newSingleThreadExecutor { task ->
                 Thread(task, "riffle-lens-evaluation").apply { isDaemon = true }
@@ -289,6 +261,8 @@ internal class MainActivityDependencies(
         // A source the user turned off emits Off without reading its repository; the shared registry on top
         // gives containers and the Sources page one connection per source.
         val enablement = StoredSourceEnablement(SharedPreferencesDisabledSourcesStore(activity))
+        // Per-source content levels (Settings > Privacy), applied at lens projection; device-local like enablement.
+        val contentPrivacy = StoredSourceContentPrivacy(SharedPreferencesContentLevelStore(activity))
         val shared = SharedSourceRegistry(EnablementSourceRegistry(registry, enablement))
         return WorkspaceRuntime(
             repository = workspaceRepository,
@@ -298,6 +272,7 @@ internal class MainActivityDependencies(
                     shared,
                     lensExecutor,
                     exclusionChanges = exclusionRepository,
+                    contentPrivacy = contentPrivacy,
                     exclusions = {
                         exclusionRepository.rules(
                             homeLayoutDeviceClassFromConfiguration(
@@ -323,7 +298,8 @@ internal class MainActivityDependencies(
                         if (recentAppRepository.canReadRecentApps()) SourceAccess.GRANTED else SourceAccess.REQUIRED,
                 )
             },
-            sourceControls = SourceControls(statusRegistry = shared, enablement = enablement),
+            sourceControls =
+                SourceControls(statusRegistry = shared, enablement = enablement, contentPrivacy = contentPrivacy),
             exclusions = exclusionRepository,
             icsFeeds = IcsFeedsController(icsFeedRepository, icsRefreshCoordinator),
             searchQuery = searchQuery,
@@ -406,6 +382,43 @@ internal class MainActivityDependencies(
             deleteHostedWidgetId = hostIdDeletion::ifAllowed,
         )
 }
+
+/** The built-in item sources behind the workspace preview, each reading its repository lazily. */
+private fun MainActivityDependencies.workspaceItemSources(
+    contentResolver: ContentResolver,
+    launcherSettings: () -> LauncherSettings,
+    searchQuery: SearchQueryHolder,
+) = androidItemSources(
+    installedApps = installedAppRepository,
+    appVisibility = appVisibilityRepository,
+    recentApps = recentAppRepository,
+    notificationRepository = activeNotificationRepository,
+    notificationAccess = notificationAccessGateway,
+    hideRules = { launcherSettings().notificationHiding.rules },
+    calendar =
+        androidCalendarSourceDependencies(
+            contentResolver = contentResolver,
+            access = calendarAccessGateway,
+            accessChanges = calendarAccessChanges,
+        ),
+    content =
+        ContentSourceDependencies(
+            search = SearchSourceDependencies(query = searchQuery),
+            feeds =
+                FeedSourceDependencies(
+                    configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
+                    cache = feedArticleCacheRepository,
+                    changes = feedRefreshCoordinator.cacheChanges,
+                ),
+            ics =
+                IcsSourceDependencies(
+                    feeds = { icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds },
+                    cachedEvents = { id -> icsFeedRepository.cached(id)?.events },
+                    engine = icsEngine,
+                    changes = icsFeedRepository,
+                ),
+        ),
+)
 
 /**
  * The widget host id deletes of the process. Nothing is deleted while the process is read-only or damaged

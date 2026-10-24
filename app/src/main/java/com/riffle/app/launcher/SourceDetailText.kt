@@ -57,9 +57,8 @@ internal object SourceDetailText {
     const val LOADING_LAYOUTS = "Pages that use this source are still loading."
     const val OPEN_ALL_RULES = "Open all hidden items and rules"
     const val CONTENT_LEVEL_TITLE = "Content level"
-    const val CONTENT_LEVEL_LATER =
-        "Coming later: a per-source choice of how much of a notification to show. Until then, hide rules and " +
-            "Android's own lock screen settings are the controls."
+    const val CONTENT_LEVEL_NOTE =
+        "How much of each item any page, widget or dock section may show. The same choice is on Settings > Privacy."
     const val RULES_TITLE = "Hide rules"
     const val NOTIFICATION_RULES_NOTE = "Rules that hide notifications before any page can show them."
     const val APP_RULES_TITLE = "Hidden apps"

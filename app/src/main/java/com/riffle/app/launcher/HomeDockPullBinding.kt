@@ -7,6 +7,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
@@ -57,7 +58,7 @@ internal class HomeDockPullPlan(
 internal class HomeDockPullBinding(
     /** The edge the dock is drawn on now: the shown surface's at rest, the frame's during a pull. */
     val dockEdge: DockPosition,
-    /** For the destination's root: measures the window and carries the keyboard shortcut. */
+    /** For the destination's root: measures the window, carries the keyboard shortcut and the menu action. */
     val rootModifier: Modifier,
     /** For the dock body: the pull gesture, the accessibility action and the dock's translation. */
     val dockModifier: Modifier,
@@ -105,7 +106,11 @@ internal fun rememberHomeDockPullBinding(
     plan: HomeDockPullPlan,
     dockPull: DockPullState,
     onAction: (LauncherShellAction) -> Unit,
-    /** The dock's "Workspace menu" accessibility action (#1351); null (the default) adds none. */
+    /**
+     * The workspace menu (S9, Q9). When present the dock pull, its keyboard shortcut and the dock's accessibility
+     * action open the menu instead of switching between Home and Library; null (no workspaces, tests of the mode pull)
+     * keeps the mode pull.
+     */
     onOpenWorkspaceMenu: (() -> Unit)? = null,
 ): HomeDockPullBinding {
     val rootSize = remember { mutableStateOf(IntSize.Zero) }
@@ -114,7 +119,11 @@ internal fun rememberHomeDockPullBinding(
     val pullDirection = plan.edges.edgeFor(currentSurface).pullDirection
     // No pull while the layout is being edited (long-press + drag moves dock items then) or a
     // widget is being placed.
-    val canPull = state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen
+    val browsing = state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen
+    val menu = rememberDockMenuPull(browsing, pullDirection, onOpenWorkspaceMenu)
+    // With the workspace menu the pull no longer moves between modes, so the reorient transition never starts; while
+    // the workspaces are still loading (no menu yet) it is inert rather than the old mode switch.
+    val canPull = browsing && !menu.isPresent && LocalDockModePullEnabled.current
     val edges = plan.edges
     val frameState = remember(dockPull, edges) { derivedStateOf { dockPull.transition.frame(edges) } }
     val transitioning = remember(dockPull) { derivedStateOf { dockPull.transition !is DockPullTransitionState.Idle } }
@@ -137,6 +146,7 @@ internal fun rememberHomeDockPullBinding(
             .testTag(HOME_DOCK_PULL_TEST_TAG)
             .then(dockPullActionModifier(canPull, dockPullActionLabel(currentSurface), switchNow))
             .then(workspaceMenuActionModifier(onOpenWorkspaceMenu))
+            .then(menu.modifier)
             // Before the translation, so the finger is measured against the dock's resting place.
             .dockPullInput(pullDirection, host)
             .graphicsLayer {
@@ -162,13 +172,15 @@ internal fun rememberHomeDockPullBinding(
     val screenFrostModifier = screenFrostModifier(transitioning.value && !reducedMotion, pullDirection, frameState)
     val rootModifier =
         Modifier
+            // The surface root carries the "Workspace menu" action too, so it exists when a workspace hides its dock.
+            .then(workspaceMenuActionModifier(onOpenWorkspaceMenu))
             .onSizeChanged { size -> rootSize.value = size }
             .onPreviewKeyEvent { event ->
                 val isShortcut =
                     event.type == KeyEventType.KeyDown &&
                         event.isCtrlPressed &&
                         event.key == pullDirection.shortcutKey
-                canPull && isShortcut && switchNow()
+                isShortcut && (menu.openFromShortcut() || (canPull && switchNow()))
             }
     val dockBackgroundAlpha = remember(frameState) { { frameState.value.dockBackgroundAlpha } }
     val dockContentRevealAlpha = remember(dockPull) { { dockPull.revealAlpha } }
@@ -198,10 +210,9 @@ private fun dockPullActionModifier(
     }
 
 /**
- * The dock's "Workspace menu" accessibility action. It is not the dock pull (which stays the Home <->
- * Library switch): the menu opens from this and from the dock's explicit affordance. Identity when the
- * menu is off. Custom actions of stacked semantics modifiers are concatenated, so this adds to the
- * mode-switch action rather than replacing it.
+ * The "Workspace menu" accessibility action, the equivalent of the dock pull (S9) and of the dock's explicit
+ * affordance; also on the home surface root, so it exists when a workspace hides its dock (11.4). Identity when there
+ * is no menu. Custom actions of stacked semantics modifiers are concatenated.
  */
 internal fun workspaceMenuActionModifier(onOpen: (() -> Unit)?): Modifier =
     if (onOpen == null) {
@@ -219,6 +230,13 @@ internal fun workspaceMenuActionModifier(onOpen: (() -> Unit)?): Modifier =
     }
 
 internal const val WORKSPACE_MENU_ACTION_LABEL = "Workspace menu"
+
+/**
+ * Whether the dock pull may still switch Home and Library when there is no workspace menu: true where no shell says
+ * otherwise (tests of the mode pull); false from the shell while its workspaces are loading (S9), so the pull is
+ * inert until the menu exists.
+ */
+internal val LocalDockModePullEnabled = staticCompositionLocalOf { true }
 
 /**
  * How far the dock's own [androidx.compose.ui.graphics.GraphicsLayerScope.cameraDistance] is pushed

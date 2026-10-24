@@ -1,44 +1,25 @@
 package com.riffle.app.launcher.workspace
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.RiffleLauncherTheme
-import com.riffle.app.launcher.WorkspaceMenuHost
-import com.riffle.app.launcher.pool.PlacedHomeContent
-import com.riffle.app.launcher.pool.PoolEditUi
 import com.riffle.app.launcher.pool.PoolHomeSwitch
-import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.home.dockFor
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.SourceId
-import com.riffle.core.domain.launcher.workspace.WorkspaceId
-import com.riffle.core.domain.launcher.workspace.dock.PreviewDock
-import com.riffle.core.domain.launcher.workspace.pool.PoolHomeProjection
-import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
-import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
-import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
-import com.riffle.core.domain.launcher.workspace.workspaceShownMode
+import com.riffle.core.domain.launcher.workspace.Workspace
+import com.riffle.core.domain.launcher.workspace.WorkspaceSkin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
 /**
- * What the shell needs to host the Workspaces (preview): its [controller] and the repository's change
- * counter, plus the [runtime], which is only built (and so only touches sources and storage) once the
- * preview setting is on and the layer composes.
+ * What the shell needs to host workspaces (S9: the launcher's home, no longer a preview): the [controller] (which
+ * workspace the editor is open on), the repository's change counter, and the [runtime], built once on first use (it
+ * subscribes to no source until a page observes a lens and reads no platform data when created).
  */
 class WorkspacePreviewHost internal constructor(
     internal val controller: WorkspacePreviewController,
@@ -46,30 +27,24 @@ class WorkspacePreviewHost internal constructor(
     internal val runtime: () -> WorkspaceRuntime,
     /** Called only when the user taps "Review access" in the editor; routes to the existing explicit flows. */
     internal val onRequestSourceAccess: (SourceId) -> Unit = {},
-    /** The placed-items pool behind the home pages; null keeps the placeholder. Built only when the preview opens. */
-    internal val pool: (() -> PoolRuntime)? = null,
-    /**
-     * The S4 cutover switch. While the standard home renders from the pool this process, the preview's home pages
-     * and dock are the standard home's own pool, and "Refresh home items" is retired (it would overwrite edits).
-     */
+    /** The S4 cutover switch, the one developer fallback left (Settings > Developer > Home from placed items). */
     internal val poolHome: PoolHomeSwitch? = null,
 )
 
-/** Stands in for an absent host, so the shell can observe "enabled" and "version" unconditionally. */
-internal val NeverEnabled: StateFlow<Boolean> = MutableStateFlow(false)
+/** Stands in for an absent host, so the shell can observe "version" unconditionally. */
 internal val NoWorkspaceVersion: StateFlow<Int> = MutableStateFlow(0)
 
 /**
- * Composed by the shell only while the preview setting is on. It loads the workspaces once (seeding the
- * defaults, never overwriting what is stored), forwards the dock menu's jump, Finder and Edit choices to the
- * controller, and shows the full-screen preview while the controller says it is open.
+ * Composed by the shell whenever it has a host. It loads the workspaces once (seeding the Nova default for a layout
+ * with nothing stored, never overwriting what is stored) and the per-layout exclusion rules, and draws the workspace
+ * editor over the home while the menu's Edit (or Settings > Workspaces > Edit) has it open. The home itself is the
+ * standard home surface (`LauncherShell`); the full-screen preview surface is no longer shown.
  */
 @Composable
-internal fun WorkspacePreviewLayer(
+internal fun WorkspaceLayer(
     host: WorkspacePreviewHost,
     state: LauncherShellState,
     viewModel: LauncherShellViewModel,
-    menu: WorkspaceMenuHost?,
 ) {
     val runtime = remember(host) { host.runtime() }
     LaunchedEffect(runtime) {
@@ -77,165 +52,24 @@ internal fun WorkspacePreviewLayer(
         runtime.repository.initialize(WorkspaceBootstrap::seed)
         viewModel.workspaceMenu.refresh()
     }
-    ReturnToLauncherEffect(host.controller)
-    LaunchedEffect(host) { viewModel.workspaceMenuEffects.collect { effect -> host.controller.onEffect(effect) } }
-    val open by host.controller.isOpen.collectAsState()
     val editing by host.controller.editing.collectAsState()
-    if (open) WorkspacePreviewContent(host, runtime, state, menu)
-    if (open) {
-        editing?.let { id -> WorkspaceEditorLayer(host, runtime, state, id) }
-    }
-}
-
-/** Coming back from another app (the activity stopped, then started) is a Return for the open preview. */
-@Composable
-private fun ReturnToLauncherEffect(controller: WorkspacePreviewController) {
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, controller) {
-        var stopped = false
-        val observer =
-            LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_STOP -> stopped = true
-                    Lifecycle.Event.ON_START -> {
-                        if (stopped) controller.onReturn()
-                        stopped = false
-                    }
-                    else -> Unit
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-}
-
-@Composable
-private fun WorkspacePreviewContent(
-    host: WorkspacePreviewHost,
-    runtime: WorkspaceRuntime,
-    state: LauncherShellState,
-    menu: WorkspaceMenuHost?,
-) {
-    val version by host.workspaceVersion.collectAsState()
-    val navigation by host.controller.navigation.collectAsState()
-    val returnRequest by host.controller.returnRequest.collectAsState()
-    val deviceClass = state.homeLayoutSet.activeKey.deviceClass
-    // N10: workspaces, hiding and placed items follow the Workspaces layout, so a rotation changes geometry only.
-    val layout = deviceClass.workspaceLayoutClass()
-    val workspace = remember(version, layout) { runtime.repository.load()?.resolveActive(layout)?.workspace }
-    val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val servicesFor =
-        remember(runtime, reducedMotion) {
-            { padding: PaddingValues -> runtime.services(reducedMotion, padding) }
-        }
-    val placedHome = rememberPlacedHome(host, state, workspace?.id)
-    val hideController = remember(runtime) { runtime.hideController() }
-    val layoutSet = state.homeLayoutSet
-    // Once the home renders from the pool (S4) the dock is the pool's; before that, the standard home's.
-    val poolHomeRuntime = remember(host) { host.pool?.takeIf { host.poolHome?.activeThisProcess == true }?.invoke() }
-    val poolVersion by (poolHomeRuntime?.repository?.version ?: NoWorkspaceVersion).collectAsState()
-    val dockPins =
-        remember(layoutSet, deviceClass, poolVersion) {
-            val poolDock = poolHomeRuntime?.repository?.pool(deviceClass)?.let(PoolHomeProjection::projectDock)
-            PreviewDock.from(poolDock ?: layoutSet.dockFor(deviceClass))
-        }
-    WorkspacePreviewTheme(state) {
-        PreviewHideHost(
-            hideController,
-            layout,
-            (dockPins?.barHeightDp ?: PreviewDock.MIN_BAR_HEIGHT_DP).dp,
-        ) {
-            WorkspacePreviewSurface(
-                workspace = workspace,
-                servicesFor = servicesFor,
-                menu = menu,
-                reducedMotion = reducedMotion,
-                navigation = navigation,
-                onNavigationConsumed = host.controller::navigationConsumed,
-                returnBehavior = state.launcherSettings.home.returnBehavior,
-                returnRequest = returnRequest,
-                onReturnConsumed = host.controller::returnConsumed,
-                onExit = host.controller::close,
-                placedHome = placedHome,
-                dockPins = dockPins,
-            )
-        }
-    }
+    editing?.let { id -> WorkspaceEditorLayer(host, runtime, state, id) }
 }
 
 /**
- * The read-only placed home content, or null when the host has no pool. Loads the pool once the preview is open
- * (the one-time import from the standard home runs here), and rebuilds when the pool or the active workspace changes.
+ * The shell's theme, so a workspace surface matches the launcher's appearance settings, with [workspace]'s skin
+ * override (Q15) in place of the global theme preset when it names one ([WorkspaceSkin.resolve]).
  */
-@Composable
-private fun rememberPlacedHome(
-    host: WorkspacePreviewHost,
-    state: LauncherShellState,
-    workspaceId: WorkspaceId?,
-): PlacedHomeContent? {
-    val pool = remember(host) { host.pool?.invoke() }
-    val layoutSet by rememberUpdatedState(state.homeLayoutSet)
-    val scope = rememberCoroutineScope()
-    LaunchedEffect(pool) { pool?.initialize(layoutSet) }
-    val version by (pool?.repository?.version ?: NoWorkspaceVersion).collectAsState()
-    // The standard home writes the same pool: an edit session built on an older pool ends instead of writing it back.
-    LaunchedEffect(version) { pool?.editing?.endIfChangedElsewhere() }
-    val deviceClass = state.homeLayoutSet.activeKey.deviceClass.workspaceLayoutClass()
-    val shownMode = state.homeLayoutSet.workspaceShownMode()
-    val labels = state.homeLayoutSet.activeLayout.settings.labels
-    val installedApps = state.installedApps
-    return remember(pool, version, workspaceId, deviceClass, shownMode, labels, installedApps) {
-        pool?.let { runtime ->
-            val candidates = workspaceId?.let { PoolHomeView.candidates(it, deviceClass, shownMode) }
-            val placed = runtime.repository.pool(deviceClass)
-            val editWorkspace =
-                if (candidates == null || placed == null) {
-                    null
-                } else {
-                    PoolHomeView.arrangementOf(
-                        placed,
-                        candidates,
-                    )
-                }
-            PlacedHomeContent(
-                resolve = { page ->
-                    val candidates = workspaceId?.let { PoolHomeView.candidates(it, deviceClass, shownMode) }
-                    val placed = runtime.repository.pool(deviceClass)
-                    if (candidates == null || placed == null) null else PoolHomeView.resolve(placed, page, candidates)
-                },
-                iconLoader = runtime.iconLoader,
-                widgetViews = runtime.widgetViews,
-                labelSettings = labels,
-                onOpen = { item -> runtime.actions.open(item) },
-                // Refresh replaces the preview's edits, so it asks first (the dialog is the editor overlay's).
-                // Retired once the standard home renders from the pool: there is nothing to catch up with.
-                onReimport =
-                    if (host.poolHome?.activeThisProcess == true) null else ({ runtime.editing.requestReimport() }),
-                edit =
-                    PoolEditUi(
-                        controller = runtime.editing,
-                        deviceClass = deviceClass,
-                        pool = placed,
-                        workspaceId = editWorkspace,
-                        installedApps = installedApps,
-                        standardHostIds = { PoolHostIds.standardHome(layoutSet) },
-                        onReimportConfirmed = { scope.launch { runtime.reimport(layoutSet) } },
-                    ),
-            )
-        }
-    }
-}
-
-/** The shell's theme, so the preview matches the launcher's appearance settings. */
 @Composable
 internal fun WorkspacePreviewTheme(
     state: LauncherShellState,
+    workspace: Workspace?,
     content: @Composable () -> Unit,
 ) {
     val appearance = state.launcherSettings.appearance
     RiffleLauncherTheme(
         themeMode = appearance.themeMode,
-        themePreset = appearance.themePreset,
+        themePreset = WorkspaceSkin.resolve(appearance.themePreset, workspace),
         themeAccent = appearance.themeAccent,
         themeColors = appearance.themeColors,
         themeCornerStyle = appearance.themeCornerStyle,

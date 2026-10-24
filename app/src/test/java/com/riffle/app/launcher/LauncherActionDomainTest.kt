@@ -172,6 +172,7 @@ class LauncherActionDomainTest {
                 activity("OpenNotifications", LauncherShellAction.OpenNotifications),
                 activity("OpenSettings", LauncherShellAction.OpenSettings),
                 activity("OpenSettingsPage", LauncherShellAction.OpenSettingsPage(SettingsPage.APPEARANCE)),
+                activity("OpenWorkspaceMenu", LauncherShellAction.OpenWorkspaceMenu),
                 settings("RequestNotificationAccess", LauncherShellAction.RequestNotificationAccess),
                 settings("RequestOverlayDockPermission", LauncherShellAction.RequestOverlayDockPermission),
                 settings("RequestCalendarAccess", LauncherShellAction.RequestCalendarAccess),
@@ -390,6 +391,10 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectReturnBehavior",
                     LauncherShellAction.SelectReturnBehavior(ReturnBehavior.START_PAGE),
+                ),
+                settings(
+                    "SetScreenContentProtection",
+                    LauncherShellAction.SetScreenContentProtection(enabled = true),
                 ),
                 settings(
                     "SelectAppDrawerPresentation",

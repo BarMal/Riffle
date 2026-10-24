@@ -6,13 +6,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.FirstRunStatus
@@ -51,7 +48,6 @@ class StandardTemplateValidationTest {
         val appListActionReducer = LauncherAppListActionReducer(InstalledAppCatalog())
         val shellStateReducer = LauncherShellStateReducer()
         var displayedCase by mutableStateOf(validationCases.first())
-        var showTemplateSetting by mutableStateOf(true)
         var shellState by mutableStateOf(launcherState(apps))
 
         fun dispatch(action: LauncherShellAction) {
@@ -65,7 +61,6 @@ class StandardTemplateValidationTest {
                                 LauncherShellAction.AppDrawerQueryChanged(""),
                             ),
                         )
-                    showTemplateSetting = false
                 }
 
                 is LauncherActivityRoute.Navigation ->
@@ -78,22 +73,20 @@ class StandardTemplateValidationTest {
         composeRule.setContent {
             RiffleLauncherTheme(themeMode = displayedCase.themeMode) {
                 Box(modifier = Modifier.size(width = displayedCase.widthDp.dp, height = displayedCase.heightDp.dp)) {
-                    if (showTemplateSetting) {
-                        HomeTemplateSetting(
-                            selectedViewMode = shellState.homeLayout.viewMode,
-                            selectedTemplateId = shellState.homeLayout.templateId,
-                            availableViewModes = listOf(shellState.homeLayout.viewMode),
-                            deviceClass = shellState.settingsLayoutDeviceClass,
-                            onAction = ::dispatch,
-                        )
-                    } else {
-                        LauncherShellContent(state = shellState, onAction = ::dispatch)
-                    }
+                    LauncherShellContent(state = shellState, onAction = ::dispatch)
                 }
             }
         }
 
-        composeRule.onNodeWithText("Standard phone app drawer").performClick()
+        // The Layout template row retired at S9 (design 3.1); the template stays data a preset can seed from.
+        composeRule.runOnIdle {
+            dispatch(
+                LauncherShellAction.SelectLauncherTemplate(
+                    templateId = LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId,
+                    mode = shellState.homeLayout.viewMode,
+                ),
+            )
+        }
         composeRule.runOnIdle {
             assertEquals(LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId, shellState.homeLayout.templateId)
             assertEquals(1, shellState.homeLayout.pages.size)
@@ -159,18 +152,6 @@ class StandardTemplateValidationTest {
             )
         val reducer = LauncherHomePageEditReducer(homeLayoutRepository = homeLayoutRepository)
 
-        composeRule.setContent {
-            HomeTemplateSetting(
-                selectedViewMode = foldableState.homeLayout.viewMode,
-                selectedTemplateId = foldableState.homeLayout.templateId,
-                availableViewModes = listOf(foldableState.homeLayout.viewMode),
-                deviceClass = foldableState.settingsLayoutDeviceClass,
-                onAction = {},
-            )
-        }
-
-        composeRule.onAllNodesWithText("Standard phone app drawer").assertCountEquals(0)
-        composeRule.onNodeWithText("No compatible template is available").assertIsDisplayed()
         assertEquals(
             foldableState,
             reducer.reduce(

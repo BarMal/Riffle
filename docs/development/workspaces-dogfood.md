@@ -1,7 +1,14 @@
-# Dogfooding Workspaces (preview)
+# Dogfooding Workspaces
 
-Workspaces (pages of lenses over live sources, the workspace menu and the editor) are wired into the
-app behind a runtime switch, **Workspaces (preview)**, so you can try them on a real phone without
+> **S9 (2026-10-24): workspaces are the launcher's home.** There is no "Workspaces (preview)" switch any more: the
+> home is the active workspace, drawn by the standard home surface (full editing), with lens pages after the home
+> pages; the dock pull opens the workspace menu. Follow the checklist in
+> [`workspaces-default.md`](../product/workspaces-default.md) (export a backup first). The sections below describe the
+> earlier preview and are kept as history; where they mention the switch, the preview surface, "Exit preview" or
+> "Refresh home items", those are gone.
+
+Workspaces (pages of lenses over live sources, the workspace menu and the editor) were wired into the
+app behind a runtime switch, **Workspaces (preview)**, so you could try them on a real phone without
 touching the standard launcher. Nothing about this has been run on a device yet: treat the first
 session as the first real validation and report what you find.
 
@@ -22,7 +29,7 @@ does **not** replace the alpha. The preview is in release builds too; there is n
 It adds no dependencies or assets, so it should not move the APK size budget
 ([`apk-size-budget.md`](../release/apk-size-budget.md)); the release notes list the actual size.
 
-## What the switch does
+## What the switch did (before S9)
 
 - **Off (default):** the standard launcher is exactly as before. No workspace code runs: no source
   subscriptions, no workspace storage reads, nothing built.

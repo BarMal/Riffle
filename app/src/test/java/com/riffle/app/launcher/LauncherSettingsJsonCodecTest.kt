@@ -66,6 +66,7 @@ import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.PrivacySettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
@@ -895,6 +896,20 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(
             ReturnBehavior.RESTORE,
             decodeLauncherSettings("""{"home": {"returnBehavior": "NOT_A_THING"}}""").home.returnBehavior,
+        )
+    }
+
+    @Test
+    fun roundTripsScreenContentProtectionAndDefaultsToOff() {
+        listOf(true, false).forEach { enabled ->
+            val settings = LauncherSettings(privacy = PrivacySettings(protectScreenContent = enabled))
+            assertEquals(enabled, decodeLauncherSettings(encodeLauncherSettings(settings)).privacy.protectScreenContent)
+        }
+        assertEquals(false, decodeLauncherSettings("{}").privacy.protectScreenContent)
+        assertEquals(false, decodeLauncherSettings("""{"privacy": 1}""").privacy.protectScreenContent)
+        assertEquals(
+            false,
+            decodeLauncherSettings("""{"privacy": {"protectScreenContent": "yes"}}""").privacy.protectScreenContent,
         )
     }
 

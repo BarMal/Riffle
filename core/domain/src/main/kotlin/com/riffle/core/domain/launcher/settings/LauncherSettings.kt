@@ -25,6 +25,7 @@ data class LauncherSettings(
     val motion: MotionSettings = MotionSettings(),
     val notificationHiding: NotificationHidingSettings = NotificationHidingSettings(),
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),
+    val privacy: PrivacySettings = PrivacySettings(),
     val rss: RssSettings = RssSettings(),
     val search: SearchSettings = SearchSettings(),
 )
@@ -556,7 +557,16 @@ enum class LauncherGestureAction {
     SELECT_PREVIOUS_APP_STAGE,
     LAUNCH_APP,
     LAUNCH_APP_SHORTCUT,
+
+    /**
+     * Opens the workspace menu (WS10 11.4). No default binding uses it: since S9 the dock pull opens the menu, and
+     * this is how a workspace without a dock (Niagara) or a person who prefers a gesture reaches it.
+     */
+    OPEN_WORKSPACE_MENU,
     ;
+
+    /** Actions that need the workspace menu (always present since S9; kept for callers that filter on it). */
+    val needsWorkspaceMenu: Boolean get() = this == OPEN_WORKSPACE_MENU
 
     companion object {
         /**

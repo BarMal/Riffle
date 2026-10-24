@@ -224,6 +224,15 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SetScreenContentProtection ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                privacy = state.launcherSettings.privacy.copy(protectScreenContent = action.enabled),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectSearchResultPresentation ->
                     state.withLauncherSettings(
                         settings =

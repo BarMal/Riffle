@@ -83,6 +83,12 @@ sealed interface LauncherShellAction {
 
     data class OpenSettingsPage(val page: SettingsPage) : LauncherShellAction
 
+    /**
+     * Opens the workspace menu, from a gesture bound to `OPEN_WORKSPACE_MENU`. Does nothing while the workspace
+     * menu feature is off (the menu controller refuses to open without a model).
+     */
+    data object OpenWorkspaceMenu : LauncherShellAction
+
     data object RequestNotificationAccess : LauncherShellAction
 
     /** Runs a contextual action for one live app-stage notification. */
@@ -415,6 +421,11 @@ sealed interface LauncherShellAction {
 
     data class SelectSearchResultPresentation(
         val presentation: SearchResultPresentation,
+    ) : LauncherShellAction
+
+    /** Settings > Privacy: hide launcher content in screenshots and recents (off by default). */
+    data class SetScreenContentProtection(
+        val enabled: Boolean,
     ) : LauncherShellAction
 
     data class SelectAppDrawerPresentation(

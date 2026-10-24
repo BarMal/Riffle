@@ -12,7 +12,9 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.homeReturnTarget
+import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 
 /**
  * Applies the Returning to Home setting (Restore, First page, Start page) to the standard Home pager.
@@ -25,20 +27,29 @@ import com.riffle.core.domain.launcher.home.homeReturnTarget
  * The decision is pure (`homeReturnTarget`) and moves nothing at the default Restore or when the drawer, search,
  * Settings or an edit mode is open. The move is an ordinary `SelectHomePage`, so the pager follows the selected
  * page the way it does for every page change, and an instant scroll replaces the animation under reduced motion.
- * While the Workspaces preview is [suppressed] it owns the screen and applies the same setting itself.
+ * Start page is the active workspace's start page when it is a placed page ([startPage], S9), else the first page.
+ * [suppressed] skips it (no caller suppresses it since the Workspaces preview retired).
  */
 @Composable
 internal fun HomeReturnEffect(
     state: LauncherShellState,
     suppressed: Boolean,
     onAction: (LauncherShellAction) -> Unit,
+    /** The active workspace's start page, when it is a placed page (S9); null keeps "the first page". */
+    startPage: () -> LauncherPageId? = { null },
 ) {
     val latestState = rememberUpdatedState(state)
     val latestSuppressed = rememberUpdatedState(suppressed)
     val latestOnAction = rememberUpdatedState(onAction)
+    val latestStartPage = rememberUpdatedState(startPage)
     val apply: () -> Unit = {
         if (!latestSuppressed.value) {
-            latestState.value.homeReturnTarget()?.let { page ->
+            val state = latestState.value
+            // Restore keeps whatever is showing; the other choices name their page even when it is already the
+            // selected one, so they also leave a workspace lens page (which is never selected, S9).
+            val includeSelected = state.launcherSettings.home.returnBehavior != ReturnBehavior.RESTORE
+            state.homeReturnTarget(startPageId = latestStartPage.value(), includeSelected = includeSelected)?.let {
+                    page ->
                 latestOnAction.value(LauncherShellAction.SelectHomePage(page))
             }
         }

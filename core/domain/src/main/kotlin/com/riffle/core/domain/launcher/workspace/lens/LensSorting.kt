@@ -24,8 +24,9 @@ val PINNED_EXT_KEY: ItemExtKey = ItemExtKey("launcher.pinned")
 /**
  * Stable, total ordering for lens results.
  *
- * Sort keys are read from the item as it will be seen after redaction: a SENSITIVE item has no title and
- * is never pinned, so ordering cannot leak redacted content. Missing values sort last in both directions.
+ * Sort keys are read from the item as it will be seen after redaction: a SENSITIVE item, or one whose
+ * source content level hides its text, has no title and is never pinned, so ordering cannot leak redacted
+ * content. Missing values sort last in both directions.
  * The final tie-breaker is always the item id ascending, so the result never depends on input order
  * (except `SOURCE_ORDER`, which is input order by definition).
  */
@@ -33,33 +34,45 @@ internal object LensSorting {
     fun sort(
         ranked: List<Ranked>,
         sort: LensSort,
-    ): List<Ranked> = ranked.sortedWith(comparator(sort))
+        levels: SourceContentLevels = SourceContentLevels.ALL_SHOWN,
+    ): List<Ranked> = ranked.sortedWith(comparator(sort, levels))
 
-    fun isPinned(item: Item): Boolean =
-        ItemField.EXT in LensProjection.visibleFields(item, ItemField.ALL) &&
+    fun isPinned(
+        item: Item,
+        levels: SourceContentLevels = SourceContentLevels.ALL_SHOWN,
+    ): Boolean =
+        ItemField.EXT in LensProjection.visibleFields(item, ItemField.ALL, levels) &&
             item.ext[PINNED_EXT_KEY] == ItemExtValue.Flag(true)
 
-    private fun comparator(sort: LensSort): Comparator<Ranked> {
-        val field = fieldComparator(sort)
+    private fun comparator(
+        sort: LensSort,
+        levels: SourceContentLevels,
+    ): Comparator<Ranked> {
+        val field = fieldComparator(sort, levels)
         val ordered =
-            if (sort.pinnedFirst) compareBy<Ranked> { if (isPinned(it.item)) 0 else 1 }.then(field) else field
+            if (sort.pinnedFirst) compareBy<Ranked> { if (isPinned(it.item, levels)) 0 else 1 }.then(field) else field
         return ordered.thenBy { it.item.id.value }
     }
 
-    private fun fieldComparator(sort: LensSort): Comparator<Ranked> {
+    private fun fieldComparator(
+        sort: LensSort,
+        levels: SourceContentLevels,
+    ): Comparator<Ranked> {
         val descending = sort.direction == SortDirection.DESCENDING
         return when (sort.field) {
             LensSortField.SOURCE_ORDER ->
                 if (descending) compareByDescending { it.order } else compareBy { it.order }
             LensSortField.TIME -> nullsLast(descending) { it.item.timeEpochMillis }
             LensSortField.TITLE ->
-                nullsLast(descending) { titleOf(it.item)?.lowercase(Locale.ROOT) }
-                    .then(nullsLast(descending) { titleOf(it.item) })
+                nullsLast(descending) { titleOf(it.item, levels)?.lowercase(Locale.ROOT) }
+                    .then(nullsLast(descending) { titleOf(it.item, levels) })
         }
     }
 
-    private fun titleOf(item: Item): String? =
-        item.title.takeIf { ItemField.TITLE in LensProjection.visibleFields(item, ItemField.ALL) }
+    private fun titleOf(
+        item: Item,
+        levels: SourceContentLevels,
+    ): String? = item.title.takeIf { ItemField.TITLE in LensProjection.visibleFields(item, ItemField.ALL, levels) }
 
     private fun <T : Comparable<T>> nullsLast(
         descending: Boolean,

@@ -15,13 +15,14 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
     listOf(
         SettingsPageEntry(
             label = "Layout",
-            subtitle = "Home mode, grid, pages, and labels",
+            subtitle = "Grid, labels, and returning to Home",
             page = SettingsPage.LAYOUT,
             group = SettingsPageGroup.HOME,
             searchAliases =
                 listOf(
                     "home layout",
-                    "home mode",
+                    "returning to home",
+                    "start page",
                     "grid columns",
                     "grid rows",
                     "show labels",
@@ -210,6 +211,25 @@ private fun systemSettingsPageEntries(status: SettingsOverviewStatus): List<Sett
                     "notification access",
                     "overlay access",
                     "floating dock permission",
+                ),
+        ),
+        SettingsPageEntry(
+            label = "Privacy",
+            subtitle = PrivacySettingsText.ENTRY_SUBTITLE,
+            page = SettingsPage.PRIVACY,
+            group = SettingsPageGroup.SYSTEM,
+            searchAliases =
+                listOf(
+                    "privacy",
+                    "screenshots",
+                    "screen recording",
+                    "recents",
+                    "secure",
+                    "redact",
+                    "content level",
+                    "hide content",
+                    "titles only",
+                    "work profile",
                 ),
         ),
         SettingsPageEntry(

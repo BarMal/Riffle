@@ -44,7 +44,7 @@ import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * Settings > Sources. Reachable only from the Developer section while Workspaces (preview) is on. While it is
+ * Settings > Sources. Reachable from the Workspaces section of Settings (S9). While it is
  * open each source has one status subscription (shared with the containers); closing it releases them all.
  */
 @Composable

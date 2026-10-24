@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.workspace.Lens
 import com.riffle.core.domain.launcher.workspace.LensBinding
 import com.riffle.core.domain.launcher.workspace.LensExpressionValidity
 import com.riffle.core.domain.launcher.workspace.LensGroup
+import com.riffle.core.domain.launcher.workspace.LensId
 import com.riffle.core.domain.launcher.workspace.LensLibrary
 import com.riffle.core.domain.launcher.workspace.LensLibraryOps
 import com.riffle.core.domain.launcher.workspace.LensLibraryResult
@@ -20,6 +21,7 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceCopy
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceSourceIds
+import com.riffle.core.domain.launcher.workspace.withOrigin
 
 data class InstalledPreset(
     val layout: LayoutWorkspaces,
@@ -43,9 +45,16 @@ private data class Promoted(
  *
  * The catalog stays inline data: a preset variant is promoted at install time. Every binding except the
  * home-grid pages (which are tied to the page they show) becomes an entry of the layout's library with
- * origin `Preset(presetId, key)`, `key` being the container's stable part id in the catalog ("finder",
- * "w-media", "dock"). An entry with that origin that already exists is reused as the user left it, so
- * installing the same preset again adds no lens; a name that clashes with another lens gets " (<Preset>)".
+ * origin `Preset(presetId, key, installed)`, `key` being the container's stable part id in the catalog
+ * ("finder", "w-media", "dock") and `installed` the catalog definition it was installed with. An entry with
+ * that origin that already exists is reused, so installing the same preset again adds no lens; a name that
+ * clashes with another lens gets " (<Preset>)".
+ *
+ * Reinstalling or resetting refreshes untouched entries (owner decision, #1363): an entry whose lens still
+ * equals its installed definition takes the current catalog definition (dependents follow, through
+ * [LensLibraryOps.applyEdit]); an entry the user edited is left alone; a rename alone is not an edit. An
+ * entry without a recorded definition (installed before it was recorded) counts as edited, unless it already
+ * equals the catalog, in which case the definition is recorded.
  */
 object PresetLensInstaller {
     /** Adds [preset]'s [posture] variant to [layout], writing its lenses to the layout's library. */
@@ -56,16 +65,19 @@ object PresetLensInstaller {
         ids: WorkspaceIdFactory = WorkspaceIdFactory.Random,
         activate: Boolean = false,
     ): InstalledPreset {
-        val promoted = promote(layout.library, preset, preset.variant(posture), ids)
+        val variant = preset.variant(posture)
+        val base = refresh(layout, planned(preset, variant), all = false)
+        val promoted = promote(base.library, preset, variant, ids)
         val workspace = WorkspaceCopy.withFreshIds(promoted.workspace, ids)
-        return InstalledPreset(layout.copy(library = promoted.library).add(workspace, activate), workspace.id)
+        return InstalledPreset(base.copy(library = promoted.library).add(workspace, activate), workspace.id)
     }
 
     /**
      * Rebuilds [workspaceId]'s arrangement (pages, dock section, gestures) from the catalog, keeping its
-     * id and name. Saved lenses are kept as the user left them, except a preset lens the user deleted,
-     * which is re-added. With [restoreLenses] every lens with this preset's origin is also reset to the
-     * catalog definition (dependents follow; any it would break are detached).
+     * id and name. Edited saved lenses are kept as the user left them (untouched ones are refreshed, as on
+     * install), and a preset lens the user deleted is re-added. With [restoreLenses] every lens with this
+     * preset's origin is reset to the catalog definition, edited or not (dependents follow; any it would
+     * break are detached).
      */
     fun reset(
         layout: LayoutWorkspaces,
@@ -77,7 +89,7 @@ object PresetLensInstaller {
     ): LayoutWorkspaces {
         val variant = preset.variant(posture)
         if (layout.find(workspaceId) == null) return layout
-        val base = if (restoreLenses) restore(layout, planned(preset, variant)) else layout
+        val base = refresh(layout, planned(preset, variant), all = restoreLenses)
         val promoted = promote(base.library, preset, variant, ids)
         val fresh = WorkspaceCopy.withFreshIds(promoted.workspace, ids)
         return base.copy(library = promoted.library).replace(workspaceId) {
@@ -85,19 +97,33 @@ object PresetLensInstaller {
         }
     }
 
-    private fun restore(
+    /**
+     * Sets each existing entry of [plans] to the catalog definition when it is untouched (or every one when
+     * [all]) and records that definition as installed. Edited entries are left exactly as they are.
+     */
+    private fun refresh(
         layout: LayoutWorkspaces,
         plans: List<PlannedLens>,
+        all: Boolean,
     ): LayoutWorkspaces =
-        plans.fold(layout) { acc, plan ->
-            val entry = acc.library.lenses.firstOrNull { it.origin == plan.origin }
-            if (entry == null || entry.lens == plan.lens) {
-                acc
-            } else {
-                val result = LensLibraryOps.applyEdit(acc, entry.id, plan.lens, BreakPolicy.DETACH_BROKEN)
-                (result as? LensLibraryResult.Applied)?.layout ?: acc
+        plans.distinctBy { it.origin.key }.fold(layout) { acc, plan ->
+            val entry = acc.library.lenses.firstOrNull { plan.origin.sameCatalogLens(it.origin) }
+            when {
+                entry == null -> acc
+                entry.lens == plan.lens -> acc.recordInstalled(entry.id, plan.origin)
+                all || entry.isUntouchedPresetLens -> {
+                    val result = LensLibraryOps.applyEdit(acc, entry.id, plan.lens, BreakPolicy.DETACH_BROKEN)
+                    (result as? LensLibraryResult.Applied)?.layout?.recordInstalled(entry.id, plan.origin) ?: acc
+                }
+                else -> acc
             }
         }
+
+    private fun LayoutWorkspaces.recordInstalled(
+        id: LensId,
+        origin: LensOrigin.Preset,
+    ): LayoutWorkspaces =
+        if (library.find(id)?.origin == origin) this else copy(library = library.withOrigin(id, origin))
 
     private fun promote(
         library: LensLibrary,
@@ -128,7 +154,7 @@ object PresetLensInstaller {
         ids: WorkspaceIdFactory,
     ): Pair<LensLibrary, LensBinding> {
         val expression = site.binding.expression
-        val existing = library.lenses.firstOrNull { it.origin == plan.origin }
+        val existing = library.lenses.firstOrNull { plan.origin.sameCatalogLens(it.origin) }
         if (existing != null) {
             val reused = LensBinding(existing.lens, expression, existing.id)
             return library to if (accepts(reused, site.kind)) reused else site.binding
@@ -168,6 +194,6 @@ object PresetLensInstaller {
         } else {
             val key = site.containerId?.value?.removePrefix("${variant.id.value}:") ?: "dock"
             val label = key.removePrefix("w-").replace('-', ' ').replaceFirstChar { it.uppercase() }
-            PlannedLens(LensOrigin.Preset(preset.id, key), label, site.binding.lens)
+            PlannedLens(LensOrigin.Preset(preset.id, key, site.binding.lens), label, site.binding.lens)
         }
 }

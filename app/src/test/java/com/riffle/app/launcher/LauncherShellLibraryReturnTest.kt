@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -12,53 +11,43 @@ import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Test
 
+/**
+ * S9 (design 3.2, closes #1323): leaving Library (a cold start, a Home press, an app launch, Back) never switches the
+ * shown mode any more, whatever the stored "After leaving Library" value says. The value is still decoded and kept.
+ */
 class LauncherShellLibraryReturnTest {
     @Test
-    fun everyTriggerLeavesLibraryForHomeByDefaultAndSavesTheSwitch() {
-        LibraryExitTrigger.entries.forEach { trigger ->
-            val repository = RecordingHomeLayoutRepository()
-            val reducer =
-                LauncherHomePageEditReducer(
-                    homeLayoutRepository = repository,
-                    viewModeAvailability = defaultLauncherViewModeAvailability(),
-                )
+    fun noTriggerSwitchesModeUnderEitherStoredSetting() {
+        LibraryReturnTarget.entries.forEach { target ->
+            LibraryExitTrigger.entries.forEach { trigger ->
+                val repository = RecordingHomeLayoutRepository()
+                val reducer =
+                    LauncherHomePageEditReducer(
+                        homeLayoutRepository = repository,
+                        viewModeAvailability = defaultLauncherViewModeAvailability(),
+                    )
+                val state = libraryState(target)
 
-            val updated = reducer.reduce(libraryState(), LauncherShellAction.LeaveLibrary(trigger))
+                val updated = reducer.reduce(state, LauncherShellAction.LeaveLibrary(trigger))
 
-            assertEquals("$trigger", LauncherViewMode.CARD_INTERFACE, updated.homeLayoutSet.activeKey.viewMode)
-            assertEquals("$trigger", LauncherViewMode.CARD_INTERFACE, updated.homeLayout.viewMode)
-            assertEquals("$trigger", LauncherViewMode.CARD_INTERFACE, repository.saved?.activeKey?.viewMode)
+                assertEquals("$target $trigger", state, updated)
+                assertNull("$target $trigger: nothing is written", repository.saved)
+            }
         }
     }
 
     @Test
-    fun noTriggerLeavesLibraryWhenTheSettingKeepsLibrary() {
-        LibraryExitTrigger.entries.forEach { trigger ->
-            val state = libraryState(LibraryReturnTarget.LIBRARY)
-            val reducer =
-                LauncherHomePageEditReducer(
-                    homeLayoutRepository = RecordingHomeLayoutRepository(),
-                    viewModeAvailability = defaultLauncherViewModeAvailability(),
-                )
+    fun theStoredValueIsKept() {
+        val state = libraryState(LibraryReturnTarget.HOME)
 
-            assertEquals("$trigger", state, reducer.reduce(state, LauncherShellAction.LeaveLibrary(trigger)))
-        }
+        assertEquals(LibraryReturnTarget.HOME, state.launcherSettings.appDrawer.afterLeavingLibrary)
     }
 
     @Test
-    fun backLeavesLibraryOnlyFromBrowsingLibraryOnHomeWithTheDefaultSetting() {
-        assertTrue(libraryState().backLeavesLibrary)
-        assertFalse(libraryState(LibraryReturnTarget.LIBRARY).backLeavesLibrary)
-        assertFalse(libraryState().copy(destination = ShellDestination.SETTINGS).backLeavesLibrary)
-        assertFalse(state(LauncherViewMode.CARD_INTERFACE, LibraryReturnTarget.HOME).backLeavesLibrary)
-    }
-
-    @Test
-    fun selectingTheReturnTargetIsASettingsAction() {
+    fun selectingTheReturnTargetIsStillASettingsAction() {
         assertEquals(
             LauncherActionDomain.SETTINGS,
             LauncherShellAction.SelectLibraryReturnTarget(LibraryReturnTarget.LIBRARY).launcherActionDomain(),
@@ -69,14 +58,11 @@ class LauncherShellLibraryReturnTest {
         )
     }
 
-    private fun libraryState(returnTarget: LibraryReturnTarget = LibraryReturnTarget.HOME): LauncherShellState =
-        state(LauncherViewMode.HOME_SCREEN_LIBRARY, returnTarget)
-
-    private fun state(
-        mode: LauncherViewMode,
-        returnTarget: LibraryReturnTarget,
-    ): LauncherShellState {
-        val layoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard().copy(viewMode = mode))
+    private fun libraryState(returnTarget: LibraryReturnTarget): LauncherShellState {
+        val layoutSet =
+            HomeLayoutSet.fromLayout(
+                HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
+            )
         return LauncherShellState(
             homeLayout = layoutSet.activeLayout,
             homeLayoutSet = layoutSet,

@@ -45,7 +45,7 @@ internal fun WorkspaceEditorLayer(
         val (workspace, scope) = loaded
         val reducedMotion = state.launcherSettings.motion.reducedMotion
         val services = remember(runtime, reducedMotion) { runtime.services(reducedMotion) }
-        WorkspacePreviewTheme(state) {
+        WorkspacePreviewTheme(state, workspace) {
             EditorEntry(
                 workspace = workspace,
                 sources = sources,

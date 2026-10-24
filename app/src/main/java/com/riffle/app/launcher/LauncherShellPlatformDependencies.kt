@@ -27,6 +27,11 @@ data class LauncherShellPlatformDependencies(
         catalog.sortedProviders(widgetProviderRepository.installedWidgetProviders())
 }
 
+/**
+ * Every mode on every device class. Since S9 the mode is not a user choice: the stored `LauncherViewMode` is migration
+ * input and follows the active workspace (`WorkspaceHome.homeModeFor`), so no stored layout resolves to another mode
+ * on load any more (design 3.3, #1324). The Library-only availability the alpha shipped with is retired.
+ */
 fun defaultLauncherViewModeAvailability(): LauncherViewModeAvailability =
     LauncherViewModeAvailability(
         enabledExperimentalModesByDeviceClass =
@@ -36,16 +41,4 @@ fun defaultLauncherViewModeAvailability(): LauncherViewModeAvailability =
                     LauncherViewMode.CARD_INTERFACE,
                 )
             },
-    )
-
-/**
- * What the shipped app offers: only Library, until Cards and Standard are redesigned
- * (#1318-#1325). Stored layouts in a hidden mode resolve to Library on load.
- */
-fun libraryOnlyLauncherViewModeAvailability(): LauncherViewModeAvailability =
-    LauncherViewModeAvailability(
-        enabledExperimentalModesByDeviceClass =
-            HomeLayoutDeviceClass.entries.associateWith { setOf(LauncherViewMode.HOME_SCREEN_LIBRARY) },
-        alwaysAvailableModes = emptySet(),
-        fallbackMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
     )

@@ -42,7 +42,6 @@ import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
 import com.riffle.app.launcher.LocalFeedRefreshCoordinator
 import com.riffle.app.launcher.WallpaperPickerLaunchResult
-import com.riffle.app.launcher.WorkspaceMenuFeature
 import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.calendar.CalendarAccessCoordinator
 import com.riffle.app.launcher.canPerformStageAction
@@ -61,13 +60,14 @@ import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.rss.startFeedBackgroundSync
+import com.riffle.app.launcher.startScreenContentProtectionSync
 import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.startWallpaperOffsetSync
 import com.riffle.app.launcher.widgets.PendingWidgetAddStep
 import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
-import com.riffle.app.launcher.workspace.SharedPreferencesWorkspacePreviewPreference
+import com.riffle.app.launcher.workspace.AlwaysOnWorkspaces
 import com.riffle.app.launcher.workspace.SourceAccessLaunchers
 import com.riffle.app.launcher.workspace.WorkspacePreviewController
 import com.riffle.app.launcher.workspace.WorkspacePreviewHost
@@ -78,9 +78,9 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -103,25 +103,20 @@ class MainActivity : ComponentActivity() {
             platformDependencies = dependencies.platformDependencies(),
         )
     }
-    private val workspacePreviewController by lazy {
-        WorkspacePreviewController(
-            preference = SharedPreferencesWorkspacePreviewPreference(this),
-            onEnabledChanged = { enabled -> WorkspaceMenuFeature.enabled = enabled },
-        )
-    }
 
-    /** Built on first use (the preview switch on) and kept, so toggling the preview never leaks another one. */
+    /** S9: workspaces are always on; the controller only tracks the workspace the editor is open on. */
+    private val workspacePreviewController by lazy { WorkspacePreviewController(preference = AlwaysOnWorkspaces) }
+
+    /** Built once, on first use, and kept for the process's activity. */
     private val workspaceRuntime by lazy {
         dependencies.workspaceRuntime { shellViewModel.state.value.launcherSettings }
     }
-    private val poolRuntime by lazy { dependencies.poolRuntime() }
     private val workspacePreviewHost by lazy {
         WorkspacePreviewHost(
             controller = workspacePreviewController,
             workspaceVersion = dependencies.workspaceRepository.version,
             runtime = { workspaceRuntime },
             onRequestSourceAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
-            pool = { poolRuntime },
             poolHome = dependencies.homeLayoutRuntime.poolHomeSwitch,
         )
     }
@@ -168,6 +163,7 @@ class MainActivity : ComponentActivity() {
                 refreshInstalledApps = { shellViewModel.refreshInstalledApps() },
                 refreshWidgetProviders = { shellViewModel.refreshWidgetProviders() },
                 onConfirmedPackageRemoved = shellViewModel::onConfirmedPackageRemoved,
+                onPackageInstalled = shellViewModel::onPackageInstalled,
             )
         }
     }
@@ -329,6 +325,8 @@ class MainActivity : ComponentActivity() {
             editHomePage = shellViewModel::onHomePageEdited,
             editHomeShortcut = shellViewModel::onHomeShortcutEdited,
             editDock = shellViewModel::onDockEdited,
+            // A gesture bound to "Workspace menu" (global or the workspace's own); nothing until workspaces load.
+            openWorkspaceMenu = { shellViewModel.workspaceMenu.dispatch(WorkspaceMenuAction.Open) },
         )
     }
 
@@ -447,16 +445,9 @@ class MainActivity : ComponentActivity() {
                         LauncherAppActionCallbacks(
                             launch =
                                 LauncherAppLaunchCallbacks(
-                                    launchApp = { action ->
-                                        if (appLauncher.launch(action.identity)) {
-                                            shellViewModel.leaveLibrary(LibraryExitTrigger.APP_LAUNCH)
-                                        }
-                                    },
-                                    launchAppShortcut = { action ->
-                                        if (appLauncher.launchShortcut(action.shortcut)) {
-                                            shellViewModel.leaveLibrary(LibraryExitTrigger.APP_LAUNCH)
-                                        }
-                                    },
+                                    // S9: launching an app never switches the shown mode or workspace (#1323).
+                                    launchApp = { action -> appLauncher.launch(action.identity) },
+                                    launchAppShortcut = { action -> appLauncher.launchShortcut(action.shortcut) },
                                     searchWeb = { action -> webSearchLauncher.launch(action.query) },
                                     openAppInfo = { action -> appLauncher.openAppInfo(action.identity) },
                                     uninstallApp = { action -> appLauncher.uninstall(action.identity) },
@@ -527,6 +518,7 @@ class MainActivity : ComponentActivity() {
         refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)
+        startScreenContentProtectionSync(shellViewModel.state)
         startFeedBackgroundSync(shellViewModel.state, dependencies.feedBackgroundRefreshScheduler)
         startWallpaperOffsetSync(
             state = shellViewModel.state,
@@ -558,10 +550,7 @@ class MainActivity : ComponentActivity() {
                 }
             },
         )
-        // A fresh start (not a recreation) opens Home unless the user keeps Library (#1243).
-        if (savedInstanceState == null) {
-            shellViewModel.leaveLibrary(LibraryExitTrigger.COLD_START)
-        }
+        // S9: a cold start keeps the active workspace and its mode (#1323); the Return setting picks the page.
         if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
         }
@@ -586,13 +575,13 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         refreshPlatformStatuses()
         if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
-            // Home pressed while the launcher is in front: the Workspaces (preview), when open, goes to the page
-            // the Return setting names, and Exit stays one tap. From another app it is a Return instead, which the
-            // preview layer's lifecycle observer handles.
-            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) workspacePreviewController.onHomePress()
-            // A Home press: leave Library first (when the setting says so), then reset Home's page.
-            shellViewModel.leaveLibrary(LibraryExitTrigger.HOME_PRESS)
+            // A Home press: back to Home's first page (closing the drawer, search and any overlay), then to the active
+            // workspace's start page when it has one on a placed page (design 3.2, E2). It never changes the mode
+            // or the workspace (#1323).
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
+            // Even when it is already selected: the pager may be on a workspace lens page and must come back.
+            shellViewModel.workspaceStartPage()
+                ?.let { page -> launcherActionRouter.handle(LauncherShellAction.SelectHomePage(page)) }
         }
     }
 
@@ -776,11 +765,14 @@ internal fun handleAppCatalogChange(
     refreshInstalledApps: () -> Unit,
     refreshWidgetProviders: () -> Unit,
     onConfirmedPackageRemoved: (AppPackageName, AppProfile) -> Unit,
+    onPackageInstalled: (AppPackageName, AppProfile) -> Unit = { _, _ -> refreshInstalledApps() },
 ) {
     invalidateWidgetPreviews()
     when (change) {
         AppCatalogChange.Refresh -> refreshInstalledApps()
         is AppCatalogChange.PackageRemoved -> onConfirmedPackageRemoved(change.packageName, change.profile)
+        // Refreshes the app list too, then places the new app where a workspace asks for it.
+        is AppCatalogChange.PackageAdded -> onPackageInstalled(change.packageName, change.profile)
     }
     refreshWidgetProviders()
 }

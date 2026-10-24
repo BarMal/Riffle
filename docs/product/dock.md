@@ -1,7 +1,16 @@
 # The dock
 
-The dock is Riffle's central shortcut and recents surface, and the handle that moves between Home
-and Library. There is **one dock per device class: its content is shared by both modes, its edge
+> **S9 (2026-10-24, [`workspaces-default.md`](workspaces-default.md)).** Workspaces are the launcher's home and the
+> Home/Library pair is retired as a user concept. **The dock pull opens the workspace menu** (Q9,
+> `workspaces-configuration.md` 11.5): same claim and direction, no re-orientation, no mode switch. The dock is the
+> layout's shared dock (pins and panel in the pool, `PoolDock`) with the shown workspace's override on top: device
+> class dock, then `WorkspaceDock.presentation` (hidden, edge, icon size), after the stranding rule (a workspace may
+> hide it only when a gesture opens the menu). The home surface reads the effective dock, so a hidden dock reserves
+> nothing and a moved one reserves its edge. The Home/Library text below is kept as history; it still describes the
+> code path used where no workspace menu exists.
+
+The dock is Riffle's central shortcut and recents surface, and the handle that opens the workspace menu (before S9:
+that moved between Home and Library). There is **one dock per device class: its content is shared by both modes, its edge
 is chosen per mode**. This document is the target it is being built toward and the honest state of
 it today; where the two differ, the target wins.
 
@@ -12,7 +21,7 @@ A single strip, anchored to one edge of the screen, holding two sections:
 - a **static** section of items the user pinned, which always show; and
 - a **dynamic** section of items that appear because something arrived.
 
-Pulling it away from its edge switches between Home and Library (see
+Pulling it away from its edge opens the workspace menu (S9; before, it switched between Home and Library, see
 [The dock is the handle](#the-dock-is-the-handle)).
 
 Swiping it open reveals a **panel**: a small home screen using standard conventions, for widgets
@@ -225,7 +234,8 @@ section does that job, so the rail is gone (#1159).
 | Panel exists, standard conventions | Done — a real `LauncherPage` on the same grid machinery as a home page |
 | Cards expanded shelf is panel-only | Done (#1166) — the notification card row is dropped there, the panel stays |
 | Shelf expansion | **Switched off** (plan Decision 11) behind `DockShelfExpansion.enabled`; code kept |
-| Workspace menu from the dock | **In progress** (#1351) behind `WorkspaceMenuFeature.enabled` (default off): opens from a dock affordance and the "Workspace menu" accessibility action, never from the dock pull; see workspaces-sources-lenses.md |
+| Workspace menu from the dock | **Done** (S9): the dock pull, the dock affordance, the "Workspace menu" accessibility action (dock and home root) and Ctrl+arrow open it; `WorkspaceMenuFeature` is deleted. See gestures.md "Workspace menu (S9)" |
+| Per-workspace dock overrides on the home | **Done** (S9): `withWorkspaceHome` applies `EffectiveDock` to the dock the home draws (render only; Settings > Dock edits the shared dock) |
 | Dock swipe-up gesture action | **Removed** (plan Decision 9) — the dock pull will be the only mode-transition trigger |
 | Panel configurable: size, grid, padding | **Not started** |
 | Panel editing: drag in from the picker | **Not started** — needs a non-fullscreen picker so the dock stays visible |

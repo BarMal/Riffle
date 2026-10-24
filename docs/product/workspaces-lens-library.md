@@ -10,7 +10,7 @@ Package `com.riffle.core.domain.launcher.workspace` (all pure Kotlin, no Android
 
 | Type | File | Role |
 | --- | --- | --- |
-| `LensId`, `SavedLens(id, name, lens, origin)`, `LensOrigin.Preset` | `LensLibrary.kt` | A named, reusable lens definition. `origin` marks a preset-installed lens. |
+| `LensId`, `SavedLens(id, name, lens, origin)`, `LensOrigin.Preset` | `LensLibrary.kt` | A named, reusable lens definition. `origin` marks a preset-installed lens and the definition it was installed with. |
 | `LensLibrary` | `LensLibrary.kt` | Ordered, per layout, cap 100, names trimmed 1..40 and unique case-insensitively. `tryAdd` (with reasons), `rename`, `update`, `duplicate`, `move`, `remove`, `addCopy`, `nameProblem`. Operations that cannot apply return the receiver. |
 | `LensBinding.ref: LensId? = null` | `Container.kt` | Additive. `lens` stays the lens to draw (a snapshot of the library lens when `ref` resolves). |
 | `LayoutWorkspaces.library` | `LayoutWorkspaces.kt` | Optional field, default empty, so existing behaviour is identical. `repaired(...)` gained an optional `library`. |
@@ -61,20 +61,49 @@ Smallest correct rework: the catalog is unchanged and keeps inline lenses. `Pres
 promotes at install time:
 
 * Every binding of the installed variant except home-grid pages becomes a library entry with origin
-  `Preset(presetId, key)`, where `key` is the container's catalog part id (`finder`, `inbox`, `w-media`,
-  `dock`...), stable across releases and across compact/expanded variants.
-* An existing entry with that origin is **reused as the user left it** (reinstalling adds no lens). If the
-  reused lens no longer pairs with the preset's expression, that binding stays inline.
+  `Preset(presetId, key, installed)`, where `key` is the container's catalog part id (`finder`, `inbox`, `w-media`,
+  `dock`...), stable across releases and across compact/expanded variants, and `installed` is the catalog
+  definition the entry was installed (or last refreshed) with. Identity is `presetId` + `key`
+  (`Preset.sameCatalogLens`); `installed` only says whether the user edited it.
+* An existing entry with that origin is **reused** (reinstalling adds no lens), and **refreshed when untouched**
+  (owner decision, built in S7; see "Untouched preset lenses" below). If the reused lens no longer pairs with the
+  preset's expression, that binding stays inline.
 * Name collisions with a different lens: `"<Label> (<Preset>)"`, then `"<Label> (<Preset> 2)"`. A preset never
   renames or overwrites a user lens; library full also falls back to inline.
 * `PresetInstaller.addPreset` now goes through the installer; `installPreset`, `newInstallLayout` and
   `withDefaultsFor` are unchanged (the first-run Nova default stays inline).
 * `reset(layout, workspaceId, preset, posture, restoreLenses)` rebuilds pages, dock section and gestures from
-  the catalog keeping id and name. Saved lenses are kept as the user left them, except a deleted preset lens,
-  which is re-added. `restoreLenses = true` also resets every lens with this preset's origin to the catalog
-  definition (through `applyEdit(DETACH_BROKEN)`, so other dependents follow, and any it would break detach).
-  `Workspace.presetId` was **not** added (it would touch the shared `Workspace`); the caller supplies the
-  preset to reset to.
+  the catalog keeping id and name. Edited saved lenses are kept as the user left them, untouched ones are
+  refreshed (as on install), and a deleted preset lens is re-added. `restoreLenses = true` resets every lens with
+  this preset's origin to the catalog definition, edited or not (through `applyEdit(DETACH_BROKEN)`, so other
+  dependents follow, and any it would break detach), which makes them untouched again. The caller supplies the
+  preset to reset to (Settings reads it from `Workspace.presetId`, added later by the settings slice).
+
+### Untouched preset lenses (owner decision 2026-10-23, built in S7)
+
+"Reinstalling a preset refreshes library lenses the user hasn't edited."
+
+* **Tracking.** `LensOrigin.Preset.installed: Lens?` is the catalog definition the entry was installed or last
+  refreshed with. `SavedLens.isUntouchedPresetLens` is `origin.installed == lens`. Entries without an origin are the
+  user's own and are never touched by a preset.
+* **Rule** (`PresetLensInstaller.install` and `reset`, one pre-pass over the variant's planned lenses before
+  promotion): for each existing entry with the same `presetId` + `key`:
+  * lens equals the current catalog lens: nothing changes except recording `installed` (so a legacy entry becomes
+    trackable);
+  * untouched (lens equals `installed`) and the catalog changed: the entry takes the new definition through
+    `LensLibraryOps.applyEdit(DETACH_BROKEN)`, so every dependent's snapshot follows in the same returned layout
+    (refs stay valid; a dependent the new definition would break is detached and keeps drawing the old lens), and
+    `installed` becomes the new definition;
+  * edited (lens differs from `installed`), or `installed` unknown: left exactly as it is.
+* **Rename-only is untouched (decision).** Only the definition is compared, never the name: the name is the user's
+  label, and a renamed lens still behaves as the catalog shipped it, so it is refreshed and keeps the user's name.
+  A stored per-lens search query is part of the definition (section 13), so typing one into a preset lens counts as
+  an edit.
+* **Legacy entries** (installed before `installed` was recorded) count as edited, because nothing proves the user
+  left them alone; the first reinstall where the entry already equals the catalog records `installed`, so later
+  releases can refresh it.
+* Copies: `copyFromOtherLayout` keeps origins including `installed`; Duplicate and Copy to layout drop the origin
+  (the copy is the user's own).
 
 ### Codec
 
@@ -85,6 +114,11 @@ survivors are repaired (unique ids and names, cap, 40 chars), an unknown origin 
 non-string `ref` reads as inline, and after decoding each layout `rehydrate` makes resolving refs take the
 library lens. Every ref-carrying binding also stores its lens, so a v1 reader that ignores `library` and
 `ref` still draws every container. The per-workspace blob version (`WorkspaceCodec`) stays 1: `ref` is purely additive.
+
+A preset origin is `{"type": "preset", "preset", "key", "installed"?}`; `"installed"` (S7) is a lens in the
+`LensCodec` format, written only when known. It is additive: the set version stays 2, an older blob decodes with it
+unknown (counts as edited), an undecodable one reads as unknown, and an older reader ignores it. It holds a catalog
+lens definition only, never item content. Backup carries it unchanged (the library rides the workspace set section).
 
 ### Editor operations
 
@@ -134,6 +168,12 @@ directly; the editor goes through `LensSessionOps` because its draft is a sessio
 `PresetLensInstallerTest`, and the seeded `LensLibraryPropertyTest` (150 seeds x 40 operations: no dangling
 refs, workspaces always pass `WorkspaceValidation`, snapshots always equal the library lens, unique names and
 ids, copy-from-layout shares no ids and keeps drawing the same lenses, codec round trip of every reachable layout).
+`PresetLensRefreshTest` (S7): the installed definition is recorded; reinstall refreshes an untouched entry and its
+dependents follow through the same ref; an edited entry is left alone; rename-only stays untouched and keeps the
+name; reset refreshes untouched entries and keeps edited ones unless `restoreLenses`; a legacy entry without a
+recorded definition is not refreshed but is recorded once it equals the catalog; codec and backup round trips keep
+`installed`, and a restored untouched entry still refreshes. `LensLibraryCodecTest` covers older and broken
+`installed` values.
 
 ## Not done
 
@@ -143,8 +183,12 @@ ids, copy-from-layout shares no ids and keeps drawing the same lenses, codec rou
 * Changing the lens of a referenced binding inside the editor flow: it asks to detach first, or to change the saved lens
   in Settings > Saved lenses (which shows the dry-run impact). An in-flow "edit the saved lens" with the impact preview was not
   built (decision to confirm, see [`workspaces-editor.md`](workspaces-editor.md)).
-* `Workspace.presetId` and a "Reset to preset" menu entry; the dry-run impact preview of `restoreLenses` is available
-  through `previewEdit` per lens but `reset` itself applies with `DETACH_BROKEN` and does not ask.
+* The dry-run impact preview of `restoreLenses` is available through `previewEdit` per lens but `reset` itself
+  applies with `DETACH_BROKEN` and does not ask. The automatic refresh of untouched entries (S7) also applies with
+  `DETACH_BROKEN` and does not ask or announce which entries it refreshed; Settings > Saved lenses has no "from
+  preset, unedited" badge yet.
+* Refresh happens only when the user installs or resets a preset; nothing refreshes untouched entries when the app
+  updates on its own.
 * Placed-item (section 9) handling in reset; backup/restore of the library (section 5) beyond the workspace set codec.
 * Preset catalog files still build inline lenses; promotion is derived from container part ids rather than declared
   `PresetLens` data. Declaring them per preset would let one lens be shared between two containers.
@@ -153,6 +197,6 @@ ids, copy-from-layout shares no ids and keeps drawing the same lenses, codec rou
 
 * **Duplicate shares refs** (as built, design 4.3). Per-binding Detach stays available for an independent copy.
 * **Reinstalling a preset refreshes untouched entries.** When a preset's catalog lens changed in a newer release, an
-  entry the user never edited takes the new definition; an edited entry is left alone. Not built yet: today an entry is
-  reused as is and only `reset(restoreLenses = true)` refreshes it, and "untouched" needs tracking (for example the
-  catalog lens an entry was installed from).
+  entry the user never edited takes the new definition; an edited entry is left alone. **Built in S7**: see "Untouched
+  preset lenses" above (tracking by `LensOrigin.Preset.installed`; a rename alone keeps an entry untouched, a decision
+  for the owner to confirm).
