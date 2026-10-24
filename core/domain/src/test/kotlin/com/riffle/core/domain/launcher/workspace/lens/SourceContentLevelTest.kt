@@ -182,18 +182,18 @@ class SourceContentLevelTest {
 
     @Test
     fun noLevelLeaksForAnyGroupingSortOrLimit() {
-        SourceContentLevel.entries.forEach { level ->
-            GROUPS.forEach { group ->
-                SORTS.forEach { sort ->
-                    listOf(null, 1, 3).forEach { limit ->
-                        val lens = Lens(sources = listOf(NOTES), group = group, sort = sort, limit = limit)
-                        val text = eval(lens, items, level).toString()
-                        forbidden(level).forEach { secret ->
-                            assertFalse(secret in text, "$level $group $sort $limit leaked $secret: $text")
-                        }
+        val lenses =
+            GROUPS.flatMap { group ->
+                SORTS.flatMap { sort ->
+                    listOf(null, 1, 3).map { limit ->
+                        Lens(sources = listOf(NOTES), group = group, sort = sort, limit = limit)
                     }
                 }
             }
+        SourceContentLevel.entries.flatMap { level -> lenses.map { level to it } }.forEach { (level, lens) ->
+            val text = eval(lens, items, level).toString()
+            val leaked = forbidden(level).filter { it in text }
+            assertTrue(leaked.isEmpty(), "$level $lens leaked $leaked: $text")
         }
     }
 

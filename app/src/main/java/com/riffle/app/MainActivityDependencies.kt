@@ -216,6 +216,43 @@ internal class MainActivityDependencies(
             workspaceRepository = workspaceRepository,
         )
 
+    /** The built-in item sources behind the workspace preview, each reading its repository lazily. */
+    private fun workspaceItemSources(
+        launcherSettings: () -> LauncherSettings,
+        searchQuery: SearchQueryHolder,
+    ) =
+        androidItemSources(
+            installedApps = installedAppRepository,
+            appVisibility = appVisibilityRepository,
+            recentApps = recentAppRepository,
+            notificationRepository = activeNotificationRepository,
+            notificationAccess = notificationAccessGateway,
+            hideRules = { launcherSettings().notificationHiding.rules },
+            calendar =
+                androidCalendarSourceDependencies(
+                    contentResolver = activity.contentResolver,
+                    access = calendarAccessGateway,
+                    accessChanges = calendarAccessChanges,
+                ),
+            content =
+                ContentSourceDependencies(
+                    search = SearchSourceDependencies(query = searchQuery),
+                    feeds =
+                        FeedSourceDependencies(
+                            configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
+                            cache = feedArticleCacheRepository,
+                            changes = feedRefreshCoordinator.cacheChanges,
+                        ),
+                    ics =
+                        IcsSourceDependencies(
+                            feeds = { icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds },
+                            cachedEvents = { id -> icsFeedRepository.cached(id)?.events },
+                            engine = icsEngine,
+                            changes = icsFeedRepository,
+                        ),
+                ),
+        )
+
     /**
      * The workspace preview's runtime (debug-only experience). Call it only once the preview is switched on:
      * nothing in it subscribes to a source until a container observes a lens, and creating it reads no
@@ -223,38 +260,7 @@ internal class MainActivityDependencies(
      */
     fun workspaceRuntime(launcherSettings: () -> LauncherSettings): WorkspaceRuntime {
         val searchQuery = SearchQueryHolder()
-        val registry =
-            androidItemSources(
-                installedApps = installedAppRepository,
-                appVisibility = appVisibilityRepository,
-                recentApps = recentAppRepository,
-                notificationRepository = activeNotificationRepository,
-                notificationAccess = notificationAccessGateway,
-                hideRules = { launcherSettings().notificationHiding.rules },
-                calendar =
-                    androidCalendarSourceDependencies(
-                        contentResolver = activity.contentResolver,
-                        access = calendarAccessGateway,
-                        accessChanges = calendarAccessChanges,
-                    ),
-                content =
-                    ContentSourceDependencies(
-                        search = SearchSourceDependencies(query = searchQuery),
-                        feeds =
-                            FeedSourceDependencies(
-                                configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
-                                cache = feedArticleCacheRepository,
-                                changes = feedRefreshCoordinator.cacheChanges,
-                            ),
-                        ics =
-                            IcsSourceDependencies(
-                                feeds = { icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds },
-                                cachedEvents = { id -> icsFeedRepository.cached(id)?.events },
-                                engine = icsEngine,
-                                changes = icsFeedRepository,
-                            ),
-                    ),
-            )
+        val registry = workspaceItemSources(launcherSettings, searchQuery)
         val lensExecutor =
             Executors.newSingleThreadExecutor { task ->
                 Thread(task, "riffle-lens-evaluation").apply { isDaemon = true }
