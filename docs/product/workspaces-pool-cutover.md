@@ -1,6 +1,9 @@
 # Workspaces: pool cutover, read-only (WS10 S4, as built)
 
-Status: **wired behind the preview switch, read-only**. Slice S4 of `docs/product/workspaces-configuration.md` section 9,
+Status: **superseded for the standard home by the S4 app half** ([`workspaces-pool-cutover-s4.md`](workspaces-pool-cutover-s4.md#app-half-as-built)):
+the standard home now renders and edits from the pool, the pool is loaded at startup (not when the preview opens), and
+"Refresh home items" is retired while the pool home is active. What follows is the read-only first step as it was
+built, kept for the record. Originally: **wired behind the preview switch, read-only**. Slice S4 of `docs/product/workspaces-configuration.md` section 9,
 building on the pure pool domain in [`workspaces-pool.md`](workspaces-pool.md). With **Settings > Developer > Workspaces
 (preview)** on, the preview's home pages show the user's real home items (apps, shortcuts, folders, widgets) read from the
 placed-items pool. With the switch off nothing here is constructed, read or written. Tracking: #1363.
@@ -38,7 +41,8 @@ placed-items pool. With the switch off nothing here is constructed, read or writ
    one launches it. Widgets draw the hosted view through the existing `HomeWidgetViewFactory` when the host id is bound, else
    a "Widget placeholder" tile with the label.
 6. **Refresh home items** (preview top bar, only when a pool is present): `reimport` replaces the pool with a fresh import
-   of the current `HomeLayoutSet`. See decision 3.
+   of the current `HomeLayoutSet`. See decision 3. **Retired by the S4 app half** while the standard home renders from
+   the pool (it would overwrite edits); it stays only on the legacy path (Developer switch off).
 7. **Privacy.** The store holds apps, folders, widget providers and geometry. Item content (notification text, calendar
    titles, feed articles) is not part of the pool model and is never persisted or logged by this slice. A test asserts the
    encoded blob has no notification text.
@@ -88,12 +92,11 @@ placed-items pool. With the switch off nothing here is constructed, read or writ
 ## Not done
 
 * **Editing.** Built by S5: see [`workspaces-pool-editing.md`](workspaces-pool-editing.md).
-* **Dock.** Now in the pool domain (`PlacedItemPool.dock`, imported once by `ensureMigrated`; see
-  [`workspaces-pool-cutover-s4.md`](workspaces-pool-cutover-s4.md)); the preview still draws it read-only from `HomeLayoutSet`
-  until the app wave switches it (see [`workspaces-dock.md`](workspaces-dock.md)).
-* **Per-workspace arrangements** for presets, auto-paging, `NewAppPlacement` setting, new-app placement, uninstall pruning
-  (`PoolRemoval.pruneUninstalled` has no event source), startup host-id reconciliation.
-* **Live sync with `HomeLayoutSet`.** One-time import plus manual Refresh only (decision 3).
+* **Dock.** In the pool since S4; the preview draws the pool's dock while the pool home is active (S4 app half).
+* **Per-workspace arrangements** for presets, auto-paging, `NewAppPlacement` setting, new-app placement. (Uninstall
+  pruning and the pool-aware host-id checks landed with the S4 app half.)
+* **Live sync with `HomeLayoutSet`.** Replaced by the S4 cutover: the pool is the store, `HomeLayoutSet` keeps no placed
+  items.
 * **Pool in backup and restore.** Done: see the `"pool"` section in [`workspaces-backup.md`](workspaces-backup.md).
 * **Widget interaction.** Widgets are drawn, not configurable or resizable; unbound widgets are placeholders.
 * **Notification badges** on icons and the app context menu / shortcuts popup.

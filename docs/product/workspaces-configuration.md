@@ -773,7 +773,9 @@ layouts, settings and hidden apps; `isImportableBackup` ignores it). `decodeLaun
   under `"workspaces"`, and the per-layout exclusion rules under a new optional `"exclusions"` key. Keep the document
   version at 1 (bumping would make an older build reject the file, and that costs nothing to avoid). While
   `HomeLayoutSet` still exists (before S4 completes) it continues to be written under `"homeLayouts"` as today.
-  After S4 `"homeLayouts"` is not written; a pre-S4 backup is imported through the migration (9.9). Nothing else is kept
+  After S4 `"homeLayouts"` is not written; a pre-S4 backup is imported through the migration (9.9). *As built (S4 app
+  half):* `"homeLayouts"` is still written, as the pool's projection, so an older build can restore it, and a cut-over
+  backup carries `"homeFromPool": true` (see `workspaces-pool-cutover-s4.md`). Nothing else is kept
   for old readers: there are none.
 - **Import** is **replace**, with Undo (Q11), consistent with layouts, settings and hidden apps today: decode (never
   throws), replace the stored set atomically (pool and arrangements are one value, so they cannot diverge), replace
