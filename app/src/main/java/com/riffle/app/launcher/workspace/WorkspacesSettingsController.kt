@@ -2,6 +2,7 @@ package com.riffle.app.launcher.workspace
 
 import com.riffle.app.launcher.WorkspacesDialogText
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.WorkspaceRepository
@@ -54,7 +55,7 @@ internal class WorkspacesSettingsController(
         viewed: HomeLayoutDeviceClass,
         current: HomeLayoutDeviceClass,
         available: Collection<HomeLayoutDeviceClass>,
-        globalGestureActions: Collection<String> = emptyList(),
+        globalGestureActions: Collection<LauncherGestureAction> = emptyList(),
     ): WorkspacesSettingsModel? =
         repository.load()?.let { set ->
             WorkspacesSettingsPlanner.plan(set, viewed, current, available, globalGestureActions = globalGestureActions)

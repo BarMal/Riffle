@@ -116,6 +116,42 @@ class LensLibraryCodecTest {
     }
 
     @Test
+    fun `a preset origin keeps its installed definition, and an older or broken one reads as unknown`() {
+        val installed = llLens(limit = 5)
+        val library =
+            (
+                LensLibrary().tryAdd(
+                    "Recent",
+                    installed,
+                    llCounter("lib"),
+                    LensOrigin.Preset("nova", "finder", installed),
+                ) as LibraryAdd.Added
+            ).library
+        val decoded = LensLibraryCodec.decode(LensLibraryCodec.encode(library))
+        assertEquals(library, decoded)
+        assertTrue(decoded.lenses.single().isUntouchedPresetLens)
+
+        fun entry(origin: StoredValue.Obj) =
+            obj("id" to str("a"), "name" to str("A"), "lens" to LensCodec.encode(installed), "origin" to origin)
+        val older = obj("type" to str("preset"), "preset" to str("nova"), "key" to str("finder"))
+        val broken =
+            obj(
+                "type" to str("preset"),
+                "preset" to str("nova"),
+                "key" to str("finder"),
+                "installed" to obj("sources" to arr(emptyList())),
+            )
+        listOf(older, broken).forEach { origin ->
+            val saved = LensLibraryCodec.decode(obj("lenses" to arr(listOf(entry(origin))))).lenses.single()
+            assertEquals(LensOrigin.Preset("nova", "finder"), saved.origin)
+            assertTrue(!saved.isUntouchedPresetLens)
+        }
+        // An entry without an origin is the user's own.
+        val own = SavedLens(LensId("u"), "Mine", installed)
+        assertTrue(!own.isUntouchedPresetLens)
+    }
+
+    @Test
     fun `a hostile ref id decodes as a dangling ref, a blank one as inline`() {
         val ws = llWorkspace()
         val value = WorkspaceCodec.encode(ws.copy(pages = listOf(llPage("p", llBinding(ref = LensId("../../x"))))))

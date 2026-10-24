@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.workspace.NewAppDefaults
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.settings.WorkspaceRow
@@ -44,6 +45,7 @@ class WorkspaceRowActionsTest {
                 WorkspaceRowActionKind.MOVE_DOWN,
                 WorkspaceRowActionKind.DOCK,
                 WorkspaceRowActionKind.NEW_APPS,
+                WorkspaceRowActionKind.APPEARANCE,
                 WorkspaceRowActionKind.INSTALL_PRESET,
                 WorkspaceRowActionKind.DELETE,
             ),
@@ -86,6 +88,20 @@ class WorkspaceRowActionsTest {
     }
 
     @Test
+    fun appearanceOpensThePickerWithTheRowsCurrentOverride() {
+        val opened = mutableListOf<WorkspaceDialog>()
+        val skinned = row().copy(skin = LauncherThemePreset.GLASS)
+
+        WorkspacesPageCallbacks().runRowAction(skinned, WorkspaceRowActionKind.APPEARANCE) { opened += it }
+
+        assertEquals(listOf(WorkspaceDialog.PickSkin(skinned.id, "Work", LauncherThemePreset.GLASS)), opened)
+        // Not editing: appearance is a property of the workspace, so it is offered on any layout.
+        val appearance = workspaceRowActions(skinned, canEdit = false).of(WorkspaceRowActionKind.APPEARANCE)
+        assertEquals("Appearance...", appearance.label)
+        assertTrue(appearance.enabled)
+    }
+
+    @Test
     fun moveAndMakeDefaultFollowTheRow() {
         val edge = workspaceRowActions(row(isDefault = true, up = false, down = false), canEdit = true)
 
@@ -120,6 +136,7 @@ class WorkspaceRowActionsTest {
                 WorkspaceDialog.Rename(id, "Work"),
                 WorkspaceDialog.Dock(id, "Work", current = null, canHide = false),
                 WorkspaceDialog.NewApps(id, "Work", NewAppDefaults.MIGRATED, followsPreset = true, presetName = "Nova"),
+                WorkspaceDialog.PickSkin(id, "Work", null),
                 WorkspaceDialog.ConfirmReset(id, "Work", "Nova"),
                 WorkspaceDialog.PickPreset,
                 WorkspaceDialog.ConfirmDelete(id, "Work"),

@@ -1203,7 +1203,7 @@ object PlacedItemsAdapter {
   layout whose setting is `HOME_AND_FINDER` (creating a page when `autoPages`); this is the pool doing what it is for.
   The placement is a pure function (`PlacedItemsEditor.placeNewApp`). Removing the icon from one workspace leaves the
   others (9.4).
-* **As built (S7, [`workspaces-s7.md`](workspaces-s7.md) section 2).** The setting is stored on the **workspace**
+* **As built (S7, [`workspaces-s7.md`](workspaces-s7.md) section 4).** The setting is stored on the **workspace**
   (`Workspace.newApps: WorkspaceNewApps?`, codec key `"newApps"`, additive; null follows the preset), not on the pool
   arrangement: `NewAppDefaults.resolve` = own choice, else `forPreset(presetId)` (only iOS-style opts in, with
   `autoPages = true`), else `FINDER_ONLY`/no pages. `Arrangement.newAppPlacement` stays stored but is superseded.
@@ -1372,7 +1372,7 @@ remains as the migration input and for a bare home without workspaces (10.2).
 Codec: optional key `"presentation": {"hidden"?, "edge"?, "iconSize"?}` inside the workspace's dock, additive
 (a v1 decoder ignores it and draws the shared dock). Workspace schema version stays 1.
 
-**As built (S7, [`workspaces-s7.md`](workspaces-s7.md) section 1).** `WorkspaceDock.presentation: DockPresentation?`
+**As built (S7, [`workspaces-s7.md`](workspaces-s7.md) section 3).** `WorkspaceDock.presentation: DockPresentation?`
 and `"presentation"` codec key as above (follow is stored as no key). The shared dock is now the pool's `PoolDock`
 (S4), so resolution is `resolveDock(poolDock, workspace, globalGestureActions)` / `EffectiveDock.apply` over
 `PoolDockSettings` (and over `DockModel` for the preview, which still reads the home layout's dock). Library's edge
@@ -1411,8 +1411,7 @@ workspace. The two behaviour changes are preset-side: Niagara sets `hidden = tru
   workspace.
 
 **As built (S7).** `DockMenuReachability`: hidden is allowed only when a home gesture (global, or the workspace's
-`gestureBindings`) is bound to the stored action name `OPEN_WORKSPACE_MENU` (the `LauncherGestureAction` added by the
-S7 gesture PR; matched by name, so on a base without it nothing counts and hiding is refused). The issue
+`gestureBindings`, which stores action ids by enum name) is bound to `LauncherGestureAction.OPEN_WORKSPACE_MENU`. The issue
 `WorkspaceIssue.DockHiddenWithoutMenuEntry` is reported by `DockMenuReachability.issue`, not by
 `WorkspaceValidation.validate` (it depends on global settings, and a violation must draw the dock, not fall back to
 another workspace). `EffectiveDock.presentationFor` applies the fallback (`strandedFallback = true`). The Settings

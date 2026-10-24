@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.app.launcher.editor.EditorText
 import com.riffle.app.launcher.workspace.SourceAccessRoute
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.workspace.settings.LayoutFallbackNotice
 import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
 import com.riffle.core.domain.launcher.workspace.settings.WorkspaceRow
@@ -25,6 +26,12 @@ internal object WorkspacesSettingsText {
     const val MOVE_DOWN = "Move down"
     const val DELETE = "Delete"
     const val INSTALL_PRESET = "Install preset..."
+    const val APPEARANCE = "Appearance..."
+    const val APPEARANCE_TITLE = "Workspace appearance"
+    const val APPEARANCE_BODY =
+        "Use a different theme preset while this workspace is active. Mode, accent, colours, corners and " +
+            "typography still follow Settings > Appearance."
+    const val FOLLOW_GLOBAL = "Follow global appearance"
     const val COPY_FROM_OTHER = "Copy from other layout..."
     const val CANCEL = "Cancel"
     const val UNDO = "Undo"
@@ -61,8 +68,13 @@ internal object WorkspacesSettingsText {
             if (row.isActive) ACTIVE else null,
             if (row.isDefault) DEFAULT else null,
             row.presetName?.let { "$it preset" },
+            row.skin?.let { "${skinLabel(it)} theme" },
             pages(row.pageCount),
         ).joinToString(separator = " · ")
+
+    /** A theme preset's name as Settings > Appearance shows it; null is "Follow global appearance". */
+    fun skinLabel(skin: LauncherThemePreset?): String =
+        skin?.let { themeOptionLabel(it.name, isSelected = false) } ?: FOLLOW_GLOBAL
 
     /** What TalkBack reads for a row, which also states what tapping it does. */
     fun rowSpokenSummary(row: WorkspaceRow): String =
@@ -124,6 +136,13 @@ internal object WorkspacesDialogText {
 
     fun workspaces(count: Int): String = if (count == 1) "1 workspace" else "$count workspaces"
 
+    private fun skinChanged(
+        name: String,
+        skin: LauncherThemePreset?,
+    ): String =
+        skin?.let { "\"$name\" uses the ${WorkspacesSettingsText.skinLabel(it)} theme" }
+            ?: "\"$name\" follows the global appearance"
+
     /** One flat branch per message: the count is the number of messages, not nested logic. */
     @Suppress("CyclomaticComplexMethod")
     fun message(message: WorkspacesSettingsMessage): String =
@@ -136,6 +155,7 @@ internal object WorkspacesDialogText {
             is WorkspacesSettingsMessage.Deleted -> "Deleted \"${message.name}\""
             is WorkspacesSettingsMessage.Reset -> "Reset \"${message.name}\" to the ${message.presetName} preset"
             is WorkspacesSettingsMessage.Installed -> "Installed \"${message.name}\""
+            is WorkspacesSettingsMessage.SkinChanged -> skinChanged(message.name, message.skin)
             is WorkspacesSettingsMessage.Copied ->
                 "Copied ${workspaces(message.copied)} from ${WorkspacesSettingsText.layoutName(message.source)}"
             WorkspacesSettingsMessage.CannotDeleteLast -> ONLY_ONE_REASON

@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.settings.LayoutFallbackNotice
@@ -119,6 +120,7 @@ class WorkspacesSettingsTextTest {
                 WorkspacesSettingsMessage.Deleted("A"),
                 WorkspacesSettingsMessage.Reset("A", "Nova"),
                 WorkspacesSettingsMessage.Installed("A"),
+                WorkspacesSettingsMessage.SkinChanged("A", LauncherThemePreset.GLASS),
                 WorkspacesSettingsMessage.Copied(HomeLayoutDeviceClass.TABLET, replaced = 2, copied = 1),
                 WorkspacesSettingsMessage.CannotDeleteLast,
                 WorkspacesSettingsMessage.InvalidName,
@@ -133,5 +135,23 @@ class WorkspacesSettingsTextTest {
             WorkspacesDialogText.message(WorkspacesSettingsMessage.Copied(HomeLayoutDeviceClass.TABLET, 2, 1)),
         )
         assertFalse(WorkspacesDialogText.message(WorkspacesSettingsMessage.CannotDeleteLast).isEmpty())
+    }
+
+    @Test
+    fun theAppearanceOverrideIsNamedLikeSettingsAppearanceAndFollowingGlobalIsSaid() {
+        assertEquals("Glass", WorkspacesSettingsText.skinLabel(LauncherThemePreset.GLASS))
+        assertEquals("Follow global appearance", WorkspacesSettingsText.skinLabel(null))
+        assertEquals(
+            "Active · Terminal theme · 3 pages",
+            WorkspacesSettingsText.rowSummary(row(active = true).copy(skin = LauncherThemePreset.TERMINAL)),
+        )
+        assertEquals(
+            "\"A\" uses the Retro theme",
+            WorkspacesDialogText.message(WorkspacesSettingsMessage.SkinChanged("A", LauncherThemePreset.RETRO)),
+        )
+        assertEquals(
+            "\"A\" follows the global appearance",
+            WorkspacesDialogText.message(WorkspacesSettingsMessage.SkinChanged("A", null)),
+        )
     }
 }

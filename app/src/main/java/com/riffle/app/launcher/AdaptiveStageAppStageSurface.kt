@@ -148,6 +148,7 @@ internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boo
         LauncherShellAction.SelectPreviousAppStage,
         LauncherShellAction.OpenSearch,
         LauncherShellAction.OpenSettings,
+        LauncherShellAction.OpenWorkspaceMenu,
         -> true
 
         else -> false

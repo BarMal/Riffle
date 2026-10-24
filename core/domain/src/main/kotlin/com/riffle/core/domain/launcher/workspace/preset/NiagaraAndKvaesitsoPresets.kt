@@ -38,7 +38,9 @@ internal object NiagaraPreset {
                 finderPage(ids, ExpressionKind.ALPHA_LIST),
             ),
             WorkspaceDock(presentation = DockPresentation(hidden = true)),
-        ).copy(gestureBindings = mapOf(HomeGesture.ONE_FINGER_UP.name to DockMenuReachability.WORKSPACE_MENU_ACTION))
+        ).copy(
+            gestureBindings = mapOf(HomeGesture.ONE_FINGER_UP.name to DockMenuReachability.WORKSPACE_MENU_ACTION.name),
+        )
     }
 }
 

@@ -93,7 +93,11 @@ The shelf code and its tests stay (the tests switch the flag on around themselve
 **Workspace menu (#1351, off by default behind `WorkspaceMenuFeature.enabled`).** It does not use any
 dock drag: the dock pull stays the Home <-> Library switch. The menu opens from a dock affordance and
 from the dock's accessibility action "Workspace menu"; see "Workspace menu" in
-`workspaces-sources-lenses.md`.
+`workspaces-sources-lenses.md`. Since WS10 S7 any home gesture can also be bound to the action
+**"Workspace menu"** (`OPEN_WORKSPACE_MENU`, `workspaces-s7.md`): the gesture settings list it only
+while the feature is on (or when a gesture already uses it), and with the feature off a gesture bound
+to it does nothing. Cards lets it through its home-action filter. No default binding uses it; the dock
+pull keeps its meaning until S9, when it opens the menu (design 11.5).
 
 ## Thresholds
 
@@ -112,9 +116,9 @@ constants at the 2.625x reference density (420dpi) they were tuned on.
 ## Arbitration table
 
 Default bindings come from `defaultHomeGestureActions` (`LauncherSettings.kt`); every home binding
-is user configurable. Cards filters home actions to stage navigation, search and
-Settings (`adaptiveStageAppStageActionFilter`; Settings since #1212, so a gesture bound to it is
-never a dead end in Cards). "Home" means the home gesture layer with the user's binding; "unbound"
+is user configurable. Cards filters home actions to stage navigation, search,
+Settings and the workspace menu (`adaptiveStageAppStageActionFilter`; Settings since #1212, so a
+gesture bound to it is never a dead end in Cards; the workspace menu since WS10 S7). "Home" means the home gesture layer with the user's binding; "unbound"
 means no default binding, so nothing happens unless the user binds the gesture.
 
 | Region | Input | Std / Lib | Cards |

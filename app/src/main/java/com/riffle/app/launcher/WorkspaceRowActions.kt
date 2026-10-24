@@ -1,6 +1,8 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
@@ -16,6 +18,7 @@ internal enum class WorkspaceRowActionKind {
     MOVE_DOWN,
     DOCK,
     NEW_APPS,
+    APPEARANCE,
     RESET,
     INSTALL_PRESET,
     DELETE,
@@ -55,6 +58,7 @@ internal fun workspaceRowActions(
         WorkspaceRowAction(WorkspaceRowActionKind.MOVE_DOWN, WorkspacesSettingsText.MOVE_DOWN, row.canMoveDown),
         WorkspaceRowAction(WorkspaceRowActionKind.DOCK, WorkspaceDockSettingsText.DOCK),
         WorkspaceRowAction(WorkspaceRowActionKind.NEW_APPS, WorkspaceDockSettingsText.NEW_APPS),
+        WorkspaceRowAction(WorkspaceRowActionKind.APPEARANCE, WorkspacesSettingsText.APPEARANCE),
         row.presetName
             ?.let { WorkspaceRowAction(WorkspaceRowActionKind.RESET, WorkspacesSettingsText.resetLabel(it)) }
             ?: WorkspaceRowAction(WorkspaceRowActionKind.INSTALL_PRESET, WorkspacesSettingsText.INSTALL_PRESET),
@@ -73,6 +77,9 @@ internal sealed interface WorkspaceDialog {
     data class ConfirmDelete(val id: WorkspaceId, val name: String) : WorkspaceDialog
 
     data class ConfirmReset(val id: WorkspaceId, val name: String, val presetName: String) : WorkspaceDialog
+
+    /** The workspace's appearance: follow the global theme preset, or override it with one. */
+    data class PickSkin(val id: WorkspaceId, val name: String, val skin: LauncherThemePreset?) : WorkspaceDialog
 
     data object PickPreset : WorkspaceDialog
 
@@ -97,8 +104,8 @@ internal sealed interface WorkspaceDialog {
 }
 
 /**
- * Runs the chosen row action: non-destructive ones apply at once; Rename, Reset, Delete and the preset picker
- * open their dialog (Reset and Delete confirm and offer Undo); Edit goes to the existing editor route.
+ * Runs the chosen row action: non-destructive ones apply at once; Rename, Appearance, Reset, Delete and the preset
+ * picker open their dialog (Reset and Delete confirm and offer Undo); Edit goes to the existing editor route.
  */
 internal fun WorkspacesPageCallbacks.runRowAction(
     row: WorkspaceRow,
@@ -116,6 +123,7 @@ internal fun WorkspacesPageCallbacks.runRowAction(
         WorkspaceRowActionKind.DOCK -> openDialog(WorkspaceDialog.Dock(id, row.name, row.dock, row.canHideDock))
         WorkspaceRowActionKind.NEW_APPS ->
             openDialog(WorkspaceDialog.NewApps(id, row.name, row.newApps, row.newAppsFollowPreset, row.presetName))
+        WorkspaceRowActionKind.APPEARANCE -> openDialog(WorkspaceDialog.PickSkin(id, row.name, row.skin))
         WorkspaceRowActionKind.RESET ->
             openDialog(WorkspaceDialog.ConfirmReset(id, row.name, row.presetName.orEmpty()))
         WorkspaceRowActionKind.INSTALL_PRESET -> openDialog(WorkspaceDialog.PickPreset)
@@ -129,5 +137,5 @@ internal data class WorkspacesPageCallbacks(
     val onEdit: (WorkspaceId) -> Unit = {},
     val onSelectLayout: (HomeLayoutDeviceClass) -> Unit = {},
     /** The global home gestures' action names, so hiding a dock is checked against them (11.4). */
-    val globalGestureActions: Collection<String> = emptyList(),
+    val globalGestureActions: Collection<LauncherGestureAction> = emptyList(),
 )

@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.workspace.dock
 
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.workspace.DockMenuReachability
 import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.Workspace
@@ -28,7 +29,7 @@ object EffectiveDock {
     /** [workspace]'s override after the stranding rule ([DockMenuReachability]). */
     fun presentationFor(
         workspace: Workspace?,
-        globalGestureActions: Collection<String>,
+        globalGestureActions: Collection<LauncherGestureAction>,
     ): DockPresentationResolution {
         val stored = workspace?.dock?.presentation
         val stranded = workspace != null && DockMenuReachability.issue(workspace, globalGestureActions) != null
@@ -74,7 +75,7 @@ object EffectiveDock {
 fun resolveDock(
     poolDock: PoolDock?,
     workspace: Workspace?,
-    globalGestureActions: Collection<String> = emptyList(),
+    globalGestureActions: Collection<LauncherGestureAction> = emptyList(),
 ): PoolDock? =
     poolDock?.let { dock ->
         val presentation = EffectiveDock.presentationFor(workspace, globalGestureActions).presentation

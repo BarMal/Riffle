@@ -2,8 +2,8 @@ package com.riffle.core.domain.launcher.workspace.settings
 
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.workspace.ContainerId
-import com.riffle.core.domain.launcher.workspace.DockMenuReachability
 import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 
 class WorkspaceDockAndNewAppsSettingsTest {
     private val phone = HomeLayoutDeviceClass.PHONE
-    private val menu = listOf(DockMenuReachability.WORKSPACE_MENU_ACTION)
+    private val menu = listOf(LauncherGestureAction.OPEN_WORKSPACE_MENU)
     private val page =
         PageContainer(
             ContainerId("p"),

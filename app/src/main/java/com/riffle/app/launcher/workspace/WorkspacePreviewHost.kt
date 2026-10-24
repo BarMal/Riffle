@@ -24,7 +24,9 @@ import com.riffle.core.domain.launcher.home.dockFor
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.DockMenuReachability
 import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
+import com.riffle.core.domain.launcher.workspace.WorkspaceSkin
 import com.riffle.core.domain.launcher.workspace.dock.EffectiveDock
 import com.riffle.core.domain.launcher.workspace.dock.PreviewDock
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
@@ -134,7 +136,7 @@ private fun WorkspacePreviewContent(
         }
     val sharedDock = remember(layoutSet, deviceClass) { layoutSet.dockFor(deviceClass) }
     val dockPins = remember(sharedDock, presentation) { PreviewDock.from(sharedDock, presentation) }
-    WorkspacePreviewTheme(state) {
+    WorkspacePreviewTheme(state, workspace) {
         PreviewHideHost(
             hideController,
             layout,
@@ -217,16 +219,20 @@ private fun rememberPlacedHome(
     }
 }
 
-/** The shell's theme, so the preview matches the launcher's appearance settings. */
+/**
+ * The shell's theme, so the preview matches the launcher's appearance settings, with [workspace]'s skin override
+ * (Q15) in place of the global theme preset when it names one ([WorkspaceSkin.resolve]).
+ */
 @Composable
 internal fun WorkspacePreviewTheme(
     state: LauncherShellState,
+    workspace: Workspace?,
     content: @Composable () -> Unit,
 ) {
     val appearance = state.launcherSettings.appearance
     RiffleLauncherTheme(
         themeMode = appearance.themeMode,
-        themePreset = appearance.themePreset,
+        themePreset = WorkspaceSkin.resolve(appearance.themePreset, workspace),
         themeAccent = appearance.themeAccent,
         themeColors = appearance.themeColors,
         themeCornerStyle = appearance.themeCornerStyle,

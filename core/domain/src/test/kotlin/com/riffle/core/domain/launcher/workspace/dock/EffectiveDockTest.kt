@@ -30,7 +30,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class EffectiveDockTest {
-    private val menuGesture = DockMenuReachability.WORKSPACE_MENU_ACTION
+    private val menuGesture = LauncherGestureAction.OPEN_WORKSPACE_MENU
     private val shared =
         PoolDock(
             pins = listOf(PoolItemId("a"), PoolItemId("b")),
@@ -104,24 +104,38 @@ class EffectiveDockTest {
 
     @Test
     fun aMenuGestureInTheWorkspaceOrTheGlobalGesturesLetsTheDockHide() {
-        val own = ws(DockPresentation(hidden = true), mapOf("ONE_FINGER_UP" to menuGesture))
+        val own = ws(DockPresentation(hidden = true), mapOf("ONE_FINGER_UP" to menuGesture.name))
         assertFalse(resolveDock(shared, own)!!.settings.isEnabled)
         assertNull(DockMenuReachability.issue(own, emptyList()))
         val global = ws(DockPresentation(hidden = true))
-        assertFalse(resolveDock(shared, global, listOf("NONE", menuGesture))!!.settings.isEnabled)
+        assertFalse(resolveDock(shared, global, listOf(LauncherGestureAction.NONE, menuGesture))!!.settings.isEnabled)
         assertFalse(EffectiveDock.presentationFor(global, listOf(menuGesture)).strandedFallback)
         // Other gestures do not count.
-        assertTrue(EffectiveDock.presentationFor(global, listOf("OPEN_SEARCH", "OPEN_SETTINGS")).strandedFallback)
+        assertTrue(
+            EffectiveDock.presentationFor(
+                global,
+                listOf(LauncherGestureAction.OPEN_SEARCH, LauncherGestureAction.OPEN_SETTINGS),
+            ).strandedFallback,
+        )
     }
 
     @Test
     fun globalActionsListEveryHomeGestureIncludingDefaults() {
         val settings = HomeGestureSettings().withAction(HomeGesture.THREE_FINGER_UP, LauncherGestureAction.OPEN_SEARCH)
-        val names = DockMenuReachability.globalActions(settings)
-        assertEquals(HomeGesture.entries.size, names.size)
-        assertTrue("OPEN_SEARCH" in names)
-        assertTrue("OPEN_NOTIFICATIONS" in names)
-        assertFalse(menuGesture in names)
+        val actions = DockMenuReachability.globalActions(settings)
+        assertEquals(HomeGesture.entries.size, actions.size)
+        assertTrue(LauncherGestureAction.OPEN_SEARCH in actions)
+        assertTrue(LauncherGestureAction.OPEN_NOTIFICATIONS in actions)
+        assertFalse(menuGesture in actions)
+        val bound = settings.withAction(HomeGesture.TWO_FINGER_LEFT, menuGesture)
+        assertTrue(DockMenuReachability.hasMenuGesture(ws(), DockMenuReachability.globalActions(bound)))
+        // A binding whose stored name is unknown (an older or newer build) is "no action", never the menu.
+        assertFalse(
+            DockMenuReachability.hasMenuGesture(
+                ws(gestures = mapOf("ONE_FINGER_UP" to "open_workspace_menu")),
+                emptyList(),
+            ),
+        )
     }
 
     @Test
@@ -159,7 +173,7 @@ class EffectiveDockTest {
     @Test
     fun switchingWorkspacesChangesTheEffectiveDockButNeverItsPins() {
         val follow = ws()
-        val hidden = ws(DockPresentation(hidden = true), mapOf("ONE_FINGER_UP" to menuGesture))
+        val hidden = ws(DockPresentation(hidden = true), mapOf("ONE_FINGER_UP" to menuGesture.name))
         val left = ws(DockPresentation(edge = DockPosition.LEFT))
         val docks = listOf(follow, hidden, left, follow).map { resolveDock(shared, it)!! }
         assertEquals(listOf(true, false, true, true), docks.map { it.settings.isEnabled })
