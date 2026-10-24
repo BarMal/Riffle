@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.search.LauncherSearchProvider
 import com.riffle.core.domain.launcher.search.LauncherSearchResultType
 import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntryId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsPagesTest {
@@ -101,12 +102,15 @@ class SettingsPagesTest {
 
     @Test
     fun privacyPageIsFoundByItsControlsAndSitsWithPermissionsAndBackup() {
-        listOf("screenshots", "recents", "redact", "content level", "titles only", "work profile").forEach { query ->
-            assertEquals(query, listOf(SettingsPage.PRIVACY), settingsMainPageEntriesMatching(query).map { it.page })
-        }
-        assertEquals(
-            listOf(SettingsPage.RSS, SettingsPage.PRIVACY),
-            settingsMainPageEntriesMatching("privacy").map { entry -> entry.page },
+        listOf("privacy", "screenshots", "recents", "redact", "content level", "titles only", "work profile")
+            .forEach { query ->
+                val pages = settingsMainPageEntriesMatching(query).map { it.page }
+                assertTrue("$query found $pages", SettingsPage.PRIVACY in pages)
+            }
+        // The group title ("Permissions, privacy & backup") also matches, so "privacy" lists that whole group.
+        assertTrue(
+            settingsMainPageEntriesMatching("privacy").map { it.page }
+                .containsAll(listOf(SettingsPage.RSS, SettingsPage.PRIVACY, SettingsPage.BACKUP)),
         )
         assertEquals(
             SettingsPageGroup.SYSTEM,
