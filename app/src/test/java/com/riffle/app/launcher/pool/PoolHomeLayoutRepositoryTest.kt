@@ -3,6 +3,14 @@ package com.riffle.app.launcher.pool
 import com.riffle.app.launcher.pool.PoolHomeFixture.homeItems
 import com.riffle.app.launcher.pool.PoolHomeFixture.legacyId
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
+import com.riffle.core.domain.launcher.workspace.Workspace
+import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
+import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import com.riffle.core.domain.launcher.workspace.pool.AppArrival
+import com.riffle.core.domain.launcher.workspace.pool.NewAppPlacement
+import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -327,4 +335,63 @@ class PoolHomeLayoutRepositoryTest {
             layouts.snapshot!!.activeLayout.homeItems().map { it.id.value.legacyId() },
         )
     }
+
+    private val nova = WorkspacePresets.defaultFor(HomeLayoutDeviceClass.PHONE)
+
+    private fun workspacesWith(workspace: Workspace) =
+        WorkspaceSet(mapOf(HomeLayoutDeviceClass.PHONE to LayoutWorkspaces.single(workspace)))
+
+    @Test
+    fun theNovaDefaultShowsTheMigratedHomeAndItsFirstEditForks() {
+        val (repository, legacy) = start()
+        val migratedHome = repository.shown().activeLayout.homeItems()
+
+        val retargeted = repository.retarget(workspacesWith(nova), repository.shown())
+        assertEquals("S9: the default workspace renders the migrated home", migratedHome, retargeted.activeLayout.homeItems())
+        assertFalse(PoolArrangements.ownsArrangement(currentPool.current()!!.pools.getValue(HomeLayoutDeviceClass.PHONE), nova.id))
+
+        val savesBefore = legacy.saved.size
+        repository.edit { layout ->
+            layout.mapHome { page ->
+                page.copy(
+                    items =
+                        page.items.map {
+                            if (it.id.value.endsWith("mail")) it.withPlacement(PoolHomeFixture.at(3, 4)) else it
+                        },
+                )
+            }
+        }
+        val pool = currentPool.current()!!.pools.getValue(HomeLayoutDeviceClass.PHONE)
+        assertTrue("the edit landed in the workspace's own copy", PoolArrangements.ownsArrangement(pool, nova.id))
+        assertEquals("HomeLayoutSet is not written for a moved item", savesBefore, legacy.saved.size)
+        runBlocking { repository.flushNow() }
+
+        // A restart shows the edit once the workspaces are known again; the migrated home is kept as it was.
+        val (restarted, _) = start()
+        assertEquals(migratedHome, restarted.shown().activeLayout.homeItems())
+        val again = restarted.retarget(workspacesWith(nova), restarted.shown())
+        assertEquals(PoolHomeFixture.at(3, 4), again.activeLayout.homeItems().first { it.id.value.endsWith("mail") }.placement)
+    }
+
+    @Test
+    fun anInstalledAppIsPlacedInAWorkspaceThatAsksForIt() {
+        val (repository, legacy) = start()
+        val ios = nova.copy(newApps = WorkspaceNewApps(NewAppPlacement.HOME_AND_FINDER, autoPages = true))
+        val set = workspacesWith(ios)
+        repository.retarget(set, repository.shown())
+        val savesBefore = legacy.saved.size
+
+        val placed = repository.placeNewApp(repository.shown(), PoolHomeFixture.identity("new.app"), "New", set)
+
+        assertTrue(
+            placed.activeLayout.homeItems().any { (it as? AppShortcutItem)?.appIdentity == PoolHomeFixture.identity("new.app") },
+        )
+        assertEquals(placed, repository.shown())
+        assertEquals("the icon lives in the pool, not in HomeLayoutSet", savesBefore, legacy.saved.size)
+        // An update or a profile coming back places nothing.
+        val before = currentPool.current()
+        repository.placeNewApp(repository.shown(), PoolHomeFixture.identity("other.app"), "Other", set, AppArrival.UPDATED)
+        assertEquals(before, currentPool.current())
+    }
 }
+

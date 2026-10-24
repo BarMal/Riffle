@@ -9,11 +9,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-/** Whether the owner turned the Workspaces (preview) developer setting on. Persisted; default off. */
+/**
+ * Whether workspaces are on. Since S9 they always are ([AlwaysOnWorkspaces]); the interface stays for tests of the
+ * controller's gating. The old preview switch's preferences file (`riffle_workspace_preview`) is no longer read.
+ */
 internal interface WorkspacePreviewPreference {
     fun isEnabled(): Boolean
 
     fun setEnabled(enabled: Boolean)
+}
+
+/** S9: workspaces are the launcher's home, not a preview that can be off. */
+internal object AlwaysOnWorkspaces : WorkspacePreviewPreference {
+    override fun isEnabled(): Boolean = true
+
+    override fun setEnabled(enabled: Boolean) = Unit
 }
 
 /** Where the open preview should scroll to. */
@@ -32,8 +42,8 @@ internal sealed interface PreviewNavigation {
  *   preview and leave a [navigation] for the pager to consume once; Edit opens the preview and sets
  *   [editing] to the workspace to edit.
  *
- * [onEnabledChanged] runs before the state flows change, so a flag derived from the setting (the dock menu's
- * `WorkspaceMenuFeature`) is already consistent when observers recompose.
+ * [onEnabledChanged] runs before the state flows change. Since S9 the shell builds it with [AlwaysOnWorkspaces] and
+ * uses only [editing] (the editor over the home); the menu's jumps and Finder go to the home itself.
  */
 internal class WorkspacePreviewController(
     private val preference: WorkspacePreviewPreference,

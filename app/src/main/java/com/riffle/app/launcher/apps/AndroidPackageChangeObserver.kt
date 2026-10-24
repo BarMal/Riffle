@@ -21,6 +21,16 @@ internal sealed interface AppCatalogChange {
         val packageName: AppPackageName,
         val profile: AppProfile,
     ) : AppCatalogChange
+
+    /**
+     * A package was installed for an available profile: `LauncherApps.Callback.onPackageAdded`, which the platform
+     * reports for a new install only (an update is `onPackageChanged`, a profile coming back `onPackagesAvailable`).
+     * The one event that may place a new app's icon (N9).
+     */
+    data class PackageAdded(
+        val packageName: AppPackageName,
+        val profile: AppProfile,
+    ) : AppCatalogChange
 }
 
 internal class AndroidPackageChangeObserver(
@@ -46,7 +56,12 @@ internal class AndroidPackageChangeObserver(
                 packageName: String,
                 user: UserHandle,
             ) {
-                onCatalogChanged(AppCatalogChange.Refresh)
+                onCatalogChanged(
+                    AppCatalogChange.PackageAdded(
+                        packageName = AppPackageName(packageName),
+                        profile = user.toAppProfile(userManager = userManager, launcherApps = launcherApps),
+                    ),
+                )
             }
 
             override fun onPackageRemoved(

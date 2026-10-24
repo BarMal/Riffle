@@ -147,7 +147,7 @@ private fun HomeGestureRow(
                 expanded = isExpanded.value,
                 onDismissRequest = { isExpanded.value = false },
             ) {
-                gestureActionOptions(WorkspaceMenuFeature.enabled, current = action).forEach { option ->
+                gestureActionOptions(workspaceMenuEnabled = true, current = action).forEach { option ->
                     DropdownMenuItem(
                         text = { Text(text = option.label) },
                         onClick = {

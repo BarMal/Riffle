@@ -23,7 +23,7 @@ data class WorkspaceMenuUiState(
     val isVisible: Boolean get() = menu.isOpen && model != null
 }
 
-/** The menu as the shell hands it to the home surface; absent (null) when the feature is off. */
+/** The menu as the shell hands it to the home surface; absent (null) while no workspaces are loaded. */
 data class WorkspaceMenuHost(
     val state: WorkspaceMenuUiState,
     val onAction: (WorkspaceMenuAction) -> Unit,
@@ -32,15 +32,15 @@ data class WorkspaceMenuHost(
 /**
  * Holds the workspace menu's state and runs its reducer (#1351). No Android types.
  *
- * With the feature off, or no repository, or nothing loaded yet, [WorkspaceMenuPlanner] has no model
- * and the reducer refuses to open, so nothing is drawn. Switching workspace is persisted here through
- * the [repository]; page navigation, the Finder and Edit are only reported through [onEffect] (the
- * pager host and the editor own them), so this never reaches into those areas.
+ * With no repository or nothing loaded yet (or [isEnabled] false, for tests), [WorkspaceMenuPlanner] has no
+ * model and the reducer refuses to open, so nothing is drawn. Since S9 the menu is always on. Switching workspace
+ * is persisted here through the [repository]; page navigation, the Finder and Edit are only reported through
+ * [onEffect] (the shell's home and the editor own them), so this never reaches into those areas.
  */
 class WorkspaceMenuController internal constructor(
     private val repository: WorkspaceRepository?,
     private val deviceClass: () -> HomeLayoutDeviceClass,
-    private val isEnabled: () -> Boolean = { WorkspaceMenuFeature.enabled },
+    private val isEnabled: () -> Boolean = { true },
     private val capabilities: () -> LayoutCapabilities = { LayoutCapabilities() },
     private val groups: () -> Map<ContainerId, List<PageSetGroupRef>> = { emptyMap() },
     private val onEffect: (WorkspaceMenuEffect) -> Unit = {},
@@ -49,7 +49,7 @@ class WorkspaceMenuController internal constructor(
     private val mutableState = MutableStateFlow(WorkspaceMenuUiState())
     val state: StateFlow<WorkspaceMenuUiState> = mutableState.asStateFlow()
 
-    /** Whether the dock should offer the menu at all: the feature is on and there is something to show. */
+    /** Whether the dock should offer the menu at all: there is something to show. */
     fun isAvailable(): Boolean = plan() != null
 
     fun dispatch(action: WorkspaceMenuAction) {

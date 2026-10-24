@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.workspace
 
+import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
@@ -9,6 +10,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.workspace.dock.EffectiveDock
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 
 /**
@@ -202,3 +204,27 @@ fun PageHost.readsPlacedItems(): Boolean =
                     body.placements.any { WorkspaceSourceIds.HOME_GRID in it.widget.binding.lens.sources }
             }
     }
+
+/**
+ * The shell state the home surface draws while [workspace] is active (S9, render only, never stored): the global home
+ * gestures with the workspace's own bindings on top ([WorkspaceHome.gestures]) and the shared dock with the
+ * workspace's override after the stranding rule ([EffectiveDock.presentationFor], design 11.4). Settings, the drawer
+ * and the stored state keep the global values. Null (nothing loaded) and a workspace that overrides nothing return
+ * this state itself.
+ */
+fun LauncherShellState.withWorkspaceHome(workspace: Workspace?): LauncherShellState {
+    if (workspace == null) return this
+    val global = launcherSettings.gestures.homeGestures
+    val gestures = WorkspaceHome.gestures(global, workspace)
+    val presentation = EffectiveDock.presentationFor(workspace, DockMenuReachability.globalActions(global)).presentation
+    val dock = EffectiveDock.apply(homeLayout.dock, presentation)
+    return if (gestures === global && dock == homeLayout.dock) {
+        this
+    } else {
+        copy(
+            homeLayout = homeLayout.copy(dock = dock),
+            launcherSettings =
+                launcherSettings.copy(gestures = launcherSettings.gestures.copy(homeGestures = gestures)),
+        )
+    }
+}

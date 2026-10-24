@@ -11,6 +11,8 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
@@ -18,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
 import com.riffle.app.launcher.designsystem.RiffleMotion
+import com.riffle.app.launcher.workspace.WorkspaceHomePage
+import com.riffle.app.launcher.workspace.WorkspaceHomePages
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -31,9 +35,11 @@ internal fun rememberImmediateHomePagerState(
     layout: HomeLayout,
     reducedMotion: Boolean = false,
     actions: HomeWorkspaceActions,
+    /** The active workspace's lens pages drawn after the layout's pages (S9); they are never a selected page. */
+    extraPageCount: Int = 0,
 ): ImmediateHomePagerState {
     val selectedPageIndex = layout.selectedPageIndex.coerceIn(0, layout.lastPageIndex)
-    val pageCount = layout.pages.size
+    val pageCount = layout.pages.size + extraPageCount.coerceAtLeast(0)
     val foundationPagerState =
         rememberPagerState(initialPage = selectedPageIndex) { pageCount.coerceAtLeast(1) }
     val pagerState = remember(foundationPagerState) { ImmediateHomePagerState(foundationPagerState) }
@@ -138,7 +144,14 @@ internal fun ImmediateWorkspacePager(
     activeDragSession: HomeDragSession? = null,
     onDragPageTargetChanged: (com.riffle.core.domain.launcher.home.LauncherPageId) -> Unit = {},
     modifier: Modifier = Modifier,
+    /**
+     * The active workspace's lens and container pages (S9), drawn after the layout's pages by the container hosts.
+     * Swiping onto one selects no layout page (the settle report finds no page there), so the stored selection stays.
+     */
+    extraPages: WorkspaceHomePages? = null,
 ) {
+    val extraCount = extraPages?.pages?.size ?: 0
+    extraPages?.let { pages -> ExtraPageJumpEffect(pages, pagerState, layout.pages.size, presentation.reducedMotion) }
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -170,17 +183,25 @@ internal fun ImmediateWorkspacePager(
         HorizontalPager(
             state = pagerState.foundationPagerState,
             modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = layout.pages.size > 1 && activeDragSession == null,
+            userScrollEnabled = layout.pages.size + extraCount > 1 && activeDragSession == null,
             flingBehavior =
                 PagerDefaults.flingBehavior(
                     state = pagerState.foundationPagerState,
                     snapAnimationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(presentation.reducedMotion)),
                     snapPositionalThreshold = PAGE_CHANGE_DISTANCE_THRESHOLD,
                 ),
-            key = { index -> layout.pages.getOrNull(index)?.id?.value ?: index },
+            key = { index ->
+                layout.pages.getOrNull(index)?.id?.value
+                    ?: extraPages?.pages?.getOrNull(index - layout.pages.size)?.id?.value?.let { "workspace:$it" }
+                    ?: index
+            },
         ) { index ->
-            val page = layout.pages.getOrNull(index) ?: return@HorizontalPager
             val pageModifier = Modifier.fillMaxSize().clipToBounds()
+            val page = layout.pages.getOrNull(index)
+            if (page == null) {
+                extraPages?.let { pages -> WorkspaceHomePage(pages, index - layout.pages.size, pageModifier) }
+                return@HorizontalPager
+            }
             if (page.isNotificationCardsPage) {
                 GeneratedNotificationCardsPage(
                     groups = presentation.generatedPage.notificationGroupsByApp,
@@ -203,6 +224,28 @@ internal fun ImmediateWorkspacePager(
                     modifier = pageModifier,
                 )
             }
+        }
+    }
+}
+
+/** Scrolls to the extra page the workspace menu asked for ([WorkspaceHomePages.jumpRequest]), once. */
+@Composable
+private fun ExtraPageJumpEffect(
+    extraPages: WorkspaceHomePages,
+    pagerState: ImmediateHomePagerState,
+    layoutPageCount: Int,
+    reducedMotion: Boolean,
+) {
+    val jump by extraPages.jumpRequest.collectAsState()
+    LaunchedEffect(jump) {
+        jump?.let { index ->
+            if (index in extraPages.pages.indices) {
+                pagerState.foundationPagerState.animateScrollToPage(
+                    page = layoutPageCount + index,
+                    animationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
+                )
+            }
+            extraPages.consume(index)
         }
     }
 }

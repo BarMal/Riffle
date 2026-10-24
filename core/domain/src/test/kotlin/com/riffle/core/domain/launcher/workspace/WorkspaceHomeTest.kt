@@ -1,6 +1,8 @@
 package com.riffle.core.domain.launcher.workspace
 
+import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -15,6 +17,7 @@ import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -143,5 +146,29 @@ class WorkspaceHomeTest {
         assertEquals(global.actionFor(HomeGesture.PINCH_IN), result.actionFor(HomeGesture.PINCH_IN))
         assertEquals(global.actionFor(HomeGesture.PINCH_OUT), result.actionFor(HomeGesture.PINCH_OUT))
         assertEquals(LauncherGestureAction.OPEN_SEARCH, result.actionFor(HomeGesture.TWO_FINGER_UP))
+    }
+
+    @Test
+    fun theHomeStateLayersTheWorkspaceGesturesAndDockOverride() {
+        val state = LauncherShellState()
+        assertSame(state, state.withWorkspaceHome(null))
+        assertSame(state, state.withWorkspaceHome(nova))
+
+        // Niagara hides its dock and binds a swipe up to the menu: both apply, the stored settings stay global.
+        val niagara = checkNotNull(WorkspacePresets.byId("niagara")).compact
+        val home = state.withWorkspaceHome(niagara)
+        assertFalse(home.homeLayout.dock.isEnabled)
+        assertEquals(state.homeLayout.dock.items, home.homeLayout.dock.items)
+        assertEquals(
+            LauncherGestureAction.OPEN_WORKSPACE_MENU,
+            home.launcherSettings.gestures.homeGestures.actionFor(HomeGesture.ONE_FINGER_UP),
+        )
+
+        // A hidden dock without any gesture to the menu is drawn anyway (the stranding rule).
+        val stranded = nova.copy(dock = nova.dock.copy(presentation = DockPresentation(hidden = true)))
+        assertTrue(state.withWorkspaceHome(stranded).homeLayout.dock.isEnabled)
+
+        val left = nova.copy(dock = nova.dock.copy(presentation = DockPresentation(edge = DockPosition.LEFT)))
+        assertEquals(DockPosition.LEFT, state.withWorkspaceHome(left).homeLayout.dock.position)
     }
 }

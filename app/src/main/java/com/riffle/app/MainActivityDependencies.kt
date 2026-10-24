@@ -37,6 +37,7 @@ import com.riffle.app.launcher.calendar.AndroidCalendarAccessGateway
 import com.riffle.app.launcher.calendar.CalendarAccessChanges
 import com.riffle.app.launcher.calendar.SharedPreferencesCalendarDenialHistory
 import com.riffle.app.launcher.calendar.sourceAccess
+import com.riffle.app.launcher.defaultLauncherViewModeAvailability
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.exclusions.DataStoreExclusionStore
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
@@ -46,7 +47,6 @@ import com.riffle.app.launcher.ics.ICS_MAX_RESPONSE_BYTES
 import com.riffle.app.launcher.ics.IcsFeedsController
 import com.riffle.app.launcher.ics.IcsRefreshCoordinator
 import com.riffle.app.launcher.ics.defaultIcsEngine
-import com.riffle.app.launcher.libraryOnlyLauncherViewModeAvailability
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
@@ -212,7 +212,7 @@ internal class MainActivityDependencies(
                     screenWidthDp = activity.resources.configuration.screenWidthDp,
                     screenHeightDp = activity.resources.configuration.screenHeightDp,
                 ),
-            viewModeAvailability = libraryOnlyLauncherViewModeAvailability(),
+            viewModeAvailability = defaultLauncherViewModeAvailability(),
             deleteHostedWidgetId = hostIdDeletion::unlessReferenced,
             feedArticleCacheRepository = feedArticleCacheRepository,
             workspaceRepository = workspaceRepository,

@@ -22,8 +22,8 @@ import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * What the Workspaces and Sources settings pages need from the shell, provided only while the Workspaces
- * (preview) switch is on so every other host of the settings surface (tests, screenshots) draws neither page.
+ * What the Workspaces and Sources settings pages need from the shell, provided by the shell whenever it hosts
+ * workspaces (S9: always in the app), so other hosts of the settings surface (tests, screenshots) draw neither page.
  *
  * [version] changes whenever the stored workspaces do (an edit, a menu switch), so the page re-plans.
  * [currentLayout] is the layout this device is showing now: the only one the editor can open. [onEdit] opens
@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.StateFlow
  * [globalSearchQuery] is the shared query holder the Search source page reports on (only whether one is set).
  * [contentLevels] drives the content-level controls of Settings > Privacy and the source pages (null: not shown).
  */
-@Suppress("LongParameterList") // One bundle of the preview runtime's settings controllers.
+@Suppress("LongParameterList") // One bundle of the workspace runtime's settings controllers.
 internal class WorkspaceSettingsHost(
     val workspaces: WorkspacesSettingsController,
     val sources: SourcesSettingsController,
