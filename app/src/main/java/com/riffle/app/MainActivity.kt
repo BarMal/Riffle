@@ -69,6 +69,7 @@ import com.riffle.app.launcher.widgets.PendingWidgetAddStep
 import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
+import com.riffle.app.launcher.wizard.HomeWizardStores
 import com.riffle.app.launcher.workspace.AlwaysOnWorkspaces
 import com.riffle.app.launcher.workspace.SourceAccessLaunchers
 import com.riffle.app.launcher.workspace.WorkspacePreviewController
@@ -120,6 +121,24 @@ class MainActivity : ComponentActivity() {
             runtime = { workspaceRuntime },
             onRequestSourceAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
             poolHome = dependencies.homeLayoutRuntime.poolHomeSwitch,
+            wizardStores = wizardStores,
+        )
+    }
+
+    /** Where the content wizard writes: the workspace store and the pool, under the home's read-only and S9 rules. */
+    private val wizardStores by lazy {
+        val home = dependencies.homeLayoutRuntime
+        HomeWizardStores(
+            workspaceRepository = dependencies.workspaceRepository,
+            poolRepository = home.pool,
+            readOnly = { home.readOnlyHome != null },
+            holding = { home.poolHome?.awaitingWorkspaces == true },
+            flushPool = {
+                lifecycleScope.launch {
+                    val poolHome = home.poolHome
+                    if (poolHome != null) poolHome.flushNow() else home.pool.flush()
+                }
+            },
         )
     }
 

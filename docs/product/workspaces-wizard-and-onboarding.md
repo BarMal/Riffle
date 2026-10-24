@@ -1,7 +1,8 @@
 # Workspaces: content wizard and first-time walkthrough (domain, as built)
 
-Status: **domain built and tested; no UI yet.** Package `core/domain/.../launcher/workspace/wizard/`. Two UI slices
-build on this API: the wizard screens and the walkthrough screens. Refs #1363. Builds on the model in
+Status: **domain built and tested; the wizard UI is built (section 6).** Package
+`core/domain/.../launcher/workspace/wizard/`. Two UI slices build on this API: the wizard screens (section 6) and the
+walkthrough screens. Refs #1363. Builds on the model in
 [`workspaces-sources-lenses.md`](workspaces-sources-lenses.md), the editor in [`workspaces-editor.md`](workspaces-editor.md),
 saved lenses in [`workspaces-lens-library.md`](workspaces-lens-library.md), the pool in
 [`workspaces-pool.md`](workspaces-pool.md), and the default home in [`workspaces-default.md`](workspaces-default.md). It
@@ -449,6 +450,112 @@ Accessibility: every row is one 48 dp target that reads label, description, stat
 options stay focusable with their reason; problems and the permission status are polite live regions; Move up / Move
 down replace drag; step changes cross-fade with `RiffleMotion.standard` and snap under reduced motion; content respects
 `WindowInsets.safeDrawing`; at 600 dp and wider the preview sits beside the steps (as the editor).
+
+## 6. Wizard UI (as built)
+
+App package `app/.../launcher/wizard/` (Compose, Material 3), plus small additive hooks in the editor, Settings > Saved
+lenses, the source detail pages and the workspace layer.
+
+### Files
+
+| File | What |
+| --- | --- |
+| `ContentWizard.kt` | `ContentWizard(context, onFinished, onCancelled, onAdvanced, ...)` (stateful, saveable) and the stateless `ContentWizardScreen` (screenshots), the preview pane |
+| `WizardSteps.kt` | Source (with "Needs access" and Review access), Place, Save, and the Content and Look steps over the shared options |
+| `WizardGoalOptions.kt` | **The compact per-goal options view for the walkthrough:** `GoalOptions(setup, looks, apps, feeds, callbacks)`, and its halves `GoalContentOptions` / `GoalLookOptions`, wired by `GoalOptionsCallbacks` (`wizardCallbacks` wires them to `WizardAction`s) |
+| `WizardHolder.kt` | The pure state holder over `WizardReducer`: restore, refusal notice, visible steps, "Step n of m", the closing name |
+| `WizardStateCodec.kt` | The state as nested `ArrayList`s for saved instance state (process death); never throws |
+| `WizardCommit.kt` | Applying through `WizardApply` and writing: `commit` (Settings) and `forEditor` (an edit for the session); the `WizardStores` port |
+| `HomeWizardStores.kt` | `WizardStores` over the cached workspace repository and the pool repository; a workspace-only fallback |
+| `ContentWizardRequests.kt` | Which Settings-opened wizard shows (`WizardRequest.NewSavedLens`, `.FromSource`) and the advanced handoff |
+| `WizardInputs.kt`, `WizardText.kt`, `WizardTags.kt` | Picker choices (visible apps, RSS feeds by host, calendar feeds by name), the copy (section 5), test tags |
+| `editor/EditorWizard.kt`, `editor/EditorWizardSteps.kt` | The editor's wizard (`EditorContentWizard`), `EditorWizardSupport`, and the editor reducer's wizard steps |
+| `workspace/WorkspaceWizardLayer.kt` | Draws a Settings-opened wizard over Settings, applies and announces it |
+
+### Entry points
+
+1. **Editor.** "Add page or widget" opens the wizard (`EditorAction.OpenWizard`); a widget page's "Add widget" opens it
+   on that page (`WizardEntry.Editor(pageId)`). "Open advanced builder" sits next to "Add page or widget" (one tap) and
+   in the wizard's top bar, which hands over to the Add flow on the wizard's draft (`EditorAction.StartAdvanced`). The
+   wizard's context is the session (`LensScope.layoutWith(draft)`). Its result is `EditorAction.ApplyWizard(edit,
+   library)`: one `session.apply(edit, ..., nextScope)` step, so **Undo, Redo, Revert and the discard prompt cover the
+   page and its saved lens**; Done saves both as today. Picked apps are written to the pool at once (own store).
+2. **Settings > Saved lenses > New** opens the wizard (`WorkspaceSettingsHost.onNewLensWizard`); "Open advanced
+   builder" under it opens the builder empty, and the wizard's own link opens the builder on its draft
+   (`LensBuilderSessions.startNew(layout, draft)`).
+3. **A source detail page**: a new "Add to your home" section, row "Use this source on your home"
+   (`WorkspaceSettingsHost.onUseSource`), opens the wizard with that source pre-selected for the layout's active
+   workspace. Its advanced link opens the editor of that workspace on the Add flow with the draft
+   (`ContentWizardRequests.takeEditorHandoff`, `EditorEntry(initialHandoff)`).
+4. **Walkthrough**: `GoalOptions` (no frame, no buttons) for its Options step; `ContentWizard` itself can also be hosted.
+
+### Behaviour
+
+- **State.** `rememberSaveable` with `WizardStateCodec` (keyed by the entry): a run survives rotation and folding (the
+  activity handles configuration changes; the composition stays) and is restored from saved instance state wherever
+  the host composes it again; a restored state whose step this run no longer shows starts again. The hosts' own "open"
+  flags (the editor, `ContentWizardRequests`) are in memory, as the editor's are today, so after process death the
+  wizard is not reopened by itself.
+  A refused finish reopens on the last step with the reason as a polite live region.
+- **Steps.** "Step n of m" (from `WizardFlow.steps`), a heading, the step's controls, the current step's problems (a
+  polite live region next to the buttons; Next disabled), Back (cancels on the first step), one primary button
+  ("Next", then "Add", or "Save" for a lens only), close (Cancel) and "Open advanced builder" in the top bar. System
+  Back steps back. Rows are the editor's `EditorChoiceRow`: one 48 dp selectable row with radio or checkbox role,
+  selected state, and label, description, badge and reason read as one sentence; disabled options stay visible with
+  their reason. The step change cross-fades with `RiffleMotion.standard` and snaps under reduced motion. Content
+  respects `WindowInsets.safeDrawing`.
+- **Layout.** At 600 dp and wider the live preview sits beside the steps on every step (as the editor); compact shows
+  it above the looks on the Look step.
+- **Preview.** `WizardFlow.preview` drawn by `EditorPreview` (so `LensBoundExpression`, or `PageSetContainerHost` per
+  group) over the runtime's `ContainerServices`; a placed goal lists the picked apps.
+- **Permissions.** A goal that needs access shows "Needs access"; once chosen (and on later steps of a source page's
+  run) the explanation per permission and "Review access", which calls the existing explicit flow
+  (`SourceAccessLaunchers.request`, calendar rationale first). Nothing is ever requested by the wizard itself; skipped
+  content draws "Needs access" through the existing hosts.
+- **Apply outside the editor** (`WizardCommit.commit`): re-validated against what is stored now; the workspace store is
+  written only when the layout changed, the pool only when picked apps changed it. A pool change is **refused** with
+  the existing `READ_ONLY_HOME_NOTICE` in a read-only home, with "Your home is still loading" while S9 holds item edits
+  (`awaitingWorkspaces`), and while the pool is not loaded; nothing is written then. Success shows a toast "Added
+  {name}" and refreshes the workspace menu.
+- **Editor**: `EditorEnvironment.editContext` now always knows `home.grid` (as `WizardContext.descriptors` does), so a
+  placed page the wizard adds never blocks Done as an unknown source.
+
+### Tests (app)
+
+- JVM (`app/src/test/.../launcher/wizard`, `.../editor/EditorWizardReducerTest`): `WizardHolderTest` (every step to
+  Finished, Back, Cancel, refusal reopens on the last step, restore, "Use this source" skips Source, names),
+  `WizardStateCodecTest` (round trip, Bundle-safe values, garbage), `WizardCommitTest` (source page, new lens, picked
+  apps into the pool, read-only and held refusals with nothing written, stale layout, the editor edit),
+  `ContentWizardRequestsTest`, `EditorWizardReducerTest` (one Undo step with its saved lens, Redo, Revert, Done saves
+  page and lens together, the advanced handoff, a placed page does not block Done).
+- Roborazzi: `screenshots/wizard/WizardScreenshotTest` (compact: each step light and dark, needs access, large font,
+  "Use this source", a refused finish) and `WizardUnfoldedScreenshotTest` (unfolded two-pane: each step light and dark).
+- Compose UI (Robolectric): `WizardEntryPointsTest`, a happy path from the editor (through Done), Saved lenses > New
+  (wizard and advanced button, then a saved lens), a source page (the row, then a page on the active workspace),
+  Cancel and the advanced handoff, and the walkthrough's `GoalOptions`.
+
+### Not done (wizard UI)
+
+- Calendar feeds in the feed picker come from the last state the ICS controller published (empty until Settings >
+  Calendar feeds or Sources has been opened this process); RSS feeds always show.
+- The placed-goal preview lists app names, not icons.
+- The app picker is a plain list with a filter field above 12 apps (no icons, no sections).
+- From Settings the announcement is a toast (the wizard closes over Settings); the editor uses its own notice.
+- Reopening a wizard after process death (the editor and the Settings request are not persisted).
+
+### Owner device checklist (wizard)
+
+- [ ] Editor > Add page or widget: Notifications > A page for each app > Add. The page appears; Undo removes it and its
+      saved lens; Done keeps both. A widget page's "Add widget" starts on a widget there.
+- [ ] Editor > Open advanced builder (both places): the Add flow opens, from the wizard with its draft.
+- [ ] Settings > Saved lenses > New: wizard, no Place step, Save adds the lens; "Open advanced builder" opens the builder.
+- [ ] Settings > Sources > Calendar (access not granted) > Use this source on your home: "Needs access" with the
+      explanation; Review access shows the rationale before the system dialog; Add places it; it says Needs access.
+- [ ] Favourite apps from a source page or the editor: apps appear on a new home page; in a read-only home the wizard
+      says "Your home screen can't be changed right now ..." and nothing changes.
+- [ ] Rotate and unfold mid-run: choices kept, the preview beside the steps when unfolded.
+- [ ] TalkBack: each row reads label, description, state and reason; problems are announced; Remove animations snaps
+      the step change.
 
 ## Decisions (to confirm)
 

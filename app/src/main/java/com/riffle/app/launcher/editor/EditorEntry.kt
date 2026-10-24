@@ -44,6 +44,7 @@ import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.editor.LensScope
 import com.riffle.core.domain.launcher.workspace.editor.LensScopeChange
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoice
+import com.riffle.core.domain.launcher.workspace.wizard.AdvancedHandoff
 
 internal const val EDITOR_OFFER_TEST_TAG = "editor-adopt-offer"
 
@@ -67,6 +68,10 @@ private val CompactPreviewHeight: Dp = 220.dp
  *   requests a permission itself.
  * - [services] supplies live previews: use the real provider in the app, a static one in tests and previews.
  *
+ * - [initialHandoff] opens the editor on the advanced builder with a wizard's draft (a source page's wizard).
+ * - [wizard] supplies the content wizard ("Add page or widget", the default; the advanced builder stays one tap
+ *   away): the pool for Favourite apps and what its pickers offer. Its result is one editor step (Undo covers it).
+ *
  * Edits are a draft until Done; leaving with unsaved changes asks first. Nothing item-shaped is stored.
  */
 @Suppress("LongParameterList")
@@ -81,10 +86,16 @@ fun EditorEntry(
     capabilities: LayoutCapabilities = LayoutCapabilities(),
     onRequestSourceAccess: (SourceId) -> Unit = {},
     scope: LensScope = LensScope(),
+    wizard: EditorWizardSupport? = null,
+    initialHandoff: AdvancedHandoff? = null,
 ) {
     val environment = remember(sources, capabilities) { EditorEnvironment(sources, capabilities) }
     val reducer = remember(environment) { WorkspaceEditorReducer(environment) }
-    var state by remember(workspace, scope, reducer) { mutableStateOf(reducer.start(workspace, scope)) }
+    var state by remember(workspace, scope, reducer) {
+        val started = reducer.start(workspace, scope)
+        // A source page's wizard handed its draft to the advanced builder: the editor opens on that flow.
+        mutableStateOf(initialHandoff?.let { reducer.reduce(started, EditorAction.StartAdvanced(it)).state } ?: started)
+    }
     val dispatch: (EditorAction) -> Unit = { action ->
         val transition = reducer.reduce(state, action)
         state = transition.state
@@ -98,13 +109,14 @@ fun EditorEntry(
         }
     }
     BackHandler { dispatch(EditorAction.Back) }
-    EditorScreen(state, environment, services, dispatch, onRequestSourceAccess, modifier)
+    EditorScreen(state, environment, services, dispatch, onRequestSourceAccess, modifier, wizard)
 }
 
 /**
  * The stateless editor screen: renders [state] and forwards every interaction to [dispatch]. Split from
  * [EditorEntry] so screenshot tests can render any step without driving the flow by hand.
  */
+@Suppress("LongParameterList")
 @Composable
 internal fun EditorScreen(
     state: WorkspaceEditorUiState,
@@ -113,7 +125,13 @@ internal fun EditorScreen(
     dispatch: (EditorAction) -> Unit,
     onRequestSourceAccess: (SourceId) -> Unit,
     modifier: Modifier = Modifier,
+    wizard: EditorWizardSupport? = null,
 ) {
+    val open = state.wizard
+    if (open != null) {
+        EditorContentWizard(state, open, environment, services, dispatch, onRequestSourceAccess, wizard, modifier)
+        return
+    }
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             val twoPane = maxWidth >= TwoPaneMinWidth
