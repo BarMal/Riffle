@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -71,6 +72,18 @@ class DockPullWorkspaceMenuTest {
     }
 
     @Test
+    fun whileTheWorkspacesLoadThePullIsInertAndSwitchesNoMode() {
+        val actions = setContent(withMenu = false, modePullEnabled = false)
+
+        pull(dyFraction = -0.6f)
+
+        composeRule.runOnIdle {
+            assertTrue(menuActions.isEmpty())
+            assertTrue(actions.none { it is LauncherShellAction.SelectLauncherViewMode })
+        }
+    }
+
+    @Test
     fun theDockOffersTheMenuAndNoModeSwitchAsAccessibilityActions() {
         setContent()
         val labels =
@@ -99,7 +112,10 @@ class DockPullWorkspaceMenuTest {
         composeRule.waitForIdle()
     }
 
-    private fun setContent(): MutableList<LauncherShellAction> {
+    private fun setContent(
+        withMenu: Boolean = true,
+        modePullEnabled: Boolean = true,
+    ): MutableList<LauncherShellAction> {
         val actions = mutableListOf<LauncherShellAction>()
         val layout =
             HomeLayoutDefaults.standard().let { standard ->
@@ -115,12 +131,18 @@ class DockPullWorkspaceMenuTest {
             )
         composeRule.setContent {
             MaterialTheme {
-                HomeDestination(
-                    state = state,
-                    appIconLoader = EmptyAppIconLoader,
-                    workspaceMenu = WorkspaceMenuHost(WorkspaceMenuUiState(), onAction = { menuActions += it }),
-                    onAction = { action -> actions += action },
-                )
+                CompositionLocalProvider(LocalDockModePullEnabled provides modePullEnabled) {
+                    HomeDestination(
+                        state = state,
+                        appIconLoader = EmptyAppIconLoader,
+                        workspaceMenu =
+                            WorkspaceMenuHost(
+                                WorkspaceMenuUiState(),
+                                onAction = { menuActions += it },
+                            ).takeIf { withMenu },
+                        onAction = { action -> actions += action },
+                    )
+                }
             }
         }
         composeRule.waitForIdle()

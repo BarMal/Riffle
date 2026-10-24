@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceHome
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.pool.AppArrival
+import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeCommit
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
@@ -91,6 +92,25 @@ internal class PoolHomeLayoutRepository(
     var shownWorkspaces: HomeShownWorkspaces = HomeShownWorkspaces.Migrated
         private set
 
+    /**
+     * True from [awaitWorkspaces] until the next [retarget]: the workspaces did not load before the first frame, so
+     * which arrangement an edit belongs to is not known yet. Meanwhile a commit that would change placed items is
+     * refused (the shell keeps what it showed; selection and other non-item changes are kept), so an edit can never
+     * land in the wrong workspace's arrangement. Uninstall pruning and restores still apply (they are not edits).
+     */
+    @Volatile
+    var awaitingWorkspaces: Boolean = false
+        private set
+
+    /** The startup read of the workspaces timed out: hold item edits until [retarget] (see [awaitingWorkspaces]). */
+    fun awaitWorkspaces() {
+        awaitingWorkspaces = true
+    }
+
+    /** The placed items of [deviceClass]'s Workspaces layout as they are now, or null while the pool is not loaded. */
+    fun poolFor(deviceClass: HomeLayoutDeviceClass): PlacedItemPool? =
+        pool.current()?.pools?.get(deviceClass.workspaceLayoutClass())
+
     /** Deletes host ids nothing references any more; set by the platform wiring (it hops to the main thread). */
     @Volatile
     var hostIdReleaser: ((Set<HostedWidgetId>) -> Unit)? = null
@@ -131,7 +151,21 @@ internal class PoolHomeLayoutRepository(
         // Nothing shown yet (a fresh install starts from a default set the pool never showed): the edit is measured
         // against the pool's view of that set, so it is ingested instead of being projected away.
         val previous = shown ?: PoolHomeSync.projection(state, layoutSet, shownWorkspaces)
-        return publish(PoolHomeSync.commit(state, previous, layoutSet, ids, shownWorkspaces), state)
+        val commit = PoolHomeSync.commit(state, previous, layoutSet, ids, shownWorkspaces)
+        return if (!awaitingWorkspaces || commit.state == state) publish(commit, state) else held(state, layoutSet)
+    }
+
+    /**
+     * A commit while [awaitingWorkspaces] that would change placed items: [layoutSet] is projected from the pool as
+     * it is (its item edits dropped, the rest kept) when that writes nothing to the pool; otherwise the shell keeps
+     * what it showed. Nothing reaches the pool either way.
+     */
+    private fun held(
+        state: PoolStoreState,
+        layoutSet: HomeLayoutSet,
+    ): HomeLayoutSet {
+        val kept = PoolHomeSync.reproject(state, layoutSet, ids, shownWorkspaces)
+        return if (kept.state == state) publish(kept, state) else shown ?: layoutSet
     }
 
     override fun withoutRemovedPackage(
@@ -164,6 +198,7 @@ internal class PoolHomeLayoutRepository(
     ): HomeLayoutSet {
         val next = WorkspaceHome.shownWorkspaces(workspaces)
         shownWorkspaces = next
+        awaitingWorkspaces = false
         val state = pool.current() ?: return layoutSet
         return publish(PoolHomeSync.reproject(state, layoutSet.withoutHomeItems(state.pools.keys), ids, next), state)
     }

@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
@@ -27,6 +28,8 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
 
@@ -40,6 +43,7 @@ internal fun rememberImmediateHomePagerState(
 ): ImmediateHomePagerState {
     val selectedPageIndex = layout.selectedPageIndex.coerceIn(0, layout.lastPageIndex)
     val pageCount = layout.pages.size + extraPageCount.coerceAtLeast(0)
+    val selectionRequest by LocalHomeSelectionRequests.current.collectAsState()
     val foundationPagerState =
         rememberPagerState(initialPage = selectedPageIndex) { pageCount.coerceAtLeast(1) }
     val pagerState = remember(foundationPagerState) { ImmediateHomePagerState(foundationPagerState) }
@@ -55,7 +59,9 @@ internal fun rememberImmediateHomePagerState(
     // matching isScrollInProgress transition, which a fast run of instant scrubToPage jumps can
     // coalesce away before it ever gets the chance to. Clearing it here too bounds how long a stale
     // marker could otherwise survive to a single genuine commit, rather than indefinitely.
-    LaunchedEffect(selectedPageIndex, pageCount, reducedMotion) {
+    // Also on every explicit selection request (S9): a Home press, a Return or a menu jump names the page already
+    // selected while a workspace lens page (never a selected page) is on screen, and must still scroll back.
+    LaunchedEffect(selectedPageIndex, pageCount, reducedMotion, selectionRequest) {
         pagerState.lastUncommittedScrubPage = null
         if (
             pageCount > 0 &&
@@ -249,6 +255,15 @@ private fun ExtraPageJumpEffect(
         }
     }
 }
+
+/**
+ * The shell's count of explicit requests to show the selected home page
+ * (`LauncherShellViewModel.homeSelectionRequests`); a constant where no shell provides it (tests, previews), which
+ * leaves the pager's behaviour as before.
+ */
+internal val LocalHomeSelectionRequests = staticCompositionLocalOf<StateFlow<Int>> { NoHomeSelectionRequests }
+
+private val NoHomeSelectionRequests: StateFlow<Int> = MutableStateFlow(0)
 
 private val LauncherPage.isNotificationCardsPage: Boolean
     get() = (type as? LauncherPageType.Generated)?.kind == GeneratedLauncherPageKind.NOTIFICATION_CARDS

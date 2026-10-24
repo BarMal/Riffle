@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.workspace.dock.EffectiveDock
+import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 
 /**
@@ -102,19 +103,59 @@ object WorkspaceHome {
             // A migrated workspace of another mode shows once the shell switched to its mode ([homeModeFor]).
             migratedMode(workspace.id, layoutClass) != null -> migrated
             !hasHomeGrid(workspace) -> HomeShownWorkspace(workspace.id)
-            else -> HomeShownWorkspace(workspace.id, PoolHomeView.candidates(workspace.id, layoutClass, key.viewMode))
+            else -> HomeShownWorkspace(workspace.id, borrowCandidates(workspace.id, layoutClass))
         }
     }
 
     /**
-     * The mode the standard home shows while [workspace] is active on [layoutClass]: a migrated workspace's own mode,
-     * otherwise [current] (the stored mode stays as it is, so nothing re-lays out the borrowed home).
+     * What a non-migrated workspace borrows until its first edit, best first: itself, then the migrated arrangements
+     * in a fixed order (Library, Standard, Cards). Fixed, never the currently shown mode, so a detour through a
+     * migrated workspace of another mode cannot change what a preset borrows (or later forks). Library first because
+     * the alpha showed every layout as Library.
+     */
+    fun borrowCandidates(
+        id: WorkspaceId,
+        layoutClass: HomeLayoutDeviceClass,
+    ): List<WorkspaceId> {
+        val migrated =
+            BORROW_ORDER.map {
+                HomeLayoutWorkspaceMapper.workspaceId(
+                    layoutClass.workspaceLayoutClass(),
+                    it,
+                )
+            }
+        return (listOf(id) + migrated).distinct()
+    }
+
+    /**
+     * The mode the standard home shows while [workspace] is active on [layoutClass], derived from [pool] (the
+     * layout's placed items) so it never depends on what a migrated workspace selected before:
+     * - a migrated workspace: its own mode;
+     * - one that forked: the mode of the migrated arrangement it was forked from ([Arrangement.forkedFrom]);
+     * - one that borrows: the mode of the arrangement it borrows ([borrowCandidates]);
+     * - one with an arrangement of no known origin (an older fork, an adopted page): the first migrated arrangement
+     *   the pool holds, in [borrowCandidates] order.
+     * Otherwise (no pool, or no migrated arrangement at all) [current].
      */
     fun homeModeFor(
         workspace: Workspace?,
         layoutClass: HomeLayoutDeviceClass,
+        pool: PlacedItemPool?,
         current: LauncherViewMode,
-    ): LauncherViewMode = workspace?.let { migratedMode(it.id, layoutClass) } ?: current
+    ): LauncherViewMode {
+        val id = workspace?.id ?: return current
+        val migrated = migratedMode(id, layoutClass)
+        val others = borrowCandidates(id, layoutClass).drop(1)
+        val origin =
+            when {
+                migrated != null || pool == null -> null
+                id in pool.arrangements ->
+                    pool.arrangements.getValue(id).forkedFrom?.takeIf { migratedMode(it, layoutClass) != null }
+                        ?: others.firstOrNull { it in pool.arrangements }
+                else -> PoolHomeView.arrangementOf(pool, others) ?: others.firstOrNull { it in pool.arrangements }
+            }
+        return migrated ?: origin?.let { migratedMode(it, layoutClass) } ?: current
+    }
 
     /** Whether [workspace] has a pager page that draws placed items. */
     fun hasHomeGrid(workspace: Workspace): Boolean = workspace.pagerPages.any(PoolHomeView::isPlacedHomePage)
@@ -190,6 +231,12 @@ object WorkspaceHome {
     }
 
     private val TARGETED_ACTIONS = setOf(LauncherGestureAction.LAUNCH_APP, LauncherGestureAction.LAUNCH_APP_SHORTCUT)
+    private val BORROW_ORDER =
+        listOf(
+            LauncherViewMode.HOME_SCREEN_LIBRARY,
+            LauncherViewMode.STANDARD_APP_DRAWER,
+            LauncherViewMode.CARD_INTERFACE,
+        )
     private const val MIGRATED_PAGE_PREFIX = "page:"
 }
 

@@ -42,20 +42,20 @@ class WorkspaceHomeTest {
     }
 
     @Test
-    fun theHomeModeFollowsAMigratedWorkspaceAndOtherwiseStays() {
+    fun withoutAPoolTheHomeModeFollowsAMigratedWorkspaceAndOtherwiseStays() {
         val standard =
             Workspace(WorkspaceHome.migratedId(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, phone)), "S")
         assertEquals(
             LauncherViewMode.STANDARD_APP_DRAWER,
-            WorkspaceHome.homeModeFor(standard, phone, LauncherViewMode.HOME_SCREEN_LIBRARY),
+            WorkspaceHome.homeModeFor(standard, phone, null, LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
         assertEquals(
             LauncherViewMode.HOME_SCREEN_LIBRARY,
-            WorkspaceHome.homeModeFor(nova, phone, LauncherViewMode.HOME_SCREEN_LIBRARY),
+            WorkspaceHome.homeModeFor(nova, phone, null, LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
         assertEquals(
             LauncherViewMode.CARD_INTERFACE,
-            WorkspaceHome.homeModeFor(null, phone, LauncherViewMode.CARD_INTERFACE),
+            WorkspaceHome.homeModeFor(null, phone, null, LauncherViewMode.CARD_INTERFACE),
         )
     }
 

@@ -7,6 +7,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
@@ -120,8 +121,9 @@ internal fun rememberHomeDockPullBinding(
     // widget is being placed.
     val browsing = state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen
     val menu = rememberDockMenuPull(browsing, pullDirection, onOpenWorkspaceMenu)
-    // With the workspace menu the pull no longer moves between modes, so the reorient transition never starts.
-    val canPull = browsing && !menu.isPresent
+    // With the workspace menu the pull no longer moves between modes, so the reorient transition never starts; while
+    // the workspaces are still loading (no menu yet) it is inert rather than the old mode switch.
+    val canPull = browsing && !menu.isPresent && LocalDockModePullEnabled.current
     val edges = plan.edges
     val frameState = remember(dockPull, edges) { derivedStateOf { dockPull.transition.frame(edges) } }
     val transitioning = remember(dockPull) { derivedStateOf { dockPull.transition !is DockPullTransitionState.Idle } }
@@ -228,6 +230,13 @@ internal fun workspaceMenuActionModifier(onOpen: (() -> Unit)?): Modifier =
     }
 
 internal const val WORKSPACE_MENU_ACTION_LABEL = "Workspace menu"
+
+/**
+ * Whether the dock pull may still switch Home and Library when there is no workspace menu: true where no shell says
+ * otherwise (tests of the mode pull); false from the shell while its workspaces are loading (S9), so the pull is
+ * inert until the menu exists.
+ */
+internal val LocalDockModePullEnabled = staticCompositionLocalOf { true }
 
 /**
  * How far the dock's own [androidx.compose.ui.graphics.GraphicsLayerScope.cameraDistance] is pushed

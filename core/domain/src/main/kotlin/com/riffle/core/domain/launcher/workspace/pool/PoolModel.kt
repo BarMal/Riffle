@@ -87,6 +87,12 @@ enum class NewAppPlacement {
 data class Arrangement(
     val pages: List<ArrangementPage> = emptyList(),
     val newAppPlacement: NewAppPlacement = NewAppPlacement.FINDER_ONLY,
+    /**
+     * The arrangement this one was copied from (a fork on first edit, a duplicate; a copy of a copy keeps the origin),
+     * or null when it was migrated, adopted or built in code. The standard home derives a forked workspace's mode
+     * from it (S9, `WorkspaceHome.homeModeFor`). Codec key `"forkedFrom"`, written only when set.
+     */
+    val forkedFrom: WorkspaceId? = null,
 )
 
 /**
