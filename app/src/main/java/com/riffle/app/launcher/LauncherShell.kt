@@ -44,6 +44,7 @@ import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
 import com.riffle.app.launcher.workspace.LensesSettingsController
 import com.riffle.app.launcher.workspace.NeverEnabled
 import com.riffle.app.launcher.workspace.NoWorkspaceVersion
+import com.riffle.app.launcher.workspace.SourceContentLevelsController
 import com.riffle.app.launcher.workspace.SourcesSettingsController
 import com.riffle.app.launcher.workspace.WorkspacePreviewHost
 import com.riffle.app.launcher.workspace.WorkspacePreviewLayer
@@ -205,6 +206,11 @@ private fun rememberWorkspaceSettingsHost(
                 lenses = lenses,
                 previewServices = { reducedMotion -> runtime.services(reducedMotion) },
                 globalSearchQuery = runtime.searchQuery,
+                contentLevels =
+                    SourceContentLevelsController(
+                        privacy = runtime.contentPrivacy,
+                        descriptors = { runtime.registry.descriptors() },
+                    ),
                 version = host.workspaceVersion,
                 currentLayout = currentLayout,
                 onEdit = { id -> host.controller.onEffect(WorkspaceMenuEffect.EditWorkspace(id)) },

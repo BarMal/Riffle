@@ -800,6 +800,14 @@ layouts, settings and hidden apps; `isImportableBackup` ignores it). `decodeLaun
 
 ## 6. Privacy
 
+> **As built (S11):** items 1 and 3 of 6.2 exist, on Settings > Privacy (a main page in Permissions, privacy &
+> backup) and on each privacy-sensitive source's page. Content level `SHOW` / `HIDE_BODY` / `HIDE_TEXT` is a per-source
+> ceiling inside `LensProjection` (still the only redaction point; sort and `ByExt` group keys read the same view),
+> default `SHOW`, device-local and not in the backup document (like source enablement). The screenshot switch is
+> `LauncherSettings.privacy.protectScreenContent` (off; in backups) and secures the window on every destination
+> except Settings, plus `setRecentsScreenshotEnabled(false)` on API 33+. Details, tests and the device checklist:
+> [`workspaces-privacy.md`](workspaces-privacy.md).
+
 ### 6.1 As built
 
 - `Item.privacy` is `VISIBLE` / `SENSITIVE`; the lens `project` step is the **only** redaction point

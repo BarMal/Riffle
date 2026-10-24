@@ -61,7 +61,8 @@ workspace name, page number, widget number, kind and the saved lens name when th
 
 - **Content level is a "coming later" note.** Design section 6.2 proposes `SHOW` / `HIDE_BODY` / `HIDE_TEXT` per source,
   but nothing like it exists in the app (searched: no content-level type, setting or projection). The page therefore says
-  it is coming later and points at hide rules; no privacy control was invented.
+  it is coming later and points at hide rules; no privacy control was invented. *(Superseded by S11: the page now has
+  the real control; see [`workspaces-privacy.md`](workspaces-privacy.md).)*
 - **Search**: no new provider concept. The page explains that a lens can carry its own query and that lenses without one
   read the shared `SearchQueryHolder`. The runtime now creates that holder explicitly and passes it both to the Search
   source and to Settings, so the page can say whether a shared query is set. **Nothing in the app writes the holder

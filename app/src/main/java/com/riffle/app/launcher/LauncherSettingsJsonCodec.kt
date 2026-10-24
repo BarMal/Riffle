@@ -51,6 +51,7 @@ import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.PrivacySettings
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
@@ -77,6 +78,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("motion", encodeMotionSettings(settings.motion))
         .put("notificationHiding", encodeNotificationHiding(settings.notificationHiding))
         .put("overlayDock", encodeOverlayDock(settings.overlayDock))
+        .put("privacy", encodePrivacy(settings.privacy))
         .put("rss", encodeRssSettings(settings.rss))
         .put("search", encodeSearchSettings(settings.search))
         .toString()
@@ -100,6 +102,7 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
                     ?: defaults.notificationHiding,
             overlayDock =
                 json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
+            privacy = json.section("privacy", defaults.privacy, JSONObject::toPrivacy),
             rss = json.optJSONObject("rss")?.toRssSettings(defaults.rss) ?: defaults.rss,
             search = json.optJSONObject("search")?.toSearchSettings(defaults.search) ?: defaults.search,
         )
@@ -145,6 +148,15 @@ private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBeh
                 .takeIf(String::isNotEmpty)
                 ?.let { name -> ReturnBehavior.entries.firstOrNull { it.name == name } }
                 ?: defaults.returnBehavior,
+    )
+
+private fun encodePrivacy(settings: PrivacySettings): JSONObject =
+    JSONObject().put("protectScreenContent", settings.protectScreenContent)
+
+// Absent (settings saved before S11) or not a boolean: off, the default.
+private fun JSONObject.toPrivacy(defaults: PrivacySettings): PrivacySettings =
+    PrivacySettings(
+        protectScreenContent = (opt("protectScreenContent") as? Boolean) ?: defaults.protectScreenContent,
     )
 
 private fun encodeSearchSettings(settings: SearchSettings): JSONObject =

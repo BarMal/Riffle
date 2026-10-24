@@ -8,19 +8,27 @@ import com.riffle.core.domain.launcher.workspace.SENSITIVE_ITEM_FIELDS
 /**
  * Projection and privacy redaction. This is the only place an [Item] is redacted; Expressions only ever
  * see the output. Identity (`id`, `sourceId`, `target`) and `privacy` itself are always retained.
+ *
+ * Three limits meet here, each of which can only remove fields: the lens's `project`, the item's source
+ * [SourceContentLevel] ceiling (`levels`) and, for a SENSITIVE item, [SENSITIVE_ITEM_FIELDS].
  */
 internal object LensProjection {
-    /** The fields that survive for [item]: the lens projection, minus sensitive fields for SENSITIVE items. */
+    /** The fields that survive for [item]: the lens projection within its source's ceiling, minus sensitive fields. */
     fun visibleFields(
         item: Item,
         project: Set<ItemField>,
-    ): Set<ItemField> = if (item.privacy == ItemPrivacy.SENSITIVE) project - SENSITIVE_ITEM_FIELDS else project
+        levels: SourceContentLevels = SourceContentLevels.ALL_SHOWN,
+    ): Set<ItemField> {
+        val ceiled = project intersect levels.ceilingOf(item.sourceId)
+        return if (item.privacy == ItemPrivacy.SENSITIVE) ceiled - SENSITIVE_ITEM_FIELDS else ceiled
+    }
 
     fun redact(
         item: Item,
         project: Set<ItemField>,
+        levels: SourceContentLevels = SourceContentLevels.ALL_SHOWN,
     ): Item {
-        val keep = visibleFields(item, project)
+        val keep = visibleFields(item, project, levels)
         return item.copy(
             title = item.title.takeIf { ItemField.TITLE in keep },
             subtitle = item.subtitle.takeIf { ItemField.SUBTITLE in keep },

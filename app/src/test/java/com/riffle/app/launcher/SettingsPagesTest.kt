@@ -6,7 +6,9 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.search.LauncherSearchProvider
 import com.riffle.core.domain.launcher.search.LauncherSearchResultType
+import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntryId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsPagesTest {
@@ -31,6 +33,7 @@ class SettingsPagesTest {
                 "App drawer" to SettingsPage.APPS,
                 "RSS feeds" to SettingsPage.RSS,
                 "Permissions" to SettingsPage.PERMISSIONS,
+                "Privacy" to SettingsPage.PRIVACY,
                 "Backup" to SettingsPage.BACKUP,
                 "About" to SettingsPage.VERSION,
             ),
@@ -95,6 +98,26 @@ class SettingsPagesTest {
             listOf(SettingsPage.APPEARANCE),
             settingsMainPageEntriesMatching("theme colours").map { entry -> entry.page },
         )
+    }
+
+    @Test
+    fun privacyPageIsFoundByItsControlsAndSitsWithPermissionsAndBackup() {
+        listOf("privacy", "screenshots", "recents", "redact", "content level", "titles only", "work profile")
+            .forEach { query ->
+                val pages = settingsMainPageEntriesMatching(query).map { it.page }
+                assertTrue("$query found $pages", SettingsPage.PRIVACY in pages)
+            }
+        // The group title ("Permissions, privacy & backup") also matches, so "privacy" lists that whole group.
+        assertTrue(
+            settingsMainPageEntriesMatching("privacy").map { it.page }
+                .containsAll(listOf(SettingsPage.RSS, SettingsPage.PRIVACY, SettingsPage.BACKUP)),
+        )
+        assertEquals(
+            SettingsPageGroup.SYSTEM,
+            settingsMainPageEntries().single { it.page == SettingsPage.PRIVACY }.group,
+        )
+        assertEquals(SettingsPage.PRIVACY, LauncherSearchSettingsEntryId("privacy").settingsPage())
+        assertEquals(SettingsPage.MAIN, settingsBackTarget(SettingsPage.PRIVACY))
     }
 
     @Test

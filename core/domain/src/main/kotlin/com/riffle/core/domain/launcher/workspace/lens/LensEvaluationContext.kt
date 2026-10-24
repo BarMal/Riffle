@@ -28,6 +28,8 @@ data class LensEvaluationContext(
     val maxFilterDepth: Int = DEFAULT_MAX_FILTER_DEPTH,
     /** The current layout's source exclusions, applied before every lens; empty means nothing is excluded. */
     val exclusions: ExclusionRuleSet = ExclusionRuleSet.EMPTY,
+    /** How much of each source any lens may show (Settings > Privacy); every source shows everything by default. */
+    val contentLevels: SourceContentLevels = SourceContentLevels.ALL_SHOWN,
 ) {
     init {
         require(maxInputItems > 0) { "maxInputItems must be positive." }

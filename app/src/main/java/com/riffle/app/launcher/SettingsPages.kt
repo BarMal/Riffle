@@ -18,6 +18,7 @@ enum class SettingsPage(
     CONTEXTUAL("Contextual"),
     MOTION("Motion & haptics"),
     PERMISSIONS("Permissions"),
+    PRIVACY("Privacy"),
     APPS("App drawer"),
     RSS("RSS feeds"),
     BACKUP("Backup"),

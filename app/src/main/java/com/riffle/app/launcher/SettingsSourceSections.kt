@@ -19,7 +19,9 @@ import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsText
 import com.riffle.app.launcher.ics.IcsFeedsText
 import com.riffle.app.launcher.ics.IcsFeedsUiState
+import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
+import com.riffle.core.domain.launcher.workspace.lens.SourceContentLevel
 import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
 import com.riffle.core.domain.launcher.workspace.sources.ics.IcsFeedId
 
@@ -42,6 +44,7 @@ internal fun SourceSpecificSections(
 ) {
     when (page) {
         SettingsPage.SOURCE_NOTIFICATIONS -> {
+            HostedContentLevelSection(host = host, id = SourceIds.NOTIFICATIONS)
             SourceNotificationsIntro()
             SettingsExclusionsPageContent(
                 state = state,
@@ -58,21 +61,57 @@ internal fun SourceSpecificSections(
         SettingsPage.SOURCE_RSS -> SettingsRssPageContent(state = state, onAction = onAction)
         SettingsPage.SOURCE_SEARCH ->
             SourceSearchSections(sharedQuerySet = rememberSharedQuerySet(host.globalSearchQuery))
-        SettingsPage.SOURCE_ICS -> HostedIcsSections(host = host, onPageSelected = onPageSelected)
+        SettingsPage.SOURCE_ICS -> {
+            HostedContentLevelSection(host = host, id = SourceIds.ICS)
+            HostedIcsSections(host = host, onPageSelected = onPageSelected)
+        }
+        SettingsPage.SOURCE_MEDIA -> HostedContentLevelSection(host = host, id = SourceIds.MEDIA)
+        SettingsPage.SOURCE_CALENDAR -> HostedContentLevelSection(host = host, id = SourceIds.CALENDAR)
         else -> Unit
     }
 }
 
-/** Notifications: the content level is only a note until that control exists (design section 6.2). */
+/**
+ * The source's content level (design section 6.2), the same control and state as on Settings > Privacy. Shown only
+ * for privacy-sensitive sources and only where the runtime provides the levels.
+ */
 @Composable
-internal fun SourceNotificationsIntro() {
-    SettingsSection(title = SourceDetailText.CONTENT_LEVEL_TITLE) {
-        SettingsListRow(
-            modifier = Modifier.testTag(SOURCE_CONTENT_LEVEL_TAG),
-            title = SourceDetailText.CONTENT_LEVEL_TITLE,
-            subtitle = SourceDetailText.CONTENT_LEVEL_LATER,
+private fun HostedContentLevelSection(
+    host: WorkspaceSettingsHost,
+    id: SourceId,
+) {
+    val controller = host.contentLevels?.takeIf { it.supports(id) } ?: return
+    rememberContentLevelRows(controller).firstOrNull { it.id == id }?.let { row ->
+        SourceContentLevelSection(
+            id = id,
+            sourceTitle = row.title,
+            level = row.level,
+            onSelect = { level -> controller.setLevel(id, level) },
         )
     }
+}
+
+@Composable
+internal fun SourceContentLevelSection(
+    id: SourceId,
+    sourceTitle: String,
+    level: SourceContentLevel,
+    onSelect: (SourceContentLevel) -> Unit,
+) {
+    SettingsSection(title = SourceDetailText.CONTENT_LEVEL_TITLE) {
+        Text(
+            modifier = Modifier.padding(horizontal = RiffleSpacing.m).testTag(SOURCE_CONTENT_LEVEL_TAG),
+            text = SourceDetailText.CONTENT_LEVEL_NOTE,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ContentLevelOptions(id = id, sourceTitle = sourceTitle, current = level, onSelect = onSelect)
+    }
+}
+
+/** Notifications: what its rules do, above the rules list. */
+@Composable
+internal fun SourceNotificationsIntro() {
     Text(
         modifier = Modifier.padding(horizontal = RiffleSpacing.s),
         text = "${SourceDetailText.RULES_TITLE}. ${SourceDetailText.NOTIFICATION_RULES_NOTE}",

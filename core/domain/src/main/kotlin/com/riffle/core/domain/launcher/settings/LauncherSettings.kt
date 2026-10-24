@@ -25,6 +25,7 @@ data class LauncherSettings(
     val motion: MotionSettings = MotionSettings(),
     val notificationHiding: NotificationHidingSettings = NotificationHidingSettings(),
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),
+    val privacy: PrivacySettings = PrivacySettings(),
     val rss: RssSettings = RssSettings(),
     val search: SearchSettings = SearchSettings(),
 )
