@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -23,6 +24,7 @@ class LauncherBackupExportCoordinator(
                 workspaceSet = workspaceBackup?.let { runCatching(it::currentWorkspaceSet).getOrNull() },
                 exclusions = workspaceBackup?.let { runCatching(it::currentExclusions).getOrNull() },
                 pool = workspaceBackup?.let { runCatching(it::currentPool).getOrNull() },
+                homeFromPool = homeLayoutRepository is PoolHomeLayoutRepository,
             )
         }
 }

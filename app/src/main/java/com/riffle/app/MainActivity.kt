@@ -120,6 +120,7 @@ class MainActivity : ComponentActivity() {
             runtime = { workspaceRuntime },
             onRequestSourceAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
             pool = { poolRuntime },
+            poolHome = dependencies.homeLayoutRuntime.poolHomeSwitch,
         )
     }
 
@@ -514,8 +515,9 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(activeNotificationRefreshCoordinator)
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
-        // Writes the home layout behind on stop, so backgrounding never leaves an edit only in memory.
-        lifecycle.addObserver(homeLayoutRepository)
+        // Writes the home layout (and the placed-items pool, once the home renders from it) behind on stop, so
+        // backgrounding never leaves an edit only in memory.
+        lifecycle.addObserver(dependencies.homeLayoutRuntime)
         refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)

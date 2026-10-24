@@ -150,11 +150,16 @@ private fun rememberWorkspacePreviewSetting(
     enabled: Boolean,
 ): WorkspacePreviewSetting? =
     host?.let { previewHost ->
-        remember(previewHost, enabled) {
+        val poolHomeEnabled by (previewHost.poolHome?.enabled ?: NeverEnabled).collectAsState()
+        remember(previewHost, enabled, poolHomeEnabled) {
             WorkspacePreviewSetting(
                 enabled = enabled,
                 onEnabledChange = previewHost.controller::setEnabled,
                 onOpen = previewHost.controller::open,
+                poolHome =
+                    previewHost.poolHome?.let { switch ->
+                        PoolHomeSetting(poolHomeEnabled, switch.activeThisProcess, switch::setEnabled)
+                    },
             )
         }
     }

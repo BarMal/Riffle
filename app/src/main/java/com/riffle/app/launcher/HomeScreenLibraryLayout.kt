@@ -125,8 +125,13 @@ private fun LauncherItem.withoutLibraryApps(): LauncherItem? =
         is WidgetItem -> this
     }
 
+/**
+ * Placed by Library's auto-layout. Once the home renders from the placed-items pool (S4), an app placed before the
+ * cutover carries its migrated id `pi:<deviceclass>:<mode>:library-app:...` (and a repeat a `#n` suffix), so the
+ * marker is matched after the migration prefix too; apps placed since keep their `library-app:` id.
+ */
 internal val AppShortcutItem.isLibraryApp: Boolean
-    get() = id.value.startsWith(LIBRARY_APP_ITEM_PREFIX)
+    get() = id.value.startsWith(LIBRARY_APP_ITEM_PREFIX) || id.value.contains(":$LIBRARY_APP_ITEM_PREFIX")
 
 private val AppIdentity.shortcutKey: String
     get() = "${profile.id.value}:${packageName.value}/${activityName.value}"

@@ -23,7 +23,9 @@ import com.riffle.core.domain.launcher.modeSwitchTargetDeviceClass
  *
  * The in-memory [LauncherShellState.homeLayoutSet] is the source of truth; the repository is only
  * told about the result (and writes it behind). Nothing here reads the layout set back from storage,
- * so an edit can never be based on a copy that lags what is on screen (#1176, #1198).
+ * so an edit can never be based on a copy that lags what is on screen (#1176, #1198). Once the home
+ * renders from the placed-items pool (S4) the repository answers with the pool's view of the result
+ * ([HomeLayoutRepository.commitHomeLayoutSet]), which is what is kept.
  */
 internal fun LauncherShellState.withHomeLayout(
     layout: HomeLayout,
@@ -31,7 +33,7 @@ internal fun LauncherShellState.withHomeLayout(
 ): LauncherShellState =
     homeLayoutSet
         .withActiveLayout(layout)
-        .also(homeLayoutRepository::saveHomeLayoutSet)
+        .let(homeLayoutRepository::commitHomeLayoutSet)
         .let { layoutSet ->
             copy(
                 homeLayout = layoutSet.activeLayout,
@@ -63,7 +65,7 @@ internal fun LauncherShellState.withSelectedHomeLayoutMode(
         homeLayoutSet
             .withActiveLayout(homeLayout)
             .withModeChosenFor(deviceClass = targetDeviceClass, mode = resolvedMode)
-            .also(homeLayoutRepository::saveHomeLayoutSet)
+            .let(homeLayoutRepository::commitHomeLayoutSet)
 
     return copy(homeLayout = layoutSet.activeLayout, homeLayoutSet = layoutSet)
 }
@@ -88,7 +90,7 @@ internal fun LauncherShellState.withSettingsHomeMode(
     return homeLayoutSet
         .withActiveLayout(homeLayout)
         .withHomeMode(deviceClass = deviceClass, mode = mode)
-        .also(homeLayoutRepository::saveHomeLayoutSet)
+        .let(homeLayoutRepository::commitHomeLayoutSet)
         .let { updated -> copy(homeLayout = updated.activeLayout, homeLayoutSet = updated) }
 }
 
@@ -118,8 +120,7 @@ internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
                 // what the user built rather than taking the seed's default (#1205).
                 .withLayoutKeepingDock(key = targetKey, layout = selectedLayout)
                 .withModeChosenFor(deviceClass = targetDeviceClass, mode = mode)
-
-        homeLayoutRepository.saveHomeLayoutSet(updatedLayoutSet)
+                .let(homeLayoutRepository::commitHomeLayoutSet)
 
         copy(
             homeLayout =
@@ -156,7 +157,7 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
     return layoutSet
         .withActiveLayout(homeLayout)
         .selectDeviceClass(deviceClass, viewModeAvailability)
-        .also(homeLayoutRepository::saveHomeLayoutSet)
+        .let(homeLayoutRepository::commitHomeLayoutSet)
         .let { updatedLayoutSet ->
             copy(
                 homeLayout = updatedLayoutSet.activeLayout,
@@ -216,8 +217,7 @@ internal fun LauncherShellState.withSettingsTargetLayout(
             .withActiveLayout(homeLayout)
             .withLayout(key = key, layout = layout)
             .withModeChosenFor(deviceClass = settingsLayoutDeviceClass, mode = key.viewMode)
-
-    homeLayoutRepository.saveHomeLayoutSet(layoutSet)
+            .let(homeLayoutRepository::commitHomeLayoutSet)
 
     return copy(
         homeLayout = layoutSet.activeLayout,

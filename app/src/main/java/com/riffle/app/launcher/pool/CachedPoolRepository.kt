@@ -43,6 +43,7 @@ internal interface PoolStorePort {
  *
  * Nothing here stores or logs item content: the pool holds apps, folders and widget providers only.
  */
+@Suppress("TooManyFunctions") // Load, cutover, edit, flush and backup paths of one small store.
 internal class CachedPoolRepository(
     private val store: PoolStorePort,
 ) {
@@ -75,6 +76,36 @@ internal class CachedPoolRepository(
         }
     }
 
+    /**
+     * [initialize] for the standard home's cutover (S4): the same read and storage failure policy, but the stored pool
+     * is brought in line with [layoutSet] first ([PoolCutover.resync]: the migrated workspaces' arrangements and the
+     * docks are imported afresh from [layoutSet], everything else stored is kept), because until now the standard home
+     * was edited in `HomeLayoutSet` and a pool imported earlier is stale. Persists the result when it changed.
+     * Returns true only when the result is on disk (written now, or equal to what was read), so the caller may stop
+     * writing placed items to `HomeLayoutSet`; false after a read or write failure, or when the pool was already
+     * loaded (then nothing is done).
+     */
+    suspend fun initializeForCutover(
+        layoutSet: HomeLayoutSet,
+        providerOf: (HostedWidgetId) -> WidgetProviderIdentity? = { null },
+    ): Boolean =
+        lock.withLock {
+            if (cached != null) return@withLock false
+            val read = runCatching { store.read() }.onFailure { if (it is CancellationException) throw it }
+            if (read.isFailure) persistenceEnabled = false
+            val result = PoolCutover.resync(read.getOrNull(), layoutSet, providerOf)
+            publish(result.state)
+            when {
+                !persistenceEnabled -> false
+                result.state == read.getOrNull() -> true
+                else -> persist(result.state)
+            }
+        }
+
+    /** False once a read failed: nothing will be written this process, so nothing may depend on a write landing. */
+    val isPersistent: Boolean
+        get() = persistenceEnabled
+
     /** Replaces the pools by a fresh import of [layoutSet]. Does nothing before [initialize]. */
     suspend fun reimport(
         layoutSet: HomeLayoutSet,
@@ -104,6 +135,26 @@ internal class CachedPoolRepository(
             }
             current != null
         }.also { updated -> if (updated) mutableVersion.update { it + 1 } }
+
+    /**
+     * Replaces the whole in-memory state (the standard home's edits can touch several layouts at once), like [update]:
+     * synchronous, written by [flush], false and nothing changed before [initialize]. The import flags are kept.
+     */
+    fun replace(state: PoolStoreState): Boolean {
+        var changed = false
+        val loaded =
+            synchronized(stateLock) {
+                val current = cached
+                if (current != null && current.pools != state.pools) {
+                    cached = current.copy(pools = state.pools)
+                    dirty = true
+                    changed = true
+                }
+                current != null
+            }
+        if (changed) mutableVersion.update { it + 1 }
+        return loaded
+    }
 
     /**
      * Writes the latest state if an [update] has not been written yet. Atomic (one DataStore transaction), a failed
@@ -161,10 +212,11 @@ internal class CachedPoolRepository(
         mutableVersion.update { it + 1 }
     }
 
-    private suspend fun persist(state: PoolStoreState) {
-        if (persistenceEnabled) {
-            val written = runCatching { store.write(state) }.onFailure { if (it is CancellationException) throw it }
-            if (written.isSuccess) synchronized(stateLock) { if (cached === state) dirty = false }
-        }
+    /** Writes [state]; true when it landed. A failure is tolerated (the next [flush] of an edit writes again). */
+    private suspend fun persist(state: PoolStoreState): Boolean {
+        if (!persistenceEnabled) return false
+        val written = runCatching { store.write(state) }.onFailure { if (it is CancellationException) throw it }
+        if (written.isSuccess) synchronized(stateLock) { if (cached === state) dirty = false }
+        return written.isSuccess
     }
 }

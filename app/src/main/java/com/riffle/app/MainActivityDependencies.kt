@@ -52,8 +52,6 @@ import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnectio
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
-import com.riffle.app.launcher.pool.CachedPoolRepository
-import com.riffle.app.launcher.pool.DataStorePoolStore
 import com.riffle.app.launcher.pool.PoolItemActions
 import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.app.launcher.rss.AndroidFeedParser
@@ -85,11 +83,11 @@ import com.riffle.app.launcher.workspace.workspaceLensProvider
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.hostsWidget
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
+import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
 import com.riffle.core.domain.launcher.workspace.sources.EnablementSourceRegistry
 import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
@@ -102,7 +100,9 @@ import java.util.concurrent.Executors
 internal class MainActivityDependencies(
     private val activity: Activity,
 ) {
-    val homeLayoutRepository by lazy { HomeLayoutRepositories.writeBehind(activity) }
+    /** The process's home layout repositories (and, once cut over, the pool-backed home): opened once. */
+    val homeLayoutRuntime by lazy { HomeLayoutRepositories.runtime(activity) }
+    val homeLayoutRepository: HomeLayoutRepository get() = homeLayoutRuntime.repository
     val launcherSettingsRepository by lazy { DataStoreLauncherSettingsRepository(activity) }
     val firstRunRepository by lazy { SharedPreferencesFirstRunRepository(activity) }
     val installedAppRepository by lazy {
@@ -113,8 +113,11 @@ internal class MainActivityDependencies(
     }
     val exclusionRepository by lazy { CachedExclusionRepository(DataStoreExclusionStore(activity)) }
 
-    /** One pool repository shared by the preview and backup; building it reads nothing (see `initialize`). */
-    private val poolRepository by lazy { CachedPoolRepository(DataStorePoolStore(activity)) }
+    /**
+     * The process's one pool repository, shared by the standard home (once cut over it is loaded at startup), the
+     * preview and backup, so they never hold diverging copies.
+     */
+    private val poolRepository by lazy { HomeLayoutRepositories.pool(activity) }
     val appVisibilityRepository by lazy { SharedPreferencesAppVisibilityRepository(activity) }
     val feedArticleCacheRepository by lazy { DataStoreFeedArticleCacheRepository(activity) }
 
@@ -189,18 +192,15 @@ internal class MainActivityDependencies(
         WidgetBindingCoordinator(
             widgetHostGateway = widgetHostGateway,
             transactionStore = PersistentWidgetAddTransactionStore(activity),
-            hostedWidgetIdReferenceState = { hostedWidgetId ->
-                homeLayoutRepository.loadHomeLayoutSet()
-                    ?.hostedWidgetIdReferenceState(hostedWidgetId)
-                    ?: HostedWidgetIdReferenceState.Unknown
-            },
+            hostedWidgetIdReferenceState = { hostedWidgetId -> hostedWidgetIdReferenceState(hostedWidgetId) },
         )
     }
     val widgetAddWindowSizeProvider by lazy { AndroidWidgetAddWindowSizeProvider(activity) }
     val widgetPreviewImageLoader by lazy { AndroidWidgetPreviewImageLoader(activity) }
 
-    fun platformDependencies(): LauncherShellPlatformDependencies =
-        LauncherShellPlatformDependencies(
+    fun platformDependencies(): LauncherShellPlatformDependencies {
+        attachHostIdReleaser()
+        return LauncherShellPlatformDependencies(
             notificationRepository = activeNotificationRepository,
             widgetProviderRepository = AndroidInstalledWidgetProviderRepository(activity),
             initialHomeLayoutDeviceClass =
@@ -209,10 +209,46 @@ internal class MainActivityDependencies(
                     screenHeightDp = activity.resources.configuration.screenHeightDp,
                 ),
             viewModeAvailability = libraryOnlyLauncherViewModeAvailability(),
-            deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
+            deleteHostedWidgetId = ::deleteHostedWidgetIdUnlessReferenced,
             feedArticleCacheRepository = feedArticleCacheRepository,
             workspaceRepository = workspaceRepository,
         )
+    }
+
+    /**
+     * Once the home renders from the pool, a widget removed from one workspace may still be shown by another (the same
+     * instance), so the shell's "delete the removed widget's host id" goes through this check: an id any arrangement,
+     * the dock or the shell's set still references is kept. On the legacy path the shell deletes as before.
+     */
+    private fun deleteHostedWidgetIdUnlessReferenced(hostedWidgetId: HostedWidgetId) {
+        val poolHome = homeLayoutRuntime.poolHome
+        if (poolHome == null || !poolHome.isHostIdReferenced(hostedWidgetId)) {
+            widgetHostGateway.deleteHostedWidgetId(hostedWidgetId)
+        }
+    }
+
+    /** Host ids the pool released after its write landed: deleted on the main thread, rechecked there. */
+    private fun attachHostIdReleaser() {
+        homeLayoutRuntime.poolHome?.hostIdReleaser = { ids ->
+            activity.runOnUiThread { ids.forEach(::deleteHostedWidgetIdUnlessReferenced) }
+        }
+    }
+
+    /**
+     * The startup check on a discarded widget-add transaction: referenced by the pool (any layout, arrangement or
+     * dock) or the shell's layout set. Unknown (so nothing is deleted) while neither can be read.
+     */
+    private fun hostedWidgetIdReferenceState(hostedWidgetId: HostedWidgetId): HostedWidgetIdReferenceState {
+        val layoutSet = homeLayoutRepository.loadHomeLayoutSet()
+        val poolState = poolRepository.current()
+        val poolHome = homeLayoutRuntime.poolHome
+        return when {
+            poolHome != null && poolState == null -> HostedWidgetIdReferenceState.Unknown
+            layoutSet == null && poolState == null -> HostedWidgetIdReferenceState.Unknown
+            PoolHostIds.isReferenced(hostedWidgetId, poolState, layoutSet) -> HostedWidgetIdReferenceState.Referenced
+            else -> HostedWidgetIdReferenceState.Unreferenced
+        }
+    }
 
     /**
      * The workspace preview's runtime (debug-only experience). Call it only once the preview is switched on:
@@ -314,7 +350,7 @@ internal class MainActivityDependencies(
             actions = PoolItemActions(launchApp = appLauncher::launch, launchShortcut = appLauncher::launchShortcut),
             providerOf = widgetHostGateway::hostedWidgetProvider,
             releaseHostIds = { ids ->
-                activity.runOnUiThread { ids.forEach(widgetHostGateway::deleteHostedWidgetId) }
+                activity.runOnUiThread { ids.forEach(::deleteHostedWidgetIdUnlessReferenced) }
             },
         )
 
@@ -361,6 +397,7 @@ internal class MainActivityDependencies(
             exclusions = exclusionRepository,
             pool = poolRepository,
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            poolOwnsHome = { homeLayoutRuntime.poolHome != null },
         )
     }
 
@@ -376,13 +413,3 @@ internal class MainActivityDependencies(
             deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
         )
 }
-
-private fun HomeLayoutSet.hostedWidgetIdReferenceState(hostedWidgetId: HostedWidgetId): HostedWidgetIdReferenceState =
-    hostsWidget(hostedWidgetId)
-        .let { referenced ->
-            if (referenced) {
-                HostedWidgetIdReferenceState.Referenced
-            } else {
-                HostedWidgetIdReferenceState.Unreferenced
-            }
-        }

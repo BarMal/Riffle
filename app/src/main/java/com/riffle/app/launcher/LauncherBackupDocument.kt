@@ -26,6 +26,12 @@ data class LauncherBackupDocument(
     val exclusions: LayoutExclusionRules? = null,
     /** Placed items (apps, folders, widget providers; never a host id). Absent in backups written before them. */
     val pool: PoolStoreState? = null,
+    /**
+     * Written by a build whose standard home renders from the pool (S4): [pool] is then the authority for placed
+     * items and [homeLayoutSet] only their projection. False for every older backup, whose [homeLayoutSet] is
+     * re-imported into the pool on restore. Older builds ignore the key and restore [homeLayoutSet] as before.
+     */
+    val homeFromPool: Boolean = false,
 )
 
 fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
@@ -43,6 +49,7 @@ fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
                 ?.let { rules -> json.put("exclusions", JSONObject(encodeExclusionRules(rules))) }
             WorkspaceBackup.exportPool(document.pool)
                 ?.let { state -> json.put("pool", JSONObject(encodePoolStore(state))) }
+            if (document.homeFromPool) json.put("homeFromPool", true)
         }
         .toString()
 
@@ -73,6 +80,7 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
             workspaceSet = json.optWorkspaceSet(),
             exclusions = json.optExclusions(),
             pool = json.optPool(),
+            homeFromPool = json.optBoolean("homeFromPool", false),
         )
     }.getOrElse { error ->
         when (error) {

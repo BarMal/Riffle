@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -32,14 +33,18 @@ fun LauncherShellState.withImportedBackup(
     launcherSettingsRepository: LauncherSettingsRepository,
     appVisibilityRepository: AppVisibilityRepository,
 ): LauncherShellState {
-    homeLayoutRepository.saveHomeLayoutSet(document.homeLayoutSet)
+    // Once the home renders from the pool, its restore carries the pool section along (see PoolHomeSync.restore).
+    val layoutSet =
+        (homeLayoutRepository as? PoolHomeLayoutRepository)
+            ?.restoreFromBackup(document.homeLayoutSet, document.pool, document.homeFromPool)
+            ?: document.homeLayoutSet.also(homeLayoutRepository::saveHomeLayoutSet)
     launcherSettingsRepository.saveLauncherSettings(document.launcherSettings)
     appVisibilityRepository.replaceHiddenAppIdentities(document.hiddenAppIdentities)
 
     return copy(
-        homeLayout = document.homeLayoutSet.activeLayout,
-        homeLayoutSet = document.homeLayoutSet,
-        settingsLayoutDeviceClass = document.homeLayoutSet.activeKey.deviceClass,
+        homeLayout = layoutSet.activeLayout,
+        homeLayoutSet = layoutSet,
+        settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
         launcherSettings = document.launcherSettings,
         // Restore never triggers a network refresh; this only assigns configuration, with an
         // empty cache by construction since the article cache is never part of the backup document.

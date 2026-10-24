@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
+import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.workspace.WorkspaceBootstrap
 import com.riffle.core.domain.launcher.FirstRunStatus
@@ -204,6 +205,7 @@ class LauncherShellViewModel(
                 workspaceMenu.refresh()
             }
         }
+        observePoolHome()
         if (platformDependencies.loadInitialPlatformState) {
             refreshInstalledApps()
             refreshNotifications()
@@ -211,11 +213,26 @@ class LauncherShellViewModel(
         }
     }
 
+    /**
+     * Once the standard home renders from the placed-items pool (S4), the Workspaces preview's editor writes the same
+     * pool; when it does, the home is projected again so it never edits a stale copy. Inert on the legacy path.
+     */
+    private fun observePoolHome() {
+        val poolHome = homeLayoutRepository as? PoolHomeLayoutRepository ?: return
+        viewModelScope.launch {
+            poolHome.externalChanges.collect {
+                val current = mutableState.value
+                val reprojected = poolHome.reproject(current.homeLayoutSet.withActiveLayout(current.homeLayout))
+                mutableState.value = current.copy(homeLayout = reprojected.activeLayout, homeLayoutSet = reprojected)
+            }
+        }
+    }
+
     fun onConfirmedPackageRemoved(
         packageName: AppPackageName,
         profile: AppProfile,
     ) {
-        val state = mutableState.value
+        val state = mutableState.value.withoutRemovedPackageInStores(packageName, profile, homeLayoutRepository)
         mutableState.value =
             state
                 .withInstalledApps(
@@ -699,6 +716,21 @@ private fun LauncherShellState.removedDockHostedWidgetId(action: LauncherShellAc
         else -> null
     }
 
+/**
+ * A confirmed package-removed event reaches the stores beyond the shell's layout set first (the placed-items pool:
+ * every workspace, dock pins, folder entries), so the shell's own pruning below works on the pruned projection. The
+ * same state when the repository holds nothing else.
+ */
+private fun LauncherShellState.withoutRemovedPackageInStores(
+    packageName: AppPackageName,
+    profile: AppProfile,
+    homeLayoutRepository: HomeLayoutRepository,
+): LauncherShellState {
+    val current = homeLayoutSet.withActiveLayout(homeLayout)
+    val pruned = homeLayoutRepository.withoutRemovedPackage(current, packageName, profile)
+    return if (pruned === current) this else copy(homeLayout = pruned.activeLayout, homeLayoutSet = pruned)
+}
+
 private fun createInitialState(
     homeLayoutRepository: HomeLayoutRepository,
     launcherSettingsRepository: LauncherSettingsRepository,
@@ -722,11 +754,15 @@ private fun createInitialState(
             )
         }
 
-    if (initialLayoutSet != null && initialLayoutSet.activeKey != storedLayoutSet?.activeKey) {
-        homeLayoutRepository.saveHomeLayoutSet(initialLayoutSet)
-    }
+    // A store that renders the home from the pool (S4) answers with its view of the chosen set.
+    val committedLayoutSet =
+        if (initialLayoutSet != null && initialLayoutSet.activeKey != storedLayoutSet?.activeKey) {
+            homeLayoutRepository.commitHomeLayoutSet(initialLayoutSet)
+        } else {
+            initialLayoutSet
+        }
 
-    val layoutSet = initialLayoutSet ?: HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
+    val layoutSet = committedLayoutSet ?: HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
 
     val storedSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings()
     val launcherSettings = storedSettings
