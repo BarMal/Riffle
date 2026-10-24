@@ -1,13 +1,18 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherItem
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.WidgetItem
@@ -15,8 +20,11 @@ import com.riffle.core.domain.launcher.home.allItems
 import com.riffle.core.domain.launcher.home.dockFor
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import com.riffle.core.domain.launcher.workspace.HomeLayoutWorkspaceMapper
+import com.riffle.core.domain.launcher.workspace.HomeShownWorkspace
+import com.riffle.core.domain.launcher.workspace.HomeShownWorkspaces
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
+import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 /**
@@ -45,6 +53,7 @@ data class PoolHomeCommit(
  * what is still written to the `HomeLayoutSet` store: the same set with no placed items (page slots and dock settings
  * only), so `HomeLayoutSet` stops being written for placed items and the dock.
  */
+@Suppress("TooManyFunctions") // The one whole-set mapping: commit, projection, restore, uninstall, new apps.
 object PoolHomeSync {
     /** The migrated workspace whose arrangement [key] shows. */
     fun workspaceOf(key: HomeLayoutKey): WorkspaceId =
@@ -54,9 +63,13 @@ object PoolHomeSync {
      * Ingests what changed from [previous] (the last [PoolHomeCommit.shown], null at startup or after the pool was
      * replaced) to [next] (the shell's new set) and projects [next] from the result.
      *
-     * Per key, the active key first: a key [previous] did not hold is projected when its workspace has an arrangement,
-     * else adopted (its layout becomes the arrangement, keeping engine ids where they are free; the dock is adopted
-     * only by a pool that has none). A key whose `Home` pages or dock changed is ingested
+     * Which workspace a key shows and edits is [shown]'s answer (S9: the active workspace of the active key's layout,
+     * [com.riffle.core.domain.launcher.workspace.WorkspaceHome]; the default is the migrated one). A workspace that
+     * borrows an arrangement forks it on its first edit, so the edit lands in its own copy.
+     *
+     * Per key, the active key first: a key [previous] did not hold is projected when its workspace has an arrangement
+     * (its own or a borrowed one), else adopted (its layout becomes the arrangement, keeping engine ids where they are
+     * free; the dock is adopted only by a pool that has none). A key whose `Home` pages or dock changed is ingested
      * ([PoolHomeProjection.ingest]); a second key of the same workspace in one commit (portrait and landscape phone)
      * is not, so the active key's edit wins, and once one key wrote a layout's dock the others compare against the
      * pool's dock rather than overwrite it. Selection, edit mode and settings never touch the pool. Library's dock
@@ -67,14 +80,16 @@ object PoolHomeSync {
         previous: HomeLayoutSet?,
         next: HomeLayoutSet,
         ids: WorkspaceIdFactory,
+        shown: HomeShownWorkspaces = HomeShownWorkspaces.Migrated,
     ): PoolHomeCommit {
         val run = CommitRun(state.pools, ids)
         keysOf(next).forEach { key ->
-            run.apply(key, previous?.takeIf { key in it.layouts }?.layoutFor(key), next.layoutFor(key))
+            val target = shown.shownFor(key, next.activeKey.viewMode)
+            run.apply(key, target, previous?.takeIf { key in it.layouts }?.layoutFor(key), next.layoutFor(key))
         }
         val pools = withLibraryEdges(run.pools, next)
         val nextState = if (pools == state.pools) state else state.copy(pools = pools)
-        return PoolHomeCommit(nextState, project(pools, next), run.released)
+        return PoolHomeCommit(nextState, project(pools, next, shown), run.released)
     }
 
     /**
@@ -84,9 +99,10 @@ object PoolHomeSync {
     fun projection(
         state: PoolStoreState,
         next: HomeLayoutSet,
+        shown: HomeShownWorkspaces = HomeShownWorkspaces.Migrated,
     ): HomeLayoutSet {
         // Only keys whose layout class has a pool: a key without one must stay unseen, so [commit] adopts it.
-        val projected = project(state.pools, next)
+        val projected = project(state.pools, next, shown)
         return projected.copy(
             layouts = projected.layouts.filterKeys { it.deviceClass.workspaceLayoutClass() in state.pools },
         )
@@ -102,12 +118,13 @@ object PoolHomeSync {
         state: PoolStoreState,
         stored: HomeLayoutSet,
         ids: WorkspaceIdFactory,
+        shown: HomeShownWorkspaces = HomeShownWorkspaces.Migrated,
     ): PoolHomeCommit =
         if (PoolCutover.holdsNoPlacedItems(stored)) {
-            reproject(state, stored, ids)
+            reproject(state, stored, ids, shown)
         } else {
-            val projected = projection(state, stored)
-            commit(state, projected, PoolHomeFallbackMerge.merge(state, projected, stored), ids)
+            val projected = projection(state, stored, shown)
+            commit(state, projected, PoolHomeFallbackMerge.merge(state, projected, stored), ids, shown)
         }
 
     /** [shown] projected again from [state], ingesting nothing it already shows (after the pool changed elsewhere). */
@@ -115,7 +132,8 @@ object PoolHomeSync {
         state: PoolStoreState,
         shown: HomeLayoutSet,
         ids: WorkspaceIdFactory,
-    ): PoolHomeCommit = commit(state, null, shown, ids)
+        workspaces: HomeShownWorkspaces = HomeShownWorkspaces.Migrated,
+    ): PoolHomeCommit = commit(state, null, shown, ids, workspaces)
 
     /**
      * A confirmed package-removed event: drops the package from every pool ([PoolRemoval.pruneUninstalled]: apps,
@@ -127,6 +145,7 @@ object PoolHomeSync {
         packageName: AppPackageName,
         profile: AppProfile,
         ids: WorkspaceIdFactory,
+        workspaces: HomeShownWorkspaces = HomeShownWorkspaces.Migrated,
     ): PoolHomeCommit {
         val released = LinkedHashSet<HostedWidgetId>()
         val pools =
@@ -134,7 +153,7 @@ object PoolHomeSync {
                 PoolRemoval.pruneUninstalled(pool, packageName, profile).also { released += it.releasedHostIds }.pool
             }
         val pruned = if (pools == state.pools) state else state.copy(pools = pools)
-        val projected = reproject(pruned, shown, ids)
+        val projected = reproject(pruned, shown, ids, workspaces)
         return projected.copy(releasedHostIds = released + projected.releasedHostIds)
     }
 
@@ -154,6 +173,7 @@ object PoolHomeSync {
         homeFromPool: Boolean,
         ids: WorkspaceIdFactory,
         providerOf: (HostedWidgetId) -> WidgetProviderIdentity? = { null },
+        workspaces: HomeShownWorkspaces = HomeShownWorkspaces.Migrated,
     ): PoolHomeCommit {
         val state =
             if (homeFromPool && backupPool != null) {
@@ -164,10 +184,48 @@ object PoolHomeSync {
             } else {
                 PoolCutover.resync(backupPool ?: current, homeLayouts, providerOf).state
             }
-        val restored = commit(state, null, homeLayouts, ids)
+        val restored = commit(state, null, homeLayouts, ids, workspaces)
         val dropped =
             current?.let { PoolHostIds.referencedHostIds(it) - PoolHostIds.referencedHostIds(restored.state) }.orEmpty()
         return restored.copy(releasedHostIds = restored.releasedHostIds + dropped)
+    }
+
+    /**
+     * N9/N12 on the standard home: a package was installed ([arrival]; only [AppArrival.INSTALLED] places anything).
+     * One app is placed in every opted-in workspace ([PoolNewApps.placeNewApp]) of every layout that has a pool and a
+     * stored workspace layout in [workspaceSet]; a workspace that borrows forks first (with the same candidates the
+     * standard home shows it with). [shown] is then projected again. Nothing changes for any other arrival, for a
+     * layout without stored workspaces, or when no workspace opts in.
+     */
+    @Suppress("LongParameterList") // The install event's facts plus the projection's inputs.
+    fun placeNewApp(
+        state: PoolStoreState,
+        shown: HomeLayoutSet,
+        identity: AppIdentity,
+        label: String,
+        workspaceSet: WorkspaceSet,
+        arrival: AppArrival,
+        ids: WorkspaceIdFactory,
+        workspaces: HomeShownWorkspaces = HomeShownWorkspaces.Migrated,
+    ): PoolHomeCommit {
+        val activeMode = shown.activeKey.viewMode
+        val pools =
+            state.pools.mapValues { (layoutClass, pool) ->
+                if (!workspaceSet.hasLayout(layoutClass)) {
+                    pool
+                } else {
+                    PoolNewApps.placeNewApp(
+                        pool = pool,
+                        identity = identity,
+                        label = label,
+                        ids = ids,
+                        layout = workspaceSet.workspacesFor(layoutClass),
+                        arrival = arrival,
+                    ) { id -> PoolHomeView.candidates(id, layoutClass, activeMode) }.edit.pool
+                }
+            }
+        val placed = if (pools == state.pools) state else state.copy(pools = pools)
+        return reproject(placed, shown, ids, workspaces)
     }
 
     /**
@@ -194,17 +252,31 @@ object PoolHomeSync {
     private fun keysOf(set: HomeLayoutSet): List<HomeLayoutKey> =
         listOf(set.activeKey) + set.layouts.keys.filter { it != set.activeKey }
 
+    /**
+     * The arrangement [target] draws in [pool]: its own, else the first of its candidates with pages (it borrows that
+     * one until its first edit forks it), else its own id (no arrangement: no placed pages, a stand-in page).
+     */
+    fun arrangementShown(
+        pool: PlacedItemPool,
+        target: HomeShownWorkspace,
+    ): WorkspaceId =
+        target.workspaceId.takeIf { it in pool.arrangements }
+            ?: PoolHomeView.arrangementOf(pool, target.candidates)
+            ?: target.workspaceId
+
     /** [next] with each key's `Home` pages and each device class's dock projected from [pools]. */
     private fun project(
         pools: Map<HomeLayoutDeviceClass, PlacedItemPool>,
         next: HomeLayoutSet,
+        shown: HomeShownWorkspaces,
     ): HomeLayoutSet {
         val keys = keysOf(next)
         val layouts =
             keys.associateWith { key ->
                 val base = next.layoutFor(key)
                 val pool = pools[key.deviceClass.workspaceLayoutClass()]
-                if (pool == null) base else PoolHomeProjection.project(pool, workspaceOf(key), base)
+                val target = shown.shownFor(key, next.activeKey.viewMode)
+                if (pool == null) base else PoolHomeProjection.project(pool, arrangementShown(pool, target), base)
             }
         val docks =
             (next.docks.keys + keys.map { it.deviceClass }).associateWith { deviceClass ->
@@ -226,19 +298,22 @@ object PoolHomeSync {
 
         fun apply(
             key: HomeLayoutKey,
+            target: HomeShownWorkspace,
             previous: HomeLayout?,
             next: HomeLayout,
         ) {
             val layoutClass = key.deviceClass.workspaceLayoutClass()
-            val workspaceId = workspaceOf(key)
+            val workspaceId = target.workspaceId
             val pool = pools[layoutClass]
             when {
                 workspaceId in written -> Unit
                 previous == null ->
-                    if (pool == null || workspaceId !in pool.arrangements) {
+                    // A key never seen is adopted only when its workspace has nothing to show: no arrangement of its
+                    // own and none to borrow (a borrower shows the borrowed one and forks on its first edit).
+                    if (pool == null || arrangementShown(pool, target) !in pool.arrangements) {
                         adopt(layoutClass, workspaceId, pool ?: PlacedItemPool(), next)
                     }
-                else -> edit(layoutClass, workspaceId, pool ?: PlacedItemPool(), previous, next)
+                else -> edit(layoutClass, target, pool ?: PlacedItemPool(), previous, next)
             }
         }
 
@@ -262,7 +337,7 @@ object PoolHomeSync {
 
         private fun edit(
             layoutClass: HomeLayoutDeviceClass,
-            workspaceId: WorkspaceId,
+            target: HomeShownWorkspace,
             pool: PlacedItemPool,
             previous: HomeLayout,
             next: HomeLayout,
@@ -271,8 +346,39 @@ object PoolHomeSync {
             val before = shared?.let { previous.copy(dock = it) } ?: previous
             val after = shared?.let { next.copy(dock = it) } ?: next
             if (before.homePages() != after.homePages() || before.dock != after.dock) {
-                ingest(layoutClass, workspaceId, pool, before, after)
+                val fork = forkedIfBorrowing(pool, target)
+                ingest(
+                    layoutClass,
+                    target.workspaceId,
+                    fork.pool,
+                    before.withItemIds(fork.clonedIds),
+                    after.withItemIds(fork.clonedIds),
+                )
                 dockWritten += layoutClass
+            }
+        }
+
+        /**
+         * Fork on first edit (S4 domain, used by the standard home from S9): a workspace that shows a borrowed
+         * arrangement gets its own copy first, so the edit lands in it and the borrowed one (the migrated home, a
+         * recovery copy) is left as it was. Apps and widget instances are shared by reference, so their ids in the
+         * edited layout stay valid; folders are cloned, so [ForkedPool.clonedIds] maps the borrowed folder ids the
+         * projection showed to the fork's own, and the edit is applied to those.
+         */
+        private fun forkedIfBorrowing(
+            pool: PlacedItemPool,
+            target: HomeShownWorkspace,
+        ): ForkedPool {
+            val borrows = target.workspaceId !in pool.arrangements && target.candidates.isNotEmpty()
+            val result = if (borrows) PoolArrangements.fork(pool, target.workspaceId, target.candidates, ids) else null
+            val forked = (result as? PoolResult.Done)?.edit?.pool ?: pool
+            val source = PoolHomeView.arrangementOf(pool, target.candidates.filter { it != target.workspaceId })
+            val from = source?.let { pool.arrangements[it] }
+            val to = forked.arrangements[target.workspaceId]
+            return if (forked === pool || from == null || to == null) {
+                ForkedPool(forked)
+            } else {
+                ForkedPool(forked, clonedIds(from, to))
             }
         }
 
@@ -290,6 +396,47 @@ object PoolHomeSync {
         }
     }
 }
+
+/** A pool after a fork on first edit, and the ids the fork gave its cloned items (old text to new text). */
+private class ForkedPool(
+    val pool: PlacedItemPool,
+    val clonedIds: Map<String, String> = emptyMap(),
+)
+
+/** Old to new item id for every placement the copy [to] of [from] re-pointed (pages and placements keep order). */
+private fun clonedIds(
+    from: Arrangement,
+    to: Arrangement,
+): Map<String, String> =
+    from.pages.zip(to.pages).flatMap { (old, new) ->
+        old.placements.zip(new.placements).mapNotNull { (a, b) ->
+            (a.item.value to b.item.value).takeIf { a.item != b.item }
+        }
+    }.toMap()
+
+/** This layout with the top-level `Home` page items in [ids] given their new id (a fork's clones). */
+private fun HomeLayout.withItemIds(ids: Map<String, String>): HomeLayout =
+    if (ids.isEmpty()) {
+        this
+    } else {
+        copy(
+            pages =
+                pages.map { page ->
+                    if (page.type != LauncherPageType.Home) {
+                        page
+                    } else {
+                        page.copy(items = page.items.map { item -> ids[item.id.value]?.let(item::withId) ?: item })
+                    }
+                },
+        )
+    }
+
+private fun LauncherItem.withId(value: String): LauncherItem =
+    when (this) {
+        is AppShortcutItem -> copy(id = LauncherItemId(value))
+        is FolderItem -> copy(id = LauncherItemId(value))
+        is WidgetItem -> copy(id = LauncherItemId(value))
+    }
 
 /**
  * Library's dock edge is a `HomeLayoutSet` setting the dock settings UI writes; the pool dock keeps a copy

@@ -18,8 +18,8 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceReturnResolver
 /**
  * Pure: the standard (non-preview) Home pager applying the Return setting (owner decision Q7).
  *
- * The standard layout has no workspace and no start page of its own, so "Start page" means the first page of
- * the active layout, which is also the page a Home button press has always opened. The decision reuses
+ * "Start page" is the active workspace's start page when it is a placed page of the layout (`startPageId`, S9),
+ * else the first page of the active layout, which is also the page a Home button press has always opened. It reuses
  * [WorkspaceReturnResolver] over a stand-in workspace that holds the layout's pages in order (no start page, no
  * Finder), so the standard shell and the Workspaces preview cannot disagree on the rule.
  *
@@ -39,9 +39,10 @@ object HomeReturn {
         behavior: ReturnBehavior,
         event: ReturnEvent = ReturnEvent.RETURN,
         atTopLevel: Boolean = layout.editMode == HomeEditMode.Browsing,
+        startPageId: LauncherPageId? = null,
     ): LauncherPageId? {
         if (!atTopLevel || layout.pages.isEmpty()) return null
-        val standIn = standIn(layout)
+        val standIn = standIn(layout, startPageId)
         val selected = ContainerId(slot(layout.selectedPageIndex))
         val landed = WorkspaceReturnResolver.resolve(standIn, behavior, selected, event)
         val index = landed?.let { id -> standIn.pages.indexOfFirst { it.id == id } } ?: -1
@@ -54,12 +55,17 @@ object HomeReturn {
     // Stand-in page ids are by position, so a blank or duplicated LauncherPageId cannot break the stand-in.
     private fun slot(index: Int) = "page-$index"
 
-    private fun standIn(layout: HomeLayout): Workspace {
+    private fun standIn(
+        layout: HomeLayout,
+        startPageId: LauncherPageId?,
+    ): Workspace {
         val binding = LensBinding(Lens(sources = listOf(SourceId("home"))), ExpressionKind.LIST)
+        val startIndex = startPageId?.let { id -> layout.pages.indexOfFirst { it.id == id } } ?: -1
         return Workspace(
             id = WorkspaceId("standard-home"),
             name = "Home",
             pages = layout.pages.indices.map { PageContainer(ContainerId(slot(it)), PageContent.Bound(binding)) },
+            startPageId = startIndex.takeIf { it >= 0 }?.let { ContainerId(slot(it)) },
         )
     }
 }
@@ -71,10 +77,14 @@ object HomeReturn {
  * notifications, Settings and the page editing modes are left exactly as they are, so Back and Home keep
  * closing them the way they always have. With the default setting this is always null.
  */
-fun LauncherShellState.homeReturnTarget(event: ReturnEvent = ReturnEvent.RETURN): LauncherPageId? =
+fun LauncherShellState.homeReturnTarget(
+    event: ReturnEvent = ReturnEvent.RETURN,
+    startPageId: LauncherPageId? = null,
+): LauncherPageId? =
     HomeReturn.landingPage(
         layout = homeLayout,
         behavior = launcherSettings.home.returnBehavior,
         event = event,
         atTopLevel = destination == ShellDestination.HOME && homeLayout.editMode == HomeEditMode.Browsing,
+        startPageId = startPageId,
     )

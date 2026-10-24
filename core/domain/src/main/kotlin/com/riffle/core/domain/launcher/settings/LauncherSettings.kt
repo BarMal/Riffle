@@ -559,13 +559,13 @@ enum class LauncherGestureAction {
     LAUNCH_APP_SHORTCUT,
 
     /**
-     * Opens the workspace menu (WS10 11.4). Honoured only while the workspace menu feature is on; otherwise
-     * it does nothing. No default binding uses it (the dock pull opens the menu from S9).
+     * Opens the workspace menu (WS10 11.4). No default binding uses it: since S9 the dock pull opens the menu, and
+     * this is how a workspace without a dock (Niagara) or a person who prefers a gesture reaches it.
      */
     OPEN_WORKSPACE_MENU,
     ;
 
-    /** Actions that only mean something while the workspace menu feature is on. */
+    /** Actions that need the workspace menu (always present since S9; kept for callers that filter on it). */
     val needsWorkspaceMenu: Boolean get() = this == OPEN_WORKSPACE_MENU
 
     companion object {
