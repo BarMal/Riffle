@@ -46,13 +46,19 @@ internal class WorkspacesSettingsController(
 
     val feedback: StateFlow<WorkspacesFeedback?> = mutableFeedback.asStateFlow()
 
-    /** The page's model, or null until the repository has loaded. */
+    /**
+     * The page's model, or null until the repository has loaded. [globalGestureActions] are the global home gestures'
+     * action names, so a row knows whether its dock may be hidden (11.4).
+     */
     fun model(
         viewed: HomeLayoutDeviceClass,
         current: HomeLayoutDeviceClass,
         available: Collection<HomeLayoutDeviceClass>,
+        globalGestureActions: Collection<String> = emptyList(),
     ): WorkspacesSettingsModel? =
-        repository.load()?.let { set -> WorkspacesSettingsPlanner.plan(set, viewed, current, available) }
+        repository.load()?.let { set ->
+            WorkspacesSettingsPlanner.plan(set, viewed, current, available, globalGestureActions = globalGestureActions)
+        }
 
     /**
      * Which places read each source across [layouts] (a layout with nothing stored reads as its default workspace,

@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.editor
 
+import com.riffle.app.launcher.WorkspaceDockSettingsText
 import com.riffle.core.domain.launcher.workspace.ContainerIssue
 import com.riffle.core.domain.launcher.workspace.GestureAxis
 import com.riffle.core.domain.launcher.workspace.ItemField
@@ -52,6 +53,7 @@ internal object EditorReasonText {
             WorkspaceIssue.MultipleFinderPages -> "Only one page can be the Finder"
             is WorkspaceIssue.UnsupportedExpression ->
                 "${EditorText.expressionLabel(issue.kind)} is not available on this screen"
+            WorkspaceIssue.DockHiddenWithoutMenuEntry -> WorkspaceDockSettingsText.HIDDEN_NEEDS_GESTURE
         }
 
     fun rejection(rejection: EditRejection): String =

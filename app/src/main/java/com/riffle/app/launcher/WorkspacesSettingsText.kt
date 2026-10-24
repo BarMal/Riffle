@@ -124,6 +124,8 @@ internal object WorkspacesDialogText {
 
     fun workspaces(count: Int): String = if (count == 1) "1 workspace" else "$count workspaces"
 
+    /** One flat branch per message: the count is the number of messages, not nested logic. */
+    @Suppress("CyclomaticComplexMethod")
     fun message(message: WorkspacesSettingsMessage): String =
         when (message) {
             is WorkspacesSettingsMessage.Activated -> "Switched to \"${message.name}\""
@@ -140,6 +142,7 @@ internal object WorkspacesDialogText {
             WorkspacesSettingsMessage.InvalidName -> "A workspace needs a name."
             WorkspacesSettingsMessage.NoKnownPreset -> "This workspace has no recorded preset to reset to."
             WorkspacesSettingsMessage.NothingToDo -> "Nothing changed."
+            is WorkspacesSettingsMessage.DockAndNewAppsMessage -> WorkspaceDockSettingsText.message(message)
         }
 }
 

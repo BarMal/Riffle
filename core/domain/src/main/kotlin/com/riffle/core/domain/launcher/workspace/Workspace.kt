@@ -33,11 +33,17 @@ data class Workspace(
      * that names no page is ignored, never an error. May name the Finder page, which opens on search.
      */
     val startPageId: ContainerId? = null,
+    /** What a newly installed app does here; null follows the preset's default ([NewAppDefaults.resolve]). */
+    val newApps: WorkspaceNewApps? = null,
 )
 
-/** Pinned dock entries stay in `DockModel`; the workspace only adds the dynamic section's lens. */
+/**
+ * Pinned dock entries stay in the layout's shared dock (`PoolDock`); the workspace only adds the dynamic section's lens
+ * and, optionally, a [presentation] override (hidden, edge, icon size). Null follows the shared dock.
+ */
 data class WorkspaceDock(
     val dynamicSection: LensBinding? = null,
+    val presentation: DockPresentation? = null,
 )
 
 sealed interface WorkspaceIssue {
@@ -51,6 +57,13 @@ sealed interface WorkspaceIssue {
 
     /** The layout cannot draw this expression. */
     data class UnsupportedExpression(val kind: ExpressionKind) : WorkspaceIssue
+
+    /**
+     * The dock is hidden but no gesture opens the workspace menu, so a touch user could not reach it (11.4). Reported
+     * by [DockMenuReachability.issue], never by [WorkspaceValidation.validate]: it depends on the global gestures, and
+     * a stored violation draws the dock instead of falling back to another workspace.
+     */
+    data object DockHiddenWithoutMenuEntry : WorkspaceIssue
 }
 
 /** What a layout (posture) can draw. Defaults to every expression. */

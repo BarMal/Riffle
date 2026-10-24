@@ -1,5 +1,7 @@
 package com.riffle.core.domain.launcher.workspace.preset
 
+import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.LensBinding
 import com.riffle.core.domain.launcher.workspace.LensGroup
@@ -13,7 +15,8 @@ private const val TIMESCAPE = "timescape"
  *
  * Compact (folded): Now widgets, an Inbox page-set (one CardStack per notifying app), Recents, with the
  * notifications as the dock's dynamic section. Expanded (unfolded): the container model has no
- * master/detail link, so the Index pane and the CardStack are two independent widgets side by side.
+ * master/detail link, so the Index pane and the CardStack are two independent widgets side by side; its dock
+ * sits on the left edge.
  * See docs/product/workspaces-presets.md for the gaps.
  */
 internal object TimeScapePreset {
@@ -57,7 +60,8 @@ internal object TimeScapePreset {
             ids,
             "TimeScape",
             listOf(now(ids), inbox(ids), finderPage(ids, ExpressionKind.CATEGORIES)),
-            notificationDock(),
+            // Unfolded TimeScape keeps its dock on the left edge (11.6); pins stay the layout's.
+            notificationDock().copy(presentation = DockPresentation(edge = DockPosition.LEFT)),
         )
     }
 

@@ -4,11 +4,13 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.MAX_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MAX_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
+import com.riffle.core.domain.launcher.workspace.DockPresentation
 
 /** One pinned dock entry the preview can draw and activate. */
 sealed interface PreviewDockPin {
@@ -34,6 +36,10 @@ sealed interface PreviewDockPin {
  * not draw (hosted widgets). [iconSizeDp] and [itemSpacingDp] are the user's dock settings clamped to their
  * documented ranges. [isShown] is `false` when the user hid the dock (`DockModel.isEnabled`): the preview keeps a
  * bar so the workspace menu handle stays anchored, but draws no pins.
+ *
+ * [isHiddenHere] is the shown workspace's own "no dock" override (11.2): then there is no bar at all and nothing is
+ * reserved. [edge] is the edge the preview draws the bar on: the workspace's edge override, else the bottom (as the
+ * preview always drew it). The preview has its top bar on the top edge, so a top dock is drawn at the bottom there.
  */
 data class PreviewDockModel(
     val pins: List<PreviewDockPin>,
@@ -41,7 +47,15 @@ data class PreviewDockModel(
     val itemSpacingDp: Int,
     val isShown: Boolean,
     val unsupportedCount: Int,
+    val edge: DockPosition = DockPosition.BOTTOM,
+    val isHiddenHere: Boolean = false,
 ) {
+    /** Whether the bar runs down a side edge (pins in a column) instead of along the bottom. */
+    val isVertical: Boolean get() = edge == DockPosition.LEFT || edge == DockPosition.RIGHT
+
+    /** The space the bar takes from the pages on its [edge]: none when the workspace hides the dock. */
+    val reservedExtentDp: Int get() = if (isHiddenHere) 0 else barHeightDp
+
     /** Whether there is nothing pinned to draw. */
     val hasNoPins: Boolean get() = !isShown || pins.isEmpty()
 
@@ -79,6 +93,27 @@ object PreviewDock {
                     .coerceIn(MIN_DOCK_ITEM_SPACING_DP, MAX_DOCK_ITEM_SPACING_DP),
             isShown = dock?.isEnabled ?: true,
             unsupportedCount = items.size - pins.size,
+        )
+    }
+
+    /**
+     * The preview dock while a workspace with [presentation] is shown: the shared [dock] with the override layered on
+     * (`EffectiveDock.apply`; pass the presentation after the stranding rule, `EffectiveDock.presentationFor`).
+     */
+    fun from(
+        dock: DockModel?,
+        presentation: DockPresentation?,
+    ): PreviewDockModel {
+        val effective = dock?.let { EffectiveDock.apply(it, presentation) }
+        val base = from(effective ?: dock)
+        // The preview has always drawn the shared dock at the bottom; only a workspace's own edge moves it.
+        val edge = presentation?.edge ?: DockPosition.BOTTOM
+        val iconSize = presentation?.iconSizeDp ?: base.iconSizeDp
+        return base.copy(
+            iconSizeDp = iconSize.coerceIn(MIN_DOCK_ICON_SIZE_DP, MAX_DOCK_ICON_SIZE_DP),
+            isShown = base.isShown && presentation?.hidden != true,
+            edge = if (edge == DockPosition.TOP) DockPosition.BOTTOM else edge,
+            isHiddenHere = presentation?.hidden == true,
         )
     }
 

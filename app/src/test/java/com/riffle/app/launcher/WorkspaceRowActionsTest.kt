@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.workspace.NewAppDefaults
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.settings.WorkspaceRow
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsAction
@@ -41,6 +42,8 @@ class WorkspaceRowActionsTest {
                 WorkspaceRowActionKind.MAKE_DEFAULT,
                 WorkspaceRowActionKind.MOVE_UP,
                 WorkspaceRowActionKind.MOVE_DOWN,
+                WorkspaceRowActionKind.DOCK,
+                WorkspaceRowActionKind.NEW_APPS,
                 WorkspaceRowActionKind.INSTALL_PRESET,
                 WorkspaceRowActionKind.DELETE,
             ),
@@ -115,6 +118,8 @@ class WorkspaceRowActionsTest {
         assertEquals(
             listOf(
                 WorkspaceDialog.Rename(id, "Work"),
+                WorkspaceDialog.Dock(id, "Work", current = null, canHide = false),
+                WorkspaceDialog.NewApps(id, "Work", NewAppDefaults.MIGRATED, followsPreset = true, presetName = "Nova"),
                 WorkspaceDialog.ConfirmReset(id, "Work", "Nova"),
                 WorkspaceDialog.PickPreset,
                 WorkspaceDialog.ConfirmDelete(id, "Work"),

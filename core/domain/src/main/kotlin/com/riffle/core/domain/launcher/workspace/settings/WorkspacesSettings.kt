@@ -1,13 +1,17 @@
 package com.riffle.core.domain.launcher.workspace.settings
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.DockMenuReachability
+import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.LayoutCapabilities
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
+import com.riffle.core.domain.launcher.workspace.NewAppDefaults
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIssue
 import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
+import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
 import com.riffle.core.domain.launcher.workspace.WorkspaceResolution
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
@@ -25,6 +29,14 @@ data class WorkspaceRow(
     val canDelete: Boolean,
     val canMoveUp: Boolean,
     val canMoveDown: Boolean,
+    /** The workspace's dock override as stored (null follows the layout's dock, 11.2). */
+    val dock: DockPresentation? = null,
+    /** Whether Hidden may be chosen: a gesture reaches the workspace menu without the dock (11.4). */
+    val canHideDock: Boolean = false,
+    /** The new-app setting in effect (9.8): the workspace's own, else its preset's default. */
+    val newApps: WorkspaceNewApps = NewAppDefaults.MIGRATED,
+    /** True while [newApps] is the preset's default rather than the workspace's own choice. */
+    val newAppsFollowPreset: Boolean = true,
 ) {
     val canReset: Boolean get() = presetName != null
 }
@@ -71,13 +83,17 @@ object WorkspacesSettingsPlanner {
         current: HomeLayoutDeviceClass,
         available: Collection<HomeLayoutDeviceClass> = HomeLayoutDeviceClass.entries,
         capabilities: LayoutCapabilities = LayoutCapabilities(),
+        globalGestureActions: Collection<String> = emptyList(),
     ): WorkspacesSettingsModel {
         val viewedLayout = viewed.workspaceLayoutClass()
         val layout = set.workspacesFor(viewedLayout)
         val offered = WorkspaceLayoutClasses.of(available)
         return WorkspacesSettingsModel(
             layout = viewedLayout,
-            rows = layout.workspaces.mapIndexed { index, workspace -> row(layout, workspace, index) },
+            rows =
+                layout.workspaces.mapIndexed { index, workspace ->
+                    row(layout, workspace, index, globalGestureActions)
+                },
             fallback = fallback(set.resolveActive(viewedLayout, capabilities), layout),
             copySources =
                 WorkspaceLayoutClasses.entries
@@ -91,6 +107,7 @@ object WorkspacesSettingsPlanner {
         layout: LayoutWorkspaces,
         workspace: Workspace,
         index: Int,
+        globalGestureActions: Collection<String>,
     ) = WorkspaceRow(
         id = workspace.id,
         name = workspace.name,
@@ -101,6 +118,10 @@ object WorkspacesSettingsPlanner {
         canDelete = layout.workspaces.size > 1,
         canMoveUp = index > 0,
         canMoveDown = index < layout.workspaces.size - 1,
+        dock = workspace.dock.presentation,
+        canHideDock = DockMenuReachability.canHideDock(workspace, globalGestureActions),
+        newApps = NewAppDefaults.resolve(workspace),
+        newAppsFollowPreset = workspace.newApps == null,
     )
 
     /** The preset [workspace] records as its origin; never guessed from its name or content. */

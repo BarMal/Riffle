@@ -1,9 +1,13 @@
 package com.riffle.core.domain.launcher.workspace.settings
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.DockMenuReachability
+import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
+import com.riffle.core.domain.launcher.workspace.NewAppDefaults
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
+import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.preset.PresetLensInstaller
 import com.riffle.core.domain.launcher.workspace.preset.PresetPosture
@@ -39,6 +43,22 @@ sealed interface WorkspacesSettingsMessage {
     data object NoKnownPreset : WorkspacesSettingsMessage
 
     data object NothingToDo : WorkspacesSettingsMessage
+
+    /** The outcomes of the per-workspace dock and new-app settings (S7), worded together by the UI. */
+    sealed interface DockAndNewAppsMessage : WorkspacesSettingsMessage
+
+    /** The dock override of [name] changed; [presentation] null means it follows the layout's dock again. */
+    data class DockChanged(val name: String, val presentation: DockPresentation?) : DockAndNewAppsMessage
+
+    /** Hiding the dock was refused: no gesture would reach the workspace menu (11.4). */
+    data object DockHiddenNeedsMenuGesture : DockAndNewAppsMessage
+
+    /** The new-app setting of [name] is now [newApps] ([followsPreset] when it was reset to the preset's default). */
+    data class NewAppsChanged(
+        val name: String,
+        val newApps: WorkspaceNewApps,
+        val followsPreset: Boolean,
+    ) : DockAndNewAppsMessage
 }
 
 /**
@@ -170,6 +190,59 @@ sealed interface WorkspacesSettingsAction {
                 val installed = PresetLensInstaller.install(current, preset, PresetPosture.of(layout), ids, activate)
                 installed.layout.replace(installed.workspaceId) { it.copy(name = name, presetId = preset.id) }
             }
+        }
+    }
+
+    /**
+     * Sets a workspace's dock override (11.2); null, or an override that overrides nothing, follows the layout's dock.
+     * Hiding is refused with [WorkspacesSettingsMessage.DockHiddenNeedsMenuGesture] unless a gesture reaches the
+     * workspace menu ([DockMenuReachability]); [globalGestureActions] are the global home gestures' action names.
+     * Never touches the dock's pins. Not undoable (like Rename; the dialog shows the current choice).
+     */
+    data class SetDockPresentation(
+        val id: WorkspaceId,
+        val presentation: DockPresentation?,
+        val globalGestureActions: Collection<String> = emptyList(),
+    ) : WorkspacesSettingsAction {
+        override fun applyTo(
+            set: WorkspaceSet,
+            layout: HomeLayoutDeviceClass,
+            ids: WorkspaceIdFactory,
+        ): WorkspacesSettingsChange {
+            val workspace =
+                set.workspacesFor(layout).find(id) ?: return set.unchanged(WorkspacesSettingsMessage.NothingToDo)
+            val next = presentation?.takeUnless { it.followsShared }
+            val candidate = workspace.copy(dock = workspace.dock.copy(presentation = next))
+            return if (DockMenuReachability.issue(candidate, globalGestureActions) != null) {
+                set.unchanged(WorkspacesSettingsMessage.DockHiddenNeedsMenuGesture)
+            } else {
+                set.edit(layout, { WorkspacesSettingsMessage.DockChanged(workspace.name, next) }) { stored ->
+                    stored.replace(id) { it.copy(dock = it.dock.copy(presentation = next)) }
+                }
+            }
+        }
+    }
+
+    /** Sets what a newly installed app does in a workspace (9.8); null follows its preset's default again. */
+    data class SetNewApps(
+        val id: WorkspaceId,
+        val newApps: WorkspaceNewApps?,
+    ) : WorkspacesSettingsAction {
+        override fun applyTo(
+            set: WorkspaceSet,
+            layout: HomeLayoutDeviceClass,
+            ids: WorkspaceIdFactory,
+        ): WorkspacesSettingsChange {
+            val workspace =
+                set.workspacesFor(layout).find(id) ?: return set.unchanged(WorkspacesSettingsMessage.NothingToDo)
+            val updated = workspace.copy(newApps = newApps)
+            val message =
+                WorkspacesSettingsMessage.NewAppsChanged(
+                    workspace.name,
+                    NewAppDefaults.resolve(updated),
+                    followsPreset = newApps == null,
+                )
+            return set.edit(layout, { message }) { stored -> stored.replace(id) { it.copy(newApps = newApps) } }
         }
     }
 

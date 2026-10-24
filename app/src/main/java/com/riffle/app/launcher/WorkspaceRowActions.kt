@@ -1,7 +1,9 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
+import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
 import com.riffle.core.domain.launcher.workspace.settings.WorkspaceRow
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsAction
 
@@ -12,6 +14,8 @@ internal enum class WorkspaceRowActionKind {
     MAKE_DEFAULT,
     MOVE_UP,
     MOVE_DOWN,
+    DOCK,
+    NEW_APPS,
     RESET,
     INSTALL_PRESET,
     DELETE,
@@ -49,6 +53,8 @@ internal fun workspaceRowActions(
         WorkspaceRowAction(WorkspaceRowActionKind.MAKE_DEFAULT, WorkspacesSettingsText.MAKE_DEFAULT, !row.isDefault),
         WorkspaceRowAction(WorkspaceRowActionKind.MOVE_UP, WorkspacesSettingsText.MOVE_UP, row.canMoveUp),
         WorkspaceRowAction(WorkspaceRowActionKind.MOVE_DOWN, WorkspacesSettingsText.MOVE_DOWN, row.canMoveDown),
+        WorkspaceRowAction(WorkspaceRowActionKind.DOCK, WorkspaceDockSettingsText.DOCK),
+        WorkspaceRowAction(WorkspaceRowActionKind.NEW_APPS, WorkspaceDockSettingsText.NEW_APPS),
         row.presetName
             ?.let { WorkspaceRowAction(WorkspaceRowActionKind.RESET, WorkspacesSettingsText.resetLabel(it)) }
             ?: WorkspaceRowAction(WorkspaceRowActionKind.INSTALL_PRESET, WorkspacesSettingsText.INSTALL_PRESET),
@@ -71,6 +77,23 @@ internal sealed interface WorkspaceDialog {
     data object PickPreset : WorkspaceDialog
 
     data object PickCopySource : WorkspaceDialog
+
+    /** The workspace's dock override (11.2); [canHide] is false while no gesture reaches the workspace menu. */
+    data class Dock(
+        val id: WorkspaceId,
+        val name: String,
+        val current: DockPresentation?,
+        val canHide: Boolean,
+    ) : WorkspaceDialog
+
+    /** What a newly installed app does in the workspace (9.8); [followsPreset] while it is the preset's default. */
+    data class NewApps(
+        val id: WorkspaceId,
+        val name: String,
+        val current: WorkspaceNewApps,
+        val followsPreset: Boolean,
+        val presetName: String?,
+    ) : WorkspaceDialog
 }
 
 /**
@@ -90,6 +113,9 @@ internal fun WorkspacesPageCallbacks.runRowAction(
         WorkspaceRowActionKind.MAKE_DEFAULT -> onAction(WorkspacesSettingsAction.MakeDefault(id))
         WorkspaceRowActionKind.MOVE_UP -> onAction(WorkspacesSettingsAction.Move(id, -1))
         WorkspaceRowActionKind.MOVE_DOWN -> onAction(WorkspacesSettingsAction.Move(id, 1))
+        WorkspaceRowActionKind.DOCK -> openDialog(WorkspaceDialog.Dock(id, row.name, row.dock, row.canHideDock))
+        WorkspaceRowActionKind.NEW_APPS ->
+            openDialog(WorkspaceDialog.NewApps(id, row.name, row.newApps, row.newAppsFollowPreset, row.presetName))
         WorkspaceRowActionKind.RESET ->
             openDialog(WorkspaceDialog.ConfirmReset(id, row.name, row.presetName.orEmpty()))
         WorkspaceRowActionKind.INSTALL_PRESET -> openDialog(WorkspaceDialog.PickPreset)
@@ -102,4 +128,6 @@ internal data class WorkspacesPageCallbacks(
     val onAction: (WorkspacesSettingsAction) -> Unit = {},
     val onEdit: (WorkspaceId) -> Unit = {},
     val onSelectLayout: (HomeLayoutDeviceClass) -> Unit = {},
+    /** The global home gestures' action names, so hiding a dock is checked against them (11.4). */
+    val globalGestureActions: Collection<String> = emptyList(),
 )

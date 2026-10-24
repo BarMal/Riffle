@@ -63,6 +63,20 @@ internal fun WorkspacesDialogs(
             model?.let {
                 CopySourceDialog(it, onDismiss) { source -> apply(WorkspacesSettingsAction.CopyFromLayout(source)) }
             }
+        is WorkspaceDialog.Dock ->
+            WorkspaceDockDialog(dialog, onDismiss) { presentation ->
+                apply(
+                    WorkspacesSettingsAction.SetDockPresentation(
+                        dialog.id,
+                        presentation,
+                        callbacks.globalGestureActions,
+                    ),
+                )
+            }
+        is WorkspaceDialog.NewApps ->
+            WorkspaceNewAppsDialog(dialog, onDismiss) { newApps ->
+                apply(WorkspacesSettingsAction.SetNewApps(dialog.id, newApps))
+            }
     }
 }
 
