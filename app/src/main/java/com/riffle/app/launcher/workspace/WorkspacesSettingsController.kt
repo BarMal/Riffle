@@ -3,6 +3,7 @@ package com.riffle.app.launcher.workspace
 import com.riffle.app.launcher.WorkspacesDialogText
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.WorkspaceRepository
 import com.riffle.core.domain.launcher.workspace.settings.SourceUsage
 import com.riffle.core.domain.launcher.workspace.settings.SourceUsagePlanner
@@ -55,11 +56,12 @@ internal class WorkspacesSettingsController(
 
     /**
      * Which places read each source across [layouts] (a layout with nothing stored reads as its default workspace,
-     * as the rest of Settings does), or null until the repository has loaded. Reads only; nothing is changed.
+     * as the rest of Settings does), or null until the repository has loaded. Reads only; nothing is changed. A
+     * landscape phone is the phone layout (N10), so it is listed once.
      */
     fun sourceUsage(layouts: Collection<HomeLayoutDeviceClass>): SourceUsage? =
         repository.load()?.let { set ->
-            SourceUsagePlanner.plan(layouts.distinct().associateWith { set.workspacesFor(it) })
+            SourceUsagePlanner.plan(WorkspaceLayoutClasses.of(layouts).associateWith { set.workspacesFor(it) })
         }
 
     /** Applies [action] to [layout] and persists it. False when it changed nothing (the reason is announced). */

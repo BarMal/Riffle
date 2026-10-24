@@ -68,7 +68,7 @@ object PresetInstaller {
         ids: WorkspaceIdFactory = WorkspaceIdFactory.Random,
     ): WorkspaceSet =
         deviceClasses.fold(set) { acc, deviceClass ->
-            if (deviceClass in acc.layouts) acc else acc.withLayout(deviceClass, newInstallLayout(deviceClass, ids))
+            if (acc.hasLayout(deviceClass)) acc else acc.withLayout(deviceClass, newInstallLayout(deviceClass, ids))
         }
 
     /**

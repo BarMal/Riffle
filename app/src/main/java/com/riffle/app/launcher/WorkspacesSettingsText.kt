@@ -35,10 +35,10 @@ internal object WorkspacesSettingsText {
     const val EDIT_OTHER_LAYOUT_REASON = "Switch Settings to this device's layout to edit it."
     const val EDITING_NOTE = "Each layout keeps its own workspaces. Changes here never touch your home screen items."
 
+    /** A landscape phone is the phone layout for every Workspaces value (N10), so it is named as one. */
     fun layoutName(layout: HomeLayoutDeviceClass): String =
         when (layout) {
-            HomeLayoutDeviceClass.PHONE -> "Phone (folded)"
-            HomeLayoutDeviceClass.PHONE_LANDSCAPE -> "Phone (landscape)"
+            HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.PHONE_LANDSCAPE -> "Phone (folded)"
             HomeLayoutDeviceClass.FOLDABLE -> "Foldable (unfolded)"
             HomeLayoutDeviceClass.TABLET -> "Tablet"
             HomeLayoutDeviceClass.DESKTOP -> "Desktop"

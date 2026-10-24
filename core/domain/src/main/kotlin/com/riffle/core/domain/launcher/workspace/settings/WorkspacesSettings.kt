@@ -7,9 +7,11 @@ import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIssue
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.WorkspaceResolution
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 /** One workspace of the layout being shown, with what its row may offer. */
 data class WorkspaceRow(
@@ -60,7 +62,8 @@ data class WorkspacesSettingsModel(
 object WorkspacesSettingsPlanner {
     /**
      * Plans the page for [viewed], among the layouts [available]. [current] is the layout this device is
-     * showing now (the only one the editor can open).
+     * showing now (the only one the editor can open). All three are read as Workspaces layout classes
+     * ([workspaceLayoutClass], N10), so a landscape phone is the phone layout and is never offered as a source.
      */
     fun plan(
         set: WorkspaceSet,
@@ -69,16 +72,18 @@ object WorkspacesSettingsPlanner {
         available: Collection<HomeLayoutDeviceClass> = HomeLayoutDeviceClass.entries,
         capabilities: LayoutCapabilities = LayoutCapabilities(),
     ): WorkspacesSettingsModel {
-        val layout = set.workspacesFor(viewed)
+        val viewedLayout = viewed.workspaceLayoutClass()
+        val layout = set.workspacesFor(viewedLayout)
+        val offered = WorkspaceLayoutClasses.of(available)
         return WorkspacesSettingsModel(
-            layout = viewed,
+            layout = viewedLayout,
             rows = layout.workspaces.mapIndexed { index, workspace -> row(layout, workspace, index) },
-            fallback = fallback(set.resolveActive(viewed, capabilities), layout),
+            fallback = fallback(set.resolveActive(viewedLayout, capabilities), layout),
             copySources =
-                HomeLayoutDeviceClass.entries
-                    .filter { it != viewed && it in available }
+                WorkspaceLayoutClasses.entries
+                    .filter { it != viewedLayout && it in offered }
                     .map { CopySource(it, set.workspacesFor(it).workspaces.size) },
-            canEdit = viewed == current,
+            canEdit = viewedLayout == current.workspaceLayoutClass(),
         )
     }
 

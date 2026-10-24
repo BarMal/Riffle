@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.workspace.exclusions
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.StoredValue
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -141,8 +142,9 @@ class ExclusionStorageTest {
         val hide = randomHideRules(Random(1), 4)
         val migrated = ExclusionMigration.migrate(LayoutExclusionRules(), hiddenApps, hide)
         assertTrue(migrated.legacyMigrated)
-        assertEquals(HomeLayoutDeviceClass.entries.toSet(), migrated.layouts.keys)
-        HomeLayoutDeviceClass.entries.forEach { layout ->
+        // N10: no separate landscape rule set; a landscape phone reads the phone's.
+        assertEquals(WorkspaceLayoutClasses.entries.toSet(), migrated.layouts.keys)
+        WorkspaceLayoutClasses.entries.forEach { layout ->
             assertEquals(hiddenApps.size + hide.size, migrated.forLayout(layout).rules.size)
             assertTrue(migrated.forLayout(layout).rules.all { it.id.value.startsWith("mig:${layout.name}:") })
         }
@@ -200,7 +202,11 @@ class ExclusionStorageTest {
             }
         val i = item("n")
         assertEquals(emptyList(), SourceExclusionFilter.apply(rules.forLayout(HomeLayoutDeviceClass.PHONE), listOf(i)))
-        HomeLayoutDeviceClass.entries.filter { it != HomeLayoutDeviceClass.PHONE }.forEach {
+        assertEquals(
+            emptyList(),
+            SourceExclusionFilter.apply(rules.forLayout(HomeLayoutDeviceClass.PHONE_LANDSCAPE), listOf(i)),
+        )
+        WorkspaceLayoutClasses.entries.filter { it != HomeLayoutDeviceClass.PHONE }.forEach {
             assertEquals(listOf(i), SourceExclusionFilter.apply(rules.forLayout(it), listOf(i)))
         }
     }

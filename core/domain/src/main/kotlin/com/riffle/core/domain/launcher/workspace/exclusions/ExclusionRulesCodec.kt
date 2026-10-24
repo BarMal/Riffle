@@ -22,7 +22,8 @@ const val CURRENT_EXCLUSION_SCHEMA_VERSION = 1
  *
  * Decoding never throws: a value that is not an object is null; a layout with an unknown device class, a
  * rule with an unknown matcher kind or a missing id/source, and a repeated rule id are dropped; unknown enum
- * values fall back to a default. A newer schema version is read on a best-effort basis.
+ * values fall back to a default. A newer schema version is read on a best-effort basis. A `PHONE_LANDSCAPE`
+ * rule set (written before N10) is merged into `PHONE`'s ([LayoutExclusionRules.folded]).
  */
 object ExclusionRulesCodec {
     fun encode(rules: LayoutExclusionRules): StoredValue.Obj =
@@ -46,7 +47,7 @@ object ExclusionRulesCodec {
             root.array("layouts")
                 .mapNotNull { (it as? StoredValue.Obj)?.let(::decodeLayout) }
                 .toMap()
-        return LayoutExclusionRules(layouts, legacyMigrated = root.bool("legacyMigrated") ?: false)
+        return LayoutExclusionRules(layouts, legacyMigrated = root.bool("legacyMigrated") ?: false).folded()
     }
 
     private fun decodeLayout(root: StoredValue.Obj): Pair<HomeLayoutDeviceClass, ExclusionRuleSet>? {

@@ -35,7 +35,8 @@ class WorkspacesSettingsTextTest {
         val names = HomeLayoutDeviceClass.entries.map { WorkspacesSettingsText.layoutName(it) }
 
         assertEquals(
-            listOf("Phone (folded)", "Phone (landscape)", "Foldable (unfolded)", "Tablet", "Desktop"),
+            // N10: a landscape phone is the phone layout, so it carries the same name.
+            listOf("Phone (folded)", "Phone (folded)", "Foldable (unfolded)", "Tablet", "Desktop"),
             names,
         )
         assertTrue(names.none { name -> name.any { it == '_' } || name == name.uppercase() })

@@ -1,8 +1,8 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.WorkspaceMigration
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import kotlinx.coroutines.CoroutineScope
@@ -63,7 +63,7 @@ class CachedWorkspaceRepositoryTest {
     @Test
     fun initializeFillsOnlyTheGapsAroundStoredLayouts() =
         runBlocking {
-            val other = HomeLayoutDeviceClass.entries.first { it != layoutSet.activeKey.deviceClass }
+            val other = WorkspaceLayoutClasses.entries.first { it != layoutSet.activeKey.deviceClass }
             val stored = WorkspaceSet().update(other) { it.rename(it.activeId, "Kept") }
             val repository = CachedWorkspaceRepository(FakeStore(stored), scope)
             repository.initialize(layoutSet)

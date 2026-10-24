@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatchMode
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatcher
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionOrigin
@@ -13,6 +14,7 @@ import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleSet
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionTextField
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.exclusions.SourceExclusionRule
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 /** What the user typed to add a text rule. */
 data class TextRuleDraft(
@@ -231,7 +233,7 @@ private fun ExclusionsSettingsAction.ApplyToAllLayouts.applyToAll(
     val rule = set.find(id) ?: return ExclusionsChange.refused(rules, ExclusionsMessage.UnknownRule)
     val after = rules.copyToOtherLayouts(layout, rule, ids)
     val added =
-        HomeLayoutDeviceClass.entries.sumOf { other ->
+        WorkspaceLayoutClasses.entries.sumOf { other ->
             after.forLayout(other).rules.size - rules.forLayout(other).rules.size
         }
     return if (added == 0) {
@@ -243,14 +245,15 @@ private fun ExclusionsSettingsAction.ApplyToAllLayouts.applyToAll(
 
 /**
  * Adds a copy of [rule] (fresh id, as a user rule, enabled state kept) to every layout except [layout], skipping
- * layouts that already have an equal rule by source and matcher. Idempotent.
+ * layouts that already have an equal rule by source and matcher. Idempotent. The layouts are
+ * [WorkspaceLayoutClasses.entries] (N10: a landscape phone is the phone layout).
  */
 fun LayoutExclusionRules.copyToOtherLayouts(
     layout: HomeLayoutDeviceClass,
     rule: SourceExclusionRule,
     ids: WorkspaceIdFactory = WorkspaceIdFactory.Random,
 ): LayoutExclusionRules =
-    HomeLayoutDeviceClass.entries.filter { it != layout }.fold(this) { acc, other ->
+    WorkspaceLayoutClasses.entries.filter { it != layout.workspaceLayoutClass() }.fold(this) { acc, other ->
         val copy = rule.copy(id = ExclusionRuleId(ids.next()), origin = ExclusionOrigin.USER)
         val current = acc.forLayout(other)
         val merged = current.merge(ExclusionRuleSet(listOf(copy)))

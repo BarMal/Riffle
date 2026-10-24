@@ -38,6 +38,7 @@ import com.riffle.core.domain.launcher.workspace.settings.LensCopyTarget
 import com.riffle.core.domain.launcher.workspace.settings.LensDetailModel
 import com.riffle.core.domain.launcher.workspace.settings.LensesSettingsAction
 import com.riffle.core.domain.launcher.workspace.settings.LensesSettingsModel
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 internal const val LENSES_NEW_TEST_TAG = "lenses-new"
 internal const val LENSES_EMPTY_TEST_TAG = "lenses-empty"
@@ -118,9 +119,12 @@ private fun HostedLensesPage(
     val session by lenses.builder.session.collectAsState()
     val statuses by host.sources.statuses.collectAsState()
     val disabled by host.sources.disabled.collectAsState()
-    val viewed = state.selectedLayoutDeviceClass
+    // N10: a landscape phone shows (and edits) the phone layout.
+    val viewed = state.selectedLayoutDeviceClass.workspaceLayoutClass()
     val tabs =
-        remember(state.availableLayoutDeviceClasses) { settingsLayoutDeviceTabs(state.availableLayoutDeviceClasses) }
+        remember(state.availableLayoutDeviceClasses) {
+            workspaceSettingsLayoutDeviceTabs(state.availableLayoutDeviceClasses)
+        }
     val others = remember(tabs, viewed) { tabs.map { it.deviceClass }.filter { it != viewed } }
     LensesFeedbackEffect(lenses)
     SourceStatusEffect(sources = host.sources, active = session != null)

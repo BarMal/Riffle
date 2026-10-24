@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.workspace.settings
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatchMode
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatcher
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionOrigin
@@ -272,9 +273,10 @@ class ExclusionsSettingsTest {
             assertEquals(1, first.after.forLayout(layout).rules.size)
             assertEquals(text, first.after.forLayout(layout).rules.single().matcher)
         }
-        assertEquals(HomeLayoutDeviceClass.entries.size - 1, (first.message as ExclusionsMessage.AppliedToAll).added)
+        // N10: the landscape phone shares the phone's rules, so it is not a separate target.
+        assertEquals(WorkspaceLayoutClasses.entries.size - 1, (first.message as ExclusionsMessage.AppliedToAll).added)
         val copiedIds =
-            HomeLayoutDeviceClass.entries.filter { it != phone }.map {
+            WorkspaceLayoutClasses.entries.filter { it != phone }.map {
                 first.after.forLayout(
                     it,
                 ).rules.single().id

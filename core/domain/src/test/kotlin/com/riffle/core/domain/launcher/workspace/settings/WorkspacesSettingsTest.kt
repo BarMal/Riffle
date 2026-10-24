@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceCodec
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.WorkspaceSetCodec
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
@@ -103,7 +104,8 @@ class WorkspacesSettingsTest {
     fun copySourcesAreTheOtherAvailableLayoutsInOrder() {
         val all = HomeLayoutDeviceClass.entries
         val model = WorkspacesSettingsPlanner.plan(set, foldable, phone, available = all)
-        assertEquals(all.filter { it != foldable }, model.copySources.map { it.layout })
+        // N10: a landscape phone is the phone layout, so it is never a separate copy source.
+        assertEquals(WorkspaceLayoutClasses.entries.filter { it != foldable }, model.copySources.map { it.layout })
         assertEquals(3, model.copySources.first { it.layout == phone }.workspaceCount)
 
         val limited = WorkspacesSettingsPlanner.plan(set, phone, phone, available = listOf(phone, foldable))
