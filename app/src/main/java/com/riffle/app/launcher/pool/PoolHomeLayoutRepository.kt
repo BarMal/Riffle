@@ -67,8 +67,14 @@ internal class PoolHomeLayoutRepository(
     private val flushRequests = AtomicLong()
 
     init {
-        // Released host ids go once the pool on disk no longer references them, whoever's write put it there.
-        pool.onWritten { if (pool.isWritten) releaseHostIds() }
+        // Once the pool on disk is everything in memory, whoever wrote it (the home or the preview's editor): released
+        // host ids go, and the recovery snapshot catches up with the pool.
+        pool.onWritten {
+            if (pool.isWritten) {
+                releaseHostIds()
+                scope.launch { refreshSnapshot() }
+            }
+        }
     }
 
     /** Deletes host ids nothing references any more; set by the platform wiring (it hops to the main thread). */
@@ -91,7 +97,8 @@ internal class PoolHomeLayoutRepository(
     fun open(stored: HomeLayoutSet?) {
         val state = pool.current() ?: return
         synchronized(lock) { lastStored = stored }
-        if (stored != null) publish(PoolHomeSync.commit(state, null, stored, ids), state)
+        // A set with placed items was written by a legacy fallback session: ingest its edits ([PoolHomeSync.open]).
+        if (stored != null) publish(PoolHomeSync.open(state, stored, ids), state)
     }
 
     override fun loadHomeLayout(): HomeLayout? = (shown ?: legacy.loadHomeLayoutSet())?.activeLayout
@@ -160,14 +167,22 @@ internal class PoolHomeLayoutRepository(
         }
     }
 
+    /** Writes the pool's full projection of the shell's set as the recovery snapshot, when it changed. */
     private suspend fun refreshSnapshot() {
-        val current = shown
+        val state = pool.current()
+        val base = shown
+        val snapshot = if (state == null || base == null) null else PoolHomeSync.projection(state, base)
         val changed =
-            current != null && synchronized(lock) { (current !== lastSnapshot).also { lastSnapshot = current } }
-        if (current != null && changed) {
-            val written = runCatching { writeSnapshot(current) }.onFailure { if (it is CancellationException) throw it }
-            // A failed snapshot write is retried on the next flush.
-            if (written.isFailure) synchronized(lock) { if (lastSnapshot === current) lastSnapshot = null }
+            snapshot != null && synchronized(lock) { (snapshot != lastSnapshot).also { lastSnapshot = snapshot } }
+        if (snapshot != null && changed) {
+            val written =
+                runCatching {
+                    writeSnapshot(
+                        snapshot,
+                    )
+                }.onFailure { if (it is CancellationException) throw it }
+            // A failed snapshot write is retried after the next pool write.
+            if (written.isFailure) synchronized(lock) { if (lastSnapshot == snapshot) lastSnapshot = null }
         }
     }
 

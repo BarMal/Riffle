@@ -136,11 +136,20 @@ object PoolCutover {
             }
     }
 
-    /** True when [state] was migrated and holds a migrated workspace's arrangement (`ws:...`) or a dock. */
+    /**
+     * True when [state] was migrated and actually holds a home: at least one placed item in a migrated workspace's
+     * arrangement (`ws:...`) or one dock pin or panel item. A pool migrated from a stripped set has arrangements and a
+     * dock but nothing in them, so it does not count.
+     */
     fun holdsHome(state: PoolStoreState): Boolean =
         state.migrated &&
             state.pools.values.any { pool ->
-                pool.dock != null || pool.arrangements.keys.any { it.value.startsWith(MIGRATED_WORKSPACE_PREFIX) }
+                val placed =
+                    pool.arrangements
+                        .filterKeys { it.value.startsWith(MIGRATED_WORKSPACE_PREFIX) }
+                        .values
+                        .any { arrangement -> arrangement.pages.any { it.placements.isNotEmpty() } }
+                placed || pool.dock?.referenced.orEmpty().isNotEmpty()
             }
 
     private const val MIGRATED_WORKSPACE_PREFIX = "ws:"

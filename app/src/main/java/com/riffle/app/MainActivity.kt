@@ -55,6 +55,7 @@ import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.launchNotificationListenerSettings
 import com.riffle.app.launcher.overlay.AndroidUsageAccessSettingsAction
+import com.riffle.app.launcher.pool.POOL_HOME_RECOVERY_NOTICE
 import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
@@ -518,6 +519,9 @@ class MainActivity : ComponentActivity() {
         // Writes the home layout (and the placed-items pool, once the home renders from it) behind on stop, so
         // backgrounding never leaves an edit only in memory.
         lifecycle.addObserver(dependencies.homeLayoutRuntime)
+        if (dependencies.homeLayoutRuntime.takeRecoveryNotice()) {
+            Toast.makeText(this, POOL_HOME_RECOVERY_NOTICE, Toast.LENGTH_LONG).show()
+        }
         refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)
