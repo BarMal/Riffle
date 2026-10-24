@@ -1,8 +1,10 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
 data class PoolCutoverResult(
@@ -90,14 +92,23 @@ object PoolCutover {
      * items with the same (deterministic) id, the fresh arrangements come first so a host id both claim stays with the
      * standard home's widget, and the result is repaired and collected. Pure and deterministic: a second run over the
      * result is equal. [stored] is folded (N10) first; a null [stored] is a plain migration.
+     *
+     * Hard guard: a [layoutSet] with no placed item at all ([holdsNoPlacedItems]) never replaces a [stored] pool that
+     * already holds a home ([holdsHome]); [stored] is returned as it is.
      */
     fun resync(
         stored: PoolStoreState?,
         layoutSet: HomeLayoutSet,
         providerOf: (HostedWidgetId) -> WidgetProviderIdentity? = { null },
     ): PoolCutoverResult {
+        val folded = stored?.let(PoolLayoutFold::fold)
+        if (folded != null && holdsHome(folded) && holdsNoPlacedItems(layoutSet)) {
+            // A set without a single placed item cannot be the authority over a pool that holds the home: it is a
+            // stripped (already cut over) set whose marker was lost. Keep the pool.
+            return PoolCutoverResult(folded, changed = folded != stored, issues = emptyList())
+        }
         val migration = PoolMigration.migrate(layoutSet)
-        val base = stored?.let(PoolLayoutFold::fold)?.pools.orEmpty()
+        val base = folded?.pools.orEmpty()
         val issues = migration.issues.toMutableList()
         val pools =
             (base.keys + migration.pools.keys).sortedBy { it.ordinal }.associateWith { deviceClass ->
@@ -114,6 +125,25 @@ object PoolCutover {
         val next = PoolStoreState(migrated = true, pools = pools)
         return PoolCutoverResult(next, changed = next != stored, issues = issues)
     }
+
+    /** True when [layoutSet] has no `Home` page item, no dock pin and no dock panel item anywhere. */
+    fun holdsNoPlacedItems(layoutSet: HomeLayoutSet): Boolean {
+        fun DockModel.isEmptyDock() = items.isEmpty() && panel?.items.isNullOrEmpty()
+        return layoutSet.docks.values.all { it.isEmptyDock() } &&
+            layoutSet.layouts.values.all { layout ->
+                layout.dock.isEmptyDock() &&
+                    layout.pages.filter { it.type == LauncherPageType.Home }.all { it.items.isEmpty() }
+            }
+    }
+
+    /** True when [state] was migrated and holds a migrated workspace's arrangement (`ws:...`) or a dock. */
+    fun holdsHome(state: PoolStoreState): Boolean =
+        state.migrated &&
+            state.pools.values.any { pool ->
+                pool.dock != null || pool.arrangements.keys.any { it.value.startsWith(MIGRATED_WORKSPACE_PREFIX) }
+            }
+
+    private const val MIGRATED_WORKSPACE_PREFIX = "ws:"
 
     private fun merge(
         kept: PlacedItemPool,

@@ -562,4 +562,54 @@ class PoolHomeSyncTest {
         assertEquals(listOf("later"), shown.activeLayout.page(second).items.map { it.id.value.legacyId() })
         assertNotEquals(stale, once.state)
     }
+
+    @Test
+    fun resyncNeverReplacesAPoolThatHoldsTheHomeWithASetWithoutPlacedItems() {
+        val opened = open()
+        val stripped = PoolHomeSync.stored(opened.shown, opened.state.pools.keys)
+        assertTrue(PoolCutover.holdsNoPlacedItems(stripped))
+        assertTrue(PoolCutover.holdsHome(opened.state))
+        val result = PoolCutover.resync(opened.state, stripped)
+        assertEquals(opened.state, result.state)
+        assertFalse(result.changed)
+        assertFalse(PoolCutover.holdsNoPlacedItems(legacy))
+        assertNotEquals(
+            opened.state,
+            PoolCutover.resync(
+                opened.state,
+                legacy.withActiveLayout(layout.withPage(layout.page(home).copy(items = listOf(land)))),
+            ).state,
+        )
+    }
+
+    @Test
+    fun anEditOnAStaleProjectionDoesNotReCreateAnItemRemovedElsewhere() {
+        val opened = open()
+        val pool = opened.state.pools.getValue(HomeLayoutDeviceClass.PHONE)
+        val ws = PoolHomeSync.workspaceOf(phone)
+        val mail = pool.items.keys.first { it.value.endsWith(":mail") }
+        val removed = (PoolRemoval.remove(pool, ws, mail) as PoolResult.Done).edit.pool
+        val elsewhere = opened.state.copy(pools = opened.state.pools + (HomeLayoutDeviceClass.PHONE to removed))
+        // The shell still shows `mail` and moves `maps`.
+        val stale = opened.shown
+        val moved =
+            stale.withActiveLayout(
+                stale.activeLayout.withPage(
+                    stale.activeLayout.page(second).copy(
+                        items = stale.activeLayout.page(second).items.map { it.withPlacement(at(0, 0)) },
+                    ),
+                ),
+            )
+        val result = PoolHomeSync.commit(elsewhere, stale, moved, ids)
+        assertTrue(result.shown.activeLayout.homeItems().none { it.id.value == mail.value }, "not re-created")
+        assertEquals(at(0, 0), result.shown.activeLayout.page(second).items.single().placement)
+    }
+
+    @Test
+    fun aRestoreReportsTheHostIdsOfWidgetsTheRestoredPoolNoLongerHolds() {
+        val opened = open()
+        val older = legacy.withActiveLayout(layout.withPage(layout.page(home).copy(items = listOf(land))))
+        val restored = PoolHomeSync.restore(opened.state, null, older, homeFromPool = false, ids)
+        assertEquals(setOf(HostedWidgetId(42)), restored.releasedHostIds, "the dock panel widget is still restored")
+    }
 }

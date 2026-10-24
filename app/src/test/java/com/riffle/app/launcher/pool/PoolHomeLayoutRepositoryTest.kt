@@ -4,6 +4,7 @@ import com.riffle.app.launcher.pool.PoolHomeFixture.homeItems
 import com.riffle.app.launcher.pool.PoolHomeFixture.legacyId
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -14,6 +15,7 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.pool.PoolArrangements
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
+import com.riffle.core.domain.launcher.workspace.pool.PoolRemoval
 import com.riffle.core.domain.launcher.workspace.pool.PoolResult
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -30,8 +32,10 @@ class PoolHomeLayoutRepositoryTest {
     private val pools = DiskPoolStore()
 
     /** One process: opens the stores as `HomeLayoutRepositories` does, returns the shell's repository. */
+    private lateinit var currentPool: CachedPoolRepository
+
     private fun start(): Pair<PoolHomeLayoutRepository, WriteThroughHomeLayouts> {
-        val pool = CachedPoolRepository(pools)
+        val pool = CachedPoolRepository(pools).also { currentPool = it }
         val opening = runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
         assertTrue(opening.poolHome)
         val legacy = WriteThroughHomeLayouts(layouts)
@@ -198,5 +202,105 @@ class PoolHomeLayoutRepositoryTest {
             }
         assertTrue(added.activeLayout.homeItems().any { it.id.value == "widget-9" })
         assertTrue(repository.isHostIdReferenced(HostedWidgetId(90)))
+    }
+
+    @Test
+    fun theFirstEditAfterAFreshInstallIsKeptAcrossARestart() {
+        layouts.stored = null
+        val (repository, _) = start()
+        assertEquals(null, repository.loadHomeLayoutSet())
+        val default = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
+        val widget =
+            WidgetItem(LauncherItemId("widget-1"), HostedWidgetId(71), "Notes", placement = PoolHomeFixture.at(0, 0))
+        val added =
+            repository.commitHomeLayoutSet(
+                default.withActiveLayout(
+                    default.activeLayout.let { l ->
+                        l.copy(pages = l.pages.map { it.copy(items = listOf(PoolHomeFixture.app("first", 1), widget)) })
+                    },
+                ),
+            )
+        assertEquals(listOf("first", "widget-1"), added.activeLayout.homeItems().map { it.id.value })
+        assertTrue("the widget's host id is held, not leaked", repository.isHostIdReferenced(HostedWidgetId(71)))
+        runBlocking { repository.flushNow() }
+        assertEquals(listOf("first", "widget-1"), start().first.shown().activeLayout.homeItems().map { it.id.value })
+    }
+
+    @Test
+    fun theRecoverySnapshotIsRefreshedAfterAPoolWrite() {
+        val pool = CachedPoolRepository(pools)
+        val opening = runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        val repository =
+            poolHomeRepository(
+                WriteThroughHomeLayouts(layouts),
+                pool,
+                snapshots = layouts,
+            ).also { it.open(opening.stored) }
+        repository.edit {
+                layout ->
+            layout.mapHome { page -> page.copy(items = page.items + PoolHomeFixture.app("new", 3)) }
+        }
+        assertEquals("not before the pool write", 3, layouts.snapshot!!.activeLayout.homeItems().size)
+        runBlocking { repository.flushNow() }
+        assertEquals(repository.shown(), layouts.snapshot)
+        assertEquals(4, layouts.snapshot!!.activeLayout.homeItems().size)
+    }
+
+    @Test
+    fun aHomeCommitOnAStaleProjectionNeverRevertsAPreviewRemoval() {
+        val pool = CachedPoolRepository(pools)
+        val opening = runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(opening.stored) }
+        val stale = repository.shown()
+        // The preview's editor removes "maps" from the same arrangement; the shell has not reprojected yet.
+        val phone = pool.pool(HomeLayoutDeviceClass.PHONE)!!
+        val ws = PoolHomeSync.workspaceOf(PoolHomeFixture.key)
+        val mapsId = phone.items.keys.first { it.value.endsWith("maps") }
+        pool.update(HomeLayoutDeviceClass.PHONE, (PoolRemoval.remove(phone, ws, mapsId) as PoolResult.Done).edit.pool)
+        val moved =
+            repository.commitHomeLayoutSet(
+                stale.withActiveLayout(
+                    stale.activeLayout.mapHome { page ->
+                        page.copy(
+                            items =
+                                page.items.map {
+                                    if (it.id.value.endsWith("mail")) it.withPlacement(PoolHomeFixture.at(3, 4)) else it
+                                },
+                        )
+                    },
+                ),
+            )
+        assertEquals(listOf("mail", "clock"), moved.activeLayout.homeItems().map { it.id.value.legacyId() })
+    }
+
+    @Test
+    fun aRestoreReleasesTheHostIdsOfWidgetsItDropped() {
+        val (repository, _) = start()
+        val released = mutableListOf<Set<HostedWidgetId>>()
+        repository.hostIdReleaser = { released += it }
+        val older =
+            PoolHomeFixture.legacySet().let { set ->
+                set.withActiveLayout(
+                    set.activeLayout.mapHome { it.copy(items = listOf(PoolHomeFixture.app("old", 2))) },
+                )
+            }
+        repository.restoreFromBackup(older, backupPool = null, homeFromPool = false)
+        runBlocking { repository.flushNow() }
+        assertEquals(listOf(setOf(HostedWidgetId(42))), released)
+    }
+
+    @Test
+    fun releasedHostIdsGoAfterAnyoneElsesWriteToo() {
+        val (repository, _) = start()
+        val released = mutableListOf<Set<HostedWidgetId>>()
+        repository.hostIdReleaser = { released += it }
+        repository.edit {
+                layout ->
+            layout.mapHome { page -> page.copy(items = page.items.filterNot { it is WidgetItem }) }
+        }
+        assertEquals(emptyList<Set<HostedWidgetId>>(), released)
+        // Another writer of the same repository (the preview's editor) flushes first.
+        runBlocking { currentPool.flush() }
+        assertEquals(listOf(setOf(HostedWidgetId(42))), released)
     }
 }

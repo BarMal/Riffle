@@ -16,13 +16,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.CopyOnWriteArrayList
 
 /** Suspend storage for the [PoolStoreState]; the DataStore-backed store implements it, tests fake it. */
 internal interface PoolStorePort {
+    /** What is stored, null when nothing is; throws [UndecodablePoolException] when a stored value is unreadable. */
     suspend fun read(): PoolStoreState?
 
     suspend fun write(state: PoolStoreState)
+
+    /**
+     * Copies the stored (undecodable) value once to a quarantine key, so a recovery may write the pool key without
+     * losing it; never over an earlier copy. Throws when the copy could not be made.
+     */
+    suspend fun quarantine() = Unit
 }
+
+/** A pool value is stored but cannot be decoded (corrupt, truncated, or a future schema). */
+internal class UndecodablePoolException : Exception("The stored pool cannot be decoded")
 
 /**
  * The synchronous view of the placed-items pool that the Workspaces preview reads, over a suspend
@@ -32,8 +43,9 @@ internal interface PoolStorePort {
  * [initialize] reads what is stored and runs [PoolCutover.ensureMigrated], the one-time, flag-guarded import
  * from `HomeLayoutSet` (which is only read, never changed), then persists the result only if it changed. A
  * second call does nothing; a later process finds the flag and does not migrate again. A read that throws
- * (as opposed to a blob that cannot be decoded, which reads as nothing stored and is re-derived) disables
- * persistence for this process, so a transient storage failure can never replace a pool that exists on disk.
+ * disables persistence for this process, so a transient storage failure can never replace a pool that exists on
+ * disk. A blob that cannot be decoded is copied once to a quarantine key and then reads as nothing stored and is
+ * re-derived (the standard home re-derives it from its recovery snapshot, see `openHomeLayouts`).
  *
  * [reimport] replaces the pools with a fresh import of the current `HomeLayoutSet`. Until pool editing exists
  * the standard home is still edited in `HomeLayoutSet`, so this is how the preview catches up with it.
@@ -53,6 +65,10 @@ internal class CachedPoolRepository(
     @Volatile
     private var persistenceEnabled = true
 
+    @Volatile
+    private var corruptOnLoad = false
+    private val writtenListeners = CopyOnWriteArrayList<() -> Unit>()
+
     /** True while [cached] holds a change that has not been written yet. Guarded by [stateLock]. */
     private var dirty = false
     private val stateLock = Any()
@@ -67,12 +83,11 @@ internal class CachedPoolRepository(
         providerOf: (HostedWidgetId) -> WidgetProviderIdentity? = { null },
     ) = lock.withLock {
         if (cached == null) {
-            val read = runCatching { store.read() }.onFailure { if (it is CancellationException) throw it }
-            if (read.isFailure) persistenceEnabled = false
-            val stored = read.getOrNull()?.let(PoolLayoutFold::fold)
+            val read = readStored()
+            val stored = read?.let(PoolLayoutFold::fold)
             val result = PoolCutover.ensureMigrated(stored, layoutSet, providerOf)
             publish(result.state)
-            if (result.changed || stored != read.getOrNull()) persist(result.state)
+            if (result.changed || stored != read) persist(result.state)
         }
     }
 
@@ -91,13 +106,12 @@ internal class CachedPoolRepository(
     ): Boolean =
         lock.withLock {
             if (cached != null) return@withLock false
-            val read = runCatching { store.read() }.onFailure { if (it is CancellationException) throw it }
-            if (read.isFailure) persistenceEnabled = false
-            val result = PoolCutover.resync(read.getOrNull(), layoutSet, providerOf)
+            val read = readStored()
+            val result = PoolCutover.resync(read, layoutSet, providerOf)
             publish(result.state)
             when {
                 !persistenceEnabled -> false
-                result.state == read.getOrNull() -> true
+                result.state == read -> true
                 else -> persist(result.state)
             }
         }
@@ -105,6 +119,37 @@ internal class CachedPoolRepository(
     /** False once a read failed: nothing will be written this process, so nothing may depend on a write landing. */
     val isPersistent: Boolean
         get() = persistenceEnabled
+
+    /** True when this process found a stored pool it could not decode (it was quarantined, then re-derived). */
+    val wasCorruptOnLoad: Boolean
+        get() = corruptOnLoad
+
+    /** True when nothing in memory is waiting to be written (what is on disk is what [current] returns). */
+    val isWritten: Boolean
+        get() = synchronized(stateLock) { !dirty }
+
+    /** Called (on the writing thread) after every write that landed, whoever asked for it. */
+    fun onWritten(listener: () -> Unit) {
+        writtenListeners += listener
+    }
+
+    /**
+     * The stored state, or null when nothing usable is stored. An undecodable value is quarantined first (so a
+     * recovery may write over the key); if that copy fails, or the read itself fails, persistence is disabled for the
+     * process, so what is on disk is never replaced.
+     */
+    private suspend fun readStored(): PoolStoreState? {
+        val read = runCatching { store.read() }.onFailure { if (it is CancellationException) throw it }
+        val failure = read.exceptionOrNull()
+        if (failure is UndecodablePoolException) {
+            corruptOnLoad = true
+            val copied = runCatching { store.quarantine() }.onFailure { if (it is CancellationException) throw it }
+            if (copied.isFailure) persistenceEnabled = false
+        } else if (failure != null) {
+            persistenceEnabled = false
+        }
+        return read.getOrNull()
+    }
 
     /** Replaces the pools by a fresh import of [layoutSet]. Does nothing before [initialize]. */
     suspend fun reimport(
@@ -172,6 +217,7 @@ internal class CachedPoolRepository(
                     val written =
                         runCatching { store.write(snapshot) }.onFailure { if (it is CancellationException) throw it }
                     if (written.isSuccess) synchronized(stateLock) { if (cached === snapshot) dirty = false }
+                    if (written.isSuccess) writtenListeners.forEach { it() }
                     written.isSuccess && synchronized(stateLock) { !dirty }
                 }
             }
@@ -217,6 +263,7 @@ internal class CachedPoolRepository(
         if (!persistenceEnabled) return false
         val written = runCatching { store.write(state) }.onFailure { if (it is CancellationException) throw it }
         if (written.isSuccess) synchronized(stateLock) { if (cached === state) dirty = false }
+        if (written.isSuccess) writtenListeners.forEach { it() }
         return written.isSuccess
     }
 }

@@ -70,6 +70,9 @@ internal class PoolEditController(
 
     private var session: PoolEditSession? = null
     private var deviceClass: HomeLayoutDeviceClass? = null
+
+    /** The pool the session last saw in the [repository] (at [enter], then each value it wrote). */
+    private var base: PlacedItemPool? = null
     private var standardHostIds: () -> Set<HostedWidgetId> = { emptySet() }
     private var flushJob: Job? = null
     private var noticeSeq = 0L
@@ -87,6 +90,7 @@ internal class PoolEditController(
             session != null
         } else {
             session = PoolEditSession(pool)
+            base = pool
             this.deviceClass = deviceClass
             this.standardHostIds = standardHostIds
             mutableState.value = PoolEditState(editing = true)
@@ -101,11 +105,41 @@ internal class PoolEditController(
         val deletable = PoolHostIds.deletable(released, standardHostIds())
         session = null
         deviceClass = null
+        base = null
         flushJob?.cancel()
         mutableState.update { PoolEditState(reimportRequested = it.reimportRequested) }
         scope.launch {
             if (repository.flush() && deletable.isNotEmpty()) onHostIdsReleased(deletable)
         }
+    }
+
+    /**
+     * Ends edit mode when the pool changed outside this session (the standard home's commits, an uninstall, a
+     * reprojection or a restore write the same repository): what the session already wrote is kept, its Undo history
+     * is dropped, and a short notice says so. A session pool built on an older base is never written. True when it
+     * ended the session.
+     */
+    fun endIfChangedElsewhere(): Boolean {
+        val current = session
+        val dc = deviceClass
+        if (current == null || dc == null || repository.pool(dc) === base) return false
+        val (released, _) = current.finish()
+        val referenced = repository.current()?.let(PoolHostIds::referencedHostIds).orEmpty()
+        val deletable = PoolHostIds.deletable(released, standardHostIds()) - referenced
+        session = null
+        deviceClass = null
+        base = null
+        flushJob?.cancel()
+        mutableState.update {
+            PoolEditState(
+                reimportRequested = it.reimportRequested,
+                notice = PoolEditNotice(++noticeSeq, PoolEditText.HOME_CHANGED, undoable = false),
+            )
+        }
+        scope.launch {
+            if (repository.flush() && deletable.isNotEmpty()) onHostIdsReleased(deletable)
+        }
+        return true
     }
 
     /** Writes pending edits now (the activity is stopping). Keeps edit mode and the Undo history. */
@@ -133,10 +167,12 @@ internal class PoolEditController(
     }
 
     fun undo() {
+        if (endIfChangedElsewhere()) return
         session?.takeIf { it.canUndo }?.let { replace(it.undo(), notice = null) }
     }
 
     fun redo() {
+        if (endIfChangedElsewhere()) return
         session?.takeIf { it.canRedo }?.let { replace(it.redo(), notice = null) }
     }
 
@@ -145,6 +181,7 @@ internal class PoolEditController(
         summary: String,
         op: (PlacedItemPool) -> PoolResult,
     ) {
+        if (endIfChangedElsewhere()) return
         val current = session ?: return
         val step = current.apply(op(current.pool))
         val rejection = (step.result as? PoolResult.Rejected)?.reason
@@ -232,7 +269,7 @@ internal class PoolEditController(
     ) {
         session = next
         val dc = deviceClass
-        if (dc != null) repository.update(dc, next.pool)
+        if (dc != null && repository.update(dc, next.pool)) base = repository.pool(dc)
         scheduleFlush()
         val selected = mutableState.value.selected?.takeIf { it in next.pool.items }
         mutableState.update {

@@ -15,6 +15,7 @@ import com.riffle.app.launcher.pool.HomeLayoutCutoverStore
 import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.app.launcher.pool.PoolHomePreference
 import com.riffle.app.launcher.pool.PoolHomeSwitch
+import com.riffle.app.launcher.pool.PrePoolSnapshot
 import com.riffle.app.launcher.pool.openHomeLayouts
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -40,7 +41,7 @@ private val Context.homeLayoutDataStore by preferencesDataStore(
  * Nothing on the UI path talks to this directly -- [HomeLayoutRepositories] wraps it in a
  * [WriteBehindHomeLayoutRepository] that serves reads from memory and writes here on [Dispatchers.IO].
  * Once the standard home renders from the placed-items pool (S4) the blob holds no placed items, and
- * [readPrePoolSnapshot] keeps the full set as it was at the cutover (see [openHomeLayouts]).
+ * [readPrePoolSnapshot] keeps a recent full copy of the home as a recovery source (see [openHomeLayouts]).
  */
 internal class DataStoreHomeLayoutStore(context: Context) : HomeLayoutCutoverStore {
     private val dataStore = context.homeLayoutDataStore
@@ -56,9 +57,20 @@ internal class DataStoreHomeLayoutStore(context: Context) : HomeLayoutCutoverSto
         }
     }
 
-    override suspend fun readPrePoolSnapshot(): HomeLayoutSet? =
-        dataStore.data.first()[HomeLayoutDataStoreKeys.prePoolSnapshot]
-            ?.let { value -> runCatching { decodeHomeLayoutSet(value) }.getOrNull() }
+    override suspend fun readPrePoolSnapshot(): PrePoolSnapshot {
+        val value = dataStore.data.first()[HomeLayoutDataStoreKeys.prePoolSnapshot] ?: return PrePoolSnapshot.Absent
+        return runCatching { decodeHomeLayoutSet(value) }.getOrNull()?.let { PrePoolSnapshot.Present(it) }
+            ?: PrePoolSnapshot.Unreadable
+    }
+
+    override suspend fun quarantinePrePoolSnapshot() {
+        dataStore.edit { preferences ->
+            val raw = preferences[HomeLayoutDataStoreKeys.prePoolSnapshot]
+            if (raw != null && preferences[HomeLayoutDataStoreKeys.prePoolSnapshotCorrupt] == null) {
+                preferences[HomeLayoutDataStoreKeys.prePoolSnapshotCorrupt] = raw
+            }
+        }
+    }
 
     override suspend fun writePrePoolSnapshot(snapshot: HomeLayoutSet?) {
         val encoded = snapshot?.let(::encodeHomeLayoutSet)
@@ -131,8 +143,13 @@ internal object HomeLayoutRepositories {
             )
         val poolHome =
             if (opening.poolHome) {
-                PoolHomeLayoutRepository(legacy = writeBehind, pool = pool, scope = scope, providerOf = providerOf)
-                    .also { repository -> repository.open(opening.stored) }
+                PoolHomeLayoutRepository(
+                    legacy = writeBehind,
+                    pool = pool,
+                    scope = scope,
+                    providerOf = providerOf,
+                    writeSnapshot = { snapshot -> store.writePrePoolSnapshot(snapshot) },
+                ).also { repository -> repository.open(opening.stored) }
             } else {
                 null
             }
@@ -159,4 +176,5 @@ private object HomeLayoutDataStoreKeys {
     const val PREFERENCES_NAME = "riffle_home_layout"
     val homeLayout = stringPreferencesKey("home_layout")
     val prePoolSnapshot = stringPreferencesKey("home_layout_pre_pool")
+    val prePoolSnapshotCorrupt = stringPreferencesKey("home_layout_pre_pool_corrupt")
 }

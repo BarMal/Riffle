@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.workspace.pool.PoolHomeCommit
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -49,6 +50,8 @@ internal class PoolHomeLayoutRepository(
     private val ids: WorkspaceIdFactory = WorkspaceIdFactory.Random,
     private val providerOf: (HostedWidgetId) -> WidgetProviderIdentity? = { null },
     private val debounceMillis: Long = POOL_HOME_WRITE_DEBOUNCE_MILLIS,
+    /** Keeps the recovery snapshot recent: the full projected set, written after the pool's own writes. */
+    private val writeSnapshot: suspend (HomeLayoutSet) -> Unit = {},
 ) : HomeLayoutRepository {
     private val lock = Any()
 
@@ -57,17 +60,28 @@ internal class PoolHomeLayoutRepository(
     private var lastStored: HomeLayoutSet? = null
     private var releasedPending: Set<HostedWidgetId> = emptySet()
 
+    /** The pool state this repository last published or projected from; anything else is someone else's change. */
     @Volatile
-    private var ownVersion = -1
+    private var lastPublished: PoolStoreState? = null
+    private var lastSnapshot: HomeLayoutSet? = null
     private val flushRequests = AtomicLong()
+
+    init {
+        // Released host ids go once the pool on disk no longer references them, whoever's write put it there.
+        pool.onWritten { if (pool.isWritten) releaseHostIds() }
+    }
 
     /** Deletes host ids nothing references any more; set by the platform wiring (it hops to the main thread). */
     @Volatile
     var hostIdReleaser: ((Set<HostedWidgetId>) -> Unit)? = null
 
-    /** Changes of the pool this repository did not make, for the shell to [reproject]. */
+    /**
+     * Changes of the pool this repository did not make, for the shell to [reproject]. Compared by state, not by version
+     * (the version flow is conflated): a change is skipped only when the pool is exactly what this repository last
+     * published, which already includes anything it was built on.
+     */
     val externalChanges: Flow<Unit>
-        get() = pool.version.drop(1).filter { it != ownVersion }.map { }
+        get() = pool.version.drop(1).filter { pool.current().let { it != null && it !== lastPublished } }.map { }
 
     /**
      * Projects [stored] (what the `HomeLayoutSet` store holds: page slots without placed items once cut over) from
@@ -94,7 +108,10 @@ internal class PoolHomeLayoutRepository(
 
     override fun commitHomeLayoutSet(layoutSet: HomeLayoutSet): HomeLayoutSet {
         val state = pool.current() ?: return layoutSet.also(legacy::saveHomeLayoutSet)
-        return publish(PoolHomeSync.commit(state, shown, layoutSet, ids), state)
+        // Nothing shown yet (a fresh install starts from a default set the pool never showed): the edit is measured
+        // against the pool's view of that set, so it is ingested instead of being projected away.
+        val previous = shown ?: PoolHomeSync.projection(state, layoutSet)
+        return publish(PoolHomeSync.commit(state, previous, layoutSet, ids), state)
     }
 
     override fun withoutRemovedPackage(
@@ -132,9 +149,26 @@ internal class PoolHomeLayoutRepository(
         return PoolHostIds.isReferenced(hostedWidgetId, state, shown)
     }
 
-    /** Writes the pool now (then releases host ids it let go of); the legacy store flushes on its own. */
+    /**
+     * Writes the pool now, then releases host ids it let go of and refreshes the recovery snapshot (only after the
+     * pool write landed, so the snapshot never runs ahead of the pool). The legacy store flushes on its own.
+     */
     suspend fun flushNow() {
-        if (pool.flush()) releaseHostIds()
+        if (pool.flush()) {
+            releaseHostIds()
+            refreshSnapshot()
+        }
+    }
+
+    private suspend fun refreshSnapshot() {
+        val current = shown
+        val changed =
+            current != null && synchronized(lock) { (current !== lastSnapshot).also { lastSnapshot = current } }
+        if (current != null && changed) {
+            val written = runCatching { writeSnapshot(current) }.onFailure { if (it is CancellationException) throw it }
+            // A failed snapshot write is retried on the next flush.
+            if (written.isFailure) synchronized(lock) { if (lastSnapshot === current) lastSnapshot = null }
+        }
     }
 
     private fun publish(
@@ -144,10 +178,8 @@ internal class PoolHomeLayoutRepository(
         val stored = PoolHomeSync.stored(commit.shown, commit.state.pools.keys)
         val storedChanged =
             synchronized(lock) {
-                if (commit.state != before) {
-                    pool.replace(commit.state)
-                    ownVersion = pool.version.value
-                }
+                if (commit.state != before) pool.replace(commit.state)
+                lastPublished = pool.current()
                 shown = commit.shown
                 releasedPending = releasedPending + commit.releasedHostIds
                 (stored != lastStored).also { lastStored = stored }

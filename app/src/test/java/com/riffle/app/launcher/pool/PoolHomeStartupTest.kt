@@ -30,7 +30,11 @@ class PoolHomeStartupTest {
         val (opening, pool) = open(layouts, pools)
         assertTrue(opening.poolHome)
         assertEquals(legacy, opening.stored)
-        assertEquals(legacy, layouts.snapshot)
+        assertEquals(
+            "the snapshot is the pool's projection: every item",
+            legacy.activeLayout.homeItems().map { it.id.value },
+            layouts.snapshot!!.activeLayout.homeItems().map { it.id.value.legacyId() },
+        )
         assertNotNull(pools.stored)
         assertEquals(pools.stored, pool.current())
     }
@@ -113,6 +117,81 @@ class PoolHomeStartupTest {
         val (reopened, fresh) = open(layouts, pools)
         val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), fresh)
         repository.open(reopened.stored)
+        assertEquals(3, repository.loadHomeLayoutSet()!!.activeLayout.homeItems().size)
+    }
+
+    /** A cut-over store: the pool written, `HomeLayoutSet` stripped, a recent snapshot. */
+    private fun cutOverStores(): Pair<DiskHomeLayoutStore, DiskPoolStore> {
+        val layouts = DiskHomeLayoutStore(stored = legacy)
+        val pools = DiskPoolStore()
+        val (opening, pool) = open(layouts, pools)
+        poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).open(opening.stored)
+        assertTrue(layouts.stored!!.activeLayout.homeItems().isEmpty())
+        return layouts to pools
+    }
+
+    @Test
+    fun anUnreadableSnapshotNeverCutsOverAgainAndKeepsThePool() {
+        val (layouts, pools) = cutOverStores()
+        val before = pools.stored
+        layouts.snapshotUnreadable = true
+        val (opening, pool) = open(layouts, pools)
+        assertTrue(opening.poolHome)
+        assertTrue(layouts.snapshotQuarantined)
+        assertEquals("the pool is not resynced from the stripped set", before, pools.stored)
+        val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(opening.stored) }
+        assertEquals(3, repository.loadHomeLayoutSet()!!.activeLayout.homeItems().size)
+    }
+
+    @Test
+    fun anUnreadableSnapshotAndAnUnreadablePoolRunTheLegacyPathAndWriteNothing() {
+        val (layouts, pools) = cutOverStores()
+        layouts.snapshotUnreadable = true
+        pools.failRead = true
+        val writes = layouts.writes
+        val (opening, _) = open(layouts, pools)
+        assertFalse(opening.poolHome)
+        assertEquals(writes, layouts.writes)
+        assertTrue("the marker stays", layouts.snapshotUnreadable)
+    }
+
+    @Test
+    fun aLostMarkerOverAStrippedSetKeepsThePool() {
+        val (layouts, pools) = cutOverStores()
+        val before = pools.stored
+        layouts.snapshot = null
+        val (opening, _) = open(layouts, pools)
+        assertTrue(opening.poolHome)
+        assertEquals("PoolCutover's hard guard: no resync from a set with no placed items", before, pools.stored)
+        assertEquals(3, layouts.snapshot!!.activeLayout.homeItems().size)
+    }
+
+    @Test
+    fun anUndecodablePoolIsQuarantinedAndRebuiltFromTheSnapshot() {
+        val (layouts, pools) = cutOverStores()
+        pools.corrupt = true
+        val (opening, pool) = open(layouts, pools)
+        assertTrue(opening.poolHome)
+        assertTrue(pools.quarantined)
+        assertNotNull("recovered and written once the original was copied away", pools.stored)
+        val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(opening.stored) }
+        assertEquals(3, repository.loadHomeLayoutSet()!!.activeLayout.homeItems().size)
+    }
+
+    @Test
+    fun aPoolThatCannotBeReadRunsTheLegacyPathFromTheSnapshotAndCutsOverCleanlyNextTime() {
+        val (layouts, pools) = cutOverStores()
+        pools.failRead = true
+        val (opening, _) = open(layouts, pools)
+        assertFalse(opening.poolHome)
+        assertEquals(3, opening.stored!!.activeLayout.homeItems().size)
+        assertEquals("the full set is written back, never stripped", 3, layouts.stored!!.activeLayout.homeItems().size)
+        assertNull("the marker is removed", layouts.snapshot)
+
+        pools.failRead = false
+        val (next, pool) = open(layouts, pools)
+        assertTrue(next.poolHome)
+        val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(next.stored) }
         assertEquals(3, repository.loadHomeLayoutSet()!!.activeLayout.homeItems().size)
     }
 }

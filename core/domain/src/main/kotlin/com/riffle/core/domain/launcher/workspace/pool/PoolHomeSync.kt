@@ -77,6 +77,15 @@ object PoolHomeSync {
         return PoolHomeCommit(nextState, project(pools, next), run.released)
     }
 
+    /**
+     * [next] as the pool shows it, ingesting and adopting nothing: the `previous` of a [commit] when the shell holds no
+     * projection yet (a fresh install, where the shell starts from a default set the pool never showed).
+     */
+    fun projection(
+        state: PoolStoreState,
+        next: HomeLayoutSet,
+    ): HomeLayoutSet = project(state.pools, next)
+
     /** [shown] projected again from [state], ingesting nothing it already shows (after the pool changed elsewhere). */
     fun reproject(
         state: PoolStoreState,
@@ -111,7 +120,8 @@ object PoolHomeSync {
      * take theirs back from [homeLayouts], which a cut-over build exports as the projection, by item id). Any other
      * backup (older builds, with or without a pool section) re-imports its [homeLayouts] into the pool
      * ([PoolCutover.resync] over [backupPool] or, without one, the [current] pool, so arrangements the backup does not
-     * describe are kept). [homeLayouts] is then projected.
+     * describe are kept). [homeLayouts] is then projected. [PoolHomeCommit.releasedHostIds] holds the host ids of the
+     * [current] widgets the restored pool no longer references (to delete once nothing else holds them).
      */
     fun restore(
         current: PoolStoreState?,
@@ -130,7 +140,10 @@ object PoolHomeSync {
             } else {
                 PoolCutover.resync(backupPool ?: current, homeLayouts, providerOf).state
             }
-        return commit(state, null, homeLayouts, ids)
+        val restored = commit(state, null, homeLayouts, ids)
+        val dropped =
+            current?.let { PoolHostIds.referencedHostIds(it) - PoolHostIds.referencedHostIds(restored.state) }.orEmpty()
+        return restored.copy(releasedHostIds = restored.releasedHostIds + dropped)
     }
 
     /**

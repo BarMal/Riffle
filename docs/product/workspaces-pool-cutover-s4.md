@@ -184,19 +184,27 @@ dock, writes the pool only (tested: the stored set is equal before and after a m
 * **First start with the switch on** (no snapshot): `CachedPoolRepository.initializeForCutover` reads the pool and
   brings it in line with the stored set (`PoolCutover.resync`: the migrated workspaces' arrangements and the docks are
   re-imported from `HomeLayoutSet`, everything else in the pool, such as the preview's own or forked arrangements, is
-  kept). A pool imported earlier by the preview is stale by now (the home was edited in `HomeLayoutSet` since), so the
-  owner's current home wins. Only once that write has landed is the full stored set written as a one-time snapshot
-  (`home_layout_pre_pool` in `riffle_home_layout`), and only then is the stripped set written. If either write fails
-  the home stays on the legacy path for that process and nothing is stripped.
-* **Later starts**: the pool is loaded as stored; a pool that cannot be decoded is re-imported from the snapshot (not
-  from the stripped set), so the worst case is the home as it was at the cutover.
+  kept). A pool imported earlier by the preview is stale by now, so the owner's current home wins. Only once that write
+  has landed is the snapshot written (`home_layout_pre_pool` in `riffle_home_layout`: the pool's full projection), and
+  only then is the stripped set written. If either write fails the home stays on the legacy path for that process.
+* **The snapshot is a recovery copy, kept recent**: after every pool write of the home (debounced, and on `onStop`) the
+  full projected set (items and dock) is written to it. It is never the source of truth while the pool can be read.
 * **Switch turned off**: on the next start the pool's projection is written back as the full `HomeLayoutSet` and the
-  snapshot removed; the legacy path then finds every item. Turning it on again cuts over again (resync from the
-  then-current set). If the pool cannot be read, the hand-back waits and the pool home stays for that process.
-* A pool that cannot be read at all (read failure, persistence disabled) still renders the home from what could be
-  derived, in memory only; nothing is written that process (same policy as the preview).
-* The startup read stays the single blocking read the launcher had (no new loading state): the pool is read in the same
-  step, so the first frame already shows the pool's items.
+  snapshot removed. Turning it on again cuts over again (resync from the then-current set).
+* The startup read stays the single blocking read the launcher had: the pool is read in the same step, so the first
+  frame already shows the pool's items.
+
+### Failure handling
+
+| Situation at start | What happens | Why nothing is lost |
+| --- | --- | --- |
+| Snapshot absent, switch on, pool write or snapshot write fails | Legacy path this process; nothing stripped. | `HomeLayoutSet` still full. |
+| Snapshot absent but `HomeLayoutSet` has no placed items and the pool holds a home (marker lost) | `PoolCutover.resync`'s hard guard keeps the pool; a fresh snapshot (the projection) is written. | A set without placed items never replaces `ws:*` arrangements or a dock. |
+| Snapshot present but undecodable (or its read fails) | Copied once to `home_layout_pre_pool_corrupt`; never cut over again. A readable pool that holds a home runs it (or is handed back with the switch off) and the next flush writes a fresh snapshot; otherwise the legacy path runs on the stored set and nothing is written. | The pool is not resynced from a stripped set. |
+| Pool blob undecodable | Copied once to `pool_corrupt` (if that copy fails, persistence is off for the process); then rebuilt from the recent snapshot and written. | The original stays in `pool_corrupt`; the snapshot is at most one flush behind. |
+| Pool read fails (I/O), snapshot present | Legacy path this process from the snapshot's full set, which is written as `HomeLayoutSet` and the marker removed; the next start cuts over cleanly from it. | The pool home never runs without a writable pool, so no edit is silently dropped. |
+| Pool and snapshot both unreadable | Legacy path on the stored set; nothing written at startup; the marker stays. | The next start trusts the pool again once it reads. |
+| Fresh install (nothing stored) | The first commit is measured against the pool's projection of the shell's default set, so the first add is ingested (and a widget's host id is held). | Tested: add, restart, the item is there. |
 
 ### Editing
 
@@ -212,6 +220,9 @@ equal pool).
 
 ### Host ids
 
+* Released ids are handed out after **any** successful pool write that leaves nothing unwritten (the preview's flushes
+  too), and a restore reports the host ids of the current widgets the restored pool no longer holds, through the same
+  referenced check.
 * The shell's "delete the removed widget's host id" (remove, delete page, remove from dock) now goes through
   `deleteHostedWidgetIdUnlessReferenced`: an id any arrangement, the dock or the shell's set still references is kept.
 * Ingest's released ids are collected and handed to the releaser only after the pool write landed, filtered again
@@ -241,6 +252,12 @@ confirmed-removal callback).
 ### The preview
 
 The preview's home pages already read the pool; its dock now reads the pool's dock while the pool home is active.
+Its editor ends an edit session when the pool changed outside it (`PoolEditController.endIfChangedElsewhere`, checked
+before every edit, Undo and Redo, and whenever the pool's version changes): what the session already wrote is kept, its
+Undo history is dropped, a short notice says so, and a session pool built on an older base is never written.
+`externalChanges` compares the pool with the state the home last published (not versions, which are conflated), and an
+ingest drops ids its `before` showed that the pool no longer holds, so a home commit on a stale projection never
+re-creates something the preview removed.
 "Refresh home items" is retired then (it would replace edits with a re-import). Preview editing and the standard home
 share one `CachedPoolRepository`; `PoolHomeLayoutRepository.externalChanges` fires when the preview changed the pool and
 the shell reprojects (`LauncherShellViewModel.observePoolHome`); the preview observes `version` as before.
@@ -264,6 +281,15 @@ the shell reprojects (`LauncherShellViewModel.observePoolHome`); the preview obs
 
 ### Tests (app half)
 
+Review fixes (PR #1431): `PoolHomeSyncTest` adds the resync hard guard, an edit on a stale projection not re-creating a
+removed item, and a restore reporting dropped host ids; `PoolHomeStartupTest` adds an unreadable snapshot (never cut
+over, pool kept), unreadable snapshot plus unreadable pool (legacy, nothing written), a lost marker over a stripped set
+(pool kept, snapshot rewritten), an undecodable pool (quarantined, rebuilt from the snapshot), and a pool read failure
+(legacy from the snapshot's full set, clean cutover next start); `PoolHomeLayoutRepositoryTest` adds the first edit after a
+fresh install surviving a restart, the snapshot refreshed after a pool write, a stale home commit not reverting a preview
+removal, a restore releasing dropped widgets, and release after another writer's flush; `PoolEditControllerTest` adds a
+session ending on an outside change without writing its stale pool, and one that keeps going when nothing changed.
+
 * Domain `PoolHomeSyncTest` (18): projection at startup equals the legacy layout (ids modulo the migration prefix, dock,
   Library edge); landscape shows the phone arrangement; the stored set holds no placed items and keeps page slots,
   All-apps pages, selection and dock settings; a restart (pool through its codec, the stored set) projects the same home;
@@ -285,8 +311,8 @@ the shell reprojects (`LauncherShellViewModel.observePoolHome`); the preview obs
 ### Verification (app half)
 
 `./gradlew verify` was **not** run (dl.google.com is blocked). In a scratch Gradle project on Maven Central: the whole
-`:core:domain` suite (1853 tests), the Android-free app files (`CachedPoolRepository`, `PoolHomeLayoutRepository`,
-`PoolHomeStartup`) with their JVM tests and the existing `CachedPoolRepository*` tests (34 tests), ktlint on domain main
+`:core:domain` suite (1856 tests), the Android-free app files (`CachedPoolRepository`, `PoolHomeLayoutRepository`,
+`PoolHomeStartup`, `PoolEditController`) with their JVM tests and the existing `CachedPoolRepository*` and `PoolEditController` tests (65 tests), ktlint on domain main
 and test, those app files and every other changed app file, detekt over the whole domain and app trees (main and test).
 The Android wiring (`DataStoreHomeLayoutStore`, `MainActivity*`, the view model, Compose settings row, preview host) was
 not compiled locally; CI runs `verify deviceVerify`.

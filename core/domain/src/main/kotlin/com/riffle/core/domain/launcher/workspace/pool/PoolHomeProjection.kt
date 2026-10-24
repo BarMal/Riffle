@@ -64,7 +64,9 @@ object PoolHomeProjection {
      *
      * Dock items stay exclusive to the dock: an item that enters the dock while another arrangement still shows it is
      * cloned for the dock when it is an app or folder; a widget instance moves into the dock and leaves the other
-     * arrangements (it would otherwise be on screen twice). A workspace without an arrangement gets one. The result
+     * arrangements (it would otherwise be on screen twice). A workspace without an arrangement gets one. An id
+     * [before] showed that the pool no longer holds here (removed elsewhere since [before] was projected) is dropped,
+     * never re-created, so an edit made on a stale projection cannot revert another writer's removal. The result
      * goes through [PoolValidation.repair] and [PoolGc.finish], so [PoolEdit.releasedHostIds] are exactly the host ids
      * that no arrangement and no dock references any more (to delete after the Undo window, never at once).
      */
@@ -77,9 +79,13 @@ object PoolHomeProjection {
     ): PoolEdit {
         val arrangement = pool.arrangements[workspaceId] ?: Arrangement()
         val held = (PoolReferences.referencedIn(arrangement) + PoolReferences.inDock(pool)).filter { it in pool.items }
-        val known = shownItems(before).map { it.id.value }.toSet() intersect held.map { it.value }.toSet()
+        val shown = shownItems(before).map { it.id.value }.toSet()
+        val known = shown intersect held.map { it.value }.toSet()
+        // `before` showed it but the pool no longer holds it here: removed elsewhere since (the preview's editor, an
+        // uninstall). It is not new, so it is dropped rather than re-created from a stale copy.
+        val removedElsewhere = shown - known
         val afterHome = after.pages.filter { it.type == LauncherPageType.Home }
-        val afterItems = editedItems(afterHome, after.dock)
+        val afterItems = editedItems(afterHome, after.dock).filter { it.id.value !in removedElsewhere }
         val idMap = ArrangementIngest.assignIds(afterItems, known, pool, ids)
         val upserts = afterItems.mapNotNull { ArrangementIngest.upsert(it, idMap, pool) }
         val items = pool.items + upserts.associateBy { it.id }

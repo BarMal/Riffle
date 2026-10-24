@@ -30,15 +30,28 @@ import kotlinx.coroutines.Job
 internal class DiskPoolStore(
     var stored: PoolStoreState? = null,
     var failWrite: Boolean = false,
+    /** The stored value is there but cannot be decoded. */
+    var corrupt: Boolean = false,
+    var failRead: Boolean = false,
 ) : PoolStorePort {
     var writes = 0
+    var quarantined = false
 
-    override suspend fun read(): PoolStoreState? = stored
+    override suspend fun read(): PoolStoreState? {
+        if (failRead) error("disk")
+        if (corrupt) throw UndecodablePoolException()
+        return stored
+    }
 
     override suspend fun write(state: PoolStoreState) {
         if (failWrite) error("full")
         writes++
+        corrupt = false
         stored = state
+    }
+
+    override suspend fun quarantine() {
+        quarantined = true
     }
 }
 
@@ -46,17 +59,32 @@ internal class DiskPoolStore(
 internal class DiskHomeLayoutStore(
     var stored: HomeLayoutSet? = null,
     var snapshot: HomeLayoutSet? = null,
+    /** A snapshot value is stored but cannot be decoded. */
+    var snapshotUnreadable: Boolean = false,
 ) : HomeLayoutCutoverStore {
+    var writes = 0
+    var snapshotQuarantined = false
+
     override suspend fun read(): HomeLayoutSet? = stored
 
     override suspend fun write(layoutSet: HomeLayoutSet) {
+        writes++
         stored = layoutSet
     }
 
-    override suspend fun readPrePoolSnapshot(): HomeLayoutSet? = snapshot
+    override suspend fun readPrePoolSnapshot(): PrePoolSnapshot =
+        when {
+            snapshotUnreadable -> PrePoolSnapshot.Unreadable
+            else -> snapshot?.let { PrePoolSnapshot.Present(it) } ?: PrePoolSnapshot.Absent
+        }
 
     override suspend fun writePrePoolSnapshot(snapshot: HomeLayoutSet?) {
+        snapshotUnreadable = false
         this.snapshot = snapshot
+    }
+
+    override suspend fun quarantinePrePoolSnapshot() {
+        snapshotQuarantined = true
     }
 }
 
@@ -84,6 +112,7 @@ internal class WriteThroughHomeLayouts(
 internal fun poolHomeRepository(
     legacy: HomeLayoutRepository,
     pool: CachedPoolRepository,
+    snapshots: DiskHomeLayoutStore? = null,
 ): PoolHomeLayoutRepository {
     var n = 0
     return PoolHomeLayoutRepository(
@@ -92,6 +121,7 @@ internal fun poolHomeRepository(
         scope = CoroutineScope(Job()),
         ids = WorkspaceIdFactory { "minted${++n}" },
         debounceMillis = Long.MAX_VALUE,
+        writeSnapshot = { snapshot -> snapshots?.writePrePoolSnapshot(snapshot) },
     )
 }
 

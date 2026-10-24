@@ -178,6 +178,8 @@ private fun rememberPlacedHome(
     val scope = rememberCoroutineScope()
     LaunchedEffect(pool) { pool?.initialize(layoutSet) }
     val version by (pool?.repository?.version ?: NoWorkspaceVersion).collectAsState()
+    // The standard home writes the same pool: an edit session built on an older pool ends instead of writing it back.
+    LaunchedEffect(version) { pool?.editing?.endIfChangedElsewhere() }
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass.workspaceLayoutClass()
     val shownMode = state.homeLayoutSet.workspaceShownMode()
     val labels = state.homeLayoutSet.activeLayout.settings.labels
