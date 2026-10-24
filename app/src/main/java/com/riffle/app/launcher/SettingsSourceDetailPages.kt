@@ -33,6 +33,7 @@ import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 internal const val SOURCE_DETAIL_STATUS_TAG = "source-detail-status"
 internal const val SOURCE_DETAIL_SWITCH_TAG = "source-detail-switch"
 internal const val SOURCE_USED_BY_EMPTY_TAG = "source-used-by-empty"
+internal const val SOURCE_DETAIL_ADD_TAG = "source-detail-add"
 
 internal fun sourcePlaceTestTag(index: Int): String = "source-place-$index"
 
@@ -86,6 +87,7 @@ internal fun SettingsSourceDetailPageContent(
         onToggle = { enabled -> controller.setEnabled(id, enabled) },
         onAllow = host.onRequestSourceAccess,
         onEdit = host.onEdit,
+        onUseSource = host.onUseSource?.let { open -> { open(id) } },
     ) {
         SourceSpecificSections(
             page = page,
@@ -113,12 +115,15 @@ internal fun SourceDetailScaffold(
     onAllow: (SourceId) -> Unit,
     onEdit: (WorkspaceId) -> Unit,
     modifier: Modifier = Modifier,
+    /** "Use this source": the content wizard with this source pre-selected (null: not offered). */
+    onUseSource: (() -> Unit)? = null,
     specific: @Composable ColumnScope.() -> Unit = {},
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val wide = maxWidth >= TWO_PANE_MIN_WIDTH_DP.dp
         val main: @Composable ColumnScope.() -> Unit = {
             SourceStatusSection(row = row, calendarAccess = calendarAccess, onToggle = onToggle, onAllow = onAllow)
+            onUseSource?.let { SourceUseSection(onUse = it) }
             specific()
         }
         val usedBy: @Composable ColumnScope.() -> Unit = {
@@ -148,6 +153,19 @@ internal fun SourceDetailScaffold(
                 usedBy()
             }
         }
+    }
+}
+
+/** Opens the content wizard on this source (its goal pre-selected), to add it to the active workspace. */
+@Composable
+private fun SourceUseSection(onUse: () -> Unit) {
+    SettingsSection(title = SourceDetailText.ADD_TO_HOME_TITLE) {
+        SettingsClickableRow(
+            modifier = Modifier.testTag(SOURCE_DETAIL_ADD_TAG),
+            title = SourceDetailText.ADD_TO_HOME,
+            subtitle = SourceDetailText.ADD_TO_HOME_BODY,
+            onClick = onUse,
+        )
     }
 }
 

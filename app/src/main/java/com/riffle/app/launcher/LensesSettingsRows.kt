@@ -17,6 +17,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -224,11 +225,20 @@ internal fun NewLensButton(
         modifier = Modifier.padding(horizontal = RiffleSpacing.s),
         verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
     ) {
+        // The content wizard by default (when the host offers it); the advanced builder stays one tap away.
+        val wizard = callbacks.onNewWizard
         Button(
-            onClick = callbacks.onNew,
+            onClick = wizard ?: callbacks.onNew,
             enabled = !model.isFull,
             modifier = Modifier.heightIn(min = RiffleSpacing.xxxl).testTag(LENSES_NEW_TEST_TAG),
         ) { Text("+ ${LensesSettingsText.NEW}") }
+        if (wizard != null) {
+            TextButton(
+                onClick = callbacks.onNew,
+                enabled = !model.isFull,
+                modifier = Modifier.heightIn(min = RiffleSpacing.xxxl).testTag(LENSES_NEW_ADVANCED_TEST_TAG),
+            ) { Text(LensesSettingsText.NEW_ADVANCED) }
+        }
         if (model.isFull) {
             Text(
                 text = LensesSettingsText.FULL_HINT,

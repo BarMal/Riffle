@@ -8,6 +8,8 @@ import androidx.compose.runtime.remember
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.pool.PoolHomeSwitch
+import com.riffle.app.launcher.wizard.ContentWizardRequests
+import com.riffle.app.launcher.wizard.WizardStores
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.SourceId
@@ -29,6 +31,10 @@ class WorkspacePreviewHost internal constructor(
     internal val onRequestSourceAccess: (SourceId) -> Unit = {},
     /** The S4 cutover switch, the one developer fallback left (Settings > Developer > Home from placed items). */
     internal val poolHome: PoolHomeSwitch? = null,
+    /** Where the content wizard writes (the pool and the home's rules); null: the workspace store alone. */
+    internal val wizardStores: WizardStores? = null,
+    /** The content wizard Settings has open, drawn over it by [WorkspaceLayer]. */
+    internal val wizardRequests: ContentWizardRequests = ContentWizardRequests(),
 )
 
 /** Stands in for an absent host, so the shell can observe "version" unconditionally. */
@@ -37,7 +43,8 @@ internal val NoWorkspaceVersion: StateFlow<Int> = MutableStateFlow(0)
 /**
  * Composed by the shell whenever it has a host. It loads the workspaces once (seeding the Nova default for a layout
  * with nothing stored, never overwriting what is stored) and the per-layout exclusion rules, and draws the workspace
- * editor over the home while the menu's Edit (or Settings > Workspaces > Edit) has it open. The home itself is the
+ * editor over the home while the menu's Edit (or Settings > Workspaces > Edit) has it open, and the content wizard
+ * Settings opened (Saved lenses > New, a source page's "Use this source"). The home itself is the
  * standard home surface (`LauncherShell`); the full-screen preview surface is no longer shown.
  */
 @Composable
@@ -53,6 +60,9 @@ internal fun WorkspaceLayer(
         viewModel.workspaceMenu.refresh()
     }
     val editing by host.controller.editing.collectAsState()
+    val wizard by host.wizardRequests.current.collectAsState()
+    // The wizard opens from Settings; its advanced builder may open the editor, which then draws on top.
+    wizard?.let { request -> WorkspaceWizardLayer(host, runtime, state, viewModel, request) }
     editing?.let { id -> WorkspaceEditorLayer(host, runtime, state, id) }
 }
 

@@ -49,6 +49,9 @@ import com.riffle.core.domain.launcher.workspace.editor.FlowMode
 import com.riffle.core.domain.launcher.workspace.editor.WorkspaceEdit
 import com.riffle.core.domain.launcher.workspace.effectiveStartPageId
 
+internal const val EDITOR_ADD_TEST_TAG = "editor-add"
+internal const val EDITOR_ADVANCED_TEST_TAG = "editor-advanced"
+
 /**
  * The workspace as an editable list: name, pages (reorder, change content, remove), widgets inside grid
  * pages (move, change content, remove) and the dock's dynamic section. Reordering and moving are buttons, so
@@ -73,9 +76,22 @@ internal fun EditorOverview(
         workspace.pages.forEachIndexed { index, page ->
             PageCard(page, index, workspace.pages.size, page.id == workspace.effectiveStartPageId, library, onAction)
         }
-        Button(onClick = { onAction(EditorAction.StartFlow(FlowMode.Add)) }) {
-            Icon(Icons.Filled.Add, contentDescription = null)
-            Text(EditorText.ADD_PAGE, modifier = Modifier.padding(start = RiffleSpacing.s))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // The content wizard by default; the advanced builder stays one tap away.
+            Button(
+                onClick = { onAction(EditorAction.OpenWizard()) },
+                modifier = Modifier.testTag(EDITOR_ADD_TEST_TAG),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Text(EditorText.ADD_PAGE, modifier = Modifier.padding(start = RiffleSpacing.s))
+            }
+            TextButton(
+                onClick = { onAction(EditorAction.StartFlow(FlowMode.Add)) },
+                modifier = Modifier.heightIn(min = RiffleSpacing.xxxl).testTag(EDITOR_ADVANCED_TEST_TAG),
+            ) { Text(EditorText.ADVANCED) }
         }
         DockCard(workspace, library, onAction)
     }
@@ -221,7 +237,7 @@ private fun GridWidgets(
             }
         }
     }
-    OutlinedButton(onClick = { onAction(EditorAction.StartFlow(FlowMode.Add)) }) { Text(EditorText.ADD_WIDGET_HERE) }
+    OutlinedButton(onClick = { onAction(EditorAction.OpenWizard(page.id)) }) { Text(EditorText.ADD_WIDGET_HERE) }
 }
 
 @Composable

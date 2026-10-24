@@ -13,6 +13,7 @@ import com.riffle.core.domain.launcher.workspace.SourceDescriptor
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceRepository
+import com.riffle.core.domain.launcher.workspace.editor.LensDraft
 import com.riffle.core.domain.launcher.workspace.editor.LensDraftAction
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoice
 import com.riffle.core.domain.launcher.workspace.settings.LensCopyTarget
@@ -146,10 +147,13 @@ internal class LensBuilderSessions(
         return true
     }
 
-    /** Starts an empty lens for [layout]. */
-    fun startNew(layout: HomeLayoutDeviceClass) {
+    /** Starts a new lens for [layout]: empty, or [draft] (the content wizard's "Open advanced builder"). */
+    fun startNew(
+        layout: HomeLayoutDeviceClass,
+        draft: LensDraft? = null,
+    ) {
         viewed = layout
-        mutableSession.value = LensSession.startNew()
+        mutableSession.value = draft?.let { LensSession(null, null, it) } ?: LensSession.startNew()
     }
 
     /** One edit of the lens being built. */

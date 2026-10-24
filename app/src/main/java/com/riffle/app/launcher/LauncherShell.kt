@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
+import com.riffle.app.launcher.wizard.WizardRequest
 import com.riffle.app.launcher.workspace.LensesSettingsController
 import com.riffle.app.launcher.workspace.LocalWorkspaceHomePages
 import com.riffle.app.launcher.workspace.NoWorkspaceVersion
@@ -244,6 +245,12 @@ private fun rememberWorkspaceSettingsHost(
                 currentLayout = currentLayout,
                 onEdit = { id -> host.controller.onEffect(WorkspaceMenuEffect.EditWorkspace(id)) },
                 onRequestSourceAccess = host.onRequestSourceAccess,
+                onUseSource = { source -> host.wizardRequests.open(WizardRequest.FromSource(source, currentLayout)) },
+                onNewLensWizard = { layout ->
+                    host.wizardRequests.open(WizardRequest.NewSavedLens(layout)) { handoff ->
+                        lenses.builder.startNew(layout, handoff.draft)
+                    }
+                },
                 exclusions =
                     runtime.exclusions?.let { repository ->
                         ExclusionsSettingsController(
