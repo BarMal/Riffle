@@ -26,6 +26,7 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceIssue
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.editor.EditContext
 import com.riffle.core.domain.launcher.workspace.editor.ExpressionOptions
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 /** One saved lens of the layout, as the list shows it. */
 data class LensRow(
@@ -142,7 +143,7 @@ object LensesSettingsPlanner {
                     fromPreset = saved.origin != null,
                 )
             }
-        return LensesSettingsModel(viewed, rows.sortedBy { it.name.lowercase() })
+        return LensesSettingsModel(viewed.workspaceLayoutClass(), rows.sortedBy { it.name.lowercase() })
     }
 
     /** The other layouts [id] can be copied to, with what each holds. Empty for an unknown lens. */
@@ -153,7 +154,8 @@ object LensesSettingsPlanner {
         available: Collection<HomeLayoutDeviceClass>,
     ): List<LensCopyTarget> {
         val saved = set.workspacesFor(viewed).library.find(id) ?: return emptyList()
-        return available.filter { it != viewed }.distinct().map { target ->
+        val viewedLayout = viewed.workspaceLayoutClass()
+        return available.map { it.workspaceLayoutClass() }.filter { it != viewedLayout }.distinct().map { target ->
             val library = set.workspacesFor(target).library
             LensCopyTarget(
                 layout = target,

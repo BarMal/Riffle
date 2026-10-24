@@ -19,8 +19,11 @@ done.
   `hideItem`, `hideEmptyContent`, `hideLike(field, generalizeNumbers)`. They return null when the item cannot
   support the rule (no app or group, sensitive item, text shorter than 3 characters). Ids and clock are injected.
 * `LayoutExclusionRules(layouts: Map<HomeLayoutDeviceClass, ExclusionRuleSet>, legacyMigrated)`: one set per layout,
-  keyed by the plain device class (all five). Owner decision N10 (fold `PHONE_LANDSCAPE` into `PHONE`) is not applied:
-  the key is a plain `HomeLayoutDeviceClass`, so folding is a one-line change in the consumer when decided.
+  keyed by `HomeLayoutDeviceClass.workspaceLayoutClass()` (owner decision N10, built): `forLayout` and `update` map
+  `PHONE_LANDSCAPE` to `PHONE`, so rotating never changes what is hidden. `folded()` merges a stored landscape set into the
+  phone's (phone's rules first; a landscape rule is appended unless the phone has its id, or an equal rule that hides at least
+  as much; the user-rule cap is not applied), so nothing hidden becomes visible. The codec, the legacy migration (which now
+  fills the four Workspaces layouts) and backup restore apply it. See `workspaces-configuration.md` section 17.
 
 ## Evaluation
 
@@ -98,9 +101,9 @@ the preview off nothing exists and nothing runs). Details of the page are in
   re-subscribing any source; cancelling the observation detaches it. The first `initialize` also notifies, so a lens
   that composed before the rules loaded fixes itself. With no signal passed (default) behaviour is unchanged.
   `SourceBackedLensResultProvider`'s constructor gained `contextChanges` before the trailing `context` lambda.
-* **Per layout and N10.** Rules are viewed and edited for the layout selected in the layout tabs, keyed by the plain
-  device class exactly as stored (N10, folding `PHONE_LANDSCAPE` into `PHONE`, is still **not** applied; the page shows the
-  layout name, and a rule with no equal rule on another listed layout carries "Only on this layout"). "Apply to all
+* **Per layout and N10.** Rules are viewed and edited for the layout selected in the layout tabs. The tabs are the Workspaces
+  layouts (`workspaceSettingsLayoutDeviceTabs`: no Landscape tab), and a landscape selection shows the phone's rules (N10); the
+  page shows the layout name, and a rule with no equal rule on another listed layout carries "Only on this layout". "Apply to all
   layouts" adds a copy (fresh id, user origin, enabled state kept) to every other layout, de-duplicated by source and
   matcher, so it is idempotent; it is undoable.
 * **Actions.** Switch per rule (the whole row; no Undo, it is its own inverse); Delete asks first, announces in the Settings
@@ -164,4 +167,4 @@ the preview off nothing exists and nothing runs). Details of the page are in
   adapter over the rules; removing `withHiddenApps` and `NotificationHideRuleFilter` from the adapters. Until then a rule
   edited here affects the preview and what feeds it; the classic launcher still applies the legacy hidden apps and hide rules.
 * Backup (`"exclusions"` document key) and import of pre-S6 backups through the migration (S8).
-* Notification variant of `isAppHidden` for non-lens consumers; the N10 landscape fold.
+* Notification variant of `isAppHidden` for non-lens consumers.

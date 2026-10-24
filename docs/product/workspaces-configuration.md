@@ -199,10 +199,11 @@ makes Undo after restore or after a bad edit exact; keep it, nothing more elabor
 ### 1.6 Per-layout behaviour and posture changes
 
 - Workspaces, the pool (9), the lens library (4) and exclusion rules (14) are **per layout**
-  (`HomeLayoutDeviceClass`), independent, as already built. Note the layout is derived from the window size
+  (`HomeLayoutDeviceClass`), independent, as already built. The device class is derived from the window size
   at runtime (`HomeLayoutDeviceClassClassifier`: `PHONE`, `PHONE_LANDSCAPE`, `FOLDABLE`, `TABLET`, `DESKTOP`), so
-  rotating a phone to landscape *changes layout*. That is pre-existing for layouts and is a real consequence
-  for exclusions (14.6, N10).
+  rotating a phone gives `PHONE_LANDSCAPE`. **As built (N10, section 17):** every Workspaces value is keyed by
+  `workspaceLayoutClass()`, which maps `PHONE_LANDSCAPE` to `PHONE`, so rotation changes geometry only. The classic
+  `HomeLayoutSet` keeps its own landscape layouts.
 - Posture change mid-use: the shell recomputes `resolveActive` for the new class, no write. The selected page
   is kept by container id (`PageSetSelection`) when the same workspace exists on both layouts, else the new
   layout's active workspace's first page.
@@ -1708,12 +1709,14 @@ set is the scope. Evaluation order is unchanged: the provider takes the rule set
 exclusions first, then the lens filter. Non-lens consumers (app drawer and search, notification badges, dock cards) use
 the rule set of the **current** layout.
 
-**What "layout" means for exclusions (needs a decision, N10).** The layout is derived from the window size at runtime
+**What "layout" means for exclusions (decided N10, built).** The device class is derived from the window size at runtime
 (`HomeLayoutDeviceClassClassifier`: `PHONE`, `PHONE_LANDSCAPE`, `FOLDABLE`, `TABLET`, `DESKTOP`), so a phone rotated to
-landscape is a different layout and, taken literally, un-hides everything. Recommendation: key the rule sets by an
-`ExclusionScope` = device class with `PHONE_LANDSCAPE` folded into `PHONE` (rotation never changes what is hidden; folding or
-using a tablet does). Workspaces, pool and lens library keep the plain device class. Everything below says "layout" for
-"exclusion scope".
+landscape is a different device class and, taken literally, would un-hide everything. As built, rule sets are keyed by
+`HomeLayoutDeviceClass.workspaceLayoutClass()` (`PHONE_LANDSCAPE` -> `PHONE`; no separate `ExclusionScope` type): rotation
+never changes what is hidden; folding or using a tablet does. The owner extended the fold to workspaces, pool and lens
+library too, so all four share one notion of layout (section 17). Stored landscape rules are merged into the phone's once
+on load (`LayoutExclusionRules.folded()`), never un-hiding anything. Everything below says "layout" for "workspace layout
+class".
 
 **Storage.** A separate `source_exclusions` key in the workspace DataStore holding `Map<ExclusionScope, List<SourceExclusionRule>>`,
 **not** inside the workspace blob or `LayoutWorkspaces`. Reason: hiding is a privacy statement, so resetting workspaces,
@@ -1903,6 +1906,64 @@ L = likelihood, I = impact (H/M/L). Only the risks that matter for one developer
 | 5 | **Two navigation styles drift apart** (only if full-parity Classic is chosen, S-C) | M | M | Default plan avoids it (developer toggle, then dropped); if chosen: shared data and engines, chrome-only difference, matrix of UI tests, name it "Navigation style" | 10 |
 | 6 | **Per-layout exclusions surprise the owner**: hidden items reappear on rotation, fold or tablet | M | L | Scope folds landscape into portrait (N10); layout label on every surface; "Hide on all layouts"; copy-from-layout never un-hides | 14.6 |
 
+## 17. N10: landscape folds into the phone layout (as built)
+
+Owner decision N10: a phone in landscape is the phone layout for every Workspaces value. Rotation changes geometry only,
+never which workspaces, saved lenses, hidden items or placed items are shown.
+
+**Mapping.** `HomeLayoutDeviceClass.workspaceLayoutClass()` (`core/domain/.../workspace/WorkspaceLayoutClass.kt`) maps
+`PHONE_LANDSCAPE` to `PHONE` and every other class to itself; `WorkspaceLayoutClasses.entries` lists the four Workspaces
+layouts. `WorkspaceSet` (`workspacesFor`, `withLayout`, `update`, `resolveActive`, `copyFromOtherLayout`, new `hasLayout`)
+and `LayoutExclusionRules` (`forLayout`, `update`) key by it, and so do `CachedPoolRepository.pool` and `update`, the preview
+host (workspace, hide host, placed home, pool editing), the editor layer, the workspace menu, the Settings host's current
+layout, and the planners (copy sources, lens copy targets, "Only on this layout", "Apply to all layouts", source usage). The
+preview's fallback arrangement for a preset workspace uses the phone's shown mode (`HomeLayoutSet.workspaceShownMode()`), so
+rotation does not change it either. The classic `HomeLayoutSet` (its layouts, docks, mode pairs) is untouched.
+
+**Settings.** The Workspaces, Saved lenses and Hidden items and rules pages use `workspaceSettingsLayoutDeviceTabs`: no
+"Landscape" tab, and a landscape selection shows the phone layout. "Copy from other layout" and "Copy to" never offer it.
+`WorkspacesSettingsText.layoutName(PHONE_LANDSCAPE)` reads as the phone's name for any message that still carries it.
+
+**Stored data, folded once on load (pure, idempotent, never throws).**
+
+| Value | Only landscape stored | Both stored | Where |
+| --- | --- | --- | --- |
+| `WorkspaceSet` (workspaces, active/default, lens library) | becomes `PHONE` | `PHONE` wins, landscape dropped | `WorkspaceLayoutFold.fold`, applied by `WorkspaceSetCodec.decode`, `WorkspaceBootstrap.seed`, `WorkspaceMigration.ensureMigrated`, `WorkspaceBackup.restoreSet` |
+| `LayoutExclusionRules` | becomes `PHONE` | merged into `PHONE`: the phone's rules first, then each landscape rule unless the phone has its id (phone wins) or an equal rule (source and matcher) that hides at least as much; the cap is not applied | `LayoutExclusionRules.folded()`, applied by `ExclusionRulesCodec.decode`, `ExclusionMigration.migrate`, `WorkspaceBackup.restoreExclusions` |
+| `PoolStoreState.pools` | becomes `PHONE` | `PHONE` wins | `PoolLayoutFold.fold` (`workspace/pool/PoolLayoutFold.kt`), applied by `CachedPoolRepository.initialize` (written back once) and `replaceFromBackup` |
+
+Migration from `HomeLayoutSet` (`WorkspaceMigration`, and through it `PoolMigration`) creates no `PHONE_LANDSCAPE` entry: a
+landscape-only set migrates to the phone layout, and when the device was rotated at migration time the phone layout shows the
+phone's remembered mode. The legacy hidden apps and hide rules are copied into the four Workspaces layouts. Default seeding
+(`PresetInstaller.withDefaultsFor`, `WorkspaceBootstrap`) never writes a landscape layout and never overwrites the phone's
+through it. An older backup with landscape entries goes through the same folds.
+
+**Tests.** Domain: `WorkspaceLayoutFoldTest` (mapping, accessors, only-landscape/both/neither, decode of an older blob in
+either order, fuzzed hostile layout entries, migration and `ensureMigrated`, preset seeding, backup restore, shown mode),
+`ExclusionLayoutFoldTest` (rotation reads the phone rules, the three cases, phone wins on an id conflict, an enabled
+landscape rule survives a disabled phone twin, cap bypass, decode and restore, fuzzed input, migration), `PoolLayoutFoldTest`
+(the three cases, fuzzed decode, migration). App JVM: `WorkspaceRotationTest` (portrait and rotated windows classify
+differently but resolve the same workspace set, the same placed items and the same hidden rules; an edit from a rotated
+window lands in the phone pool; a restored older pool is folded; the Workspaces tabs offer no landscape layout). Existing
+tests that enumerated `HomeLayoutDeviceClass.entries` for Workspaces values now use `WorkspaceLayoutClasses.entries`.
+
+**Not done.** The preview dock (`HomeLayoutSet.dockFor(<window device class>)`) and label settings still come from the
+window's classic layout until the dock moves into the pool (S4); a landscape dock that differs from the portrait one is
+therefore still shown in landscape. The classic Settings > Home layout pages keep their Landscape tab by design. Not run on a
+device.
+
+**Owner device checklist (N10).**
+1. With Workspaces (preview) on, open the preview in portrait, switch to a non-default workspace, then rotate with the
+   preview open: the same workspace, page and placed items stay; only the geometry changes. Rotate back: unchanged.
+2. Hide an app from the preview in portrait, rotate: it stays hidden (lens pages, Finder, search). Unhide it in landscape in
+   Settings > Hidden items and rules, rotate back: it is visible in portrait too.
+3. In landscape, open Settings > Workspaces, Saved lenses and Hidden items and rules: no "Landscape" tab; the phone layout is
+   shown and editable; "Copy from other layout" lists no landscape layout.
+4. Move a placed app in landscape (preview edit mode), rotate: the move is there in portrait.
+5. Restore a backup taken before this change: workspaces, rules and placed items match what the phone showed in portrait,
+   and nothing previously hidden reappears in either orientation.
+
+
 ---
 
 ## Open questions for the owner
@@ -1911,7 +1972,7 @@ Decided: Q1 to Q19 and N1 to N9 (banners at the top), and N10 to N12 (owner, 202
 
 | # | Question | Decision |
 | --- | --- | --- |
-| N10 | **Scope under rotation.** A phone in landscape is `PHONE_LANDSCAPE`, a different layout. | **Fold `PHONE_LANDSCAPE` into `PHONE`** for every per-layout value (workspaces, lens library, pool, exclusions). Rotation affects geometry only. Not built yet. |
+| N10 | **Scope under rotation.** A phone in landscape is `PHONE_LANDSCAPE`, a different layout. | **Fold `PHONE_LANDSCAPE` into `PHONE`** for every per-layout value (workspaces, lens library, pool, exclusions). Rotation affects geometry only. **Built** (section 17). |
 | N11 | **Classic (N7).** | **Default plan**: a developer toggle, deleted at S9. Full-parity Classic (10.3, slice S-C) is **not planned**; the default Nova workspace carries the parity contract. Any future second style is named "Navigation style". |
 | N12 | **New apps in a pool world (9.8).** | **Every opted-in workspace** of the layout (one shared `PoolApp`). |
 

@@ -43,6 +43,7 @@ import com.riffle.core.domain.launcher.workspace.settings.LayoutFallbackNotice
 import com.riffle.core.domain.launcher.workspace.settings.WorkspaceRow
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsAction
 import com.riffle.core.domain.launcher.workspace.settings.WorkspacesSettingsModel
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 /** Settings > Workspaces. Reachable only from the Developer section while Workspaces (preview) is on. */
 @Composable
@@ -65,9 +66,12 @@ private fun HostedWorkspacesPage(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val version by host.version.collectAsState()
-    val viewed = state.selectedLayoutDeviceClass
+    // N10: a landscape phone shows (and edits) the phone layout.
+    val viewed = state.selectedLayoutDeviceClass.workspaceLayoutClass()
     val tabs =
-        remember(state.availableLayoutDeviceClasses) { settingsLayoutDeviceTabs(state.availableLayoutDeviceClasses) }
+        remember(state.availableLayoutDeviceClasses) {
+            workspaceSettingsLayoutDeviceTabs(state.availableLayoutDeviceClasses)
+        }
     val model =
         remember(host, version, viewed, tabs) {
             host.workspaces.model(viewed, host.currentLayout, tabs.map { it.deviceClass })

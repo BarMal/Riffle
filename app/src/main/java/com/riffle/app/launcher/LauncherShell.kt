@@ -66,6 +66,7 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuEffect
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 import kotlinx.coroutines.delay
 
 @Composable
@@ -110,7 +111,8 @@ fun LauncherShell(
     val workspaceMenu = menuHost.takeUnless { previewOpen }
 
     val previewSetting = rememberWorkspacePreviewSetting(workspacePreview, previewEnabled)
-    val settingsHost = rememberWorkspaceSettingsHost(workspacePreview, previewEnabled, deviceClass, viewModel)
+    val settingsHost =
+        rememberWorkspaceSettingsHost(workspacePreview, previewEnabled, deviceClass.workspaceLayoutClass(), viewModel)
 
     HomeReturnEffect(state = state, suppressed = previewOpen, onAction = onAction)
 

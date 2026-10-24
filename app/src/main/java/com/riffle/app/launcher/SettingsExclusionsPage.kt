@@ -41,6 +41,7 @@ import com.riffle.core.domain.launcher.workspace.settings.ExclusionRuleSection
 import com.riffle.core.domain.launcher.workspace.settings.ExclusionsSettingsAction
 import com.riffle.core.domain.launcher.workspace.settings.ExclusionsSettingsModel
 import com.riffle.core.domain.launcher.workspace.settings.TextRuleProblem
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 internal const val EXCLUSIONS_EMPTY_TEST_TAG = "exclusions-empty"
 internal const val EXCLUSIONS_ADD_TEST_TAG = "exclusions-add-text-rule"
@@ -80,9 +81,12 @@ private fun HostedExclusionsPage(
     onAction: (LauncherShellAction) -> Unit,
     sources: Set<SourceId>?,
 ) {
-    val viewed = state.selectedLayoutDeviceClass
+    // N10: a landscape phone shows (and edits) the phone layout.
+    val viewed = state.selectedLayoutDeviceClass.workspaceLayoutClass()
     val tabs =
-        remember(state.availableLayoutDeviceClasses) { settingsLayoutDeviceTabs(state.availableLayoutDeviceClasses) }
+        remember(state.availableLayoutDeviceClasses) {
+            workspaceSettingsLayoutDeviceTabs(state.availableLayoutDeviceClasses)
+        }
     DisposableEffect(controller) {
         controller.open()
         onDispose { controller.close() }

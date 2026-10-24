@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleSet
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionTextField
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.exclusions.SourceExclusionRule
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 /** The groups of Settings > Hidden items and rules, in display order. */
 enum class ExclusionRuleKind {
@@ -171,7 +172,8 @@ object ExclusionsSettingsPlanner {
         disabledSources: Set<SourceId> = emptySet(),
     ): ExclusionsSettingsModel {
         val set = rules.forLayout(viewed)
-        val others = otherLayouts.filter { it != viewed }.distinct()
+        val viewedLayout = viewed.workspaceLayoutClass()
+        val others = otherLayouts.map { it.workspaceLayoutClass() }.filter { it != viewedLayout }.distinct()
         val rows =
             set.rules.map { rule ->
                 val off = rule.source in disabledSources
@@ -194,7 +196,7 @@ object ExclusionsSettingsPlanner {
                 rows.filter { it.kind == kind }.takeIf { it.isNotEmpty() }?.let { ExclusionRuleSection(kind, it) }
             }
         return ExclusionsSettingsModel(
-            layout = viewed,
+            layout = viewedLayout,
             sections = sections,
             ruleCount = rows.size,
             canAdd = set.rules.count { it.origin == ExclusionOrigin.USER } < SourceExclusionRule.MAX_USER_RULES,

@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.workspace.backup
 
 import com.riffle.core.domain.launcher.workspace.LensLibraryOps
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutFold
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
@@ -47,13 +48,14 @@ object WorkspaceBackup {
     /**
      * A usable restore of [set], or null when it is null or holds no layout (leave current data alone).
      * Refs that resolve take the library's lens ([LensLibraryOps.rehydrate]) and dangling lens refs are
-     * detached to the inline lens they already drew.
+     * detached to the inline lens they already drew. An older file's landscape layout is folded into the phone
+     * one (N10, [WorkspaceLayoutFold]).
      */
     fun restoreSet(set: WorkspaceSet?): WorkspaceRestore? {
         if (set == null || set.layouts.isEmpty()) return null
         var repaired = 0
         val layouts =
-            set.layouts.mapValues { (_, layout) ->
+            WorkspaceLayoutFold.fold(set).layouts.mapValues { (_, layout) ->
                 val hydrated = LensLibraryOps.rehydrate(layout)
                 repaired += hydrated.dangling.size
                 LensLibraryOps.detachDangling(hydrated.layout)
@@ -90,8 +92,11 @@ object WorkspaceBackup {
     fun exportExclusions(rules: LayoutExclusionRules?): LayoutExclusionRules? =
         rules?.takeIf { it.layouts.isNotEmpty() || it.legacyMigrated }
 
-    /** The rules to restore, or null to leave the current rules untouched. */
-    fun restoreExclusions(rules: LayoutExclusionRules?): LayoutExclusionRules? = exportExclusions(rules)
+    /**
+     * The rules to restore, or null to leave the current rules untouched. An older file's landscape rules are
+     * merged into the phone ones (N10, [LayoutExclusionRules.folded]).
+     */
+    fun restoreExclusions(rules: LayoutExclusionRules?): LayoutExclusionRules? = exportExclusions(rules)?.folded()
 }
 
 private fun isWidget(item: PoolItem): Boolean = item is PoolWidget

@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +74,13 @@ internal fun settingsLayoutDeviceTabs(classes: Set<HomeLayoutDeviceClass>): List
             }
     }
 }
+
+/**
+ * The layout tabs of the Workspaces pages (workspaces, saved lenses, exclusions): no separate landscape tab, as a
+ * landscape phone is the phone layout for every Workspaces value (N10). The classic layout pages keep theirs.
+ */
+internal fun workspaceSettingsLayoutDeviceTabs(classes: Set<HomeLayoutDeviceClass>): List<SettingsLayoutDeviceTab> =
+    settingsLayoutDeviceTabs(WorkspaceLayoutClasses.of(classes))
 
 private fun HomeLayoutDeviceClass.settingsLabel(): String =
     when (this) {

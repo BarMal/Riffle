@@ -27,6 +27,8 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.dock.PreviewDock
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
+import com.riffle.core.domain.launcher.workspace.workspaceShownMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -111,7 +113,9 @@ private fun WorkspacePreviewContent(
     val navigation by host.controller.navigation.collectAsState()
     val returnRequest by host.controller.returnRequest.collectAsState()
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
-    val workspace = remember(version, deviceClass) { runtime.repository.load()?.resolveActive(deviceClass)?.workspace }
+    // N10: workspaces, hiding and placed items follow the Workspaces layout, so a rotation changes geometry only.
+    val layout = deviceClass.workspaceLayoutClass()
+    val workspace = remember(version, layout) { runtime.repository.load()?.resolveActive(layout)?.workspace }
     val reducedMotion = state.launcherSettings.motion.reducedMotion
     val servicesFor =
         remember(runtime, reducedMotion) {
@@ -124,7 +128,7 @@ private fun WorkspacePreviewContent(
     WorkspacePreviewTheme(state) {
         PreviewHideHost(
             hideController,
-            deviceClass,
+            layout,
             (dockPins?.barHeightDp ?: PreviewDock.MIN_BAR_HEIGHT_DP).dp,
         ) {
             WorkspacePreviewSurface(
@@ -160,8 +164,8 @@ private fun rememberPlacedHome(
     val scope = rememberCoroutineScope()
     LaunchedEffect(pool) { pool?.initialize(layoutSet) }
     val version by (pool?.repository?.version ?: NoWorkspaceVersion).collectAsState()
-    val deviceClass = state.homeLayoutSet.activeKey.deviceClass
-    val shownMode = state.homeLayoutSet.activeKey.viewMode
+    val deviceClass = state.homeLayoutSet.activeKey.deviceClass.workspaceLayoutClass()
+    val shownMode = state.homeLayoutSet.workspaceShownMode()
     val labels = state.homeLayoutSet.activeLayout.settings.labels
     val installedApps = state.installedApps
     return remember(pool, version, workspaceId, deviceClass, shownMode, labels, installedApps) {

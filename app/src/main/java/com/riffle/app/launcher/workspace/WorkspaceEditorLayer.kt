@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.editor.LensScope
 import com.riffle.core.domain.launcher.workspace.editor.LensScopeChange
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 /**
  * The workspace editor over the preview, for the workspace the dock menu's Edit chose. Saving replaces just
@@ -26,7 +27,8 @@ internal fun WorkspaceEditorLayer(
     state: LauncherShellState,
     workspaceId: WorkspaceId,
 ) {
-    val deviceClass = state.homeLayoutSet.activeKey.deviceClass
+    // N10: the Workspaces layout, so rotating while editing keeps the same workspace (and the open editor).
+    val deviceClass = state.homeLayoutSet.activeKey.deviceClass.workspaceLayoutClass()
     // The layout's library and its other workspaces come along, for saved lenses (preview only, like the editor).
     val loaded =
         remember(workspaceId, deviceClass) {
