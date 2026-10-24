@@ -25,7 +25,8 @@ data class PoolDecodeResult(
 )
 
 /**
- * Encodes and decodes a [PlacedItemPool] to [StoredValue] (the `pool` entry of a layout in the workspace set blob).
+ * Encodes and decodes a [PlacedItemPool] to [StoredValue] (the `pool` entry of a layout in the pool store). The dock
+ * is an optional `dock` key: a pool written before the dock moved into the pool decodes with `dock = null`.
  * Decoding never throws: a missing or malformed value is an empty pool, undecodable items and arrangements are
  * dropped, and the result goes through [PoolValidation.repair] so the invariants hold. Dangling references are
  * dropped and reported in [PoolDecodeResult.issues].
@@ -35,6 +36,7 @@ object PoolCodec {
         obj(
             "items" to arr(pool.items.values.map(PoolItemEncoding::encodeItem)),
             "arrangements" to arr(pool.arrangements.map { (id, arrangement) -> encodeArrangement(id, arrangement) }),
+            "dock" to pool.dock?.let(PoolDockCodec::encode),
         )
 
     fun decode(value: StoredValue?): PoolDecodeResult {
@@ -47,7 +49,8 @@ object PoolCodec {
             root.array("arrangements")
                 .mapNotNull { (it as? StoredValue.Obj)?.let(::decodeArrangement) }
                 .distinctBy { it.first }
-        val repaired = PoolValidation.repair(PlacedItemPool(items.associateBy { it.id }, arrangements.toMap()))
+        val dock = root.obj("dock")?.let { guarded { PoolDockCodec.decode(it) } }
+        val repaired = PoolValidation.repair(PlacedItemPool(items.associateBy { it.id }, arrangements.toMap(), dock))
         return PoolDecodeResult(repaired.pool, repaired.issues)
     }
 
@@ -61,7 +64,7 @@ object PoolCodec {
             "pages" to arr(arrangement.pages.map(::encodePage)),
         )
 
-    private fun encodePage(page: ArrangementPage): StoredValue.Obj =
+    internal fun encodePage(page: ArrangementPage): StoredValue.Obj =
         obj(
             "id" to str(page.id.value),
             "columns" to num(page.grid.columns),
@@ -94,7 +97,7 @@ object PoolCodec {
             }
         }
 
-    private fun decodePage(root: StoredValue.Obj): ArrangementPage? {
+    internal fun decodePage(root: StoredValue.Obj): ArrangementPage? {
         val id = root.string("id")
         val columns = root.int("columns")
         val rows = root.int("rows")

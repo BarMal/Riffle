@@ -20,20 +20,20 @@ class PoolCopyTest {
     ) = pool.arrangements.getValue(ws).pages.flatMap { it.placements }.map { it.item }
 
     @Test
-    fun duplicateClonesByDefaultAndWidgetsBecomePlaceholders() {
+    fun duplicateClonesAppsAndFoldersByDefaultAndSharesTheWidgetInstance() {
         val edit = PoolCopy.duplicateWorkspace(source, W1, W3, counterIds()).done()
         val copy = edit.pool
         assertEquals(3, items(copy, W3).size)
-        assertTrue(items(copy, W3).none { it in items(copy, W1) }, "nothing is shared")
+        assertEquals(listOf(PoolItemId("w")), items(copy, W3).filter { it in items(copy, W1) }, "only the widget")
         assertEquals(
             source.arrangements.getValue(W1).pages.map { it.placements.map { p -> p.at } },
             copy.arrangements.getValue(W3).pages.map { it.placements.map { p -> p.at } },
         )
         val widgets = copy.items.values.filterIsInstance<PoolWidget>()
-        assertEquals(2, widgets.size)
-        val placeholder = widgets.first { it.hostedId == null }
-        assertEquals(provider, placeholder.provider)
-        assertEquals(HostedWidgetId(9), widgets.first { it.hostedId != null }.hostedId)
+        assertEquals(1, widgets.size, "no placeholder: the same instance")
+        assertEquals(HostedWidgetId(9), widgets.single().hostedId)
+        assertEquals(2, copy.refs("w"))
+        assertEquals(emptySet(), edit.releasedHostIds)
         assertEquals(source.arrangements.getValue(W1).newAppPlacement, copy.arrangements.getValue(W3).newAppPlacement)
         assertInvariants(copy)
     }
@@ -48,12 +48,21 @@ class PoolCopyTest {
     }
 
     @Test
-    fun keepSharedReferencesAppsAndFoldersButNeverWidgets() {
+    fun keepSharedReferencesAppsFoldersAndWidgets() {
         val copy = PoolCopy.duplicateWorkspace(source, W1, W3, counterIds(), CopyMode.KEEP_SHARED).done().pool
         assertEquals(2, copy.refs("a"))
         assertEquals(2, copy.refs("f"))
-        assertEquals(1, copy.refs("w"))
+        assertEquals(2, copy.refs("w"))
+        assertEquals(source.items, copy.items)
         assertInvariants(copy)
+    }
+
+    @Test
+    fun deletingTheOriginalOfADuplicateKeepsTheSharedWidgetBound() {
+        val copy = PoolCopy.duplicateWorkspace(source, W1, W3, counterIds()).done().pool
+        val deleted = PoolRemoval.deleteWorkspace(copy, W1).done()
+        assertEquals(emptySet(), deleted.releasedHostIds)
+        assertEquals(HostedWidgetId(9), (deleted.pool.items.getValue(PoolItemId("w")) as PoolWidget).hostedId)
     }
 
     @Test

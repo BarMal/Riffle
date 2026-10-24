@@ -149,10 +149,10 @@ class PoolHomeEditingTest {
     }
 
     @Test
-    fun separateCopyOfAWidgetIsANewPlaceholderAndASecondPlacementIsRefused() {
+    fun separateCopyOfAWidgetIsANewPlaceholderAndASecondPlacementHereIsRefused() {
         assertEquals(
-            PoolRejection.WIDGET_ALREADY_PLACED,
-            PoolPlacement.placeExisting(base, W2, P1, PoolItemId("w")).rejection(),
+            PoolRejection.ALREADY_IN_ARRANGEMENT,
+            PoolPlacement.placeExisting(base, W1, P2, PoolItemId("w")).rejection(),
         )
         val copied = PoolWidgets.separateCopy(base, PoolItemId("w"), W2, P1, counterIds("c"), null).done().pool
         val widgets = copied.items.values.filterIsInstance<PoolWidget>()

@@ -27,10 +27,7 @@ internal object PoolPages {
             arrangement == null -> rejected(PoolRejection.UNKNOWN_WORKSPACE)
             page == null -> rejected(PoolRejection.UNKNOWN_PAGE)
             item == null -> rejected(PoolRejection.UNKNOWN_ITEM)
-            item is PoolWidget && PoolReferences.count(pool, itemId) > 0 ->
-                rejected(
-                    PoolRejection.WIDGET_ALREADY_PLACED,
-                )
+            itemId in PoolReferences.inDock(pool) -> rejected(PoolRejection.ITEM_IN_DOCK)
             itemId in PoolReferences.referencedIn(arrangement) -> rejected(PoolRejection.ALREADY_IN_ARRANGEMENT)
             !permits(item, at?.span ?: span) -> rejected(PoolRejection.INVALID_PLACEMENT)
             else -> engineStep(pool, workspaceId, page, item, at, span)

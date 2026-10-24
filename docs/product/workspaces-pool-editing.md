@@ -46,8 +46,9 @@ says why in the snackbar. A one-line notice in the edit bar says edits change th
 Decisions 1 and 2 were confirmed by the owner on 2026-10-23 (#1363); 3 to 5 are still to confirm.
 
 1. **Edits go to the arrangement shown.** Preset workspaces have no arrangement yet and show the migrated Library home, so
-   editing one edits that arrangement (shared by every preset that borrows it). Per-workspace arrangements (fork on first
-   edit) are not built; they need a decision on cloning widgets, which are single-placement.
+   editing one edits that arrangement (shared by every preset that borrows it). The domain half of per-workspace
+   arrangements now exists (`PoolArrangements.fork`, after the widget rule change; see
+   [`workspaces-pool-cutover-s4.md`](workspaces-pool-cutover-s4.md)); the editor does not call it yet.
 2. **No live sync with the standard home.** Edits and `HomeLayoutSet` diverge by design; the top-bar notice and the
    Refresh confirm say so.
 3. **Buttons first, drag as a shortcut.** Drag moves within a page only; moving between pages is the page buttons.

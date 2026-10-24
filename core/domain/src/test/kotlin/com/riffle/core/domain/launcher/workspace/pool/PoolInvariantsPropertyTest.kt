@@ -2,6 +2,7 @@ package com.riffle.core.domain.launcher.workspace.pool
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridPlacementEngine
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -87,13 +88,59 @@ class PoolInvariantsPropertyTest {
         pool: PlacedItemPool,
     ): PoolEdit? {
         val host = if (r.rnd.nextBoolean()) null else HostedWidgetId(5000 + r.counter++)
-        return when (r.rnd.nextInt(4)) {
+        return when (r.rnd.nextInt(6)) {
             0 -> PoolWidgets.separateCopy(pool, r.item(pool), r.ws(), r.page(), r.ids, host, r.cell()).edit()
             1 -> PoolWidgets.bind(pool, r.item(pool), HostedWidgetId(7000 + r.counter)).edit()
             2 -> PoolWidgets.unbind(pool, r.item(pool)).edit()
+            3 -> PoolArrangements.fork(pool, r.ws(), r.workspaces.shuffled(r.rnd), r.ids).edit()
+            4 -> projectedEdit(r, pool)
             else -> ingestWithRandomRemoval(r, pool)
         }
     }
+
+    /** A random home or dock edit through the standard-home projection: remove an item, or move one into the dock. */
+    private fun projectedEdit(
+        r: Run,
+        pool: PlacedItemPool,
+    ): PoolEdit {
+        val ws = r.ws()
+        val before = PoolHomeProjection.project(pool, ws, projectionBase)
+        val homeItems = before.pages.flatMap { it.items }
+        val victim = (homeItems + before.dock.items).randomOrNull(r.rnd)?.id
+        val after =
+            when {
+                victim == null -> before
+                r.rnd.nextBoolean() ->
+                    before.copy(
+                        pages = before.pages.map { page -> page.copy(items = page.items.filter { it.id != victim }) },
+                        dock = before.dock.copy(items = before.dock.items.filter { it.id != victim }),
+                    )
+                else -> {
+                    val moved = homeItems.firstOrNull { it.id == victim }
+                    if (moved == null || moved is com.riffle.core.domain.launcher.home.WidgetItem) {
+                        before
+                    } else {
+                        before.copy(
+                            pages =
+                                before.pages.map {
+                                        page ->
+                                    page.copy(items = page.items.filter { it.id != victim })
+                                },
+                            dock = before.dock.copy(items = before.dock.items + moved),
+                        )
+                    }
+                }
+            }
+        return PoolHomeProjection.ingest(pool, ws, before, after, r.ids)
+    }
+
+    private val projectionBase =
+        com.riffle.core.domain.launcher.home.HomeLayout(
+            viewMode = com.riffle.core.domain.launcher.home.LauncherViewMode.STANDARD_APP_DRAWER,
+            pages = listOf(com.riffle.core.domain.launcher.home.LauncherPage(P1, grid = GridDimensions(4, 4))),
+            selectedPageId = P1,
+            dock = com.riffle.core.domain.launcher.home.DockModel(capacity = 5),
+        )
 
     private fun ingestWithRandomRemoval(
         r: Run,
@@ -115,7 +162,7 @@ class PoolInvariantsPropertyTest {
     fun invariantsAndHostIdAccountingHoldAfterEveryRandomOperation() {
         for (seed in 1..80) {
             val r = Run(seed)
-            var pool = emptyPool(listOf(W1, W2, W3), NewAppPlacement.HOME_AND_FINDER)
+            var pool = emptyPool(listOf(W1, W2, W3), NewAppPlacement.HOME_AND_FINDER).copy(dock = PoolDock())
             repeat(120) { step ->
                 val edit =
                     when (r.rnd.nextInt(3)) {
@@ -141,7 +188,7 @@ class PoolInvariantsPropertyTest {
     @Test
     fun aRejectedOperationReturnsTheSameValueAndAnUndoRestoresItExactly() {
         val pool = emptyPool().add(poolWidget("w"), cell = at(0, 0)).add(poolApp("a"), cell = at(1, 0))
-        val rejected = PoolPlacement.placeExisting(pool, W2, P1, PoolItemId("w"))
+        val rejected = PoolPlacement.placeExisting(pool, W1, P2, PoolItemId("w"))
         assertEquals(pool, rejected.poolOr(pool))
         val deleted = PoolRemoval.deleteWorkspace(pool, W1).done()
         assertTrue(deleted.pool.items.isEmpty())

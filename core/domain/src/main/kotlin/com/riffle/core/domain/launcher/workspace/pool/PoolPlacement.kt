@@ -40,8 +40,10 @@ object PoolPlacement {
     }
 
     /**
-     * Places an existing app (or shortcut) in another arrangement: apps are freely shared. A widget is refused
-     * (single placement: move it, or add a separate copy); a folder is refused (sharing is [shareFolder]).
+     * Places an existing app, shortcut or widget in another arrangement (or on another page of one that does not show
+     * it yet): apps and widget instances are shared freely, once per arrangement. A widget keeps its one host id and
+     * configuration wherever it is placed; a divergent configuration is [PoolWidgets.separateCopy]. A folder is refused
+     * (sharing is [shareFolder]); a dock item is refused ([PoolRejection.ITEM_IN_DOCK]).
      */
     fun placeExisting(
         pool: PlacedItemPool,
@@ -99,8 +101,8 @@ object PoolPlacement {
     }
 
     /**
-     * Moves an item's placement from one workspace to another. This is how a widget changes workspace: its single
-     * placement moves and the host id is kept. Apps and folders move too (the source loses its reference).
+     * Moves an item's placement from one workspace to another: the source loses its reference, the host id of a widget
+     * is kept. Refused when the target already shows the item.
      */
     fun moveToWorkspace(
         pool: PlacedItemPool,

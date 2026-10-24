@@ -9,7 +9,7 @@ placed-items pool. With the switch off nothing here is constructed, read or writ
 
 | Piece | Where | Notes |
 | --- | --- | --- |
-| Store state and codec | `core/domain/.../pool/PoolStore.kt` | `PoolStoreState(migrated, pools by device class)`; `PoolStoreCodec` over `StoredValue`, version 1. Never throws: wrong shape or a future version reads as "not stored"; an unknown device class or undecodable pool is skipped; each pool goes through `PoolCodec.decode` (repair). |
+| Store state and codec | `core/domain/.../pool/PoolStore.kt` | `PoolStoreState(migrated, pools by device class, dockImportPending)`; `PoolStoreCodec` over `StoredValue`, version 2 since the dock moved into the pool (version 1 still decodes). Never throws: wrong shape or a future version reads as "not stored"; an unknown device class or undecodable pool is skipped; each pool goes through `PoolCodec.decode` (repair). |
 | Cutover | `.../pool/PoolCutover.kt` | `ensureMigrated(stored, layoutSet, providerOf)`: pure, idempotent, flag-guarded; `reimport(...)`: fresh import; `PoolWidgetBackfill`. |
 | Home view | `.../pool/PoolHomeView.kt` | Pure: which arrangement and page a `home.grid` page shows. |
 | Store | `app/.../launcher/pool/DataStorePoolStore.kt`, `PoolStoreJsonCodec.kt` | Own DataStore file `riffle_pool`, one JSON blob, `org.json` bridge over the domain codec (same shape as the workspace and exclusion stores). |
@@ -88,7 +88,9 @@ placed-items pool. With the switch off nothing here is constructed, read or writ
 ## Not done
 
 * **Editing.** Built by S5: see [`workspaces-pool-editing.md`](workspaces-pool-editing.md).
-* **Dock.** Not in the pool; the preview draws it read-only from `HomeLayoutSet` (see [`workspaces-dock.md`](workspaces-dock.md)).
+* **Dock.** Now in the pool domain (`PlacedItemPool.dock`, imported once by `ensureMigrated`; see
+  [`workspaces-pool-cutover-s4.md`](workspaces-pool-cutover-s4.md)); the preview still draws it read-only from `HomeLayoutSet`
+  until the app wave switches it (see [`workspaces-dock.md`](workspaces-dock.md)).
 * **Per-workspace arrangements** for presets, auto-paging, `NewAppPlacement` setting, new-app placement, uninstall pruning
   (`PoolRemoval.pruneUninstalled` has no event source), startup host-id reconciliation.
 * **Live sync with `HomeLayoutSet`.** One-time import plus manual Refresh only (decision 3).

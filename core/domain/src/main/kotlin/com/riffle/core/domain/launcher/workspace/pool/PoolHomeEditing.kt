@@ -100,7 +100,8 @@ object PoolHomeEditing {
     /**
      * Adds an app to [workspaceId]'s arrangement at the first free cell, trying [preferredPage] first, then the other
      * pages in order. An app the pool already holds is reused (apps are shared freely); otherwise one new [PoolApp] is
-     * created. Refused when the arrangement already shows this app or no page has room.
+     * created (a dock pin is never reused: dock items are exclusive to the dock). Refused when the arrangement already
+     * shows this app or no page has room.
      */
     fun addApp(
         pool: PlacedItemPool,
@@ -112,8 +113,7 @@ object PoolHomeEditing {
     ): PoolResult {
         val arrangement = pool.arrangements[workspaceId] ?: return rejected(PoolRejection.UNKNOWN_WORKSPACE)
         val shown = PoolReferences.referencedIn(arrangement)
-        val existing =
-            pool.items.values.firstOrNull { it is PoolApp && it.appIdentity == identity && it.appShortcutId == null }
+        val existing = reusableApp(pool, identity)
         val ordered = arrangement.pages.sortedBy { if (it.id == preferredPage) 0 else 1 }
         return when {
             ordered.isEmpty() -> rejected(PoolRejection.UNKNOWN_PAGE)
@@ -132,6 +132,17 @@ object PoolHomeEditing {
                 }
                 last
             }
+        }
+    }
+
+    /** A pool app for [identity] (not a shortcut) that an arrangement may reference: never a dock pin. */
+    private fun reusableApp(
+        pool: PlacedItemPool,
+        identity: AppIdentity,
+    ): PoolApp? {
+        val inDock = PoolReferences.inDock(pool)
+        return pool.items.values.filterIsInstance<PoolApp>().firstOrNull {
+            it.appIdentity == identity && it.appShortcutId == null && it.id !in inDock
         }
     }
 
@@ -223,4 +234,27 @@ object PoolHostIds {
         released: Set<HostedWidgetId>,
         standardHome: Set<HostedWidgetId>,
     ): Set<HostedWidgetId> = released - standardHome
+
+    /**
+     * Every bound host id the pool store references, across every layout, arrangement and dock: what startup
+     * reconciliation must keep. Only referenced items count, so a stray unreferenced item cannot keep an id alive.
+     */
+    fun referencedHostIds(state: PoolStoreState): Set<HostedWidgetId> =
+        state.pools.values.flatMapTo(HashSet()) { pool ->
+            val referenced = PoolReferences.referenced(pool)
+            pool.items.values.mapNotNull { item -> (item as? PoolWidget)?.takeIf { it.id in referenced }?.hostedId }
+        }
+
+    /**
+     * Startup reconciliation (pure): of the host ids the platform host has [allocated], those nothing references any
+     * more: not the pool store ([referencedHostIds]), not the standard home ([standardHome], while it still holds
+     * widgets) and not an id waiting in a deletion queue whose Undo window is still open ([pending]).
+     */
+    fun unreferenced(
+        allocated: Set<HostedWidgetId>,
+        state: PoolStoreState,
+        standardHome: Set<HostedWidgetId> = emptySet(),
+        pending: Set<HostedWidgetId> = emptySet(),
+    ): Set<HostedWidgetId> =
+        allocated - referencedHostIds(state) - standardHome - pending - ArrangementAdapter.UNBOUND_HOST_ID
 }

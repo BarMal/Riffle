@@ -12,9 +12,16 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.dockFor
 import com.riffle.core.domain.launcher.workspace.HomeLayoutWorkspaceMapper
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceMigration
+
+/** The outcome of [PoolMigration.importDock]: the pool with its dock, and what could not be carried over. */
+data class PoolDockImport(
+    val pool: PlacedItemPool,
+    val issues: List<PoolIssue>,
+)
 
 data class PoolMigrationResult(
     val pools: Map<HomeLayoutDeviceClass, PlacedItemPool>,
@@ -28,7 +35,7 @@ data class PoolMigrationResult(
  * [WorkspaceMigration] uses); only `Home` pages carry placed items. Today every item has exactly one reference and
  * nothing is shared across modes, so none is created: `PoolItemId` is `pi:<deviceclass>:<mode>:<LauncherItemId>`,
  * deterministic, so running it twice gives the same value. Never reads or changes [HomeLayoutSet] beyond reading it.
- * The dock is not part of the pool.
+ * The device class's shared dock (`dockFor` plus Library's edge) becomes the pool's dock ([importDock]).
  */
 object PoolMigration {
     fun migrate(layoutSet: HomeLayoutSet): PoolMigrationResult {
@@ -49,11 +56,57 @@ object PoolMigration {
                             )
                         }
                 }
-                val repaired = PoolValidation.repair(raw.build())
-                issues += raw.issues() + repaired.issues
+                val docked = importDock(raw.build(), layoutSet, deviceClass)
+                val repaired = PoolValidation.repair(docked.pool)
+                issues += raw.issues() + docked.issues + repaired.issues
                 repaired.pool
             }
         return PoolMigrationResult(pools, issues)
+    }
+
+    /**
+     * Gives [pool] the shared dock of [deviceClass] in [layoutSet] (`HomeLayoutSet.dockFor`, which falls back to the
+     * stored layouts' dock and then the class default, plus Library's edge): pins and panel items become pool items
+     * `pi:<deviceclass>:dock:<LauncherItemId>` (deterministic; a repeat or an id [pool] already uses gets a `#n`
+     * suffix). Nothing in [pool] is changed or removed, so this is safe on a pool that was edited after its migration;
+     * a pool that already has a dock is returned as it is (idempotent). Panel items without a cell are reported as
+     * [PoolIssueKind.UNPLACED_ITEM] and dropped. The result is not repaired; callers repair the whole pool.
+     */
+    fun importDock(
+        pool: PlacedItemPool,
+        layoutSet: HomeLayoutSet,
+        deviceClass: HomeLayoutDeviceClass,
+    ): PoolDockImport {
+        if (pool.dock != null) return PoolDockImport(pool, emptyList())
+        val dock = layoutSet.dockFor(deviceClass)
+        val prefix = "pi:${deviceClass.name.lowercase()}:dock:"
+        val items = LinkedHashMap(pool.items)
+        val issues = mutableListOf<PoolIssue>()
+
+        fun mint(item: LauncherItem): PoolItemId {
+            val base = prefix + item.id.value
+            var candidate = base
+            var n = 1
+            while (PoolItemId(candidate) in items) candidate = "$base#${++n}"
+            return PoolItemId(candidate).also { items[it] = ArrangementIngest.create(it, item) }
+        }
+        val pins = dock.items.map(::mint)
+        val panel =
+            dock.panel?.let { page ->
+                val placements =
+                    page.items.mapNotNull { item ->
+                        val at = item.placement
+                        if (at == null) {
+                            issues += PoolIssue(PoolIssueKind.UNPLACED_ITEM, pageId = page.id)
+                            null
+                        } else {
+                            Placement(mint(item), at)
+                        }
+                    }
+                ArrangementPage(page.id, page.grid, placements, page.generatedContentOverflowCount, page.isPinned)
+            }
+        val settings = PoolDockSettings.of(dock, layoutSet.libraryDockEdgesByDeviceClass[deviceClass])
+        return PoolDockImport(pool.copy(items = items, dock = PoolDock(pins, panel, settings)), issues)
     }
 
     /**

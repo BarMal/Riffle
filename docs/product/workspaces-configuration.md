@@ -1068,9 +1068,10 @@ data class LayoutWorkspaces(/* existing fields */ val library: LensLibrary = Len
                             val pool: PlacedItemPool = PlacedItemPool())   // NEW, additive, default empty
 ```
 
-The dock stays outside the pool: `DockModel` (pins, `panel`) is already "one object per layout shared by every
-workspace" (11.1), so it is a pool with no arrangement. Its panel widgets still take part in the widget uniqueness
-check (9.3).
+The dock is in the pool (S4, owner decision 2026-10-24): `PlacedItemPool.dock` holds the layout's one dock, shared by
+every workspace (11.1): pins as pool item references, the optional panel page, and the appearance fields of `DockModel`.
+Dock items are exclusive to the dock (an item the dock references is referenced by no arrangement), because the dock is
+drawn beside every workspace's pages. See [`workspaces-pool-cutover-s4.md`](workspaces-pool-cutover-s4.md).
 
 **Invariants (enforced by `PoolOps`, re-established on decode by `validate`):**
 
@@ -1078,8 +1079,8 @@ check (9.3).
 2. A pool item is referenced **at most once per arrangement** (so `LauncherItemId == PoolItemId` is unique within
    any materialised `HomeLayout`, which the engines assume; two *different* pool apps for the same application
    are fine, exactly as today where the ordinal exists for that reason).
-3. A `PoolWidget` is referenced by **at most one placement in the whole layout** and its `hostedId` is not
-   used by any other `PoolWidget` or dock panel widget (9.3).
+3. A `PoolWidget` is one platform instance: it may be referenced by any number of arrangements (at most once per
+   arrangement, by invariant 2) and its `hostedId` is held by no other `PoolWidget` (dock widgets included) (9.3).
 4. Reference counts are **derived, never stored** (9.4). Every pool item has at least one reference after any
    `PoolOps` call (no orphans), except inside an open Undo window.
 
@@ -1089,11 +1090,11 @@ check (9.3).
 | --- | --- | --- |
 | App / app shortcut (`PoolApp`) | **Yes.** | Stateless: sharing is invisible apart from "remove everywhere". Cheap; this is the natural use of the pool. |
 | Folder (`PoolFolder`) | **Yes, by explicit action.** | One folder, edits (rename, add, remove entry) show everywhere it is placed; edit mode shows "Shared with N workspaces". "Make independent" clones it. Never shared implicitly (copy operations clone, 9.5). |
-| Widget (`PoolWidget`) | **No: one placement in the layout.** | An `AppWidgetHost` id is a single live instance with its own state and configuration; two placements would share state and double-bind. Moving a widget between workspaces **moves** its single placement (host id kept). |
-| Widget "in two workspaces" | **Clone with explicit consent.** | Action "Add a separate copy here" explains: "A widget can't be in two places. This adds a new copy that you configure separately." It allocates a new host id (via the gateway) for the same `provider` and starts the normal bind/configure flow. A provider-less legacy widget cannot be cloned (action hidden, with the reason). |
+| Widget (`PoolWidget`) | **Yes: the same instance, at most once per arrangement** (owner decision 2026-10-24, superseding "one placement in the layout"). | A widget is ONE platform instance (host id plus its configuration). Only one workspace is shown at a time, so the same instance may be placed in any number of workspaces; the shown workspace draws it, and its configuration is therefore shared. Duplicating or forking a workspace references the same instance (no placeholders). The host id is released only when no arrangement and no dock references it. A dock widget is in no arrangement (the dock is drawn beside every workspace). |
+| Widget with a divergent configuration | **Separate copy, explicit.** | Action "Add a separate copy here": a new pool widget for the same `provider` with a new host id (or an unbound placeholder until the bind/configure flow runs). A provider-less legacy widget cannot be copied (action hidden, with the reason). |
 
-`validate` enforces rule 3 by keeping the first placement (by workspace order) and dropping later ones with a notice:
-never two bound views of one host id.
+`validate` enforces rule 3 by keeping the first widget (dock first, then workspace order) that holds a host id and
+dropping a later, different widget that claims the same id: never two pool widgets bound to one host id.
 
 ### 9.4 References, GC, deletion and Undo
 
@@ -1127,8 +1128,9 @@ from silently editing the original.
 
 | Operation | Apps/shortcuts | Folders | Widgets |
 | --- | --- | --- | --- |
-| **Duplicate workspace** (`LayoutWorkspaces.duplicate`) | Cloned (new `PoolApp`s). | Cloned (independent). | **Placeholders**: same cell, span and provider, `hostedId = null`; a banner "2 widgets need setting up" offers the add flow per widget. |
-| Duplicate workspace, option "Keep items shared" | Shared references. | Shared references. | Placeholders (never shared). |
+| **Duplicate workspace** (`LayoutWorkspaces.duplicate`) | Cloned (new `PoolApp`s). | Cloned (independent). | **Shared**: the same instance (S4 rule change, 9.3). |
+| Duplicate workspace, option "Keep items shared" | Shared references. | Shared references. | Shared. |
+| **Fork on first edit** (`PoolArrangements.fork`) | Shared references. | Cloned (independent). | Shared. |
 | **Duplicate page** (`HomePageEngine.duplicatePage`, in one arrangement) | Cloned (the engine already gives fresh ids). | Cloned. | Still rejected (existing behaviour). |
 | **Copy from other layout** | Cloned into the **target pool** with fresh ids. | Cloned. | Placeholders. |
 | **Preset install** | Preset arrangements start with empty placed pages; nothing is moved or deleted in other workspaces. | n/a | n/a |
@@ -1145,8 +1147,8 @@ are separate and are **not** replaced (14.6).
   because the installed-app snapshot starts empty and profiles disappear temporarily, the same caution
   `HomeScreenLibraryCompaction.kt` documents), run `PoolOps.pruneUninstalled(layout, identity)`: drop every placement
   of every `PoolApp` with that identity and every folder entry, remove folders left empty, collect. Until the event,
-  unresolvable apps are hidden at render time, as today. Dock pins are not in the pool and are handled by the same
-  event in the dock path (verify; not found today).
+  unresolvable apps are hidden at render time, as today. Dock pins are in the pool since S4 and are pruned by the same
+  call.
 * **Restore.** Pool and arrangements arrive together. All widgets are unbound placeholders unless
   `isHostedWidgetBoundTo(id, provider)` confirms the id on this device (5). A placeholder keeps its cell and span and
   offers "Set up widget"; a widget whose provider is not installed offers "Remove".
@@ -1234,7 +1236,7 @@ become lens pages, an `AllApps` page becomes the Finder when it is the only one,
 | --- | --- | --- |
 | **Dangling reference** (a placement whose item is missing: bad edit, partial restore, bug) | Placement is dropped at decode with a notice; the cell renders empty, never a crash; all mutations go through `PoolOps` | `validate` self-heals every case; property test: after random `PoolOps` sequences invariants 1-4 hold |
 | **Orphan / leak** (zero-reference item, or a widget host id never released) | `collect` after every mutation; startup reconciliation of host ids against blob and `workspaces_prev` | GC on last-reference removal; reconciliation is idempotent |
-| **Widget ownership** (two bound views of one host id, wrong id deleted on remove) | Invariant 3 in `validate`; moves keep the single placement; clone allocates a new id; deletion only via `releasedHostIds` after Undo | multiply-placed widget keeps first; clone creates distinct id; remove-everywhere releases exactly the referenced ids |
+| **Widget ownership** (two pool widgets on one host id, wrong id deleted on remove) | Invariant 3 in `validate`; one instance may sit in several arrangements but only the shown workspace draws it; separate copy allocates a new id; deletion only via `releasedHostIds` after Undo, and only once no arrangement and no dock references the instance | duplicate host id keeps the first widget; removing a shared widget from one workspace releases nothing; remove-everywhere releases exactly the referenced ids |
 | **Reference-counting bugs** (premature collect, stale count) | Counts are derived from the arrangements, never stored | removing one of two references keeps the item; removing the last collects it |
 | **Surprise sharing** (editing a folder "in one place" changes another workspace) | Sharing only by explicit action; copies clone; "Shared with N" label; "Make independent" | duplicate workspace yields independent folders; shared-folder edit visible in both |
 | **Adapter desync / id collision** between engine ids and pool ids | Remap every new id; differential test against the legacy engines | engine-assigned id equal to another arrangement's id is remapped |

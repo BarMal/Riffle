@@ -107,7 +107,9 @@ class PoolCutoverTest {
         val mine = emptyPool(listOf(W1)).add(poolApp("x"))
         val stored = PoolStoreState(migrated = false, pools = mapOf(HomeLayoutDeviceClass.PHONE to mine))
         val result = PoolCutover.ensureMigrated(stored, layoutSet)
-        assertEquals(mine, result.state.pools.getValue(HomeLayoutDeviceClass.PHONE))
+        val kept = result.state.pools.getValue(HomeLayoutDeviceClass.PHONE)
+        assertEquals(mine, kept.copy(dock = null), "items and arrangements are kept")
+        assertTrue(kept.dock != null, "and the dock is imported")
         assertTrue(result.state.migrated)
     }
 

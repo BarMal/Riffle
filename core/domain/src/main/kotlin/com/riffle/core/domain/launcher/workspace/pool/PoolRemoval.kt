@@ -33,7 +33,9 @@ object PoolRemoval {
         }
     }
 
-    /** "Remove everywhere": drops every placement of [itemId] in every arrangement, then it is collected. */
+    /**
+     * "Remove everywhere": drops every placement of [itemId] in every arrangement and the dock, then it is collected.
+     */
     fun removeEverywhere(
         pool: PlacedItemPool,
         itemId: PoolItemId,
@@ -45,7 +47,7 @@ object PoolRemoval {
                 pool.arrangements.keys.fold(
                     pool,
                 ) { acc, workspaceId -> PoolPages.dropPlacement(acc, workspaceId, itemId) }
-            PoolResult.Done(PoolGc.finish(pool, dropped))
+            PoolResult.Done(PoolGc.finish(pool, dropped.copy(dock = dropped.dock?.without(setOf(itemId)))))
         }
 
     /** Drops [workspaceId]'s arrangement; items only it held are collected, shared ones stay. */
@@ -75,8 +77,9 @@ object PoolRemoval {
 
     /**
      * Prunes a confirmed *package removed* event for [profile] (never "absent from a snapshot", never a profile
-     * pause): drops every app of that package, every folder entry of it, and folders left empty. Idempotent. Dock pins
-     * and widgets of the package are not handled here.
+     * pause): drops every app of that package (on home pages and pinned to the dock alike), every folder entry of it,
+     * and folders left empty. Idempotent. Widgets of the package are not handled here (their provider is gone: the app
+     * layer unbinds them, [PoolWidgets.unbind]).
      */
     fun pruneUninstalled(
         pool: PlacedItemPool,
@@ -102,9 +105,10 @@ object PoolRemoval {
         return PoolGc.finish(pool, dropDangling(pool.copy(items = items)))
     }
 
-    /** Removes placements whose item is missing. */
+    /** Removes placements and dock references whose item is missing. */
     internal fun dropDangling(pool: PlacedItemPool): PlacedItemPool =
         pool.copy(
+            dock = pool.dock?.without(pool.dock.referenced - pool.items.keys),
             arrangements =
                 pool.arrangements.mapValues { (_, arrangement) ->
                     arrangement.copy(
@@ -117,3 +121,14 @@ object PoolRemoval {
                 },
         )
 }
+
+/** This dock without any reference to [ids]. */
+internal fun PoolDock.without(ids: Set<PoolItemId>): PoolDock =
+    if (ids.isEmpty()) {
+        this
+    } else {
+        copy(
+            pins = pins.filter { it !in ids },
+            panel = panel?.let { page -> page.copy(placements = page.placements.filter { it.item !in ids }) },
+        )
+    }
