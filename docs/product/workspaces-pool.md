@@ -1,6 +1,6 @@
 # Workspaces: the shared placed-items pool (WS10 S3, as built)
 
-Status: **domain, now wired read-only behind the preview switch by S4 (see [`workspaces-pool-cutover.md`](workspaces-pool-cutover.md))**. The text below describes the S3 state. Slice S3 of `docs/product/workspaces-configuration.md` section 9 (owner decisions N2, N9,
+Status: **domain, now wired read-only behind the preview switch by S4 (see [`workspaces-pool-cutover.md`](workspaces-pool-cutover.md))**. The text below describes the S3 state, updated for the S4 domain changes (widget rule, dock in the pool, fork on first edit; see [`workspaces-pool-cutover-s4.md`](workspaces-pool-cutover-s4.md)). Slice S3 of `docs/product/workspaces-configuration.md` section 9 (owner decisions N2, N9,
 N12, N13). Nothing in `app/` uses it, no runtime behaviour changes, and `HomeLayoutSet` is still the source of truth for
 the home screen. Code: `core/domain/.../launcher/workspace/pool/`. Tracking: #1363, slice issue #1383.
 
@@ -8,7 +8,9 @@ the home screen. Code: `core/domain/.../launcher/workspace/pool/`. Tracking: #13
 
 | Piece | Where | Notes |
 | --- | --- | --- |
-| Model | `PoolModel.kt` | `PoolItem` = `PoolApp` (app or shortcut), `PoolFolder` (value `FolderEntry`s), `PoolWidget` (provider, nullable host id). `Placement`, `ArrangementPage`, `Arrangement`, `PlacedItemPool`. |
+| Model | `PoolModel.kt`, `PoolDock.kt` | `PoolItem` = `PoolApp` (app or shortcut), `PoolFolder` (value `FolderEntry`s), `PoolWidget` (provider, nullable host id). `Placement`, `ArrangementPage`, `Arrangement`, `PlacedItemPool` (items, arrangements, `dock`). `PoolDock` (pins, panel page, `PoolDockSettings`). |
+| Fork on first edit | `PoolArrangements.kt` | `fork` gives a workspace its own arrangement copied from the one it borrows. |
+| Standard-home projection | `PoolHomeProjection.kt` | `project` / `ingest` between the pool and a `HomeLayout` (S4 cutover). |
 | Derived references, GC, results | `PoolResults.kt` | `PoolReferences` (counts are computed, never stored), `PoolGc`, `PoolEdit`, `PoolRejection`, `HostIdDeletionQueue`. |
 | Engine adapter | `ArrangementAdapter.kt`, `ArrangementIngest.kt` | Joins an arrangement to `LauncherPage` for the existing engines; ingest maps an edited page back and remaps ids. |
 | Operations | `PoolPlacement`, `PoolRemoval`, `PoolCopy`, `PoolWidgets`, `PoolNewApps` | Pure, return `PoolResult` (`Done(PoolEdit)` or a typed `Rejected`). |
@@ -30,31 +32,46 @@ the home screen. Code: `core/domain/.../launcher/workspace/pool/`. Tracking: #13
 4. **Deferred widget deletion.** A collected widget's host id goes to `PoolEdit.releasedHostIds` (never to the pool). The app
    layer holds them in a `HostIdDeletionQueue` and calls `deleteHostedWidgetId` only after the Undo window; after an Undo,
    `withoutReferenced(restoredPool)` forgets ids that are live again. An id still held by a surviving widget is never released.
-5. **Widget rule.** A widget has at most one placement in the layout and a host id is held by one widget. `placeExisting`
-   refuses a second placement (`WIDGET_ALREADY_PLACED`); `moveToWorkspace` moves the single placement and keeps the id;
-   `PoolWidgets.separateCopy` is the explicit "separate copy" (new pool id, same provider, new host id or a placeholder;
-   refused when the provider is unknown).
+5. **Widget rule (changed in S4, owner decision 2026-10-24).** A widget is ONE platform instance (host id and
+   configuration). Only one workspace is shown at a time, so the same instance may be placed in any number of
+   arrangements, at most once per arrangement; its configuration is shared. `placeExisting` shares it like an app
+   (`ALREADY_IN_ARRANGEMENT` for a second placement in one arrangement; `WIDGET_ALREADY_PLACED` is no longer produced);
+   `moveToWorkspace` moves one placement and keeps the id; a host id is still held by one pool widget, and is released
+   only when no arrangement and no dock references the instance. `PoolWidgets.separateCopy` stays the explicit "separate
+   copy" for a divergent configuration (new pool id, same provider, new host id or a placeholder; refused when the
+   provider is unknown).
 6. **Folders are shared only by explicit action.** `placeExisting` refuses a folder; `PoolPlacement.shareFolder` shares one;
    `PoolCopy.makeFolderIndependent` splits it again. Apps are shared freely (once per arrangement).
-7. **Copies clone** (`CopyMode.CLONE`); `KEEP_SHARED` references apps and folders but never widgets. Widgets are always
-   unbound placeholders (same cell, span, provider). `duplicateWorkspace`, `copyArrangement` and `copyFromOtherLayout`
-   (items two copied workspaces shared stay shared in the target; the target pool is replaced and its widget host ids
-   released, deferred).
+7. **Copies clone apps and folders, and share widget instances.** `CopyMode.CLONE` (default) clones apps and folders;
+   `KEEP_SHARED` references apps and folders; `FORK` (fork on first edit) references apps and clones folders. Every
+   in-layout copy references the same widget instance (no placeholders). `copyFromOtherLayout` cannot share across
+   pools, so its widgets are still unbound placeholders (same cell, span, provider); items two copied workspaces shared
+   stay shared in the target; the target's arrangements are replaced (its dock is kept) and replaced widgets' host ids
+   released, deferred.
 8. **New apps (N9/N12).** `PoolNewApps.placeNewApp` creates ONE `PoolApp` and references it from the first free cell of the
    first page with room in every `HOME_AND_FINDER` arrangement. Idempotent per event; if nothing is placed the pool is
    unchanged. It never creates pages ("pages appear as you fill them" is arrangement-only and not built).
 9. **Uninstall.** `PoolRemoval.pruneUninstalled(pool, packageName, profile)` is for a confirmed package-removed event only: it
-   drops apps and folder entries of that package and profile and any folder left empty. Widgets of the package and dock pins
-   are not touched.
+   drops apps and folder entries of that package and profile (on home pages and in the dock) and any folder left empty.
+   Widgets of the package are not touched (unbind them, `PoolWidgets.unbind`).
 10. **Engines are reused, never reimplemented.** Bounds, collisions and first-free-cell come from `GridPlacementEngine`
     (`placeItem`, `placeItemInFirstAvailableCell`, `moveItem`), run on `LauncherPage` values built by the adapter.
 11. **Id collisions.** Engines mint ids from a per-arrangement ordinal (`HomeShortcutEngine`). `ArrangementIngest` treats every id
     that was not in the adapted input as new and assigns a fresh pool-unique id; it never trusts an engine id as pool-global.
     Edits to an existing folder or widget write back to the single pool item (visible everywhere it is placed, by design).
-12. **Invariants** (held by every operation, re-established by `PoolValidation.repair`): every placement resolves; an item is
-    placed at most once per arrangement; a widget is placed once per layout and a host id is held once; placements are in
-    bounds and do not collide; page ids are unique per arrangement; no item is left without a reference. Repair keeps the
-    first occurrence in workspace, page and placement order, and is idempotent.
+12. **Invariants** (held by every operation, re-established by `PoolValidation.repair`): every reference resolves; an item is
+    referenced at most once per arrangement and at most once by the dock; a host id is held by one pool widget; an item the
+    dock references is referenced by no arrangement (`DOCK_ITEM_IN_ARRANGEMENT`, `ITEM_IN_DOCK`); placements are in bounds
+    and do not collide; page ids are unique per arrangement; no item is left without a reference. Repair handles the dock
+    first, then keeps the first occurrence in workspace, page and placement order, and is idempotent.
+13. **Dock in the pool (S4).** `PlacedItemPool.dock` is the layout's one dock (pins are never per workspace, Q17): `pins`
+    reference pool items in order, `panel` is the optional dock panel page, `settings` carries every `DockModel` field
+    except items and panel, plus Library's edge. References and GC count the dock (`PoolReferences.inDock`, `referenced`,
+    `count`), `removeEverywhere` and uninstall pruning reach it, and the codec writes it as an optional `dock` key.
+14. **Fork on first edit (S4).** `PoolArrangements.fork(pool, workspace, candidates, ids)` gives a workspace that borrows an
+    arrangement (`PoolHomeView.candidates`) its own copy: apps and widget instances by reference, folders cloned, pages copied
+    with their ids, the new-app setting copied. Idempotent (a workspace with an arrangement is unchanged);
+    `NOTHING_TO_FORK` when no candidate has pages.
 
 ## Migration
 
@@ -66,8 +83,9 @@ suffix. Widgets get `provider = null` (a later app-layer backfill) and host id 0
 items, colliding placements and duplicate host ids are dropped and reported by kind and id, never labels.
 `PoolMigration.homePages(pool, deviceClass, mode)` is the inverse used for the one-time check: it equals the original Home
 pages for well-formed data (golden fixtures with apps, a folder, a widget, a pinned second page, All apps and a generated page,
-plus a seeded property test over layouts built with `GridPlacementEngine`). The dock is not in the pool and `HomeLayoutSet` is
-only read.
+plus a seeded property test over layouts built with `GridPlacementEngine`). The device class's shared dock (`dockFor`, plus
+Library's edge) becomes the pool's dock (`PoolMigration.importDock`, ids `pi:<deviceclass>:dock:<LauncherItemId>`).
+`HomeLayoutSet` is only read.
 
 ## Codec
 
@@ -80,8 +98,9 @@ result is always a valid pool.
 ## Tests
 
 `PoolPlacementTest`, `PoolRemovalTest`, `PoolCopyTest`, `PoolWidgetsAndNewAppsTest`, `ArrangementIngestTest`,
-`PoolMigrationTest`, `PoolCodecTest`, and `PoolInvariantsPropertyTest` (80 seeds x 120 random operations covering every
-operation; after each step an independent invariant check, repair finds nothing, and every host id that left the pool is in
+`PoolMigrationTest`, `PoolCodecTest`, `PoolDockTest`, `PoolArrangementsTest`, `PoolHomeProjectionTest`, and
+`PoolInvariantsPropertyTest` (80 seeds x 120 random operations covering every operation, including fork and projected home and
+dock edits; after each step an independent invariant check, repair finds nothing, and every host id that left the pool is in
 `releasedHostIds` and no released id is live).
 
 ## Not done
@@ -93,10 +112,9 @@ operation; after each step an independent invariant check, repair finds nothing,
 * **Home-surface rendering and the HomeLayout adapter.** The page-level adapter exists; the `HomeLayout`-level wrapper
   (settings, dock, selected page, edit mode) belongs with the wiring.
 * **Sharing UI** (N13): "Also show in...", "Keep items shared", "Add a separate copy". The operations exist.
-* **Uninstall observer.** The package-removed event source is not hooked up; dock pins and widgets of a removed package are
-  not pruned.
-* **Provider backfill** for migrated widgets, restore-time rebinding (`isHostedWidgetBound`), and startup reconciliation of
-  leaked host ids.
+* **Uninstall observer.** The package-removed event source is not hooked up; widgets of a removed package are not unbound.
+* **Provider backfill** is done (S4 read-only); restore-time rebinding (`isHostedWidgetBound`) is not. Startup reconciliation
+  has its pure half (`PoolHostIds.referencedHostIds`, `PoolHostIds.unreferenced`); the app call is not wired.
 * **Pool-aware `LayoutWorkspaces.remove`/`duplicate`.** Those still behave as before and ignore the pool. Use
   `PoolRemoval.deleteWorkspace` and `PoolCopy.duplicateWorkspace` alongside them when wired; decode drops stranded arrangements.
 * **Auto-paging, `Workspace` field for the new-apps setting, per-workspace dock overrides.**

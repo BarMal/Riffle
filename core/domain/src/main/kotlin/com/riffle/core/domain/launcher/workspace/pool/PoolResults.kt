@@ -11,9 +11,12 @@ data class ReferenceSite(
     val pageId: LauncherPageId,
 )
 
-/** Derived reference counts. Nothing here is stored, so a counter cannot drift from the arrangements. */
+/**
+ * Derived reference counts. Nothing here is stored, so a counter cannot drift from the arrangements and the dock.
+ * [index] lists arrangement references only; the dock's references are [inDock], and [count] adds both.
+ */
 object PoolReferences {
-    /** Every reference of every referenced item, in arrangement then page then placement order. */
+    /** Every arrangement reference of every referenced item, in arrangement then page then placement order. */
     fun index(pool: PlacedItemPool): Map<PoolItemId, List<ReferenceSite>> =
         buildMap<PoolItemId, MutableList<ReferenceSite>> {
             pool.arrangements.forEach { (workspaceId, arrangement) ->
@@ -25,13 +28,20 @@ object PoolReferences {
             }
         }
 
+    /** Items the layout's dock references (pins and panel). */
+    fun inDock(pool: PlacedItemPool): Set<PoolItemId> = pool.dock?.referenced.orEmpty()
+
+    /** Every referenced item: by an arrangement or by the dock. */
+    fun referenced(pool: PlacedItemPool): Set<PoolItemId> = index(pool).keys + inDock(pool)
+
+    /** References across every arrangement plus one when the dock holds it. */
     fun count(
         pool: PlacedItemPool,
         id: PoolItemId,
-    ): Int = index(pool)[id]?.size ?: 0
+    ): Int = (index(pool)[id]?.size ?: 0) + if (id in inDock(pool)) 1 else 0
 
     /** Items with no reference: what garbage collection removes. */
-    fun unreferenced(pool: PlacedItemPool): Set<PoolItemId> = pool.items.keys - index(pool).keys
+    fun unreferenced(pool: PlacedItemPool): Set<PoolItemId> = pool.items.keys - referenced(pool)
 
     fun referencedIn(arrangement: Arrangement): Set<PoolItemId> =
         arrangement.pages.flatMap { page -> page.placements.map { it.item } }.toSet()
@@ -59,6 +69,8 @@ enum class PoolRejection {
     UNKNOWN_ITEM,
     NOT_PLACED_HERE,
     ALREADY_IN_ARRANGEMENT,
+
+    /** No longer produced: a widget may be placed in any number of arrangements (once per arrangement). */
     WIDGET_ALREADY_PLACED,
     FOLDER_SHARING_IS_EXPLICIT,
     NOT_A_FOLDER,
@@ -75,6 +87,12 @@ enum class PoolRejection {
     INVALID_PLACEMENT,
     PAGE_NOT_EMPTY,
     LAST_PAGE,
+
+    /** The item is in the dock, and dock items are referenced by no arrangement (see [PoolDock]). */
+    ITEM_IN_DOCK,
+
+    /** The workspace has no arrangement of its own and none of its candidates has one to fork. */
+    NOTHING_TO_FORK,
 }
 
 sealed interface PoolResult {
@@ -100,15 +118,18 @@ fun PoolResult.poolOr(fallback: PlacedItemPool): PlacedItemPool = (this as? Pool
 
 /** Garbage collection and the diff that turns two pool values into a [PoolEdit]. */
 object PoolGc {
-    /** [pool] without zero-reference items. Folder entries go with their folder. */
+    /**
+     * [pool] without zero-reference items (no arrangement and no dock reference). Folder entries go with their folder.
+     */
     fun collect(pool: PlacedItemPool): PlacedItemPool {
-        val referenced = PoolReferences.index(pool).keys
+        val referenced = PoolReferences.referenced(pool)
         return pool.copy(items = pool.items.filterKeys { it in referenced })
     }
 
     /**
-     * Collects [after] and describes the change from [before]. A collected widget's host id is released
-     * unless a surviving widget still holds the same id.
+     * Collects [after] and describes the change from [before]. A widget instance is collected, and its host id
+     * released, only when no arrangement and no dock references it any more; an id a surviving widget still holds is
+     * never released.
      */
     fun finish(
         before: PlacedItemPool,

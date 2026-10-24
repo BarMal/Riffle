@@ -48,8 +48,11 @@ data class PoolFolder(
 ) : PoolItem
 
 /**
- * A hosted widget. At most one placement in the whole layout. [hostedId] null is an unbound placeholder
- * (copied, restored, or provider gone); [provider] null is a legacy widget that cannot be cloned.
+ * A hosted widget: ONE platform instance (its host id and the configuration behind it). Only one workspace is shown at
+ * a time, so the same instance may be placed in any number of arrangements (at most once per arrangement); the shown
+ * workspace draws it, and its configuration is therefore shared. A host id is held by one pool widget. [hostedId] null
+ * is an unbound placeholder (restored, separate copy not yet set up, or provider gone); [provider] null is a legacy
+ * widget that cannot be cloned into a separate instance ([PoolWidgets.separateCopy]).
  */
 data class PoolWidget(
     override val id: PoolItemId,
@@ -87,12 +90,14 @@ data class Arrangement(
 )
 
 /**
- * The placed items of one layout: [items] by id plus every workspace's [arrangements]. Reference counts
- * are derived ([PoolReferences]), never stored. Mutate only through the `Pool*` operation objects.
+ * The placed items of one layout: [items] by id, every workspace's [arrangements], and the layout's one [dock] (shared
+ * by every workspace; null until it has been imported, see `PoolCutover`). Reference counts are derived
+ * ([PoolReferences]), never stored. Mutate only through the `Pool*` operation objects.
  */
 data class PlacedItemPool(
     val items: Map<PoolItemId, PoolItem> = emptyMap(),
     val arrangements: Map<WorkspaceId, Arrangement> = emptyMap(),
+    val dock: PoolDock? = null,
 ) {
-    val isEmpty: Boolean get() = items.isEmpty() && arrangements.isEmpty()
+    val isEmpty: Boolean get() = items.isEmpty() && arrangements.isEmpty() && dock == null
 }

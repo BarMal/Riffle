@@ -103,12 +103,22 @@ internal fun assertInvariants(pool: PlacedItemPool) {
             }
         }
     }
+    val dock = pool.dock
+    if (dock != null) {
+        val dockRefs = dock.pins + dock.panel?.placements?.map { it.item }.orEmpty()
+        assertEquals(dockRefs.size, dockRefs.toSet().size, "dock references unique")
+        dockRefs.forEach { id ->
+            assertTrue(id in pool.items, "dangling dock reference $id")
+            assertTrue(id !in refs, "dock item $id also in an arrangement")
+            refs.merge(id, 1, Int::plus)
+        }
+        dock.panel?.let { assertGeometry(it, "dock panel") }
+    }
     pool.items.values.forEach { item ->
         assertTrue((refs[item.id] ?: 0) >= 1, "orphan ${item.id}")
-        if (item is PoolWidget) assertEquals(1, refs[item.id], "widget ${item.id} placed once")
     }
     val hosts = pool.items.values.mapNotNull { (it as? PoolWidget)?.hostedId }
-    assertEquals(hosts.size, hosts.toSet().size, "host ids unique")
+    assertEquals(hosts.size, hosts.toSet().size, "host ids held by one widget")
 }
 
 private fun assertGeometry(

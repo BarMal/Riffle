@@ -4,16 +4,22 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 
 enum class CopyMode {
-    /** Apps and folders are cloned: the copy is independent of the original (the default). */
+    /** Apps and folders are cloned: the copy is independent of the original (the default). Widgets are shared. */
     CLONE,
 
-    /** Apps and folders are referenced, not cloned ("Keep items shared"). Widgets are never shared. */
+    /** Apps, folders and widgets are referenced, not cloned ("Keep items shared"). */
     KEEP_SHARED,
+
+    /** Fork on first edit ([PoolArrangements.fork]): apps and widgets are referenced, folders are cloned. */
+    FORK,
 }
 
 /**
- * Copy semantics: copies clone, sharing is an explicit choice. Widgets are never cloned live: a copy gets an
- * unbound placeholder (same cell, span and provider, `hostedId = null`) that the app layer offers to set up.
+ * Copy semantics within one layout: copies clone apps and folders, sharing a folder is an explicit choice. A widget is
+ * one platform instance that may sit in any number of arrangements, so every in-layout copy references the same
+ * instance (same host id and configuration; no placeholders); a divergent configuration is
+ * [PoolWidgets.separateCopy]. Across layouts ([copyFromOtherLayout]) references cannot cross pools, so widgets become
+ * unbound placeholders there.
  */
 object PoolCopy {
     /** Replaces [to]'s arrangement by a copy of [from]'s (creating it when absent). */
@@ -32,8 +38,12 @@ object PoolCopy {
                 val taken = pool.items.keys.toMutableSet()
                 val map = LinkedHashMap<PoolItemId, PoolItemId>()
                 PoolReferences.referencedIn(source).filter { it in pool.items }.forEach { old ->
-                    val keep = mode == CopyMode.KEEP_SHARED && pool.items[old] !is PoolWidget
-                    map[old] = if (keep) old else PoolIds.fresh(taken, ids).also { taken += it }
+                    map[old] =
+                        if (shares(mode, pool.items.getValue(old))) {
+                            old
+                        } else {
+                            PoolIds.fresh(taken, ids).also { taken += it }
+                        }
                 }
                 val clones =
                     map.filter {
@@ -71,9 +81,10 @@ object PoolCopy {
         }
 
     /**
-     * "Copy from other layout": [target]'s pool is replaced by clones of [source]'s arrangements for the workspaces in
-     * [workspaceIdMap] (old id to new id), items cloned with fresh ids, widgets as placeholders. Items that two copied
-     * workspaces shared stay shared in the copy. Replaced widgets' host ids are released (deferred).
+     * "Copy from other layout": [target]'s arrangements are replaced by clones of [source]'s arrangements for the
+     * workspaces in [workspaceIdMap] (old id to new id), items cloned with fresh ids, widgets as placeholders. Items
+     * that two copied workspaces shared stay shared in the copy. [target]'s dock and its items are kept (the dock
+     * belongs to the layout, not to a workspace). Replaced widgets' host ids are released (deferred).
      */
     fun copyFromOtherLayout(
         source: PlacedItemPool,
@@ -100,7 +111,8 @@ object PoolCopy {
                 }
             }.toMap()
         val items = map.mapNotNull { (old, new) -> source.items[old]?.let { clone(it, new) } }.associateBy { it.id }
-        return PoolGc.finish(target, PlacedItemPool(items, arrangements))
+        val dockItems = target.items.filterKeys { it in PoolReferences.inDock(target) }
+        return PoolGc.finish(target, PlacedItemPool(dockItems + items, arrangements, target.dock))
     }
 
     /** "Make independent": gives [workspaceId] its own clone of a folder it shares. A no-op for an unshared folder. */
@@ -133,6 +145,16 @@ object PoolCopy {
             }
         }
     }
+
+    private fun shares(
+        mode: CopyMode,
+        item: PoolItem,
+    ): Boolean =
+        when (item) {
+            is PoolWidget -> true
+            is PoolApp -> mode != CopyMode.CLONE
+            is PoolFolder -> mode == CopyMode.KEEP_SHARED
+        }
 
     private fun clone(
         item: PoolItem,

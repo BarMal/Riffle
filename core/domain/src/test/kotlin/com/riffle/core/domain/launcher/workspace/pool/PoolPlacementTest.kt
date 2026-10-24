@@ -69,20 +69,31 @@ class PoolPlacementTest {
     }
 
     @Test
-    fun aWidgetHasASinglePlacementInTheLayout() {
+    fun aWidgetInstanceMaySitInSeveralArrangementsButOnlyOnceInEach() {
         val pool = emptyPool().add(poolWidget("w"))
+        val shared = PoolPlacement.placeExisting(pool, W2, P1, PoolItemId("w")).done()
+        assertEquals(2, shared.pool.refs("w"))
+        assertEquals(1, shared.pool.items.values.count { it is PoolWidget }, "one instance, two placements")
+        assertEquals(emptySet(), shared.releasedHostIds)
+        assertInvariants(shared.pool)
         assertEquals(
-            PoolRejection.WIDGET_ALREADY_PLACED,
-            PoolPlacement.placeExisting(pool, W2, P1, PoolItemId("w")).rejection(),
-        )
-        assertEquals(
-            PoolRejection.WIDGET_ALREADY_PLACED,
+            PoolRejection.ALREADY_IN_ARRANGEMENT,
             PoolPlacement.placeExisting(pool, W1, P2, PoolItemId("w")).rejection(),
         )
         assertEquals(
             PoolRejection.HOST_ID_IN_USE,
             PoolPlacement.addNew(pool, W2, P1, poolWidget("w2", host = 100)).rejection(),
         )
+    }
+
+    @Test
+    fun removingASharedWidgetFromOneArrangementKeepsItsHostIdUntilTheLastReferenceGoes() {
+        val shared = PoolPlacement.placeExisting(emptyPool().add(poolWidget("w")), W2, P1, PoolItemId("w")).done().pool
+        val once = PoolRemoval.remove(shared, W1, PoolItemId("w")).done()
+        assertEquals(emptySet(), once.releasedHostIds)
+        assertEquals(1, once.pool.refs("w"))
+        val gone = PoolRemoval.remove(once.pool, W2, PoolItemId("w")).done()
+        assertEquals(setOf(HostedWidgetId(100)), gone.releasedHostIds)
     }
 
     @Test

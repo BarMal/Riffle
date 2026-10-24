@@ -81,8 +81,8 @@ class PoolCodecTest {
     }
 
     @Test
-    fun duplicateWidgetPlacementsKeepTheFirstOnly() {
-        // Re-point W2's placements at the widget: it is then placed twice in the layout.
+    fun aWidgetSharedAcrossArrangementsDecodesAsOneInstance() {
+        // Re-point W2's placement at the widget: the same instance is then placed in W1 and W2, which is valid.
         val pool =
             rich.copy(
                 arrangements =
@@ -100,8 +100,8 @@ class PoolCodecTest {
                     ),
             )
         val decoded = PoolCodec.decode(PoolCodec.encode(pool))
-        assertEquals(1, decoded.pool.refs("w"))
-        assertTrue(decoded.issues.any { it.kind == PoolIssueKind.WIDGET_MULTIPLY_PLACED })
+        assertEquals(2, decoded.pool.refs("w"))
+        assertTrue(decoded.issues.none { it.kind == PoolIssueKind.WIDGET_MULTIPLY_PLACED })
         assertInvariants(decoded.pool)
     }
 

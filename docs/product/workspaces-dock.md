@@ -32,7 +32,9 @@ With **Settings > Developer > Workspaces (preview)** off nothing here runs. Trac
 
 ## Decisions (please confirm)
 
-1. **Pins are read live from `HomeLayoutSet`, not from the pool.** The brief asked for pool dock pins "if the pool domain
+1. **Pins are read live from `HomeLayoutSet`, not from the pool.** (Superseded in the domain by S4: the dock is now in the
+   pool, imported once, see [`workspaces-pool-cutover-s4.md`](workspaces-pool-cutover-s4.md); the preview switches when the
+   app wave lands.) The brief asked for pool dock pins "if the pool domain
    lacks them: extend additively". Not done, on purpose: the pool is a one-time snapshot and `migrated` is already true on
    dogfood devices, so a new field would need a second migration path and would go stale the moment the user pins something
    on Home (the placed-home page has the Refresh action for exactly that reason). Reading the live dock has no staleness,

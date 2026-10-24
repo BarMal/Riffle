@@ -53,7 +53,7 @@ object ArrangementIngest {
             .filter { it.placement != null && it.id.value.isNotBlank() }
             .distinctBy { it.id.value }
 
-    private fun assignIds(
+    internal fun assignIds(
         items: List<LauncherItem>,
         known: Set<String>,
         pool: PlacedItemPool,
@@ -71,7 +71,7 @@ object ArrangementIngest {
         }
     }
 
-    private fun upsert(
+    internal fun upsert(
         item: LauncherItem,
         idMap: Map<String, PoolItemId>,
         pool: PlacedItemPool,
@@ -108,7 +108,7 @@ object ArrangementIngest {
                 )
         }
 
-    private fun toPage(
+    internal fun toPage(
         page: LauncherPage,
         idMap: Map<String, PoolItemId>,
         seen: MutableSet<String>,

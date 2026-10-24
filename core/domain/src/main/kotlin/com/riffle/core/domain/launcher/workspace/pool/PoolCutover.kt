@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -15,12 +16,14 @@ data class PoolCutoverResult(
 /**
  * The one-time, flag-guarded import of the placed items in [HomeLayoutSet] into the pool store (S4 of the
  * Workspaces work). Pure: [HomeLayoutSet] is only read, never changed or deleted, so it stays the source of
- * truth for the standard home until pool editing exists.
+ * truth for the standard home until the app cuts over to the pool ([PoolHomeProjection]).
  *
- * Idempotent: once [PoolStoreState.migrated] is set the stored state is returned as is. Before that, a device
- * class that already holds a non-empty pool keeps it (stored data is never overwritten), every other class
- * gets [PoolMigration]'s pool, and every migrated widget whose host id [providerOf] can name gets its
- * provider backfilled (see [PoolWidgetBackfill]).
+ * Idempotent: once [PoolStoreState.migrated] is set the stored state is returned as is, except that a store migrated
+ * before the dock moved into the pool ([PoolStoreState.dockImportPending], a schema 1 value) gets each layout's dock
+ * imported once ([PoolMigration.importDock]); its arrangements, possibly edited since, are kept. Before the flag is
+ * set, a device class that already holds a non-empty pool keeps it (stored data is never overwritten; it gets a dock
+ * if it has none), every other class gets [PoolMigration]'s pool (dock included), and every migrated widget whose host
+ * id [providerOf] can name gets its provider backfilled (see [PoolWidgetBackfill]).
  */
 object PoolCutover {
     fun ensureMigrated(
@@ -28,14 +31,56 @@ object PoolCutover {
         layoutSet: HomeLayoutSet,
         providerOf: (HostedWidgetId) -> WidgetProviderIdentity? = { null },
     ): PoolCutoverResult {
-        if (stored?.migrated == true) return PoolCutoverResult(stored, changed = false, issues = emptyList())
+        if (stored?.migrated == true) {
+            return if (stored.dockImportPending) importDocks(stored, layoutSet, providerOf) else unchanged(stored)
+        }
         val migration = PoolMigration.migrate(layoutSet)
-        val kept = stored?.pools.orEmpty().filterValues { !it.isEmpty }
+        val issues = migration.issues.toMutableList()
+        val kept =
+            stored?.pools.orEmpty().filterValues { !it.isEmpty }.mapValues { (deviceClass, pool) ->
+                withDock(pool, layoutSet, deviceClass, issues)
+            }
         val pools =
             (migration.pools + kept).mapValues { (_, pool) -> PoolWidgetBackfill.apply(pool, providerOf) }
         val next = PoolStoreState(migrated = true, pools = pools)
-        return PoolCutoverResult(next, changed = next != stored, issues = migration.issues)
+        return PoolCutoverResult(next, changed = next != stored, issues = issues)
     }
+
+    private fun unchanged(stored: PoolStoreState) = PoolCutoverResult(stored, changed = false, issues = emptyList())
+
+    /**
+     * The one-time dock import for a store migrated under schema 1: every stored class, and every class with a layout.
+     */
+    private fun importDocks(
+        stored: PoolStoreState,
+        layoutSet: HomeLayoutSet,
+        providerOf: (HostedWidgetId) -> WidgetProviderIdentity?,
+    ): PoolCutoverResult {
+        val issues = mutableListOf<PoolIssue>()
+        val classes = stored.pools.keys + layoutSet.layouts.keys.map { it.deviceClass }
+        val pools =
+            classes.associateWith { deviceClass ->
+                val pool = withDock(stored.pools[deviceClass] ?: PlacedItemPool(), layoutSet, deviceClass, issues)
+                PoolWidgetBackfill.apply(pool, providerOf)
+            }
+        val next = stored.copy(pools = pools, dockImportPending = false)
+        return PoolCutoverResult(next, changed = true, issues = issues)
+    }
+
+    private fun withDock(
+        pool: PlacedItemPool,
+        layoutSet: HomeLayoutSet,
+        deviceClass: HomeLayoutDeviceClass,
+        issues: MutableList<PoolIssue>,
+    ): PlacedItemPool =
+        if (pool.dock != null) {
+            pool
+        } else {
+            val imported = PoolMigration.importDock(pool, layoutSet, deviceClass)
+            val repaired = PoolValidation.repair(imported.pool)
+            issues += imported.issues + repaired.issues
+            repaired.pool
+        }
 
     /**
      * A fresh import that replaces every pool (the flag stays set). The standard home is still edited in
