@@ -92,24 +92,6 @@ object PoolHomeSync {
         )
     }
 
-    /**
-     * The first projection of a process from what the `HomeLayoutSet` store holds. A stripped [stored] (no placed
-     * items) is simply projected. A [stored] that holds placed items was written by a legacy-path session since (a
-     * fallback while the pool could not be used): the pool is preferred and that session's additions are ingested on
-     * top ([PoolHomeFallbackMerge]), so neither what it added nor anything newer in the pool is lost.
-     */
-    fun open(
-        state: PoolStoreState,
-        stored: HomeLayoutSet,
-        ids: WorkspaceIdFactory,
-    ): PoolHomeCommit =
-        if (PoolCutover.holdsNoPlacedItems(stored)) {
-            reproject(state, stored, ids)
-        } else {
-            val projected = projection(state, stored)
-            commit(state, projected, PoolHomeFallbackMerge.merge(state, projected, stored), ids)
-        }
-
     /** [shown] projected again from [state], ingesting nothing it already shows (after the pool changed elsewhere). */
     fun reproject(
         state: PoolStoreState,

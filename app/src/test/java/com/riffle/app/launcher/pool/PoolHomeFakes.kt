@@ -53,8 +53,6 @@ internal class DiskPoolStore(
     override suspend fun quarantine() {
         quarantined = true
     }
-
-    override suspend fun hasQuarantine(): Boolean = quarantined
 }
 
 /** The `HomeLayoutSet` store, with the cutover snapshot. */
@@ -64,13 +62,21 @@ internal class DiskHomeLayoutStore(
     /** A snapshot value is stored but cannot be decoded. */
     var snapshotUnreadable: Boolean = false,
     var failRead: Boolean = false,
+    /** The stored set is there but cannot be decoded. */
+    var corrupt: Boolean = false,
 ) : HomeLayoutCutoverStore {
     var writes = 0
     var snapshotQuarantined = false
+    var quarantined = false
 
     override suspend fun read(): HomeLayoutSet? {
         if (failRead) throw java.io.IOException("disk")
+        if (corrupt) throw UndecodableHomeLayoutException()
         return stored
+    }
+
+    override suspend fun quarantine() {
+        quarantined = true
     }
 
     override suspend fun write(layoutSet: HomeLayoutSet) {
@@ -85,6 +91,7 @@ internal class DiskHomeLayoutStore(
         }
 
     override suspend fun writePrePoolSnapshot(snapshot: HomeLayoutSet?) {
+        writes++
         snapshotUnreadable = false
         this.snapshot = snapshot
     }
@@ -92,8 +99,6 @@ internal class DiskHomeLayoutStore(
     override suspend fun quarantinePrePoolSnapshot() {
         snapshotQuarantined = true
     }
-
-    override suspend fun hasQuarantinedSnapshot(): Boolean = snapshotQuarantined
 }
 
 /** The legacy write-behind repository, writing straight through to [store]. */

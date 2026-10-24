@@ -2,16 +2,7 @@ package com.riffle.app.launcher.pool
 
 import com.riffle.app.launcher.pool.PoolHomeFixture.homeItems
 import com.riffle.app.launcher.pool.PoolHomeFixture.legacyId
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageType
-import com.riffle.core.domain.launcher.home.WidgetItem
-import com.riffle.core.domain.launcher.workspace.pool.PoolApp
-import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
-import com.riffle.core.domain.launcher.workspace.pool.PoolItemId
-import com.riffle.core.domain.launcher.workspace.pool.PoolPlacement
-import com.riffle.core.domain.launcher.workspace.pool.PoolResult
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -154,13 +145,15 @@ class PoolHomeStartupTest {
     }
 
     @Test
-    fun anUnreadableSnapshotAndAnUnreadablePoolRunTheLegacyPathAndWriteNothing() {
+    fun anUnreadableSnapshotAndAnUnreadablePoolShowTheHomeReadOnlyAndWriteNothing() {
         val (layouts, pools) = cutOverStores()
         layouts.snapshotUnreadable = true
         pools.failRead = true
         val writes = layouts.writes
         val (opening, _) = open(layouts, pools)
         assertFalse(opening.poolHome)
+        assertTrue(opening.readOnly)
+        assertFalse(opening.allowsHostIdDeletion)
         assertEquals(writes, layouts.writes)
         assertTrue("the marker stays", layouts.snapshotUnreadable)
     }
@@ -189,59 +182,55 @@ class PoolHomeStartupTest {
     }
 
     @Test
-    fun aFallbackSessionsAdditionsAreKeptAndThePoolStaysPreferred() {
+    fun aPoolThatCannotBeReadShowsTheSnapshotReadOnlyAndTheNextStartUsesThePool() {
         val (layouts, pools) = cutOverStores()
-        // The pool is newer than the snapshot: an app the snapshot never saw.
-        val newer = CachedPoolRepository(pools).also { runBlocking { it.initialize(layouts.snapshot!!) } }
-        val ws = PoolHomeSync.workspaceOf(PoolHomeFixture.key)
-        val phone = newer.pool(HomeLayoutDeviceClass.PHONE)!!
-        val withNewer =
-            PoolPlacement.addNew(
-                phone,
-                ws,
-                PoolHomeFixture.home,
-                PoolApp(PoolItemId("pool-newer"), PoolHomeFixture.identity("n"), "n"),
-                PoolHomeFixture.at(3, 0),
-            )
-        newer.update(HomeLayoutDeviceClass.PHONE, (withNewer as PoolResult.Done).edit.pool)
-        runBlocking { newer.flush() }
-
+        val stripped = layouts.stored
         pools.failRead = true
-        val (fallback, _) = open(layouts, pools)
-        assertFalse(fallback.poolHome)
-        assertEquals("the full set is written back, never stripped", 3, layouts.stored!!.activeLayout.homeItems().size)
+        val writes = layouts.writes
+        val (opening, _) = open(layouts, pools)
+        assertFalse(opening.poolHome)
+        assertTrue(opening.readOnly)
+        assertFalse("no host id may be deleted in this process", opening.allowsHostIdDeletion)
+        assertEquals(layouts.snapshot, opening.stored)
+        assertEquals("nothing written", writes, layouts.writes)
+        assertEquals(stripped, layouts.stored)
         assertNotNull("the marker stays", layouts.snapshot)
-        // The fallback session adds an app and a widget (the legacy path writes full sets).
-        val session = layouts.stored!!
-        val widget =
-            WidgetItem(
-                LauncherItemId("widget-8"),
-                HostedWidgetId(88),
-                "Notes",
-                placement = PoolHomeFixture.at(2, 3, 2, 1),
-            )
-        val added = listOf(PoolHomeFixture.app("added", 2), widget)
-        layouts.stored =
-            session.withActiveLayout(
-                session.activeLayout.copy(
-                    pages =
-                        session.activeLayout.pages.map { page ->
-                            if (page.type == LauncherPageType.Home) page.copy(items = page.items + added) else page
-                        },
-                ),
-            )
 
         pools.failRead = false
         val (next, pool) = open(layouts, pools)
         assertTrue(next.poolHome)
+        assertTrue(next.allowsHostIdDeletion)
         val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(next.stored) }
-        val items = repository.loadHomeLayoutSet()!!.activeLayout.homeItems().map { it.id.value }
-        assertTrue(items.toString(), "added" in items && "widget-8" in items && "pool-newer" in items)
-        assertTrue(repository.isHostIdReferenced(HostedWidgetId(88)))
-        runBlocking { repository.flushNow() }
-        val (again, againPool) = open(layouts, pools)
-        val restarted = poolHomeRepository(WriteThroughHomeLayouts(layouts), againPool).also { it.open(again.stored) }
-        assertEquals(items, restarted.loadHomeLayoutSet()!!.activeLayout.homeItems().map { it.id.value })
+        assertEquals(3, repository.loadHomeLayoutSet()!!.activeLayout.homeItems().size)
+    }
+
+    @Test
+    fun anUndecodableHomeLayoutSetIsQuarantinedNeverOverwrittenAndShownReadOnlyFromTheSnapshot() {
+        val (layouts, pools) = cutOverStores()
+        layouts.corrupt = true
+        val writes = layouts.writes
+        val poolWrites = pools.writes
+        val (opening, _) = open(layouts, pools)
+        assertTrue(opening.readOnly)
+        assertTrue(opening.damaged)
+        assertTrue(layouts.quarantined)
+        assertEquals(layouts.snapshot, opening.stored)
+        assertEquals(writes, layouts.writes)
+        assertEquals(poolWrites, pools.writes)
+    }
+
+    @Test
+    fun anUndecodableHomeLayoutSetWithoutASnapshotNeverCutsOverFromDefaults() {
+        val layouts = DiskHomeLayoutStore(stored = legacy, corrupt = true)
+        val pools = DiskPoolStore()
+        val (opening, pool) = open(layouts, pools)
+        assertTrue(opening.readOnly)
+        assertNull("defaults, in memory only", opening.stored)
+        assertTrue(layouts.quarantined)
+        assertNull(layouts.snapshot)
+        assertEquals(0, layouts.writes)
+        assertEquals(0, pools.writes)
+        assertNull(pool.current())
     }
 
     @Test
@@ -253,6 +242,7 @@ class PoolHomeStartupTest {
         val layoutWrites = layouts.writes
         val (opening, pool) = open(layouts, pools)
         assertFalse(opening.poolHome)
+        assertTrue(opening.readOnly)
         assertTrue(opening.damaged)
         assertNull("no pool was derived from the stripped set", pool.current())
         assertEquals(poolWrites, pools.writes)
@@ -267,7 +257,8 @@ class PoolHomeStartupTest {
         val pools = DiskPoolStore()
         val (opening, pool) = open(layouts, pools)
         assertFalse(opening.poolHome)
-        assertFalse(opening.persist)
+        assertTrue(opening.readOnly)
+        assertFalse(opening.allowsHostIdDeletion)
         assertTrue(opening.damaged)
         assertNull(opening.stored)
         assertNull(pool.current())
@@ -276,8 +267,24 @@ class PoolHomeStartupTest {
     }
 
     @Test
-    fun aCleanStartIsNotDamaged() {
+    fun aCleanStartIsNotDamagedEvenWithQuarantinedCopiesLeft() {
         val (layouts, pools) = cutOverStores()
-        assertFalse(open(layouts, pools).first.damaged)
+        layouts.snapshotQuarantined = true
+        pools.quarantined = true
+        layouts.quarantined = true
+        val opening = open(layouts, pools).first
+        assertFalse(opening.damaged)
+        assertTrue(opening.allowsHostIdDeletion)
+    }
+
+    @Test
+    fun theRecoveryNoticeShowsOncePerIncidentAndResetsAfterACleanStart() {
+        val first = recoveryNoticeStep(alreadyShown = false, damaged = true)
+        assertTrue(first.show)
+        val again = recoveryNoticeStep(alreadyShown = first.shownAfter, damaged = true)
+        assertFalse("still damaged: not again", again.show)
+        val clean = recoveryNoticeStep(alreadyShown = again.shownAfter, damaged = false)
+        assertFalse(clean.show)
+        assertTrue("a later incident is announced again", recoveryNoticeStep(clean.shownAfter, damaged = true).show)
     }
 }

@@ -1,6 +1,6 @@
 package com.riffle.app.launcher
 
-import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
+import com.riffle.app.launcher.pool.BackupRestoringHomeLayouts
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -33,9 +33,10 @@ fun LauncherShellState.withImportedBackup(
     launcherSettingsRepository: LauncherSettingsRepository,
     appVisibilityRepository: AppVisibilityRepository,
 ): LauncherShellState {
-    // Once the home renders from the pool, its restore carries the pool section along (see PoolHomeSync.restore).
+    // Once the home renders from the pool, its restore carries the pool section along (see PoolHomeSync.restore); a
+    // read-only home writes the backup as the full set for the next start to cut over from.
     val layoutSet =
-        (homeLayoutRepository as? PoolHomeLayoutRepository)
+        (homeLayoutRepository as? BackupRestoringHomeLayouts)
             ?.restoreFromBackup(document.homeLayoutSet, document.pool, document.homeFromPool)
             ?: document.homeLayoutSet.also(homeLayoutRepository::saveHomeLayoutSet)
     launcherSettingsRepository.saveLauncherSettings(document.launcherSettings)

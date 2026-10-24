@@ -52,7 +52,8 @@ internal class PoolHomeLayoutRepository(
     private val debounceMillis: Long = POOL_HOME_WRITE_DEBOUNCE_MILLIS,
     /** Keeps the recovery snapshot recent: the full projected set, written after the pool's own writes. */
     private val writeSnapshot: suspend (HomeLayoutSet) -> Unit = {},
-) : HomeLayoutRepository {
+) : HomeLayoutRepository,
+    BackupRestoringHomeLayouts {
     private val lock = Any()
 
     @Volatile
@@ -97,8 +98,7 @@ internal class PoolHomeLayoutRepository(
     fun open(stored: HomeLayoutSet?) {
         val state = pool.current() ?: return
         synchronized(lock) { lastStored = stored }
-        // A set with placed items was written by a legacy fallback session: ingest its edits ([PoolHomeSync.open]).
-        if (stored != null) publish(PoolHomeSync.open(state, stored, ids), state)
+        if (stored != null) publish(PoolHomeSync.reproject(state, stored, ids), state)
     }
 
     override fun loadHomeLayout(): HomeLayout? = (shown ?: legacy.loadHomeLayoutSet())?.activeLayout
@@ -141,7 +141,7 @@ internal class PoolHomeLayoutRepository(
      * `homeLayouts` are imported into the pool. Returns the set the shell keeps. Before the pool loaded this is a plain
      * `HomeLayoutSet` restore.
      */
-    fun restoreFromBackup(
+    override fun restoreFromBackup(
         homeLayouts: HomeLayoutSet,
         backupPool: PoolStoreState?,
         homeFromPool: Boolean,
