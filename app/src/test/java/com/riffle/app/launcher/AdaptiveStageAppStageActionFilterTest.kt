@@ -42,6 +42,12 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
+    fun allowsTheWorkspaceMenuGestureFromCardsMode() {
+        // The menu is drawn above every mode surface, so a gesture bound to it works in Cards too.
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenWorkspaceMenu))
+    }
+
+    @Test
     fun blocksUnrelatedActionsFromReachingCardsMode() {
         assertFalse(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenNotifications))
         assertFalse(

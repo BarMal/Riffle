@@ -67,80 +67,143 @@ internal fun PreviewDockContent(
     dynamicSection: LensBinding?,
     services: ContainerServices,
     modifier: Modifier = Modifier,
+    /** A side dock (11.2): the same sections in a column, pins scrolling vertically. */
+    vertical: Boolean = false,
 ) {
     var openFolder by remember { mutableStateOf<FolderItem?>(null) }
-    Row(
-        modifier = modifier.fillMaxSize().padding(horizontal = RiffleSpacing.m),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-    ) {
-        if (!model.hasNoPins) {
-            Box(
-                modifier = Modifier.weight(1f).fillMaxHeight().testTag(PREVIEW_DOCK_PINS_TEST_TAG),
-                contentAlignment = Alignment.Center,
-            ) {
-                PinnedRun(model, home) { openFolder = it }
-            }
+    val onOpenFolder = { folder: FolderItem -> openFolder = folder }
+    if (vertical) {
+        Column(
+            modifier = modifier.fillMaxSize().padding(vertical = RiffleSpacing.m),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+        ) {
+            DockSections(
+                model,
+                home,
+                dynamicSection,
+                services,
+                DockSectionModifiers(Modifier.weight(1f).fillMaxWidth(), Modifier.weight(1f)),
+                vertical = true,
+                onOpenFolder = onOpenFolder,
+            )
         }
-        if (dynamicSection != null) {
-            Box(modifier = Modifier.weight(1f).fillMaxHeight().testTag(PREVIEW_DOCK_DYNAMIC_TEST_TAG)) {
-                LensBoundExpression(dynamicSection, services, Modifier.fillMaxSize())
-            }
-        }
-        if (model.hasNoPins && dynamicSection == null) {
-            Text(
-                text = if (model.isShown) WorkspacePreviewText.DOCK_EMPTY else WorkspacePreviewText.DOCK_HIDDEN,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f).testTag(PREVIEW_DOCK_EMPTY_TEST_TAG),
+    } else {
+        Row(
+            modifier = modifier.fillMaxSize().padding(horizontal = RiffleSpacing.m),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+        ) {
+            DockSections(
+                model,
+                home,
+                dynamicSection,
+                services,
+                DockSectionModifiers(Modifier.weight(1f).fillMaxHeight(), Modifier.weight(1f)),
+                vertical = false,
+                onOpenFolder = onOpenFolder,
             )
         }
     }
     openFolder?.let { folder -> DockFolderDialog(folder, home, onDismiss = { openFolder = null }) }
 }
 
+/** The weighted modifiers of the dock's sections: [section] for the pins and dynamic section, [note] for the text. */
+private class DockSectionModifiers(val section: Modifier, val note: Modifier)
+
+@Suppress("LongParameterList")
+@Composable
+private fun DockSections(
+    model: PreviewDockModel,
+    home: PlacedHomeContent,
+    dynamicSection: LensBinding?,
+    services: ContainerServices,
+    modifiers: DockSectionModifiers,
+    vertical: Boolean,
+    onOpenFolder: (FolderItem) -> Unit,
+) {
+    if (!model.hasNoPins) {
+        Box(modifier = modifiers.section.testTag(PREVIEW_DOCK_PINS_TEST_TAG), contentAlignment = Alignment.Center) {
+            PinnedRun(model, home, vertical, onOpenFolder)
+        }
+    }
+    if (dynamicSection != null) {
+        Box(modifier = modifiers.section.testTag(PREVIEW_DOCK_DYNAMIC_TEST_TAG)) {
+            LensBoundExpression(dynamicSection, services, Modifier.fillMaxSize())
+        }
+    }
+    if (model.hasNoPins && dynamicSection == null) {
+        Text(
+            text = if (model.isShown) WorkspacePreviewText.DOCK_EMPTY else WorkspacePreviewText.DOCK_HIDDEN,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = modifiers.note.testTag(PREVIEW_DOCK_EMPTY_TEST_TAG),
+        )
+    }
+}
+
 @Composable
 private fun PinnedRun(
     model: PreviewDockModel,
     home: PlacedHomeContent,
+    vertical: Boolean,
     onOpenFolder: (FolderItem) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(model.itemSpacingDp.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val spacing = Arrangement.spacedBy(model.itemSpacingDp.dp)
+    if (vertical) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = spacing,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            model.pins.forEach { pin -> DockPin(pin, model, home, onOpenFolder) }
+        }
+    } else {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = spacing,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            model.pins.forEach { pin -> DockPin(pin, model, home, onOpenFolder) }
+        }
+    }
+}
+
+@Composable
+private fun DockPin(
+    pin: PreviewDockPin,
+    model: PreviewDockModel,
+    home: PlacedHomeContent,
+    onOpenFolder: (FolderItem) -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(model.targetSizeDp.dp)
+                .testTag(previewDockPinTestTag(pin))
+                .clickable(
+                    onClickLabel = PreviewDock.actionLabel(pin),
+                    role = Role.Button,
+                    onClick = {
+                        when (pin) {
+                            is PreviewDockPin.App -> home.onOpen(pin.item)
+                            is PreviewDockPin.Folder -> onOpenFolder(pin.item)
+                        }
+                    },
+                )
+                .clearAndSetSemantics { contentDescription = PreviewDock.spokenLabel(pin) },
+        contentAlignment = Alignment.Center,
     ) {
-        model.pins.forEach { pin ->
-            Box(
-                modifier =
-                    Modifier
-                        .size(model.targetSizeDp.dp)
-                        .testTag(previewDockPinTestTag(pin))
-                        .clickable(
-                            onClickLabel = PreviewDock.actionLabel(pin),
-                            role = Role.Button,
-                            onClick = {
-                                when (pin) {
-                                    is PreviewDockPin.App -> home.onOpen(pin.item)
-                                    is PreviewDockPin.Folder -> onOpenFolder(pin.item)
-                                }
-                            },
-                        )
-                        .clearAndSetSemantics { contentDescription = PreviewDock.spokenLabel(pin) },
-                contentAlignment = Alignment.Center,
-            ) {
-                when (pin) {
-                    is PreviewDockPin.App ->
-                        LauncherAppIcon(
-                            pin.item.appIdentity,
-                            pin.label,
-                            home.iconLoader,
-                            Modifier.size(model.iconSizeDp.dp),
-                        )
-                    is PreviewDockPin.Folder -> FolderPreviewIcon(pin.item, home.iconLoader, model.iconSizeDp)
-                }
-            }
+        when (pin) {
+            is PreviewDockPin.App ->
+                LauncherAppIcon(
+                    pin.item.appIdentity,
+                    pin.label,
+                    home.iconLoader,
+                    Modifier.size(model.iconSizeDp.dp),
+                )
+            is PreviewDockPin.Folder -> FolderPreviewIcon(pin.item, home.iconLoader, model.iconSizeDp)
         }
     }
 }

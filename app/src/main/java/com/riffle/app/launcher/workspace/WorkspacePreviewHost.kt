@@ -23,8 +23,12 @@ import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.dockFor
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
+import com.riffle.core.domain.launcher.workspace.DockMenuReachability
 import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
+import com.riffle.core.domain.launcher.workspace.WorkspaceSkin
+import com.riffle.core.domain.launcher.workspace.dock.EffectiveDock
 import com.riffle.core.domain.launcher.workspace.dock.PreviewDock
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeProjection
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
@@ -134,16 +138,23 @@ private fun WorkspacePreviewContent(
     // Once the home renders from the pool (S4) the dock is the pool's; before that, the standard home's.
     val poolHomeRuntime = remember(host) { host.pool?.takeIf { host.poolHome?.activeThisProcess == true }?.invoke() }
     val poolVersion by (poolHomeRuntime?.repository?.version ?: NoWorkspaceVersion).collectAsState()
-    val dockPins =
-        remember(layoutSet, deviceClass, poolVersion) {
-            val poolDock = poolHomeRuntime?.repository?.pool(deviceClass)?.let(PoolHomeProjection::projectDock)
-            PreviewDock.from(poolDock ?: layoutSet.dockFor(deviceClass))
+    // 11.4: the shared dock with the shown workspace's override (a stranded "hidden" draws the dock anyway).
+    val gestures = state.launcherSettings.gestures.homeGestures
+    val presentation =
+        remember(workspace, gestures) {
+            EffectiveDock.presentationFor(workspace, DockMenuReachability.globalActions(gestures)).presentation
         }
-    WorkspacePreviewTheme(state) {
+    val sharedDock =
+        remember(layoutSet, deviceClass, poolVersion) {
+            poolHomeRuntime?.repository?.pool(deviceClass)?.let(PoolHomeProjection::projectDock)
+                ?: layoutSet.dockFor(deviceClass)
+        }
+    val dockPins = remember(sharedDock, presentation) { PreviewDock.from(sharedDock, presentation) }
+    WorkspacePreviewTheme(state, workspace) {
         PreviewHideHost(
             hideController,
             layout,
-            (dockPins?.barHeightDp ?: PreviewDock.MIN_BAR_HEIGHT_DP).dp,
+            (if (dockPins.isVertical) 0 else dockPins.reservedExtentDp).dp,
         ) {
             WorkspacePreviewSurface(
                 workspace = workspace,
@@ -226,16 +237,20 @@ private fun rememberPlacedHome(
     }
 }
 
-/** The shell's theme, so the preview matches the launcher's appearance settings. */
+/**
+ * The shell's theme, so the preview matches the launcher's appearance settings, with [workspace]'s skin override
+ * (Q15) in place of the global theme preset when it names one ([WorkspaceSkin.resolve]).
+ */
 @Composable
 internal fun WorkspacePreviewTheme(
     state: LauncherShellState,
+    workspace: Workspace?,
     content: @Composable () -> Unit,
 ) {
     val appearance = state.launcherSettings.appearance
     RiffleLauncherTheme(
         themeMode = appearance.themeMode,
-        themePreset = appearance.themePreset,
+        themePreset = WorkspaceSkin.resolve(appearance.themePreset, workspace),
         themeAccent = appearance.themeAccent,
         themeColors = appearance.themeColors,
         themeCornerStyle = appearance.themeCornerStyle,

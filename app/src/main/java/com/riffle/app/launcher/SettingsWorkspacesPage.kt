@@ -38,6 +38,7 @@ import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.workspace.WorkspacesSettingsController
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.workspace.DockMenuReachability
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.settings.LayoutFallbackNotice
 import com.riffle.core.domain.launcher.workspace.settings.WorkspaceRow
@@ -72,9 +73,11 @@ private fun HostedWorkspacesPage(
         remember(state.availableLayoutDeviceClasses) {
             workspaceSettingsLayoutDeviceTabs(state.availableLayoutDeviceClasses)
         }
+    val gestures = state.settings.gestures.homeGestures
+    val globalGestureActions = remember(gestures) { DockMenuReachability.globalActions(gestures) }
     val model =
-        remember(host, version, viewed, tabs) {
-            host.workspaces.model(viewed, host.currentLayout, tabs.map { it.deviceClass })
+        remember(host, version, viewed, tabs, globalGestureActions) {
+            host.workspaces.model(viewed, host.currentLayout, tabs.map { it.deviceClass }, globalGestureActions)
         }
     WorkspacesFeedbackEffect(host.workspaces)
     Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.l)) {
@@ -85,6 +88,7 @@ private fun HostedWorkspacesPage(
             callbacks =
                 WorkspacesPageCallbacks(
                     onAction = { action -> host.workspaces.dispatch(viewed, action) },
+                    globalGestureActions = globalGestureActions,
                     onEdit = host.onEdit,
                     onSelectLayout = { layout ->
                         onAction(LauncherShellAction.SelectSettingsLayoutDeviceClass(layout))

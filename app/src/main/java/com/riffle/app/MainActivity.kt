@@ -79,6 +79,7 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -327,6 +328,8 @@ class MainActivity : ComponentActivity() {
             editHomePage = shellViewModel::onHomePageEdited,
             editHomeShortcut = shellViewModel::onHomeShortcutEdited,
             editDock = shellViewModel::onDockEdited,
+            // A gesture bound to "Workspace menu"; the controller refuses while the feature is off.
+            openWorkspaceMenu = { shellViewModel.workspaceMenu.dispatch(WorkspaceMenuAction.Open) },
         )
     }
 

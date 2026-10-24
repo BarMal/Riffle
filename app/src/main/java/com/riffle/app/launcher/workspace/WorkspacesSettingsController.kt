@@ -2,6 +2,7 @@ package com.riffle.app.launcher.workspace
 
 import com.riffle.app.launcher.WorkspacesDialogText
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.WorkspaceRepository
@@ -46,13 +47,19 @@ internal class WorkspacesSettingsController(
 
     val feedback: StateFlow<WorkspacesFeedback?> = mutableFeedback.asStateFlow()
 
-    /** The page's model, or null until the repository has loaded. */
+    /**
+     * The page's model, or null until the repository has loaded. [globalGestureActions] are the global home gestures'
+     * action names, so a row knows whether its dock may be hidden (11.4).
+     */
     fun model(
         viewed: HomeLayoutDeviceClass,
         current: HomeLayoutDeviceClass,
         available: Collection<HomeLayoutDeviceClass>,
+        globalGestureActions: Collection<LauncherGestureAction> = emptyList(),
     ): WorkspacesSettingsModel? =
-        repository.load()?.let { set -> WorkspacesSettingsPlanner.plan(set, viewed, current, available) }
+        repository.load()?.let { set ->
+            WorkspacesSettingsPlanner.plan(set, viewed, current, available, globalGestureActions = globalGestureActions)
+        }
 
     /**
      * Which places read each source across [layouts] (a layout with nothing stored reads as its default workspace,

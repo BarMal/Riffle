@@ -16,11 +16,12 @@ object WorkspaceCodec {
             "id" to str(workspace.id.value),
             "name" to str(workspace.name),
             "pages" to arr(workspace.pages.map(PageCodec::encode)),
-            "dock" to obj("dynamic" to workspace.dock.dynamicSection?.let(LensCodec::encodeBinding)),
+            "dock" to encodeDock(workspace.dock),
             "gestures" to StoredValue.Obj(workspace.gestureBindings.mapValues { str(it.value) }),
             "skin" to workspace.skinOverrideId?.let(::str),
             "preset" to workspace.presetId?.let(::str),
             "start" to workspace.startPageId?.let { str(it.value) },
+            "newApps" to workspace.newApps?.let(WorkspaceExtrasCodec::encodeNewApps),
         )
 
     fun encode(lens: Lens): StoredValue.Obj = LensCodec.encode(lens)
@@ -33,7 +34,7 @@ object WorkspaceCodec {
                 id = WorkspaceId(root.string("id") ?: return@guarded null),
                 name = root.string("name").orEmpty(),
                 pages = root.array("pages").mapNotNull(PageCodec::decode),
-                dock = WorkspaceDock(dynamicSection = LensCodec.decodeBinding(root.obj("dock")?.obj("dynamic"))),
+                dock = decodeDock(root.obj("dock")),
                 gestureBindings =
                     root.obj("gestures")?.fields.orEmpty()
                         .mapNotNull { (k, v) -> (v as? StoredValue.Str)?.let { k to it.value } }
@@ -41,9 +42,22 @@ object WorkspaceCodec {
                 skinOverrideId = root.string("skin"),
                 presetId = root.string("preset")?.takeIf { it.isNotBlank() },
                 startPageId = root.string("start")?.takeIf { it.isNotBlank() }?.let(::ContainerId),
+                newApps = WorkspaceExtrasCodec.decodeNewApps(root.obj("newApps")),
             )
         }
     }
+
+    private fun encodeDock(dock: WorkspaceDock): StoredValue.Obj =
+        obj(
+            "dynamic" to dock.dynamicSection?.let(LensCodec::encodeBinding),
+            "presentation" to dock.presentation?.let(WorkspaceExtrasCodec::encodePresentation),
+        )
+
+    private fun decodeDock(dock: StoredValue.Obj?): WorkspaceDock =
+        WorkspaceDock(
+            dynamicSection = LensCodec.decodeBinding(dock?.obj("dynamic")),
+            presentation = WorkspaceExtrasCodec.decodePresentation(dock?.obj("presentation")),
+        )
 
     /** Returns null when no usable source remains. */
     fun decodeLens(value: StoredValue?): Lens? = LensCodec.decode(value)
