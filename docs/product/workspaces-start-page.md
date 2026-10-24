@@ -1,5 +1,10 @@
 # Workspaces: start page, Return setting, Finder out of the pager
 
+> **S9 update ([`workspaces-default.md`](workspaces-default.md)).** The real home is the active workspace: "Start
+> page" and a Home press use the workspace's start page when it is a placed page (`HomeReturn.landingPage(...,
+> startPageId)`), else the first page. "Returning to Home" moved to Settings > Layout. The preview surface described
+> below is no longer shown; the Finder is the app drawer.
+
 Status: built behind the Workspaces (preview) developer setting. Standard launcher behaviour is unchanged with the
 preview off. Implements owner decisions Q6 (Finder is its own surface), Q7 (Return is a setting) and Q14 (a start
 page per workspace) from `workspaces-configuration.md` (sections 3.2 and 8.3). Refs #1363.

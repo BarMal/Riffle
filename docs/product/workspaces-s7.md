@@ -1,5 +1,10 @@
 # Workspaces S7: skin override, workspace-menu gesture, dock overrides and new apps (as built)
 
+> **S9 update ([`workspaces-default.md`](workspaces-default.md)).** The preview switch and `WorkspaceMenuFeature` are
+> gone, and the shell now does what this page lists as not done: the launcher theme reads `WorkspaceSkin.resolve`,
+> the home applies the workspace's `gestureBindings` and dock override (`withWorkspaceHome`), and a package-added
+> event calls `PoolNewApps.placeNewApp(..., AppArrival.INSTALLED)`. The dock pull opens the menu.
+
 Status: built behind Settings > Developer > "Workspaces (preview)" (off by default) and, for the gesture, the
 workspace menu feature (`WorkspaceMenuFeature.enabled`). Standard launcher behaviour is unchanged with both off. This
 page covers four rows of slice S7 in `workspaces-configuration.md` section 7: the **per-workspace skin override** (Q15,

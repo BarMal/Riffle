@@ -8,6 +8,12 @@ dock as a sibling of the Adaptive Stage surface rather than inside it.
 This page describes the behaviour after #1210, revised by the dock-pull decisions (see
 "Mode transitions" below). The code it describes:
 
+> **Plan revision 2026-10-01 (WS10, as built at S9, 2026-10-24).** Workspaces are the launcher's home and the
+> Home/Library mode pair is no longer a user concept (`workspaces-configuration.md` 3.1, 11.5;
+> [`workspaces-default.md`](workspaces-default.md)). **The dock pull opens the workspace menu** (owner decision Q9):
+> same claim rules, same direction logic, no mode switch. "Mode transitions" below is kept as the history of the pull
+> and describes what still runs where no workspace menu exists (tests, a shell without workspaces).
+
 > **Plan revision 2026-09-25.** The dock pull becomes the only mode-transition trigger (Decisions
 > 3, 9, 11 in `modes-dock-handle-and-cards-plan.md`). The alternative triggers are deleted and
 > dock shelf expansion is switched off (#1241, below). The pull itself is built (#1206, #1207): a
@@ -20,13 +26,31 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 | Card stack scroll/fling | `CardStack.kt` | `Modifier.scrollable` + custom `FlingBehavior` |
 | Stage pager (Cards) | `AdaptiveStageAppStageSurface.kt` | `HorizontalPager` |
 | Home page pager (Std/Lib) | `ImmediateHomePager.kt` | `HorizontalPager` |
-| Dock pull (Home ↔ Library) | `DockPull.kt`, `HomeDockPullBinding.kt` | Custom pointer loop (ADR 0002: direction-selective claim), decisions in `core/domain/.../dockpull/` |
+| Dock pull: workspace menu (S9) | `DockMenuPull.kt`, `HomeDockPullBinding.kt` | Custom pointer loop with the same claim as below (`dockPullClaimFor`) |
+| Dock pull (Home ↔ Library, only without a workspace menu) | `DockPull.kt`, `HomeDockPullBinding.kt` | Custom pointer loop (ADR 0002: direction-selective claim), decisions in `core/domain/.../dockpull/` |
 | Dock shelf expand/collapse (switched off, see below) | `DockShelfGesture.kt` | Custom pointer loop (ADR 0002: direction-selective claim) |
 | Dock run / dock sections | `HomeDock.kt`, `DockDynamicSection.kt`, `DockNotificationCards.kt` | `horizontalScroll`/`verticalScroll` |
 | Page indicator scrub | `HomePageControls.kt` | `detectHorizontalDragGestures` |
 | Arbitration decisions | `core/domain/.../gestures/`, `.../cards/CardStackOverscroll.kt` | Pure Kotlin, unit tested |
 
-## Mode transitions
+## Workspace menu (S9)
+
+With workspaces on (always, in the app) the dock pull **opens the workspace menu**:
+
+- **Claim.** Exactly the mode pull's (below): one finger on the dock body, past touch slop, leading along the edge's
+  natural pull direction, before the long-press timeout; off while the layout is edited or the widget picker is open.
+  A drag along the run still scrolls the sections, a held press is still a long-press, a drag into the edge does
+  nothing. With a moved dock edge (a workspace's dock override) the pull direction follows the effective edge.
+- **Effect.** On the claim the menu opens (its own open animation is the feedback; under reduced motion it appears
+  at once). The dock and the pages do not move with the finger; the rest of the gesture is consumed.
+- **Equivalents.** The accessibility action **"Workspace menu"** on the dock and on the home surface root (so it
+  exists when a workspace hides its dock), the dock's menu handle, **Ctrl + the arrow of the pull direction**, and any
+  home gesture bound to "Workspace menu" (global, or a workspace's own `gestureBindings`, which the shell now applies:
+  Niagara binds a swipe up). The "Switch to Library" / "Switch to Home" action is gone.
+- **No dock, no pull** (the menu stays reachable through the surface action and the bound gesture, design 11.4): a
+  workspace may hide its dock only when a gesture opens the menu.
+
+## Mode transitions (history; only without a workspace menu)
 
 **The dock pull is the only mode-transition trigger** (plan Decision 9). It moves between a device
 class's fixed Home ↔ Library pair (`ModePair`, #1241): Home is Cards or Standard, chosen in
@@ -90,14 +114,9 @@ defaults to false. Off, no dock opens its shelf -- by swipe or by button -- and 
 settings are hidden; the swipe away from the dock edge that the shelf used to claim does nothing.
 The shelf code and its tests stay (the tests switch the flag on around themselves).
 
-**Workspace menu (#1351, off by default behind `WorkspaceMenuFeature.enabled`).** It does not use any
-dock drag: the dock pull stays the Home <-> Library switch. The menu opens from a dock affordance and
-from the dock's accessibility action "Workspace menu"; see "Workspace menu" in
-`workspaces-sources-lenses.md`. Since WS10 S7 any home gesture can also be bound to the action
-**"Workspace menu"** (`OPEN_WORKSPACE_MENU`, `workspaces-s7.md`): the gesture settings list it only
-while the feature is on (or when a gesture already uses it), and with the feature off a gesture bound
-to it does nothing. Cards lets it through its home-action filter. No default binding uses it; the dock
-pull keeps its meaning until S9, when it opens the menu (design 11.5).
+**Workspace menu.** Since S9 the dock pull opens it (above); `WorkspaceMenuFeature` is deleted. Any home gesture
+can be bound to **"Workspace menu"** (`OPEN_WORKSPACE_MENU`, `workspaces-s7.md`), listed in the gesture settings
+always. Cards lets it through its home-action filter. No default binding uses it.
 
 ## Thresholds
 
@@ -123,7 +142,7 @@ means no default binding, so nothing happens unless the user binds the gesture.
 
 | Region | Input | Std / Lib | Cards |
 | --- | --- | --- | --- |
-| Dock body | 1-finger in the natural pull direction (away from the edge) | **Dock pull**, Home ↔ Library (claims past touch slop when the drag leads along the pull) | same |
+| Dock body | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the workspace menu (S9; claims past touch slop when the drag leads along the pull) | same |
 | Dock sections (dynamic, notification row) | 1-finger along the dock run | Section scrolls (owns) | Section scrolls (owns) |
 | Dock sections | 1-finger away from edge | Nothing while shelf expansion is off (reserved for the dock pull) | same |
 | Dock background / icons | 1-finger away from edge | Nothing while shelf expansion is off; falls through to Home in Std/Lib (unbound by default) (reserved for the dock pull) | Nothing (reserved for the dock pull) |
@@ -196,8 +215,9 @@ no longer be available for the hand-off.
   widgets.
 - **The dock pull's hit area is the dock's resting place.** A finger catching a settling dock has to
   land where the dock rests (on the edge it is settling onto), not where it is drawn mid-flight.
-- **No dock, no pull.** With the dock switched off or hidden, the keyboard shortcut is the only
-  in-place way to switch; Settings still changes mode.
+- **No dock, no pull** (the menu stays reachable through the surface action and the bound gesture, 11.4). With
+  the dock switched off or hidden by a workspace, the "Workspace menu" accessibility action on the home surface,
+  Ctrl+arrow and a bound gesture open the menu.
 - **Side docks:** along-run vertical drags scroll the dock run when it has overflow. The dock pull
   (#1207) does not compete with that: a side dock's pull is horizontal, perpendicular to its run.
 - **Primitive migration (ADR 0002):** `HomeGestureInput` and `DockShelfGesture` stay custom pointer
