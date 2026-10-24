@@ -172,6 +172,10 @@ launcher draws the built-in Nova default and loads asynchronously.
 
 ### 1.3 Fresh data and the first-run chooser
 
+> **Superseded (owner decision, goal-first only):** the preset chooser below is replaced by a first-time walkthrough
+> ("What do you want on your home screens?") and a content wizard; domain built in
+> [`workspaces-wizard-and-onboarding.md`](workspaces-wizard-and-onboarding.md), UI to follow.
+
 With nothing stored the home is the **Nova-style preset** (WS8), seeded by `PresetInstaller.withDefaultsFor`
 (fills only layouts with nothing stored). A non-blocking "Choose your home style" sheet in the existing
 first-run flow offers the preset cards (2.3); Skip keeps Nova; it never delays the Home role request. This is
