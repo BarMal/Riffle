@@ -31,6 +31,7 @@ internal object EditorText {
     const val NAME_LABEL = "Workspace name"
     const val PAGES = "Pages"
     const val ADD_PAGE = "Add page or widget"
+    const val ADVANCED = "Open advanced builder"
     const val DOCK_SECTION = "Dock section"
     const val DOCK_SECTION_EMPTY = "No dynamic section"
     const val SET_DOCK_SECTION = "Set dock section"

@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.StateFlow
  * preview through the same provider the containers use (null: the page says the preview is unavailable).
  * [globalSearchQuery] is the shared query holder the Search source page reports on (only whether one is set).
  * [contentLevels] drives the content-level controls of Settings > Privacy and the source pages (null: not shown).
+ * [onUseSource] and [onNewLensWizard] open the content wizard over Settings (the source page's "Use this source",
+ * Saved lenses > New).
  */
 @Suppress("LongParameterList") // One bundle of the workspace runtime's settings controllers.
 internal class WorkspaceSettingsHost(
@@ -50,6 +52,10 @@ internal class WorkspaceSettingsHost(
     val previewServices: ((reducedMotion: Boolean) -> ContainerServices)? = null,
     val globalSearchQuery: SearchQueryHolder? = null,
     val contentLevels: SourceContentLevelsController? = null,
+    /** Opens the content wizard on a source ("Use this source"); null: the source pages do not offer it. */
+    val onUseSource: ((SourceId) -> Unit)? = null,
+    /** Opens the content wizard for a new saved lens of a layout; null: Saved lenses > New opens the builder. */
+    val onNewLensWizard: ((HomeLayoutDeviceClass) -> Unit)? = null,
 )
 
 internal val LocalWorkspaceSettingsHost = staticCompositionLocalOf<WorkspaceSettingsHost?> { null }

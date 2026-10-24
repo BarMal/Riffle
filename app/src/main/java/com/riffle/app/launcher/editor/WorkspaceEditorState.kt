@@ -1,10 +1,14 @@
 package com.riffle.app.launcher.editor
 
+import com.riffle.core.domain.launcher.workspace.ContainerId
 import com.riffle.core.domain.launcher.workspace.LayoutCapabilities
+import com.riffle.core.domain.launcher.workspace.LensLibrary
 import com.riffle.core.domain.launcher.workspace.LibraryProblem
+import com.riffle.core.domain.launcher.workspace.SourceDescriptor
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceIssue
+import com.riffle.core.domain.launcher.workspace.WorkspaceSourceIds
 import com.riffle.core.domain.launcher.workspace.editor.AdoptOffer
 import com.riffle.core.domain.launcher.workspace.editor.BindingFlow
 import com.riffle.core.domain.launcher.workspace.editor.BindingFlowAction
@@ -22,6 +26,7 @@ import com.riffle.core.domain.launcher.workspace.editor.LensScopeChange
 import com.riffle.core.domain.launcher.workspace.editor.SourceChoice
 import com.riffle.core.domain.launcher.workspace.editor.WorkspaceEdit
 import com.riffle.core.domain.launcher.workspace.editor.WorkspaceEditSession
+import com.riffle.core.domain.launcher.workspace.wizard.AdvancedHandoff
 
 /** What the editor reads that is not its own state. */
 internal data class EditorEnvironment(
@@ -29,7 +34,21 @@ internal data class EditorEnvironment(
     val capabilities: LayoutCapabilities = LayoutCapabilities(),
     val ids: WorkspaceIdFactory = WorkspaceIdFactory.Random,
 ) {
-    val editContext: EditContext get() = EditContext(capabilities, sources.map { it.descriptor })
+    /**
+     * The sources edits are validated against, with `home.grid` (the pool, never in the registry) always known, as
+     * the content wizard validates: a placed page the wizard adds must not read as an unknown source at Done.
+     */
+    val editContext: EditContext
+        get() {
+            val known = sources.map { it.descriptor }
+            val withHome =
+                if (known.any { it.id == WorkspaceSourceIds.HOME_GRID }) {
+                    known
+                } else {
+                    known + SourceDescriptor(WorkspaceSourceIds.HOME_GRID)
+                }
+            return EditContext(capabilities, withHome)
+        }
 
     fun flowContext(
         workspace: Workspace,
@@ -64,7 +83,15 @@ internal sealed interface EditorMessage {
 
     /** Something the user asked for was refused by the library (the name, a full library). */
     data class LibraryRefused(val problem: LibraryProblem) : EditorMessage
+
+    /** The content wizard added [name]; Undo takes it back. */
+    data class WizardAdded(val name: String) : EditorMessage
 }
+
+/** The content wizard is open over the editor; [pageId] is the widget page it was opened from, if any. */
+internal data class EditorWizard(
+    val pageId: ContainerId? = null,
+)
 
 internal data class WorkspaceEditorUiState(
     val session: WorkspaceEditSession,
@@ -74,6 +101,8 @@ internal data class WorkspaceEditorUiState(
     val confirmingDiscard: Boolean = false,
     /** After Save as lens: the other containers that hold the same lens, which can use it too. Null: no offer. */
     val offer: AdoptOffer? = null,
+    /** The content wizard ("Add page or widget"), while it is open. */
+    val wizard: EditorWizard? = null,
 )
 
 internal sealed interface EditorAction {
@@ -114,6 +143,24 @@ internal sealed interface EditorAction {
 
     /** The system back: steps back inside a flow, cancels a flow at its first step, otherwise asks to close. */
     data object Back : EditorAction
+
+    /** Opens the content wizard; [pageId] is a widget page to add to (its "Add widget"). */
+    data class OpenWizard(val pageId: ContainerId? = null) : EditorAction
+
+    data object CloseWizard : EditorAction
+
+    /**
+     * The wizard finished: [edit] (null when only picked apps were placed) and the [library] it leaves (a saved
+     * lens it added) go into the session as one step, so Undo, Redo, Revert and the discard prompt cover them.
+     */
+    data class ApplyWizard(
+        val edit: WorkspaceEdit?,
+        val library: LensLibrary,
+        val name: String,
+    ) : EditorAction
+
+    /** "Open advanced builder" from the wizard: the Add flow starts on the wizard's draft. */
+    data class StartAdvanced(val handoff: AdvancedHandoff) : EditorAction
 }
 
 /** What the host must do as a result of an action. */
@@ -149,7 +196,8 @@ internal class WorkspaceEditorReducer(private val environment: EditorEnvironment
         action: EditorAction,
     ): EditorTransition {
         val transition =
-            EditorSavedLens.reduce(state, action, environment)?.let { EditorTransition(it) }
+            (EditorSavedLens.reduce(state, action, environment) ?: EditorWizardSteps.reduce(state, action, environment))
+                ?.let { EditorTransition(it) }
                 ?: step(state, action)
         val answers = action == EditorAction.ConfirmFlow || action == EditorAction.AdoptIdentical
         return if (answers || transition.state.offer == null) {
@@ -219,6 +267,7 @@ internal class WorkspaceEditorReducer(private val environment: EditorEnvironment
         val flow = state.flow
         return when {
             state.confirmingDiscard -> EditorTransition(state.copy(confirmingDiscard = false))
+            state.wizard != null -> EditorTransition(state.copy(wizard = null))
             flow == null -> requestClose(state)
             flow.state.step == EditorStep.SOURCE -> EditorTransition(state.copy(flow = null, message = null))
             else -> EditorTransition(reduceFlow(state, EditorAction.Flow(BindingFlowAction.Back)))
@@ -259,6 +308,7 @@ internal fun messageIsError(message: EditorMessage): Boolean =
     when (message) {
         is EditorMessage.Rejected, is EditorMessage.SaveBlocked, is EditorMessage.LibraryRefused -> true
         is EditorMessage.SavedAsLens, is EditorMessage.Adopted, is EditorMessage.Detached -> false
+        is EditorMessage.WizardAdded -> false
     }
 
 internal fun messageText(message: EditorMessage): String =
@@ -268,6 +318,7 @@ internal fun messageText(message: EditorMessage): String =
         is EditorMessage.Adopted -> EditorLensMessages.adopted(message.name, message.count)
         is EditorMessage.Detached -> EditorLensMessages.detached(message.name)
         is EditorMessage.LibraryRefused -> EditorLensMessages.libraryProblem(message.problem)
+        is EditorMessage.WizardAdded -> "Added ${message.name}"
         is EditorMessage.SaveBlocked ->
             message.issues.map {
                 EditorReasonText.workspace(

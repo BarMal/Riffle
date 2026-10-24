@@ -23,6 +23,7 @@ internal object LensesSettingsText {
         "Named, reusable lenses for each layout: build, rename, copy and see where they are used"
     const val NOT_LOADED = "Workspaces are still loading. Open this page again in a moment."
     const val NEW = "New"
+    const val NEW_ADVANCED = "Open advanced builder"
     const val NEW_DESCRIPTION = "New saved lens"
     const val LIST_HEADING = "Saved lenses"
     const val EXPLAINER =

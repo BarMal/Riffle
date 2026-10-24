@@ -45,6 +45,12 @@ internal fun WorkspaceEditorLayer(
         val (workspace, scope) = loaded
         val reducedMotion = state.launcherSettings.motion.reducedMotion
         val services = remember(runtime, reducedMotion) { runtime.services(reducedMotion) }
+        val wizard =
+            remember(host, runtime, state.installedApps, state.launcherSettings.rss, workspaceId, deviceClass) {
+                host.editorWizardSupport(runtime, state, deviceClass, workspaceId)
+            }
+        // A source page's wizard that handed over to the advanced builder opens the editor on that flow, once.
+        val handoff = remember(workspaceId) { host.wizardRequests.takeEditorHandoff() }
         WorkspacePreviewTheme(state, workspace) {
             EditorEntry(
                 workspace = workspace,
@@ -55,6 +61,8 @@ internal fun WorkspaceEditorLayer(
                 capabilities = LayoutCapabilities(),
                 onRequestSourceAccess = host.onRequestSourceAccess,
                 scope = scope,
+                wizard = wizard,
+                initialHandoff = handoff,
             )
         }
     }

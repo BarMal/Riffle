@@ -41,6 +41,7 @@ import com.riffle.core.domain.launcher.workspace.settings.LensesSettingsModel
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 internal const val LENSES_NEW_TEST_TAG = "lenses-new"
+internal const val LENSES_NEW_ADVANCED_TEST_TAG = "lenses-new-advanced"
 internal const val LENSES_EMPTY_TEST_TAG = "lenses-empty"
 internal const val LENSES_HEADING_TEST_TAG = "lenses-heading"
 internal const val LENSES_DETAIL_PLACEHOLDER_TEST_TAG = "lenses-detail-placeholder"
@@ -75,6 +76,8 @@ internal class LensesPageCallbacks(
     val onSelectLayout: (HomeLayoutDeviceClass) -> Unit = {},
     val onOpen: (LensId) -> Unit = {},
     val onNew: () -> Unit = {},
+    /** + New through the content wizard; null: + New opens the builder (then there is no separate advanced button). */
+    val onNewWizard: (() -> Unit)? = null,
     val onBuilderAction: (LensDraftAction) -> Unit = {},
     val onDispatch: (LensesSettingsAction) -> Unit = {},
     val onCloseDetail: () -> Unit = {},
@@ -149,6 +152,7 @@ private fun HostedLensesPage(
             onSelectLayout = { layout -> onAction(LauncherShellAction.SelectSettingsLayoutDeviceClass(layout)) },
             onOpen = { id -> lenses.builder.open(viewed, id) },
             onNew = { lenses.builder.startNew(viewed) },
+            onNewWizard = host.onNewLensWizard?.let { open -> { open(viewed) } },
             onBuilderAction = { action -> lenses.builder.edit(action, choices) },
             onDispatch = { action -> lenses.dispatch(viewed, action) },
             onCloseDetail = lenses.builder::close,
