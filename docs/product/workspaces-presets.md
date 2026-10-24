@@ -18,7 +18,8 @@ express.
   workspace and container ids (the WS5 copy helper). Clone-and-edit is therefore the same as editing any
   workspace; nothing links an installed workspace back to its preset.
 - `skinHintId` is an opaque suggestion for the UI. It is not written into the installed workspace
-  (`skinOverrideId` stays null).
+  (`skinOverrideId` stays null). The hints name no theme preset yet; the user sets a workspace's skin in
+  Settings > Workspaces > Appearance (S7, [`workspaces-s7.md`](workspaces-s7.md)).
 - Default: `WorkspacePresets.defaultFor(deviceClass)` is the Nova-style workspace.
   `PresetInstaller.newInstallLayout` / `withDefaultsFor` / `addPreset` are the small helpers that put an
   installed preset into the existing `WorkspaceSet` APIs (a minimal integration aid; `WorkspaceMigration`
