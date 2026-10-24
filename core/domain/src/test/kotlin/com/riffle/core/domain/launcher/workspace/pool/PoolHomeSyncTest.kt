@@ -612,4 +612,20 @@ class PoolHomeSyncTest {
         val restored = PoolHomeSync.restore(opened.state, null, older, homeFromPool = false, ids)
         assertEquals(setOf(HostedWidgetId(42)), restored.releasedHostIds, "the dock panel widget is still restored")
     }
+
+    @Test
+    fun rebuildingThePoolFromItsOwnProjectionKeepsTheIds() {
+        val opened = open()
+        val snapshot = opened.shown
+        val once = PoolCutover.ensureMigrated(null, snapshot).state
+        val twice = PoolCutover.ensureMigrated(null, snapshot).state
+        assertEquals(once, twice)
+        val phone = HomeLayoutDeviceClass.PHONE
+        assertEquals(
+            opened.state.pools.getValue(phone).items.keys,
+            once.pools.getValue(phone).items.keys,
+            "no stacked prefix",
+        )
+        assertEquals(snapshot, PoolHomeSync.commit(once, null, snapshot, ids).shown)
+    }
 }
