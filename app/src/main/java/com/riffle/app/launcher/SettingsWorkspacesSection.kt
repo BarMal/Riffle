@@ -4,6 +4,8 @@ package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.riffle.app.launcher.onboarding.LocalWalkthroughLauncher
+import com.riffle.app.launcher.onboarding.WalkthroughText
 
 /**
  * The S4 cutover switch ("Home from placed items") as the Developer section draws it: the stored choice, and what this
@@ -44,6 +46,14 @@ internal fun SettingsWorkspacesSection(onPageSelected: (SettingsPage) -> Unit = 
                     title = LensesSettingsText.TITLE,
                     subtitle = LensesSettingsText.DEVELOPER_SUBTITLE,
                     onClick = { onPageSelected(SettingsPage.LENSES) },
+                )
+            }
+            // The first-time walkthrough, again: never replaces anything, only adds or updates "My home".
+            LocalWalkthroughLauncher.current?.let { runWalkthrough ->
+                SettingsClickableRow(
+                    title = WalkthroughText.SETTINGS_ROW,
+                    subtitle = WalkthroughText.SETTINGS_ROW_SUBTITLE,
+                    onClick = runWalkthrough,
                 )
             }
         }

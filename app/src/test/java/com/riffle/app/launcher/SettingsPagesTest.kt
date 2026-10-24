@@ -317,10 +317,22 @@ class SettingsPagesTest {
     fun launcherSearchSettingsEntriesResolveBackToSettingsPages() {
         val entries = settingsLauncherSearchEntries()
 
+        // The last entry is "Set up your home again", in the Workspaces section of the main page.
         assertEquals(
-            settingsMainPageEntries().map { entry -> entry.page },
+            settingsMainPageEntries().map { entry -> entry.page } + SettingsPage.MAIN,
             entries.map { entry -> entry.id.settingsPage() },
         )
+    }
+
+    @Test
+    fun theWalkthroughIsFoundBySearchAndOpensTheMainSettingsPage() {
+        val entries = settingsLauncherSearchEntries()
+        listOf("walkthrough", "setup", "onboarding").forEach { query ->
+            val results = LauncherSearchProvider().search(query = query, apps = emptyList(), settingsEntries = entries)
+            assertEquals(query, listOf("Set up your home again"), results.map { result -> result.title })
+        }
+        val entry = entries.single { it.title == "Set up your home again" }
+        assertEquals(SettingsPage.MAIN, entry.id.settingsPage())
     }
 
     @Test

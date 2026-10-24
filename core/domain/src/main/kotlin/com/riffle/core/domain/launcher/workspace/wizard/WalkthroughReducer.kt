@@ -246,7 +246,9 @@ internal object WalkthroughNavigation {
                 state
             }
         val steps = WalkthroughFlow.steps(left, context)
-        val following = steps.getOrNull(steps.indexOf(left.step) + 1) ?: WalkthroughStep.DONE
+        // By order, not by index: the current step may have just left the sequence (Permissions, once every
+        // permission it asked for was granted).
+        val following = steps.firstOrNull { it.ordinal > left.step.ordinal } ?: WalkthroughStep.DONE
         return when {
             !WalkthroughFlow.canAdvance(state, context) -> state
             state.step == WalkthroughStep.OPTIONS && state.optionsIndex < lastOption ->
@@ -262,8 +264,7 @@ internal object WalkthroughNavigation {
         context: WalkthroughContext,
     ): WalkthroughState {
         val steps = WalkthroughFlow.steps(state, context)
-        val index = steps.indexOf(state.step)
-        val previous = steps.getOrNull(index - 1)
+        val previous = steps.lastOrNull { it.ordinal < state.step.ordinal }
         val lastOption = (WalkthroughFlow.optionGoals(state, context).size - 1).coerceAtLeast(0)
         return when {
             state.step == WalkthroughStep.OPTIONS && state.optionsIndex > 0 ->

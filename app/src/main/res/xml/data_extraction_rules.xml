@@ -10,14 +10,19 @@
 
   The ICS calendar feed DataStore file ("riffle_ics_feeds") holds feed URLs, which can contain secret
   tokens, plus parsed events. It is excluded from both for the same reason. See issue #1409.
+
+  The onboarding state (SharedPreferences "riffle_onboarding") describes this install only (whether the
+  first-time walkthrough ran here), so it is not carried to another device either.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
         <exclude domain="file" path="datastore/riffle_ics_feeds.preferences_pb" />
+        <exclude domain="sharedpref" path="riffle_onboarding.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
         <exclude domain="file" path="datastore/riffle_ics_feeds.preferences_pb" />
+        <exclude domain="sharedpref" path="riffle_onboarding.xml" />
     </device-transfer>
 </data-extraction-rules>
