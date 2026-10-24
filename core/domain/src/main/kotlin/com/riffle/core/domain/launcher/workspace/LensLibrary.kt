@@ -10,8 +10,23 @@ value class LensId(val value: String) {
 
 /** Where a saved lens came from, when it was not made by the user. Identity for reinstalls, not the name. */
 sealed interface LensOrigin {
-    /** A lens a built-in preset installed; [key] is stable across releases (for example "finder"). */
-    data class Preset(val presetId: String, val key: String) : LensOrigin
+    /**
+     * A lens a built-in preset installed; [key] is stable across releases (for example "finder").
+     * [installed] is the catalog definition the entry was installed (or last refreshed) with: while the
+     * entry's lens still equals it, the user has not edited the lens, and reinstalling or resetting the
+     * preset refreshes it to the current catalog definition. Null (entries installed before it was
+     * recorded) means "unknown", which counts as edited. Only the definition is compared: a rename alone
+     * keeps the entry untouched.
+     */
+    data class Preset(
+        val presetId: String,
+        val key: String,
+        val installed: Lens? = null,
+    ) : LensOrigin {
+        /** The same catalog lens, whatever definition each was installed with. */
+        fun sameCatalogLens(other: LensOrigin?): Boolean =
+            other is Preset && other.presetId == presetId && other.key == key
+    }
 }
 
 /** A named, reusable lens definition. Definition only: never item content. */
@@ -20,7 +35,17 @@ data class SavedLens(
     val name: String,
     val lens: Lens,
     val origin: LensOrigin? = null,
-)
+) {
+    /** A preset lens whose definition is still the one it was installed with (renaming does not count). */
+    val isUntouchedPresetLens: Boolean
+        get() = (origin as? LensOrigin.Preset)?.installed?.let { it == lens } ?: false
+}
+
+/** Replaces the origin of [id] (a preset records the definition it refreshed the entry with). */
+fun LensLibrary.withOrigin(
+    id: LensId,
+    origin: LensOrigin?,
+): LensLibrary = copy(lenses = lenses.map { if (it.id == id) it.copy(origin = origin) else it })
 
 /** Why a library operation did not apply. */
 enum class LibraryProblem {
