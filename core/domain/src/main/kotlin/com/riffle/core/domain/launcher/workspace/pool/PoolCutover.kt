@@ -1,8 +1,10 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
 data class PoolCutoverResult(
@@ -81,6 +83,98 @@ object PoolCutover {
             issues += imported.issues + repaired.issues
             repaired.pool
         }
+
+    /**
+     * The import that hands the standard home to the pool (S4 cutover, and restoring a backup that predates it):
+     * [layoutSet] is authoritative for the migrated workspaces (`ws:<deviceclass>:<mode>`), so their arrangements and
+     * each layout's dock are replaced by a fresh [PoolMigration] of it, while everything else [stored] holds (the
+     * preview's own and forked arrangements, the items only they reference) is kept. Fresh items overwrite stored
+     * items with the same (deterministic) id, the fresh arrangements come first so a host id both claim stays with the
+     * standard home's widget, and the result is repaired and collected. Pure and deterministic: a second run over the
+     * result is equal. [stored] is folded (N10) first; a null [stored] is a plain migration.
+     *
+     * Hard guard: a [layoutSet] with no placed item at all ([holdsNoPlacedItems]) never replaces a [stored] pool that
+     * already holds a home ([holdsHome]); [stored] is returned as it is.
+     */
+    fun resync(
+        stored: PoolStoreState?,
+        layoutSet: HomeLayoutSet,
+        providerOf: (HostedWidgetId) -> WidgetProviderIdentity? = { null },
+    ): PoolCutoverResult {
+        val folded = stored?.let(PoolLayoutFold::fold)
+        if (folded != null && holdsHome(folded) && holdsNoPlacedItems(layoutSet)) {
+            // A set without a single placed item cannot be the authority over a pool that holds the home: it is a
+            // stripped (already cut over) set whose marker was lost. Keep the pool.
+            return PoolCutoverResult(folded, changed = folded != stored, issues = emptyList())
+        }
+        val migration = PoolMigration.migrate(layoutSet)
+        val base = folded?.pools.orEmpty()
+        val issues = migration.issues.toMutableList()
+        val pools =
+            (base.keys + migration.pools.keys).sortedBy { it.ordinal }.associateWith { deviceClass ->
+                val kept = base[deviceClass]
+                val fresh = migration.pools[deviceClass]
+                val merged =
+                    when {
+                        kept == null -> fresh ?: PlacedItemPool()
+                        fresh == null -> kept
+                        else -> merge(kept, fresh, issues)
+                    }
+                PoolWidgetBackfill.apply(merged, providerOf)
+            }
+        val next = PoolStoreState(migrated = true, pools = pools)
+        return PoolCutoverResult(next, changed = next != stored, issues = issues)
+    }
+
+    /** True when [layoutSet] has no `Home` page item, no dock pin and no dock panel item anywhere. */
+    fun holdsNoPlacedItems(layoutSet: HomeLayoutSet): Boolean {
+        fun DockModel.isEmptyDock() = items.isEmpty() && panel?.items.isNullOrEmpty()
+        return layoutSet.docks.values.all { it.isEmptyDock() } &&
+            layoutSet.layouts.values.all { layout ->
+                layout.dock.isEmptyDock() &&
+                    layout.pages.filter { it.type == LauncherPageType.Home }.all { it.items.isEmpty() }
+            }
+    }
+
+    /**
+     * True when [state] was migrated and actually holds a home: at least one placed item in a migrated workspace's
+     * arrangement (`ws:...`) or one dock pin or panel item. A pool migrated from a stripped set has arrangements and a
+     * dock but nothing in them, so it does not count.
+     */
+    fun holdsHome(state: PoolStoreState): Boolean =
+        state.migrated &&
+            state.pools.values.any { pool ->
+                val placed =
+                    pool.arrangements
+                        .filterKeys { it.value.startsWith(MIGRATED_WORKSPACE_PREFIX) }
+                        .values
+                        .any { arrangement -> arrangement.pages.any { it.placements.isNotEmpty() } }
+                placed || pool.dock?.referenced.orEmpty().isNotEmpty()
+            }
+
+    private const val MIGRATED_WORKSPACE_PREFIX = "ws:"
+
+    private fun merge(
+        kept: PlacedItemPool,
+        fresh: PlacedItemPool,
+        issues: MutableList<PoolIssue>,
+    ): PlacedItemPool {
+        // A replaced arrangement keeps its own settings (the new-app placement); only its pages are re-imported.
+        val replaced =
+            fresh.arrangements.mapValues { (id, arrangement) ->
+                kept.arrangements[id]?.let { arrangement.copy(newAppPlacement = it.newAppPlacement) } ?: arrangement
+            }
+        val repaired =
+            PoolValidation.repair(
+                kept.copy(
+                    items = kept.items + fresh.items,
+                    arrangements = replaced + kept.arrangements.filterKeys { it !in fresh.arrangements },
+                    dock = fresh.dock ?: kept.dock,
+                ),
+            )
+        issues += repaired.issues.filter { it.kind != PoolIssueKind.ORPHAN_ITEM }
+        return repaired.pool
+    }
 
     /**
      * A fresh import that replaces every pool (the flag stays set). The standard home is still edited in

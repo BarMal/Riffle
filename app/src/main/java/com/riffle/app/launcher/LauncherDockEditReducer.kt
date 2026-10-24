@@ -49,7 +49,6 @@ internal class LauncherDockEditReducer(
     ): LauncherShellState {
         val layoutSet = homeLayoutSet.withDockEdge(deviceClass, ModeSurface.LIBRARY, edge)
         if (layoutSet == homeLayoutSet) return this
-        homeLayoutRepository.saveHomeLayoutSet(layoutSet)
-        return copy(homeLayoutSet = layoutSet)
+        return copy(homeLayoutSet = homeLayoutRepository.commitHomeLayoutSet(layoutSet))
     }
 }

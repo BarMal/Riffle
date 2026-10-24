@@ -30,6 +30,8 @@ import com.riffle.core.domain.launcher.workspace.pool.PoolHomeEditing
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeTarget
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
 import com.riffle.core.domain.launcher.workspace.pool.PoolItemId
+import com.riffle.core.domain.launcher.workspace.pool.PoolRemoval
+import com.riffle.core.domain.launcher.workspace.pool.PoolResult
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
 import com.riffle.core.domain.launcher.workspace.pool.PoolWidget
 import kotlinx.coroutines.CoroutineScope
@@ -380,5 +382,48 @@ class PoolEditControllerTest {
         edit.select(original.id("com.a"))
         edit.deleteEverywhere(original.id("com.a"), "com.a")
         assertNull(edit.state.value.selected)
+    }
+
+    @Test
+    fun aSessionEndsWhenTheHomeChangesThePoolAndNeverWritesItsStaleCopy() {
+        val repository = repositoryOver(FakeStore())
+        val edit = controller(repository)
+        edit.enter(phone) { emptySet() }
+        edit.move(target, repository.pool(phone)!!.id("com.b"), "com.b", 1, 0)
+        val afterPreviewEdit = repository.pool(phone)!!
+        assertTrue(edit.state.value.canUndo)
+
+        // The standard home commits on top of the preview's edit (it writes the same repository).
+        val homeCommit =
+            PoolRemoval.remove(
+                afterPreviewEdit,
+                workspace,
+                afterPreviewEdit.id("com.a"),
+            ) as PoolResult.Done
+        repository.replace(repository.current()!!.copy(pools = mapOf(phone to homeCommit.edit.pool)))
+
+        edit.undo()
+        assertFalse("edit mode ended", edit.state.value.editing)
+        assertEquals(PoolEditText.HOME_CHANGED, edit.state.value.notice?.text)
+        assertEquals(
+            "the home's commit is kept, the stale session is not written",
+            homeCommit.edit.pool,
+            repository.pool(phone),
+        )
+        edit.move(target, homeCommit.edit.pool.id("com.b"), "com.b", 1, 0)
+        assertEquals(homeCommit.edit.pool, repository.pool(phone))
+        assertFalse(edit.endIfChangedElsewhere())
+    }
+
+    @Test
+    fun aSessionWhosePoolIsUnchangedElsewhereKeepsGoing() {
+        val repository = repositoryOver(FakeStore())
+        val edit = controller(repository)
+        edit.enter(phone) { emptySet() }
+        edit.move(target, repository.pool(phone)!!.id("com.b"), "com.b", 1, 0)
+        assertFalse(edit.endIfChangedElsewhere())
+        edit.undo()
+        assertTrue(edit.state.value.editing)
+        assertTrue(edit.state.value.canRedo)
     }
 }

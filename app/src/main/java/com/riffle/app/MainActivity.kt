@@ -55,6 +55,8 @@ import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.launchNotificationListenerSettings
 import com.riffle.app.launcher.overlay.AndroidUsageAccessSettingsAction
+import com.riffle.app.launcher.pool.POOL_HOME_RECOVERY_NOTICE
+import com.riffle.app.launcher.pool.showBlockedHomeEdits
 import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
@@ -120,6 +122,7 @@ class MainActivity : ComponentActivity() {
             runtime = { workspaceRuntime },
             onRequestSourceAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
             pool = { poolRuntime },
+            poolHome = dependencies.homeLayoutRuntime.poolHomeSwitch,
         )
     }
 
@@ -278,7 +281,7 @@ class MainActivity : ComponentActivity() {
                 shellViewModel.completeWidgetAdd(action)
                     .deleteHostedWidgetIdWhenRejected(
                         action,
-                        widgetHostGateway::deleteHostedWidgetId,
+                        dependencies.hostIdDeletion::ifAllowed,
                     )
         ) {
             is HostedWidgetAddCompletionResult.Placed ->
@@ -514,8 +517,13 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(activeNotificationRefreshCoordinator)
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
-        // Writes the home layout behind on stop, so backgrounding never leaves an edit only in memory.
-        lifecycle.addObserver(homeLayoutRepository)
+        // Writes the home layout (and the placed-items pool, once the home renders from it) behind on stop, so
+        // backgrounding never leaves an edit only in memory.
+        lifecycle.addObserver(dependencies.homeLayoutRuntime)
+        if (dependencies.homeLayoutRuntime.takeRecoveryNotice()) {
+            Toast.makeText(this, POOL_HOME_RECOVERY_NOTICE, Toast.LENGTH_LONG).show()
+        }
+        showBlockedHomeEdits(dependencies.homeLayoutRuntime.readOnlyHome)
         refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)

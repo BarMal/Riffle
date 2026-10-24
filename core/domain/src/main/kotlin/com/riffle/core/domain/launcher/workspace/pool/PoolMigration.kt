@@ -84,7 +84,7 @@ object PoolMigration {
         val issues = mutableListOf<PoolIssue>()
 
         fun mint(item: LauncherItem): PoolItemId {
-            val base = prefix + item.id.value
+            val base = migratedId(prefix, item.id.value)
             var candidate = base
             var n = 1
             while (PoolItemId(candidate) in items) candidate = "$base#${++n}"
@@ -125,6 +125,18 @@ object PoolMigration {
             page.copy(items = page.items.map { it.withId(LauncherItemId(it.id.value.removePrefix(prefix))) })
         }
     }
+
+    /**
+     * The pool id of a migrated item: [prefix] plus its `LauncherItemId`, except for an id that already is a pool id
+     * (`pi:...`, a set projected from a pool, such as the cutover's recovery snapshot), which is kept as it is, so
+     * rebuilding a pool from its own projection gives back the same ids instead of stacking prefixes.
+     */
+    private fun migratedId(
+        prefix: String,
+        itemId: String,
+    ): String = if (itemId.startsWith(POOL_ID_PREFIX)) itemId else prefix + itemId
+
+    private const val POOL_ID_PREFIX = "pi:"
 
     private fun prefix(
         deviceClass: HomeLayoutDeviceClass,
@@ -170,7 +182,7 @@ object PoolMigration {
                         unplaced += PoolIssue(PoolIssueKind.UNPLACED_ITEM, workspaceId, page.id)
                         null
                     } else {
-                        val id = uniqueId(prefix + item.id.value)
+                        val id = uniqueId(migratedId(prefix, item.id.value))
                         items[id] = ArrangementIngest.create(id, item)
                         Placement(id, at)
                     }

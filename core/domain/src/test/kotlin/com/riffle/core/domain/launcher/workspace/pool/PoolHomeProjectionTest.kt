@@ -227,7 +227,7 @@ class PoolHomeProjectionTest {
             )
         val edit = ingest(created)
         val folder = edit.pool.items.values.filterIsInstance<PoolFolder>().single { it.label == "New" }
-        assertTrue(folder.id.value.startsWith("fresh"), "engine id is not trusted")
+        assertEquals("folder:1", folder.id.value, "a free engine id is kept (PoolIds.derived)")
         assertEquals(listOf("a"), folder.entries.map { it.entryId })
         assertEquals(1, edit.pool.refs("a"), "W2 still shows a")
         val renamed =
@@ -267,7 +267,7 @@ class PoolHomeProjectionTest {
         val addEdit = ingest(added)
         val widget =
             addEdit.pool.items.values.filterIsInstance<PoolWidget>().single { it.hostedId == HostedWidgetId(30) }
-        assertNotEquals("widget:1", widget.id.value)
+        assertEquals("widget:1", widget.id.value, "a free engine id is kept")
         assertEquals(1, addEdit.pool.refs(widget.id.value))
 
         val resized =
@@ -350,7 +350,7 @@ class PoolHomeProjectionTest {
         val pins = pinEdit.pool.dock!!.pins
         assertEquals(2, pins.size)
         assertEquals(PoolItemId("d"), pins.first())
-        assertTrue(pins[1].value.startsWith("fresh"))
+        assertEquals(PoolItemId("app:p:0"), pins[1])
         val back = PoolHomeProjection.project(pinEdit.pool, W1, base)
         val reordered =
             PoolHomeProjection.ingest(

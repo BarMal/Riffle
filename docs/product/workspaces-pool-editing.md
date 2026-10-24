@@ -23,7 +23,9 @@ page. **Done** (or Back) leaves it. In edit mode:
 | Undo / Redo | Buttons, or the snackbar Undo | `PoolEditSession`, 50 steps |
 
 Every edit is one atomic immutable `PoolEdit`; Undo restores the previous pool value. A rejected edit changes nothing and
-says why in the snackbar. A one-line notice in the edit bar says edits change this preview only, not the standard home.
+says why in the snackbar. A one-line notice in the edit bar says edits to a page that shows the standard home's layout also change the
+standard home (true since the S4 cutover renders the standard home from the same pool), while a workspace with pages of
+its own changes only in the preview.
 **Refresh home items** now asks first: it replaces everything in the preview, including your edits.
 
 ## How it is built

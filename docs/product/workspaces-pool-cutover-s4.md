@@ -1,9 +1,11 @@
-# Workspaces: pool cutover, domain half (WS10 S4, as built)
+# Workspaces: pool cutover (WS10 S4, as built)
 
-Status: **domain only (`:core:domain`), not wired.** Nothing in `app/` calls the new API yet and no runtime behaviour
-changes; the app wave wires the standard home onto it. This slice makes it possible for the standard home to render and
-edit FROM the placed-items pool through a projection, so `HomeLayoutSet` stops being written for placed items and the
-dock. Builds on [`workspaces-pool.md`](workspaces-pool.md) (pure pool), [`workspaces-pool-cutover.md`](workspaces-pool-cutover.md)
+Status: **wired, on by default.** The standard home renders and edits FROM the placed-items pool: every Home page item
+and the dock come from `riffle_pool`, and `HomeLayoutSet` is no longer written for placed items or dock pins. A
+developer switch (Settings > Developer > **Home from placed items**) falls back to the legacy path for one release. The
+first half of this doc is the domain contract (PR #1428); the [app half](#app-half-as-built) follows.
+
+**Take a backup export before installing this build** (Settings > Backup > Export, keep the file). Builds on [`workspaces-pool.md`](workspaces-pool.md) (pure pool), [`workspaces-pool-cutover.md`](workspaces-pool-cutover.md)
 (read-only store and import) and [`workspaces-pool-editing.md`](workspaces-pool-editing.md) (preview editing). Design:
 `workspaces-configuration.md` sections 9 and 11. Owner decisions of 2026-10-23/24 on #1363 (the pool store is
 authoritative; the dock moves into the pool now; the widget rule below).
@@ -73,6 +75,10 @@ authoritative; the dock moves into the pool now; the widget rule below).
 * Page ids need only be unique within one arrangement; a fork keeps them.
 * Migrated ids: `pi:<deviceclass>:<mode>:<LauncherItemId>` (home items), `pi:<deviceclass>:dock:<LauncherItemId>` (dock pins
   and panel items); a repeat or an id already in use gets a `#n` suffix. Deterministic, so a re-run is equal.
+* **Changed by the app half:** a new id is `PoolIds.derived`: the engine's own text when no pool item uses it, else the
+  first free `text#n` (it used to be a fresh factory id). Prefixes that mean something to the standard home survive
+  (`library-app:`), and a Library relayout that strips and re-mints the same text lands on the same id instead of
+  minting a new one every pass. Collisions are still never trusted (`only2` in another arrangement gives `only2#2`).
 
 ### Host-id rules
 
@@ -142,17 +148,236 @@ repair, `addApp` never reuses a pin), updated `PoolPlacementTest`, `PoolCopyTest
 `./gradlew verify` was **not** run (dl.google.com is blocked here); CI runs `verify deviceVerify`. The whole `:core:domain`
 test suite, ktlint (main and test) and detekt (pool package) ran in a scratch Gradle project on Maven Central only.
 
+## App half (as built)
+
+### The shape
+
+The shell keeps its engines, reducers and its in-memory `LauncherShellState.homeLayoutSet`. What changed is the one
+repository every layout write goes through:
+
+| Piece | Where | What it does |
+| --- | --- | --- |
+| Write choke point | `HomeLayoutRepository.commitHomeLayoutSet` (domain interface, default = save and return the set) | Every reducer that wrote `saveHomeLayoutSet` now keeps what `commit` returns (`withHomeLayout`, `withSettingsTargetLayout`, mode/template/device-class selection, the dock edge, Home's reset, startup's device-class choice, backup import). A plain store returns the same set, so the legacy path is unchanged. |
+| Whole-set mapping | `core/domain/.../pool/PoolHomeSync.kt` (pure) | `commit(state, previous, next)`: ingests every key whose `Home` pages or dock changed since `previous` (active key first), adopts a key it has not seen, projects every key again; `stored(shown)` is what `HomeLayoutSet` still gets; `pruneUninstalled`, `reproject`, `restore`. |
+| Pool-backed repository | `app/.../pool/PoolHomeLayoutRepository.kt` | Implements `HomeLayoutRepository` over `CachedPoolRepository` (in memory at once, written behind after 250 ms and on `onStop`) and the legacy write-behind repository (now only told the stripped set). Host-id release, external-change signal, backup restore. |
+| Startup | `app/.../pool/PoolHomeStartup.kt` (`openHomeLayouts`), `HomeLayoutStartupLoad.kt`, `DataStoreHomeLayoutStore.kt` (`HomeLayoutRepositories.runtime`) | Reads the layout set and the pool in the one blocking startup read the launcher already had, runs the cutover or the hand-back, builds the repositories. One `CachedPoolRepository` per process, shared by the home, the preview and backup. |
+| Switch | `pool/PoolHomePreference.kt` (`riffle_pool_home`, default on), Developer row in `WorkspacePreviewSetting.kt` | Read once per process; flipping it applies at the next start. |
+
+### Which arrangement a key shows
+
+Every `HomeLayoutSet` key (`deviceClass`, `mode`) shows `ws:<layout class>:<mode>` in the pool of
+`deviceClass.workspaceLayoutClass()` (N10): the landscape phone shows the phone pool's arrangement and dock, so rotating
+changes geometry only. The standard home does not follow the Workspaces preview's active workspace (that stays a
+preview concept until S9); it always shows the migrated workspace of the shown mode. Generated and All-apps pages
+(including Library's `library:N` overflow pages), settings, template, selection, edit mode, mode choices and Library's
+dock edge stay in `HomeLayoutSet`. Library's edge is mirrored into `PoolDockSettings.libraryPosition` on every commit.
+
+### What `HomeLayoutSet` still holds
+
+`PoolHomeSync.stored`: the same set with every `Home` page's items and every dock's pins and panel items removed in
+the device classes the pool covers. `Home` pages stay as empty slots so their order among generated pages and the
+selected page survive; dock settings stay. So moving, adding or removing an icon, folder or widget, or pinning to the
+dock, writes the pool only (tested: the stored set is equal before and after a move).
+
+### Startup, cutover and hand-back
+
+* **First start with the switch on** (no snapshot): `CachedPoolRepository.initializeForCutover` reads the pool and
+  brings it in line with the stored set (`PoolCutover.resync`: the migrated workspaces' arrangements and the docks are
+  re-imported from `HomeLayoutSet`, everything else in the pool, such as the preview's own or forked arrangements, is
+  kept). A pool imported earlier by the preview is stale by now, so the owner's current home wins. Only once that write
+  has landed are the snapshot (`home_layout_pre_pool` in `riffle_home_layout`: the pool's full projection) and the
+  stripped set written, in one DataStore transaction. If anything fails the home stays on the legacy path for that
+  process and nothing is stripped.
+* **The snapshot is a recovery copy, kept recent**: whenever the pool has been fully written, whoever wrote it (the
+  home or the preview's editor), the pool's full projection of the shell's set (items and dock) is written to it. It is
+  never the source of truth while the pool can be read.
+* **Switch turned off**: on the next start the pool's projection is written back as the full `HomeLayoutSet` and the
+  snapshot removed. Turning it on again cuts over again (resync from the then-current set).
+* **Read-only home**: a process that cannot use the pool although the store was cut over (the pool cannot be read or
+  written, the snapshot or the `HomeLayoutSet` is damaged) shows the home read-only (`ReadOnlyHomeLayoutRepository`)
+  from the best full set there is: the snapshot, else the stored set, else defaults. Every home edit (add, move, remove,
+  folder, widget add/resize/remove, page and dock edits) is refused with a toast: "Your home screen can't be changed
+  right now. Restart Riffle, or restore a backup in Settings > Backup." Selection, edit mode and a newly seen layout key
+  (rotation) are kept in memory; launcher settings stay usable. Nothing is written (not `HomeLayoutSet`, not the pool,
+  which is frozen, not the snapshot) and no widget host id is deleted. The marker stays; the next start that can use
+  the pool simply uses it. The one write is a backup restore: its layouts become the full `HomeLayoutSet` and the
+  marker is removed, so the next start cuts over from them.
+* The startup read stays the single blocking read the launcher had: the pool is read in the same step, so the first
+  frame already shows the pool's items.
+* **Recovery notice**: when THIS start finds damage (an unreadable snapshot, an undecodable pool, an unreadable or
+  undecodable `HomeLayoutSet`), the user is told once (a toast) that a backup import restores it; a clean start resets
+  it, so a later incident is announced again. The quarantined copies (`pool_corrupt`, `home_layout_pre_pool_corrupt`,
+  `home_layout_corrupt`) are never overwritten or deleted, and do not by themselves trigger the notice.
+* **Host ids in a read-only or damaged process**: the shell's deletes, released ids, the startup check on a discarded
+  widget-add transaction (Unknown) and the delete of a rejected widget add are all skipped.
+
+### Failure handling
+
+| Situation at start | What happens | Why nothing is lost |
+| --- | --- | --- |
+| `HomeLayoutSet` cannot be read (I/O) | Read-only from the snapshot (else defaults); notice. | Nothing is written this process. |
+| `HomeLayoutSet` value undecodable | Copied once to `home_layout_corrupt`; read-only from the snapshot (else defaults); never cut over; notice. | The original is kept; defaults never replace it. |
+| Snapshot absent, switch on, pool write or snapshot write fails | Legacy path (the store was never cut over); nothing stripped. | `HomeLayoutSet` is still the full home. |
+| Snapshot absent but `HomeLayoutSet` has no placed items and the pool holds a home (marker lost) | `PoolCutover.resync`'s hard guard keeps the pool (`holdsHome`: at least one placed item or dock pin); the snapshot (the projection) and the stripped set are written together. | A set without placed items never replaces a pool with items. |
+| Snapshot readable, pool undecodable | Copied once to `pool_corrupt` (if that copy fails: read-only); rebuilt from the recent snapshot and written; notice. | The original stays in `pool_corrupt`; the snapshot follows every full pool write; `pi:` ids are kept, so a rebuild gives the same ids. |
+| Snapshot readable, pool cannot be read (I/O) or written | Read-only from the snapshot; the marker stays; the next start that can use the pool uses it. | Nothing is written; no host id deleted. |
+| Snapshot undecodable (or its read fails) | Copied once to `home_layout_pre_pool_corrupt`; never cut over, never migrated. A stored, readable pool that holds a home runs it (or is handed back); otherwise read-only from the stored set. Notice. | No resync or migration from a stripped set can write an empty home. |
+| Snapshot undecodable and pool undecodable | Both quarantined; read-only from the stored set; nothing migrated or written. Notice. | Both originals are kept for a backup or manual recovery. |
+| Fresh install (nothing stored) | The cutover writes a stripped default set and the snapshot; a repository opened without a set measures the first commit against the pool's projection, so the first add is ingested (and a widget's host id is held). | Tested: add, restart, the item is there. |
+
+### Editing
+
+Engines run unchanged on the projected layout; `commit` ingests the result. Ids are kept where free
+(`PoolIds.derived`), so a reducer that refers to an item it just created still finds it. Two keys of one workspace in
+one commit (portrait and landscape phone): the active key wins; once a key wrote a dock, the others compare against the
+pool's dock. Selection and edit mode never touch the pool. The standard home adopts a key it has never seen (a new device
+class, a template's seed) as that workspace's arrangement; it does not fork from the preview's workspaces.
+
+Library: compact mode strips and re-places its own apps every pass; `isLibraryApp` now also recognises migrated ids
+(`pi:...:library-app:...`), and the re-placed `library-app:` ids are kept from then on (tested: two relayouts give an
+equal pool).
+
+### Host ids
+
+* Released ids are handed out after **any** successful pool write that leaves nothing unwritten (the preview's flushes
+  too), and a restore reports the host ids of the current widgets the restored pool no longer holds, through the same
+  referenced check.
+* The shell's "delete the removed widget's host id" (remove, delete page, remove from dock) now goes through
+  `deleteHostedWidgetIdUnlessReferenced`: an id any arrangement, the dock or the shell's set still references is kept.
+* Ingest's released ids are collected and handed to the releaser only after the pool write landed, filtered again
+  through `PoolHostIds.isReferenced` (pool store plus the shell's set, pages and docks).
+* The startup orphan check on a discarded widget-add transaction is pool-aware (pool store plus set; Unknown, so nothing
+  is deleted, while the pool home has not loaded).
+* `PoolHostIds.standardHome` now includes docks and dock panels (it read pages only).
+* The preview's releaser uses the same guard.
+
+### Uninstall
+
+A confirmed package-removed event calls `HomeLayoutRepository.withoutRemovedPackage` first: `PoolRemoval.pruneUninstalled`
+on every pool (every workspace, dock pins, folder entries, emptied folders; widgets untouched), then the shell's own
+pruning runs on the pruned projection. Never on "absent from a snapshot" or a paused profile (the only call site is the
+confirmed-removal callback).
+
+### Backup
+
+* Export: `"homeLayouts"` is still written (the full projection, so an older build restores the home), the `"pool"`
+  section as before, plus `"homeFromPool": true` when the home renders from the pool.
+* Import with the pool home: `PoolHomeSync.restore`. A `homeFromPool` backup restores its pool section as the
+  authority; its widgets take their host ids back from `"homeLayouts"` by item id (the pool section carries none). Any
+  other backup (older builds, with or without a pool section) re-imports its `"homeLayouts"` into the pool through
+  `PoolCutover.resync` over its pool section or, without one, the current pool. The port's separate pool restore is
+  skipped then (the home's restore does it, in order).
+
+### The preview
+
+The preview's home pages already read the pool; its dock now reads the pool's dock while the pool home is active.
+Its editor ends an edit session when the pool changed outside it (`PoolEditController.endIfChangedElsewhere`, checked
+before every edit, Undo and Redo, and whenever the pool's version changes): what the session already wrote is kept, its
+Undo history is dropped, a short notice says so, and a session pool built on an older base is never written.
+`externalChanges` compares the pool with the state the home last published (not versions, which are conflated), and an
+ingest drops ids its `before` showed that the pool no longer holds, so a home commit on a stale projection never
+re-creates something the preview removed.
+"Refresh home items" is retired then (it would replace edits with a re-import). Preview editing and the standard home
+share one `CachedPoolRepository`; `PoolHomeLayoutRepository.externalChanges` fires when the preview changed the pool and
+the shell reprojects (`LauncherShellViewModel.observePoolHome`); the preview observes `version` as before.
+
+### Decisions to confirm (app half)
+
+1. **`HomeLayoutSet` keeps empty `Home` page slots** rather than dropping `Home` pages, so page order among generated
+   pages and the selection survive; plus a one-time pre-cutover snapshot as the disaster fallback.
+2. **Resync at the cutover**: the stored `HomeLayoutSet` wins over a pool the preview imported earlier for the migrated
+   workspaces; the preview's own arrangements are kept.
+3. **Landscape phone follows N10**: it shows the phone arrangement and dock. Items that existed only in the old
+   landscape layout are not shown any more (they stay in the snapshot; their widget host ids are not deleted).
+4. **The standard home shows `ws:<class>:<mode>`**, not the preview's active workspace, until S9.
+5. **The switch applies at the next start** (hand-over in either direction happens at startup, where it is atomic with
+   the first read).
+6. **New ids keep the engine's text** (`PoolIds.derived`, domain change above).
+7. **No full sweep of allocated host ids at startup**: only the discarded-transaction check (now pool-aware) and the
+   released-after-write path delete ids. A sweep over `AppWidgetHost.getAppWidgetIds` would also have to know every
+   Workspaces widget slot; left out rather than risk a live widget.
+8. **The backup marker `homeFromPool`** distinguishes a cut-over backup's projection from an older backup's layouts.
+
+### Tests (app half)
+
+Third review (read-only fallback replaces the editable fallback and its merge, which is removed):
+`ReadOnlyHomeLayoutRepositoryTest` refuses each edit type (add, move, remove, folder, widget add/resize/remove, page
+add/delete, dock pin/unpin/panel) and writes nothing, throttles the notice, keeps selection, edit mode and a new key, and
+writes only a backup restore; `PoolHomeStartupTest` covers a pool that cannot be read (read-only from the snapshot,
+nothing written, no host-id deletion, the next start uses the pool), an undecodable `HomeLayoutSet` (quarantined, never
+overwritten, read-only from the snapshot; without a snapshot never cut over from defaults), a clean start not damaged even
+with quarantine keys left, and the recovery notice resetting after a clean start.
+
+Second review fixes: `PoolHomeSyncTest` adds `holdsHome` false for a pool migrated from a stripped set;
+`PoolHomeStartupTest` adds an undecodable pool with an unreadable snapshot (nothing migrated or written) and an
+unreadable `HomeLayoutSet` store; `PoolHomeLayoutRepositoryTest` adds the snapshot catching up with another writer's pool
+write.
+
+Review fixes (PR #1431): `PoolHomeSyncTest` adds the resync hard guard, an edit on a stale projection not re-creating a
+removed item, and a restore reporting dropped host ids; `PoolHomeStartupTest` adds an unreadable snapshot (never cut
+over, pool kept), unreadable snapshot plus unreadable pool (legacy, nothing written), a lost marker over a stripped set
+(pool kept, snapshot rewritten), an undecodable pool (quarantined, rebuilt from the snapshot), and a pool read failure
+(legacy from the snapshot's full set, clean cutover next start); `PoolHomeLayoutRepositoryTest` adds the first edit after a
+fresh install surviving a restart, the snapshot refreshed after a pool write, a stale home commit not reverting a preview
+removal, a restore releasing dropped widgets, and release after another writer's flush; `PoolEditControllerTest` adds a
+session ending on an outside change without writing its stale pool, and one that keeps going when nothing changed.
+
+* Domain `PoolHomeSyncTest` (18): projection at startup equals the legacy layout (ids modulo the migration prefix, dock,
+  Library edge); landscape shows the phone arrangement; the stored set holds no placed items and keeps page slots,
+  All-apps pages, selection and dock settings; a restart (pool through its codec, the stored set) projects the same home;
+  move (stored set unchanged, landscape key re-projected), add, folder rename/create, widget add/resize/remove (host id
+  released only at the last reference), removing a widget a fork shows releases nothing, page add/reorder/delete, dock
+  pins/settings/panel/Library edge, Library relayout stable, selection and edit mode do not touch the pool, active key
+  wins over a stale sibling, a new device class is adopted, uninstall pruning (every workspace, dock, folder entries,
+  widgets kept, other profile untouched), pre-cutover backup restore keeps other arrangements, cut-over backup restore
+  takes host ids back, resync idempotent. `ArrangementIngestTest` and `PoolHomeProjectionTest` updated for
+  `PoolIds.derived`.
+* App JVM `PoolHomeStartupTest` (6): first cutover (pool written, then snapshot), parity of the first projection and the
+  stripped store, a failing pool write keeps the legacy path untouched, the legacy flag path reads and writes no pool,
+  hand-back and cutting over again, a lost pool re-imported from the snapshot. `PoolHomeLayoutRepositoryTest` (8): an edit
+  is in memory, in the pool after a flush and after a restart, and does not write `HomeLayoutSet`; an unflushed edit is
+  not durable (the restart shows the last written pool); released host ids only after the write and only unreferenced
+  ones; a fork's widget is never released; uninstall; a preview edit is signalled and reprojected; an older backup is
+  imported; a new widget keeps its engine id.
+
+### Verification (app half)
+
+`./gradlew verify` was **not** run (dl.google.com is blocked). In a scratch Gradle project on Maven Central: the whole
+`:core:domain` suite (1858 tests), the Android-free app files (`CachedPoolRepository`, `PoolHomeLayoutRepository`,
+`PoolHomeStartup`, `PoolEditController`) with their JVM tests and the existing `CachedPoolRepository*` and `PoolEditController` tests (77 tests), ktlint on domain main
+and test, those app files and every other changed app file, detekt over the whole domain and app trees (main and test).
+The Android wiring (`DataStoreHomeLayoutStore`, `MainActivity*`, the view model, Compose settings row, preview host) was
+not compiled locally; CI runs `verify deviceVerify`.
+
 ## Not done
 
-* **App wiring** (next wave): render the standard home through `project`, route engine edits through `ingest`, stop writing
-  `Home` pages and the dock to `HomeLayoutSet`, fork on first edit, settings UI writing dock settings (and Library's edge) to
-  the pool, the startup reconciliation call, the uninstall event source.
+* Per-workspace homes on the standard home (it shows the migrated workspace of the shown mode until S9); fork on first
+  edit is used by the preview only.
+* A startup sweep of all allocated widget host ids (decision 7).
+* An asynchronous startup with a loading state (the existing single blocking read is kept).
+* Removing `HomeLayoutSet`'s `"homeLayouts"` from backups (kept so older builds can restore).
 * The app's `PoolEditText` still has a message for `WIDGET_ALREADY_PLACED` (harmless, never shown now).
-* N10 (folding `PHONE_LANDSCAPE` into `PHONE`) is a separate slice; the dock import follows whatever device classes the
-  migration and the layout set yield.
-* Per-workspace dock overrides (`DockPresentation`, Q17) are not part of this slice.
+* Per-workspace dock overrides (`DockPresentation`, Q17).
+* Deleting the legacy path and the switch (next release, with S9).
 
 ## Owner device checklist
 
-Nothing to check on a device for this slice: it changes no runtime behaviour. The checklist for the cutover comes with the
-app wave.
+**Before installing: Settings > Backup > Export, keep the file.** Then install and open Riffle once.
+
+- [ ] Home, drawer, dock and Settings are reachable. Every icon, folder and widget is where it was; the dock has the
+      same pins (and panel, if you use it).
+- [ ] Force-stop Riffle and reopen: everything is still in place. Reboot the phone: still in place.
+- [ ] Move an icon, force-stop, reopen: it stays moved.
+- [ ] Add a widget, move it, resize it, remove it. Add another and leave it; force-stop and reopen: it is there and live.
+- [ ] Create a folder (drop an app on an app), rename it, take an app out; force-stop and reopen.
+- [ ] Add a Home page, reorder pages, delete a page with a widget on it.
+- [ ] Pin and unpin an app in the dock, reorder pins, change a dock setting (icon size, edge, Library's edge).
+- [ ] Library: install an app, it appears; uninstall it, it disappears from Home, the dock and any folder.
+- [ ] Rotate, and fold/unfold if you have a foldable: you stay on your page; the landscape phone shows the same items as
+      portrait.
+- [ ] Workspaces (preview) on: its home pages and dock show the same items; "Refresh home items" is gone; an edit in the
+      preview's editor shows on the standard home after you leave the preview.
+- [ ] Backup export, then restore it: everything comes back, widgets live.
+- [ ] Settings > Developer > Home from placed items off, restart Riffle: everything is still there (legacy path). On
+      again, restart: still there.
+- [ ] Report anything wrong with the steps and a screenshot; do not paste item content.

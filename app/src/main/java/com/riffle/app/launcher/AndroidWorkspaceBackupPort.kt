@@ -22,6 +22,11 @@ internal class AndroidWorkspaceBackupPort(
     private val exclusions: CachedExclusionRepository,
     private val pool: CachedPoolRepository,
     private val scope: CoroutineScope,
+    /**
+     * True once the standard home renders from the pool (S4): the pool section is then restored together with the
+     * backup's home layouts by the home's own restore (`withImportedBackup`), never on its own here.
+     */
+    private val poolOwnsHome: () -> Boolean = { false },
 ) : WorkspaceBackupPort {
     @Volatile
     private var storedSet: WorkspaceSet? = null
@@ -65,6 +70,7 @@ internal class AndroidWorkspaceBackupPort(
     }
 
     override fun restorePool(state: PoolStoreState) {
+        if (poolOwnsHome()) return
         scope.launch {
             runCatching { pool.replaceFromBackup(state) }
                 .onFailure { if (it is CancellationException) throw it }

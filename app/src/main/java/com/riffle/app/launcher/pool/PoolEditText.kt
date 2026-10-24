@@ -12,7 +12,10 @@ internal object PoolEditText {
     const val ADD_PAGE = "Add page"
     const val REMOVE_PAGE = "Remove empty page"
     const val EDITING_TITLE = "Editing preview home"
-    const val NOT_STANDARD_NOTICE = "Edits here change this preview only, not your standard home."
+    const val HOME_CHANGED = "Your home changed outside the editor, so editing stopped. Edits so far are kept."
+    const val NOT_STANDARD_NOTICE =
+        "Edits to a page that shows your standard home's layout also change your standard home; " +
+            "a workspace with its own pages changes only here."
     const val ENTER_EDIT_LONG_PRESS = "Edit preview home"
 
     const val MOVE_LEFT = "Move left"

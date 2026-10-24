@@ -133,7 +133,6 @@ private fun LauncherShellState.withDefaultHomeOpened(homeLayoutRepository: HomeL
             selectedPageId = homeLayout.pages.firstOrNull()?.id ?: homeLayout.selectedPageId,
             editMode = HomeEditMode.Browsing,
         )
-    val layoutSet = homeLayoutSet.withActiveLayout(resetLayout)
-    homeLayoutRepository.saveHomeLayoutSet(layoutSet)
+    val layoutSet = homeLayoutRepository.commitHomeLayoutSet(homeLayoutSet.withActiveLayout(resetLayout))
     return copy(homeLayout = layoutSet.activeLayout, homeLayoutSet = layoutSet)
 }

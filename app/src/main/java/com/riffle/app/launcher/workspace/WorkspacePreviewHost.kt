@@ -18,6 +18,7 @@ import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.WorkspaceMenuHost
 import com.riffle.app.launcher.pool.PlacedHomeContent
 import com.riffle.app.launcher.pool.PoolEditUi
+import com.riffle.app.launcher.pool.PoolHomeSwitch
 import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.dockFor
@@ -25,6 +26,7 @@ import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.dock.PreviewDock
+import com.riffle.core.domain.launcher.workspace.pool.PoolHomeProjection
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
@@ -46,6 +48,11 @@ class WorkspacePreviewHost internal constructor(
     internal val onRequestSourceAccess: (SourceId) -> Unit = {},
     /** The placed-items pool behind the home pages; null keeps the placeholder. Built only when the preview opens. */
     internal val pool: (() -> PoolRuntime)? = null,
+    /**
+     * The S4 cutover switch. While the standard home renders from the pool this process, the preview's home pages
+     * and dock are the standard home's own pool, and "Refresh home items" is retired (it would overwrite edits).
+     */
+    internal val poolHome: PoolHomeSwitch? = null,
 )
 
 /** Stands in for an absent host, so the shell can observe "enabled" and "version" unconditionally. */
@@ -124,7 +131,14 @@ private fun WorkspacePreviewContent(
     val placedHome = rememberPlacedHome(host, state, workspace?.id)
     val hideController = remember(runtime) { runtime.hideController() }
     val layoutSet = state.homeLayoutSet
-    val dockPins = remember(layoutSet, deviceClass) { PreviewDock.from(layoutSet.dockFor(deviceClass)) }
+    // Once the home renders from the pool (S4) the dock is the pool's; before that, the standard home's.
+    val poolHomeRuntime = remember(host) { host.pool?.takeIf { host.poolHome?.activeThisProcess == true }?.invoke() }
+    val poolVersion by (poolHomeRuntime?.repository?.version ?: NoWorkspaceVersion).collectAsState()
+    val dockPins =
+        remember(layoutSet, deviceClass, poolVersion) {
+            val poolDock = poolHomeRuntime?.repository?.pool(deviceClass)?.let(PoolHomeProjection::projectDock)
+            PreviewDock.from(poolDock ?: layoutSet.dockFor(deviceClass))
+        }
     WorkspacePreviewTheme(state) {
         PreviewHideHost(
             hideController,
@@ -164,6 +178,8 @@ private fun rememberPlacedHome(
     val scope = rememberCoroutineScope()
     LaunchedEffect(pool) { pool?.initialize(layoutSet) }
     val version by (pool?.repository?.version ?: NoWorkspaceVersion).collectAsState()
+    // The standard home writes the same pool: an edit session built on an older pool ends instead of writing it back.
+    LaunchedEffect(version) { pool?.editing?.endIfChangedElsewhere() }
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass.workspaceLayoutClass()
     val shownMode = state.homeLayoutSet.workspaceShownMode()
     val labels = state.homeLayoutSet.activeLayout.settings.labels
@@ -192,7 +208,9 @@ private fun rememberPlacedHome(
                 labelSettings = labels,
                 onOpen = { item -> runtime.actions.open(item) },
                 // Refresh replaces the preview's edits, so it asks first (the dialog is the editor overlay's).
-                onReimport = { runtime.editing.requestReimport() },
+                // Retired once the standard home renders from the pool: there is nothing to catch up with.
+                onReimport =
+                    if (host.poolHome?.activeThisProcess == true) null else ({ runtime.editing.requestReimport() }),
                 edit =
                     PoolEditUi(
                         controller = runtime.editing,
