@@ -138,7 +138,7 @@ private fun CacheDrawScope.buildGlassSheen(
     val rimPx = RIM_LINE_DP.dp.toPx()
 
     val bands =
-        listOf(
+        listOfNotNull(
             // 1. Top specular.
             SheenBand(
                 brush =
@@ -153,7 +153,7 @@ private fun CacheDrawScope.buildGlassSheen(
                 size = Size(size.width, specularHeight),
             ),
             // 2. Caustic light spot.
-            SheenBand(
+            if (!DOCK_GLASS_SHEEN_BISECT_CAUSTIC) null else SheenBand(
                 brush =
                     Brush.radialGradient(
                         0f to white(CAUSTIC_CENTER_ALPHA),
@@ -196,7 +196,7 @@ private fun CacheDrawScope.buildGlassSheen(
     // 1dp inside -- the same trick dockSurfaceAppearance's own pull-branch outline uses.
     return GlassSheen(
         bands = bands,
-        border = if (strength.border > 0f) shape.createOutline(size, layoutDirection, this) else null,
+        border = if (strength.border > 0f && DOCK_GLASS_SHEEN_BISECT_BORDER) shape.createOutline(size, layoutDirection, this) else null,
         borderColor = GLASS_BORDER_COLOR.copy(alpha = dockGlassSheenAlpha(GLASS_BORDER_ALPHA, strength.border)),
         borderStroke = Stroke(width = 2 * GLASS_BORDER_DP.dp.toPx()),
     )
@@ -219,8 +219,14 @@ private fun DrawScope.drawGlassSheen(
  * setting that can go to 0 (a square dock), which would make the specular vanish, so it is sized
  * from a fixed reference radius instead -- the desktop pill's own.
  */
-// TEMPORARY (Device verify bisect): switches the sheen off to isolate the emulator hang.
-private const val DOCK_GLASS_SHEEN_BISECT_ENABLED = false
+/** TEMPORARY (Device verify bisect): which sheen layers are drawn, to isolate the emulator hang. */
+private const val DOCK_GLASS_SHEEN_BISECT_ENABLED = true
+
+/** TEMPORARY (Device verify bisect). */
+private const val DOCK_GLASS_SHEEN_BISECT_CAUSTIC = false
+
+/** TEMPORARY (Device verify bisect). */
+private const val DOCK_GLASS_SHEEN_BISECT_BORDER = false
 
 private const val DOCK_SHEEN_REFERENCE_CORNER_DP = 16
 
