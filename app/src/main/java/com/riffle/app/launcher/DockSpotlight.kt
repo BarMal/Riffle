@@ -7,9 +7,12 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.neverEqualPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -24,6 +27,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
@@ -110,14 +114,32 @@ internal fun dockSpotlightEdgeStops(
 }
 
 /**
- * Collects where each icon currently sits and what colour it is. Positions are reported in root
- * coordinates by [dockSpotlightSource] and only read at draw time, so scrolling the strip or an
- * icon arriving moves the glow without recomposing the dock.
+ * Collects where each icon currently sits and what colour it is, and eases the glow on screen
+ * toward what that describes (see `DockSpotlightFlow.kt`). Positions are reported in root
+ * coordinates by [dockSpotlightSource]; nothing here recomposes the dock -- the glow is redrawn
+ * from [shown], and only on the frames it actually changes.
  */
 @Stable
-internal class DockSpotlightState {
+internal class DockSpotlightState(
+    private val runsHorizontally: Boolean,
+) {
     private val sources = mutableStateMapOf<Any, Pair<Offset, Color?>>()
     private var originInRoot by mutableStateOf(Offset.Zero)
+    private var layoutSize by mutableStateOf(Size.Zero)
+
+    // One array, eased in place on the main thread by [run]; re-set after every change under a
+    // never-equal policy, so whatever reads [shown] (the draw cache) sees each change.
+    private val shownState = mutableStateOf(emptyDockSpotlightProfile(), neverEqualPolicy())
+    private val scratch = emptyDockSpotlightProfile()
+
+    // The last display frame a settle stepped on, kept across restarts: while the icons keep
+    // moving (a scroll), every frame brings a new target and restarts the settle, and each restart
+    // must still step on its first frame rather than spend it taking a timestamp. 0 when settled.
+    private var lastFrameNanos = 0L
+
+    /** The glow currently on screen. Reading it in a draw cache ties the cache to its changes. */
+    val shown: FloatArray
+        get() = shownState.value
 
     fun report(
         key: Any,
@@ -133,8 +155,12 @@ internal class DockSpotlightState {
         sources.remove(key)
     }
 
-    fun updateOrigin(origin: Offset) {
+    fun updateLayout(
+        origin: Offset,
+        size: Size,
+    ) {
         originInRoot = origin
+        layoutSize = size
     }
 
     fun stopsFor(
@@ -149,17 +175,94 @@ internal class DockSpotlightState {
                 },
             runLengthPx = if (runsHorizontally) size.width else size.height,
         )
+
+    /**
+     * Follows the icons for as long as the dock is on screen: each time they move, arrive, leave
+     * or change colour, [shown] eases toward the new glow, one display frame at a time, then the
+     * frame loop stops -- a dock at rest asks for no frames at all. With [animate] off (reduced
+     * motion, or a flow of 0), and whenever nothing is lit yet, it jumps straight there instead, so
+     * a dock never fades its glow in on launch or as icon colours finish loading.
+     * [flowSeconds] is the flow's time constant (the "Spotlight flow" setting).
+     */
+    suspend fun run(
+        animate: Boolean,
+        flowSeconds: Float,
+    ) {
+        snapshotFlow { dockSpotlightTargetProfile(stopsFor(layoutSize, runsHorizontally)) }
+            .collectLatest { target ->
+                if (!target.contentEquals(shown)) {
+                    if (animate && flowSeconds > 0f && dockSpotlightProfileIsLit(shown)) {
+                        settleTowards(target, flowSeconds)
+                    } else {
+                        showNow(target)
+                    }
+                }
+            }
+    }
+
+    private fun showNow(target: FloatArray) {
+        val profile = shownState.value
+        target.copyInto(profile)
+        shownState.value = profile
+        lastFrameNanos = 0L
+    }
+
+    private suspend fun settleTowards(
+        target: FloatArray,
+        flowSeconds: Float,
+    ) {
+        var elapsed = 0f
+        var settled = false
+        while (!settled) {
+            val frame = withFrameNanos { it }
+            val dt =
+                if (lastFrameNanos == 0L) {
+                    FIRST_FRAME_SECONDS
+                } else {
+                    ((frame - lastFrameNanos) / NANOS_PER_SECOND).coerceIn(0f, DOCK_SPOTLIGHT_MAX_FRAME_SECONDS)
+                }
+            lastFrameNanos = frame
+            elapsed += dt
+            val profile = shownState.value
+            settled = stepDockSpotlightProfile(profile, target, dt, flowSeconds, scratch) ||
+                elapsed >= dockSpotlightMaxSettleSeconds(flowSeconds)
+            if (settled) {
+                target.copyInto(profile)
+                lastFrameNanos = 0L
+            }
+            shownState.value = profile
+        }
+    }
 }
+
+private const val NANOS_PER_SECOND = 1_000_000_000f
+
+/** The step taken on the first frame of a settle, with no previous frame to measure from. */
+private const val FIRST_FRAME_SECONDS = 1f / 60f
 
 /** The spotlight the dock strip around this composable is collecting into, if it has one. */
 internal val LocalDockSpotlight = staticCompositionLocalOf<DockSpotlightState?> { null }
 
-/** Remembers a spotlight for one dock strip, or null when the glass theme is switched off. */
+/**
+ * Remembers a spotlight for one dock strip running along [position]'s edge, and keeps its glow
+ * following the icons -- or returns null, and runs nothing, when the glass theme is switched off
+ * or this strip draws no background of its own ([enabled] false).
+ */
 @Composable
-internal fun rememberDockSpotlightState(): DockSpotlightState? {
-    val enabled = LocalLiquidGlassSettings.current.enabled
-    val state = remember { DockSpotlightState() }
-    return state.takeIf { enabled }
+internal fun rememberDockSpotlightState(
+    position: DockPosition,
+    enabled: Boolean,
+): DockSpotlightState? {
+    val glass = LocalLiquidGlassSettings.current
+    val active = enabled && glass.enabled
+    val runsHorizontally = position.isHorizontalEdge
+    val state = remember(runsHorizontally) { DockSpotlightState(runsHorizontally) }
+    if (active) {
+        LaunchedEffect(state, glass.reducedMotion, glass.spotlightFlowSeconds) {
+            state.run(animate = !glass.reducedMotion, flowSeconds = glass.spotlightFlowSeconds)
+        }
+    }
+    return state.takeIf { active }
 }
 
 /**
@@ -223,26 +326,31 @@ internal fun Modifier.dockSpotlight(
     alphaProvider: () -> Float,
 ): Modifier {
     if (spotlight == null) return this
-    return onGloballyPositioned { coordinates -> spotlight.updateOrigin(coordinates.positionInRoot()) }
-        .drawWithCache {
-            // Reading the stops here ties the cache to them: the bands are rebuilt only when an
-            // icon moves, arrives, leaves or changes colour, or the dock resizes -- not every frame.
-            val runsHorizontally = position.isHorizontalEdge
-            val stops = spotlight.stopsFor(size, runsHorizontally)
-            // The edge facing into the screen is the inner one: the top of a bottom dock, the
-            // right of a left dock, and so on.
-            val innerAtStart = position == DockPosition.BOTTOM || position == DockPosition.RIGHT
-            val bands =
+    return onGloballyPositioned { coordinates ->
+        val size = coordinates.size
+        spotlight.updateLayout(coordinates.positionInRoot(), Size(size.width.toFloat(), size.height.toFloat()))
+    }.drawWithCache {
+        // Reading the glow here ties the cache to it: the bands are rebaked only on frames it
+        // changes (while it flows) and when the dock resizes -- never for a dock at rest.
+        val profile = spotlight.shown
+        val runsHorizontally = position.isHorizontalEdge
+        // The edge facing into the screen is the inner one: the top of a bottom dock, the
+        // right of a left dock, and so on.
+        val innerAtStart = position == DockPosition.BOTTOM || position == DockPosition.RIGHT
+        val bands =
+            if (!dockSpotlightProfileIsLit(profile)) {
+                emptyList()
+            } else {
                 listOfNotNull(
                     spotlightBand(
-                        stops = stops,
+                        profile = profile,
                         runsHorizontally = runsHorizontally,
                         atStart = innerAtStart,
                         depthPx = SPOTLIGHT_INNER_DEPTH_DP.dp.toPx(),
                         alpha = SPOTLIGHT_INNER_ALPHA,
                     ),
                     spotlightBand(
-                        stops = stops,
+                        profile = profile,
                         runsHorizontally = runsHorizontally,
                         atStart = !innerAtStart,
                         depthPx = SPOTLIGHT_OUTER_DEPTH_DP.dp.toPx(),
@@ -250,24 +358,25 @@ internal fun Modifier.dockSpotlight(
                     ),
                     // The two short ends, lit by the icon nearest each, so the glow runs all the
                     // way round the dock the way it does round a window's four edges.
-                    spotlightEndBand(stops, runsHorizontally, atRunStart = true),
-                    spotlightEndBand(stops, runsHorizontally, atRunStart = false),
+                    spotlightEndBand(profile, runsHorizontally, atRunStart = true),
+                    spotlightEndBand(profile, runsHorizontally, atRunStart = false),
                 )
-            onDrawBehind {
-                val fade = alphaProvider().coerceIn(0f, 1f)
-                if (fade > 0f) {
-                    bands.forEach { band ->
-                        drawImage(
-                            image = band.image,
-                            dstOffset = band.offset,
-                            dstSize = band.size,
-                            alpha = fade,
-                            filterQuality = FilterQuality.Low,
-                        )
-                    }
+            }
+        onDrawBehind {
+            val fade = alphaProvider().coerceIn(0f, 1f)
+            if (fade > 0f) {
+                bands.forEach { band ->
+                    drawImage(
+                        image = band.image,
+                        dstOffset = band.offset,
+                        dstSize = band.size,
+                        alpha = fade,
+                        filterQuality = FilterQuality.Low,
+                    )
                 }
             }
         }
+    }
 }
 
 private const val MIN_CHANNEL = 1e-4f

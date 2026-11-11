@@ -13,14 +13,17 @@ package com.riffle.core.domain.launcher.settings
  * moderate midpoint rather than the maximum, and [refractionStrengthPercent] -- the more visually
  * noisy of the two -- defaults low.
  *
- * No motion axis lives here: unlike iOS, Android has no OS-level "Reduce Transparency" signal, and
- * this feature's own motion (a specular sweep, once later PRs animate it) rides the launcher's
- * existing, already system-aware [MotionSettings.reducedMotion] rather than inventing a second one.
+ * No motion on/off axis lives here: unlike iOS, Android has no OS-level "Reduce Transparency"
+ * signal, and this feature's own motion rides the launcher's existing, already system-aware
+ * [MotionSettings.reducedMotion] rather than inventing a second one. [spotlightFlowMillis] is a
+ * pace, not a switch: how slowly the dock's icon-colour spotlight follows its icons when they move
+ * (0 follows instantly); reduced motion still overrides it to instant.
  */
 data class LiquidGlassSettings(
     val enabled: Boolean = true,
     val frostStrengthPercent: Int = DEFAULT_LIQUID_GLASS_FROST_STRENGTH_PERCENT,
     val refractionStrengthPercent: Int = DEFAULT_LIQUID_GLASS_REFRACTION_STRENGTH_PERCENT,
+    val spotlightFlowMillis: Int = DEFAULT_SPOTLIGHT_FLOW_MILLIS,
 )
 
 const val MIN_LIQUID_GLASS_STRENGTH_PERCENT = 0
@@ -28,12 +31,19 @@ const val MAX_LIQUID_GLASS_STRENGTH_PERCENT = 100
 const val DEFAULT_LIQUID_GLASS_FROST_STRENGTH_PERCENT = 45
 const val DEFAULT_LIQUID_GLASS_REFRACTION_STRENGTH_PERCENT = 20
 
+/** The spotlight's flow time constant: 0 follows the icons instantly, 1000 drifts after them. */
+const val MIN_SPOTLIGHT_FLOW_MILLIS = 0
+const val MAX_SPOTLIGHT_FLOW_MILLIS = 1000
+const val SPOTLIGHT_FLOW_STEP_MILLIS = 50
+const val DEFAULT_SPOTLIGHT_FLOW_MILLIS = 350
+
 fun LiquidGlassSettings.coerced(): LiquidGlassSettings =
     copy(
         frostStrengthPercent =
             frostStrengthPercent.coerceIn(MIN_LIQUID_GLASS_STRENGTH_PERCENT, MAX_LIQUID_GLASS_STRENGTH_PERCENT),
         refractionStrengthPercent =
             refractionStrengthPercent.coerceIn(MIN_LIQUID_GLASS_STRENGTH_PERCENT, MAX_LIQUID_GLASS_STRENGTH_PERCENT),
+        spotlightFlowMillis = spotlightFlowMillis.coerceIn(MIN_SPOTLIGHT_FLOW_MILLIS, MAX_SPOTLIGHT_FLOW_MILLIS),
     )
 
 /**
@@ -48,6 +58,7 @@ fun LauncherSettings.resolveLiquidGlass(): ResolvedLiquidGlass =
             frostStrengthFraction = settings.frostStrengthPercent / 100f,
             refractionStrengthFraction = settings.refractionStrengthPercent / 100f,
             reducedMotion = motion.reducedMotion,
+            spotlightFlowSeconds = settings.spotlightFlowMillis / MILLIS_PER_SECOND,
         )
     }
 
@@ -56,4 +67,8 @@ data class ResolvedLiquidGlass(
     val frostStrengthFraction: Float,
     val refractionStrengthFraction: Float,
     val reducedMotion: Boolean,
+    /** The spotlight's flow time constant in seconds; 0 follows instantly. */
+    val spotlightFlowSeconds: Float = DEFAULT_SPOTLIGHT_FLOW_MILLIS / MILLIS_PER_SECOND,
 )
+
+private const val MILLIS_PER_SECOND = 1000f

@@ -482,6 +482,8 @@ sealed interface LauncherShellAction {
 
     data class SelectLiquidGlassRefractionStrength(val percent: Int) : LauncherShellAction
 
+    data class SelectLiquidGlassSpotlightFlow(val millis: Int) : LauncherShellAction
+
     data class SelectHomeSwipeGestureAction(
         val direction: HomeSwipeGestureDirection,
         val action: LauncherGestureAction,

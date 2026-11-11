@@ -863,12 +863,14 @@ private fun encodeLiquidGlass(settings: LiquidGlassSettings): JSONObject =
         .put("enabled", settings.enabled)
         .put("frostStrengthPercent", settings.frostStrengthPercent)
         .put("refractionStrengthPercent", settings.refractionStrengthPercent)
+        .put("spotlightFlowMillis", settings.spotlightFlowMillis)
 
 private fun JSONObject.toLiquidGlass(defaults: LiquidGlassSettings): LiquidGlassSettings =
     LiquidGlassSettings(
         enabled = optBoolean("enabled", defaults.enabled),
         frostStrengthPercent = optInt("frostStrengthPercent", defaults.frostStrengthPercent),
         refractionStrengthPercent = optInt("refractionStrengthPercent", defaults.refractionStrengthPercent),
+        spotlightFlowMillis = optInt("spotlightFlowMillis", defaults.spotlightFlowMillis),
     ).coerced()
 
 private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =

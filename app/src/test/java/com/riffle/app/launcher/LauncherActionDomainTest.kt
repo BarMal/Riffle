@@ -499,6 +499,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectLiquidGlassRefractionStrength(percent = 30),
                 ),
                 settings(
+                    "SelectLiquidGlassSpotlightFlow",
+                    LauncherShellAction.SelectLiquidGlassSpotlightFlow(millis = 600),
+                ),
+                settings(
                     "SelectHomeSwipeGestureAction",
                     LauncherShellAction.SelectHomeSwipeGestureAction(
                         direction = HomeSwipeGestureDirection.UP,
