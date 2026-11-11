@@ -196,7 +196,12 @@ private fun CacheDrawScope.buildGlassSheen(
     // 1dp inside -- the same trick dockSurfaceAppearance's own pull-branch outline uses.
     return GlassSheen(
         bands = bands,
-        border = if (strength.border > 0f && DOCK_GLASS_SHEEN_BISECT_BORDER) shape.createOutline(size, layoutDirection, this) else null,
+        border =
+            if (strength.border > 0f && DOCK_GLASS_SHEEN_BISECT_BORDER) {
+                shape.createOutline(size, layoutDirection, this)
+            } else {
+                null
+            },
         borderColor = GLASS_BORDER_COLOR.copy(alpha = dockGlassSheenAlpha(GLASS_BORDER_ALPHA, strength.border)),
         borderStroke = Stroke(width = 2 * GLASS_BORDER_DP.dp.toPx()),
     )
@@ -206,6 +211,10 @@ private fun DrawScope.drawGlassSheen(
     sheen: GlassSheen,
     fade: Float,
 ) {
+    if (DOCK_GLASS_SHEEN_BISECT_FLAT) {
+        drawRect(color = Color.White, alpha = BISECT_FLAT_ALPHA * fade)
+        return
+    }
     sheen.bands.forEach { band ->
         drawRect(brush = band.brush, topLeft = band.topLeft, size = band.size, alpha = fade)
     }
@@ -227,6 +236,12 @@ private const val DOCK_GLASS_SHEEN_BISECT_CAUSTIC = false
 
 /** TEMPORARY (Device verify bisect). */
 private const val DOCK_GLASS_SHEEN_BISECT_BORDER = false
+
+/** TEMPORARY (Device verify bisect): one flat fill instead of any gradient. */
+private const val DOCK_GLASS_SHEEN_BISECT_FLAT = true
+
+/** TEMPORARY (Device verify bisect). */
+private const val BISECT_FLAT_ALPHA = 0.05f
 
 private const val DOCK_SHEEN_REFERENCE_CORNER_DP = 16
 
