@@ -100,7 +100,7 @@ internal fun Modifier.dockGlassSheen(
     strength: DockGlassSheenStrength,
     alphaProvider: () -> Float,
 ): Modifier {
-    if (!LocalLiquidGlassSettings.current.enabled) return this
+    if (!LocalLiquidGlassSettings.current.enabled || !DOCK_GLASS_SHEEN_BISECT_ENABLED) return this
     return drawWithCache {
         val sheen = if (size.width > 0f && size.height > 0f) buildGlassSheen(shape, strength) else null
         onDrawWithContent {
@@ -219,6 +219,9 @@ private fun DrawScope.drawGlassSheen(
  * setting that can go to 0 (a square dock), which would make the specular vanish, so it is sized
  * from a fixed reference radius instead -- the desktop pill's own.
  */
+// TEMPORARY (Device verify bisect): switches the sheen off to isolate the emulator hang.
+private const val DOCK_GLASS_SHEEN_BISECT_ENABLED = false
+
 private const val DOCK_SHEEN_REFERENCE_CORNER_DP = 16
 
 private const val SPECULAR_CORNER_MULTIPLIER = 4f
