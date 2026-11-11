@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -30,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import kotlin.math.ceil
 
 /*
  * The dock's spotlight: each icon's own colour glows onto the dock's two long edges at the point
@@ -136,6 +138,9 @@ internal class DockSpotlightState(
     // moving (a scroll), every frame brings a new target and restarts the settle, and each restart
     // must still step on its first frame rather than spend it taking a timestamp. 0 when settled.
     private var lastFrameNanos = 0L
+
+    /** Bakes [shown] into the image drawn; reuses its buffers between frames. */
+    val glowBaker = DockSpotlightGlowBaker()
 
     /** The glow currently on screen. Reading it in a draw cache ties the cache to its changes. */
     val shown: FloatArray
@@ -316,13 +321,14 @@ internal fun Modifier.dockSpotlightSource(
 }
 
 /**
- * Draws [spotlight]'s edge glow behind this node's content. Chain it after the dock's own
- * background, which already clips to the dock's shape, so the glow follows the rounded corners.
- * [alphaProvider] is the dock pull's background fade, read at draw time.
+ * Draws [spotlight]'s edge glow behind this node's content, following the dock's outline rounded
+ * to [cornerRadiusDp]. Chain it after the dock's own background, which already clips to that
+ * shape. [alphaProvider] is the dock pull's background fade, read at draw time.
  */
 internal fun Modifier.dockSpotlight(
     spotlight: DockSpotlightState?,
     position: DockPosition,
+    cornerRadiusDp: Int,
     alphaProvider: () -> Float,
 ): Modifier {
     if (spotlight == null) return this
@@ -330,50 +336,43 @@ internal fun Modifier.dockSpotlight(
         val size = coordinates.size
         spotlight.updateLayout(coordinates.positionInRoot(), Size(size.width.toFloat(), size.height.toFloat()))
     }.drawWithCache {
-        // Reading the glow here ties the cache to it: the bands are rebaked only on frames it
-        // changes (while it flows) and when the dock resizes -- never for a dock at rest.
+        // Reading the glow here ties the cache to it: it is rebaked only on frames it changes
+        // (while it flows) and when the dock resizes -- never for a dock at rest.
         val profile = spotlight.shown
         val runsHorizontally = position.isHorizontalEdge
-        // The edge facing into the screen is the inner one: the top of a bottom dock, the
-        // right of a left dock, and so on.
-        val innerAtStart = position == DockPosition.BOTTOM || position == DockPosition.RIGHT
-        val bands =
-            if (!dockSpotlightProfileIsLit(profile)) {
-                emptyList()
-            } else {
-                listOfNotNull(
-                    spotlightBand(
-                        profile = profile,
-                        runsHorizontally = runsHorizontally,
-                        atStart = innerAtStart,
-                        depthPx = SPOTLIGHT_INNER_DEPTH_DP.dp.toPx(),
-                        alpha = SPOTLIGHT_INNER_ALPHA,
-                    ),
-                    spotlightBand(
-                        profile = profile,
-                        runsHorizontally = runsHorizontally,
-                        atStart = !innerAtStart,
-                        depthPx = SPOTLIGHT_OUTER_DEPTH_DP.dp.toPx(),
-                        alpha = SPOTLIGHT_OUTER_ALPHA,
-                    ),
-                    // The two short ends, lit by the icon nearest each, so the glow runs all the
-                    // way round the dock the way it does round a window's four edges.
-                    spotlightEndBand(profile, runsHorizontally, atRunStart = true),
-                    spotlightEndBand(profile, runsHorizontally, atRunStart = false),
+        val runPx = if (runsHorizontally) size.width else size.height
+        val crossPx = if (runsHorizontally) size.height else size.width
+        val maxCrossDepth = crossPx * MAX_DEPTH_FRACTION
+        val glow =
+            if (dockSpotlightProfileIsLit(profile) && runPx >= 1f && crossPx >= 1f) {
+                spotlight.glowBaker.bake(
+                    profile = profile,
+                    runPx = runPx,
+                    crossPx = crossPx,
+                    cornerRadiusPx = cornerRadiusDp.dp.toPx(),
+                    // The edge facing into the screen is the inner one: the top of a bottom dock,
+                    // the right of a left dock, and so on.
+                    innerAtStart = position == DockPosition.BOTTOM || position == DockPosition.RIGHT,
+                    runsHorizontally = runsHorizontally,
+                    edges =
+                        DockSpotlightGlowEdges(
+                            innerDepthPx = SPOTLIGHT_INNER_DEPTH_DP.dp.toPx().coerceAtMost(maxCrossDepth),
+                            outerDepthPx = SPOTLIGHT_OUTER_DEPTH_DP.dp.toPx().coerceAtMost(maxCrossDepth),
+                            endDepthPx = SPOTLIGHT_END_DEPTH_DP.dp.toPx().coerceAtMost(runPx * MAX_DEPTH_FRACTION),
+                            innerAlpha = SPOTLIGHT_INNER_ALPHA,
+                            outerAlpha = SPOTLIGHT_OUTER_ALPHA,
+                            endAlpha = SPOTLIGHT_END_ALPHA,
+                        ),
+                    texelPx = SPOTLIGHT_TEXEL_DP.dp.toPx(),
                 )
+            } else {
+                null
             }
+        val dstSize = IntSize(ceil(size.width).toInt(), ceil(size.height).toInt())
         onDrawBehind {
             val fade = alphaProvider().coerceIn(0f, 1f)
-            if (fade > 0f) {
-                bands.forEach { band ->
-                    drawImage(
-                        image = band.image,
-                        dstOffset = band.offset,
-                        dstSize = band.size,
-                        alpha = fade,
-                        filterQuality = FilterQuality.Low,
-                    )
-                }
+            if (glow != null && fade > 0f) {
+                drawImage(image = glow, dstSize = dstSize, alpha = fade, filterQuality = FilterQuality.Low)
             }
         }
     }
@@ -389,3 +388,14 @@ private const val SPOTLIGHT_INNER_DEPTH_DP = 10
 private const val SPOTLIGHT_OUTER_DEPTH_DP = 7
 private const val SPOTLIGHT_INNER_ALPHA = 0.55f
 private const val SPOTLIGHT_OUTER_ALPHA = 0.30f
+
+// The short ends sit between the two long edges' strengths, so the rim reads as one continuous
+// glow round the dock rather than two lit strips.
+private const val SPOTLIGHT_END_DEPTH_DP = 8
+private const val SPOTLIGHT_END_ALPHA = 0.42f
+
+/** Keeps opposite edges' glows from meeting in the middle of a slim dock. */
+private const val MAX_DEPTH_FRACTION = 0.3f
+
+/** The glow is soft, so it is baked at this coarse a texel and stretched: ~12k texels for a phone dock. */
+private const val SPOTLIGHT_TEXEL_DP = 1.5f
