@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import android.graphics.BlendMode
+import android.graphics.ComposeShader
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -11,15 +13,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.CacheDrawScope
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.LinearGradientShader
+import androidx.compose.ui.graphics.Shader
+import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.dp
@@ -127,7 +129,9 @@ internal class DockSpotlightState {
         centerInRoot: Offset,
         color: Color?,
     ) {
-        sources[key] = centerInRoot to color
+        // Every layout pass reports again; only a real change should invalidate the glow.
+        val source = centerInRoot to color
+        if (sources[key] != source) sources[key] = source
     }
 
     fun remove(key: Any) {
@@ -221,79 +225,96 @@ internal fun Modifier.dockSpotlight(
 ): Modifier {
     if (spotlight == null) return this
     return onGloballyPositioned { coordinates -> spotlight.updateOrigin(coordinates.positionInRoot()) }
-        .drawBehind {
-            val fade = alphaProvider().coerceIn(0f, 1f)
-            if (fade <= 0f) return@drawBehind
+        .drawWithCache {
+            // Reading the stops here ties the cache to them: the bands are rebuilt only when an
+            // icon moves, arrives, leaves or changes colour, or the dock resizes -- not every frame.
             val runsHorizontally = position.isHorizontalEdge
             val stops = spotlight.stopsFor(size, runsHorizontally)
-            if (stops.isEmpty()) return@drawBehind
             // The edge facing into the screen is the inner one: the top of a bottom dock, the
             // right of a left dock, and so on.
             val innerAtStart = position == DockPosition.BOTTOM || position == DockPosition.RIGHT
-            drawSpotlightEdge(
-                stops = stops,
-                runsHorizontally = runsHorizontally,
-                atStart = innerAtStart,
-                depthPx = SPOTLIGHT_INNER_DEPTH_DP.dp.toPx(),
-                alpha = SPOTLIGHT_INNER_ALPHA * fade,
-            )
-            drawSpotlightEdge(
-                stops = stops,
-                runsHorizontally = runsHorizontally,
-                atStart = !innerAtStart,
-                depthPx = SPOTLIGHT_OUTER_DEPTH_DP.dp.toPx(),
-                alpha = SPOTLIGHT_OUTER_ALPHA * fade,
-            )
+            val bands =
+                listOfNotNull(
+                    spotlightBand(
+                        stops = stops,
+                        runsHorizontally = runsHorizontally,
+                        atStart = innerAtStart,
+                        depthPx = SPOTLIGHT_INNER_DEPTH_DP.dp.toPx(),
+                        alpha = SPOTLIGHT_INNER_ALPHA,
+                    ),
+                    spotlightBand(
+                        stops = stops,
+                        runsHorizontally = runsHorizontally,
+                        atStart = !innerAtStart,
+                        depthPx = SPOTLIGHT_OUTER_DEPTH_DP.dp.toPx(),
+                        alpha = SPOTLIGHT_OUTER_ALPHA,
+                    ),
+                )
+            onDrawBehind {
+                val fade = alphaProvider().coerceIn(0f, 1f)
+                if (fade > 0f) {
+                    bands.forEach { band ->
+                        drawRect(brush = band.brush, topLeft = band.topLeft, size = band.size, alpha = fade)
+                    }
+                }
+            }
         }
 }
 
+/** One edge's glow, ready to draw: a single brush over the edge's band. */
+private class SpotlightBand(
+    val brush: Brush,
+    val topLeft: Offset,
+    val size: Size,
+)
+
 /**
- * One edge's glow: the colour gradient along the run, masked by an inward fade across [depthPx].
- * [atStart] picks the top (horizontal run) or left (vertical run) edge.
+ * One edge's glow: the colour gradient along the run, masked by an inward fade across [depthPx],
+ * or null when there is nothing to draw. [atStart] picks the top (horizontal run) or left
+ * (vertical run) edge.
+ *
+ * The colour and the fade are combined into one shader (destination-in), so each edge is a single
+ * plain draw -- the same "gradient, then destination-in fade" the status bar's edge strips do in
+ * two passes, without the offscreen layer two passes would need.
  */
 @Suppress("LongParameterList")
-private fun DrawScope.drawSpotlightEdge(
+private fun CacheDrawScope.spotlightBand(
     stops: List<DockSpotlightStop>,
     runsHorizontally: Boolean,
     atStart: Boolean,
     depthPx: Float,
     alpha: Float,
-) {
+): SpotlightBand? {
     val edgeStops = dockSpotlightEdgeStops(stops, alpha)
-    if (edgeStops.isEmpty()) return
     val crossLength = if (runsHorizontally) size.height else size.width
     val depth = depthPx.coerceAtMost(crossLength * SPOTLIGHT_MAX_DEPTH_FRACTION)
-    if (depth <= 0f) return
-
-    val along =
-        if (runsHorizontally) {
-            Brush.horizontalGradient(colorStops = edgeStops, startX = 0f, endX = size.width)
-        } else {
-            Brush.verticalGradient(colorStops = edgeStops, startY = 0f, endY = size.height)
-        }
     val edgeStart = if (atStart) 0f else crossLength - depth
-    val (topLeft, bandSize) =
-        if (runsHorizontally) {
-            Offset(0f, edgeStart) to Size(size.width, depth)
-        } else {
-            Offset(edgeStart, 0f) to Size(depth, size.height)
-        }
-
-    // Colour along the run, then mask it to fade inward from the edge -- the same two-pass
-    // "gradient, then destination-in fade" the status bar's edge strips use.
-    drawContext.canvas.saveLayer(Rect(topLeft, bandSize), Paint())
-    drawRect(brush = along, topLeft = topLeft, size = bandSize)
+    val topLeft = if (runsHorizontally) Offset(0f, edgeStart) else Offset(edgeStart, 0f)
+    val bandSize = if (runsHorizontally) Size(size.width, depth) else Size(depth, size.height)
+    val runEnd = if (runsHorizontally) Offset(size.width, 0f) else Offset(0f, size.height)
+    val edge = if (runsHorizontally) Offset(0f, edgeStart) else Offset(edgeStart, 0f)
+    val inward = if (runsHorizontally) Offset(0f, depth) else Offset(depth, 0f)
     val opaque = Color.Black
-    val clear = Color.Black.copy(alpha = 0f)
-    val fadeColors = if (atStart) listOf(opaque, clear) else listOf(clear, opaque)
-    val fade =
-        if (runsHorizontally) {
-            Brush.verticalGradient(fadeColors, startY = topLeft.y, endY = topLeft.y + depth)
-        } else {
-            Brush.horizontalGradient(fadeColors, startX = topLeft.x, endX = topLeft.x + depth)
+    val clear = Color.Transparent
+    val brush =
+        object : ShaderBrush() {
+            override fun createShader(size: Size): Shader =
+                ComposeShader(
+                    LinearGradientShader(
+                        from = Offset.Zero,
+                        to = runEnd,
+                        colors = edgeStops.map { (_, color) -> color },
+                        colorStops = edgeStops.map { (position, _) -> position },
+                    ),
+                    LinearGradientShader(
+                        from = edge,
+                        to = edge + inward,
+                        colors = if (atStart) listOf(opaque, clear) else listOf(clear, opaque),
+                    ),
+                    BlendMode.DST_IN,
+                )
         }
-    drawRect(brush = fade, topLeft = topLeft, size = bandSize, blendMode = BlendMode.DstIn)
-    drawContext.canvas.restore()
+    return if (edgeStops.isEmpty() || depth <= 0f) null else SpotlightBand(brush, topLeft, bandSize)
 }
 
 private const val MIN_CHANNEL = 1e-4f
