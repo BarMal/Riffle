@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.IntOffset
@@ -194,8 +195,9 @@ internal fun rememberDockSpotlightColor(
 }
 
 /**
- * Reports this icon's centre and [color] to the enclosing dock's spotlight -- null [color] for an
- * icon with none, which still marks its place on the run as unlit. A no-op outside a spotlit dock.
+ * Reports the centre of this icon's visible part and its [color] to the enclosing dock's spotlight
+ * -- null [color] for an icon with none, which still marks its place on the run as unlit. A no-op
+ * outside a spotlit dock.
  */
 @Composable
 internal fun Modifier.dockSpotlightSource(
@@ -207,12 +209,15 @@ internal fun Modifier.dockSpotlightSource(
         onDispose { spotlight.remove(key) }
     }
     return onGloballyPositioned { coordinates ->
-        val size = coordinates.size
-        spotlight.report(
-            key = key,
-            centerInRoot = coordinates.positionInRoot() + Offset(size.width / 2f, size.height / 2f),
-            color = color,
-        )
+        // Only what is actually on screen lights the edge: bounds clipped by the strip's own
+        // scroll viewport, so an icon scrolled out of its section stops glowing -- rather than
+        // casting its colour under the other section, which it still sits beneath, unclipped.
+        val visible = coordinates.boundsInRoot()
+        if (visible.width <= 0f || visible.height <= 0f) {
+            spotlight.remove(key)
+        } else {
+            spotlight.report(key = key, centerInRoot = visible.center, color = color)
+        }
     }
 }
 
@@ -252,6 +257,10 @@ internal fun Modifier.dockSpotlight(
                         depthPx = SPOTLIGHT_OUTER_DEPTH_DP.dp.toPx(),
                         alpha = SPOTLIGHT_OUTER_ALPHA,
                     ),
+                    // The two short ends, lit by the icon nearest each, so the glow runs all the
+                    // way round the dock the way it does round a window's four edges.
+                    spotlightEndBand(stops, runsHorizontally, atRunStart = true),
+                    spotlightEndBand(stops, runsHorizontally, atRunStart = false),
                 )
             onDrawBehind {
                 val fade = alphaProvider().coerceIn(0f, 1f)
@@ -308,6 +317,41 @@ private fun CacheDrawScope.spotlightBand(
             image = bakeSpotlightBand(edgeStops, alongPx, depth, runsHorizontally, atStart),
             offset = if (runsHorizontally) IntOffset(0, edgeStart) else IntOffset(edgeStart, 0),
             size = if (runsHorizontally) IntSize(alongPx, depth) else IntSize(depth, alongPx),
+        )
+    }
+}
+
+/**
+ * One short end's glow: the colour the long edges carry out to that end (the nearest icon's, or
+ * nothing when that icon is unlit), fading inward along the run. Uniform across the dock's
+ * thickness, so it bakes to a one-pixel ramp stretched across it.
+ */
+private fun CacheDrawScope.spotlightEndBand(
+    stops: List<DockSpotlightStop>,
+    runsHorizontally: Boolean,
+    atRunStart: Boolean,
+): SpotlightBand? {
+    val edgeStops = dockSpotlightEdgeStops(stops, SPOTLIGHT_END_ALPHA)
+    val color = (if (atRunStart) edgeStops.firstOrNull() else edgeStops.lastOrNull())?.second
+    val runLength = if (runsHorizontally) size.width else size.height
+    val crossPx = ceil(if (runsHorizontally) size.height else size.width).toInt()
+    val depth = ceil(SPOTLIGHT_END_DEPTH_DP.dp.toPx().coerceAtMost(runLength * SPOTLIGHT_MAX_DEPTH_FRACTION)).toInt()
+    return if (color == null || color.alpha <= 0f || depth <= 0 || crossPx <= 0) {
+        null
+    } else {
+        val start = if (atRunStart) 0 else floor(runLength).toInt() - depth
+        val pixels =
+            IntArray(depth) { index ->
+                // The outer end of the dock is fully lit, fading to nothing at the inner end.
+                val fromOuter = if (atRunStart) index else depth - 1 - index
+                color.copy(alpha = color.alpha * (1f - (fromOuter + 0.5f) / depth)).toArgb()
+            }
+        val width = if (runsHorizontally) depth else 1
+        val height = if (runsHorizontally) 1 else depth
+        SpotlightBand(
+            image = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888).asImageBitmap(),
+            offset = if (runsHorizontally) IntOffset(start, 0) else IntOffset(0, start),
+            size = if (runsHorizontally) IntSize(depth, crossPx) else IntSize(crossPx, depth),
         )
     }
 }
@@ -375,6 +419,11 @@ private const val SPOTLIGHT_INNER_DEPTH_DP = 10
 private const val SPOTLIGHT_OUTER_DEPTH_DP = 7
 private const val SPOTLIGHT_INNER_ALPHA = 0.55f
 private const val SPOTLIGHT_OUTER_ALPHA = 0.30f
+
+// The short ends sit between the two long edges' strengths, so the rim reads as one continuous
+// glow round the dock rather than two lit strips.
+private const val SPOTLIGHT_END_DEPTH_DP = 8
+private const val SPOTLIGHT_END_ALPHA = 0.42f
 
 /** The glow is baked at 1/4 of the run's resolution: its colour changes slowly along it. */
 private const val SPOTLIGHT_BAKE_SCALE = 4f

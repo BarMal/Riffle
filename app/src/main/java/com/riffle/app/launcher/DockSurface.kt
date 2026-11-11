@@ -399,7 +399,6 @@ internal fun DockSurfaceStrip(
                     staticSide(true)
                     DockSectionDivider(runsHorizontally = runsHorizontally)
                     DockDynamicSection(
-                        dock = dock,
                         entries = dynamicEntries,
                         slotMetrics = surfaceMetrics.slotMetrics,
                         mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
