@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -355,7 +354,13 @@ internal fun dockSpotlightColorAt(
             val (fromPosition, from) = edgeStops[after - 1]
             val (toPosition, to) = edgeStops[after]
             val span = toPosition - fromPosition
-            lerp(from, to, if (span > 0f) (position - fromPosition) / span else 1f)
+            val t = if (span > 0f) (position - fromPosition) / span else 1f
+            Color(
+                red = from.red + (to.red - from.red) * t,
+                green = from.green + (to.green - from.green) * t,
+                blue = from.blue + (to.blue - from.blue) * t,
+                alpha = from.alpha + (to.alpha - from.alpha) * t,
+            )
         }
     }
 }
