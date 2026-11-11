@@ -73,9 +73,9 @@ internal fun dockSpotlightStops(
 internal fun dockSpotlightGlowColor(color: Color): Color {
     val max = maxOf(color.red, color.green, color.blue)
     val scale = if (max > MIN_CHANNEL) (1f - SPOTLIGHT_VIVID_NORM) + SPOTLIGHT_VIVID_NORM / max else 1f
-    fun lift(channel: Float): Float {
+    val lift = { channel: Float ->
         val normalised = (channel * scale).coerceAtMost(1f)
-        return normalised + (1f - normalised) * SPOTLIGHT_WHITE_MIX
+        normalised + (1f - normalised) * SPOTLIGHT_WHITE_MIX
     }
     return Color(lift(color.red), lift(color.green), lift(color.blue))
 }
