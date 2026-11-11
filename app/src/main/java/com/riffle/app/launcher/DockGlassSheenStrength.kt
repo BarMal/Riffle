@@ -121,17 +121,16 @@ internal fun Modifier.dockGlassSheen(
     }
 }
 
-/** The sheen, baked: three small images stretched over the dock, plus the border outline. */
+/** One baked layer: a small image, stretched over [size] at [offset]. */
+private class SheenImage(
+    val image: ImageBitmap,
+    val offset: IntOffset,
+    val size: IntSize,
+)
+
+/** The sheen, baked: small images stretched over the dock, plus the border outline. */
 private class GlassSheen(
-    /** 1px wide, the dock's height: top specular and bottom inner shadow (vertical only). */
-    val verticalRamp: ImageBitmap,
-    /** The dock's width, 1px tall: the rim line's bell curve (horizontal only). */
-    val rimRamp: ImageBitmap,
-    val rimOffset: IntOffset,
-    val rimSize: IntSize,
-    /** The caustic spot at a fraction of the dock's resolution; it is a soft blur either way. */
-    val caustic: ImageBitmap,
-    val dockSize: IntSize,
+    val layers: List<SheenImage>,
     val border: Outline?,
     val borderColor: Color,
     val borderStroke: Stroke,
@@ -211,13 +210,17 @@ private fun CacheDrawScope.bakeGlassSheen(
     // 5. Glass border: a plain stroke, nothing to bake. Centred on the edge and clipped to the
     // shape, so twice the width draws 1dp inside -- the same trick dockSurfaceAppearance's own
     // pull-branch outline uses.
+    val dockSize = IntSize(widthPx, heightPx)
     return GlassSheen(
-        verticalRamp = verticalRamp,
-        rimRamp = rimRamp,
-        rimOffset = IntOffset(0, rimPx),
-        rimSize = IntSize(widthPx, rimPx),
-        caustic = caustic,
-        dockSize = IntSize(widthPx, heightPx),
+        layers =
+            listOf(
+                // 1px wide, the dock's height: top specular and bottom inner shadow.
+                SheenImage(verticalRamp, IntOffset.Zero, dockSize),
+                // At a fraction of the dock's resolution: a soft blur either way.
+                SheenImage(caustic, IntOffset.Zero, dockSize),
+                // The dock's width, 1px tall: the rim line's bell curve.
+                SheenImage(rimRamp, IntOffset(0, rimPx), IntSize(widthPx, rimPx)),
+            ),
         border = if (strength.border > 0f) shape.createOutline(size, layoutDirection, this) else null,
         borderColor = GLASS_BORDER_COLOR.copy(alpha = dockGlassSheenAlpha(GLASS_BORDER_ALPHA, strength.border)),
         borderStroke = Stroke(width = 2 * GLASS_BORDER_DP.dp.toPx()),
@@ -245,25 +248,15 @@ private fun DrawScope.drawGlassSheen(
     sheen: GlassSheen,
     fade: Float,
 ) {
-    drawImage(
-        image = sheen.verticalRamp,
-        dstSize = sheen.dockSize,
-        alpha = fade,
-        filterQuality = FilterQuality.Low,
-    )
-    drawImage(
-        image = sheen.caustic,
-        dstSize = sheen.dockSize,
-        alpha = fade,
-        filterQuality = FilterQuality.Low,
-    )
-    drawImage(
-        image = sheen.rimRamp,
-        dstOffset = sheen.rimOffset,
-        dstSize = sheen.rimSize,
-        alpha = fade,
-        filterQuality = FilterQuality.Low,
-    )
+    sheen.layers.forEach { layer ->
+        drawImage(
+            image = layer.image,
+            dstOffset = layer.offset,
+            dstSize = layer.size,
+            alpha = fade,
+            filterQuality = FilterQuality.Low,
+        )
+    }
     sheen.border?.let { border ->
         drawOutline(outline = border, color = sheen.borderColor, alpha = fade, style = sheen.borderStroke)
     }
