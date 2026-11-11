@@ -67,6 +67,9 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                     "status bar",
                     "navigation bar",
                     "system UI",
+                    "liquid glass",
+                    "dock spotlight",
+                    "spotlight flow",
                 ),
         ),
         SettingsPageEntry(

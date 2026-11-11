@@ -37,9 +37,9 @@ class DockSpotlightFlowTest {
         val scratch = emptyDockSpotlightProfile()
 
         var frames = 0
-        while (!stepDockSpotlightProfile(shown, target, frame, scratch)) {
+        while (!stepDockSpotlightProfile(shown, target, frame, FLOW, scratch)) {
             frames++
-            assertTrue("still flowing after $frames frames", frames < DOCK_SPOTLIGHT_MAX_SETTLE_SECONDS / frame)
+            assertTrue("still flowing after $frames frames", frames < dockSpotlightMaxSettleSeconds(FLOW) / frame)
         }
 
         assertArrayEquals(target, shown, 0f)
@@ -50,7 +50,7 @@ class DockSpotlightFlowTest {
         val shown = emptyDockSpotlightProfile()
         val target = dockSpotlightTargetProfile(listOf(DockSpotlightStop(0.5f, Color.Green)))
 
-        val settled = stepDockSpotlightProfile(shown, target, frame, emptyDockSpotlightProfile())
+        val settled = stepDockSpotlightProfile(shown, target, frame, FLOW, emptyDockSpotlightProfile())
 
         assertFalse(settled)
         val alpha = shown[3]
@@ -65,7 +65,7 @@ class DockSpotlightFlowTest {
         val middle = DOCK_SPOTLIGHT_PROFILE_SAMPLES / 2
         target[middle * 4 + 3] = 1f
 
-        stepDockSpotlightProfile(shown, target, frame, emptyDockSpotlightProfile())
+        stepDockSpotlightProfile(shown, target, frame, FLOW, emptyDockSpotlightProfile())
 
         val neighbourAlpha = shown[(middle + 1) * 4 + 3]
         assertTrue("the neighbour picked some of it up, was $neighbourAlpha", neighbourAlpha > 0f)
@@ -77,7 +77,7 @@ class DockSpotlightFlowTest {
         val target = emptyDockSpotlightProfile()
         val scratch = emptyDockSpotlightProfile()
 
-        repeat(10) { stepDockSpotlightProfile(shown, target, frame, scratch) }
+        repeat(10) { stepDockSpotlightProfile(shown, target, frame, FLOW, scratch) }
 
         for (sample in 0 until DOCK_SPOTLIGHT_PROFILE_SAMPLES) {
             val alpha = shown[sample * 4 + 3]
@@ -85,7 +85,20 @@ class DockSpotlightFlowTest {
         }
     }
 
+    @Test
+    fun aSlowerFlowMovesLessPerFrame() {
+        val target = dockSpotlightTargetProfile(listOf(DockSpotlightStop(0.5f, Color.Green)))
+        val quick = emptyDockSpotlightProfile()
+        val slow = emptyDockSpotlightProfile()
+
+        stepDockSpotlightProfile(quick, target, frame, 0.2f, emptyDockSpotlightProfile())
+        stepDockSpotlightProfile(slow, target, frame, 1f, emptyDockSpotlightProfile())
+
+        assertTrue(slow[3] < quick[3])
+    }
+
     private companion object {
         const val EIGHT_BIT_STEP = 1f / 255f
+        const val FLOW = 0.35f
     }
 }

@@ -180,14 +180,22 @@ internal class DockSpotlightState(
      * Follows the icons for as long as the dock is on screen: each time they move, arrive, leave
      * or change colour, [shown] eases toward the new glow, one display frame at a time, then the
      * frame loop stops -- a dock at rest asks for no frames at all. With [animate] off (reduced
-     * motion), and whenever nothing is lit yet, it jumps straight there instead, so a dock never
-     * fades its glow in on launch or as icon colours finish loading.
+     * motion, or a flow of 0), and whenever nothing is lit yet, it jumps straight there instead, so
+     * a dock never fades its glow in on launch or as icon colours finish loading.
+     * [flowSeconds] is the flow's time constant (the "Spotlight flow" setting).
      */
-    suspend fun run(animate: Boolean) {
+    suspend fun run(
+        animate: Boolean,
+        flowSeconds: Float,
+    ) {
         snapshotFlow { dockSpotlightTargetProfile(stopsFor(layoutSize, runsHorizontally)) }
             .collectLatest { target ->
                 if (!target.contentEquals(shown)) {
-                    if (animate && dockSpotlightProfileIsLit(shown)) settleTowards(target) else showNow(target)
+                    if (animate && flowSeconds > 0f && dockSpotlightProfileIsLit(shown)) {
+                        settleTowards(target, flowSeconds)
+                    } else {
+                        showNow(target)
+                    }
                 }
             }
     }
@@ -199,7 +207,10 @@ internal class DockSpotlightState(
         lastFrameNanos = 0L
     }
 
-    private suspend fun settleTowards(target: FloatArray) {
+    private suspend fun settleTowards(
+        target: FloatArray,
+        flowSeconds: Float,
+    ) {
         var elapsed = 0f
         var settled = false
         while (!settled) {
@@ -213,8 +224,8 @@ internal class DockSpotlightState(
             lastFrameNanos = frame
             elapsed += dt
             val profile = shownState.value
-            settled = stepDockSpotlightProfile(profile, target, dt, scratch) ||
-                elapsed >= DOCK_SPOTLIGHT_MAX_SETTLE_SECONDS
+            settled = stepDockSpotlightProfile(profile, target, dt, flowSeconds, scratch) ||
+                elapsed >= dockSpotlightMaxSettleSeconds(flowSeconds)
             if (settled) {
                 target.copyInto(profile)
                 lastFrameNanos = 0L
@@ -247,7 +258,9 @@ internal fun rememberDockSpotlightState(
     val runsHorizontally = position.isHorizontalEdge
     val state = remember(runsHorizontally) { DockSpotlightState(runsHorizontally) }
     if (active) {
-        LaunchedEffect(state, glass.reducedMotion) { state.run(animate = !glass.reducedMotion) }
+        LaunchedEffect(state, glass.reducedMotion, glass.spotlightFlowSeconds) {
+            state.run(animate = !glass.reducedMotion, flowSeconds = glass.spotlightFlowSeconds)
+        }
     }
     return state.takeIf { active }
 }

@@ -93,6 +93,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectLiquidGlassEnabled,
         is LauncherShellAction.SelectLiquidGlassFrostStrength,
         is LauncherShellAction.SelectLiquidGlassRefractionStrength,
+        is LauncherShellAction.SelectLiquidGlassSpotlightFlow,
         is LauncherShellAction.SelectHomeSwipeGestureAction,
         is LauncherShellAction.SelectHomeGestureAction,
         LauncherShellAction.ResetHomeSwipeGestureActions,

@@ -104,6 +104,18 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectLiquidGlassSpotlightFlow ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                liquidGlass =
+                                    state.launcherSettings.liquidGlass
+                                        .copy(spotlightFlowMillis = action.millis)
+                                        .coerced(),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectContextualEnabled ->
                     state.withContextualSettingsAction(
                         action = action,

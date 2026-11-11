@@ -929,6 +929,7 @@ class LauncherSettingsJsonCodecTest {
                         enabled = false,
                         frostStrengthPercent = 70,
                         refractionStrengthPercent = 35,
+                        spotlightFlowMillis = 650,
                     ),
             )
 

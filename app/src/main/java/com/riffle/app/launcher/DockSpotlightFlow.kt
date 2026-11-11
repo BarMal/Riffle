@@ -49,7 +49,8 @@ internal fun dockSpotlightProfileIsLit(profile: FloatArray): Boolean =
     (0 until DOCK_SPOTLIGHT_PROFILE_SAMPLES).any { sample -> profile[sample * CHANNELS + 3] > SETTLED_EPSILON }
 
 /**
- * Moves [shown] one frame of [dtSeconds] toward [target], in place, and reports whether it has
+ * Moves [shown] one frame of [dtSeconds] toward [target], in place, about 63% of the way per
+ * [timeConstantSeconds] (the user's "Spotlight flow" setting), and reports whether it has
  * arrived (no visible gap left anywhere), in which case it is snapped exactly onto [target].
  *
  * Each sample moves by its remaining distance, partly its own and partly the average over its
@@ -63,9 +64,10 @@ internal fun stepDockSpotlightProfile(
     shown: FloatArray,
     target: FloatArray,
     dtSeconds: Float,
+    timeConstantSeconds: Float,
     scratch: FloatArray,
 ): Boolean {
-    val ease = 1f - exp(-dtSeconds.coerceAtLeast(0f) / DOCK_SPOTLIGHT_FLOW_TIME_CONSTANT_SECONDS)
+    val ease = 1f - exp(-dtSeconds.coerceAtLeast(0f) / timeConstantSeconds.coerceAtLeast(MIN_TIME_CONSTANT_SECONDS))
     val samples = DOCK_SPOTLIGHT_PROFILE_SAMPLES
     for (sample in 0 until samples) {
         val from = (sample - DOCK_SPOTLIGHT_DIFFUSION_RADIUS).coerceAtLeast(0)
@@ -99,15 +101,19 @@ internal fun stepDockSpotlightProfile(
     return settled
 }
 
-/** How quickly the glow follows: about 63% of the way there after this long. */
-internal const val DOCK_SPOTLIGHT_FLOW_TIME_CONSTANT_SECONDS = 0.35f
-
 /**
  * Hard ceiling on one settle, so the frame loop always ends -- an animation that never settles
- * would keep the dock redrawing for good. Never normally reached: a change is about 90% of the way
- * there after 0.7s and settled by about 1.9s.
+ * would keep the dock redrawing for good. Scales with the chosen pace, as a slow flow legitimately
+ * takes longer: a change settles in about 5.5 time constants (90% there after about 2), so 8 is
+ * never normally reached.
  */
-internal const val DOCK_SPOTLIGHT_MAX_SETTLE_SECONDS = 3f
+internal fun dockSpotlightMaxSettleSeconds(timeConstantSeconds: Float): Float =
+    timeConstantSeconds * MAX_SETTLE_TIME_CONSTANTS
+
+private const val MAX_SETTLE_TIME_CONSTANTS = 8f
+
+/** Guards the easing against a zero time constant; an instant flow never steps at all. */
+private const val MIN_TIME_CONSTANT_SECONDS = 0.001f
 
 /** The longest frame step taken, so a stalled frame does not jump the glow. */
 internal const val DOCK_SPOTLIGHT_MAX_FRAME_SECONDS = 0.05f

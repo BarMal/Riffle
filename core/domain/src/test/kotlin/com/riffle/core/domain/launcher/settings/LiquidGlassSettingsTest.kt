@@ -56,4 +56,21 @@ class LiquidGlassSettingsTest {
 
         assertFalse(settings.resolveLiquidGlass().enabled)
     }
+
+    @Test
+    fun spotlightFlowDefaultsToAGentleFollowAndClampsToItsRange() {
+        assertEquals(DEFAULT_SPOTLIGHT_FLOW_MILLIS, LiquidGlassSettings().spotlightFlowMillis)
+        val tooFast = LiquidGlassSettings(spotlightFlowMillis = -100).coerced()
+        val tooSlow = LiquidGlassSettings(spotlightFlowMillis = 9000).coerced()
+
+        assertEquals(MIN_SPOTLIGHT_FLOW_MILLIS, tooFast.spotlightFlowMillis)
+        assertEquals(MAX_SPOTLIGHT_FLOW_MILLIS, tooSlow.spotlightFlowMillis)
+    }
+
+    @Test
+    fun resolveLiquidGlassCarriesTheSpotlightFlowInSeconds() {
+        val settings = LauncherSettings(liquidGlass = LiquidGlassSettings(spotlightFlowMillis = 600))
+
+        assertEquals(0.6f, settings.resolveLiquidGlass().spotlightFlowSeconds, 1e-6f)
+    }
 }
