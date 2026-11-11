@@ -7,15 +7,22 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockVisualEffect
+import kotlin.math.ceil
 
 /*
  * The dock's glass sheen: the layers the desktop glass theme's pills and panels draw over their
@@ -91,8 +98,11 @@ internal fun dockGlassSheenAlpha(
  * [alphaProvider] is the dock pull's background fade, read at draw time. A no-op when liquid
  * glass is switched off, which keeps today's flat look for anyone who turned it off.
  *
- * The gradients are built once per size (and strength), not on every frame: the dock redraws on
- * every frame of a drag or pull, and the pull only changes the fade, applied as a plain alpha.
+ * The gradients are baked in software into small images once per size and strength -- the same
+ * approach the desktop plugin takes with its edge textures -- and the GPU only stretches those
+ * images. Live gradient shaders on the dock hung the software-rendered CI emulator within a couple
+ * of minutes of UI tests, and baked ramps are cheaper on any device besides: a few kilobytes per
+ * dock, no shader work per frame, and the dock pull's fade is just a draw alpha.
  */
 @Composable
 internal fun Modifier.dockGlassSheen(
@@ -100,9 +110,9 @@ internal fun Modifier.dockGlassSheen(
     strength: DockGlassSheenStrength,
     alphaProvider: () -> Float,
 ): Modifier {
-    if (!LocalLiquidGlassSettings.current.enabled || !DOCK_GLASS_SHEEN_BISECT_ENABLED) return this
+    if (!LocalLiquidGlassSettings.current.enabled) return this
     return drawWithCache {
-        val sheen = if (size.width > 0f && size.height > 0f) buildGlassSheen(shape, strength) else null
+        val sheen = if (size.width >= 1f && size.height >= 1f) bakeGlassSheen(shape, strength) else null
         onDrawWithContent {
             val fade = alphaProvider().coerceIn(0f, 1f)
             if (sheen != null && fade > 0f) drawGlassSheen(sheen, fade)
@@ -111,36 +121,38 @@ internal fun Modifier.dockGlassSheen(
     }
 }
 
-/** One sheen layer: a brush filling a rect. */
-private class SheenBand(
-    val brush: Brush,
-    val topLeft: Offset,
-    val size: Size,
-)
-
+/** The sheen, baked: three small images stretched over the dock, plus the border outline. */
 private class GlassSheen(
-    val bands: List<SheenBand>,
+    /** 1px wide, the dock's height: top specular and bottom inner shadow (vertical only). */
+    val verticalRamp: ImageBitmap,
+    /** The dock's width, 1px tall: the rim line's bell curve (horizontal only). */
+    val rimRamp: ImageBitmap,
+    val rimOffset: IntOffset,
+    val rimSize: IntSize,
+    /** The caustic spot at a fraction of the dock's resolution; it is a soft blur either way. */
+    val caustic: ImageBitmap,
+    val dockSize: IntSize,
     val border: Outline?,
     val borderColor: Color,
     val borderStroke: Stroke,
 )
 
-@Suppress("LongMethod")
-private fun CacheDrawScope.buildGlassSheen(
+private fun CacheDrawScope.bakeGlassSheen(
     shape: Shape,
     strength: DockGlassSheenStrength,
 ): GlassSheen {
-    val highlight = strength.highlight
-    val white = { alpha: Float -> Color.White.copy(alpha = dockGlassSheenAlpha(alpha, highlight)) }
-    val cornerPx = DOCK_SHEEN_REFERENCE_CORNER_DP.dp.toPx()
-    val specularHeight = minOf(cornerPx * SPECULAR_CORNER_MULTIPLIER, size.height * SPECULAR_MAX_FRACTION)
-    val shadowHeight = size.height * SHADOW_HEIGHT_FRACTION
-    val rimPx = RIM_LINE_DP.dp.toPx()
+    val white = { alpha: Float -> Color.White.copy(alpha = dockGlassSheenAlpha(alpha, strength.highlight)) }
+    val widthPx = ceil(size.width).toInt()
+    val heightPx = ceil(size.height).toInt()
+    val rimPx = RIM_LINE_DP.dp.roundToPx().coerceAtLeast(1)
 
-    val bands =
-        listOfNotNull(
-            // 1. Top specular.
-            SheenBand(
+    // 1 + 3. Top specular and bottom inner shadow share one vertical ramp.
+    val cornerPx = DOCK_SHEEN_REFERENCE_CORNER_DP.dp.toPx()
+    val specularHeight = minOf(cornerPx * SPECULAR_CORNER_MULTIPLIER, heightPx * SPECULAR_MAX_FRACTION)
+    val shadowHeight = heightPx * SHADOW_HEIGHT_FRACTION
+    val verticalRamp =
+        bake(width = 1, height = heightPx) {
+            drawRect(
                 brush =
                     Brush.verticalGradient(
                         0f to white(SPECULAR_TOP_ALPHA),
@@ -149,36 +161,25 @@ private fun CacheDrawScope.buildGlassSheen(
                         startY = 0f,
                         endY = specularHeight,
                     ),
-                topLeft = Offset.Zero,
-                size = Size(size.width, specularHeight),
-            ),
-            // 2. Caustic light spot.
-            if (!DOCK_GLASS_SHEEN_BISECT_CAUSTIC) null else SheenBand(
-                brush =
-                    Brush.radialGradient(
-                        0f to white(CAUSTIC_CENTER_ALPHA),
-                        CAUSTIC_MID_STOP to white(CAUSTIC_MID_ALPHA),
-                        1f to Color.Transparent,
-                        center = Offset(size.width * CAUSTIC_X, size.height * CAUSTIC_Y),
-                        radius = minOf(size.width, size.height) * CAUSTIC_RADIUS_FRACTION,
-                    ),
-                topLeft = Offset.Zero,
-                size = size,
-            ),
-            // 3. Bottom inner shadow.
-            SheenBand(
+                size = Size(1f, specularHeight),
+            )
+            drawRect(
                 brush =
                     Brush.verticalGradient(
                         0f to Color.Transparent,
                         1f to Color.Black.copy(alpha = dockGlassSheenAlpha(SHADOW_ALPHA, strength.shadow)),
-                        startY = size.height - shadowHeight,
-                        endY = size.height,
+                        startY = heightPx - shadowHeight,
+                        endY = heightPx.toFloat(),
                     ),
-                topLeft = Offset(0f, size.height - shadowHeight),
-                size = Size(size.width, shadowHeight),
-            ),
-            // 4. Rim line: 1dp, one dp below the top edge, bell-shaped along its length.
-            SheenBand(
+                topLeft = Offset(0f, heightPx - shadowHeight),
+                size = Size(1f, shadowHeight),
+            )
+        }
+
+    // 4. Rim line: bell-shaped along its length, one rim width below the top edge.
+    val rimRamp =
+        bake(width = widthPx, height = 1) {
+            drawRect(
                 brush =
                     Brush.horizontalGradient(
                         0f to Color.Transparent,
@@ -187,37 +188,82 @@ private fun CacheDrawScope.buildGlassSheen(
                         (1f - RIM_SHOULDER_STOP) to white(RIM_SHOULDER_ALPHA),
                         1f to Color.Transparent,
                     ),
-                topLeft = Offset(0f, rimPx),
-                size = Size(size.width, rimPx),
-            ),
-        )
+            )
+        }
 
-    // 5. Glass border. Centred on the edge and clipped to the shape, so twice the width draws
-    // 1dp inside -- the same trick dockSurfaceAppearance's own pull-branch outline uses.
+    // 2. Caustic light spot, baked small and stretched back up.
+    val causticWidth = ceil(widthPx / CAUSTIC_BAKE_SCALE).toInt().coerceAtLeast(1)
+    val causticHeight = ceil(heightPx / CAUSTIC_BAKE_SCALE).toInt().coerceAtLeast(1)
+    val caustic =
+        bake(width = causticWidth, height = causticHeight) {
+            drawRect(
+                brush =
+                    Brush.radialGradient(
+                        0f to white(CAUSTIC_CENTER_ALPHA),
+                        CAUSTIC_MID_STOP to white(CAUSTIC_MID_ALPHA),
+                        1f to Color.Transparent,
+                        center = Offset(causticWidth * CAUSTIC_X, causticHeight * CAUSTIC_Y),
+                        radius = minOf(causticWidth, causticHeight) * CAUSTIC_RADIUS_FRACTION,
+                    ),
+            )
+        }
+
+    // 5. Glass border: a plain stroke, nothing to bake. Centred on the edge and clipped to the
+    // shape, so twice the width draws 1dp inside -- the same trick dockSurfaceAppearance's own
+    // pull-branch outline uses.
     return GlassSheen(
-        bands = bands,
-        border =
-            if (strength.border > 0f && DOCK_GLASS_SHEEN_BISECT_BORDER) {
-                shape.createOutline(size, layoutDirection, this)
-            } else {
-                null
-            },
+        verticalRamp = verticalRamp,
+        rimRamp = rimRamp,
+        rimOffset = IntOffset(0, rimPx),
+        rimSize = IntSize(widthPx, rimPx),
+        caustic = caustic,
+        dockSize = IntSize(widthPx, heightPx),
+        border = if (strength.border > 0f) shape.createOutline(size, layoutDirection, this) else null,
         borderColor = GLASS_BORDER_COLOR.copy(alpha = dockGlassSheenAlpha(GLASS_BORDER_ALPHA, strength.border)),
         borderStroke = Stroke(width = 2 * GLASS_BORDER_DP.dp.toPx()),
     )
+}
+
+/** Renders [block] into a new [width] x [height] image on the CPU, in software. */
+private fun CacheDrawScope.bake(
+    width: Int,
+    height: Int,
+    block: DrawScope.() -> Unit,
+): ImageBitmap {
+    val image = ImageBitmap(width, height)
+    CanvasDrawScope().draw(
+        density = this,
+        layoutDirection = layoutDirection,
+        canvas = Canvas(image),
+        size = Size(width.toFloat(), height.toFloat()),
+        block = block,
+    )
+    return image
 }
 
 private fun DrawScope.drawGlassSheen(
     sheen: GlassSheen,
     fade: Float,
 ) {
-    if (DOCK_GLASS_SHEEN_BISECT_FLAT) {
-        drawRect(color = Color.White, alpha = BISECT_FLAT_ALPHA * fade)
-        return
-    }
-    sheen.bands.forEach { band ->
-        drawRect(brush = band.brush, topLeft = band.topLeft, size = band.size, alpha = fade)
-    }
+    drawImage(
+        image = sheen.verticalRamp,
+        dstSize = sheen.dockSize,
+        alpha = fade,
+        filterQuality = FilterQuality.Low,
+    )
+    drawImage(
+        image = sheen.caustic,
+        dstSize = sheen.dockSize,
+        alpha = fade,
+        filterQuality = FilterQuality.Low,
+    )
+    drawImage(
+        image = sheen.rimRamp,
+        dstOffset = sheen.rimOffset,
+        dstSize = sheen.rimSize,
+        alpha = fade,
+        filterQuality = FilterQuality.Low,
+    )
     sheen.border?.let { border ->
         drawOutline(outline = border, color = sheen.borderColor, alpha = fade, style = sheen.borderStroke)
     }
@@ -228,21 +274,6 @@ private fun DrawScope.drawGlassSheen(
  * setting that can go to 0 (a square dock), which would make the specular vanish, so it is sized
  * from a fixed reference radius instead -- the desktop pill's own.
  */
-/** TEMPORARY (Device verify bisect): which sheen layers are drawn, to isolate the emulator hang. */
-private const val DOCK_GLASS_SHEEN_BISECT_ENABLED = true
-
-/** TEMPORARY (Device verify bisect). */
-private const val DOCK_GLASS_SHEEN_BISECT_CAUSTIC = false
-
-/** TEMPORARY (Device verify bisect). */
-private const val DOCK_GLASS_SHEEN_BISECT_BORDER = false
-
-/** TEMPORARY (Device verify bisect): one flat fill instead of any gradient. */
-private const val DOCK_GLASS_SHEEN_BISECT_FLAT = true
-
-/** TEMPORARY (Device verify bisect). */
-private const val BISECT_FLAT_ALPHA = 0.05f
-
 private const val DOCK_SHEEN_REFERENCE_CORNER_DP = 16
 
 private const val SPECULAR_CORNER_MULTIPLIER = 4f
@@ -250,6 +281,9 @@ private const val SPECULAR_MAX_FRACTION = 0.58f
 private const val SPECULAR_TOP_ALPHA = 0.12f
 private const val SPECULAR_MID_STOP = 0.40f
 private const val SPECULAR_MID_ALPHA = 0.04f
+
+/** The caustic is baked at 1/8 of the dock's resolution: a soft radial loses nothing to it. */
+private const val CAUSTIC_BAKE_SCALE = 8f
 
 private const val CAUSTIC_X = 0.30f
 private const val CAUSTIC_Y = 0.20f

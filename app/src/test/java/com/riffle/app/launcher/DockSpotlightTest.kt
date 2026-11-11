@@ -82,4 +82,24 @@ class DockSpotlightTest {
     fun drawsNothingWhenNoIconIsLit() {
         assertTrue(dockSpotlightStops(listOf(100f to null, 200f to null), runLengthPx = 400f).isEmpty())
     }
+
+    @Test
+    fun theBakedGlowBlendsBetweenNeighbouringStops() {
+        val edge = arrayOf(0f to Color.Red, 0.5f to Color.Blue, 1f to Color.Blue)
+
+        assertEquals(Color.Red, dockSpotlightColorAt(edge, 0f))
+        val quarter = dockSpotlightColorAt(edge, 0.25f)
+        assertEquals(0.5f, quarter.red, 0.01f)
+        assertEquals(0.5f, quarter.blue, 0.01f)
+        assertEquals(Color.Blue, dockSpotlightColorAt(edge, 0.75f))
+    }
+
+    @Test
+    fun theBakedGlowHoldsItsEndColoursPastTheStops() {
+        val edge = arrayOf(0.2f to Color.Red, 0.8f to Color.Blue)
+
+        assertEquals(Color.Red, dockSpotlightColorAt(edge, 0.1f))
+        assertEquals(Color.Blue, dockSpotlightColorAt(edge, 0.9f))
+        assertEquals(Color.Transparent, dockSpotlightColorAt(emptyArray(), 0.5f))
+    }
 }

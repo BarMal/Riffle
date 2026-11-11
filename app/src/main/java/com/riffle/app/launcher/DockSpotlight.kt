@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
-import android.graphics.BlendMode
-import android.graphics.ComposeShader
+import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -17,13 +16,16 @@ import androidx.compose.ui.draw.CacheDrawScope
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.LinearGradientShader
-import androidx.compose.ui.graphics.Shader
-import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -31,6 +33,8 @@ import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 
 /*
  * The dock's spotlight: each icon's own colour glows onto the dock's two long edges at the point
@@ -254,28 +258,35 @@ internal fun Modifier.dockSpotlight(
                 val fade = alphaProvider().coerceIn(0f, 1f)
                 if (fade > 0f) {
                     bands.forEach { band ->
-                        drawRect(brush = band.brush, topLeft = band.topLeft, size = band.size, alpha = fade)
+                        drawImage(
+                            image = band.image,
+                            dstOffset = band.offset,
+                            dstSize = band.size,
+                            alpha = fade,
+                            filterQuality = FilterQuality.Low,
+                        )
                     }
                 }
             }
         }
 }
 
-/** One edge's glow, ready to draw: a single brush over the edge's band. */
+/** One edge's glow, ready to draw: a small baked image stretched over the edge's band. */
 private class SpotlightBand(
-    val brush: Brush,
-    val topLeft: Offset,
-    val size: Size,
+    val image: ImageBitmap,
+    val offset: IntOffset,
+    val size: IntSize,
 )
 
 /**
- * One edge's glow: the colour gradient along the run, masked by an inward fade across [depthPx],
- * or null when there is nothing to draw. [atStart] picks the top (horizontal run) or left
- * (vertical run) edge.
+ * One edge's glow: the colour gradient along the run times an inward fade across [depthPx], or
+ * null when there is nothing to draw. [atStart] picks the top (horizontal run) or left (vertical
+ * run) edge.
  *
- * The colour and the fade are combined into one shader (destination-in), so each edge is a single
- * plain draw -- the same "gradient, then destination-in fade" the status bar's edge strips do in
- * two passes, without the offscreen layer two passes would need.
+ * Baked pixel by pixel on the CPU into an image at a fraction of the run's resolution (the colour
+ * changes slowly along it) and stretched back up, so the GPU draws one plain image -- no gradient
+ * shader and no offscreen layer. Live gradient shaders on the dock hung the software-rendered CI
+ * emulator; baking also keeps scrolling cheap, as only these few thousand pixels are redone.
  */
 @Suppress("LongParameterList")
 private fun CacheDrawScope.spotlightBand(
@@ -286,35 +297,67 @@ private fun CacheDrawScope.spotlightBand(
     alpha: Float,
 ): SpotlightBand? {
     val edgeStops = dockSpotlightEdgeStops(stops, alpha)
+    val runLength = if (runsHorizontally) size.width else size.height
     val crossLength = if (runsHorizontally) size.height else size.width
-    val depth = depthPx.coerceAtMost(crossLength * SPOTLIGHT_MAX_DEPTH_FRACTION)
-    val edgeStart = if (atStart) 0f else crossLength - depth
-    val topLeft = if (runsHorizontally) Offset(0f, edgeStart) else Offset(edgeStart, 0f)
-    val bandSize = if (runsHorizontally) Size(size.width, depth) else Size(depth, size.height)
-    val runEnd = if (runsHorizontally) Offset(size.width, 0f) else Offset(0f, size.height)
-    val edge = if (runsHorizontally) Offset(0f, edgeStart) else Offset(edgeStart, 0f)
-    val inward = if (runsHorizontally) Offset(0f, depth) else Offset(depth, 0f)
-    val opaque = Color.Black
-    val clear = Color.Transparent
-    val brush =
-        object : ShaderBrush() {
-            override fun createShader(size: Size): Shader =
-                ComposeShader(
-                    LinearGradientShader(
-                        from = Offset.Zero,
-                        to = runEnd,
-                        colors = edgeStops.map { (_, color) -> color },
-                        colorStops = edgeStops.map { (position, _) -> position },
-                    ),
-                    LinearGradientShader(
-                        from = edge,
-                        to = edge + inward,
-                        colors = if (atStart) listOf(opaque, clear) else listOf(clear, opaque),
-                    ),
-                    BlendMode.DST_IN,
-                )
+    val depth = ceil(depthPx.coerceAtMost(crossLength * SPOTLIGHT_MAX_DEPTH_FRACTION)).toInt()
+    return if (edgeStops.isEmpty() || depth <= 0 || runLength < 1f) {
+        null
+    } else {
+        val alongPx = ceil(runLength).toInt()
+        val edgeStart = if (atStart) 0 else floor(crossLength).toInt() - depth
+        SpotlightBand(
+            image = bakeSpotlightBand(edgeStops, alongPx, depth, runsHorizontally, atStart),
+            offset = if (runsHorizontally) IntOffset(0, edgeStart) else IntOffset(edgeStart, 0),
+            size = if (runsHorizontally) IntSize(alongPx, depth) else IntSize(depth, alongPx),
+        )
+    }
+}
+
+private fun bakeSpotlightBand(
+    edgeStops: Array<Pair<Float, Color>>,
+    alongPx: Int,
+    depth: Int,
+    runsHorizontally: Boolean,
+    atStart: Boolean,
+): ImageBitmap {
+    val along = ceil(alongPx / SPOTLIGHT_BAKE_SCALE).toInt().coerceAtLeast(1)
+    val width = if (runsHorizontally) along else depth
+    val height = if (runsHorizontally) depth else along
+    val pixels = IntArray(width * height)
+    for (a in 0 until along) {
+        val color = dockSpotlightColorAt(edgeStops, (a + 0.5f) / along)
+        for (d in 0 until depth) {
+            // d = 0 is the outer edge, fading to nothing at the inner end of the band.
+            val fade = 1f - (d + 0.5f) / depth
+            val crossIndex = if (atStart) d else depth - 1 - d
+            val index = if (runsHorizontally) crossIndex * width + a else a * width + crossIndex
+            pixels[index] = color.copy(alpha = color.alpha * fade).toArgb()
         }
-    return if (edgeStops.isEmpty() || depth <= 0f) null else SpotlightBand(brush, topLeft, bandSize)
+    }
+    return Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888).asImageBitmap()
+}
+
+/**
+ * The glow's colour [position] (0..1) of the way along the run: linear between the two
+ * [edgeStops] either side of it, in unpremultiplied colour -- what a linear gradient through the
+ * same stops draws.
+ */
+internal fun dockSpotlightColorAt(
+    edgeStops: Array<Pair<Float, Color>>,
+    position: Float,
+): Color {
+    val after = edgeStops.indexOfFirst { (stop, _) -> stop >= position }
+    return when {
+        edgeStops.isEmpty() -> Color.Transparent
+        after == 0 -> edgeStops.first().second
+        after < 0 -> edgeStops.last().second
+        else -> {
+            val (fromPosition, from) = edgeStops[after - 1]
+            val (toPosition, to) = edgeStops[after]
+            val span = toPosition - fromPosition
+            lerp(from, to, if (span > 0f) (position - fromPosition) / span else 1f)
+        }
+    }
 }
 
 private const val MIN_CHANNEL = 1e-4f
@@ -327,6 +370,9 @@ private const val SPOTLIGHT_INNER_DEPTH_DP = 10
 private const val SPOTLIGHT_OUTER_DEPTH_DP = 7
 private const val SPOTLIGHT_INNER_ALPHA = 0.55f
 private const val SPOTLIGHT_OUTER_ALPHA = 0.30f
+
+/** The glow is baked at 1/4 of the run's resolution: its colour changes slowly along it. */
+private const val SPOTLIGHT_BAKE_SCALE = 4f
 
 /** Keeps the two edges' glows from meeting in the middle of a slim dock. */
 private const val SPOTLIGHT_MAX_DEPTH_FRACTION = 0.3f
