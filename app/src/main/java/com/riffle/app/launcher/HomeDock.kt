@@ -15,11 +15,9 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
@@ -41,8 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
@@ -171,8 +167,6 @@ internal fun DockSlotStrip(
             scrollOffsetPx = scrollState.value,
             maxScrollOffsetPx = scrollState.maxValue,
         )
-    val fadeColor = dockSurfaceColor(dock)
-
     val runsHorizontally = position.isHorizontalEdge
     val contentMainAxisDp = dockSlotContentMainAxisDp(renderedSlotCount, slotMetrics).dp
 
@@ -180,7 +174,12 @@ internal fun DockSlotStrip(
         modifier =
             Modifier
                 .dockRunSize(runsHorizontally, contentViewportMainAxisDp.dp)
-                .clipToBounds(),
+                .clipToBounds()
+                .dockOverflowMask(
+                    runsHorizontally = runsHorizontally,
+                    fadeStart = overflowAffordance.showStart,
+                    fadeEnd = overflowAffordance.showEnd && !suppressEndFade,
+                ),
         contentAlignment = Alignment.Center,
     ) {
         DockSlotRun(
@@ -248,13 +247,6 @@ internal fun DockSlotStrip(
                 }
             }
         }
-
-        if (overflowAffordance.showStart) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
-        }
-        if (overflowAffordance.showEnd && !suppressEndFade) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
-        }
     }
 
     moveToHomeItemId.value?.let { itemId ->
@@ -316,47 +308,6 @@ private fun Modifier.dockRunScroll(
     runsHorizontally: Boolean,
     scrollState: ScrollState,
 ): Modifier = if (runsHorizontally) horizontalScroll(scrollState) else verticalScroll(scrollState)
-
-/** The hint that the strip continues past an edge, drawn across the run at whichever end it is. */
-@Composable
-internal fun BoxScope.DockOverflowFade(
-    runsHorizontally: Boolean,
-    atRunStart: Boolean,
-    color: Color,
-) {
-    val transparent = color.copy(alpha = 0f)
-    val colors = if (atRunStart) listOf(color, transparent) else listOf(transparent, color)
-    Box(
-        modifier =
-            Modifier
-                .align(dockOverflowFadeAlignment(runsHorizontally, atRunStart))
-                .then(
-                    if (runsHorizontally) {
-                        Modifier.width(DOCK_OVERFLOW_FADE_WIDTH_DP.dp).fillMaxHeight()
-                    } else {
-                        Modifier.height(DOCK_OVERFLOW_FADE_WIDTH_DP.dp).fillMaxWidth()
-                    },
-                )
-                .background(
-                    if (runsHorizontally) {
-                        Brush.horizontalGradient(colors = colors)
-                    } else {
-                        Brush.verticalGradient(colors = colors)
-                    },
-                ),
-    )
-}
-
-internal fun dockOverflowFadeAlignment(
-    runsHorizontally: Boolean,
-    atRunStart: Boolean,
-): Alignment =
-    when {
-        runsHorizontally && atRunStart -> Alignment.CenterStart
-        runsHorizontally -> Alignment.CenterEnd
-        atRunStart -> Alignment.TopCenter
-        else -> Alignment.BottomCenter
-    }
 
 @Composable
 private fun WidgetPickerDockPlaceholder(

@@ -28,7 +28,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.riffle.core.domain.launcher.home.DockModel
 
 /**
  * The dock's dynamic side: whatever the active mode lists there -- in grid mode the apps the dock is
@@ -45,7 +44,6 @@ import com.riffle.core.domain.launcher.home.DockModel
 @Composable
 @Suppress("LongParameterList")
 internal fun DockDynamicSection(
-    dock: DockModel,
     entries: List<DockDynamicEntry>,
     slotMetrics: DockSlotRenderMetrics,
     mainAxisDp: Int,
@@ -107,8 +105,14 @@ internal fun DockDynamicSection(
     // (#1175).
     val overflowAffordance =
         DockOverflowAffordance(scrollOffsetPx = scrollState.value, maxScrollOffsetPx = scrollState.maxValue)
-    val fadeColor = dockSurfaceColor(dock)
-    Box {
+    Box(
+        modifier =
+            Modifier.dockOverflowMask(
+                runsHorizontally = runsHorizontally,
+                fadeStart = overflowAffordance.showStart && !suppressStartFade,
+                fadeEnd = overflowAffordance.showEnd,
+            ),
+    ) {
         if (runsHorizontally) {
             Row(
                 modifier = runModifier,
@@ -121,12 +125,6 @@ internal fun DockDynamicSection(
                 verticalArrangement = Arrangement.spacedBy(spacingDp.coerceAtLeast(0).dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) { tiles() }
-        }
-        if (overflowAffordance.showStart && !suppressStartFade) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
-        }
-        if (overflowAffordance.showEnd) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
         }
     }
 }
