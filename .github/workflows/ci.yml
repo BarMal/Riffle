@@ -85,6 +85,19 @@ jobs:
           disable-animations: true
           script: ./gradlew deviceVerify
 
+      # Keeps the instrumentation report and the device's logcat (UTP writes it under
+      # androidTest-results) when a device run fails, so a failure can be diagnosed from the run.
+      - name: Upload device test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-test-results
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
   screenshots:
     # Renders every JVM screenshot test and uploads the PNGs so each PR has reviewable images.
     # Record-only (not a merge gate) until goldens are committed; then CI turns comparison on with
