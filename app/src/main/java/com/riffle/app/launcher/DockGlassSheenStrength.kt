@@ -2,11 +2,13 @@ package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.CacheDrawScope
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -88,6 +90,9 @@ internal fun dockGlassSheenAlpha(
  * the dock's background, which clips to [shape], so every layer follows the dock's corners.
  * [alphaProvider] is the dock pull's background fade, read at draw time. A no-op when liquid
  * glass is switched off, which keeps today's flat look for anyone who turned it off.
+ *
+ * The gradients are built once per size (and strength), not on every frame: the dock redraws on
+ * every frame of a drag or pull, and the pull only changes the fade, applied as a plain alpha.
  */
 @Composable
 internal fun Modifier.dockGlassSheen(
@@ -96,91 +101,116 @@ internal fun Modifier.dockGlassSheen(
     alphaProvider: () -> Float,
 ): Modifier {
     if (!LocalLiquidGlassSettings.current.enabled) return this
-    return drawWithContent {
-        val fade = alphaProvider().coerceIn(0f, 1f)
-        if (fade > 0f && size.width > 0f && size.height > 0f) {
-            drawGlassSheen(shape, strength, fade)
+    return drawWithCache {
+        val sheen = if (size.width > 0f && size.height > 0f) buildGlassSheen(shape, strength) else null
+        onDrawWithContent {
+            val fade = alphaProvider().coerceIn(0f, 1f)
+            if (sheen != null && fade > 0f) drawGlassSheen(sheen, fade)
+            drawContent()
         }
-        drawContent()
     }
 }
 
+/** One sheen layer: a brush filling a rect. */
+private class SheenBand(
+    val brush: Brush,
+    val topLeft: Offset,
+    val size: Size,
+)
+
+private class GlassSheen(
+    val bands: List<SheenBand>,
+    val border: Outline?,
+    val borderColor: Color,
+    val borderStroke: Stroke,
+)
+
 @Suppress("LongMethod")
-private fun DrawScope.drawGlassSheen(
+private fun CacheDrawScope.buildGlassSheen(
     shape: Shape,
     strength: DockGlassSheenStrength,
-    fade: Float,
-) {
-    val highlight = fade * strength.highlight
-    val rimShoulder = Color.White.copy(alpha = dockGlassSheenAlpha(RIM_SHOULDER_ALPHA, highlight))
-    val shadow = fade * strength.shadow
-    val border = fade * strength.border
+): GlassSheen {
+    val highlight = strength.highlight
+    val white = { alpha: Float -> Color.White.copy(alpha = dockGlassSheenAlpha(alpha, highlight)) }
     val cornerPx = DOCK_SHEEN_REFERENCE_CORNER_DP.dp.toPx()
-
-    // 1. Top specular.
     val specularHeight = minOf(cornerPx * SPECULAR_CORNER_MULTIPLIER, size.height * SPECULAR_MAX_FRACTION)
-    drawRect(
-        brush =
-            Brush.verticalGradient(
-                0f to Color.White.copy(alpha = dockGlassSheenAlpha(SPECULAR_TOP_ALPHA, highlight)),
-                SPECULAR_MID_STOP to Color.White.copy(alpha = dockGlassSheenAlpha(SPECULAR_MID_ALPHA, highlight)),
-                1f to Color.Transparent,
-                startY = 0f,
-                endY = specularHeight,
-            ),
-        size = Size(size.width, specularHeight),
-    )
-
-    // 2. Caustic light spot.
-    val causticCenter = Offset(size.width * CAUSTIC_X, size.height * CAUSTIC_Y)
-    drawRect(
-        brush =
-            Brush.radialGradient(
-                0f to Color.White.copy(alpha = dockGlassSheenAlpha(CAUSTIC_CENTER_ALPHA, highlight)),
-                CAUSTIC_MID_STOP to Color.White.copy(alpha = dockGlassSheenAlpha(CAUSTIC_MID_ALPHA, highlight)),
-                1f to Color.Transparent,
-                center = causticCenter,
-                radius = minOf(size.width, size.height) * CAUSTIC_RADIUS_FRACTION,
-            ),
-    )
-
-    // 3. Bottom inner shadow.
     val shadowHeight = size.height * SHADOW_HEIGHT_FRACTION
-    drawRect(
-        brush =
-            Brush.verticalGradient(
-                0f to Color.Transparent,
-                1f to Color.Black.copy(alpha = dockGlassSheenAlpha(SHADOW_ALPHA, shadow)),
-                startY = size.height - shadowHeight,
-                endY = size.height,
-            ),
-        topLeft = Offset(0f, size.height - shadowHeight),
-        size = Size(size.width, shadowHeight),
-    )
-
-    // 4. Rim line: 1dp, one dp below the top edge, bell-shaped along its length.
     val rimPx = RIM_LINE_DP.dp.toPx()
-    drawRect(
-        brush =
-            Brush.horizontalGradient(
-                0f to Color.Transparent,
-                RIM_SHOULDER_STOP to rimShoulder,
-                0.5f to Color.White.copy(alpha = dockGlassSheenAlpha(RIM_PEAK_ALPHA, highlight)),
-                (1f - RIM_SHOULDER_STOP) to rimShoulder,
-                1f to Color.Transparent,
+
+    val bands =
+        listOf(
+            // 1. Top specular.
+            SheenBand(
+                brush =
+                    Brush.verticalGradient(
+                        0f to white(SPECULAR_TOP_ALPHA),
+                        SPECULAR_MID_STOP to white(SPECULAR_MID_ALPHA),
+                        1f to Color.Transparent,
+                        startY = 0f,
+                        endY = specularHeight,
+                    ),
+                topLeft = Offset.Zero,
+                size = Size(size.width, specularHeight),
             ),
-        topLeft = Offset(0f, rimPx),
-        size = Size(size.width, rimPx),
-    )
+            // 2. Caustic light spot.
+            SheenBand(
+                brush =
+                    Brush.radialGradient(
+                        0f to white(CAUSTIC_CENTER_ALPHA),
+                        CAUSTIC_MID_STOP to white(CAUSTIC_MID_ALPHA),
+                        1f to Color.Transparent,
+                        center = Offset(size.width * CAUSTIC_X, size.height * CAUSTIC_Y),
+                        radius = minOf(size.width, size.height) * CAUSTIC_RADIUS_FRACTION,
+                    ),
+                topLeft = Offset.Zero,
+                size = size,
+            ),
+            // 3. Bottom inner shadow.
+            SheenBand(
+                brush =
+                    Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = dockGlassSheenAlpha(SHADOW_ALPHA, strength.shadow)),
+                        startY = size.height - shadowHeight,
+                        endY = size.height,
+                    ),
+                topLeft = Offset(0f, size.height - shadowHeight),
+                size = Size(size.width, shadowHeight),
+            ),
+            // 4. Rim line: 1dp, one dp below the top edge, bell-shaped along its length.
+            SheenBand(
+                brush =
+                    Brush.horizontalGradient(
+                        0f to Color.Transparent,
+                        RIM_SHOULDER_STOP to white(RIM_SHOULDER_ALPHA),
+                        0.5f to white(RIM_PEAK_ALPHA),
+                        (1f - RIM_SHOULDER_STOP) to white(RIM_SHOULDER_ALPHA),
+                        1f to Color.Transparent,
+                    ),
+                topLeft = Offset(0f, rimPx),
+                size = Size(size.width, rimPx),
+            ),
+        )
 
     // 5. Glass border. Centred on the edge and clipped to the shape, so twice the width draws
     // 1dp inside -- the same trick dockSurfaceAppearance's own pull-branch outline uses.
-    if (border > 0f) {
-        drawOutline(
-            outline = shape.createOutline(size, layoutDirection, this),
-            color = GLASS_BORDER_COLOR.copy(alpha = dockGlassSheenAlpha(GLASS_BORDER_ALPHA, border)),
-            style = Stroke(width = 2 * GLASS_BORDER_DP.dp.toPx()),
-        )
+    return GlassSheen(
+        bands = bands,
+        border = if (strength.border > 0f) shape.createOutline(size, layoutDirection, this) else null,
+        borderColor = GLASS_BORDER_COLOR.copy(alpha = dockGlassSheenAlpha(GLASS_BORDER_ALPHA, strength.border)),
+        borderStroke = Stroke(width = 2 * GLASS_BORDER_DP.dp.toPx()),
+    )
+}
+
+private fun DrawScope.drawGlassSheen(
+    sheen: GlassSheen,
+    fade: Float,
+) {
+    sheen.bands.forEach { band ->
+        drawRect(brush = band.brush, topLeft = band.topLeft, size = band.size, alpha = fade)
+    }
+    sheen.border?.let { border ->
+        drawOutline(outline = border, color = sheen.borderColor, alpha = fade, style = sheen.borderStroke)
     }
 }
 
