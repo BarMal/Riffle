@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.graphics.Color
 import kotlin.math.abs
 import kotlin.math.exp
 
@@ -12,7 +13,7 @@ import kotlin.math.exp
  *
  * A profile is [DOCK_SPOTLIGHT_PROFILE_SAMPLES] premultiplied RGBA samples spread evenly along the
  * run: small enough that easing one costs nothing per frame, and it bakes straight into the edge
- * images (see `SpotlightBand.kt`) at that same resolution.
+ * image (see `DockSpotlightGlowBaker.kt`) at that same resolution.
  */
 
 /** Samples along the run; the desktop plugin's own per-edge resolution. */
@@ -42,6 +43,35 @@ internal fun dockSpotlightTargetProfile(stops: List<DockSpotlightStop>): FloatAr
         }
     }
     return profile
+}
+
+/**
+ * The glow's colour [position] (0..1) of the way along the run: linear between the two
+ * [edgeStops] either side of it, in unpremultiplied colour -- what a linear gradient through the
+ * same stops draws.
+ */
+internal fun dockSpotlightColorAt(
+    edgeStops: Array<Pair<Float, Color>>,
+    position: Float,
+): Color {
+    val after = edgeStops.indexOfFirst { (stop, _) -> stop >= position }
+    return when {
+        edgeStops.isEmpty() -> Color.Transparent
+        after == 0 -> edgeStops.first().second
+        after < 0 -> edgeStops.last().second
+        else -> {
+            val (fromPosition, from) = edgeStops[after - 1]
+            val (toPosition, to) = edgeStops[after]
+            val span = toPosition - fromPosition
+            val t = if (span > 0f) (position - fromPosition) / span else 1f
+            Color(
+                red = from.red + (to.red - from.red) * t,
+                green = from.green + (to.green - from.green) * t,
+                blue = from.blue + (to.blue - from.blue) * t,
+                alpha = from.alpha + (to.alpha - from.alpha) * t,
+            )
+        }
+    }
 }
 
 /** Whether [profile] lights anything at all. */

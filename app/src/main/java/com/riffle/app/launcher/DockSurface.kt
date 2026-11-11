@@ -377,7 +377,7 @@ internal fun DockSurfaceStrip(
                         Modifier
                     },
                 )
-                .dockSpotlight(spotlight, position, backgroundAlpha)
+                .dockSpotlight(spotlight, position, dock.cornerRadiusDp, backgroundAlpha)
                 .dockDropHighlight(
                     dock,
                     presentation.interactions.isDropHighlighted,
