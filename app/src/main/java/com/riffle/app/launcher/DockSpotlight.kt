@@ -66,19 +66,21 @@ internal fun dockSpotlightStops(
     centers: List<Pair<Float, Color?>>,
     runLengthPx: Float,
 ): List<DockSpotlightStop> {
-    if (runLengthPx <= 0f) return emptyList()
     val visible =
         centers
-            .filter { (centerPx, _) -> centerPx in 0f..runLengthPx }
+            .filter { (centerPx, _) -> runLengthPx > 0f && centerPx in 0f..runLengthPx }
             .map { (centerPx, color) -> centerPx / runLengthPx to color?.let(::dockSpotlightGlowColor) }
             .sortedBy { (position, _) -> position }
     val lit = visible.mapNotNull { (position, color) -> color?.let { position to it } }
-    if (lit.isEmpty()) return emptyList()
-    return visible.map { (position, color) ->
-        DockSpotlightStop(
-            position = position,
-            color = color ?: lit.minBy { (litPosition, _) -> abs(litPosition - position) }.second.copy(alpha = 0f),
-        )
+    return if (lit.isEmpty()) {
+        emptyList()
+    } else {
+        visible.map { (position, color) ->
+            DockSpotlightStop(
+                position = position,
+                color = color ?: lit.minBy { (litPosition, _) -> abs(litPosition - position) }.second.copy(alpha = 0f),
+            )
+        }
     }
 }
 
