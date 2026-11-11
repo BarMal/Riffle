@@ -182,10 +182,12 @@ private fun DockDynamicSectionTile(
     // like a different *kind* of control than its neighbours purely because of which section drew
     // it, not because of anything about the app itself. This tile now shares that same mask.
     val tileShape = RoundedCornerShape(DOCK_ICON_MASK_CORNER_RADIUS_DP.dp)
+    val spotlightColor = rememberDockSpotlightColor(identity = identity, appIconLoader = appIconLoader)
     Box(
         modifier =
             Modifier
                 .requiredSize(iconSizeDp.dp)
+                .dockSpotlightSource(key = "dynamic:${entry.key}", color = spotlightColor)
                 .testTag(dockDynamicSectionTileTestTag(label))
                 .semantics {
                     contentDescription = entry.contentDescription

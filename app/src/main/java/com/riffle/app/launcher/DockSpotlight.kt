@@ -28,6 +28,7 @@ import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 /*
  * The dock's spotlight: each icon's own colour glows onto the dock's two long edges at the point
@@ -39,30 +40,46 @@ import kotlinx.coroutines.withContext
  * edge facing into the screen carries the stronger glow; the edge against the screen's own edge a
  * weaker one, like light spilling out of the dock.
  *
- * Only icons with a vivid enough dominant colour contribute (see `dominantColorOf`) -- grey icons,
- * folders and widgets add nothing, matching the desktop version's "neutral content contributes 0".
+ * Only icons with a vivid enough dominant colour light the edge (see `dominantColorOf`). Grey icons,
+ * folders and widgets are still placed on the run, but as unlit points: the glow fades out across
+ * them rather than a neighbour's colour carrying straight through, matching the desktop version's
+ * "neutral content contributes 0".
  */
 
-/** One lit point along the dock's run: [position] is 0..1 from the run's start. */
+/**
+ * One point along the dock's run: [position] is 0..1 from the run's start. An unlit point (an icon
+ * with no colour of its own) carries its nearest lit neighbour's colour at zero alpha, so the glow
+ * fades out toward it without the gradient passing through black on the way.
+ */
 internal data class DockSpotlightStop(
     val position: Float,
     val color: Color,
 )
 
 /**
- * Turns icon centres (in px along the run, relative to the run's start) into the sorted gradient
- * stops the edge glow is drawn from. Centres outside the visible run -- icons scrolled out of the
- * strip -- are dropped, so the glow follows what is actually on screen.
+ * Turns icon centres (in px along the run, relative to the run's start) and their colours (null for
+ * an icon with none) into the sorted gradient stops the edge glow is drawn from. Centres outside the
+ * visible run -- icons scrolled out of the strip -- are dropped, so the glow follows what is
+ * actually on screen. Nothing lit, nothing to draw.
  */
 internal fun dockSpotlightStops(
-    centers: List<Pair<Float, Color>>,
+    centers: List<Pair<Float, Color?>>,
     runLengthPx: Float,
 ): List<DockSpotlightStop> {
     if (runLengthPx <= 0f) return emptyList()
-    return centers
-        .filter { (centerPx, _) -> centerPx in 0f..runLengthPx }
-        .map { (centerPx, color) -> DockSpotlightStop(centerPx / runLengthPx, dockSpotlightGlowColor(color)) }
-        .sortedBy { stop -> stop.position }
+    val visible =
+        centers
+            .filter { (centerPx, _) -> centerPx in 0f..runLengthPx }
+            .map { (centerPx, color) -> centerPx / runLengthPx to color?.let(::dockSpotlightGlowColor) }
+            .sortedBy { (position, _) -> position }
+    val lit = visible.mapNotNull { (position, color) -> color?.let { position to it } }
+    if (lit.isEmpty()) return emptyList()
+    return visible.map { (position, color) ->
+        DockSpotlightStop(
+            position = position,
+            color = color ?: lit.minBy { (litPosition, _) -> abs(litPosition - position) }.second.copy(alpha = 0f),
+        )
+    }
 }
 
 /**
@@ -89,7 +106,7 @@ internal fun dockSpotlightEdgeStops(
     alpha: Float,
 ): Array<Pair<Float, Color>> {
     if (stops.isEmpty() || alpha <= 0f) return emptyArray()
-    val lit = stops.map { stop -> stop.position to stop.color.copy(alpha = alpha) }
+    val lit = stops.map { stop -> stop.position to stop.color.copy(alpha = stop.color.alpha * alpha) }
     return (listOf(0f to lit.first().second) + lit + listOf(1f to lit.last().second)).toTypedArray()
 }
 
@@ -100,13 +117,13 @@ internal fun dockSpotlightEdgeStops(
  */
 @Stable
 internal class DockSpotlightState {
-    private val sources = mutableStateMapOf<Any, Pair<Offset, Color>>()
+    private val sources = mutableStateMapOf<Any, Pair<Offset, Color?>>()
     private var originInRoot by mutableStateOf(Offset.Zero)
 
     fun report(
         key: Any,
         centerInRoot: Offset,
-        color: Color,
+        color: Color?,
     ) {
         sources[key] = centerInRoot to color
     }
@@ -168,8 +185,8 @@ internal fun rememberDockSpotlightColor(
 }
 
 /**
- * Reports this icon's centre and [color] to the enclosing dock's spotlight. A no-op outside a
- * spotlit dock, or for an icon with no colour of its own (null [color]).
+ * Reports this icon's centre and [color] to the enclosing dock's spotlight -- null [color] for an
+ * icon with none, which still marks its place on the run as unlit. A no-op outside a spotlit dock.
  */
 @Composable
 internal fun Modifier.dockSpotlightSource(
@@ -180,17 +197,13 @@ internal fun Modifier.dockSpotlightSource(
     DisposableEffect(spotlight, key, color) {
         onDispose { spotlight.remove(key) }
     }
-    return if (color == null) {
-        this
-    } else {
-        onGloballyPositioned { coordinates ->
-            val size = coordinates.size
-            spotlight.report(
-                key = key,
-                centerInRoot = coordinates.positionInRoot() + Offset(size.width / 2f, size.height / 2f),
-                color = color,
-            )
-        }
+    return onGloballyPositioned { coordinates ->
+        val size = coordinates.size
+        spotlight.report(
+            key = key,
+            centerInRoot = coordinates.positionInRoot() + Offset(size.width / 2f, size.height / 2f),
+            color = color,
+        )
     }
 }
 

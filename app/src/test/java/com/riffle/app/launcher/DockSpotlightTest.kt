@@ -62,4 +62,24 @@ class DockSpotlightTest {
         assertTrue(dockSpotlightEdgeStops(emptyList(), alpha = 1f).isEmpty())
         assertTrue(dockSpotlightEdgeStops(listOf(DockSpotlightStop(0.5f, Color.Red)), alpha = 0f).isEmpty())
     }
+
+    @Test
+    fun anUnlitIconFadesTheGlowInsteadOfCarryingItsNeighboursColour() {
+        val stops =
+            dockSpotlightStops(
+                centers = listOf(100f to Color.Green, 300f to null),
+                runLengthPx = 400f,
+            )
+
+        assertEquals(listOf(0.25f, 0.75f), stops.map { it.position })
+        assertEquals(0f, stops.last().color.alpha, 1e-6f)
+        // Same hue as its lit neighbour, so the fade does not pass through black.
+        assertEquals(stops.first().color.copy(alpha = 0f), stops.last().color)
+        assertEquals(0f, dockSpotlightEdgeStops(stops, alpha = 0.5f).last().second.alpha, 1e-6f)
+    }
+
+    @Test
+    fun drawsNothingWhenNoIconIsLit() {
+        assertTrue(dockSpotlightStops(listOf(100f to null, 200f to null), runLengthPx = 400f).isEmpty())
+    }
 }

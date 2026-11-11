@@ -11,7 +11,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.DockVisualEffect
 
 /*
  * The dock's glass sheen: the layers the desktop glass theme's pills and panels draw over their
@@ -24,16 +26,62 @@ import androidx.compose.ui.unit.dp
  *  4. Rim line       -- a 1dp highlight along the top, brightest in the middle, gone at the ends.
  *  5. Glass border   -- a 1dp cool-blue outline, the desktop's "chromatic" edge.
  *
- * Desktop values are kept as-is, except the border: the desktop's border "breathes" between 0.07
- * and 0.18 alpha. A launcher's dock is on screen all the time, so a never-ending animation here
- * would cost battery for very little, and the border sits still at the middle of that range.
+ * The desktop's values are the baseline, tuned there for dark glass. [dockGlassSheenStrength]
+ * scales them to the dock's own appearance: a light dock swallows white highlights, so they (and
+ * the shadow that gives the pane its depth) strengthen as the dock gets lighter, the way the
+ * desktop plugin's sheen adapts to the content under it. The border sits at the middle of the
+ * desktop's 0.07..0.18 range.
  */
 
-/** The alpha a sheen layer is drawn at: its own, scaled by the dock pull's background fade. */
+/** Multipliers on the desktop's baseline alphas, per group of layers. */
+internal data class DockGlassSheenStrength(
+    /** Specular, caustic spot and rim line. */
+    val highlight: Float,
+    /** Bottom inner shadow. */
+    val shadow: Float,
+    /** Glass border; 0 draws none. */
+    val border: Float,
+)
+
+/**
+ * How strongly the sheen is drawn on a dock filled with [surface] (its alpha already the dock's
+ * background opacity) in the [effect] visual style.
+ *
+ * Lightness is what the eye actually gets through the dock: the fill's own luminance, weighted by
+ * its opacity, over an assumed mid-dark wallpaper for the rest. So a clear (0%) dock is treated as
+ * dark glass and gets the desktop's values, and a solid light dock gets the strongest treatment.
+ *
+ * - FLAT: the baseline.
+ * - ELEVATED: brighter highlights and a deeper shadow -- a pane raised toward the light.
+ * - OUTLINED: no glass border, since that style already draws its own outline.
+ */
+internal fun dockGlassSheenStrength(
+    effect: DockVisualEffect,
+    surface: Color,
+): DockGlassSheenStrength {
+    val opacity = surface.alpha.coerceIn(0f, 1f)
+    val seenLuminance = surface.luminance() * opacity + ASSUMED_WALLPAPER_LUMINANCE * (1f - opacity)
+    val lightness =
+        ((seenLuminance - SHEEN_DARK_LUMINANCE) / (SHEEN_LIGHT_LUMINANCE - SHEEN_DARK_LUMINANCE)).coerceIn(0f, 1f)
+    val highlight = 1f + (LIGHT_HIGHLIGHT_BOOST - 1f) * lightness
+    val shadow = 1f + (LIGHT_SHADOW_BOOST - 1f) * lightness
+    val border = 1f + (LIGHT_BORDER_BOOST - 1f) * lightness
+    return when (effect) {
+        DockVisualEffect.FLAT -> DockGlassSheenStrength(highlight, shadow, border)
+        DockVisualEffect.ELEVATED ->
+            DockGlassSheenStrength(highlight * ELEVATED_HIGHLIGHT_BOOST, shadow * ELEVATED_SHADOW_BOOST, border)
+        DockVisualEffect.OUTLINED -> DockGlassSheenStrength(highlight, shadow, border = 0f)
+    }
+}
+
+/**
+ * The alpha a sheen layer is drawn at: its baseline, scaled by [scale] (the dock pull's fade times
+ * the layer group's strength), and never past fully opaque.
+ */
 internal fun dockGlassSheenAlpha(
     layerAlpha: Float,
-    fade: Float,
-): Float = layerAlpha * fade.coerceIn(0f, 1f)
+    scale: Float,
+): Float = (layerAlpha * scale.coerceAtLeast(0f)).coerceAtMost(1f)
 
 /**
  * Draws the glass sheen over this node's background and under its content. Chain it right after
@@ -44,22 +92,29 @@ internal fun dockGlassSheenAlpha(
 @Composable
 internal fun Modifier.dockGlassSheen(
     shape: Shape,
+    strength: DockGlassSheenStrength,
     alphaProvider: () -> Float,
 ): Modifier {
     if (!LocalLiquidGlassSettings.current.enabled) return this
     return drawWithContent {
         val fade = alphaProvider().coerceIn(0f, 1f)
         if (fade > 0f && size.width > 0f && size.height > 0f) {
-            drawGlassSheen(shape, fade)
+            drawGlassSheen(shape, strength, fade)
         }
         drawContent()
     }
 }
 
+@Suppress("LongMethod")
 private fun DrawScope.drawGlassSheen(
     shape: Shape,
+    strength: DockGlassSheenStrength,
     fade: Float,
 ) {
+    val highlight = fade * strength.highlight
+    val rimShoulder = Color.White.copy(alpha = dockGlassSheenAlpha(RIM_SHOULDER_ALPHA, highlight))
+    val shadow = fade * strength.shadow
+    val border = fade * strength.border
     val cornerPx = DOCK_SHEEN_REFERENCE_CORNER_DP.dp.toPx()
 
     // 1. Top specular.
@@ -67,8 +122,8 @@ private fun DrawScope.drawGlassSheen(
     drawRect(
         brush =
             Brush.verticalGradient(
-                0f to Color.White.copy(alpha = dockGlassSheenAlpha(SPECULAR_TOP_ALPHA, fade)),
-                SPECULAR_MID_STOP to Color.White.copy(alpha = dockGlassSheenAlpha(SPECULAR_MID_ALPHA, fade)),
+                0f to Color.White.copy(alpha = dockGlassSheenAlpha(SPECULAR_TOP_ALPHA, highlight)),
+                SPECULAR_MID_STOP to Color.White.copy(alpha = dockGlassSheenAlpha(SPECULAR_MID_ALPHA, highlight)),
                 1f to Color.Transparent,
                 startY = 0f,
                 endY = specularHeight,
@@ -81,8 +136,8 @@ private fun DrawScope.drawGlassSheen(
     drawRect(
         brush =
             Brush.radialGradient(
-                0f to Color.White.copy(alpha = dockGlassSheenAlpha(CAUSTIC_CENTER_ALPHA, fade)),
-                CAUSTIC_MID_STOP to Color.White.copy(alpha = dockGlassSheenAlpha(CAUSTIC_MID_ALPHA, fade)),
+                0f to Color.White.copy(alpha = dockGlassSheenAlpha(CAUSTIC_CENTER_ALPHA, highlight)),
+                CAUSTIC_MID_STOP to Color.White.copy(alpha = dockGlassSheenAlpha(CAUSTIC_MID_ALPHA, highlight)),
                 1f to Color.Transparent,
                 center = causticCenter,
                 radius = minOf(size.width, size.height) * CAUSTIC_RADIUS_FRACTION,
@@ -95,7 +150,7 @@ private fun DrawScope.drawGlassSheen(
         brush =
             Brush.verticalGradient(
                 0f to Color.Transparent,
-                1f to Color.Black.copy(alpha = dockGlassSheenAlpha(SHADOW_ALPHA, fade)),
+                1f to Color.Black.copy(alpha = dockGlassSheenAlpha(SHADOW_ALPHA, shadow)),
                 startY = size.height - shadowHeight,
                 endY = size.height,
             ),
@@ -109,9 +164,9 @@ private fun DrawScope.drawGlassSheen(
         brush =
             Brush.horizontalGradient(
                 0f to Color.Transparent,
-                RIM_SHOULDER_STOP to Color.White.copy(alpha = dockGlassSheenAlpha(RIM_SHOULDER_ALPHA, fade)),
-                0.5f to Color.White.copy(alpha = dockGlassSheenAlpha(RIM_PEAK_ALPHA, fade)),
-                (1f - RIM_SHOULDER_STOP) to Color.White.copy(alpha = dockGlassSheenAlpha(RIM_SHOULDER_ALPHA, fade)),
+                RIM_SHOULDER_STOP to rimShoulder,
+                0.5f to Color.White.copy(alpha = dockGlassSheenAlpha(RIM_PEAK_ALPHA, highlight)),
+                (1f - RIM_SHOULDER_STOP) to rimShoulder,
                 1f to Color.Transparent,
             ),
         topLeft = Offset(0f, rimPx),
@@ -120,11 +175,13 @@ private fun DrawScope.drawGlassSheen(
 
     // 5. Glass border. Centred on the edge and clipped to the shape, so twice the width draws
     // 1dp inside -- the same trick dockSurfaceAppearance's own pull-branch outline uses.
-    drawOutline(
-        outline = shape.createOutline(size, layoutDirection, this),
-        color = GLASS_BORDER_COLOR.copy(alpha = dockGlassSheenAlpha(GLASS_BORDER_ALPHA, fade)),
-        style = Stroke(width = 2 * GLASS_BORDER_DP.dp.toPx()),
-    )
+    if (border > 0f) {
+        drawOutline(
+            outline = shape.createOutline(size, layoutDirection, this),
+            color = GLASS_BORDER_COLOR.copy(alpha = dockGlassSheenAlpha(GLASS_BORDER_ALPHA, border)),
+            style = Stroke(width = 2 * GLASS_BORDER_DP.dp.toPx()),
+        )
+    }
 }
 
 /**
@@ -154,6 +211,18 @@ private const val RIM_LINE_DP = 1
 private const val RIM_SHOULDER_STOP = 0.12f
 private const val RIM_SHOULDER_ALPHA = 0.10f
 private const val RIM_PEAK_ALPHA = 0.26f
+
+/** Riffle's default wallpapers and most photos sit around here; used for the see-through share. */
+private const val ASSUMED_WALLPAPER_LUMINANCE = 0.3f
+
+/** Below this the dock reads as dark glass (desktop values); above the light one, fully light. */
+private const val SHEEN_DARK_LUMINANCE = 0.3f
+private const val SHEEN_LIGHT_LUMINANCE = 0.7f
+private const val LIGHT_HIGHLIGHT_BOOST = 2.4f
+private const val LIGHT_SHADOW_BOOST = 1.8f
+private const val LIGHT_BORDER_BOOST = 1.6f
+private const val ELEVATED_HIGHLIGHT_BOOST = 1.3f
+private const val ELEVATED_SHADOW_BOOST = 1.5f
 
 private val GLASS_BORDER_COLOR = Color(red = 0.55f, green = 0.66f, blue = 1.0f)
 private const val GLASS_BORDER_DP = 1
