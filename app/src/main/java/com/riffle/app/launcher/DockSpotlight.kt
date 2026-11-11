@@ -180,14 +180,17 @@ internal fun Modifier.dockSpotlightSource(
     DisposableEffect(spotlight, key, color) {
         onDispose { spotlight.remove(key) }
     }
-    if (color == null) return this
-    return onGloballyPositioned { coordinates ->
-        val size = coordinates.size
-        spotlight.report(
-            key = key,
-            centerInRoot = coordinates.positionInRoot() + Offset(size.width / 2f, size.height / 2f),
-            color = color,
-        )
+    return if (color == null) {
+        this
+    } else {
+        onGloballyPositioned { coordinates ->
+            val size = coordinates.size
+            spotlight.report(
+                key = key,
+                centerInRoot = coordinates.positionInRoot() + Offset(size.width / 2f, size.height / 2f),
+                color = color,
+            )
+        }
     }
 }
 
