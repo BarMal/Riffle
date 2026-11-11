@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -359,6 +360,11 @@ internal fun DockSurfaceStrip(
         }
     }
 
+    // The spotlight belongs to the dock's own background, so a strip drawn without one (the
+    // expanded shelf's, which sits on the shelf's background instead) carries no glow either.
+    val spotlight = rememberDockSpotlightState()?.takeIf { renderBackground }
+    val backgroundAlpha = LocalDockBackgroundAlpha.current
+
     Box(
         modifier =
             modifier
@@ -371,6 +377,7 @@ internal fun DockSurfaceStrip(
                         Modifier
                     },
                 )
+                .dockSpotlight(spotlight, position, backgroundAlpha)
                 .dockDropHighlight(
                     dock,
                     presentation.interactions.isDropHighlighted,
@@ -382,26 +389,28 @@ internal fun DockSurfaceStrip(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        // Nothing dynamic to show is the common case and stays exactly as it was: one strip,
-        // centred, with no arrangement wrapped around it to shift it by a fraction of a pixel.
-        if (!showDynamicSection) {
-            staticSide(false)
-        } else {
-            DockSectionRun(runsHorizontally = runsHorizontally) {
-                staticSide(true)
-                DockSectionDivider(runsHorizontally = runsHorizontally)
-                DockDynamicSection(
-                    dock = dock,
-                    entries = dynamicEntries,
-                    slotMetrics = surfaceMetrics.slotMetrics,
-                    mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
-                    runsHorizontally = runsHorizontally,
-                    appIconLoader = appIconLoader,
-                    onAction = presentation.interactions.onAction,
-                    onEntryDelegated = onDynamicEntryDelegated,
-                    reducedMotion = presentation.interactions.reducedMotion,
-                    suppressStartFade = true,
-                )
+        CompositionLocalProvider(LocalDockSpotlight provides spotlight) {
+            // Nothing dynamic to show is the common case and stays exactly as it was: one strip,
+            // centred, with no arrangement wrapped around it to shift it by a fraction of a pixel.
+            if (!showDynamicSection) {
+                staticSide(false)
+            } else {
+                DockSectionRun(runsHorizontally = runsHorizontally) {
+                    staticSide(true)
+                    DockSectionDivider(runsHorizontally = runsHorizontally)
+                    DockDynamicSection(
+                        dock = dock,
+                        entries = dynamicEntries,
+                        slotMetrics = surfaceMetrics.slotMetrics,
+                        mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
+                        runsHorizontally = runsHorizontally,
+                        appIconLoader = appIconLoader,
+                        onAction = presentation.interactions.onAction,
+                        onEntryDelegated = onDynamicEntryDelegated,
+                        reducedMotion = presentation.interactions.reducedMotion,
+                        suppressStartFade = true,
+                    )
+                }
             }
         }
     }
