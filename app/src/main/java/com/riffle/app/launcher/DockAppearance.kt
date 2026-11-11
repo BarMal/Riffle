@@ -79,7 +79,7 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
     if (backgroundAlpha === OpaqueDockBackground) {
         var result = this
         if (spec.elevationDp > 0) result = result.shadow(spec.elevationDp.dp, shape)
-        result = result.clip(shape).dockAtRestBackground(shape, dock)
+        result = result.clip(shape).dockAtRestBackground(shape, dock).dockGlassSheen(shape, backgroundAlpha)
         if (spec.outlineWidthDp > 0) {
             result = result.border(spec.outlineWidthDp.dp, MaterialTheme.colorScheme.outlineVariant, shape)
         }
@@ -90,6 +90,7 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val elevationDp = spec.elevationDp
     val outlineWidthDp = spec.outlineWidthDp
+    val sheen = Modifier.dockGlassSheen(shape, backgroundAlpha)
     return graphicsLayer {
         shadowElevation = elevationDp.dp.toPx() * backgroundAlpha()
         this.shape = shape
@@ -107,7 +108,7 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
                 style = Stroke(width = 2 * outlineWidthDp.dp.toPx()),
             )
         }
-    }
+    }.then(sheen)
 }
 
 /**
