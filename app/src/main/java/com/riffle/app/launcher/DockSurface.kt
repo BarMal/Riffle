@@ -362,7 +362,7 @@ internal fun DockSurfaceStrip(
 
     // The spotlight belongs to the dock's own background, so a strip drawn without one (the
     // expanded shelf's, which sits on the shelf's background instead) carries no glow either.
-    val spotlight = rememberDockSpotlightState()?.takeIf { renderBackground }
+    val spotlight = rememberDockSpotlightState(position, enabled = renderBackground)
     val backgroundAlpha = LocalDockBackgroundAlpha.current
 
     Box(
