@@ -23,10 +23,11 @@ class DockSpotlightFlowTest {
         val target = dockSpotlightTargetProfile(listOf(DockSpotlightStop(0.5f, Color.Red.copy(alpha = 0.5f))))
 
         assertTrue(dockSpotlightProfileIsLit(target))
-        // Held out to both ends, as the edge stops are.
-        assertEquals(0.5f, target[0], 1e-6f)
-        assertEquals(0f, target[1], 1e-6f)
-        assertEquals(0.5f, target[3], 1e-6f)
+        // Held out to both ends, as the edge stops are. Within one 8-bit step: sRGB colours are
+        // stored at 8 bits a channel, so 0.5 alpha reads back as 128/255.
+        assertEquals(0.5f, target[0], EIGHT_BIT_STEP)
+        assertEquals(0f, target[1], EIGHT_BIT_STEP)
+        assertEquals(0.5f, target[3], EIGHT_BIT_STEP)
     }
 
     @Test
@@ -82,5 +83,9 @@ class DockSpotlightFlowTest {
             val alpha = shown[sample * 4 + 3]
             for (channel in 0 until 3) assertTrue(shown[sample * 4 + channel] <= alpha)
         }
+    }
+
+    private companion object {
+        const val EIGHT_BIT_STEP = 1f / 255f
     }
 }
