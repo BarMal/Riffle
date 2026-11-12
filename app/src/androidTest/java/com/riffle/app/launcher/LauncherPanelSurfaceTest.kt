@@ -12,6 +12,8 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.core.domain.launcher.designsystem.GlassMaterialTokens
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -44,27 +46,38 @@ class LauncherPanelSurfaceTest {
 
         val image = composeRule.onRoot().captureToImage().toPixelMap()
         val actual = image[image.width / 2, image.height / 2]
+        // The surface is Thick glass: the panel tint at that weight's tint alpha over whatever is behind it.
+        // The sheen and the content scrim add a little on top, hence the wider tolerance.
+        val glass = GlassMaterialTokens.forWeight(GlassWeight.Thick)
         val expected =
-            launcherThemeSurfaceTokens(colorScheme = lightScheme).panelColor.compositeOver(wallpaper)
+            launcherThemeSurfaceTokens(colorScheme = lightScheme)
+                .panelColor
+                .copy(alpha = glass.softwareTintAlpha(supportsBlur = true))
+                .compositeOver(wallpaper)
 
-        assertColorClose(expected, actual)
+        assertColorClose(expected, actual, tolerance = GLASS_TOLERANCE)
     }
 
     private fun assertColorClose(
         expected: Color,
         actual: Color,
+        tolerance: Float = 0.02f,
     ) {
         assertTrue(
             "red channel differs: expected=$expected actual=$actual",
-            kotlin.math.abs(expected.red - actual.red) < 0.02f,
+            kotlin.math.abs(expected.red - actual.red) < tolerance,
         )
         assertTrue(
             "green channel differs: expected=$expected actual=$actual",
-            kotlin.math.abs(expected.green - actual.green) < 0.02f,
+            kotlin.math.abs(expected.green - actual.green) < tolerance,
         )
         assertTrue(
             "blue channel differs: expected=$expected actual=$actual",
-            kotlin.math.abs(expected.blue - actual.blue) < 0.02f,
+            kotlin.math.abs(expected.blue - actual.blue) < tolerance,
         )
+    }
+
+    private companion object {
+        const val GLASS_TOLERANCE = 0.06f
     }
 }
