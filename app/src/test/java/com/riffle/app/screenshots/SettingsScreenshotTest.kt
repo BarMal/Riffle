@@ -29,19 +29,19 @@ class SettingsScreenshotTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun sectionsLiquidGlassEnabled() {
-        render(liquidGlassEnabled = true)
+    fun sections() {
+        render(reducedTransparency = false)
     }
 
     @Test
-    fun sectionsLiquidGlassDisabled() {
-        render(liquidGlassEnabled = false)
+    fun sectionsWithReducedTransparency() {
+        render(reducedTransparency = true)
     }
 
-    private fun render(liquidGlassEnabled: Boolean) {
+    private fun render(reducedTransparency: Boolean) {
         val state = ScreenshotFixtures.cardsState().settingsSurfaceState()
         composeRule.setContent {
-            ScreenshotBackdrop(liquidGlassEnabled = liquidGlassEnabled) {
+            ScreenshotBackdrop(reducedTransparency = reducedTransparency) {
                 SettingsSurface(
                     state = state,
                     onAction = {},

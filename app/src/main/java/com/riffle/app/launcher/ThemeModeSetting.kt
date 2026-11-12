@@ -4,7 +4,6 @@ import androidx.compose.runtime.Composable
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 
 @Composable
@@ -18,20 +17,6 @@ internal fun ThemeModeSetting(
         selected = selectedMode,
         onSelect = { mode -> onAction(LauncherShellAction.SelectLauncherThemeMode(mode)) },
         label = { mode -> themeOptionLabel(mode.name, isSelected = false) },
-    )
-}
-
-@Composable
-internal fun ThemePresetSetting(
-    selectedPreset: LauncherThemePreset,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsChoiceRow(
-        title = "Theme preset",
-        options = LauncherThemePreset.entries,
-        selected = selectedPreset,
-        onSelect = { preset -> onAction(LauncherShellAction.SelectLauncherThemePreset(preset)) },
-        label = { preset -> themeOptionLabel(preset.name, isSelected = false) },
     )
 }
 
@@ -55,12 +40,12 @@ internal fun ThemeCornerStyleSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsChoiceRow(
-        title = "Card corners",
-        subtitle = "Override the selected theme preset",
+        title = "Corners",
+        subtitle = "Corner radius of cards, panels, the dock and rows",
         options = LauncherThemeCornerStyle.entries,
         selected = selectedStyle,
         onSelect = { style -> onAction(LauncherShellAction.SelectLauncherThemeCornerStyle(style)) },
-        label = { style -> themeOptionLabel(style.name, isSelected = false) },
+        label = { style -> cornerStyleLabel(style) },
     )
 }
 
@@ -71,13 +56,24 @@ internal fun ThemeTypographySetting(
 ) {
     SettingsChoiceRow(
         title = "Typography",
-        subtitle = "Override the selected theme preset",
         options = LauncherThemeTypography.entries,
         selected = selectedTypography,
         onSelect = { typography -> onAction(LauncherShellAction.SelectLauncherThemeTypography(typography)) },
-        label = { typography -> themeOptionLabel(typography.name, isSelected = false) },
+        label = { typography -> typographyLabel(typography) },
     )
 }
+
+/** "Preset" is the standard corner choice; Settings calls it "Standard". */
+internal fun cornerStyleLabel(style: LauncherThemeCornerStyle): String =
+    if (style == LauncherThemeCornerStyle.PRESET) "Standard" else themeOptionLabel(style.name, isSelected = false)
+
+/** "Preset" is the standard typeface, the same as System; only System is offered by name. */
+internal fun typographyLabel(typography: LauncherThemeTypography): String =
+    if (typography == LauncherThemeTypography.PRESET) {
+        "Standard"
+    } else {
+        themeOptionLabel(typography.name, isSelected = false)
+    }
 
 internal fun themeOptionLabel(
     optionName: String,

@@ -17,7 +17,6 @@ import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -48,10 +47,8 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
-import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
@@ -246,8 +243,6 @@ sealed interface LauncherShellAction {
     data class SelectDockIconSize(val sizeDp: Int) : LauncherShellAction
 
     data class SelectDockBackgroundAlpha(val alphaPercent: Int) : LauncherShellAction
-
-    data class SelectDockVisualEffect(val effect: DockVisualEffect) : LauncherShellAction
 
     data class SelectDockBackgroundSizing(val sizing: DockBackgroundSizing) : LauncherShellAction
 
@@ -453,14 +448,9 @@ sealed interface LauncherShellAction {
 
     data class SelectLauncherThemeMode(val mode: LauncherThemeMode) : LauncherShellAction
 
-    data class SelectLauncherThemePreset(val preset: LauncherThemePreset) : LauncherShellAction
-
     data class SelectLauncherThemeAccent(val accent: LauncherThemeAccent) : LauncherShellAction
 
-    data class SelectLauncherThemeColor(
-        val target: LauncherThemeColorTarget,
-        val argb: Int?,
-    ) : LauncherShellAction
+    data class SelectCustomAccent(val argb: Int?) : LauncherShellAction
 
     data class SelectLauncherThemeCornerStyle(val style: LauncherThemeCornerStyle) : LauncherShellAction
 
@@ -475,8 +465,6 @@ sealed interface LauncherShellAction {
     data class SelectHomeStatusBarHidden(val hidden: Boolean) : LauncherShellAction
 
     data class SelectHomeNavigationBarHidden(val hidden: Boolean) : LauncherShellAction
-
-    data class SelectLiquidGlassEnabled(val enabled: Boolean) : LauncherShellAction
 
     data class SelectReducedTransparency(val reduced: Boolean) : LauncherShellAction
 

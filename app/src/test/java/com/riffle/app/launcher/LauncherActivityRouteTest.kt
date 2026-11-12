@@ -10,7 +10,6 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
-import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -148,7 +147,6 @@ class LauncherActivityRouteTest {
                 LauncherShellAction.SelectDockCapacity(capacity = 6),
                 LauncherShellAction.SelectDockIconSize(sizeDp = 52),
                 LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 80),
-                LauncherShellAction.SelectDockVisualEffect(DockVisualEffect.OUTLINED),
                 LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED),
                 LauncherShellAction.SelectDockItemSpacing(spacingDp = 12),
                 LauncherShellAction.SelectDockCornerRadius(cornerRadiusDp = 20),

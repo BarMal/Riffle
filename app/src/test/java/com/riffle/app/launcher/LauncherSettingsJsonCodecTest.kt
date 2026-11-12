@@ -45,7 +45,6 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
@@ -741,15 +740,6 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsThemePreset() {
-        val settings = LauncherSettings(appearance = AppearanceSettings(themePreset = LauncherThemePreset.RETRO))
-
-        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(LauncherThemePreset.RETRO, decodedSettings.appearance.themePreset)
-    }
-
-    @Test
     fun roundTripsThemeAccent() {
         val settings = LauncherSettings(appearance = AppearanceSettings(themeAccent = LauncherThemeAccent.TEAL))
 
@@ -760,15 +750,9 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsCustomThemeColoursIncludingAlpha() {
+    fun roundTripsCustomAccentIncludingAlpha() {
         val colors =
-            LauncherThemeColors(
-                backgroundArgb = 0xCC102030.toInt(),
-                accentArgb = 0xFF405060.toInt(),
-                dockArgb = 0x80405060.toInt(),
-                labelArgb = 0xFFE0E0E0.toInt(),
-                labelBackgroundArgb = 0x99000000.toInt(),
-            )
+            LauncherThemeColors(accentArgb = 0x80405060.toInt())
 
         val decoded =
             decodeLauncherSettings(
@@ -822,25 +806,32 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun defaultsMissingOrInvalidThemePreset() {
-        assertEquals(
-            LauncherThemePreset.MATERIAL,
-            decodeLauncherSettings("{\"appearance\": {}}").appearance.themePreset,
-        )
-        assertEquals(
-            LauncherThemePreset.MATERIAL,
-            decodeLauncherSettings("{\"appearance\": {\"themePreset\": \"UNKNOWN\"}}").appearance.themePreset,
-        )
+    fun aStoredThemePresetFromAnOlderBuildIsIgnored() {
+        val expected = decodeLauncherSettings("{\"appearance\": {}}").appearance
+        val presets = listOf("MATERIAL", "MINIMAL", "RETRO", "GLASS", "TERMINAL", "CUSTOM", "VICTORIAN", "UNKNOWN")
+        presets.forEach { preset ->
+            assertEquals(
+                expected,
+                decodeLauncherSettings("{\"appearance\": {\"themePreset\": \"$preset\"}}").appearance,
+            )
+        }
     }
 
     @Test
-    fun migratesHistoricalVictorianThemePresetToMaterial() {
-        assertEquals(
-            LauncherThemePreset.MATERIAL,
-            decodeLauncherSettings(
-                "{\"appearance\": {\"themePreset\": \"VICTORIAN\"}}",
-            ).appearance.themePreset,
-        )
+    fun removedCustomColourTargetsAreIgnoredAndTheAccentIsKept() {
+        val old =
+            """{"appearance": {"themeColors": {"backgroundArgb": 1, "accentArgb": 305419896, "dockArgb": 2,
+                "labelArgb": 3, "labelBackgroundArgb": 4}}}"""
+
+        assertEquals(LauncherThemeColors(accentArgb = 305419896), decodeLauncherSettings(old).appearance.themeColors)
+    }
+
+    @Test
+    fun theRemovedLiquidGlassEnabledFlagIsIgnored() {
+        val off = decodeLauncherSettings("""{"liquidGlass": {"enabled": false, "frostStrengthPercent": 70}}""")
+
+        assertEquals(LiquidGlassSettings(frostStrengthPercent = 70), off.liquidGlass)
+        assertFalse(JSONObject(encodeLauncherSettings(off)).getJSONObject("liquidGlass").has("enabled"))
     }
 
     @Test
@@ -980,7 +971,6 @@ class LauncherSettingsJsonCodecTest {
             LauncherSettings(
                 liquidGlass =
                     LiquidGlassSettings(
-                        enabled = false,
                         frostStrengthPercent = 70,
                         refractionStrengthPercent = 35,
                         spotlightFlowMillis = 650,

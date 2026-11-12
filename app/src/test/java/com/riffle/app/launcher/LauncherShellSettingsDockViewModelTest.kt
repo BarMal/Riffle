@@ -3,7 +3,6 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockModel
-import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -58,11 +57,11 @@ class LauncherShellSettingsDockViewModelTest {
 
         assertTrue(router.handle(LauncherShellAction.OpenSettings))
         assertTrue(router.handle(LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.PHONE)))
-        assertTrue(router.handle(LauncherShellAction.SelectDockVisualEffect(DockVisualEffect.ELEVATED)))
+        assertTrue(router.handle(LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 70)))
 
         val savedLayoutSet = checkNotNull(repository.savedLayoutSet)
         assertEquals(customisedFoldableLayout, savedLayoutSet.layoutFor(foldableKey))
-        assertEquals(DockVisualEffect.ELEVATED, savedLayoutSet.layoutFor(phoneKey).dock.visualEffect)
+        assertEquals(70, savedLayoutSet.layoutFor(phoneKey).dock.backgroundAlphaPercent)
         assertEquals(customisedFoldableLayout, viewModel.state.value.homeLayout)
     }
 

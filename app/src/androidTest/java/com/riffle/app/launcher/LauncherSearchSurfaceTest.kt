@@ -29,8 +29,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.settings.LauncherThemeColors
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -152,15 +151,11 @@ class LauncherSearchSurfaceTest {
     }
 
     @Test
-    fun searchGlassSurfaceKeepsContrastForMidToneBackgroundOnDarkAndLightWallpapers() {
-        val themeColors = LauncherThemeColors(backgroundArgb = 0xFF808080.toInt())
+    fun searchGlassSurfaceKeepsContrastOnDarkAndLightWallpapers() {
         val wallpaperColor = mutableStateOf(Color.Black)
         composeRule.setContent {
             Box(modifier = Modifier.fillMaxSize().background(wallpaperColor.value)) {
-                RiffleLauncherTheme(
-                    themePreset = LauncherThemePreset.GLASS,
-                    themeColors = themeColors,
-                ) {
+                RiffleLauncherTheme(themeMode = LauncherThemeMode.LIGHT, dynamicColor = false) {
                     SearchSurface(
                         state =
                             SearchSurfaceState(
@@ -183,11 +178,7 @@ class LauncherSearchSurfaceTest {
 
             val controls = composeRule.onNodeWithTag(SEARCH_CONTROLS_TEST_TAG).captureToImage().toPixelMap()
             val renderedSurface = controls[controls.width / 2, 4]
-            val tokens =
-                launcherThemeSurfaceTokens(
-                    themePreset = LauncherThemePreset.GLASS,
-                    colorScheme = lightScheme.withThemeColors(themeColors),
-                )
+            val tokens = launcherThemeSurfaceTokens(colorScheme = lightScheme)
             assertTrue(
                 "search Glass content must contrast over $wallpaper",
                 contrastRatio(tokens.panelContentColor, renderedSurface) >= 4.5f,

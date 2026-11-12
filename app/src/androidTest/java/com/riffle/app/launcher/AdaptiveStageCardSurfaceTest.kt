@@ -1746,9 +1746,9 @@ class AdaptiveStageCardSurfaceTest {
     }
 
     @Test
-    fun glassContentScrimStaysAFlatTintFillWhenLiquidGlassIsDisabled() {
+    fun glassContentScrimStaysAFlatTintFillWhenTransparencyIsReduced() {
         // Regression guard for the liquid-glass upgrade to GLASS/FROSTED's content-face scrim:
-        // with liquid glass explicitly off, both effects must still paint the exact flat,
+        // with transparency reduced, both effects must still paint the exact flat,
         // alpha-composited colors.glass fill they always have -- not the shader material.
         val appearance =
             AdaptiveStageAppearanceSettings(
@@ -1775,10 +1775,10 @@ class AdaptiveStageCardSurfaceTest {
                 CompositionLocalProvider(
                     LocalLiquidGlassSettings provides
                         ResolvedLiquidGlass(
-                            enabled = false,
                             frostStrengthFraction = 0.5f,
                             refractionStrengthFraction = 0.3f,
                             reducedMotion = false,
+                            reducedTransparency = true,
                         ),
                 ) {
                     Column {
@@ -1811,7 +1811,7 @@ class AdaptiveStageCardSurfaceTest {
     fun glassContentScrimRendersTheLiquidGlassMaterialWithoutCrashingWhenEligible() {
         // Not a pixel assertion on the shader's own output (that belongs to GlassSurface's own
         // coverage) -- this is the eligibility wiring for AdaptiveStageCardSurface's content-face
-        // scrim specifically: with liquid glass enabled and a real backdrop installed above it (the
+        // scrim specifically: with transparency not reduced and a real backdrop installed above it (the
         // same ProvideLiquidGlassBackdrop wiring HomeDestination uses), GLASS and FROSTED must
         // still render their content without crashing, on whatever API level this runs at --
         // below 33 that's this same eligibility gate falling back to the flat fill, at 33+ it is
@@ -1827,7 +1827,6 @@ class AdaptiveStageCardSurfaceTest {
                 CompositionLocalProvider(
                     LocalLiquidGlassSettings provides
                         ResolvedLiquidGlass(
-                            enabled = true,
                             frostStrengthFraction = 0.5f,
                             refractionStrengthFraction = 0.3f,
                             reducedMotion = false,
@@ -1887,7 +1886,6 @@ class AdaptiveStageCardSurfaceTest {
                 CompositionLocalProvider(
                     LocalLiquidGlassSettings provides
                         ResolvedLiquidGlass(
-                            enabled = true,
                             frostStrengthFraction = 0.5f,
                             refractionStrengthFraction = 0.3f,
                             reducedMotion = false,

@@ -4,7 +4,7 @@ These instructions apply to coding-agent work in this repository.
 
 ## Project intent
 
-Riffle is a polished standard Android launcher. Standard UI should use current Android and Material design language; TimeScape is an interaction inspiration only, expressed through focused card stacks with clear ordering and predictable accessible transitions.
+Riffle is a polished standard Android launcher. Its look is one glass material (see `docs/product/design-language.md`) on top of the Material 3 component baseline; TimeScape is an interaction inspiration only, expressed through focused card stacks with clear ordering and predictable accessible transitions.
 
 ## Operating rules
 
@@ -30,7 +30,7 @@ Riffle is a polished standard Android launcher. Standard UI should use current A
 ## Product priorities
 
 1. Standard Android launcher parity: home app registration, app discovery, app launch, app drawer/search, widgets, folders, wallpaper, grid/page editing, settings, backup/restore.
-2. Polished defaults: clear permission flows, accessibility, reduced motion support, and Material 3 baseline components where appropriate.
+2. Polished defaults: clear permission flows, accessibility, reduced motion and reduced transparency support, the glass material on every surface, and Material 3 baseline components where appropriate.
 3. Riffle-specific capabilities: dynamic pages, templates, cards, stack geometry, and motion profiles.
 4. Advanced contextual behaviour after the foundations are robust.
 

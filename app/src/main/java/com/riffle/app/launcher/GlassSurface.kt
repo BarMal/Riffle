@@ -61,11 +61,9 @@ import com.riffle.core.domain.launcher.designsystem.GlassWeightTokens
  * back to a blurred *tint layer* (not the backdrop) with a stronger flat scrim below API 31, where
  * [android.graphics.RenderEffect] does not exist at all.
  *
- * Two fallbacks are part of the material rather than separate looks:
- * - Reduced transparency ([ResolvedLiquidGlass.reducedTransparency]): an opaque [tint], no backdrop
- *   sampling, the sheen kept but faint, the spotlight at half strength.
- * - Liquid glass switched off in settings (until the switch is removed): today's flat [tint] fill,
- *   with no sheen.
+ * Glass is always on. The one fallback that is part of the material is reduced transparency
+ * ([ResolvedLiquidGlass.reducedTransparency]): an opaque [tint], no backdrop sampling, the sheen
+ * kept but faint, the spotlight at half strength.
  *
  * **Sheen**: the dock's glass sheen (`glassSheen`) is drawn over every weight, driven by [shape].
  *
@@ -81,8 +79,8 @@ import com.riffle.core.domain.launcher.designsystem.GlassWeightTokens
  * surface's actual visible silhouette is still clipped exactly to [shape] by the surrounding
  * `Modifier.clip(shape)`, as before.
  *
- * [tint] supplies the colour only; its alpha is the weight's to set (except in the flat fallback,
- * which draws [tint] as given). [content] is drawn on top of the glass layer, clipped to the same
+ * [tint] supplies the colour only; its alpha is the weight's to set (except under reduced
+ * transparency, which uses a near-opaque alpha). [content] is drawn on top of the glass layer, clipped to the same
  * [shape], with [contentColor] (default: the colour that contrasts [tint]).
  */
 @Composable
@@ -144,9 +142,7 @@ private fun BoxScope.GlassBackground(
     // screenshot test that renders any glass surface.
     val runningUnderRobolectric = Build.FINGERPRINT == "robolectric"
 
-    if (!liquidGlass.enabled) {
-        FlatGlassLayer(tint = tint)
-    } else if (liquidGlass.reducedTransparency) {
+    if (liquidGlass.reducedTransparency) {
         FlatGlassLayer(tint = tint.copy(alpha = GlassMaterialTokens.REDUCED_TRANSPARENCY_TINT_ALPHA))
     } else if (!runningUnderRobolectric) {
         // Nested rather than one compound condition so the inner if -- unchanged from the version
@@ -171,7 +167,7 @@ private fun BoxScope.GlassBackground(
     }
 }
 
-/** A flat fill of [tint] exactly as given: today's non-glass look, and the reduced-transparency one. */
+/** The reduced-transparency fill: a flat, near-opaque [tint]. */
 @Composable
 private fun BoxScope.FlatGlassLayer(tint: Color) {
     Box(Modifier.matchParentSize().background(tint))
@@ -198,11 +194,11 @@ private fun BoxScope.GlassSheenLayer(
  * A liquid-glass scrim [Modifier] for callers outside [GlassSurface] itself -- currently
  * `AdaptiveStageCardSurface`'s GLASS/FROSTED content-face scrim -- that want the real
  * backdrop-refraction material as a plain background fill in their own modifier chain, with the
- * same eligibility gate [GlassSurface] applies (API 33+, liquid glass enabled in settings, a
+ * same eligibility gate [GlassSurface] applies (API 33+, a
  * backdrop installed above the caller via [ProvideLiquidGlassBackdrop], not under Robolectric).
  * Falls back to a flat [tint] fill -- `Modifier.background(tint, shape)`, pixel-for-pixel what
  * callers drew before this existed -- whenever any of that is not the case, so a caller can use
- * this unconditionally and get today's exact look when liquid glass is off or unavailable.
+ * this unconditionally and get today's exact look when the backdrop is unavailable or transparency is reduced.
  */
 @Composable
 internal fun rememberLiquidGlassScrimModifier(
@@ -293,7 +289,7 @@ private fun BoxScope.LiquidGlassShaderLayer(
  *
  * Tracks this node's own position and size via [onGloballyPositioned], exactly as
  * [LiquidGlassShaderLayer] did inline, then applies [liquidGlassRefraction] using those. Callers are
- * responsible for their own eligibility gating (API 33+, liquid glass enabled, a non-null backdrop,
+ * responsible for their own eligibility gating (API 33+, a non-null backdrop,
  * not under Robolectric) and, if a clipped silhouette narrower than their own layout bounds is
  * needed (see [rememberLiquidGlassScrimModifier]'s `Modifier.clip(shape)` call), for chaining that
  * themselves -- same as before extraction, this function carries no fallback or clip of its own.

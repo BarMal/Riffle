@@ -38,7 +38,6 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
@@ -785,7 +784,6 @@ private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
         .put("hideNavigationBarOnHome", settings.homeSystemBars.hideNavigationBarOnHome)
         .put("reducedTransparency", settings.reducedTransparency)
         .put("themeMode", settings.themeMode.name)
-        .put("themePreset", settings.themePreset.name)
         .put("themeAccent", settings.themeAccent.name)
         .put("themeCornerStyle", settings.themeCornerStyle.name)
         .put("themeTypography", settings.themeTypography.name)
@@ -806,9 +804,6 @@ private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSet
             themeMode =
                 runCatching { LauncherThemeMode.valueOf(optString("themeMode")) }
                     .getOrDefault(defaults.themeMode),
-            themePreset =
-                runCatching { LauncherThemePreset.valueOf(optString("themePreset")) }
-                    .getOrDefault(defaults.themePreset),
             themeAccent =
                 runCatching { LauncherThemeAccent.valueOf(optString("themeAccent")) }
                     .getOrDefault(defaults.themeAccent),
@@ -823,22 +818,13 @@ private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSet
         ).withHomeSystemBars(homeSystemBars)
 }
 
+// Only the accent is stored. Older data also carried backgroundArgb, dockArgb, labelArgb and
+// labelBackgroundArgb, and a `themePreset`; those are ignored here, so removed values decode to glass.
 private fun encodeThemeColors(colors: LauncherThemeColors): JSONObject =
-    JSONObject()
-        .put("backgroundArgb", colors.backgroundArgb)
-        .put("accentArgb", colors.accentArgb)
-        .put("dockArgb", colors.dockArgb)
-        .put("labelArgb", colors.labelArgb)
-        .put("labelBackgroundArgb", colors.labelBackgroundArgb)
+    JSONObject().put("accentArgb", colors.accentArgb)
 
 private fun JSONObject.toThemeColors(defaults: LauncherThemeColors): LauncherThemeColors =
-    defaults.copy(
-        backgroundArgb = optNullableInt("backgroundArgb", defaults.backgroundArgb),
-        accentArgb = optNullableInt("accentArgb", defaults.accentArgb),
-        dockArgb = optNullableInt("dockArgb", defaults.dockArgb),
-        labelArgb = optNullableInt("labelArgb", defaults.labelArgb),
-        labelBackgroundArgb = optNullableInt("labelBackgroundArgb", defaults.labelBackgroundArgb),
-    )
+    defaults.copy(accentArgb = optNullableInt("accentArgb", defaults.accentArgb))
 
 private fun JSONObject.optNullableInt(
     name: String,
@@ -880,14 +866,12 @@ private fun JSONObject.toHaptics(defaults: HapticSettings): HapticSettings =
 
 private fun encodeLiquidGlass(settings: LiquidGlassSettings): JSONObject =
     JSONObject()
-        .put("enabled", settings.enabled)
         .put("frostStrengthPercent", settings.frostStrengthPercent)
         .put("refractionStrengthPercent", settings.refractionStrengthPercent)
         .put("spotlightFlowMillis", settings.spotlightFlowMillis)
 
 private fun JSONObject.toLiquidGlass(defaults: LiquidGlassSettings): LiquidGlassSettings =
     LiquidGlassSettings(
-        enabled = optBoolean("enabled", defaults.enabled),
         frostStrengthPercent = optInt("frostStrengthPercent", defaults.frostStrengthPercent),
         refractionStrengthPercent = optInt("refractionStrengthPercent", defaults.refractionStrengthPercent),
         spotlightFlowMillis = optInt("spotlightFlowMillis", defaults.spotlightFlowMillis),

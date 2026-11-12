@@ -67,7 +67,7 @@ internal fun OnboardingLayer(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val latestOnAction by rememberUpdatedState(onAction)
-    WorkspacePreviewTheme(state, workspace = null) {
+    WorkspacePreviewTheme(state) {
         Box(modifier = Modifier.fillMaxSize()) {
             when (val shown = surface) {
                 OnboardingSurface.Offer ->

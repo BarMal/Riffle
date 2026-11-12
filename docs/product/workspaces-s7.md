@@ -1,5 +1,10 @@
 # Workspaces S7: skin override, workspace-menu gesture, dock overrides and new apps (as built)
 
+> **Removed in places-views P2.** Glass is the only look, so the per-workspace skin override, `WorkspaceSkin`,
+> `WorkspacesSettingsAction.SetSkin`, `WorkspaceEdit.SetSkinOverride` and the "Appearance..." dialog are gone, as
+> are the theme presets they chose between. A stored `skin` on a workspace is ignored when decoded. Section 1 below
+> is history.
+
 > **S9 update ([`workspaces-default.md`](workspaces-default.md)).** The preview switch and `WorkspaceMenuFeature` are
 > gone, and the shell now does what this page lists as not done: the launcher theme reads `WorkspaceSkin.resolve`,
 > the home applies the workspace's `gestureBindings` and dock override (`withWorkspaceHome`), and a package-added

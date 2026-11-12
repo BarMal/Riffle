@@ -8,7 +8,7 @@ value class WorkspaceId(val value: String) {
 }
 
 /**
- * A saved arrangement of containers plus dock definition, gesture bindings and skin override.
+ * A saved arrangement of containers plus dock definition, and gesture bindings.
  *
  * Independent per layout (posture): each layout stores its own workspaces with no live link between
  * them. Per-layout storage, copy-from-other-layout and migration belong to the persistence slice.
@@ -21,8 +21,6 @@ data class Workspace(
     val dock: WorkspaceDock = WorkspaceDock(),
     /** Gesture id -> action id. Opaque here; the gesture settings own the vocabulary. */
     val gestureBindings: Map<String, String> = emptyMap(),
-    /** Null follows the global skin. */
-    val skinOverrideId: String? = null,
     /**
      * The catalog id of the preset this workspace was installed from, when known: only so Settings can offer
      * "Reset to preset". Never inferred; null for workspaces migrated or created before it was recorded.

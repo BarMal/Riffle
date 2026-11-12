@@ -5,11 +5,6 @@ import kotlin.test.assertEquals
 
 class DockModelTest {
     @Test
-    fun defaultsToFlatMaterialDockEffect() {
-        assertEquals(DockVisualEffect.FLAT, DockModel(capacity = 4).visualEffect)
-    }
-
-    @Test
     fun capsAvailableSlotsAtZeroWhenDockOverflows() {
         val dock =
             DockModel(

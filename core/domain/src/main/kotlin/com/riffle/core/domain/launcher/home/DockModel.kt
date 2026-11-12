@@ -17,7 +17,6 @@ data class DockModel(
     val notificationSlotCount: Int = DEFAULT_DOCK_NOTIFICATION_SLOT_COUNT,
     val iconSizeDp: Int = DEFAULT_DOCK_ICON_SIZE_DP,
     val backgroundAlphaPercent: Int = DEFAULT_DOCK_BACKGROUND_ALPHA_PERCENT,
-    val visualEffect: DockVisualEffect = DockVisualEffect.FLAT,
     val backgroundSizing: DockBackgroundSizing = DockBackgroundSizing.DYNAMIC,
     val alignment: DockAlignment = DockAlignment.CENTER,
     val itemSpacingDp: Int = DEFAULT_DOCK_ITEM_SPACING_DP,
@@ -84,13 +83,6 @@ enum class DockAlignment {
     START,
     CENTER,
     END,
-}
-
-/** Material treatment for the Dock container; colour always comes from the active launcher theme. */
-enum class DockVisualEffect {
-    FLAT,
-    ELEVATED,
-    OUTLINED,
 }
 
 const val DEFAULT_DOCK_NOTIFICATION_SLOT_COUNT = 3

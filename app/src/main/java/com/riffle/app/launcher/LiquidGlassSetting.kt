@@ -12,7 +12,8 @@ import com.riffle.core.domain.launcher.settings.MIN_SPOTLIGHT_FLOW_MILLIS
 import com.riffle.core.domain.launcher.settings.SPOTLIGHT_FLOW_STEP_MILLIS
 
 /**
- * Settings for Riffle's liquid-glass material: a master toggle plus two independent strength axes
+ * Settings for Riffle's liquid-glass material: two independent strength axes and a spotlight pace,
+ * plus the reduced-transparency switch, which is the only way to turn glass off
  * (see [LiquidGlassSettings] for why they are independent rather than one combined dial).
  *
  * This PR wires the material into the dock's header pill/action capsule and the appearance tuning
@@ -28,17 +29,6 @@ internal fun LiquidGlassSetting(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SettingsSwitchRow(
-            title = "Liquid glass",
-            subtitle =
-                if (settings.enabled) {
-                    "Frosted, refractive material on the dock header and appearance sheet"
-                } else {
-                    "Floating chrome uses a flat tinted surface instead"
-                },
-            checked = settings.enabled,
-            onCheckedChange = { enabled -> onAction(LauncherShellAction.SelectLiquidGlassEnabled(enabled)) },
-        )
-        SettingsSwitchRow(
             title = "Reduced transparency",
             subtitle =
                 if (reducedTransparency) {
@@ -49,32 +39,30 @@ internal fun LiquidGlassSetting(
             checked = reducedTransparency,
             onCheckedChange = { reduced -> onAction(LauncherShellAction.SelectReducedTransparency(reduced)) },
         )
-        if (settings.enabled) {
-            DiscreteSettingSlider(
-                title = "Frost strength",
-                value = settings.frostStrengthPercent,
-                valueRange = MIN_LIQUID_GLASS_STRENGTH_PERCENT..MAX_LIQUID_GLASS_STRENGTH_PERCENT,
-                valueLabel = { "$it%" },
-                onValueChange = { value -> onAction(LauncherShellAction.SelectLiquidGlassFrostStrength(value)) },
-            )
-            DiscreteSettingSlider(
-                title = "Edge refraction",
-                value = settings.refractionStrengthPercent,
-                valueRange = MIN_LIQUID_GLASS_STRENGTH_PERCENT..MAX_LIQUID_GLASS_STRENGTH_PERCENT,
-                valueLabel = { "$it%" },
-                onValueChange = { value -> onAction(LauncherShellAction.SelectLiquidGlassRefractionStrength(value)) },
-            )
-            // In 50ms steps rather than single milliseconds: twenty stops is a dial you can land on.
-            DiscreteSettingSlider(
-                title = "Spotlight flow",
-                value = settings.spotlightFlowMillis / SPOTLIGHT_FLOW_STEP_MILLIS,
-                valueRange = SPOTLIGHT_FLOW_SLIDER_STEPS,
-                valueLabel = { step -> spotlightFlowLabel(step * SPOTLIGHT_FLOW_STEP_MILLIS) },
-                onValueChange = { step ->
-                    onAction(LauncherShellAction.SelectLiquidGlassSpotlightFlow(step * SPOTLIGHT_FLOW_STEP_MILLIS))
-                },
-            )
-        }
+        DiscreteSettingSlider(
+            title = "Frost strength",
+            value = settings.frostStrengthPercent,
+            valueRange = MIN_LIQUID_GLASS_STRENGTH_PERCENT..MAX_LIQUID_GLASS_STRENGTH_PERCENT,
+            valueLabel = { "$it%" },
+            onValueChange = { value -> onAction(LauncherShellAction.SelectLiquidGlassFrostStrength(value)) },
+        )
+        DiscreteSettingSlider(
+            title = "Edge refraction",
+            value = settings.refractionStrengthPercent,
+            valueRange = MIN_LIQUID_GLASS_STRENGTH_PERCENT..MAX_LIQUID_GLASS_STRENGTH_PERCENT,
+            valueLabel = { "$it%" },
+            onValueChange = { value -> onAction(LauncherShellAction.SelectLiquidGlassRefractionStrength(value)) },
+        )
+        // In 50ms steps rather than single milliseconds: twenty stops is a dial you can land on.
+        DiscreteSettingSlider(
+            title = "Spotlight flow",
+            value = settings.spotlightFlowMillis / SPOTLIGHT_FLOW_STEP_MILLIS,
+            valueRange = SPOTLIGHT_FLOW_SLIDER_STEPS,
+            valueLabel = { step -> spotlightFlowLabel(step * SPOTLIGHT_FLOW_STEP_MILLIS) },
+            onValueChange = { step ->
+                onAction(LauncherShellAction.SelectLiquidGlassSpotlightFlow(step * SPOTLIGHT_FLOW_STEP_MILLIS))
+            },
+        )
     }
 }
 

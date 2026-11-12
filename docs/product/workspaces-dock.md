@@ -51,7 +51,7 @@ With **Settings > Developer > Workspaces (preview)** off nothing here runs. Trac
 
 - Editing pins (pin, unpin, reorder, move to Home): waits for the pool-editing slice.
 - Per-workspace overrides of edge, size, visibility and a "Follow device dock / Override" Settings row (Q17, S7).
-- The device-class dock edge (left, right, top), background alpha, corner radius, visual effect and liquid glass.
+- The device-class dock edge (left, right, top), background alpha, corner radius and glass (the dock effect choice was removed in places-views P2).
 - The expanded shelf and dock panel; hosted widgets pinned in the dock are skipped.
 - The dock pull as a menu trigger inside the preview (the handle and the TalkBack action open the menu).
 - Pin removal when an app is uninstalled is whatever `HomeLayoutSet` already does (verify; not found, see

@@ -148,15 +148,10 @@ class WorkspaceEditorTest {
     }
 
     @Test
-    fun renameSkinAndDock() {
+    fun renameAndDock() {
         val ws = workspace(boundPage("a"))
         assertEquals(EditRejection.BlankName, rejection(apply(ws, WorkspaceEdit.Rename("  "))))
         assertEquals("Work", applied(apply(ws, WorkspaceEdit.Rename("  Work "))).name)
-
-        assertEquals(EditRejection.BlankSkinId, rejection(apply(ws, WorkspaceEdit.SetSkinOverride(" "))))
-        val skinned = applied(apply(ws, WorkspaceEdit.SetSkinOverride("midnight")))
-        assertEquals("midnight", skinned.skinOverrideId)
-        assertEquals(null, applied(apply(skinned, WorkspaceEdit.SetSkinOverride(null))).skinOverrideId)
 
         val dock = binding(ExpressionKind.ICON_ROW, NOTES)
         val withDock = applied(apply(ws, WorkspaceEdit.SetDockSection(dock)))

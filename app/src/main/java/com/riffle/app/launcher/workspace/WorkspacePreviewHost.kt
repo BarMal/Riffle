@@ -13,8 +13,6 @@ import com.riffle.app.launcher.wizard.WizardStores
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.SourceId
-import com.riffle.core.domain.launcher.workspace.Workspace
-import com.riffle.core.domain.launcher.workspace.WorkspaceSkin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -67,19 +65,16 @@ internal fun WorkspaceLayer(
 }
 
 /**
- * The shell's theme, so a workspace surface matches the launcher's appearance settings, with [workspace]'s skin
- * override (Q15) in place of the global theme preset when it names one ([WorkspaceSkin.resolve]).
+ * The shell's theme, so a workspace surface matches the launcher's appearance settings.
  */
 @Composable
 internal fun WorkspacePreviewTheme(
     state: LauncherShellState,
-    workspace: Workspace?,
     content: @Composable () -> Unit,
 ) {
     val appearance = state.launcherSettings.appearance
     RiffleLauncherTheme(
         themeMode = appearance.themeMode,
-        themePreset = WorkspaceSkin.resolve(appearance.themePreset, workspace),
         themeAccent = appearance.themeAccent,
         themeColors = appearance.themeColors,
         themeCornerStyle = appearance.themeCornerStyle,

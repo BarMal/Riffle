@@ -297,8 +297,8 @@ internal val LocalGlassSpotlight = staticCompositionLocalOf<GlassSpotlightState?
 
 /**
  * Remembers a spotlight for one glass surface running along [axis], and keeps its glow following
- * the coloured things inside it -- or returns null, and runs nothing, when the glass theme is
- * switched off or this surface draws no background of its own ([enabled] false).
+ * the coloured things inside it -- or returns null, and runs nothing, when this surface draws no
+ * background of its own ([enabled] false).
  */
 @Composable
 internal fun rememberGlassSpotlightState(
@@ -306,7 +306,7 @@ internal fun rememberGlassSpotlightState(
     enabled: Boolean = true,
 ): GlassSpotlightState? {
     val glass = LocalLiquidGlassSettings.current
-    val active = enabled && glass.enabled
+    val active = enabled
     val state = remember(axis) { GlassSpotlightState(axis) }
     if (active) {
         LaunchedEffect(state, glass.reducedMotion, glass.spotlightFlowSeconds) {

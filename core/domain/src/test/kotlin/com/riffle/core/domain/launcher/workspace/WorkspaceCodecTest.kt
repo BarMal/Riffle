@@ -59,8 +59,15 @@ class WorkspaceCodecTest {
                 ),
             dock = WorkspaceDock(LensBinding(lens, ExpressionKind.ICON_ROW)),
             gestureBindings = mapOf("dock_pull" to "workspace_menu"),
-            skinOverrideId = "glass",
         )
+
+    @Test
+    fun aStoredSkinFromAnOlderBuildIsIgnored() {
+        val old = mutate(WorkspaceCodec.encode(workspace)) { it + ("skin" to StoredValue.Str("TERMINAL")) }
+        assertEquals(workspace, WorkspaceCodec.decodeWorkspace(old))
+        val unknown = mutate(WorkspaceCodec.encode(workspace)) { it + ("skin" to StoredValue.Str("midnight")) }
+        assertEquals(workspace, WorkspaceCodec.decodeWorkspace(unknown))
+    }
 
     @Test
     fun lensRoundTrips() {

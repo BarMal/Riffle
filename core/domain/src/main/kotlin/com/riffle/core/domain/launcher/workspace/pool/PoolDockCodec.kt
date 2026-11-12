@@ -4,7 +4,6 @@ import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.workspace.StoredValue
 import com.riffle.core.domain.launcher.workspace.arr
 import com.riffle.core.domain.launcher.workspace.array
@@ -46,7 +45,6 @@ internal object PoolDockCodec {
             "cardSlots" to num(s.notificationSlotCount),
             "iconSize" to num(s.iconSizeDp),
             "backgroundAlpha" to num(s.backgroundAlphaPercent),
-            "visualEffect" to str(s.visualEffect.name),
             "backgroundSizing" to str(s.backgroundSizing.name),
             "alignment" to str(s.alignment.name),
             "itemSpacing" to num(s.itemSpacingDp),
@@ -80,7 +78,6 @@ internal object PoolDockCodec {
         d.copy(
             iconSizeDp = root.int("iconSize") ?: d.iconSizeDp,
             backgroundAlphaPercent = root.int("backgroundAlpha") ?: d.backgroundAlphaPercent,
-            visualEffect = enumOrNull<DockVisualEffect>(root.string("visualEffect")) ?: d.visualEffect,
             backgroundSizing = enumOrNull<DockBackgroundSizing>(root.string("backgroundSizing")) ?: d.backgroundSizing,
             alignment = enumOrNull<DockAlignment>(root.string("alignment")) ?: d.alignment,
             itemSpacingDp = root.int("itemSpacing") ?: d.itemSpacingDp,

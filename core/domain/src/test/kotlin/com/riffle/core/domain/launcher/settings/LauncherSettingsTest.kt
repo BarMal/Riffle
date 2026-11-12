@@ -33,15 +33,9 @@ class LauncherSettingsTest {
     }
 
     @Test
-    fun customThemeColoursKeepIndependentOverridesPerSurface() {
-        val colors =
-            LauncherThemeColors()
-                .withColor(LauncherThemeColorTarget.DOCK, 0x80445566.toInt())
-                .withColor(LauncherThemeColorTarget.LABEL, 0xFF112233.toInt())
-
-        assertEquals(0x80445566.toInt(), colors.dockArgb)
-        assertEquals(0xFF112233.toInt(), colors.labelArgb)
-        assertEquals(null, colors.backgroundArgb)
+    fun customColoursAreAnAccentOnly() {
+        assertEquals(null, LauncherSettings().appearance.themeColors.accentArgb)
+        assertEquals(0xFF112233.toInt(), LauncherThemeColors(accentArgb = 0xFF112233.toInt()).accentArgb)
     }
 
     @Test

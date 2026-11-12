@@ -105,7 +105,7 @@ internal fun WorkspaceWizardLayer(
     val services = remember(runtime, reducedMotion) { runtime.services(reducedMotion) }
     val androidContext = LocalContext.current
     val stores = remember(host, runtime) { host.wizardStoresFor(runtime) }
-    WorkspacePreviewTheme(state, workspaceId?.let(layout::find)) {
+    WorkspacePreviewTheme(state) {
         ContentWizard(
             context = context,
             onFinished = { finished ->

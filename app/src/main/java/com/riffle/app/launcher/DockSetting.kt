@@ -24,7 +24,6 @@ import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_CAPACITY
 import com.riffle.core.domain.launcher.home.MAX_DOCK_CORNER_RADIUS_DP
@@ -102,10 +101,6 @@ internal fun DockSetting(
             alphaPercent = dock.backgroundAlphaPercent,
             onAction = onAction,
         )
-        DockVisualEffectSetting(
-            effect = dock.visualEffect,
-            onAction = onAction,
-        )
         DockBackgroundSizingSetting(
             sizing = dock.backgroundSizing,
             onAction = onAction,
@@ -122,30 +117,6 @@ internal fun DockSetting(
             alignment = dock.alignment,
             onAction = onAction,
         )
-    }
-}
-
-@Composable
-private fun DockVisualEffectSetting(
-    effect: DockVisualEffect,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        SettingsTextColumn(
-            title = "Dock effect",
-            subtitle = "${effect.name.lowercase().replaceFirstChar(Char::uppercase)} Material treatment",
-        )
-        DockVisualEffect.entries.forEach { candidate ->
-            TextButton(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = candidate != effect,
-                onClick = { onAction(LauncherShellAction.SelectDockVisualEffect(candidate)) },
-            ) {
-                SettingsButtonText(text = candidate.name.lowercase().replaceFirstChar(Char::uppercase))
-            }
-        }
     }
 }
 

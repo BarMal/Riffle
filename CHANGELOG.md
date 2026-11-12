@@ -8,6 +8,10 @@
 - The dock's icon-colour spotlight is generalised to any glass surface and now also lights open folders, the search results panel and Stream-style item cards from the colours of what they hold.
 - The search pill and results panel, the launcher panel, folders, the widget picker, widget frames, the context menu, dock notification cards, the page indicator, page overview cards and Settings sections all use `GlassSurface`.
 - Reduced transparency is now one top-level Appearance setting honoured by every glass surface, the sheen and the spotlight. Settings saved with it under the card stack's motion options are migrated.
+- Glass is the only look. The Material, Minimal, Retro, Terminal and Custom theme presets are gone (a saved preset becomes glass), as is the per-workspace Appearance override (a saved skin is ignored). Wallpaper-derived colour stays.
+- The Liquid glass on/off switch is gone: glass is always on and Reduced transparency is the off switch. The Settings section is now "Glass".
+- The dock effect choice (flat, elevated, outlined) is gone; the dock uses the standard glass sheen.
+- Custom colours are reduced to a custom accent; the background, dock, label and label background colours are ignored. "Card corners" is now "Corners".
 
 ## Alpha 192
 

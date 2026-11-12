@@ -97,8 +97,7 @@ internal fun glassSheenAlpha(
  * Draws the glass sheen over this node's background and under its content. Chain it right after
  * the surface's background, which clips to [shape], so every layer follows its corners.
  * [alphaProvider] is the surface's own fade (the dock pull's background fade), read at draw time.
- * A no-op when liquid glass is switched off, which keeps today's flat look for anyone who turned
- * it off. Under reduced transparency the sheen is kept, but faint.
+ * Under reduced transparency the sheen is kept, but faint.
  *
  * The gradients are baked in software into small images once per size and strength -- the same
  * approach the desktop plugin takes with its edge textures -- and the GPU only stretches those
@@ -113,7 +112,6 @@ internal fun Modifier.glassSheen(
     alphaProvider: () -> Float = { 1f },
 ): Modifier {
     val glass = LocalLiquidGlassSettings.current
-    if (!glass.enabled) return this
     val effective =
         if (glass.reducedTransparency) {
             strength.scaled(GlassMaterialTokens.REDUCED_TRANSPARENCY_SHEEN_SCALE)

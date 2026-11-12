@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -23,43 +22,14 @@ import androidx.compose.ui.graphics.RenderEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockModel
-import com.riffle.core.domain.launcher.home.DockVisualEffect
-
-internal data class DockAppearance(
-    val elevationDp: Int,
-    val outlineWidthDp: Int,
-    val cornerRadiusDp: Int,
-)
-
-internal fun dockAppearanceSpec(
-    effect: DockVisualEffect,
-    cornerRadiusDp: Int,
-): DockAppearance =
-    when (effect) {
-        DockVisualEffect.FLAT ->
-            DockAppearance(elevationDp = 0, outlineWidthDp = 0, cornerRadiusDp = cornerRadiusDp)
-        DockVisualEffect.ELEVATED ->
-            DockAppearance(elevationDp = 6, outlineWidthDp = 0, cornerRadiusDp = cornerRadiusDp)
-        DockVisualEffect.OUTLINED ->
-            DockAppearance(elevationDp = 0, outlineWidthDp = 1, cornerRadiusDp = cornerRadiusDp)
-    }
-
-@Composable
-internal fun dockBaseSurfaceColor(dock: DockModel): Color =
-    when (dock.visualEffect) {
-        DockVisualEffect.ELEVATED -> MaterialTheme.colorScheme.surfaceContainerHigh
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
 
 @Composable
 internal fun dockSurfaceColor(dock: DockModel): Color {
-    val baseColor = dockBaseSurfaceColor(dock)
-    val selectedColor = LocalLauncherThemeColorOverrides.current.dock ?: baseColor
-    return selectedColor.copy(alpha = selectedColor.alpha * dock.backgroundAlphaPercent / 100f)
+    val baseColor = MaterialTheme.colorScheme.surfaceVariant
+    return baseColor.copy(alpha = baseColor.alpha * dock.backgroundAlphaPercent / 100f)
 }
 
 /** A dock background at its own alpha: what every dock outside a dock pull draws. */
@@ -71,72 +41,27 @@ internal val OpaqueDockBackground: () -> Float = { 1f }
  */
 internal val LocalDockBackgroundAlpha = staticCompositionLocalOf { OpaqueDockBackground }
 
-/**
- * The sheen strength of a dock filled with [surface] in the [effect] visual style: the general
- * [glassSheenStrength], shaped by the dock's own effect.
- *
- * - FLAT: the baseline.
- * - ELEVATED: brighter highlights and a deeper shadow -- a pane raised toward the light.
- * - OUTLINED: no glass border, since that style already draws its own outline.
- */
-internal fun dockGlassSheenStrength(
-    effect: DockVisualEffect,
-    surface: Color,
-): GlassSheenStrength {
-    val base = glassSheenStrength(surface)
-    return when (effect) {
-        DockVisualEffect.FLAT -> base
-        DockVisualEffect.ELEVATED ->
-            base.scaled(highlight = ELEVATED_HIGHLIGHT_BOOST, shadow = ELEVATED_SHADOW_BOOST, border = 1f)
-        DockVisualEffect.OUTLINED -> base.copy(border = 0f)
-    }
-}
-
-private const val ELEVATED_HIGHLIGHT_BOOST = 1.3f
-private const val ELEVATED_SHADOW_BOOST = 1.5f
-
 @Composable
 internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
-    val spec = dockAppearanceSpec(dock.visualEffect, dock.cornerRadiusDp)
-    val shape = RoundedCornerShape(spec.cornerRadiusDp.dp)
+    val shape = RoundedCornerShape(dock.cornerRadiusDp.dp)
     val backgroundAlpha = LocalDockBackgroundAlpha.current
-    val sheenStrength = dockGlassSheenStrength(dock.visualEffect, dockSurfaceColor(dock))
+    val sheenStrength = glassSheenStrength(dockSurfaceColor(dock))
     if (backgroundAlpha === OpaqueDockBackground) {
-        var result = this
-        if (spec.elevationDp > 0) result = result.shadow(spec.elevationDp.dp, shape)
-        result =
-            result
-                .clip(shape)
-                .dockAtRestBackground(shape, dock)
-                .glassSheen(shape, sheenStrength, backgroundAlpha)
-        if (spec.outlineWidthDp > 0) {
-            result = result.border(spec.outlineWidthDp.dp, MaterialTheme.colorScheme.outlineVariant, shape)
-        }
-        return result
+        return this
+            .clip(shape)
+            .dockAtRestBackground(shape, dock)
+            .glassSheen(shape, sheenStrength, backgroundAlpha)
     }
-    // Under a dock pull: the same shadow, fill and outline, each faded by the pull at draw time.
+    // Under a dock pull: the same fill, faded by the pull at draw time.
     val color = dockSurfaceColor(dock)
-    val outlineColor = MaterialTheme.colorScheme.outlineVariant
-    val elevationDp = spec.elevationDp
-    val outlineWidthDp = spec.outlineWidthDp
     val sheen = Modifier.glassSheen(shape, sheenStrength, backgroundAlpha)
     return graphicsLayer {
-        shadowElevation = elevationDp.dp.toPx() * backgroundAlpha()
         this.shape = shape
         clip = true
     }.drawBehind {
         val alpha = backgroundAlpha().coerceIn(0f, 1f)
         val outline = shape.createOutline(size, layoutDirection, this)
         drawOutline(outline, color = color.copy(alpha = color.alpha * alpha))
-        if (outlineWidthDp > 0) {
-            drawOutline(
-                outline,
-                color = outlineColor.copy(alpha = outlineColor.alpha * alpha),
-                // Centred on the edge and clipped to the shape, so twice as wide draws the same
-                // inside-only width as Modifier.border.
-                style = Stroke(width = 2 * outlineWidthDp.dp.toPx()),
-            )
-        }
     }.then(sheen)
 }
 
@@ -149,8 +74,8 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
  * 33+, a [LocalLiquidGlassBackdrop] installed above Home's root, not under Robolectric -- the exact
  * same gate [GlassSurface] itself checks), the dock's flat [dockSurfaceColor] fill is replaced by
  * [liquidGlassShaderBackground], the same backdrop-refraction material `GlassSurface` gives its own
- * content, using [dockSurfaceColor] as the shader's tint so FLAT/ELEVATED keep tinting distinctly,
- * exactly as today, and [shape] as the surface actually clips to (already applied by the caller).
+ * content, using [dockSurfaceColor] as the shader's tint and [shape] as the surface actually clips
+ * to (already applied by the caller).
  * Otherwise this is exactly today's flat [dockSurfaceColor] fill -- zero behavior change.
  */
 @Composable
@@ -198,7 +123,7 @@ internal fun Modifier.dockDropHighlight(
             label = "dockDropHighlightAlpha",
         )
     if (alpha <= 0f) return this
-    val shape = RoundedCornerShape(dockAppearanceSpec(dock.visualEffect, dock.cornerRadiusDp).cornerRadiusDp.dp)
+    val shape = RoundedCornerShape(dock.cornerRadiusDp.dp)
     return border(DOCK_DROP_HIGHLIGHT_WIDTH_DP.dp, MaterialTheme.colorScheme.primary.copy(alpha = alpha), shape)
 }
 

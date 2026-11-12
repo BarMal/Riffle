@@ -12,9 +12,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -32,8 +30,7 @@ class LauncherPanelSurfaceTest {
             Box(modifier = Modifier.fillMaxSize().background(wallpaper)) {
                 RiffleLauncherTheme(
                     themeMode = LauncherThemeMode.LIGHT,
-                    themePreset = LauncherThemePreset.GLASS,
-                    themeColors = LauncherThemeColors(backgroundArgb = 0xFF0000FF.toInt()),
+                    dynamicColor = false,
                 ) {
                     LauncherPanel(
                         title = "Apps",
@@ -48,10 +45,7 @@ class LauncherPanelSurfaceTest {
         val image = composeRule.onRoot().captureToImage().toPixelMap()
         val actual = image[image.width / 2, image.height / 2]
         val expected =
-            launcherThemeSurfaceTokens(
-                themePreset = LauncherThemePreset.GLASS,
-                colorScheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF0000FF.toInt())),
-            ).panelColor.compositeOver(wallpaper)
+            launcherThemeSurfaceTokens(colorScheme = lightScheme).panelColor.compositeOver(wallpaper)
 
         assertColorClose(expected, actual)
     }

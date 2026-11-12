@@ -3,7 +3,7 @@
 Status: first slice (#1201). Tokens live in code; this page is the reference for when to use them.
 
 The steer is **"if Apple and Sony designed it together."** Riffle stays a standard Android launcher
-built on Material 3; the design language tunes M3 rather than replacing it. The principles below
+with one glass material on top of the Material 3 component baseline; the design language tunes M3 rather than replacing it. The principles below
 come from the Cards/modes plan (`docs/product/modes-dock-handle-and-cards-plan.md`, W1).
 
 | Principle | Apple cue | Sony cue | In Riffle |
@@ -117,7 +117,7 @@ alpha or blur radius. The numbers live in `core/domain/.../designsystem/GlassMat
   Appearance, `AppearanceSettings.reducedTransparency`) makes every glass surface an opaque tint with
   no backdrop sampling, keeps the sheen faint and the spotlight at half strength. Reduced motion
   makes the spotlight snap. Without a backdrop to sample (a popup window, below API 33) the blurred
-  tint layer applies. Until the Liquid glass switch is removed, switching it off draws a flat fill.
+  tint layer applies. Glass is always on: there is no switch for it, and no other theme preset.
 
 Do
 - Express depth with one soft, single-source shadow and a tonal step; add a hairline highlight on
@@ -141,7 +141,7 @@ Tokens: the M3 type scale, tuned in `riffleTypography`.
 | `labelMedium` | weight Medium, letter spacing 0.6 sp (M3: 0.5) |
 | `labelSmall` | weight Medium, letter spacing 0.7 sp (M3: 0.5) |
 
-Only weight and tracking change, so the user's font-family choice (System / Monospace / preset)
+Only weight and tracking change, so the user's font-family choice (System / Monospace)
 still applies on top.
 
 Do
@@ -167,8 +167,8 @@ radius, degrading to a circular corner.
 
 Material 3 roles map onto the scale: `extraSmall`/`small` → `s`, `medium` → `m`, `large` → `l`,
 `extraLarge` → `xl`. Cards default to `l` and panels to `xl`. The user's corner-style setting
-(Preset / Compact / Rounded) and non-Material presets keep their own radii; when the resolved card
-corner is sharp (Terminal), Material components go sharp too.
+(Standard / Compact / Rounded, "Corners" in Settings) picks the radii for cards, panels, the dock and
+rows; Material components follow the same scale.
 
 Do
 - Use `MaterialTheme.shapes.*`, `LocalLauncherCardShape`, `LocalLauncherPanelShape` or

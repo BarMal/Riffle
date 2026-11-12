@@ -130,8 +130,8 @@ class LayoutWorkspacesTest {
 
     @Test
     fun replaceKeepsIdAndUpdatesContent() {
-        val replaced = layout().replace(WorkspaceId("b")) { it.copy(id = WorkspaceId("hijack"), skinOverrideId = "s") }
-        assertEquals("s", replaced.find(WorkspaceId("b"))?.skinOverrideId)
+        val replaced = layout().replace(WorkspaceId("b")) { it.copy(id = WorkspaceId("hijack"), name = "renamed") }
+        assertEquals("renamed", replaced.find(WorkspaceId("b"))?.name)
         assertNull(replaced.find(WorkspaceId("hijack")))
     }
 

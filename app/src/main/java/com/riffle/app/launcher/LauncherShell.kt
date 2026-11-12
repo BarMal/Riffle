@@ -74,7 +74,6 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.Workspace
-import com.riffle.core.domain.launcher.workspace.WorkspaceSkin
 import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuEffect
 import com.riffle.core.domain.launcher.workspace.withWorkspaceHome
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
@@ -288,8 +287,8 @@ fun LauncherShellContent(
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
     workspaceMenu: WorkspaceMenuHost? = null,
     /**
-     * The active workspace (S9): its skin override applies to the launcher's theme ([WorkspaceSkin.resolve]), and its
-     * gesture bindings and dock override to the home ([withWorkspaceHome]). Null draws the global settings.
+     * The active workspace (S9): its gesture bindings and dock
+     * override apply to the home ([withWorkspaceHome]). Null draws the global settings.
      */
     workspace: Workspace? = null,
 ) {
@@ -304,7 +303,6 @@ fun LauncherShellContent(
 
     RiffleLauncherTheme(
         themeMode = state.launcherSettings.appearance.themeMode,
-        themePreset = WorkspaceSkin.resolve(state.launcherSettings.appearance.themePreset, workspace),
         themeAccent = state.launcherSettings.appearance.themeAccent,
         themeColors = state.launcherSettings.appearance.themeColors,
         themeCornerStyle = state.launcherSettings.appearance.themeCornerStyle,
@@ -312,9 +310,7 @@ fun LauncherShellContent(
         reducedTransparency = state.launcherSettings.appearance.reducedTransparency,
         liquidGlass = state.launcherSettings.resolveLiquidGlass(),
     ) {
-        val usesSystemWallpaper =
-            state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM &&
-                state.launcherSettings.appearance.themeColors.backgroundArgb == null
+        val usesSystemWallpaper = state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM
         val rootModifier =
             if (usesSystemWallpaper) {
                 Modifier.fillMaxSize()

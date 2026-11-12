@@ -15,7 +15,6 @@ import com.riffle.app.launcher.ProvideLiquidGlassBackdrop
 import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.settings.ResolvedLiquidGlass
 import org.junit.Rule
 import org.junit.Test
@@ -27,17 +26,16 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The dock's at-rest background fill (`dockSurfaceAppearance`'s branch 1, via the new
  * `dockAtRestBackground` helper it delegates to) with a real [ProvideLiquidGlassBackdrop] installed
- * above it and liquid glass turned on -- the exact eligibility gate `dockAtRestBackground` checks
- * (API 33+, enabled, non-null backdrop) before reaching for the shared AGSL shader treatment
+ * above it -- the exact eligibility gate `dockAtRestBackground` checks
+ * (API 33+, transparency not reduced, non-null backdrop) before reaching for the shared AGSL shader treatment
  * `GlassSurface` also uses.
  *
  * Robolectric's native graphics mode cannot construct a real [android.graphics.RuntimeShader] (see
- * `GlassSurface.kt`'s own `runningUnderRobolectric` doc comment), so every case here -- enabled or
- * disabled -- renders through the same flat-fill fallback; that is by design; what these tests
- * actually guard is that reaching the eligible branch with a live backdrop layer, for every
- * [DockVisualEffect], never crashes and never regresses the flat look. The real shader treatment
- * itself is exercised on-device, per this feature's own convention (see `GlassSurface.kt`'s doc
- * comment and this PR's manual validation steps).
+ * `GlassSurface.kt`'s own `runningUnderRobolectric` doc comment), so every case here renders through
+ * the same flat-fill fallback; that is by design; what these tests actually guard is that reaching
+ * the eligible branch with a live backdrop layer never crashes and never regresses the flat look.
+ * The real shader treatment itself is exercised on-device, per this feature's own convention (see
+ * `GlassSurface.kt`'s doc comment and this PR's manual validation steps).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -47,33 +45,23 @@ class DockLiquidGlassBackgroundScreenshotTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun flatEffectAtRestWithLiquidGlassEnabledAndBackdropInstalled() {
-        render(DockVisualEffect.FLAT, liquidGlassEnabled = true)
+    fun atRestWithBackdropInstalled() {
+        render(reducedTransparency = false)
     }
 
     @Test
-    fun elevatedEffectAtRestWithLiquidGlassEnabledAndBackdropInstalled() {
-        render(DockVisualEffect.ELEVATED, liquidGlassEnabled = true)
+    fun atRestWithReducedTransparencyDrawsTheOpaqueFill() {
+        render(reducedTransparency = true)
     }
 
-    @Test
-    fun outlinedEffectAtRestWithLiquidGlassEnabledAndBackdropInstalled() {
-        render(DockVisualEffect.OUTLINED, liquidGlassEnabled = true)
-    }
-
-    @Test
-    fun flatEffectAtRestWithLiquidGlassDisabledStaysOnLegacyFill() {
-        render(DockVisualEffect.FLAT, liquidGlassEnabled = false)
-    }
-
-    private fun render(
-        visualEffect: DockVisualEffect,
-        liquidGlassEnabled: Boolean,
-    ) {
+    private fun render(reducedTransparency: Boolean) {
         val iconLoader = SolidColorAppIconLoader()
         val pinned = listOf(ScreenshotFixtures.camera, ScreenshotFixtures.mail)
         composeRule.setContent {
-            RiffleLauncherTheme(liquidGlass = ResolvedLiquidGlass(liquidGlassEnabled, 0.45f, 0.2f, false)) {
+            RiffleLauncherTheme(
+                reducedTransparency = reducedTransparency,
+                liquidGlass = ResolvedLiquidGlass(0.45f, 0.2f, false, reducedTransparency),
+            ) {
                 ProvideLiquidGlassBackdrop { backdropCapture ->
                     Box(
                         modifier =
@@ -90,7 +78,6 @@ class DockLiquidGlassBackgroundScreenshotTest {
                                     capacity = pinned.size,
                                     items = pinned.map { app -> ScreenshotFixtures.shortcut(app) },
                                     position = DockPosition.BOTTOM,
-                                    visualEffect = visualEffect,
                                 ),
                             isEditing = false,
                             notificationGroupsByApp = emptyList(),

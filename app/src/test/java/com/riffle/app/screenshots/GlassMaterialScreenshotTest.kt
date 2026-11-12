@@ -62,12 +62,6 @@ class GlassMaterialScreenshotTest {
         composeRule.setContent { ScreenshotBackdrop(reducedTransparency = true) { WeightsSample() } }
         composeRule.captureScreen()
     }
-
-    @Test
-    fun liquidGlassOffKeepsTheFlatFill() {
-        composeRule.setContent { ScreenshotBackdrop(liquidGlassEnabled = false) { WeightsSample() } }
-        composeRule.captureScreen()
-    }
 }
 
 @Composable

@@ -48,7 +48,6 @@ class WorkspaceSetJsonCodecTest {
                     ),
                 ),
             ),
-            skinOverrideId = "glass",
             gestureBindings = mapOf("swipe_up" to "finder"),
         )
 
@@ -61,6 +60,18 @@ class WorkspaceSetJsonCodecTest {
             )
 
         assertEquals(set, decodeWorkspaceSet(encodeWorkspaceSet(set)))
+    }
+
+    @Test
+    fun aStoredSkinFromAnOlderBuildIsIgnored() {
+        val set = WorkspaceSet(mapOf(phone to LayoutWorkspaces.single(workspace("a"))))
+        val json = JSONObject(encodeWorkspaceSet(set))
+        val workspaces = json.getJSONArray("layouts").getJSONObject(0).getJSONArray("workspaces")
+        for (index in 0 until workspaces.length()) workspaces.getJSONObject(index).put("skin", "TERMINAL")
+        assertTrue(json.toString().contains("\"skin\""))
+
+        assertEquals(set, decodeWorkspaceSet(json.toString()))
+        assertFalse(encodeWorkspaceSet(decodeWorkspaceSet(json.toString())!!).contains("\"skin\""))
     }
 
     @Test

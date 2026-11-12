@@ -10,7 +10,6 @@ class LiquidGlassSettingsTest {
     fun defaultsAreConservativeNotMaximal() {
         val defaults = LiquidGlassSettings()
 
-        assertTrue(defaults.enabled)
         // Neither strength defaults to the maximum -- see LauncherSettings.kt's doc comment on why
         // (Apple's WWDC25 Liquid Glass had to walk back an over-transparent default twice).
         assertEquals(DEFAULT_LIQUID_GLASS_FROST_STRENGTH_PERCENT, defaults.frostStrengthPercent)
@@ -39,22 +38,21 @@ class LiquidGlassSettingsTest {
     fun resolveLiquidGlassFoldsInGlobalReducedMotion() {
         val settings =
             LauncherSettings(
-                liquidGlass = LiquidGlassSettings(enabled = true, frostStrengthPercent = 80),
+                liquidGlass = LiquidGlassSettings(frostStrengthPercent = 80),
                 motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
             )
 
         val resolved = settings.resolveLiquidGlass()
 
-        assertTrue(resolved.enabled)
         assertEquals(0.8f, resolved.frostStrengthFraction)
         assertTrue(resolved.reducedMotion)
     }
 
     @Test
-    fun resolveLiquidGlassRespectsDisabledMasterToggle() {
-        val settings = LauncherSettings(liquidGlass = LiquidGlassSettings(enabled = false))
-
-        assertFalse(settings.resolveLiquidGlass().enabled)
+    fun glassSamplesTheBackdropUnlessTransparencyIsReduced() {
+        assertTrue(LauncherSettings().resolveLiquidGlass().samplesBackdrop)
+        val reduced = LauncherSettings().withReducedTransparency(true)
+        assertFalse(reduced.resolveLiquidGlass().samplesBackdrop)
     }
 
     @Test

@@ -72,15 +72,6 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectLiquidGlassEnabled ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                liquidGlass = state.launcherSettings.liquidGlass.copy(enabled = action.enabled),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
                 is LauncherShellAction.SelectReducedTransparency ->
                     state.withLauncherSettings(
                         settings = state.launcherSettings.withReducedTransparency(action.reduced),
@@ -360,9 +351,8 @@ private val LauncherShellAction.isAppearanceSettingsAction: Boolean
         when (this) {
             is LauncherShellAction.SelectWallpaperSource,
             is LauncherShellAction.SelectLauncherThemeMode,
-            is LauncherShellAction.SelectLauncherThemePreset,
             is LauncherShellAction.SelectLauncherThemeAccent,
-            is LauncherShellAction.SelectLauncherThemeColor,
+            is LauncherShellAction.SelectCustomAccent,
             is LauncherShellAction.SelectLauncherThemeCornerStyle,
             is LauncherShellAction.SelectLauncherThemeTypography,
             is LauncherShellAction.SelectWallpaperScrollMode,

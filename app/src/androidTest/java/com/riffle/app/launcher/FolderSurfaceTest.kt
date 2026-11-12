@@ -14,8 +14,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.settings.LauncherThemeColors
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -31,10 +30,7 @@ class FolderSurfaceTest {
         val wallpaper = Color.Red
         composeRule.setContent {
             Box(modifier = Modifier.fillMaxSize().background(wallpaper)) {
-                RiffleLauncherTheme(
-                    themePreset = LauncherThemePreset.GLASS,
-                    themeColors = LauncherThemeColors(backgroundArgb = 0xFF0000FF.toInt()),
-                ) {
+                RiffleLauncherTheme(themeMode = LauncherThemeMode.LIGHT, dynamicColor = false) {
                     FolderSurface(
                         folder =
                             FolderItem(
@@ -58,10 +54,7 @@ class FolderSurfaceTest {
         val actual = image[image.width / 2, image.height / 2]
         val corner = image[0, 0]
         val expected =
-            launcherThemeSurfaceTokens(
-                themePreset = LauncherThemePreset.GLASS,
-                colorScheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF0000FF.toInt())),
-            ).panelColor.compositeOver(wallpaper)
+            launcherThemeSurfaceTokens(colorScheme = lightScheme).panelColor.compositeOver(wallpaper)
 
         assertColorClose(expected, actual)
         assertColorClose(wallpaper, corner)
