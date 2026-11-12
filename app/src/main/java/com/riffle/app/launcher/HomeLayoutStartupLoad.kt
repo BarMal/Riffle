@@ -35,9 +35,8 @@ internal const val HOME_LAYOUT_STOP_FLUSH_TIMEOUT_MILLIS = 2_000L
 internal fun openHomeLayoutsAtStartup(
     store: HomeLayoutCutoverStore,
     pool: CachedPoolRepository,
-    enabled: Boolean,
     providerOf: (HostedWidgetId) -> WidgetProviderIdentity?,
-): HomeLayoutOpening = runBlocking(Dispatchers.IO) { openHomeLayouts(store, pool, enabled, providerOf = providerOf) }
+): HomeLayoutOpening = runBlocking(Dispatchers.IO) { openHomeLayouts(store, pool, providerOf = providerOf) }
 
 /** [flushHomeLayoutBlocking] for the placed-items pool: `onStop` waits for the pool write before the layout set's. */
 internal fun flushPoolHomeBlocking(

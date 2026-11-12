@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspaces: start page, Return setting, Finder out of the pager
 
 > **S9 update ([`workspaces-default.md`](workspaces-default.md)).** The real home is the active workspace: "Start

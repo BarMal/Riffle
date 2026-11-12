@@ -12,7 +12,6 @@ enum class SettingsPage(
     LAYOUT("Layout"),
     DOCK("Dock"),
     APPEARANCE("Appearance"),
-    ADAPTIVE_STAGE_APPEARANCE("Cards appearance"),
     FLOATING_DOCK("Floating dock"),
     GESTURES("Gestures"),
     CONTEXTUAL("Contextual"),
@@ -25,12 +24,10 @@ enum class SettingsPage(
     HIDDEN_APPS("Hidden apps"),
     VERSION("About"),
 
-    /** Workspaces pages: reachable from the Workspaces section at the top of Settings (S9). */
-    WORKSPACES("Workspaces"),
+    /** Sources and their rules: reachable from the main page. */
     SOURCES("Sources"),
     EXCLUSIONS("Hidden items and rules"),
     ICS_FEEDS("Calendar feeds (ICS)"),
-    LENSES("Saved lenses"),
 
     /** Per-source detail pages, opened from a Sources row (see [SourceDetailPages]). Developer pages too. */
     SOURCE_APPS("Apps source"),
@@ -40,7 +37,6 @@ enum class SettingsPage(
     SOURCE_MEDIA("Media source"),
     SOURCE_CALENDAR("Calendar source"),
     SOURCE_RSS("RSS feeds source"),
-    SOURCE_SEARCH("Search source"),
     SOURCE_ICS("Calendar feeds source"),
 }
 

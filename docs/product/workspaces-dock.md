@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspaces: the preview dock, read-only (WS10, as built)
 
 Status: **wired behind the preview switch, read-only**. Replaces the dock placeholder in the Workspaces (preview).

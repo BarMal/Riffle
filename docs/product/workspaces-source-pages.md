@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Sources page: detail pages, Used by, Add source (as built)
 
 Slice of #1363, issue #1419 (follows the Sources page of #1384; design section 2.4 of

@@ -7,10 +7,10 @@ import com.riffle.core.domain.launcher.workspace.settings.ExclusionRuleRow
 /** User-visible wording for Settings > Hidden items and rules. Plain strings so JVM tests can check them. */
 internal object ExclusionsSettingsText {
     const val TITLE = "Hidden items and rules"
-    const val ROW_SUBTITLE = "Rules that hide apps, feeds, items and text from your pages"
+    const val ROW_SUBTITLE = "Rules that hide apps, feeds, items and text from the Stream and the Library"
     const val INTRO =
-        "Hidden items are removed before any page or lens can show them. Each layout keeps its own rules, so " +
-            "something hidden on one layout can reappear on another."
+        "Hidden items are removed before the Stream or the Library can show them. Each layout keeps its own " +
+            "rules, so something hidden on one layout can reappear on another."
     const val NOT_LOADED = "Rules are still loading. Open this page again in a moment."
     const val EMPTY_TITLE = "Nothing is hidden on this layout"
     const val EMPTY_BODY =

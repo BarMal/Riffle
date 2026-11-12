@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspace presets (WS8)
 
 Five presets ship as ordinary workspaces (see `workspaces-sources-lenses.md`): Nova-style (the default),

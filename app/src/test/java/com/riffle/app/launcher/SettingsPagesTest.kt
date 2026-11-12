@@ -25,7 +25,6 @@ class SettingsPagesTest {
                 "Layout" to SettingsPage.LAYOUT,
                 "Dock" to SettingsPage.DOCK,
                 "Appearance" to SettingsPage.APPEARANCE,
-                "Cards appearance" to SettingsPage.ADAPTIVE_STAGE_APPEARANCE,
                 "Floating dock" to SettingsPage.FLOATING_DOCK,
                 "Gestures" to SettingsPage.GESTURES,
                 "Contextual behaviour" to SettingsPage.CONTEXTUAL,
@@ -59,7 +58,7 @@ class SettingsPagesTest {
         val entries = settingsMainPageEntries()
 
         assertEquals(
-            setOf(SettingsPage.APPEARANCE, SettingsPage.ADAPTIVE_STAGE_APPEARANCE),
+            setOf(SettingsPage.APPEARANCE),
             entries.filter { entry -> entry.group == SettingsPageGroup.APPEARANCE }.map { entry -> entry.page }.toSet(),
         )
     }
@@ -317,7 +316,7 @@ class SettingsPagesTest {
     fun launcherSearchSettingsEntriesResolveBackToSettingsPages() {
         val entries = settingsLauncherSearchEntries()
 
-        // The last entry is "Set up your home again", in the Workspaces section of the main page.
+        // The last entry is "Set up Riffle again", in the Workspaces section of the main page.
         assertEquals(
             settingsMainPageEntries().map { entry -> entry.page } + SettingsPage.MAIN,
             entries.map { entry -> entry.id.settingsPage() },
@@ -325,13 +324,13 @@ class SettingsPagesTest {
     }
 
     @Test
-    fun theWalkthroughIsFoundBySearchAndOpensTheMainSettingsPage() {
+    fun theSetUpIsFoundBySearchAndOpensTheMainSettingsPage() {
         val entries = settingsLauncherSearchEntries()
         listOf("walkthrough", "setup", "onboarding").forEach { query ->
             val results = LauncherSearchProvider().search(query = query, apps = emptyList(), settingsEntries = entries)
-            assertEquals(query, listOf("Set up your home again"), results.map { result -> result.title })
+            assertEquals(query, listOf("Set up Riffle again"), results.map { result -> result.title })
         }
-        val entry = entries.single { it.title == "Set up your home again" }
+        val entry = entries.single { it.title == "Set up Riffle again" }
         assertEquals(SettingsPage.MAIN, entry.id.settingsPage())
     }
 

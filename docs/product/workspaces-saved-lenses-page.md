@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Settings > Saved lenses (WS10, as built)
 
 Issue #1420; part of #1363, #1364 and #1385. Design: [`workspaces-configuration.md`](workspaces-configuration.md) 2.1, 2.5 and

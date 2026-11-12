@@ -1,5 +1,11 @@
 # Workspaces: backup and restore (WS10 S8)
 
+> **Since ADR 0003 (slice P8).** Backup format is unchanged: version 1 documents written by earlier builds still import,
+> and export keeps writing the stored workspaces, their lenses and the saved-lens library, even though nothing in the app
+> edits or switches them any more (the active workspace's arrangement is the one Home shows). The pool section carries
+> every arrangement, so inactive workspaces' items survive a round trip. Decoded by
+> `LauncherBackupBeforeCutoverTest` against a frozen document.
+
 Issue #1394, refs #1363 section 5. This is what is built, why, and what is not.
 
 ## As built

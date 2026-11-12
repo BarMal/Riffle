@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspaces are the default (WS10 S9, as built)
 
 Status: **built, on for everyone; never run on a device.** Slice S9 of `workspaces-configuration.md` (sections 1, 3,

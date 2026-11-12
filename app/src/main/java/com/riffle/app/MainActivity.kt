@@ -54,7 +54,6 @@ import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.launchNotificationListenerSettings
 import com.riffle.app.launcher.onboarding.androidOnboardingHost
-import com.riffle.app.launcher.onboarding.flowSource
 import com.riffle.app.launcher.overlay.AndroidUsageAccessSettingsAction
 import com.riffle.app.launcher.pool.POOL_HOME_RECOVERY_NOTICE
 import com.riffle.app.launcher.pool.showBlockedHomeEdits
@@ -69,11 +68,8 @@ import com.riffle.app.launcher.widgets.PendingWidgetAddStep
 import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
-import com.riffle.app.launcher.wizard.HomeWizardStores
-import com.riffle.app.launcher.workspace.AlwaysOnWorkspaces
 import com.riffle.app.launcher.workspace.SourceAccessLaunchers
-import com.riffle.app.launcher.workspace.WorkspacePreviewController
-import com.riffle.app.launcher.workspace.WorkspacePreviewHost
+import com.riffle.app.launcher.workspace.SourcesHost
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
@@ -83,7 +79,6 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
-import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -107,21 +102,15 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    /** S9: workspaces are always on; the controller only tracks the workspace the editor is open on. */
-    private val workspacePreviewController by lazy { WorkspacePreviewController(preference = AlwaysOnWorkspaces) }
-
     /** Built once, on first use, and kept for the process's activity. */
-    private val workspaceRuntime by lazy {
-        dependencies.workspaceRuntime { shellViewModel.state.value.launcherSettings }
+    private val sourcesRuntime by lazy {
+        dependencies.sourcesRuntime { shellViewModel.state.value.launcherSettings }
     }
-    private val workspacePreviewHost by lazy {
-        WorkspacePreviewHost(
-            controller = workspacePreviewController,
+    private val sourcesHost by lazy {
+        SourcesHost(
             workspaceVersion = dependencies.workspaceRepository.version,
-            runtime = { workspaceRuntime },
+            runtime = { sourcesRuntime },
             onRequestSourceAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
-            poolHome = dependencies.homeLayoutRuntime.poolHomeSwitch,
-            wizardStores = wizardStores,
         )
     }
 
@@ -132,30 +121,13 @@ class MainActivity : ComponentActivity() {
     private val streamHost by lazy {
         dependencies.streamHost(
             launcherSettings = { shellViewModel.state.value.launcherSettings },
-            enablement = workspaceRuntime.enablement,
-            contentPrivacy = workspaceRuntime.contentPrivacy,
+            enablement = sourcesRuntime.enablement,
+            contentPrivacy = sourcesRuntime.contentPrivacy,
             requestAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
         )
     }
 
-    /** Where the content wizard writes: the workspace store and the pool, under the home's read-only and S9 rules. */
-    private val wizardStores by lazy {
-        val home = dependencies.homeLayoutRuntime
-        HomeWizardStores(
-            workspaceRepository = dependencies.workspaceRepository,
-            poolRepository = home.pool,
-            readOnly = { home.readOnlyHome != null },
-            holding = { home.poolHome?.awaitingWorkspaces == true },
-            flushPool = {
-                lifecycleScope.launch {
-                    val poolHome = home.poolHome
-                    if (poolHome != null) poolHome.flushNow() else home.pool.flush()
-                }
-            },
-        )
-    }
-
-    /** The editor's "Review access" button leads only to the existing explicit user-initiated flows. */
+    /** The "Allow access" buttons lead only to the existing explicit user-initiated flows. */
     private val sourceAccessLaunchers by lazy {
         SourceAccessLaunchers(
             calendar = { launcherActionRouter.handle(LauncherShellAction.RequestCalendarAccess) },
@@ -170,18 +142,15 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * The first-time walkthrough and the existing-user offer. Permissions go only through [sourceAccessLaunchers] (the
-     * existing explicit flows), from the walkthrough's "Continue" tap.
+     * The four-step first-run set-up. Permissions go only through [sourceAccessLaunchers] (the existing explicit
+     * flows), from an "Allow" tap in the Stream step.
      */
     private val onboardingHost by lazy {
         androidOnboardingHost(
             context = this,
             homeLayoutRuntime = dependencies.homeLayoutRuntime,
             workspaces = dependencies.workspaceRepository,
-            runtime = { workspaceRuntime },
-            icsFeeds = { dependencies.icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds.orEmpty() },
-            launchPermission = { permission -> sourceAccessLaunchers.request(permission.flowSource()) },
-            onApplied = { shellViewModel.workspaceMenu.refresh() },
+            launchPermission = { permission -> sourceAccessLaunchers.request(permission.source) },
         )
     }
     private val homeRoleGateway get() = dependencies.homeRoleGateway
@@ -375,8 +344,6 @@ class MainActivity : ComponentActivity() {
             editHomePage = shellViewModel::onHomePageEdited,
             editHomeShortcut = shellViewModel::onHomeShortcutEdited,
             editDock = shellViewModel::onDockEdited,
-            // A gesture bound to "Workspace menu" (global or the workspace's own); nothing until workspaces load.
-            openWorkspaceMenu = { shellViewModel.workspaceMenu.dispatch(WorkspaceMenuAction.Open) },
         )
     }
 
@@ -593,7 +560,7 @@ class MainActivity : ComponentActivity() {
                                     previewImageLoader = dependencies.widgetPreviewImageLoader,
                                 ),
                             adaptiveStageWindowLayout = adaptiveStageWindowLayout,
-                            workspacePreview = workspacePreviewHost,
+                            sources = sourcesHost,
                             onboarding = onboardingHost,
                             stream = streamHost,
                             onAction = launcherActionRouter::handle,

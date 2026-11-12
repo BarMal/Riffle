@@ -8,9 +8,9 @@ internal object ReturnBehaviorText {
     const val RESTORE = "Restore"
     const val RESTORE_SUMMARY = "Back to the page you were on"
     const val FIRST_PAGE = "First page"
-    const val FIRST_PAGE_SUMMARY = "Always the first page, never the Finder"
+    const val FIRST_PAGE_SUMMARY = "Always the first page"
     const val START_PAGE = "Start page"
-    const val START_PAGE_SUMMARY = "The page set as the workspace's start page"
+    const val START_PAGE_SUMMARY = "The page set as the start page"
     const val SELECTED = "Selected"
 
     fun label(behavior: ReturnBehavior): String =

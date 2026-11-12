@@ -96,7 +96,6 @@ internal class LauncherShellRefreshActions(
     private val currentState: () -> LauncherShellState,
     private val updateState: (LauncherShellState) -> Unit,
     private val refreshCoordinator: LauncherShellRefreshCoordinator,
-    private val artworkRevisionStore: AdaptiveStageArtworkRevisionStore = adaptiveStageArtworkRevisions,
     private val beforeNotificationCommit: () -> Unit = {},
 ) {
     private var installedAppRefreshJob: Job? = null
@@ -135,7 +134,6 @@ internal class LauncherShellRefreshActions(
                     context.ensureActive()
                     if (generation == notificationRefreshGeneration) {
                         val state = refreshCoordinator.applyNotificationRefresh(currentState(), notifications)
-                        artworkRevisionStore.replace(state.notificationGroupsByApp)
                         updateState(state)
                     }
                 }

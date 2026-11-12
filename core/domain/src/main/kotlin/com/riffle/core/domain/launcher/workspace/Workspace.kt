@@ -114,32 +114,3 @@ object WorkspaceValidation {
             workspace.dock.dynamicSection?.let { add(it.expression) }
         }
 }
-
-sealed interface WorkspaceResolution {
-    val workspace: Workspace
-
-    data class Resolved(override val workspace: Workspace) : WorkspaceResolution
-
-    /** The requested workspace cannot be drawn on this layout; [workspace] is the default, and the UI says so. */
-    data class FellBack(
-        override val workspace: Workspace,
-        val requested: WorkspaceId,
-        val issues: List<WorkspaceIssue>,
-    ) : WorkspaceResolution
-}
-
-object WorkspaceResolver {
-    fun resolve(
-        requested: Workspace,
-        default: Workspace,
-        capabilities: LayoutCapabilities = LayoutCapabilities(),
-        sources: List<SourceDescriptor>? = null,
-    ): WorkspaceResolution {
-        val issues = WorkspaceValidation.validate(requested, capabilities, sources)
-        return if (issues.isEmpty() || requested.id == default.id) {
-            WorkspaceResolution.Resolved(requested)
-        } else {
-            WorkspaceResolution.FellBack(default, requested.id, issues)
-        }
-    }
-}

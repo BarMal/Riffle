@@ -32,6 +32,16 @@
 - The Liquid glass on/off switch is gone: glass is always on and Reduced transparency is the off switch. The Settings section is now "Glass".
 - The dock effect choice (flat, elevated, outlined) is gone; the dock uses the standard glass sheen.
 - Custom colours are reduced to a custom accent; the background, dock, label and label background colours are ignored. "Card corners" is now "Corners".
+- First run is four short steps, one per Place: Home, the Dock, the Library and the Stream. The Stream step asks for notification access, calendar and usage access, each after a one-line explanation and each skippable; a skipped section shows "Allow access". Existing users are shown nothing; "Set up Riffle again" in Settings re-runs it and changes nothing you placed.
+- Backups written by earlier builds still import (Home, Dock, settings, hidden apps, exclusions, the Stream layout and the stored workspaces are restored), and a backup still writes the stored workspaces, so a round trip loses nothing.
+
+### Removed
+
+- One arrangement per posture (ADR 0003): Home is the arrangement of each layout's active workspace as stored, and the Dock is the pool's dock. Nothing switches workspaces any more, and nothing shows or edits the others: they stay in storage, decodable and untouched (including their pool items, which are never collected), so switching can return later. A layout with nothing stored shows the home you had.
+- The workspace menu and its "Workspace menu" accessibility action, workspace switching and Settings > Workspaces (switch, rename, duplicate, make default, reorder, install preset, reset to preset, copy between layouts, dock and new-apps overrides), the presets (iOS-style, Nova-style, TimeScape, Niagara, Kvaesitso-style), the workspace editor, the content wizard and goals, saved lenses with the lens library and Settings > Saved lenses, the advanced lens builder, per-lens search queries and the Search source's settings page, lens pages after the Home pages with their Hide menu, and Finder pages. The Library and the Stream replaced them.
+- The adaptive stage surface (the Cards home mode, its stage pager, card detail, dock stage selector and "Pin as a card" menu items), its live tuning overlay and Settings > Cards appearance, the generated notification-cards page (a saved one now says the notifications are in the Stream and opens it), and the RSS stage. A layout saved in the Cards mode now shows its placed items on the standard home. The card-stack physics the Stream's Stack view uses are kept.
+- The Developer switch "Home from placed items": the placed-items pool is the only home, and the one-time move into it runs for everyone. If it cannot be written the home is shown read-only from what is stored instead of falling back to the old storage.
+- The "Set up your home" offer and the wizard-based walkthrough.
 
 ## Alpha 192
 

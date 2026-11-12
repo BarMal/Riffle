@@ -1,3 +1,6 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+> Only Decisions 1, 3, 5, 6, 9 and 11 are superseded; the rest of this document stands.
+
 # Modes, the dock handle, and daily-driver Cards
 
 Status: **accepted plan**, tracked by #1196. The workstream issues link back here. Where this

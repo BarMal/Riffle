@@ -124,8 +124,6 @@ internal fun rememberHomeDockPullBinding(
     dockPull: DockPullState,
     hostState: HomeDockHostState,
     onAction: (LauncherShellAction) -> Unit,
-    /** The workspace menu stays reachable by its accessibility action until P8 removes it; null when there is none. */
-    onOpenWorkspaceMenu: (() -> Unit)? = null,
 ): HomeDockPullBinding {
     val rootSize = remember { mutableStateOf(IntSize.Zero) }
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -162,7 +160,7 @@ internal fun rememberHomeDockPullBinding(
             hostState = hostState,
             dockCoordinates = dockCoordinates,
         )
-    val actions = dockPullActions(dockPull, canPull, stream, direction, reducedMotion, onOpenWorkspaceMenu)
+    val actions = dockPullActions(dockPull, canPull, stream, direction, reducedMotion)
     val dockModifier =
         Modifier
             .testTag(HOME_DOCK_PULL_TEST_TAG)
@@ -213,7 +211,6 @@ private fun dockPullActions(
     stream: StreamPullInputs,
     direction: DockPullDirection,
     reducedMotion: Boolean,
-    onOpenWorkspaceMenu: (() -> Unit)?,
 ): DockPullActions {
     val libraryLabel = stringResource(R.string.dock_open_library_action)
     val streamLabel =
@@ -229,7 +226,7 @@ private fun dockPullActions(
     }
     // One customActions list: two semantics modifiers on a node do not merge their lists, the later one is dropped.
     val modifier =
-        if (canPull || onOpenWorkspaceMenu != null) {
+        if (canPull) {
             Modifier.semantics {
                 customActions =
                     listOfNotNull(
@@ -238,12 +235,6 @@ private fun dockPullActions(
                         streamDestination?.takeIf { canPull }?.let { destination ->
                             CustomAccessibilityAction(streamLabel) { open(destination) }
                         },
-                        onOpenWorkspaceMenu?.let { onOpen ->
-                            CustomAccessibilityAction(WORKSPACE_MENU_ACTION_LABEL) {
-                                onOpen()
-                                true
-                            }
-                        },
                     )
             }
         } else {
@@ -251,24 +242,6 @@ private fun dockPullActions(
         }
     return DockPullActions(modifier, open, streamDestination)
 }
-
-/** The "Workspace menu" accessibility action, kept reachable until P8 removes the menu; identity when there is none. */
-internal fun workspaceMenuActionModifier(onOpen: (() -> Unit)?): Modifier =
-    if (onOpen == null) {
-        Modifier
-    } else {
-        Modifier.semantics {
-            customActions =
-                listOf(
-                    CustomAccessibilityAction(WORKSPACE_MENU_ACTION_LABEL) {
-                        onOpen()
-                        true
-                    },
-                )
-        }
-    }
-
-internal const val WORKSPACE_MENU_ACTION_LABEL = "Workspace menu"
 
 @Composable
 @Suppress("LongParameterList")

@@ -122,8 +122,8 @@ class WorkspaceRotationTest {
 
             assertFalse(landscape in set.layouts)
             assertEquals(set.workspacesFor(portraitWindow), set.workspacesFor(rotatedWindow))
-            assertEquals(set.resolveActive(portraitWindow), set.resolveActive(rotatedWindow))
-            assertEquals(WorkspaceId("b"), set.resolveActive(rotatedWindow).workspace.id)
+            assertEquals(set.workspacesFor(portraitWindow).active, set.workspacesFor(rotatedWindow).active)
+            assertEquals(WorkspaceId("b"), set.workspacesFor(rotatedWindow).active.id)
         }
 
     @Test
@@ -136,7 +136,7 @@ class WorkspaceRotationTest {
             val set = checkNotNull(repository.load())
 
             assertFalse(landscape in set.layouts)
-            assertEquals(WorkspaceId("l"), set.resolveActive(portraitWindow).workspace.id)
+            assertEquals(WorkspaceId("l"), set.workspacesFor(portraitWindow).active.id)
         }
 
     @Test

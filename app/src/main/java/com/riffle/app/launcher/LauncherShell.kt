@@ -26,12 +26,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -46,18 +41,11 @@ import com.riffle.app.launcher.onboarding.LocalWalkthroughLauncher
 import com.riffle.app.launcher.onboarding.OnboardingHost
 import com.riffle.app.launcher.onboarding.OnboardingLayer
 import com.riffle.app.launcher.stream.StreamHost
-import com.riffle.app.launcher.wizard.WizardRequest
-import com.riffle.app.launcher.workspace.LensesSettingsController
-import com.riffle.app.launcher.workspace.LocalWorkspaceHomePages
 import com.riffle.app.launcher.workspace.NoWorkspaceVersion
-import com.riffle.app.launcher.workspace.PreviewHideHost
 import com.riffle.app.launcher.workspace.SourceContentLevelsController
+import com.riffle.app.launcher.workspace.SourcesHost
+import com.riffle.app.launcher.workspace.SourcesLayer
 import com.riffle.app.launcher.workspace.SourcesSettingsController
-import com.riffle.app.launcher.workspace.WorkspaceHomeState
-import com.riffle.app.launcher.workspace.WorkspaceLayer
-import com.riffle.app.launcher.workspace.WorkspacePreviewHost
-import com.riffle.app.launcher.workspace.WorkspacesSettingsController
-import com.riffle.app.launcher.workspace.rememberWorkspaceHome
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -66,7 +54,6 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -74,9 +61,6 @@ import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
-import com.riffle.core.domain.launcher.workspace.Workspace
-import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuEffect
-import com.riffle.core.domain.launcher.workspace.withWorkspaceHome
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 import kotlinx.coroutines.delay
 
@@ -88,7 +72,7 @@ fun LauncherShell(
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
-    workspacePreview: WorkspacePreviewHost? = null,
+    sources: SourcesHost? = null,
     onboarding: OnboardingHost? = null,
     stream: StreamHost? = null,
     onAction: (LauncherShellAction) -> Unit,
@@ -101,62 +85,38 @@ fun LauncherShell(
         remember(storedState, systemReducedMotion) {
             storedState.withSystemReducedMotion(systemReducedMotion)
         }
-    var adaptiveStageContext by rememberSaveable(stateSaver = AdaptiveStageInteractionContextSaver) {
-        mutableStateOf(AdaptiveStageInteractionContext())
-    }
-    // S9: workspaces are the home. Absent only while no workspaces are loaded (or the shell has no host).
-    val menuState by viewModel.workspaceMenu.state.collectAsState()
-    val workspaceVersion by (workspacePreview?.workspaceVersion ?: NoWorkspaceVersion).collectAsState()
+    // The sources load once; until they have, the dock pull is inert and onboarding waits.
+    val workspaceVersion by (sources?.workspaceVersion ?: NoWorkspaceVersion).collectAsState()
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
-    val menuAvailable = remember(workspaceVersion, deviceClass) { viewModel.workspaceMenu.isAvailable() }
-    // While the workspaces load the dock pull is inert (it must not switch modes; the menu is not there yet).
-    val workspacesLoading = remember(workspaceVersion) { workspacePreview != null && !viewModel.workspacesLoaded() }
-    val workspaceMenu =
-        if (menuAvailable) {
-            WorkspaceMenuHost(state = menuState, onAction = viewModel.workspaceMenu::dispatch)
-        } else {
-            null
-        }
-    val workspaceHome = rememberWorkspaceHome(workspacePreview, state)
-    val poolHomeSetting = rememberPoolHomeSetting(workspacePreview)
-    val settingsHost =
-        rememberWorkspaceSettingsHost(workspacePreview, deviceClass.workspaceLayoutClass(), viewModel)
+    val workspacesLoading = remember(workspaceVersion) { sources != null && !viewModel.workspacesLoaded() }
+    val settingsHost = rememberWorkspaceSettingsHost(sources, deviceClass.workspaceLayoutClass())
 
     HomeReturnEffect(state = state, suppressed = false, onAction = onAction, startPage = viewModel::workspaceStartPage)
-    WorkspaceMenuEffects(viewModel, workspacePreview, workspaceHome, state, onAction)
 
     Box(modifier = Modifier.fillMaxSize()) {
         CompositionLocalProvider(
-            LocalPoolHomeSetting provides poolHomeSetting,
             LocalWorkspaceSettingsHost provides settingsHost,
-            LocalWorkspaceHomePages provides workspaceHome?.pages,
             LocalHomeSelectionRequests provides viewModel.homeSelectionRequests,
             LocalWalkthroughLauncher provides onboarding?.controller?.let { controller -> controller::rerun },
         ) {
-            PreviewHideHost(workspaceHome?.hideController, deviceClass.workspaceLayoutClass(), 0.dp) {
-                LauncherShellContent(
-                    state = state,
-                    viewModeAvailability = viewModel.viewModeAvailability,
-                    appInfo = LauncherShellAppInfo(appVersionLabel, appBuildIdentityLabel),
-                    appIconLoader = appIconLoader,
-                    widgetRenderers = widgetRenderers,
-                    adaptiveStageWindowLayout = adaptiveStageWindowLayout,
-                    adaptiveStageContext = adaptiveStageContext,
-                    onAdaptiveStageContextChanged = { adaptiveStageContext = it },
-                    workspaceMenu = workspaceMenu,
-                    onAction = onAction,
-                    onSetupCardDismissed = viewModel::onSetupCardDismissed,
-                    onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
-                    workspace = workspaceHome?.workspace,
-                    stream = stream,
-                )
-            }
+            LauncherShellContent(
+                state = state,
+                viewModeAvailability = viewModel.viewModeAvailability,
+                appInfo = LauncherShellAppInfo(appVersionLabel, appBuildIdentityLabel),
+                appIconLoader = appIconLoader,
+                widgetRenderers = widgetRenderers,
+                adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                onAction = onAction,
+                onSetupCardDismissed = viewModel::onSetupCardDismissed,
+                onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
+                stream = stream,
+            )
         }
-        // Loads the workspaces and draws the workspace editor over the home while it is open.
-        if (workspacePreview != null) {
-            WorkspaceLayer(workspacePreview, state, viewModel)
+        // Loads the stored workspaces and the exclusion rules.
+        if (sources != null) {
+            SourcesLayer(sources, viewModel)
         }
-        // The first-time walkthrough and the existing-user offer, after the Home-role card (see OnboardingLayer).
+        // The first-run set-up, after the Home-role card (see OnboardingLayer).
         if (onboarding != null) {
             OnboardingLayer(onboarding, state, workspacesLoaded = !workspacesLoading, onAction = onAction)
         }
@@ -164,78 +124,20 @@ fun LauncherShell(
 }
 
 /**
- * The workspace menu's choices the shell carries out on the home (S9): a jump selects the placed page (or scrolls to
- * the lens page) it names, the Finder entry opens the app drawer (the Finder of the default Nova workspace is the
- * drawer), and Edit opens the editor. Switching workspace was already saved by the menu; the view model follows it.
- */
-@Composable
-private fun WorkspaceMenuEffects(
-    viewModel: LauncherShellViewModel,
-    host: WorkspacePreviewHost?,
-    home: WorkspaceHomeState?,
-    state: LauncherShellState,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    val latestHome by rememberUpdatedState(home)
-    val latestState by rememberUpdatedState(state)
-    val latestOnAction by rememberUpdatedState(onAction)
-    LaunchedEffect(viewModel, host) {
-        viewModel.workspaceMenuEffects.collect { effect ->
-            when (effect) {
-                is WorkspaceMenuEffect.NavigateToPage -> {
-                    val containerId = effect.key.containerId
-                    val target = latestHome?.navigate(containerId, latestState.homeLayout)
-                    if (target != null || latestHome?.isExtraPage(containerId) == true) {
-                        latestOnAction(LauncherShellAction.OpenHome)
-                    }
-                    target?.let { page -> latestOnAction(LauncherShellAction.SelectHomePage(page)) }
-                }
-                is WorkspaceMenuEffect.OpenFinderPage -> latestOnAction(LauncherShellAction.OpenAppDrawer)
-                is WorkspaceMenuEffect.EditWorkspace -> host?.controller?.onEffect(effect)
-                is WorkspaceMenuEffect.SetActiveWorkspace -> Unit
-            }
-        }
-    }
-}
-
-/** The Developer section's "Home from placed items" switch; null when the shell has no host or switch. */
-@Composable
-private fun rememberPoolHomeSetting(host: WorkspacePreviewHost?): PoolHomeSetting? {
-    val switch = host?.poolHome ?: return null
-    val enabled by switch.enabled.collectAsState()
-    return remember(switch, enabled) { PoolHomeSetting(enabled, switch.activeThisProcess, switch::setEnabled) }
-}
-
-/**
- * The Workspaces and Sources settings pages' view of the runtime. Null (so neither page exists) only when the shell
- * has no host; the runtime it reads is the one the home and the editor share.
+ * The Sources, Privacy, Hidden items and Calendar feeds pages' view of the runtime. Null (so none of them exists) only
+ * when the shell has no host.
  */
 @Composable
 private fun rememberWorkspaceSettingsHost(
-    host: WorkspacePreviewHost?,
+    host: SourcesHost?,
     currentLayout: HomeLayoutDeviceClass,
-    viewModel: LauncherShellViewModel,
 ): WorkspaceSettingsHost? =
     if (host == null) {
         null
     } else {
         val runtime = remember(host) { host.runtime() }
-        // Not keyed by the layout: a rotation changes it, and the lens being built must survive that.
-        val lenses =
-            remember(host, runtime) {
-                LensesSettingsController(
-                    repository = runtime.repository,
-                    descriptors = { runtime.registry.descriptors() },
-                    onChanged = { viewModel.workspaceMenu.refresh() },
-                )
-            }
         remember(host, runtime, currentLayout) {
             WorkspaceSettingsHost(
-                workspaces =
-                    WorkspacesSettingsController(
-                        repository = runtime.repository,
-                        onChanged = { viewModel.workspaceMenu.refresh() },
-                    ),
                 sources =
                     SourcesSettingsController(
                         monitorFor = runtime::sourceStatusMonitor,
@@ -243,8 +145,6 @@ private fun rememberWorkspaceSettingsHost(
                         descriptors = { runtime.registry.descriptors() },
                     ),
                 icsFeeds = runtime.icsFeeds,
-                lenses = lenses,
-                previewServices = { reducedMotion -> runtime.services(reducedMotion) },
                 globalSearchQuery = runtime.searchQuery,
                 contentLevels =
                     SourceContentLevelsController(
@@ -253,14 +153,7 @@ private fun rememberWorkspaceSettingsHost(
                     ),
                 version = host.workspaceVersion,
                 currentLayout = currentLayout,
-                onEdit = { id -> host.controller.onEffect(WorkspaceMenuEffect.EditWorkspace(id)) },
                 onRequestSourceAccess = host.onRequestSourceAccess,
-                onUseSource = { source -> host.wizardRequests.open(WizardRequest.FromSource(source, currentLayout)) },
-                onNewLensWizard = { layout ->
-                    host.wizardRequests.open(WizardRequest.NewSavedLens(layout)) { handoff ->
-                        lenses.builder.startNew(layout, handoff.draft)
-                    }
-                },
                 exclusions =
                     runtime.exclusions?.let { repository ->
                         ExclusionsSettingsController(
@@ -285,14 +178,6 @@ fun LauncherShellContent(
     onAction: (LauncherShellAction) -> Unit,
     onSetupCardDismissed: () -> Unit = {},
     onDockEditFeedbackDismissed: () -> Unit = {},
-    adaptiveStageContext: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
-    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
-    workspaceMenu: WorkspaceMenuHost? = null,
-    /**
-     * The active workspace (S9): its gesture bindings and dock
-     * override apply to the home ([withWorkspaceHome]). Null draws the global settings.
-     */
-    workspace: Workspace? = null,
     /** The Stream's content, layouts and actions; null draws Home even when the Stream is the destination. */
     stream: StreamHost? = null,
 ) {
@@ -338,12 +223,8 @@ fun LauncherShellContent(
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
                 adaptiveStageWindowLayout = adaptiveStageWindowLayout,
-                adaptiveStageContext = adaptiveStageContext,
-                onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 haptics = haptics,
-                workspaceMenu = workspaceMenu,
                 onAction = onAction,
-                workspace = workspace,
                 stream = stream,
             )
             if (state.destination == ShellDestination.HOME && state.shouldShowSetupCard) {
@@ -425,51 +306,6 @@ private fun LauncherShellBackHandling(
 }
 
 private const val DOCK_EDIT_REJECTION_TIMEOUT_MILLIS = 5_000L
-
-internal val AdaptiveStageInteractionContextSaver =
-    Saver<AdaptiveStageInteractionContext, List<String>>(
-        save = { context ->
-            listOf(
-                context.selectedStageKey.orEmpty(),
-                context.detailStageKey.orEmpty(),
-                context.focusedCardKey.orEmpty(),
-                context.detailCardKey.orEmpty(),
-                context.templateId.orEmpty(),
-                context.scrollOffsetPx.toString(),
-                context.allNotificationsSelected.toString(),
-            )
-        },
-        restore = { saved ->
-            if (saved.size >= 7) {
-                AdaptiveStageInteractionContext(
-                    selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
-                    detailStageKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
-                    focusedCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
-                    detailCardKey = saved.getOrNull(3)?.takeIf(String::isNotBlank),
-                    templateId = saved.getOrNull(4)?.takeIf(String::isNotBlank),
-                    scrollOffsetPx = saved.getOrNull(5)?.toIntOrNull() ?: 0,
-                    allNotificationsSelected = saved.getOrNull(6).toBoolean(),
-                )
-            } else if (saved.size >= 6) {
-                AdaptiveStageInteractionContext(
-                    selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
-                    detailStageKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
-                    focusedCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
-                    detailCardKey = saved.getOrNull(3)?.takeIf(String::isNotBlank),
-                    templateId = saved.getOrNull(4)?.takeIf(String::isNotBlank),
-                    scrollOffsetPx = saved.getOrNull(5)?.toIntOrNull() ?: 0,
-                )
-            } else {
-                AdaptiveStageInteractionContext(
-                    selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
-                    focusedCardKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
-                    detailCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
-                    templateId = saved.getOrNull(3)?.takeIf(String::isNotBlank),
-                    scrollOffsetPx = saved.getOrNull(4)?.toIntOrNull() ?: 0,
-                )
-            }
-        },
-    )
 
 internal fun dockEditRejectionMessage(reason: DockEditRejectionReason): String =
     when (reason) {
@@ -606,22 +442,11 @@ private fun LauncherDestination(
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout?,
-    adaptiveStageContext: AdaptiveStageInteractionContext,
-    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
     haptics: LauncherHaptics,
-    workspaceMenu: WorkspaceMenuHost?,
     onAction: (LauncherShellAction) -> Unit,
-    workspace: Workspace? = null,
     stream: StreamHost? = null,
 ) {
     val settingsPageActionRouter = rememberSettingsPageActionRouter(onAction)
-    // Ephemeral, not part of durable LauncherShellState -- it's a settings-page-triggered
-    // overlay, never persisted or restored, so it doesn't need reducer/action-system plumbing.
-    // Owned here (not hoisted to LauncherShellContent) so its dismiss callback can route back to
-    // the Adaptive Stage Appearance settings page through settingsPageActionRouter -- that
-    // router's own initialSettingsPage state is itself scoped to this composable, unreachable
-    // from outside it.
-    var adaptiveStageAppearanceTuning by remember { mutableStateOf(false) }
 
     when (state.destination) {
         // The Stream replaces Home and keeps the Dock under it, so both are the one HomeDestination; without a Stream
@@ -629,15 +454,11 @@ private fun LauncherDestination(
         // a sheet over Home or the Stream, so it is drawn by the same HomeDestination, with the Dock still under it.
         ShellDestination.HOME, ShellDestination.STREAM, ShellDestination.APP_DRAWER, ShellDestination.SEARCH ->
             HomeDestination(
-                // Render only: the workspace's gestures and dock override; Settings keeps the global values.
-                state = remember(state, workspace) { state.withWorkspaceHome(workspace) },
+                state = state,
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
                 adaptiveStageWindowLayout = adaptiveStageWindowLayout,
-                adaptiveStageContext = adaptiveStageContext,
-                onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 haptics = haptics,
-                workspaceMenu = workspaceMenu,
                 stream = stream,
                 streamShown =
                     stream != null &&
@@ -667,26 +488,7 @@ private fun LauncherDestination(
                 state = settingsState,
                 initialPage = settingsPageActionRouter.initialSettingsPage,
                 onAction = settingsPageActionRouter.onAction,
-                onRequestAdaptiveStageAppearanceTuning = {
-                    onAction(LauncherShellAction.OpenHome)
-                    adaptiveStageAppearanceTuning = true
-                },
             )
-    }
-    if (adaptiveStageAppearanceTuning) {
-        AdaptiveStageAppearanceTuningOverlay(
-            state = settingsState,
-            // The real actions, so the surface behind is showing the setting rather than a copy of
-            // it. Routed like the settings page's own edits so nothing about where a change came
-            // from is special.
-            onAction = settingsPageActionRouter.onAction,
-            onDismiss = {
-                adaptiveStageAppearanceTuning = false
-                // Not back to SettingsPage.ADAPTIVE_STAGE_APPEARANCE: that page now only launches
-                // this same overlay (#1177), so returning to it would reopen the sheet immediately.
-                settingsPageActionRouter.onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.MAIN))
-            },
-        )
     }
 }
 

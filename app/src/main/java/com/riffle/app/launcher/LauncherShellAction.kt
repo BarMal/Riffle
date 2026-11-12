@@ -11,7 +11,6 @@ import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -83,12 +82,6 @@ sealed interface LauncherShellAction {
 
     data class OpenSettingsPage(val page: SettingsPage) : LauncherShellAction
 
-    /**
-     * Opens the workspace menu, from a gesture bound to `OPEN_WORKSPACE_MENU`. Does nothing while the workspace
-     * menu feature is off (the menu controller refuses to open without a model).
-     */
-    data object OpenWorkspaceMenu : LauncherShellAction
-
     data object RequestNotificationAccess : LauncherShellAction
 
     /** Runs a contextual action for one live app-stage notification. */
@@ -123,16 +116,6 @@ sealed interface LauncherShellAction {
     data object DuplicateSelectedHomePage : LauncherShellAction
 
     data class SelectHomePage(val pageId: LauncherPageId) : LauncherShellAction
-
-    /** Selects the visible AdaptiveStage app stage without launching its app. */
-    data class SelectAppStage(val stageId: AppStageId) : LauncherShellAction
-
-    /** Keeps a stage available when it has no live notification content. */
-    data class ToggleAppStagePinned(val stageId: AppStageId) : LauncherShellAction
-
-    data object SelectPreviousAppStage : LauncherShellAction
-
-    data object SelectNextAppStage : LauncherShellAction
 
     data object SelectPreviousHomePage : LauncherShellAction
 

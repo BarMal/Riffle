@@ -1,28 +1,17 @@
 package com.riffle.app.launcher.exclusions
 
-import com.riffle.app.launcher.workspace.workspaceLensProvider
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.workspace.Item
-import com.riffle.core.domain.launcher.workspace.ItemId
-import com.riffle.core.domain.launcher.workspace.ItemTarget
-import com.riffle.core.domain.launcher.workspace.Lens
-import com.riffle.core.domain.launcher.workspace.LensResult
-import com.riffle.core.domain.launcher.workspace.SourceCapability
-import com.riffle.core.domain.launcher.workspace.SourceDescriptor
 import com.riffle.core.domain.launcher.workspace.SourceIds
-import com.riffle.core.domain.launcher.workspace.SourceState
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatcher
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleId
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.exclusions.SourceExclusionRule
-import com.riffle.core.domain.launcher.workspace.testing.FakeItemSource
-import com.riffle.core.domain.launcher.workspace.testing.FakeSourceRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -31,7 +20,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.Executor
 
 class ExclusionsAppLayerTest {
     private class FakeStore(
@@ -168,30 +156,6 @@ class ExclusionsAppLayerTest {
         assertNull(decodeExclusionRules("not json"))
         assertNull(decodeExclusionRules("[1,2]"))
         assertNotNull(decodeExclusionRules("{}"))
-    }
-
-    @Test
-    fun lensProviderAppliesTheLayoutsExclusionsAndDefaultsToNone() {
-        val id = SourceIds.NOTIFICATIONS
-        val items =
-            listOf("a" to "chat", "b" to "mail").map { (name, pkg) ->
-                Item(ItemId(name), id, ItemTarget.App(pkg, "personal"), title = name)
-            }
-        val source = FakeItemSource(SourceDescriptor(id, setOf(SourceCapability.LIVE)), SourceState.Ready(items))
-        val registry = FakeSourceRegistry(listOf(source))
-        val direct = Executor { it.run() }
-        val rules =
-            ExclusionRuleSet(listOf(SourceExclusionRule(ExclusionRuleId("r"), id, ExclusionMatcher.App("chat"))))
-
-        fun ids(provider: com.riffle.core.domain.launcher.workspace.container.LensResultProvider): List<String> {
-            var out = emptyList<String>()
-            provider.observe(Lens(sources = listOf(id))) { output ->
-                (output.result as? LensResult.Flat)?.let { out = it.items.map { item -> item.id.value } }
-            }
-            return out
-        }
-        assertEquals(listOf("a", "b"), ids(workspaceLensProvider(registry, direct)))
-        assertEquals(listOf("b"), ids(workspaceLensProvider(registry, direct, exclusions = { rules })))
     }
 
     @Test

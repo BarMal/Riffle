@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Settings: Workspaces and Sources pages (WS10 slice S2, as built)
 
 Part of #1363 (design: [`workspaces-configuration.md`](workspaces-configuration.md), sections 2.2, 2.3, 2.4 and

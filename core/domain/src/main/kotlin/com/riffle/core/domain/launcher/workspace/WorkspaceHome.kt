@@ -1,16 +1,11 @@
 package com.riffle.core.domain.launcher.workspace
 
-import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.settings.HomeGesture
-import com.riffle.core.domain.launcher.settings.HomeGestureSettings
-import com.riffle.core.domain.launcher.settings.LauncherGestureAction
-import com.riffle.core.domain.launcher.workspace.dock.EffectiveDock
 import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeView
 
@@ -45,21 +40,24 @@ fun interface HomeShownWorkspaces {
 }
 
 /**
- * S9, workspaces are the default: the launcher home is the active workspace of the current layout, drawn by the
- * standard home surface (full editing parity) over the pool's projection of that workspace's arrangement. Everything
- * here is pure and never throws.
+ * One arrangement per posture (ADR 0003, decision 3): the launcher home of a layout (device class) is the pool
+ * arrangement of that layout's **active** workspace as stored, drawn by the standard home surface over the pool's
+ * projection of it. There is no switching: nothing in the app changes which workspace is active, so the stored choice
+ * of the build before the cut-over stands. The other workspaces and their arrangements stay in storage, decodable and
+ * untouched (the owner may want switching back later), and nothing shows or edits them. Everything here is pure and
+ * never throws.
  *
- * Rules (`docs/product/workspaces-default.md`):
- * - A **migrated** workspace (`ws:<layout class>:<mode>`) is the home the user had in that mode: the standard home
- *   shows that mode ([homeModeFor]) and that arrangement, exactly as before the flip.
- * - Any other workspace (a preset such as the Nova default, a copy) keeps the mode the layout set already shows (the
+ * Rules:
+ * - A layout with nothing stored shows its **migrated** workspace (`ws:<layout class>:<mode>`): the home the user had
+ *   in that mode, exactly as before workspaces existed.
+ * - A **migrated** active workspace shows that mode ([homeModeFor]) and that arrangement.
+ * - Any other active workspace (the seeded default, a copy, a preset) keeps the mode the layout set already shows (the
  *   stored `LauncherViewMode`, now only migration input), shows its own arrangement, or until its first edit the
- *   arrangement it borrows ([PoolHomeView.candidates]), so the default workspace renders the migrated home
- *   identically. A workspace without any home-grid page borrows nothing.
+ *   arrangement it borrows ([PoolHomeView.candidates]), so the default renders the migrated home identically. The
+ *   first edit forks the borrowed arrangement into the active workspace; the borrowed one is left as it was.
  * - Only the active key's mode follows the workspace; the other stored modes keep their migrated arrangements.
- * - Pages of a non-migrated workspace that do not read placed items (lens pages, page-sets) are drawn by the
- *   container hosts after the placed pages ([extraPages]). A migrated workspace's lens pages are the layout's own
- *   generated pages.
+ * - Pages of the active workspace that do not read placed items (lens pages, page-sets, the Finder) are stored and
+ *   never drawn: the Library and the Stream replaced them.
  */
 @Suppress("TooManyFunctions") // Small pure rules the shell reads one by one.
 object WorkspaceHome {
@@ -76,13 +74,16 @@ object WorkspaceHome {
             HomeLayoutWorkspaceMapper.workspaceId(layoutClass.workspaceLayoutClass(), mode) == id
         }
 
-    /** The workspace [layoutClass] draws (the active one, or its fallback), or null while nothing is stored for it. */
+    /**
+     * The workspace whose arrangement [layoutClass] shows: the stored active one (never replaced by a fallback: what
+     * can be drawn is decided by its placed pages alone), or null while nothing is stored for the layout.
+     */
     fun activeWorkspace(
         set: WorkspaceSet?,
         layoutClass: HomeLayoutDeviceClass,
     ): Workspace? {
         val workspaceClass = layoutClass.workspaceLayoutClass()
-        return set?.takeIf { it.hasLayout(workspaceClass) }?.resolveActive(workspaceClass)?.workspace
+        return set?.takeIf { it.hasLayout(workspaceClass) }?.workspacesFor(workspaceClass)?.active
     }
 
     /** The [HomeShownWorkspaces] for [set]; [HomeShownWorkspaces.Migrated] for every layout [set] does not hold. */
@@ -161,21 +162,6 @@ object WorkspaceHome {
     fun hasHomeGrid(workspace: Workspace): Boolean = workspace.pagerPages.any(PoolHomeView::isPlacedHomePage)
 
     /**
-     * The pages of [workspace] the standard home draws with the container hosts, after its placed pages, in workspace
-     * order: every pager page that reads no placed items. None for a migrated workspace (its lens pages are the
-     * layout's generated pages, already drawn) and none while nothing is active.
-     */
-    fun extraPages(
-        workspace: Workspace?,
-        layoutClass: HomeLayoutDeviceClass,
-    ): List<PageHost> =
-        if (workspace == null || migratedMode(workspace.id, layoutClass) != null) {
-            emptyList()
-        } else {
-            workspace.pagerPages.filterNot { it.readsPlacedItems() }
-        }
-
-    /**
      * The standard home page [containerId] of [workspace] is drawn as in [layout], or null when it is not a placed
      * page there (a lens page, the Finder, an unknown id). A migrated page (`page:<id>`) names its layout page; a
      * home-grid page names its arrangement page through its lens, else it is the k-th placed page of the workspace
@@ -206,21 +192,6 @@ object WorkspaceHome {
         layout: HomeLayout,
     ): LauncherPageId? = workspace?.effectiveStartPageId?.let { id -> layoutPageOf(workspace, id, layout) }
 
-    /**
-     * [global] with [workspace]'s own gesture bindings on top (gesture name -> action name, both stored by enum name).
-     * Unknown names are ignored, never an error; actions that need a launch target (an app or a shortcut) are ignored
-     * because a binding stores none. Null or no bindings return [global] itself.
-     */
-    fun gestures(
-        global: HomeGestureSettings,
-        workspace: Workspace?,
-    ): HomeGestureSettings =
-        workspace?.gestureBindings.orEmpty().entries.fold(global) { settings, (gestureName, actionName) ->
-            val gesture = HomeGesture.entries.firstOrNull { it.name == gestureName }
-            val action = LauncherGestureAction.fromStoredName(actionName)?.takeUnless { it in TARGETED_ACTIONS }
-            if (gesture == null || action == null) settings else settings.withAction(gesture, action)
-        }
-
     private fun nthHomePage(
         workspace: Workspace,
         page: PageHost,
@@ -230,7 +201,6 @@ object WorkspaceHome {
         return layout.pages.filter { it.type == LauncherPageType.Home }.getOrNull(index)?.id
     }
 
-    private val TARGETED_ACTIONS = setOf(LauncherGestureAction.LAUNCH_APP, LauncherGestureAction.LAUNCH_APP_SHORTCUT)
     private val BORROW_ORDER =
         listOf(
             LauncherViewMode.HOME_SCREEN_LIBRARY,
@@ -251,27 +221,3 @@ fun PageHost.readsPlacedItems(): Boolean =
                     body.placements.any { WorkspaceSourceIds.HOME_GRID in it.widget.binding.lens.sources }
             }
     }
-
-/**
- * The shell state the home surface draws while [workspace] is active (S9, render only, never stored): the global home
- * gestures with the workspace's own bindings on top ([WorkspaceHome.gestures]) and the shared dock with the
- * workspace's override after the stranding rule ([EffectiveDock.presentationFor], design 11.4). Settings, the drawer
- * and the stored state keep the global values. Null (nothing loaded) and a workspace that overrides nothing return
- * this state itself.
- */
-fun LauncherShellState.withWorkspaceHome(workspace: Workspace?): LauncherShellState {
-    if (workspace == null) return this
-    val global = launcherSettings.gestures.homeGestures
-    val gestures = WorkspaceHome.gestures(global, workspace)
-    val presentation = EffectiveDock.presentationFor(workspace, DockMenuReachability.globalActions(global)).presentation
-    val dock = EffectiveDock.apply(homeLayout.dock, presentation)
-    return if (gestures === global && dock == homeLayout.dock) {
-        this
-    } else {
-        copy(
-            homeLayout = homeLayout.copy(dock = dock),
-            launcherSettings =
-                launcherSettings.copy(gestures = launcherSettings.gestures.copy(homeGestures = gestures)),
-        )
-    }
-}

@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspaces: content wizard and first-time walkthrough (domain, as built)
 
 Status: **domain built and tested; the wizard UI is built (section 6).** Package

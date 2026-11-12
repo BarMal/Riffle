@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -11,20 +10,11 @@ import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
-import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.AppStagePreferences
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
-import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
-import com.riffle.core.domain.launcher.settings.CardsSettings
-import com.riffle.core.domain.launcher.settings.LauncherSettings
-import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
-import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -32,136 +22,6 @@ import org.junit.Test
 import kotlin.coroutines.CoroutineContext
 
 class LauncherShellNotificationStateTest {
-    @Test
-    fun recreatedViewModelKeepsSelectedEmptyDynamicStageForNavigation() {
-        val newer = app(label = "Newer", packageName = "com.riffle.newer")
-        val older = app(label = "Older", packageName = "com.riffle.older")
-        val newerStageId = AppStageId(newer.identity.packageName, newer.identity.profile.id)
-        val settingsRepository =
-            FakeLauncherSettingsRepository(
-                LauncherSettings(
-                    cards =
-                        CardsSettings(
-                            stagePreferencesByLayout =
-                                mapOf(
-                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
-                                        AppStagePreferences(selectedStageId = newerStageId),
-                                ),
-                        ),
-                ),
-            )
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository =
-                    FakeInstalledAppRepository(
-                        apps = listOf(newer, older),
-                        profileContentVisibility =
-                            mapOf(
-                                newer.identity.profile.id to AppProfileContentVisibility.VISIBLE,
-                                older.identity.profile.id to AppProfileContentVisibility.VISIBLE,
-                            ),
-                    ),
-                launcherSettingsRepository = settingsRepository,
-                platformDependencies =
-                    LauncherShellPlatformDependencies(
-                        notificationRepository =
-                            FakeNotificationRepository(
-                                notifications =
-                                    listOf(
-                                        notification(
-                                            key = "older",
-                                            packageName = older.identity.packageName.value,
-                                        ),
-                                    ),
-                            ),
-                    ),
-            )
-
-        viewModel.onHomeRoleStatusChanged(
-            homeRoleStatus = HomeRoleStatus.UNKNOWN,
-            notificationAccessStatus = NotificationAccessStatus.GRANTED,
-        )
-        runBlocking {
-            viewModel.refreshInstalledApps().join()
-            viewModel.refreshNotifications().join()
-        }
-        viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousAppStage)
-
-        assertEquals(
-            AppStageId(older.identity.packageName, older.identity.profile.id),
-            settingsRepository.settings.cards
-                .stagePreferencesFor(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER))
-                .selectedStageId,
-        )
-    }
-
-    @Test
-    fun previousAndNextKeepNavigationValidAfterTheFocusedStageIsRetainedEmpty() {
-        val newer = app(label = "Newer", packageName = "com.riffle.newer")
-        val older = app(label = "Older", packageName = "com.riffle.older")
-
-        val nextHarness =
-            adaptiveStageHarness(
-                apps = listOf(newer, older),
-                notifications =
-                    listOf(
-                        notification(
-                            key = "newer",
-                            packageName = newer.identity.packageName.value,
-                            postedAtEpochMillis = 2_000L,
-                        ),
-                        notification(
-                            key = "older",
-                            packageName = older.identity.packageName.value,
-                            postedAtEpochMillis = 1_000L,
-                        ),
-                    ),
-                selectedStage = newer,
-            )
-        nextHarness.notificationRepository.notifications =
-            listOf(notification(key = "older", packageName = older.identity.packageName.value))
-        runBlocking { nextHarness.viewModel.refreshNotifications().join() }
-        nextHarness.viewModel.onHomePageEdited(LauncherShellAction.SelectNextAppStage)
-
-        assertEquals(
-            AppStageId(newer.identity.packageName, newer.identity.profile.id),
-            nextHarness.viewModel.state.value.launcherSettings.cards
-                .stagePreferencesFor(nextHarness.viewModel.state.value.homeLayoutSet.activeKey)
-                .selectedStageId,
-        )
-
-        val previousHarness =
-            adaptiveStageHarness(
-                apps = listOf(newer, older),
-                notifications =
-                    listOf(
-                        notification(
-                            key = "newer",
-                            packageName = newer.identity.packageName.value,
-                            postedAtEpochMillis = 2_000L,
-                        ),
-                        notification(
-                            key = "older",
-                            packageName = older.identity.packageName.value,
-                            postedAtEpochMillis = 1_000L,
-                        ),
-                    ),
-                selectedStage = older,
-            )
-        previousHarness.notificationRepository.notifications =
-            listOf(notification(key = "newer", packageName = newer.identity.packageName.value))
-        runBlocking { previousHarness.viewModel.refreshNotifications().join() }
-        previousHarness.viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousAppStage)
-
-        assertEquals(
-            AppStageId(newer.identity.packageName, newer.identity.profile.id),
-            previousHarness.viewModel.state.value.launcherSettings.cards
-                .stagePreferencesFor(previousHarness.viewModel.state.value.homeLayoutSet.activeKey)
-                .selectedStageId,
-        )
-    }
-
     @Test
     fun refreshLoadsNotificationGroups() {
         val viewModel =
@@ -476,50 +336,6 @@ class LauncherShellNotificationStateTest {
         override fun setFirstRunComplete() = Unit
     }
 
-    private data class AdaptiveStageHarness(
-        val viewModel: LauncherShellViewModel,
-        val notificationRepository: FakeNotificationRepository,
-    )
-
-    private fun adaptiveStageHarness(
-        apps: List<InstalledApp>,
-        notifications: List<LauncherNotification>,
-        selectedStage: InstalledApp,
-    ): AdaptiveStageHarness {
-        val notificationRepository = FakeNotificationRepository(notifications)
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository =
-                    FakeInstalledAppRepository(
-                        apps = apps,
-                        profileContentVisibility =
-                            apps.associate { app ->
-                                app.identity.profile.id to AppProfileContentVisibility.VISIBLE
-                            },
-                    ),
-                platformDependencies =
-                    LauncherShellPlatformDependencies(
-                        notificationRepository = notificationRepository,
-                        epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = 10_000L),
-                    ),
-            )
-        viewModel.onHomeRoleStatusChanged(
-            homeRoleStatus = HomeRoleStatus.UNKNOWN,
-            notificationAccessStatus = NotificationAccessStatus.GRANTED,
-        )
-        runBlocking {
-            viewModel.refreshInstalledApps().join()
-            viewModel.refreshNotifications().join()
-        }
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectAppStage(
-                AppStageId(selectedStage.identity.packageName, selectedStage.identity.profile.id),
-            ),
-        )
-        return AdaptiveStageHarness(viewModel, notificationRepository)
-    }
-
     private class FakeNotificationRepository(
         var notifications: List<LauncherNotification> = emptyList(),
     ) : LauncherNotificationRepository {
@@ -556,16 +372,6 @@ class LauncherShellNotificationStateTest {
 
         override fun showApp(identity: AppIdentity) {
             hiddenApps = hiddenApps - identity
-        }
-    }
-
-    private class FakeLauncherSettingsRepository(
-        var settings: LauncherSettings,
-    ) : LauncherSettingsRepository {
-        override fun loadLauncherSettings(): LauncherSettings = settings
-
-        override fun saveLauncherSettings(settings: LauncherSettings) {
-            this.settings = settings
         }
     }
 

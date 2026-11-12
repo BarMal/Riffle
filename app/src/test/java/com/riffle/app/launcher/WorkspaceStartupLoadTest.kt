@@ -35,11 +35,13 @@ class WorkspaceStartupLoadTest {
     }
 
     @Test
-    fun aQuickReadLoadsBeforeTheFirstFrameAndSeedsTheDefault() {
+    fun aQuickReadLoadsBeforeTheFirstFrameAndKeepsWhatIsStored() {
         val repository = CachedWorkspaceRepository(QuickStore(), CoroutineScope(Job()))
 
         assertTrue(loadWorkspacesAtStartup(repository, timeoutMillis = 2_000))
-        assertTrue(repository.load()!!.hasLayout(HomeLayoutDeviceClass.PHONE))
+        // Nothing is seeded: a layout with nothing stored shows the migrated home.
+        assertNotNull(repository.load())
+        assertFalse(repository.load()!!.hasLayout(HomeLayoutDeviceClass.PHONE))
     }
 
     @Test

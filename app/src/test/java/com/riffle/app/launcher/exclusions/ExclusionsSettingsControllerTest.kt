@@ -16,14 +16,13 @@ import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.SourceState
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
-import com.riffle.core.domain.launcher.workspace.container.SourceBackedLensResultProvider
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatchMode
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatcher
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleId
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionTextField
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.exclusions.SourceExclusionRule
-import com.riffle.core.domain.launcher.workspace.lens.AsyncLensEvaluator
+import com.riffle.core.domain.launcher.workspace.lens.DefaultLensEvaluator
 import com.riffle.core.domain.launcher.workspace.lens.LensEvaluationContext
 import com.riffle.core.domain.launcher.workspace.settings.ExclusionHideActions
 import com.riffle.core.domain.launcher.workspace.settings.ExclusionsSettingsAction
@@ -40,7 +39,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.Executor
 
 class ExclusionsSettingsControllerTest {
     private class FakeStore(var stored: LayoutExclusionRules? = null) : ExclusionStorePort {
@@ -359,18 +357,16 @@ class ExclusionsSettingsControllerTest {
     @Test
     fun `a rule change re-evaluates a live lens through the repository's change signal`() {
         load()
-        val provider =
-            SourceBackedLensResultProvider(
-                registry,
-                AsyncLensEvaluator(Executor { it.run() }),
-                contextChanges = repository,
-                context = { LensEvaluationContext(0L, exclusions = repository.rules(phone)) },
-            )
+        // The Stream observes the repository the same way: every rule change re-evaluates what is shown.
         var shown = emptyList<String>()
-        val handle =
-            provider.observe(Lens(sources = listOf(notifications))) { output ->
-                (output.result as? LensResult.Flat)?.let { shown = it.items.map { item -> item.id.value } }
-            }
+
+        fun evaluate() {
+            val context = LensEvaluationContext(0L, exclusions = repository.rules(phone))
+            val result = DefaultLensEvaluator.evaluate(Lens(sources = listOf(notifications)), items, context)
+            shown = (result as LensResult.Flat).items.map { item -> item.id.value }
+        }
+        evaluate()
+        val handle = repository.observe { evaluate() }
         assertEquals(listOf("n1", "n2", "n3"), shown)
 
         controller.dispatch(phone, ExclusionsSettingsAction.AddText(contains("sale")))

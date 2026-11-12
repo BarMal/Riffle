@@ -17,10 +17,9 @@ class PoolHomeStartupTest {
     private fun open(
         layouts: DiskHomeLayoutStore,
         pools: DiskPoolStore,
-        enabled: Boolean = true,
     ): Pair<HomeLayoutOpening, CachedPoolRepository> {
         val pool = CachedPoolRepository(pools)
-        return runBlocking { openHomeLayouts(layouts, pool, enabled) } to pool
+        return runBlocking { openHomeLayouts(layouts, pool) } to pool
     }
 
     @Test
@@ -65,46 +64,14 @@ class PoolHomeStartupTest {
     }
 
     @Test
-    fun aPoolThatCannotBeWrittenKeepsTheLegacyPathAndTouchesNothing() {
+    fun aPoolThatCannotBeWrittenShowsTheStoredHomeReadOnlyAndTouchesNothing() {
         val layouts = DiskHomeLayoutStore(stored = legacy)
         val (opening, _) = open(layouts, DiskPoolStore(failWrite = true))
         assertFalse(opening.poolHome)
+        assertTrue(opening.readOnly)
+        assertEquals(legacy, opening.stored)
         assertNull(layouts.snapshot)
         assertEquals(legacy, layouts.stored)
-    }
-
-    @Test
-    fun theLegacyFlagPathReadsAndWritesNoPool() {
-        val layouts = DiskHomeLayoutStore(stored = legacy)
-        val pools = DiskPoolStore()
-        val (opening, pool) = open(layouts, pools, enabled = false)
-        assertFalse(opening.poolHome)
-        assertEquals(legacy, opening.stored)
-        assertNull(pool.current())
-        assertEquals(0, pools.writes)
-        assertNull(layouts.snapshot)
-    }
-
-    @Test
-    fun turningTheSwitchOffHandsTheItemsBackToHomeLayoutSet() {
-        val layouts = DiskHomeLayoutStore(stored = legacy)
-        val pools = DiskPoolStore()
-        val (opening, pool) = open(layouts, pools)
-        poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).open(opening.stored)
-        assertTrue(layouts.stored!!.activeLayout.homeItems().isEmpty())
-
-        val (handedBack, _) = open(layouts, pools, enabled = false)
-        assertFalse(handedBack.poolHome)
-        assertNull(layouts.snapshot)
-        assertEquals(
-            legacy.activeLayout.homeItems().map { it.id.value },
-            layouts.stored!!.activeLayout.homeItems().map { it.id.value.legacyId() },
-        )
-        assertEquals(1, layouts.stored!!.activeLayout.dock.items.size)
-
-        val (again, _) = open(layouts, pools)
-        assertTrue("switching back on cuts over again", again.poolHome)
-        assertNotNull(layouts.snapshot)
     }
 
     @Test
@@ -252,7 +219,7 @@ class PoolHomeStartupTest {
     }
 
     @Test
-    fun aHomeLayoutStoreThatCannotBeReadRunsTheLegacyPathAndWritesNothing() {
+    fun aHomeLayoutStoreThatCannotBeReadShowsTheHomeReadOnlyAndWritesNothing() {
         val layouts = DiskHomeLayoutStore(stored = legacy, failRead = true)
         val pools = DiskPoolStore()
         val (opening, pool) = open(layouts, pools)

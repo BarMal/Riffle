@@ -91,7 +91,7 @@ internal fun IcsFeedsListContent(
                 SettingsListRow(
                     modifier = Modifier.testTag(ICS_FEEDS_EMPTY_TEST_TAG),
                     title = if (state.loaded) "No calendar feeds" else "Loading",
-                    subtitle = if (state.loaded) "Add a link below to see its events in Workspaces." else null,
+                    subtitle = if (state.loaded) "Add a link below to see its events in the Stream." else null,
                 )
             }
             state.rows.forEach { row -> IcsFeedRowItem(row = row, onToggle = onToggle, onRemove = onRemove) }

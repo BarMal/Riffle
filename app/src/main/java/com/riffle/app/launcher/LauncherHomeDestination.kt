@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,13 +27,11 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.library.LibrarySheet
 import com.riffle.app.launcher.library.libraryState
-import com.riffle.app.launcher.notifications.AppStageShellState
 import com.riffle.app.launcher.split.SplitPaneState
 import com.riffle.app.launcher.split.SplitPanes
 import com.riffle.app.launcher.split.rememberSplitPaneState
@@ -42,7 +39,6 @@ import com.riffle.app.launcher.split.streamPaneInsets
 import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
@@ -58,7 +54,6 @@ import com.riffle.core.domain.launcher.split.SplitWindow
 import com.riffle.core.domain.launcher.split.supportsSplit
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
-import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import kotlinx.coroutines.delay
 
 @Suppress("LongMethod", "CyclomaticComplexMethod")
@@ -69,9 +64,6 @@ fun HomeDestination(
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
-    adaptiveStageContext: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
-    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
-    workspaceMenu: WorkspaceMenuHost? = null,
     /** The Stream (ADR 0003); with [streamShown] it replaces the Home surface and the Dock stays under it. */
     stream: StreamHost? = null,
     streamShown: Boolean = false,
@@ -90,24 +82,6 @@ fun HomeDestination(
     val splitting = stream != null && deviceClass.supportsSplit()
     val splitPane = rememberSplitPaneState()
     val splitSetup: () -> SplitPullSetup? = { if (splitting) splitPane.pullSetup() else null }
-    // Cards' stages feed both its surface and its reading of the dock, so they are reconciled here, once.
-    val cardsShellState = plan.cardsState?.let { cardsState -> rememberAppStageShellState(cardsState) }
-    // The one interpreter contract (Decision 2): grid modes take the default reading, Cards supplies its own from
-    // CardsDockInterpreter.kt. The dock itself only ever sees neutral entries and intents.
-    val modeInterpreter =
-        if (!shownStream && cardsShellState != null && plan.shownMode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
-            rememberCardsDockInterpreter(
-                state = plan.stateFor(plan.shownMode),
-                shellState = cardsShellState,
-                adaptiveStageContext = adaptiveStageContext,
-                onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
-                appIconLoader = appIconLoader,
-                dockPosition = plan.edges.edgeFor(plan.shownMode.modeSurface),
-                onAction = onAction,
-            )
-        } else {
-            HomeDockInterpreter()
-        }
     // The dynamic side is the Stream's: live apps, now playing and the Stream button, whichever mode is showing.
     val dockInterpreter =
         rememberDockDynamicSide(
@@ -145,7 +119,7 @@ fun HomeDestination(
                     )
                 }
             },
-            modeInterpreter = modeInterpreter,
+            modeInterpreter = HomeDockInterpreter(),
         )
     val pull =
         rememberHomeDockPullBinding(
@@ -160,8 +134,6 @@ fun HomeDestination(
             dockPull = dockPull,
             hostState = dockHost,
             onAction = onAction,
-            onOpenWorkspaceMenu =
-                workspaceMenu?.takeIf { !shownStream }?.let { menu -> { menu.onAction(WorkspaceMenuAction.Open) } },
         )
 
     // The dock draws from the same state the surfaces do; there is no longer a switch in flight between two of them.
@@ -225,22 +197,14 @@ fun HomeDestination(
             val homeContent: @Composable () -> Unit = {
                 key(plan.currentMode) {
                     ModeSurfaceContent(
-                        mode = plan.currentMode,
                         state = plan.stateFor(plan.currentMode),
                         dockEdge = plan.edges.edgeFor(plan.currentMode.modeSurface),
                         surfaceModifier = pull.homeModifier(libraryShown = shownLibrary).then(coveredSemantics),
-                        cardsShellState = cardsShellState,
                         dockHost = dockHost,
                         presentation = presentation,
                         appIconLoader = appIconLoader,
                         widgetRenderers = widgetRenderers,
                         haptics = haptics,
-                        cards =
-                            CardsSurfaceInputs(
-                                windowLayout = adaptiveStageWindowLayout,
-                                context = adaptiveStageContext,
-                                onContextChanged = onAdaptiveStageContextChanged,
-                            ),
                         onAction = onAction,
                     )
                 }
@@ -292,10 +256,6 @@ fun HomeDestination(
                     pull = pull,
                     onAction = onAction,
                 )
-            }
-            // Nothing is composed while the feature is off or no workspaces are loaded (#1351).
-            if (!shownStream) {
-                HomeWorkspaceMenu(workspaceMenu, dockHost, plan.dockEdge, state.launcherSettings.motion.reducedMotion)
             }
         }
     }
@@ -535,58 +495,31 @@ private fun RememberSplit(
     }
 }
 
-/** What a Cards surface takes from [HomeDestination] beyond the shell state. */
-private class CardsSurfaceInputs(
-    val windowLayout: AdaptiveStageWindowLayout?,
-    val context: AdaptiveStageInteractionContext,
-    val onContextChanged: (AdaptiveStageInteractionContext) -> Unit,
-)
-
 @Composable
 private fun ModeSurfaceContent(
-    mode: LauncherViewMode,
     state: LauncherShellState,
     dockEdge: DockPosition,
     surfaceModifier: Modifier,
-    cardsShellState: AppStageShellState?,
     dockHost: HomeDockHostState,
     presentation: StandardHomePresentation,
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
     haptics: LauncherHaptics,
-    cards: CardsSurfaceInputs,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    if (mode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
-        if (cardsShellState != null) {
-            CardsHomeSurface(
-                state = state,
-                shellState = cardsShellState,
-                dockHost = dockHost,
-                dockPosition = dockEdge,
-                appIconLoader = appIconLoader,
-                adaptiveStageWindowLayout = cards.windowLayout,
-                adaptiveStageContext = cards.context,
-                onAdaptiveStageContextChanged = cards.onContextChanged,
-                onAction = onAction,
-                modifier = surfaceModifier,
-            )
-        }
-    } else {
-        StandardHome(
-            layout = state.homeLayout,
-            installedApps = state.installedApps,
-            interactions = StandardHomeInteractions(haptics = haptics),
-            presentation = presentation,
-            appIconLoader = appIconLoader,
-            widgetPreviewImageLoader = widgetRenderers.previewImageLoader,
-            deviceClass = state.settingsLayoutDeviceClass,
-            dockHost = dockHost,
-            dockEdge = dockEdge,
-            surfaceModifier = surfaceModifier,
-            onAction = onAction,
-        )
-    }
+    StandardHome(
+        layout = state.homeLayout,
+        installedApps = state.installedApps,
+        interactions = StandardHomeInteractions(haptics = haptics),
+        presentation = presentation,
+        appIconLoader = appIconLoader,
+        widgetPreviewImageLoader = widgetRenderers.previewImageLoader,
+        deviceClass = state.settingsLayoutDeviceClass,
+        dockHost = dockHost,
+        dockEdge = dockEdge,
+        surfaceModifier = surfaceModifier,
+        onAction = onAction,
+    )
 }
 
 /** What [HomeDestination] composes for one shell state: the shell's mode, and the edge its dock stands on. */
@@ -604,10 +537,6 @@ private class HomeSurfacePlan(
     /** The shell state [mode]'s surface draws from. */
     @Suppress("UnusedParameter")
     fun stateFor(mode: LauncherViewMode): LauncherShellState = state
-
-    /** The state a composed Cards surface draws from, if the shown mode is Cards. */
-    val cardsState: LauncherShellState?
-        get() = state.takeIf { currentMode.homeSurfaceKind() == HomeSurfaceKind.CARDS }
 }
 
 @Composable
@@ -643,54 +572,6 @@ private fun Modifier.dockInteractionPadding(
         DockPosition.RIGHT -> absolutePadding(right = extent)
     }
 
-@Composable
-private fun CardsHomeSurface(
-    state: LauncherShellState,
-    shellState: AppStageShellState,
-    dockHost: HomeDockHostState,
-    dockPosition: DockPosition,
-    appIconLoader: AppIconLoader,
-    adaptiveStageWindowLayout: AdaptiveStageWindowLayout?,
-    adaptiveStageContext: AdaptiveStageInteractionContext,
-    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
-    onAction: (LauncherShellAction) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    // The shared dock is drawn by HomeDockHost over this surface; the stage lays out inside the
-    // room it reserves, on whichever edge it sits. Cards' reading of that dock (the stage selector,
-    // "Show stage") is [rememberCardsDockInterpreter]'s, built beside this surface by HomeDestination.
-    // Selecting a stage from anywhere -- the selector, "Show stage", a spine chip -- leaves "All".
-    val cardsOnAction: (LauncherShellAction) -> Unit = { action ->
-        interpretCardsAction(action, adaptiveStageContext, onAdaptiveStageContextChanged, onAction)
-    }
-    val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
-    // The dock's dynamic side is the Stream's (live apps, now playing, the Stream button) in every mode, so it never
-    // hosts the stage selector: the spine is how a stage is reached by touch.
-    val dockInteractionExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
-
-    // Same precedence StandardHome gives its own content (see HOME_CONTENT_Z_INDEX): without it,
-    // this surface ties HomeDockHost's own default zIndex and, being composed after it, wins
-    // hit-testing by composition order -- swallowing taps meant for the dock and its edge companion
-    // (the stage-identity/pin/overflow pills) rather than yielding to them.
-    Box(modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX).then(modifier)) {
-        AdaptiveStageAppStageSurface(
-            state = state,
-            shellState = shellState,
-            modifier =
-                Modifier
-                    .dockInteractionPadding(dockPosition, dockInteractionExtent)
-                    .offset(y = state.launcherSettings.cards.pageVerticalOffsetDp.dp),
-            windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
-            windowLayout = adaptiveStageWindowLayout,
-            context = adaptiveStageContext,
-            onContextChanged = onAdaptiveStageContextChanged,
-            onAction = cardsOnAction,
-            appIconLoader = appIconLoader,
-            dockHostsStageSelector = false,
-        )
-    }
-}
-
 /** What the home grid and the shared dock both render from, whichever mode is showing. */
 private fun standardHomePresentation(
     state: LauncherShellState,
@@ -714,7 +595,6 @@ private fun standardHomePresentation(
                 isTargetingDockPanel = state.isWidgetPickerTargetingDockPanel,
             ),
         homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
-        adaptiveStageAppearance = state.launcherSettings.cards.adaptiveStageAppearance,
     )
 
 internal fun cardsPanelInsetPolicy(state: LauncherShellState): HomeInsetPolicy {

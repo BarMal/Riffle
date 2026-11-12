@@ -2,8 +2,8 @@ package com.riffle.app.launcher.onboarding
 
 import com.riffle.app.launcher.toJson
 import com.riffle.app.launcher.toStoredValue
-import com.riffle.core.domain.launcher.workspace.wizard.OnboardingCodec
-import com.riffle.core.domain.launcher.workspace.wizard.OnboardingState
+import com.riffle.core.domain.launcher.onboarding.OnboardingCodec
+import com.riffle.core.domain.launcher.onboarding.OnboardingState
 import org.json.JSONObject
 import org.json.JSONTokener
 

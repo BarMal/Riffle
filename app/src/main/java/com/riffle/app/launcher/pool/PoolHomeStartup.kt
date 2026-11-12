@@ -4,7 +4,6 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
-import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.pool.PoolCutover
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
 import kotlinx.coroutines.CancellationException
@@ -58,7 +57,7 @@ internal interface HomeLayoutCutoverStore {
 /** How the home opens this process: what the shell starts from, and who renders placed items. */
 internal data class HomeLayoutOpening(
     val stored: HomeLayoutSet?,
-    /** True when the standard home renders from the pool ([PoolHomeLayoutRepository]); false: the legacy path. */
+    /** True when the standard home renders from the pool ([PoolHomeLayoutRepository]); false: it is read-only. */
     val poolHome: Boolean,
     /**
      * True when the store was cut over (or cannot be read) and this process cannot use the pool: the home is shown
@@ -79,27 +78,23 @@ internal data class HomeLayoutOpening(
 
 /**
  * Opens the home at process start (once, before the first frame, off the main thread like the existing load). The
- * pool home only runs on a pool that can be written ([CachedPoolRepository.isPersistent]); nothing here throws.
+ * pool is the only home (ADR 0003): the one-time migration into it runs for everyone. The pool home only runs on a pool
+ * that can be written ([CachedPoolRepository.isPersistent]); nothing here throws.
  *
  * - **The `HomeLayoutSet` store cannot be read, or its value cannot be decoded** (that value is quarantined): read-only
  *   from the snapshot when it can be read, else from defaults. Never cut over (that would replace a damaged set with
  *   defaults).
- * - **No snapshot, switch on** (first cutover): [CachedPoolRepository.initializeForCutover] resyncs and writes the
- *   pool; only once that landed are the snapshot and the stripped set written, together. Any failure: the legacy path
- *   (the store was not cut over, `HomeLayoutSet` is still the full home), nothing stripped.
- * - **No snapshot, switch off**: the legacy path; the pool is not read.
- * - **Readable snapshot, switch on**: the pool is loaded (an undecodable pool is quarantined and rebuilt from the
- *   recent snapshot). A pool that cannot be read or written: read-only from the snapshot.
- * - **Readable snapshot, switch off** (hand-back): the pool's projection is written as the full set and the marker
- *   removed; a pool that cannot be read: read-only from the snapshot.
+ * - **No snapshot** (first cutover): [CachedPoolRepository.initializeForCutover] resyncs and writes the pool; only once
+ *   that landed are the snapshot and the stripped set written, together. Any failure: read-only from the stored set
+ *   (the store was not cut over, so `HomeLayoutSet` is still the full home), nothing stripped, nothing written.
+ * - **Readable snapshot**: the pool is loaded (an undecodable pool is quarantined and rebuilt from the recent
+ *   snapshot). A pool that cannot be read or written: read-only from the snapshot.
  * - **Unreadable snapshot**: quarantined, never cut over again and never migrated: only a stored, readable pool that
- *   holds a home runs it (or is handed back); otherwise read-only from the stored set.
+ *   holds a home runs it; otherwise read-only from the stored set.
  */
 internal suspend fun openHomeLayouts(
     store: HomeLayoutCutoverStore,
     pool: CachedPoolRepository,
-    enabled: Boolean,
-    ids: WorkspaceIdFactory = WorkspaceIdFactory.Random,
     providerOf: (HostedWidgetId) -> WidgetProviderIdentity? = { null },
 ): HomeLayoutOpening {
     val read = readSafely { store.read() }
@@ -112,15 +107,9 @@ internal suspend fun openHomeLayouts(
     val stored = read.getOrNull()
     val opening =
         when (snapshot) {
-            is PrePoolSnapshot.Present ->
-                if (enabled) {
-                    openPoolHome(pool, stored, snapshot.layoutSet, providerOf)
-                } else {
-                    handBack(store, pool, stored, snapshot.layoutSet, ids, providerOf)
-                }
-            PrePoolSnapshot.Unreadable -> openWithoutSnapshot(store, pool, stored, enabled, ids, providerOf)
-            PrePoolSnapshot.Absent ->
-                if (enabled) cutOver(store, pool, stored, providerOf) else HomeLayoutOpening(stored, poolHome = false)
+            is PrePoolSnapshot.Present -> openPoolHome(pool, stored, snapshot.layoutSet, providerOf)
+            PrePoolSnapshot.Unreadable -> openWithoutSnapshot(store, pool, stored, providerOf)
+            PrePoolSnapshot.Absent -> cutOver(store, pool, stored, providerOf)
         }
     val damaged = snapshot is PrePoolSnapshot.Unreadable || pool.wasCorruptOnLoad
     val fresh = stored == null && snapshot == PrePoolSnapshot.Absent
@@ -159,51 +148,29 @@ private suspend fun cutOver(
                 PoolHomeSync.stored(snapshot, it.pools.keys).also { set -> store.writeCutover(set, snapshot) }
             }
         }
-    return if (stripped == null) HomeLayoutOpening(stored, poolHome = false) else HomeLayoutOpening(stripped, true)
-}
-
-private suspend fun handBack(
-    store: HomeLayoutCutoverStore,
-    pool: CachedPoolRepository,
-    stored: HomeLayoutSet?,
-    snapshot: HomeLayoutSet,
-    ids: WorkspaceIdFactory,
-    providerOf: (HostedWidgetId) -> WidgetProviderIdentity?,
-): HomeLayoutOpening {
-    pool.initialize(snapshot, providerOf)
-    val state = pool.current()
-    if (state == null || !pool.isPersistent) return readOnly(snapshot)
-    val base = stored ?: snapshot
-    val full = PoolHomeSync.reproject(state, base, ids).shown
-    val handedBack =
-        guarded {
-            store.write(full)
-            store.writePrePoolSnapshot(null)
-        } != null
-    return if (handedBack) HomeLayoutOpening(full, poolHome = false) else HomeLayoutOpening(base, poolHome = true)
+    return if (stripped == null) readOnly(stored) else HomeLayoutOpening(stripped, true)
 }
 
 /**
  * The snapshot cannot be read, so the store was cut over but the recovery copy is gone: never cut over again (that
  * would resync from a stripped set) and never derive a pool (that would persist an empty home over what is left).
- * Only a stored, readable pool that holds a home runs it (or is handed back); otherwise read-only from the stored set.
+ * Only a stored, readable pool that holds a home runs it; otherwise read-only from the stored set.
  */
 private suspend fun openWithoutSnapshot(
     store: HomeLayoutCutoverStore,
     pool: CachedPoolRepository,
     stored: HomeLayoutSet?,
-    enabled: Boolean,
-    ids: WorkspaceIdFactory,
     providerOf: (HostedWidgetId) -> WidgetProviderIdentity?,
 ): HomeLayoutOpening {
     val quarantined = guarded { store.quarantinePrePoolSnapshot() } != null
     val source = stored ?: HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
     val loaded = quarantined && pool.initializeIfStored(source, providerOf)
     val state = pool.current()
-    return when {
-        !loaded || state == null || !pool.isPersistent || !PoolCutover.holdsHome(state) -> readOnly(stored)
-        enabled -> HomeLayoutOpening(source, poolHome = true)
-        else -> handBack(store, pool, source, PoolHomeSync.reproject(state, source, ids).shown, ids, providerOf)
+    val usable = loaded && state != null && pool.isPersistent
+    return if (usable && PoolCutover.holdsHome(checkNotNull(state))) {
+        HomeLayoutOpening(source, poolHome = true)
+    } else {
+        readOnly(stored)
     }
 }
 

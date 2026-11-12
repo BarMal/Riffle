@@ -50,7 +50,7 @@ internal fun AlphaScrubber(
 ) {
     val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     val cellHeight = RiffleSpacing.xl * fontScale
-    BoxWithConstraints(modifier = modifier.fillMaxHeight().width(ExpressionMinTouchTarget)) {
+    BoxWithConstraints(modifier = modifier.fillMaxHeight().width(RiffleSpacing.xxxl)) {
         val shown = AlphaIndex.thin(letters, (maxHeight / cellHeight).toInt())
         var heightPx by remember { mutableIntStateOf(1) }
         var pointerY by remember { mutableFloatStateOf(0f) }

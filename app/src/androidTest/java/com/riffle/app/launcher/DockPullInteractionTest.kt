@@ -19,7 +19,6 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherSettings
-import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -138,9 +137,8 @@ class DockPullInteractionTest {
     }
 
     @Test
-    fun thePullNoLongerOpensTheWorkspaceMenuButItsActionStaysReachable() {
-        val menuActions = mutableListOf<WorkspaceMenuAction>()
-        val actions = setContent(workspaceMenu = WorkspaceMenuHost(WorkspaceMenuUiState(), { menuActions += it }))
+    fun theDockOffersTheLibraryAndStreamActionsAndNoWorkspaceMenu() {
+        val actions = setContent()
 
         val labels =
             composeRule
@@ -150,11 +148,9 @@ class DockPullInteractionTest {
                 .map { action -> action.label }
         pull(dyFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
 
-        assertTrue(WORKSPACE_MENU_ACTION_LABEL in labels)
-        composeRule.runOnIdle {
-            assertTrue(menuActions.isEmpty())
-            assertEquals(listOf(OPEN_LIBRARY), actions)
-        }
+        // No Stream host here, so no "Open Stream"; and no "Workspace menu" any more.
+        assertEquals(listOf("Open Library"), labels)
+        composeRule.runOnIdle { assertEquals(listOf(OPEN_LIBRARY), actions) }
     }
 
     /**
@@ -182,7 +178,6 @@ class DockPullInteractionTest {
     private fun setContent(
         position: DockPosition = DockPosition.BOTTOM,
         launcherSettings: LauncherSettings = LauncherSettings(),
-        workspaceMenu: WorkspaceMenuHost? = null,
     ): MutableList<LauncherShellAction> {
         val actions = mutableListOf<LauncherShellAction>()
         val layout =
@@ -203,7 +198,6 @@ class DockPullInteractionTest {
                 HomeDestination(
                     state = state,
                     appIconLoader = EmptyAppIconLoader,
-                    workspaceMenu = workspaceMenu,
                     onAction = { action -> actions += action },
                 )
             }

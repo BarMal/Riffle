@@ -2,7 +2,6 @@ package com.riffle.core.domain.launcher.workspace
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class WorkspaceValidationTest {
@@ -49,26 +48,5 @@ class WorkspaceValidationTest {
             listOf(WorkspaceIssue.UnsupportedExpression(ExpressionKind.CARD_STACK)),
             WorkspaceValidation.validate(ws, caps),
         )
-    }
-
-    @Test
-    fun resolverFallsBackToDefaultAndSaysWhy() {
-        val default = workspace("default", page("d"))
-        val requested = workspace("fancy", page("p", ExpressionKind.CARD_STACK))
-        val caps = LayoutCapabilities(setOf(ExpressionKind.LIST))
-        val resolution = WorkspaceResolver.resolve(requested, default, caps)
-        assertIs<WorkspaceResolution.FellBack>(resolution)
-        assertEquals(default, resolution.workspace)
-        assertEquals(WorkspaceId("fancy"), resolution.requested)
-        assertTrue(resolution.issues.isNotEmpty())
-    }
-
-    @Test
-    fun resolverKeepsAValidWorkspaceAndNeverFallsBackFromTheDefaultItself() {
-        val default = workspace("default", page("d"))
-        assertIs<WorkspaceResolution.Resolved>(WorkspaceResolver.resolve(default, default))
-        assertIs<WorkspaceResolution.Resolved>(WorkspaceResolver.resolve(workspace("w", page("p")), default))
-        val brokenDefault = workspace("default")
-        assertIs<WorkspaceResolution.Resolved>(WorkspaceResolver.resolve(brokenDefault, brokenDefault))
     }
 }

@@ -8,8 +8,6 @@ internal class LauncherActivityActionHandler(
     private val editHomePage: (LauncherShellAction) -> Unit,
     private val editHomeShortcut: (LauncherShellAction) -> Unit,
     private val editDock: (LauncherShellAction) -> Unit,
-    /** Asks the workspace menu to open; inert while its feature is off. */
-    private val openWorkspaceMenu: () -> Unit = {},
 ) {
     fun handle(action: LauncherShellAction): Boolean =
         when (val route = action.launcherActivityRoute()) {
@@ -41,11 +39,6 @@ internal class LauncherActivityActionHandler(
 
             LauncherActivityRoute.DockEdit -> {
                 editDock(action)
-                true
-            }
-
-            LauncherActivityRoute.WorkspaceMenu -> {
-                openWorkspaceMenu()
                 true
             }
 

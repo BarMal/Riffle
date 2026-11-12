@@ -39,7 +39,6 @@ fun SettingsSurface(
     state: SettingsSurfaceState,
     initialPage: SettingsPage = SettingsPage.MAIN,
     onAction: (LauncherShellAction) -> Unit,
-    onRequestAdaptiveStageAppearanceTuning: () -> Unit = {},
 ) {
     // Keep the active page and its per-page scroll position through activity recreation,
     // while this settings session remains open. Leaving Settings removes this state.
@@ -79,13 +78,7 @@ fun SettingsSurface(
             // The appearance page manages its own sticky preview, tabs, and inner scroll
             // rather than sharing this page-wide scroll container.
             val settingsContentModifier =
-                if (selectedPage.value == SettingsPage.ADAPTIVE_STAGE_APPEARANCE) {
-                    pageContentModifier
-                } else {
-                    pageContentModifier.verticalScroll(
-                        settingsPageScrollStateFor(pageScrollStates, selectedPage.value),
-                    )
-                }
+                pageContentModifier.verticalScroll(settingsPageScrollStateFor(pageScrollStates, selectedPage.value))
             CompositionLocalProvider(LocalSettingsSnackbarHostState provides snackbarHostState) {
                 SettingsPageContent(
                     modifier = settingsContentModifier,
@@ -93,7 +86,6 @@ fun SettingsSurface(
                     page = selectedPage.value,
                     onPageSelected = { page -> selectedPage.value = page },
                     onAction = onAction,
-                    onRequestAdaptiveStageAppearanceTuning = onRequestAdaptiveStageAppearanceTuning,
                 )
             }
             // Takes no room until a page announces something (the Workspaces page's confirmations and Undo).

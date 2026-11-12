@@ -250,7 +250,7 @@ class LauncherShellRefreshCoordinatorTest {
                     }
             }
         val coordinator = coordinator(notificationRepository = repository)
-        val revisions = AdaptiveStageArtworkRevisionStore()
+        val latestState = AtomicReference<LauncherShellState>()
         val dispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
         try {
             runBlocking {
@@ -259,9 +259,8 @@ class LauncherShellRefreshCoordinatorTest {
                         coroutineScope = this,
                         refreshDispatcher = dispatcher,
                         currentState = { LauncherShellState() },
-                        updateState = {},
+                        updateState = latestState::set,
                         refreshCoordinator = coordinator,
-                        artworkRevisionStore = revisions,
                     )
 
                 val olderJob = actions.refreshNotifications()
@@ -271,9 +270,11 @@ class LauncherShellRefreshCoordinatorTest {
                 olderJob.join()
             }
 
-            val expected = AdaptiveStageArtworkRevisionStore()
-            expected.replace(coordinator.refreshNotifications(LauncherShellState()).notificationGroupsByApp)
-            assertEquals(expected.revisionFor(newer), revisions.revisionFor(newer))
+            // The older read finished last, but only the newest refresh may have committed.
+            assertEquals(
+                coordinator.refreshNotifications(LauncherShellState()).notificationGroupsByApp,
+                latestState.get().notificationGroupsByApp,
+            )
         } finally {
             releaseOlderRead.countDown()
             dispatcher.close()
@@ -295,7 +296,6 @@ class LauncherShellRefreshCoordinatorTest {
                     if (readCount.getAndIncrement() == 0) listOf(older) else listOf(newer)
             }
         val coordinator = coordinator(notificationRepository = repository)
-        val revisions = AdaptiveStageArtworkRevisionStore()
         val latestState = AtomicReference<LauncherShellState>()
         val dispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
         try {
@@ -307,7 +307,6 @@ class LauncherShellRefreshCoordinatorTest {
                         currentState = { LauncherShellState() },
                         updateState = latestState::set,
                         refreshCoordinator = coordinator,
-                        artworkRevisionStore = revisions,
                         beforeNotificationCommit = {
                             if (commitCount.getAndIncrement() == 0) {
                                 olderCommitReached.countDown()
@@ -323,10 +322,7 @@ class LauncherShellRefreshCoordinatorTest {
                 olderJob.join()
             }
 
-            val expected = AdaptiveStageArtworkRevisionStore()
             val expectedState = coordinator.refreshNotifications(LauncherShellState())
-            expected.replace(expectedState.notificationGroupsByApp)
-            assertEquals(expected.revisionFor(newer), revisions.revisionFor(newer))
             assertEquals(expectedState.notificationGroupsByApp, latestState.get().notificationGroupsByApp)
         } finally {
             releaseOlderCommit.countDown()

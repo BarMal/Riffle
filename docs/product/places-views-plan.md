@@ -154,6 +154,11 @@ state), removal of the old lens pages and adaptive stage surface (P8).
 
 ### P8. Cut over and delete
 
+Status: **built.** Left in place and listed in the commit message: the stored `LauncherSettings.cards` model and `cards/` stage code that
+settings and shell state still read, `PageRole.FINDER` (stored only, never drawn), the lens evaluator (it is the vehicle of the
+exclusion and content-level tests), the Search source plumbing (no Place uses it; its Settings page is gone) and the Sources pages
+(P9 removes them).
+
 - One arrangement per posture: Home is the pool's arrangement for the default workspace of each layout;
   the Dock is `PoolDock`. Migration: for each layout, the active workspace's arrangement becomes the one
   arrangement; other workspaces stay in storage, decodable, and are not shown.
