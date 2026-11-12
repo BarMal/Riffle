@@ -473,6 +473,7 @@ internal class MainActivityDependencies(
             pool = poolRepository,
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
             stream = streamLayoutRepository,
+            calendarFeeds = icsFeedRepository,
             poolOwnsHome = { homeLayoutRuntime.poolHome != null },
         )
     }

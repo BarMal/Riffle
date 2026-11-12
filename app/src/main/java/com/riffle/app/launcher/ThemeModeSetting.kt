@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
@@ -12,7 +13,8 @@ internal fun ThemeModeSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsChoiceRow(
-        title = "Color mode",
+        modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_COLOUR_MODE),
+        title = SettingKey.APPEARANCE_COLOUR_MODE.label(),
         options = LauncherThemeMode.entries,
         selected = selectedMode,
         onSelect = { mode -> onAction(LauncherShellAction.SelectLauncherThemeMode(mode)) },
@@ -26,7 +28,8 @@ internal fun ThemeAccentSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsChoiceRow(
-        title = "Theme accent",
+        modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_ACCENT),
+        title = SettingKey.APPEARANCE_ACCENT.label(),
         options = LauncherThemeAccent.entries,
         selected = selectedAccent,
         onSelect = { accent -> onAction(LauncherShellAction.SelectLauncherThemeAccent(accent)) },
@@ -40,7 +43,8 @@ internal fun ThemeCornerStyleSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsChoiceRow(
-        title = "Corners",
+        modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_CORNERS),
+        title = SettingKey.APPEARANCE_CORNERS.label(),
         subtitle = "Corner radius of cards, panels, the dock and rows",
         options = LauncherThemeCornerStyle.entries,
         selected = selectedStyle,
@@ -55,7 +59,8 @@ internal fun ThemeTypographySetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsChoiceRow(
-        title = "Typography",
+        modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_TYPOGRAPHY),
+        title = SettingKey.APPEARANCE_TYPOGRAPHY.label(),
         options = LauncherThemeTypography.entries,
         selected = selectedTypography,
         onSelect = { typography -> onAction(LauncherShellAction.SelectLauncherThemeTypography(typography)) },

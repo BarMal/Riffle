@@ -377,9 +377,8 @@ class LauncherShellViewModelTest {
             LauncherShellAction.SelectFullscreenHomeEnabled(enabled = true),
         )
 
-        assertTrue(viewModel.state.value.launcherSettings.appearance.fullscreenHome)
-        assertFalse(viewModel.state.value.launcherSettings.appearance.hideStatusBarOnHome)
-        assertFalse(viewModel.state.value.launcherSettings.appearance.hideNavigationBarOnHome)
+        assertTrue(viewModel.state.value.launcherSettings.appearance.hideStatusBarOnHome)
+        assertTrue(viewModel.state.value.launcherSettings.appearance.hideNavigationBarOnHome)
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
 

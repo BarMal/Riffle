@@ -28,10 +28,23 @@ class DataStoreLauncherSettingsRepository(context: Context) : LauncherSettingsRe
         decodeStoredLauncherSettings(readString(LauncherSettingsDataStoreKeys.launcherSettings))
 
     override fun saveLauncherSettings(settings: LauncherSettings) {
+        preserveNewerBuildBlob()
         writeString(
             key = LauncherSettingsDataStoreKeys.launcherSettings,
             value = encodeLauncherSettings(settings),
         )
+    }
+
+    /**
+     * A blob written by a newer build is decoded as far as this build understands it, and then this build's save
+     * would replace it with a version it can read. Keep the newer copy under its own key first (once), so a downgrade
+     * and a later upgrade never lose what the newer build stored.
+     */
+    private fun preserveNewerBuildBlob() {
+        val stored = readString(LauncherSettingsDataStoreKeys.launcherSettings)
+        if (isNewerThanThisBuild(stored) && readString(LauncherSettingsDataStoreKeys.newerBuildCopy) == null) {
+            writeString(LauncherSettingsDataStoreKeys.newerBuildCopy, requireNotNull(stored))
+        }
     }
 
     private fun readString(key: Preferences.Key<String>): String? = runBlocking { dataStore.data.first()[key] }
@@ -51,6 +64,7 @@ class DataStoreLauncherSettingsRepository(context: Context) : LauncherSettingsRe
 private object LauncherSettingsDataStoreKeys {
     const val PREFERENCES_NAME = "riffle_launcher_settings"
     val launcherSettings = stringPreferencesKey("launcher_settings")
+    val newerBuildCopy = stringPreferencesKey("launcher_settings_newer_build_copy")
 }
 
 internal fun decodeStoredLauncherSettings(value: String?): LauncherSettings? =

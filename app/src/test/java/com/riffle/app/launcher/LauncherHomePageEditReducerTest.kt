@@ -10,7 +10,6 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
-import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridCell
@@ -32,7 +31,6 @@ import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WidgetItem
-import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -97,29 +95,6 @@ class LauncherHomePageEditReducerTest {
 
         assertEquals(emptyList<Any>(), refreshed.homeLayout.selectedPage.items)
         assertEquals(0, refreshed.homeLayout.selectedPage.generatedContentOverflowCount)
-        assertEquals(refreshed.homeLayout, repository.savedLayoutSet?.activeLayout)
-    }
-
-    @Test
-    fun enabledContextualBehaviourSelectsAnExistingConfiguredWorkPage() {
-        val baseLayout = HomeLayoutDefaults.standard()
-        val workPage =
-            baseLayout.selectedPage.copy(
-                id = LauncherPageId("work"),
-                type = LauncherPageType.Generated(GeneratedLauncherPageKind.WORK),
-            )
-        val layout = baseLayout.copy(pages = listOf(baseLayout.selectedPage, workPage))
-        val repository = FakeHomeLayoutRepository(layout)
-        val workApp = app(label = "Docs", profile = AppProfile.work())
-        val state =
-            launcherState(repository.savedLayoutSet).copy(
-                installedApps = listOf(workApp),
-                launcherSettings = LauncherSettings(contextual = ContextualSettings(enabled = true)),
-            )
-
-        val refreshed = state.withRefreshedGeneratedPages(repository)
-
-        assertEquals(workPage.id, refreshed.homeLayout.selectedPageId)
         assertEquals(refreshed.homeLayout, repository.savedLayoutSet?.activeLayout)
     }
 

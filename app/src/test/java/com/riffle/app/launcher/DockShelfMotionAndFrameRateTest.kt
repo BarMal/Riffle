@@ -131,28 +131,6 @@ class DockShelfMotionAndFrameRateTest {
         assertEquals(null, availability.effectiveChoice)
     }
 
-    @Test
-    fun frameRateTargetCyclingSkipsUnsupportedChoices() {
-        val choices =
-            listOf(
-                DockShelfFrameRateChoice(MotionPerformanceTargetFps.FPS_60, 59.94f),
-                DockShelfFrameRateChoice(MotionPerformanceTargetFps.FPS_120, 119.88f),
-            )
-
-        assertEquals(
-            MotionPerformanceTargetFps.FPS_120,
-            nextDockShelfFrameRateTarget(MotionPerformanceTargetFps.FPS_60, choices),
-        )
-        assertEquals(
-            MotionPerformanceTargetFps.FPS_60,
-            nextDockShelfFrameRateTarget(MotionPerformanceTargetFps.FPS_120, choices),
-        )
-        assertEquals(
-            MotionPerformanceTargetFps.FPS_90,
-            nextDockShelfFrameRateTarget(MotionPerformanceTargetFps.FPS_90, emptyList()),
-        )
-    }
-
     private class FakeDockShelfFrameRatePlatform(
         initialFrameRate: Float?,
         private val supportedFrameRates: List<Float>? = listOf(60f, 90f, 120f),

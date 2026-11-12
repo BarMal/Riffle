@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.stream.StreamLayouts
@@ -18,6 +19,9 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
+import com.riffle.core.domain.launcher.workspace.sources.ics.IcsFeed
+import com.riffle.core.domain.launcher.workspace.sources.ics.IcsFeedId
+import com.riffle.core.domain.launcher.workspace.sources.ics.IcsFeedSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -47,6 +51,7 @@ class LauncherBackupBeforeCutoverTest {
         var exclusions: LayoutExclusionRules? = null
         var pool: PoolStoreState? = null
         var stream: StreamLayouts? = null
+        var calendarFeeds: IcsFeedSettings? = null
 
         override fun currentWorkspaceSet(): WorkspaceSet? = workspaceSet
 
@@ -68,6 +73,10 @@ class LauncherBackupBeforeCutoverTest {
 
         override fun restoreStreamLayouts(layouts: StreamLayouts) {
             stream = layouts
+        }
+
+        override fun restoreCalendarFeeds(feeds: IcsFeedSettings) {
+            calendarFeeds = feeds
         }
     }
 
@@ -115,6 +124,36 @@ class LauncherBackupBeforeCutoverTest {
         // The Stream layout.
         val stream = checkNotNull(port.stream).forPosture(phone)
         assertEquals(StreamView.LIST, stream.viewOf(StreamSection.NOW))
+    }
+
+    @Test
+    fun importingTheOldDocumentLeavesTheCalendarFeedsAloneBecauseItCarriesNone() {
+        val port = RecordingWorkspaceBackup()
+
+        handler(port).importBackup { ByteArrayInputStream(oldBackup.toByteArray(Charsets.UTF_8)) }
+
+        assertEquals(null, port.calendarFeeds)
+    }
+
+    @Test
+    fun aBackupThatCarriesCalendarFeedsRestoresThemThroughThePort() {
+        val port = RecordingWorkspaceBackup()
+        val feeds =
+            IcsFeedSettings(
+                listOf(
+                    IcsFeed(
+                        IcsFeedId("f1"),
+                        "Team",
+                        FeedUrl.parse("https://calendar.example.com/team.ics").getOrThrow(),
+                    ),
+                ),
+            )
+        val document = decodeLauncherBackupDocument(oldBackup).copy(calendarFeeds = feeds)
+        val encoded = encodeLauncherBackupDocument(document)
+
+        handler(port).importBackup { ByteArrayInputStream(encoded.toByteArray(Charsets.UTF_8)) }
+
+        assertEquals(feeds, port.calendarFeeds)
     }
 
     @Test

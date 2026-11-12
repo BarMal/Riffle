@@ -1,10 +1,11 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -19,18 +20,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
-import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.settings.LauncherGestureSurface
 import com.riffle.core.domain.launcher.settings.toHomeGesture
 
+/**
+ * Gestures: the fourteen swipes and pinches on Home, each a row whose menu picks its action. Draws as sections (one per
+ * finger count), so the page itself adds none.
+ */
 @Composable
 fun HomeSwipeGestureSetting(
     settings: GestureSettings,
@@ -41,32 +47,42 @@ fun HomeSwipeGestureSetting(
     val homeGestures = settings.homeGestures
     var targetPickerRequest by remember { mutableStateOf<GestureTargetPickerRequest?>(null) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Home gestures",
-            style = MaterialTheme.typography.bodyLarge,
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         homeGestureConflictSummary(settings)?.let { summary ->
             Text(
+                modifier = Modifier.padding(horizontal = 8.dp),
                 text = summary,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
         }
         gestureGroups.forEach { group ->
-            GestureGroup(
-                title = group.title,
-                rows = group.rows,
-                settings = homeGestures,
-                installedApps = installedApps,
-                onAction = onAction,
-                onTargetPickerRequest = { gesture, action ->
-                    targetPickerRequest = GestureTargetPickerRequest(gesture, action)
+            SettingsSection(title = group.title) {
+                group.rows.forEach { row ->
+                    HomeGestureRow(
+                        gesture = row.gesture,
+                        action = homeGestures.actionFor(row.gesture),
+                        launchTarget = homeGestures.launchTargetFor(row.gesture),
+                        installedApps = installedApps,
+                        onAction = onAction,
+                        onTargetPickerRequest = { gesture, action ->
+                            targetPickerRequest = GestureTargetPickerRequest(gesture, action)
+                        },
+                    )
+                }
+            }
+        }
+        SettingsSection(title = stringResource(R.string.settings_gestures_reset_section)) {
+            SettingsClickableRow(
+                title = stringResource(R.string.settings_gestures_reset),
+                subtitle = stringResource(R.string.settings_gestures_reset_subtitle),
+                onClick = { onAction(LauncherShellAction.ResetHomeSwipeGestureActions) },
+                trailingContent = {
+                    SettingsButtonText(
+                        text = stringResource(R.string.settings_gestures_reset_action),
+                    )
                 },
             )
-        }
-        TextButton(onClick = { onAction(LauncherShellAction.ResetHomeSwipeGestureActions) }) {
-            SettingsButtonText(text = "Reset")
         }
     }
     targetPickerRequest?.let { request ->
@@ -90,37 +106,7 @@ fun HomeSwipeGestureSetting(
 }
 
 @Composable
-private fun GestureGroup(
-    title: String,
-    rows: List<GestureRowState>,
-    settings: HomeGestureSettings,
-    installedApps: List<InstalledApp>,
-    onAction: (LauncherShellAction) -> Unit,
-    onTargetPickerRequest: (HomeGesture, LauncherGestureAction) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        rows.forEach { row ->
-            HomeGestureRow(
-                label = row.label,
-                gesture = row.gesture,
-                action = settings.actionFor(row.gesture),
-                launchTarget = settings.launchTargetFor(row.gesture),
-                installedApps = installedApps,
-                onAction = onAction,
-                onTargetPickerRequest = onTargetPickerRequest,
-            )
-        }
-    }
-}
-
-@Composable
 private fun HomeGestureRow(
-    label: String,
     gesture: HomeGesture,
     action: LauncherGestureAction,
     launchTarget: LauncherGestureLaunchTarget?,
@@ -130,65 +116,88 @@ private fun HomeGestureRow(
 ) {
     val isExpanded = remember { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = label,
-            maxLines = 1,
-            style = MaterialTheme.typography.bodyMedium,
+    Box {
+        SettingsClickableRow(
+            modifier = Modifier.settingAnchor(gesture.settingKey()),
+            title = gesture.label,
+            subtitle = action.targetLabel(launchTarget, installedApps),
+            onClick = { isExpanded.value = true },
+            trailingContent = { SettingsButtonText(text = stringResource(R.string.settings_gestures_change)) },
         )
-        Column {
-            TextButton(onClick = { isExpanded.value = true }) {
-                SettingsButtonText(text = action.targetLabel(launchTarget, installedApps))
-            }
-            RiffleContextMenu(
-                expanded = isExpanded.value,
-                onDismissRequest = { isExpanded.value = false },
-            ) {
-                gestureActionOptions().forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(text = option.label) },
-                        onClick = {
-                            isExpanded.value = false
-                            if (option.requiresLaunchTarget) {
-                                onTargetPickerRequest(gesture, option)
-                            } else {
-                                onAction(
-                                    LauncherShellAction.SelectHomeGestureAction(
-                                        gesture = gesture,
-                                        action = option,
-                                    ),
-                                )
-                            }
-                        },
-                    )
-                }
+        RiffleContextMenu(
+            expanded = isExpanded.value,
+            onDismissRequest = { isExpanded.value = false },
+        ) {
+            gestureActionOptions().forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(text = option.label) },
+                    onClick = {
+                        isExpanded.value = false
+                        if (option.requiresLaunchTarget) {
+                            onTargetPickerRequest(gesture, option)
+                        } else {
+                            onAction(LauncherShellAction.SelectHomeGestureAction(gesture = gesture, action = option))
+                        }
+                    },
+                )
             }
         }
     }
 }
 
+@Suppress("CyclomaticComplexMethod")
+internal fun HomeGesture.settingKey(): SettingKey =
+    when (this) {
+        HomeGesture.ONE_FINGER_UP -> SettingKey.GESTURE_ONE_FINGER_UP
+        HomeGesture.ONE_FINGER_DOWN -> SettingKey.GESTURE_ONE_FINGER_DOWN
+        HomeGesture.ONE_FINGER_LEFT -> SettingKey.GESTURE_ONE_FINGER_LEFT
+        HomeGesture.ONE_FINGER_RIGHT -> SettingKey.GESTURE_ONE_FINGER_RIGHT
+        HomeGesture.TWO_FINGER_UP -> SettingKey.GESTURE_TWO_FINGER_UP
+        HomeGesture.TWO_FINGER_DOWN -> SettingKey.GESTURE_TWO_FINGER_DOWN
+        HomeGesture.TWO_FINGER_LEFT -> SettingKey.GESTURE_TWO_FINGER_LEFT
+        HomeGesture.TWO_FINGER_RIGHT -> SettingKey.GESTURE_TWO_FINGER_RIGHT
+        HomeGesture.THREE_FINGER_UP -> SettingKey.GESTURE_THREE_FINGER_UP
+        HomeGesture.THREE_FINGER_DOWN -> SettingKey.GESTURE_THREE_FINGER_DOWN
+        HomeGesture.THREE_FINGER_LEFT -> SettingKey.GESTURE_THREE_FINGER_LEFT
+        HomeGesture.THREE_FINGER_RIGHT -> SettingKey.GESTURE_THREE_FINGER_RIGHT
+        HomeGesture.PINCH_IN -> SettingKey.GESTURE_PINCH_IN
+        HomeGesture.PINCH_OUT -> SettingKey.GESTURE_PINCH_OUT
+    }
+
 /** The actions a home gesture can be bound to, in menu order. */
-internal fun gestureActionOptions(): List<LauncherGestureAction> = LauncherGestureAction.entries
+internal fun gestureActionOptions(): List<LauncherGestureAction> =
+    listOf(
+        LauncherGestureAction.NONE,
+        LauncherGestureAction.OPEN_NOTIFICATIONS,
+        LauncherGestureAction.OPEN_SEARCH,
+        LauncherGestureAction.OPEN_LIBRARY,
+        LauncherGestureAction.OPEN_STREAM,
+        LauncherGestureAction.OPEN_SETTINGS,
+        LauncherGestureAction.ENTER_HOME_EDIT_MODE,
+        LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
+        LauncherGestureAction.ENTER_FULLSCREEN_HOME,
+        LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
+        LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
+        LauncherGestureAction.LAUNCH_APP,
+        LauncherGestureAction.LAUNCH_APP_SHORTCUT,
+    )
 
 internal val LauncherGestureAction.label: String
     get() =
         when (this) {
-            LauncherGestureAction.NONE -> "Disabled"
-            LauncherGestureAction.OPEN_NOTIFICATIONS -> "Notifications"
-            LauncherGestureAction.OPEN_SEARCH -> "Search"
-            LauncherGestureAction.OPEN_SETTINGS -> "Settings"
-            LauncherGestureAction.ENTER_HOME_EDIT_MODE -> "Edit home"
-            LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW -> "Manage pages"
-            LauncherGestureAction.ENTER_FULLSCREEN_HOME -> "Fullscreen home"
+            LauncherGestureAction.NONE -> "None"
+            LauncherGestureAction.OPEN_NOTIFICATIONS -> "Open notifications"
+            LauncherGestureAction.OPEN_SEARCH -> "Open search"
+            LauncherGestureAction.OPEN_SETTINGS -> "Open settings"
+            LauncherGestureAction.ENTER_HOME_EDIT_MODE -> "Edit Home"
+            LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW -> "Page overview"
+            LauncherGestureAction.ENTER_FULLSCREEN_HOME -> "Full-screen Home"
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> "Next page"
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> "Previous page"
             LauncherGestureAction.LAUNCH_APP -> "Launch app"
             LauncherGestureAction.LAUNCH_APP_SHORTCUT -> "Launch shortcut"
-            LauncherGestureAction.OPEN_STREAM -> "Stream"
-            LauncherGestureAction.OPEN_LIBRARY -> "Library"
+            LauncherGestureAction.OPEN_STREAM -> "Open Stream"
+            LauncherGestureAction.OPEN_LIBRARY -> "Open Library"
         }
 
 private val LauncherGestureAction.requiresLaunchTarget: Boolean
@@ -253,10 +262,10 @@ internal fun AppShortcut.gesturePickerLabel(
 internal val HomeGesture.label: String
     get() =
         when (this) {
-            HomeGesture.ONE_FINGER_UP -> "Swipe up"
-            HomeGesture.ONE_FINGER_DOWN -> "Swipe down"
-            HomeGesture.ONE_FINGER_LEFT -> "Swipe left"
-            HomeGesture.ONE_FINGER_RIGHT -> "Swipe right"
+            HomeGesture.ONE_FINGER_UP -> "One-finger swipe up"
+            HomeGesture.ONE_FINGER_DOWN -> "One-finger swipe down"
+            HomeGesture.ONE_FINGER_LEFT -> "One-finger swipe left"
+            HomeGesture.ONE_FINGER_RIGHT -> "One-finger swipe right"
             HomeGesture.TWO_FINGER_UP -> "Two-finger swipe up"
             HomeGesture.TWO_FINGER_DOWN -> "Two-finger swipe down"
             HomeGesture.TWO_FINGER_LEFT -> "Two-finger swipe left"
@@ -278,7 +287,6 @@ internal fun homeGestureConflictSummary(settings: GestureSettings): String? =
         }
 
 private data class GestureRowState(
-    val label: String,
     val gesture: HomeGesture,
 )
 
@@ -293,38 +301,38 @@ private val gestureGroups =
             title = "One finger",
             rows =
                 listOf(
-                    GestureRowState("Swipe up", HomeGesture.ONE_FINGER_UP),
-                    GestureRowState("Swipe down", HomeGesture.ONE_FINGER_DOWN),
-                    GestureRowState("Swipe left", HomeGesture.ONE_FINGER_LEFT),
-                    GestureRowState("Swipe right", HomeGesture.ONE_FINGER_RIGHT),
+                    GestureRowState(HomeGesture.ONE_FINGER_UP),
+                    GestureRowState(HomeGesture.ONE_FINGER_DOWN),
+                    GestureRowState(HomeGesture.ONE_FINGER_LEFT),
+                    GestureRowState(HomeGesture.ONE_FINGER_RIGHT),
                 ),
         ),
         GestureGroupState(
             title = "Two fingers",
             rows =
                 listOf(
-                    GestureRowState("Swipe up", HomeGesture.TWO_FINGER_UP),
-                    GestureRowState("Swipe down", HomeGesture.TWO_FINGER_DOWN),
-                    GestureRowState("Swipe left", HomeGesture.TWO_FINGER_LEFT),
-                    GestureRowState("Swipe right", HomeGesture.TWO_FINGER_RIGHT),
+                    GestureRowState(HomeGesture.TWO_FINGER_UP),
+                    GestureRowState(HomeGesture.TWO_FINGER_DOWN),
+                    GestureRowState(HomeGesture.TWO_FINGER_LEFT),
+                    GestureRowState(HomeGesture.TWO_FINGER_RIGHT),
                 ),
         ),
         GestureGroupState(
             title = "Pinch",
             rows =
                 listOf(
-                    GestureRowState("Pinch in", HomeGesture.PINCH_IN),
-                    GestureRowState("Pinch out", HomeGesture.PINCH_OUT),
+                    GestureRowState(HomeGesture.PINCH_IN),
+                    GestureRowState(HomeGesture.PINCH_OUT),
                 ),
         ),
         GestureGroupState(
             title = "Three fingers",
             rows =
                 listOf(
-                    GestureRowState("Swipe up", HomeGesture.THREE_FINGER_UP),
-                    GestureRowState("Swipe down", HomeGesture.THREE_FINGER_DOWN),
-                    GestureRowState("Swipe left", HomeGesture.THREE_FINGER_LEFT),
-                    GestureRowState("Swipe right", HomeGesture.THREE_FINGER_RIGHT),
+                    GestureRowState(HomeGesture.THREE_FINGER_UP),
+                    GestureRowState(HomeGesture.THREE_FINGER_DOWN),
+                    GestureRowState(HomeGesture.THREE_FINGER_LEFT),
+                    GestureRowState(HomeGesture.THREE_FINGER_RIGHT),
                 ),
         ),
     )

@@ -11,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -50,6 +51,7 @@ internal interface IcsStorePort {
  *
  * The feed URLs are secrets: they exist only here and in the store, never in a log, the backup or the UI.
  */
+@Suppress("TooManyFunctions")
 internal class CachedIcsFeedRepository(
     private val store: IcsStorePort,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
@@ -94,6 +96,31 @@ internal class CachedIcsFeedRepository(
             if (persistenceEnabled) scope.launch { writeSettings() }
         }
         return next
+    }
+
+    /**
+     * Replaces the whole feed list from a backup, once the stored list has loaded (so the restore can never be lost
+     * into an unloaded copy). Feeds the backup does not carry lose their cached events. Nothing is fetched: a restored
+     * feed stays "not refreshed yet" until the user asks.
+     */
+    suspend fun replaceFromBackup(restored: IcsFeedSettings) {
+        loadedFlow.first { loaded -> loaded }
+        val removed =
+            synchronized(lock) {
+                val gone =
+                    mutableSettings.value.feeds.map { it.id }.filter {
+                            id ->
+                        restored.feeds.none { it.id == id }
+                    }
+                mutableSettings.value = restored
+                cache = cache.filterKeys { id -> restored.feeds.any { it.id == id } }
+                gone
+            }
+        changed()
+        if (persistenceEnabled) {
+            writeSettings()
+            if (removed.isNotEmpty()) writeCache()
+        }
     }
 
     /** Replaces one feed's parsed events (a refresh result). */

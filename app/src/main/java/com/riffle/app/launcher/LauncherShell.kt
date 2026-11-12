@@ -484,11 +484,14 @@ private fun LauncherDestination(
             )
 
         ShellDestination.SETTINGS ->
-            SettingsSurface(
-                state = settingsState,
-                initialPage = settingsPageActionRouter.initialSettingsPage,
-                onAction = settingsPageActionRouter.onAction,
-            )
+            CompositionLocalProvider(LocalStreamLayoutRepository provides stream?.layouts) {
+                SettingsSurface(
+                    state = settingsState,
+                    initialPage = settingsPageActionRouter.initialSettingsPage,
+                    initialAnchor = settingsPageActionRouter.initialSettingsAnchor,
+                    onAction = settingsPageActionRouter.onAction,
+                )
+            }
     }
 }
 

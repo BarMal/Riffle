@@ -23,15 +23,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.ics.IcsAddResult
 import com.riffle.app.launcher.ics.IcsFeedRow
 import com.riffle.app.launcher.ics.IcsFeedsText
 import com.riffle.app.launcher.ics.IcsFeedsUiState
+import com.riffle.core.domain.launcher.workspace.SourceIds
+import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 import com.riffle.core.domain.launcher.workspace.sources.ics.IcsFeedId
 
 internal const val ICS_FEEDS_EMPTY_TEST_TAG = "ics-feeds-empty"
@@ -41,8 +43,7 @@ internal const val ICS_FEEDS_SUMMARY_TEST_TAG = "ics-feeds-summary"
 internal fun icsFeedRowTestTag(id: IcsFeedId): String = "ics-feed-row-${id.value}"
 
 /**
- * Settings > Calendar feeds (ICS). Reached from Sources like the other source pages (S9: always
- * available). While open it follows the feed list and refresh status.
+ * Stream > Agenda > Calendar feeds. While open it follows the feed list and refresh status.
  */
 @Composable
 internal fun SettingsIcsFeedsPageContent() {
@@ -56,6 +57,11 @@ internal fun SettingsIcsFeedsPageContent() {
         }
         val state by controller.state.collectAsState()
         Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.l)) {
+            StreamSourceSections(
+                ids = listOf(SourceIds.ICS),
+                anchor = null,
+                calendarAccess = CalendarAccessStatus.UNKNOWN,
+            )
             IcsFeedsListContent(
                 state = state,
                 onRefresh = { controller.refreshAll() },
@@ -63,7 +69,9 @@ internal fun SettingsIcsFeedsPageContent() {
                 onRemove = controller::remove,
             )
             SettingsSection(title = "Add a feed") {
-                IcsAddFeedForm(onAdd = controller::add)
+                Column(modifier = Modifier.settingAnchor(SettingKey.CALENDAR_FEEDS_ADD)) {
+                    IcsAddFeedForm(onAdd = controller::add)
+                }
             }
         }
     }
@@ -86,7 +94,11 @@ internal fun IcsFeedsListContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         SettingsSection(title = IcsFeedsText.TITLE) {
-            IcsRefreshRow(state = state, onRefresh = onRefresh)
+            IcsRefreshRow(
+                modifier = Modifier.settingAnchor(SettingKey.CALENDAR_FEEDS_REFRESH),
+                state = state,
+                onRefresh = onRefresh,
+            )
             if (state.rows.isEmpty()) {
                 SettingsListRow(
                     modifier = Modifier.testTag(ICS_FEEDS_EMPTY_TEST_TAG),
@@ -132,19 +144,21 @@ private fun IcsFeedRowItem(
     onToggle: (IcsFeedId, Boolean) -> Unit,
     onRemove: (IcsFeedId) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().testTag(icsFeedRowTestTag(row.id)),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f).padding(start = 8.dp),
-            title = row.name,
-            subtitle = "${row.host}. ${icsFeedStatus(row)}",
-        )
-        Switch(checked = row.enabled, onCheckedChange = { enabled -> onToggle(row.id, enabled) })
-        TextButton(onClick = { onRemove(row.id) }) { SettingsButtonText(text = "Remove") }
-    }
+    SettingsListRow(
+        modifier = Modifier.testTag(icsFeedRowTestTag(row.id)),
+        title = row.name,
+        subtitle = "${row.host}. ${icsFeedStatus(row)}",
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(
+                    modifier = Modifier.semantics { contentDescription = row.name },
+                    checked = row.enabled,
+                    onCheckedChange = { enabled -> onToggle(row.id, enabled) },
+                )
+                TextButton(onClick = { onRemove(row.id) }) { SettingsButtonText(text = "Remove") }
+            }
+        },
+    )
 }
 
 private fun icsFeedStatus(row: IcsFeedRow): String {

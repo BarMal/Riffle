@@ -35,27 +35,34 @@ internal fun RssBackgroundRefreshSettings(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SettingsChoiceRow(
-            title = "Background refresh",
+            modifier = Modifier.settingAnchor(SettingKey.FEEDS_BACKGROUND_REFRESH),
+            title = SettingKey.FEEDS_BACKGROUND_REFRESH.label(),
             subtitle = settings.refreshInterval.explanation(),
             options = FeedRefreshIntervalOption.entries,
             selected = settings.refreshInterval,
             onSelect = { option -> onAction(LauncherShellAction.SelectRssRefreshInterval(option)) },
             label = { option -> option.chipLabel() },
         )
-        if (settings.refreshInterval.isEnabled) {
+        // Shown always (but off until an interval is chosen) so search can always scroll to them.
+        run {
+            val intervalOn = settings.refreshInterval.isEnabled
             SettingsSwitchRow(
-                title = "Only on Wi-Fi",
+                modifier = Modifier.settingAnchor(SettingKey.FEEDS_WIFI_ONLY),
+                enabled = intervalOn,
+                title = SettingKey.FEEDS_WIFI_ONLY.label(),
                 subtitle = "Skip background refresh on mobile data or other metered networks.",
                 checked = settings.backgroundWifiOnly,
                 onCheckedChange = { enabled -> onAction(LauncherShellAction.SetRssBackgroundWifiOnly(enabled)) },
             )
             SettingsSwitchRow(
-                title = "Only while charging",
+                modifier = Modifier.settingAnchor(SettingKey.FEEDS_CHARGING_ONLY),
+                enabled = intervalOn,
+                title = SettingKey.FEEDS_CHARGING_ONLY.label(),
                 subtitle = "Skip background refresh unless the device is plugged in.",
                 checked = settings.backgroundChargingOnly,
                 onCheckedChange = { enabled -> onAction(LauncherShellAction.SetRssBackgroundChargingOnly(enabled)) },
             )
-            RssBackgroundStatusLine()
+            if (intervalOn) RssBackgroundStatusLine()
         }
     }
 }

@@ -28,6 +28,18 @@ class SettingsPageNavigationTest {
     }
 
     @Test
+    fun openSettingsPageCarriesTheSettingSearchWantsScrolledTo() {
+        assertEquals(
+            SettingsPageNavigation(
+                page = SettingsPage.DOCK,
+                action = LauncherShellAction.OpenSettings,
+                anchor = SettingKey.DOCK_POSITION,
+            ),
+            LauncherShellAction.OpenSettingsPage(SettingsPage.DOCK, SettingKey.DOCK_POSITION).settingsPageNavigation(),
+        )
+    }
+
+    @Test
     fun nonSettingsNavigationDoesNotChangeSettingsPageTarget() {
         assertNull(LauncherShellAction.OpenSearch.settingsPageNavigation())
     }

@@ -129,10 +129,11 @@ internal class IcsFeedsController(
 
 /** Plain-language text for the feed pages; never contains a URL or calendar content. */
 internal object IcsFeedsText {
-    const val TITLE = "Calendar feeds (ICS)"
+    const val TITLE = "Calendar feeds"
     const val INTRO =
         "Read-only calendar feeds from https .ics links. Riffle only fetches when you tap Refresh. " +
-            "A link can contain a secret, so only the host is shown and it is never backed up."
+            "A link can contain a secret, so only the host is shown. Export includes the links in the backup " +
+            "file, so keep that file private."
 
     fun countLabel(count: Int): String =
         when (count) {

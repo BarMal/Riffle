@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.app.launcher.exclusions.decodeExclusionRules
 import com.riffle.app.launcher.exclusions.encodeExclusionRules
+import com.riffle.app.launcher.ics.IcsJsonCodecs
 import com.riffle.app.launcher.pool.decodePoolStore
 import com.riffle.app.launcher.pool.encodePoolStore
 import com.riffle.app.launcher.stream.decodeStreamLayouts
@@ -15,6 +16,7 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.backup.WorkspaceBackup
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
+import com.riffle.core.domain.launcher.workspace.sources.ics.IcsFeedSettings
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -38,6 +40,11 @@ data class LauncherBackupDocument(
     val homeFromPool: Boolean = false,
     /** How the Stream is arranged per posture (sections, order, views, options). Absent in older backups. */
     val stream: StreamLayouts? = null,
+    /**
+     * The calendar feed list (name, link, on or off), never the events read from it. The links can carry a private key,
+     * so this is only ever written to the backup file the user exports. Absent in older backups.
+     */
+    val calendarFeeds: IcsFeedSettings? = null,
 )
 
 fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
@@ -57,6 +64,8 @@ fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
                 ?.let { state -> json.put("pool", JSONObject(encodePoolStore(state))) }
             StreamLayoutBackup.export(document.stream)
                 ?.let { layouts -> json.put("stream", JSONObject(encodeStreamLayouts(layouts))) }
+            document.calendarFeeds?.takeIf { it.feeds.isNotEmpty() }
+                ?.let { feeds -> json.put("calendarFeeds", JSONObject(IcsJsonCodecs.encodeSettings(feeds))) }
             if (document.homeFromPool) json.put("homeFromPool", true)
         }
         .toString()
@@ -90,6 +99,7 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
             pool = json.optPool(),
             homeFromPool = json.optBoolean("homeFromPool", false),
             stream = json.optStream(),
+            calendarFeeds = json.optCalendarFeeds(),
         )
     }.getOrElse { error ->
         when (error) {
@@ -133,6 +143,13 @@ private fun JSONObject.optStream(): StreamLayouts? =
         optJSONObject("stream")
             ?.let { decodeStreamLayouts(it.toString()) }
             ?.let(StreamLayoutBackup::restore)
+    }.getOrNull()
+
+private fun JSONObject.optCalendarFeeds(): IcsFeedSettings? =
+    runCatching {
+        optJSONObject("calendarFeeds")
+            ?.let { IcsJsonCodecs.decodeSettings(it.toString()) }
+            ?.takeIf { it.feeds.isNotEmpty() }
     }.getOrNull()
 
 private fun JSONObject.optHiddenAppIdentities(): Set<AppIdentity> =

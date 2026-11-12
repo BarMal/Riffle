@@ -114,117 +114,6 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectContextualEnabled ->
-                    state.withContextualSettingsAction(
-                        action = action,
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.UpdateAdaptiveStageAppearance ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                cards =
-                                    state.launcherSettings.cards.copy(
-                                        adaptiveStageAppearance = action.appearance.coerce(),
-                                    ),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                cards =
-                                    state.launcherSettings.cards.copy(
-                                        unfoldedAppearance = action.appearance.coerce(),
-                                    ),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectAdaptiveStagePaneArrangement ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                cards =
-                                    state.launcherSettings.cards.copy(
-                                        adaptiveStagePaneArrangement = action.arrangement,
-                                    ),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectThreadMessageOrder ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                cards =
-                                    state.launcherSettings.cards.copy(
-                                        threadMessageOrder = action.order,
-                                    ),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectThreadCardGrouping ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                cards =
-                                    state.launcherSettings.cards.copy(
-                                        threadCardGrouping = action.grouping,
-                                    ),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectCardsFoldedShowAllNotifications ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                cards =
-                                    state.launcherSettings.cards.copy(
-                                        foldedShowAllNotifications = action.enabled,
-                                    ),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectCardsUnfoldedShowAllNotifications ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                cards =
-                                    state.launcherSettings.cards.copy(
-                                        unfoldedShowAllNotifications = action.enabled,
-                                    ),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectCardsShowStageSpine ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                cards = state.launcherSettings.cards.copy(showStageSpine = action.enabled),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectCardsPageVerticalOffset ->
-                    state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                cards =
-                                    state.launcherSettings.cards.copy(
-                                        pageVerticalOffsetDp = action.offsetDp,
-                                    ).coerced(),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
                 is LauncherShellAction.SelectReturnBehavior ->
                     state.withLauncherSettings(
                         settings =
@@ -334,15 +223,6 @@ private fun LauncherShellState.withAppDrawerSettingsAction(
                 settings =
                     launcherSettings.copy(
                         appDrawer = launcherSettings.appDrawer.copy(iconGridColumns = action.columns).coerced(),
-                    ),
-                launcherSettingsRepository = launcherSettingsRepository,
-            )
-
-        is LauncherShellAction.SelectLibraryReturnTarget ->
-            withLauncherSettings(
-                settings =
-                    launcherSettings.copy(
-                        appDrawer = launcherSettings.appDrawer.copy(afterLeavingLibrary = action.target),
                     ),
                 launcherSettingsRepository = launcherSettingsRepository,
             )

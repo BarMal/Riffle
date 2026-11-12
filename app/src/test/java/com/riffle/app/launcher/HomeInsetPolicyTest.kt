@@ -38,7 +38,7 @@ class HomeInsetPolicyTest {
                 reserveStatusBar = false,
                 reserveNavigationBar = false,
             ),
-            homeInsetPolicy(AppearanceSettings(fullscreenHome = true)),
+            homeInsetPolicy(AppearanceSettings(hideStatusBarOnHome = true, hideNavigationBarOnHome = true)),
         )
     }
 

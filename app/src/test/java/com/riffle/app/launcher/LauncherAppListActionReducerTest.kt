@@ -14,11 +14,19 @@ import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
 
 class LauncherAppListActionReducerTest {
+    @Before
+    fun installSettingsText() = SettingsTextHolder.install(SettingsTestText)
+
+    @After
+    fun removeSettingsText() = SettingsTextHolder.install(null as SettingsText?)
+
     private val reducer = LauncherAppListActionReducer(InstalledAppCatalog())
 
     @Test
@@ -94,7 +102,7 @@ class LauncherAppListActionReducerTest {
 
         assertEquals("drawer", updated?.searchQuery)
         assertEquals(listOf("App drawer"), updated?.searchResults?.map { app -> app.label })
-        assertEquals(listOf("App drawer"), updated?.searchSettingsResults?.map { result -> result.title })
+        assertEquals(listOf("Library"), updated?.searchSettingsResults?.map { result -> result.title })
     }
 
     @Test

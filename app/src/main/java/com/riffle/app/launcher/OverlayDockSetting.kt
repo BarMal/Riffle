@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
@@ -81,7 +82,8 @@ private fun OverlayDockEnabledSetting(
     val presentation = overlayDockAccessPresentation(settings.enabled, permissionStatus)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SettingsSwitchRow(
-            title = "Floating dock",
+            modifier = Modifier.settingAnchor(SettingKey.FLOATING_ENABLED),
+            title = SettingKey.FLOATING_ENABLED.label(),
             subtitle = presentation.subtitle,
             checked = settings.enabled,
             onCheckedChange = { value ->
@@ -146,7 +148,8 @@ private fun OverlayDockEdgeSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsChoiceRow(
-        title = "Overlay edge",
+        modifier = Modifier.settingAnchor(SettingKey.FLOATING_EDGE),
+        title = SettingKey.FLOATING_EDGE.label(),
         subtitle = edge.label,
         options = OverlayDockEdge.entries,
         selected = edge,
@@ -161,7 +164,8 @@ private fun OverlayDockHandleThicknessSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     OverlayDockStepperSetting(
-        title = "Handle thickness",
+        key = SettingKey.FLOATING_HANDLE_THICKNESS,
+        title = SettingKey.FLOATING_HANDLE_THICKNESS.label(),
         value = thicknessDp,
         valueRange = MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP..MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP,
         valueLabel = { "$it dp" },
@@ -181,7 +185,8 @@ private fun OverlayDockHandleHeightSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     OverlayDockStepperSetting(
-        title = "Handle size",
+        key = SettingKey.FLOATING_HANDLE_SIZE,
+        title = SettingKey.FLOATING_HANDLE_SIZE.label(),
         value = heightDp,
         valueRange = MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP..MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
         valueLabel = { "$it dp" },
@@ -195,7 +200,8 @@ private fun OverlayDockVerticalOffsetSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     OverlayDockStepperSetting(
-        title = "Handle position",
+        key = SettingKey.FLOATING_HANDLE_POSITION,
+        title = SettingKey.FLOATING_HANDLE_POSITION.label(),
         value = offsetDp,
         valueRange = MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP..MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
         valueLabel = { value ->
@@ -215,7 +221,8 @@ private fun OverlayDockHandleAlphaSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     OverlayDockStepperSetting(
-        title = "Handle opacity",
+        key = SettingKey.FLOATING_HANDLE_OPACITY,
+        title = SettingKey.FLOATING_HANDLE_OPACITY.label(),
         value = alphaPercent,
         valueRange = MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT..MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
         valueLabel = { "$it%" },
@@ -229,7 +236,8 @@ private fun OverlayDockExpandedIconSizeSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     OverlayDockStepperSetting(
-        title = "Expanded icon size",
+        key = SettingKey.FLOATING_ICON_SIZE,
+        title = SettingKey.FLOATING_ICON_SIZE.label(),
         value = sizeDp,
         valueRange = MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP..MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
         valueLabel = { "$it dp" },
@@ -243,7 +251,8 @@ private fun OverlayDockLabelSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSwitchRow(
-        title = "Expanded labels",
+        modifier = Modifier.settingAnchor(SettingKey.FLOATING_LABELS),
+        title = SettingKey.FLOATING_LABELS.label(),
         subtitle = if (showLabels) "Show app names" else "Icons only",
         checked = showLabels,
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockShowLabels(value)) },
@@ -252,12 +261,14 @@ private fun OverlayDockLabelSetting(
 
 @Composable
 private fun OverlayDockStepperSetting(
+    key: SettingKey,
     title: String,
     value: Int,
     valueRange: IntRange,
     valueLabel: (Int) -> String,
     onValueChange: (Int) -> Unit,
 ) = DiscreteSettingSlider(
+    modifier = Modifier.settingAnchor(key),
     title = title,
     value = value,
     valueRange = valueRange,

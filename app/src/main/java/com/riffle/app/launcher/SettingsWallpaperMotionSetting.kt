@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 
@@ -13,7 +14,8 @@ internal fun WallpaperScrollModeSetting(
     val state = wallpaperScrollModeSettingState(selectedSource)
 
     SettingsChoiceRow(
-        title = "Wallpaper motion",
+        modifier = Modifier.settingAnchor(SettingKey.HOME_WALLPAPER_MOTION),
+        title = SettingKey.HOME_WALLPAPER_MOTION.label(),
         subtitle = state.subtitle,
         enabled = state.enabled,
         options = WallpaperScrollMode.entries,

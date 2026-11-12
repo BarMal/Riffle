@@ -4,8 +4,6 @@ import com.riffle.core.domain.launcher.workspace.lens.SourceContentLevel
 
 /** User-visible wording of Settings > Privacy and the content-level controls on the source pages. */
 internal object PrivacySettingsText {
-    const val ENTRY_SUBTITLE = "Screenshots and recents, how much pages show, and hidden items"
-
     const val SCREEN_TITLE = "Screenshots and recents"
     const val SCREEN_SWITCH = "Hide launcher content in screenshots and recents"
     const val SCREEN_ON =
@@ -14,16 +12,12 @@ internal object PrivacySettingsText {
     const val SCREEN_OFF =
         "Off. Turning it on also blocks your own screenshots of Home, the drawer and search."
 
-    const val LEVELS_TITLE = "How much pages show"
+    const val LEVELS_TITLE = "How much the Stream shows"
     const val LEVELS_NOTE =
         "Applies to every page, widget and dock section that shows the source, on every layout, and takes effect at " +
             "once. Kept on this device; not part of a backup. Hide rules still remove items completely."
     const val LEVELS_PREVIEW_OFF = "Content levels appear here once Riffle has finished loading."
     const val LEVELS_NONE = "No source that can show private content is available in this build."
-
-    const val HIDDEN_TITLE = "Hidden items"
-    const val SOURCES_ROW = "Sources"
-    const val SOURCES_ROW_SUBTITLE = "Turn a source off, or allow the access it needs"
 
     const val PROFILES_TITLE = "Work and private profiles"
     const val PROFILES_BODY =

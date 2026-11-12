@@ -89,7 +89,6 @@ class LauncherBackupSnapshotTest {
         LauncherSettings(
             appearance =
                 AppearanceSettings(
-                    fullscreenHome = false,
                     hideStatusBarOnHome = true,
                     hideNavigationBarOnHome = false,
                 ),

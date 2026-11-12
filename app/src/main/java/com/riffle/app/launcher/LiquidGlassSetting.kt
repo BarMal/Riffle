@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
 import com.riffle.core.domain.launcher.settings.MAX_LIQUID_GLASS_STRENGTH_PERCENT
@@ -29,7 +30,8 @@ internal fun LiquidGlassSetting(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SettingsSwitchRow(
-            title = "Reduced transparency",
+            modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_REDUCED_TRANSPARENCY),
+            title = SettingKey.APPEARANCE_REDUCED_TRANSPARENCY.label(),
             subtitle =
                 if (reducedTransparency) {
                     "Glass surfaces are opaque; backdrop blur is off"
@@ -40,14 +42,16 @@ internal fun LiquidGlassSetting(
             onCheckedChange = { reduced -> onAction(LauncherShellAction.SelectReducedTransparency(reduced)) },
         )
         DiscreteSettingSlider(
-            title = "Frost strength",
+            modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_FROST),
+            title = SettingKey.APPEARANCE_FROST.label(),
             value = settings.frostStrengthPercent,
             valueRange = MIN_LIQUID_GLASS_STRENGTH_PERCENT..MAX_LIQUID_GLASS_STRENGTH_PERCENT,
             valueLabel = { "$it%" },
             onValueChange = { value -> onAction(LauncherShellAction.SelectLiquidGlassFrostStrength(value)) },
         )
         DiscreteSettingSlider(
-            title = "Edge refraction",
+            modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_REFRACTION),
+            title = SettingKey.APPEARANCE_REFRACTION.label(),
             value = settings.refractionStrengthPercent,
             valueRange = MIN_LIQUID_GLASS_STRENGTH_PERCENT..MAX_LIQUID_GLASS_STRENGTH_PERCENT,
             valueLabel = { "$it%" },
@@ -55,7 +59,8 @@ internal fun LiquidGlassSetting(
         )
         // In 50ms steps rather than single milliseconds: twenty stops is a dial you can land on.
         DiscreteSettingSlider(
-            title = "Spotlight flow",
+            modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_SPOTLIGHT),
+            title = SettingKey.APPEARANCE_SPOTLIGHT.label(),
             value = settings.spotlightFlowMillis / SPOTLIGHT_FLOW_STEP_MILLIS,
             valueRange = SPOTLIGHT_FLOW_SLIDER_STEPS,
             valueLabel = { step -> spotlightFlowLabel(step * SPOTLIGHT_FLOW_STEP_MILLIS) },

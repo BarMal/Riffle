@@ -4,16 +4,9 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateCatalogDefaults
-import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.AppStagePreferences
-import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -22,15 +15,8 @@ import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
-import com.riffle.core.domain.launcher.settings.AdaptiveStageCardEffect
-import com.riffle.core.domain.launcher.settings.AdaptiveStageFanDirection
-import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
-import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
-import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
-import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -46,9 +32,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
-import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
-import com.riffle.core.domain.launcher.settings.MAX_CARDS_PAGE_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
@@ -70,11 +54,8 @@ import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
-import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
-import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
-import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import com.riffle.core.domain.launcher.settings.withReducedTransparency
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
@@ -159,28 +140,6 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsTheLibraryReturnTargetAndDefaultsAbsentOrUnknownValuesToLibrary() {
-        val settings =
-            LauncherSettings(appDrawer = AppDrawerSettings(afterLeavingLibrary = LibraryReturnTarget.HOME))
-
-        assertEquals(
-            LibraryReturnTarget.HOME,
-            decodeLauncherSettings(encodeLauncherSettings(settings)).appDrawer.afterLeavingLibrary,
-        )
-        assertEquals(
-            LibraryReturnTarget.LIBRARY,
-            decodeLauncherSettings("{\"appDrawer\": {\"presentation\": \"ICONS\"}}").appDrawer.afterLeavingLibrary,
-        )
-        assertEquals(
-            LibraryReturnTarget.LIBRARY,
-            decodeLauncherSettings("{\"appDrawer\": {\"afterLeavingLibrary\": \"DRAWER\"}}")
-                .appDrawer
-                .afterLeavingLibrary,
-        )
-        assertEquals(LibraryReturnTarget.LIBRARY, decodeLauncherSettings("{}").appDrawer.afterLeavingLibrary)
-    }
-
-    @Test
     fun roundTripsSearchResultPresentationAndDefaultsMissingValuesToIcons() {
         val settings = LauncherSettings(search = SearchSettings(SearchResultPresentation.LIST))
 
@@ -190,313 +149,6 @@ class LauncherSettingsJsonCodecTest {
             SearchResultPresentation.ICONS,
             decodeLauncherSettings("{\"search\": {\"resultPresentation\": \"UNKNOWN\"}}").search.resultPresentation,
         )
-    }
-
-    @Test
-    fun roundTripsAdaptiveStageStageIntent() {
-        val mail = AppStageId(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
-        val key = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
-        val settings =
-            LauncherSettings(
-                cards = CardsSettings(stagePreferencesByLayout = mapOf(key to AppStagePreferences(listOf(mail), mail))),
-            )
-
-        assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
-    }
-
-    @Test
-    fun roundTripsConfiguredAdaptiveStageTemplate() {
-        val settings =
-            LauncherSettings(
-                cards = CardsSettings(adaptiveStageTemplateId = AdaptiveStageTemplateCatalogDefaults.sharedCanvasId),
-            )
-
-        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(settings.cards.adaptiveStageTemplateId, decoded.cards.adaptiveStageTemplateId)
-    }
-
-    @Test
-    fun roundTripsConfiguredAdaptiveStagePaneArrangement() {
-        val settings =
-            LauncherSettings(
-                cards = CardsSettings(adaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.SPLIT),
-            )
-
-        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(settings.cards.adaptiveStagePaneArrangement, decoded.cards.adaptiveStagePaneArrangement)
-    }
-
-    @Test
-    fun roundTripsTheAllNotificationsToggles() {
-        val settings =
-            LauncherSettings(
-                cards =
-                    CardsSettings(
-                        foldedShowAllNotifications = true,
-                        unfoldedShowAllNotifications = true,
-                    ),
-            )
-
-        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(true, decoded.cards.foldedShowAllNotifications)
-        assertEquals(true, decoded.cards.unfoldedShowAllNotifications)
-    }
-
-    @Test
-    fun roundTripsTheStageSpineToggle() {
-        val settings = LauncherSettings(cards = CardsSettings(showStageSpine = true))
-
-        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(true, decoded.cards.showStageSpine)
-    }
-
-    @Test
-    fun settingsSavedBeforeTheSpineToggleExistedDecodeWithTheSpineOff() {
-        val decodedSettings =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "foldedShowAllNotifications": true
-                  }
-                }
-                """.trimIndent(),
-            )
-
-        assertEquals(false, decodedSettings.cards.showStageSpine)
-    }
-
-    @Test
-    fun roundTripsAndCoercesThePageVerticalOffset() {
-        val settings = LauncherSettings(cards = CardsSettings(pageVerticalOffsetDp = -80))
-
-        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(-80, decoded.cards.pageVerticalOffsetDp)
-
-        val decodedOutOfRange =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": { "pageVerticalOffsetDp": 9999 }
-                }
-                """.trimIndent(),
-            )
-
-        assertEquals(MAX_CARDS_PAGE_VERTICAL_OFFSET_DP, decodedOutOfRange.cards.pageVerticalOffsetDp)
-    }
-
-    @Test
-    fun settingsSavedBeforeThePageVerticalOffsetExistedDecodeToZero() {
-        val decodedSettings =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "showStageSpine": true
-                  }
-                }
-                """.trimIndent(),
-            )
-
-        assertEquals(0, decodedSettings.cards.pageVerticalOffsetDp)
-    }
-
-    @Test
-    fun defaultsUnknownAdaptiveStagePaneArrangement() {
-        val decodedSettings =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "timeScapePaneArrangement": "UNKNOWN"
-                  }
-                }
-                """.trimIndent(),
-            )
-
-        assertEquals(AdaptiveStagePaneArrangement.STACK, decodedSettings.cards.adaptiveStagePaneArrangement)
-    }
-
-    @Test
-    fun roundTripsConfiguredThreadMessageOrder() {
-        val settings =
-            LauncherSettings(
-                cards = CardsSettings(threadMessageOrder = ThreadMessageOrder.RECENT_FIRST),
-            )
-
-        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(settings.cards.threadMessageOrder, decoded.cards.threadMessageOrder)
-    }
-
-    @Test
-    fun defaultsUnknownThreadMessageOrder() {
-        val decodedSettings =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "threadMessageOrder": "UNKNOWN"
-                  }
-                }
-                """.trimIndent(),
-            )
-
-        assertEquals(ThreadMessageOrder.CHRONOLOGICAL, decodedSettings.cards.threadMessageOrder)
-    }
-
-    @Test
-    fun roundTripsConfiguredThreadCardGrouping() {
-        val settings =
-            LauncherSettings(
-                cards = CardsSettings(threadCardGrouping = ThreadCardGrouping.PER_MESSAGE),
-            )
-
-        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(settings.cards.threadCardGrouping, decoded.cards.threadCardGrouping)
-    }
-
-    @Test
-    fun defaultsUnknownThreadCardGroupingToFoldingTheConversation() {
-        // Settings written by a build that did not know this field decode to the folded default,
-        // the same shape a fresh install gets.
-        val decodedSettings =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "threadCardGrouping": "UNKNOWN"
-                  }
-                }
-                """.trimIndent(),
-            )
-
-        assertEquals(ThreadCardGrouping.PER_THREAD, decodedSettings.cards.threadCardGrouping)
-    }
-
-    @Test
-    fun migratesLegacyCardsChapterJsonToAdaptiveStageStageIntent() {
-        val legacyJson =
-            """
-            {
-              "cards": {
-                "pinnedChapterIds": [{"packageName":"com.riffle.mail","profileId":"personal"}],
-                "selectedChapterId": {
-                  "kind":"app",
-                  "packageName":"com.riffle.mail",
-                  "profileId":"personal"
-                }
-              }
-            }
-            """.trimIndent()
-        val stageId = AppStageId(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
-
-        val stagePreferences =
-            decodeLauncherSettings(legacyJson).cards.stagePreferencesFor(HomeLayoutKey(LauncherViewMode.CARD_INTERFACE))
-
-        assertEquals(listOf(stageId), stagePreferences.pinnedStageIds)
-        assertEquals(stageId, stagePreferences.selectedStageId)
-    }
-
-    @Test
-    fun migratesLegacyCardsChapterJsonToNonPhoneAdaptiveStageStageIntent() {
-        val legacyJson =
-            """
-            {
-              "cards": {
-                "pinnedChapterIds": [{"packageName":"com.riffle.mail","profileId":"personal"}],
-                "selectedChapterId": {
-                  "kind":"app",
-                  "packageName":"com.riffle.mail",
-                  "profileId":"personal"
-                }
-              }
-            }
-            """.trimIndent()
-        val stageId = AppStageId(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
-
-        val stagePreferences =
-            decodeLauncherSettings(legacyJson).cards.stagePreferencesFor(
-                HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.TABLET),
-            )
-
-        assertEquals(listOf(stageId), stagePreferences.pinnedStageIds)
-        assertEquals(stageId, stagePreferences.selectedStageId)
-    }
-
-    @Test
-    fun roundTripsLayoutSpecificStageIntentWithoutTransientContent() {
-        val mail = AppStageId(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
-        val key = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.TABLET)
-        val settings =
-            LauncherSettings(
-                cards = CardsSettings(stagePreferencesByLayout = mapOf(key to AppStagePreferences(listOf(mail), mail))),
-            )
-
-        val cardsJson = JSONObject(encodeLauncherSettings(settings)).getJSONObject("cards")
-
-        assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
-        assertFalse(cardsJson.has("content"))
-    }
-
-    @Test
-    fun roundTripsAdaptiveStageAppearanceAndClampsImportedValues() {
-        val settings =
-            LauncherSettings(
-                cards =
-                    CardsSettings(
-                        adaptiveStageAppearance =
-                            AdaptiveStageAppearanceSettings(
-                                geometry =
-                                    AdaptiveStageGeometry(
-                                        visibleDepth = 5,
-                                        aboveFocusDepth = 2,
-                                        stackPeakPercent = 30,
-                                        rotationDegrees = 8,
-                                        verticalFanDirection = AdaptiveStageFanDirection.START,
-                                    ),
-                                surface =
-                                    AdaptiveStageSurface(
-                                        blurStrengthPercent = 42,
-                                        cardEffect = AdaptiveStageCardEffect.SOLID,
-                                    ),
-                                motion =
-                                    AdaptiveStageMotion(
-                                        magnetStrengthPercent = 15,
-                                        reducedTransparency = true,
-                                    ),
-                            ),
-                    ),
-            ).withReducedTransparency(true)
-
-        assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
-
-        val imported =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "timeScapeAppearance": {
-                      "geometry": { "visibleDepth": 999, "aboveFocusDepth": 999, "stackPeakPercent": 999 },
-                      "surface": { "blurStrengthPercent": -1 },
-                      "motion": { "settleDurationMillis": 9999, "magnetStrengthPercent": 999 }
-                    }
-                  }
-                }
-                """.trimIndent(),
-            ).cards.adaptiveStageAppearance
-        assertEquals(8, imported.geometry.visibleDepth)
-        assertEquals(8, imported.geometry.aboveFocusDepth)
-        assertEquals(85, imported.geometry.stackPeakPercent)
-        assertEquals(0, imported.surface.blurStrengthPercent)
-        assertEquals(600, imported.motion.settleDurationMillis)
-        assertEquals(100, imported.motion.magnetStrengthPercent)
     }
 
     @Test
@@ -548,114 +200,6 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertFalse(decoded.appearance.reducedTransparency)
-        assertFalse(decoded.cards.adaptiveStageAppearance.motion.reducedTransparency)
-    }
-
-    @Test
-    fun migratesLegacyRawDpGeometryFieldsToTheirPercentEquivalents() {
-        // A payload saved before #1291 (verticalSpacingDp/horizontalOffsetDp/curveDp raw dp
-        // fields) carries none of the new *Percent keys -- decoding must derive a percent from
-        // the legacy dp value rather than silently falling back to the default, which would
-        // discard a real user's own tuning.
-        val decoded =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "timeScapeAppearance": {
-                      "geometry": { "verticalSpacingDp": 0, "horizontalOffsetDp": 0, "curveDp": 0 }
-                    }
-                  }
-                }
-                """.trimIndent(),
-            ).cards.adaptiveStageAppearance
-
-        // Legacy 0dp for every field migrates to 0% (the bottom of each field's own reachable
-        // band), not to the new schema's own nonzero defaults.
-        assertEquals(0, decoded.geometry.verticalSpacingPercent)
-        assertEquals(0, decoded.geometry.horizontalOffsetPercent)
-        assertEquals(0, decoded.geometry.curvePercent)
-
-        val decodedWithNewKey =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "timeScapeAppearance": {
-                      "geometry": { "verticalSpacingDp": 0, "verticalSpacingPercent": 42 }
-                    }
-                  }
-                }
-                """.trimIndent(),
-            ).cards.adaptiveStageAppearance
-
-        // A payload carrying both keys (already migrated once, or a future re-export) prefers the
-        // new key rather than re-deriving from the stale legacy one.
-        assertEquals(42, decodedWithNewKey.geometry.verticalSpacingPercent)
-    }
-
-    @Test
-    fun defaultsMissingOrUnknownAdaptiveStageAppearanceValuesSafely() {
-        val decoded =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "timeScapeAppearance": {
-                      "preset": "FUTURE",
-                      "geometry": { "fanDirection": "FUTURE" },
-                      "surface": { "backgroundSource": "FUTURE" }
-                    }
-                  }
-                }
-                """.trimIndent(),
-            ).cards.adaptiveStageAppearance
-
-        // "preset" is a stray key from before #1058 removed the preset system -- a real user's
-        // already-persisted settings.json can still contain it, and decoding must ignore it
-        // harmlessly rather than choke on it.
-        assertEquals(AdaptiveStageAppearanceSettings.modern(), decoded)
-    }
-
-    @Test
-    fun roundTripsUnfoldedAdaptiveStageAppearanceIndependentlyOfFolded() {
-        val settings =
-            LauncherSettings(
-                cards =
-                    CardsSettings(
-                        adaptiveStageAppearance =
-                            AdaptiveStageAppearanceSettings(
-                                geometry = AdaptiveStageGeometry(visibleDepth = 5),
-                            ),
-                        unfoldedAppearance =
-                            AdaptiveStageAppearanceSettings.unfolded()
-                                .let { unfolded -> unfolded.copy(geometry = unfolded.geometry.copy(visibleDepth = 3)) },
-                    ),
-            )
-
-        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(settings.cards, decoded.cards)
-        assertEquals(5, decoded.cards.adaptiveStageAppearance.geometry.visibleDepth)
-        assertEquals(3, decoded.cards.unfoldedAppearance.geometry.visibleDepth)
-    }
-
-    @Test
-    fun missingUnfoldedAppearanceInLegacyJsonDefaultsToThePlainUnfoldedProfileWithoutLosingOtherCardsFields() {
-        val decoded =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "timeScapeAppearance": { "geometry": { "visibleDepth": 5 } },
-                    "timeScapeRailSide": "TOP"
-                  }
-                }
-                """.trimIndent(),
-            ).cards
-
-        assertEquals(AdaptiveStageAppearanceSettings.unfolded(), decoded.unfoldedAppearance)
-        assertEquals(5, decoded.adaptiveStageAppearance.geometry.visibleDepth)
     }
 
     @Test
@@ -729,25 +273,6 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsFullscreenHome() {
-        val settings =
-            LauncherSettings(
-                appearance =
-                    AppearanceSettings(
-                        fullscreenHome = true,
-                        hideStatusBarOnHome = true,
-                        hideNavigationBarOnHome = true,
-                    ),
-            )
-
-        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(true, decodedSettings.appearance.fullscreenHome)
-        assertEquals(true, decodedSettings.appearance.hideStatusBarOnHome)
-        assertEquals(true, decodedSettings.appearance.hideNavigationBarOnHome)
-    }
-
-    @Test
     fun roundTripsIndependentHomeSystemBarSettings() {
         val homeSystemBars =
             HomeSystemBars(
@@ -762,29 +287,6 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(homeSystemBars, decodedSettings.appearance.homeSystemBars)
-    }
-
-    @Test
-    fun decodesLegacyFullscreenHomeIntoIndependentSystemBarSettings() {
-        val decodedSettings =
-            decodeLauncherSettings(
-                """
-                {
-                  "appearance": {
-                    "fullscreenHome": true
-                  }
-                }
-                """.trimIndent(),
-            )
-
-        assertEquals(
-            HomeSystemBars(
-                fullscreenHome = true,
-                hideStatusBarOnHome = true,
-                hideNavigationBarOnHome = true,
-            ),
-            decodedSettings.appearance.homeSystemBars,
-        )
     }
 
     @Test
@@ -1153,32 +655,12 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsContextualSettings() {
-        val settings =
-            LauncherSettings(
-                contextual = ContextualSettings(enabled = true),
-            )
-
-        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(true, decodedSettings.contextual.enabled)
-    }
-
-    @Test
-    fun defaultsMissingContextualSettings() {
-        val decodedSettings = decodeLauncherSettings("{}")
-
-        assertEquals(false, decodedSettings.contextual.enabled)
-    }
-
-    @Test
     fun defaultsMalformedSettingsSectionsIndependently() {
         val decodedSettings =
             decodeLauncherSettings(
                 """
                 {
                   "appearance": [],
-                  "contextual": "enabled",
                   "gestures": [],
                   "haptics": 1,
                   "motion": true
@@ -1187,7 +669,6 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(AppearanceSettings(), decodedSettings.appearance)
-        assertEquals(ContextualSettings(), decodedSettings.contextual)
         assertEquals(GestureSettings(), decodedSettings.gestures)
         assertEquals(HapticSettings(), decodedSettings.haptics)
         assertEquals(MotionSettings(), decodedSettings.motion)
@@ -1674,5 +1155,134 @@ class LauncherSettingsJsonCodecTest {
                 packageName = AppPackageName("com.example.camera"),
                 activityName = AppActivityName(".CameraActivity"),
             )
+    }
+
+    /** A settings blob as the P8 build wrote it: it still carries every key P9 removed. */
+    private val p8Blob =
+        """
+        {
+          "version": 10,
+          "appDrawer": {
+            "libraryViews": { "PHONE": "grid" },
+            "iconGridColumns": 5,
+            "afterLeavingLibrary": "HOME"
+          },
+          "appearance": {
+            "fullscreenHome": true,
+            "hideStatusBarOnHome": false,
+            "hideNavigationBarOnHome": false,
+            "reducedTransparency": true,
+            "themeMode": "DARK",
+            "themeAccent": "TEAL",
+            "wallpaper": { "source": "SOLID_COLOR" }
+          },
+          "cards": {
+            "stagePreferencesByLayout": [],
+            "timeScapeAppearance": { "version": 2, "geometry": { "visibleDepth": 5 } },
+            "adaptiveStageUnfoldedAppearance": { "version": 2 },
+            "timeScapeTemplateId": "shared-canvas",
+            "timeScapePaneArrangement": "SPLIT",
+            "threadMessageOrder": "RECENT_FIRST",
+            "threadCardGrouping": "PER_MESSAGE",
+            "foldedShowAllNotifications": true,
+            "unfoldedShowAllNotifications": true,
+            "showStageSpine": true,
+            "pageVerticalOffsetDp": 40
+          },
+          "contextual": { "enabled": true },
+          "haptics": { "feedbackStrength": "STRONG" },
+          "home": { "returnBehavior": "FIRST_PAGE" },
+          "rss": { "refreshInterval": "OFF" },
+          "search": { "resultPresentation": "LIST" }
+        }
+        """.trimIndent()
+
+    @Test
+    fun aBlobCarryingEveryKeyP9RemovedStillDecodesAndKeepsTheSettingsThatSurvive() {
+        val decoded = decodeLauncherSettings(p8Blob)
+
+        assertEquals(LibraryView.Grid, decoded.appDrawer.libraryViewFor(HomeLayoutDeviceClass.PHONE))
+        assertEquals(5, decoded.appDrawer.iconGridColumns)
+        assertEquals(LauncherThemeMode.DARK, decoded.appearance.themeMode)
+        assertEquals(LauncherThemeAccent.TEAL, decoded.appearance.themeAccent)
+        assertEquals(WallpaperSource.SOLID_COLOR, decoded.appearance.wallpaper.source)
+        assertEquals(HapticFeedbackStrength.STRONG, decoded.haptics.feedbackStrength)
+        assertEquals(ReturnBehavior.FIRST_PAGE, decoded.home.returnBehavior)
+        assertEquals(SearchResultPresentation.LIST, decoded.search.resultPresentation)
+    }
+
+    @Test
+    fun theOldFullscreenFlagBecomesBothBarsHiddenAndReducedTransparencyIsKept() {
+        val decoded = decodeLauncherSettings(p8Blob)
+
+        assertEquals(
+            HomeSystemBars(hideStatusBarOnHome = true, hideNavigationBarOnHome = true),
+            decoded.appearance.homeSystemBars,
+        )
+        assertTrue(decoded.appearance.reducedTransparency)
+    }
+
+    @Test
+    fun reEncodingThatBlobDropsTheRemovedKeysAndWritesTheCurrentVersion() {
+        val encoded = JSONObject(encodeLauncherSettings(decodeLauncherSettings(p8Blob)))
+
+        assertEquals(LAUNCHER_SETTINGS_JSON_VERSION, encoded.getInt("version"))
+        assertFalse(encoded.has("cards"))
+        assertFalse(encoded.has("contextual"))
+        assertFalse(encoded.getJSONObject("appDrawer").has("afterLeavingLibrary"))
+        assertFalse(encoded.getJSONObject("appearance").has("fullscreenHome"))
+        assertEquals(true, encoded.getJSONObject("appearance").getBoolean("hideStatusBarOnHome"))
+        assertEquals(true, encoded.getJSONObject("appearance").getBoolean("hideNavigationBarOnHome"))
+    }
+
+    @Test
+    fun theCodecReadsTheVersionAndOnlyFoldsTheFullscreenFlagForOlderBlobs() {
+        val older =
+            decodeLauncherSettings("""{ "version": 10, "appearance": { "fullscreenHome": true } }""")
+        val unversioned = decodeLauncherSettings("""{ "appearance": { "fullscreenHome": true } }""")
+        val current =
+            decodeLauncherSettings(
+                """{ "version": $LAUNCHER_SETTINGS_JSON_VERSION, "appearance": { "fullscreenHome": true } }""",
+            )
+
+        assertTrue(older.appearance.homeSystemBars.statusBarHidden)
+        assertTrue(unversioned.appearance.homeSystemBars.navigationBarHidden)
+        assertFalse(current.appearance.homeSystemBars.statusBarHidden)
+        assertEquals(10, storedLauncherSettingsVersion(p8Blob))
+        assertEquals(0, storedLauncherSettingsVersion("{}"))
+        assertEquals(null, storedLauncherSettingsVersion("not json"))
+    }
+
+    @Test
+    fun aBlobFromANewerBuildDecodesWhatItCanAndNeverThrows() {
+        val newer =
+            decodeLauncherSettings(
+                """
+                {
+                  "version": ${LAUNCHER_SETTINGS_JSON_VERSION + 5},
+                  "appearance": { "themeMode": "LIGHT", "themeAccent": "FUTURE_ACCENT", "somethingNew": [1, 2] },
+                  "haptics": { "feedbackStrength": "LIGHT" },
+                  "home": "no longer an object",
+                  "motion": { "reducedMotionPreference": { "nested": true } },
+                  "aSectionThisBuildNeverHeardOf": { "a": 1 }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(LauncherThemeMode.LIGHT, newer.appearance.themeMode)
+        assertEquals(LauncherThemeAccent.DEFAULT, newer.appearance.themeAccent)
+        assertEquals(HapticFeedbackStrength.LIGHT, newer.haptics.feedbackStrength)
+        assertEquals(LauncherSettings().home, newer.home)
+        assertEquals(LauncherSettings().motion, newer.motion)
+    }
+
+    @Test
+    fun aBlobFromANewerBuildIsFlaggedSoItsCopyIsKeptBeforeBeingOverwritten() {
+        assertTrue(isNewerThanThisBuild("""{ "version": ${LAUNCHER_SETTINGS_JSON_VERSION + 1} }"""))
+        assertFalse(isNewerThanThisBuild("""{ "version": $LAUNCHER_SETTINGS_JSON_VERSION }"""))
+        assertFalse(isNewerThanThisBuild(p8Blob))
+        assertFalse(isNewerThanThisBuild("{}"))
+        assertFalse(isNewerThanThisBuild("not json"))
+        assertFalse(isNewerThanThisBuild(null))
     }
 }

@@ -11,9 +11,7 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
-import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -37,8 +35,9 @@ class LibraryBackReturnTest {
 
     @Test
     fun backFromLibraryWithTheOldAlwaysHomeSettingStaysOnLibraryToo() {
+        // The setting is gone (P9); settings saved with it still decode and Back still stays on Library.
         assertBackKeepsLibrary(
-            LauncherSettings(appDrawer = AppDrawerSettings(afterLeavingLibrary = LibraryReturnTarget.HOME)),
+            decodeLauncherSettings("""{ "version": 10, "appDrawer": { "afterLeavingLibrary": "HOME" } }"""),
         )
     }
 

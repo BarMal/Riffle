@@ -5,131 +5,45 @@ import kotlin.test.assertEquals
 
 class AppearanceSettingsPolicyTest {
     @Test
-    fun fullscreenHomeDisablesIndependentSystemBarSettings() {
-        val homeSystemBars = HomeSystemBars(fullscreenHome = true)
+    fun eachBarIsIndependent() {
+        val appearance = AppearanceSettings().withHomeStatusBarHidden(hidden = true)
 
-        assertEquals(
-            HomeSystemBarSetting(checked = true, enabled = false),
-            homeSystemBars.setting(HomeSystemBar.STATUS),
-        )
-        assertEquals(
-            HomeSystemBarSetting(checked = true, enabled = false),
-            homeSystemBars.setting(HomeSystemBar.NAVIGATION),
-        )
+        assertEquals(true, appearance.homeStatusBarHidden)
+        assertEquals(false, appearance.homeNavigationBarHidden)
     }
 
     @Test
-    fun independentSystemBarSettingStaysConfigurableOutsideFullscreenHome() {
-        val homeSystemBars = HomeSystemBars(hideStatusBarOnHome = true)
+    fun hidingBothBarsIsTheFullscreenAction() {
+        val appearance = AppearanceSettings(hideStatusBarOnHome = true).withFullscreenHome(enabled = true)
 
-        assertEquals(
-            HomeSystemBarSetting(checked = true, enabled = true),
-            homeSystemBars.setting(HomeSystemBar.STATUS),
-        )
-        assertEquals(
-            HomeSystemBarSetting(checked = false, enabled = true),
-            homeSystemBars.setting(HomeSystemBar.NAVIGATION),
-        )
-    }
-
-    @Test
-    fun fullscreenHomeSelectionPreservesIndependentSystemBarSettings() {
-        val appearance =
-            AppearanceSettings(hideStatusBarOnHome = true)
-                .withFullscreenHome(enabled = true)
-
-        assertEquals(true, appearance.fullscreenHome)
-        assertEquals(true, appearance.hideStatusBarOnHome)
-        assertEquals(false, appearance.hideNavigationBarOnHome)
         assertEquals(true, appearance.homeStatusBarHidden)
         assertEquals(true, appearance.homeNavigationBarHidden)
     }
 
     @Test
-    fun fullscreenHomeClearingShowsBothSystemBars() {
+    fun showingBothBarsClearsBoth() {
         val appearance =
-            AppearanceSettings(
-                fullscreenHome = true,
-                hideStatusBarOnHome = true,
-                hideNavigationBarOnHome = true,
-            ).withFullscreenHome(enabled = false)
+            AppearanceSettings(hideStatusBarOnHome = true, hideNavigationBarOnHome = true)
+                .withFullscreenHome(enabled = false)
 
-        assertEquals(false, appearance.fullscreenHome)
-        assertEquals(false, appearance.hideStatusBarOnHome)
-        assertEquals(false, appearance.hideNavigationBarOnHome)
         assertEquals(false, appearance.homeStatusBarHidden)
         assertEquals(false, appearance.homeNavigationBarHidden)
     }
 
     @Test
-    fun fullscreenHomeClearingRestoresIndependentSystemBarSelection() {
+    fun clearingOneBarKeepsTheOther() {
         val appearance =
-            AppearanceSettings(
-                fullscreenHome = true,
-                hideStatusBarOnHome = true,
-                hideNavigationBarOnHome = false,
-            ).withFullscreenHome(enabled = false)
+            AppearanceSettings(hideStatusBarOnHome = true, hideNavigationBarOnHome = true)
+                .withHomeNavigationBarHidden(hidden = false)
 
-        assertEquals(false, appearance.fullscreenHome)
         assertEquals(true, appearance.hideStatusBarOnHome)
         assertEquals(false, appearance.hideNavigationBarOnHome)
-        assertEquals(true, appearance.homeStatusBarHidden)
-        assertEquals(false, appearance.homeNavigationBarHidden)
-    }
-
-    @Test
-    fun hidingBothIndependentSystemBarsEnablesFullscreenHome() {
-        val appearance =
-            AppearanceSettings(hideNavigationBarOnHome = true)
-                .withHomeStatusBarHidden(hidden = true)
-
-        assertEquals(true, appearance.fullscreenHome)
-        assertEquals(true, appearance.hideStatusBarOnHome)
-        assertEquals(true, appearance.hideNavigationBarOnHome)
-        assertEquals(true, appearance.homeStatusBarHidden)
-        assertEquals(true, appearance.homeNavigationBarHidden)
-    }
-
-    @Test
-    fun clearingOneSystemBarClearsFullscreenHomeAndPreservesOtherEffectiveBar() {
-        val appearance =
-            AppearanceSettings(
-                fullscreenHome = true,
-                hideStatusBarOnHome = true,
-                hideNavigationBarOnHome = true,
-            ).withHomeNavigationBarHidden(hidden = false)
-
-        assertEquals(false, appearance.fullscreenHome)
-        assertEquals(true, appearance.hideStatusBarOnHome)
-        assertEquals(false, appearance.hideNavigationBarOnHome)
-        assertEquals(true, appearance.homeStatusBarHidden)
-        assertEquals(false, appearance.homeNavigationBarHidden)
-    }
-
-    @Test
-    fun effectiveSystemBarStateIncludesFullscreenHome() {
-        val appearance = AppearanceSettings(fullscreenHome = true)
-
-        assertEquals(true, appearance.homeStatusBarHidden)
-        assertEquals(true, appearance.homeNavigationBarHidden)
     }
 
     @Test
     fun appearanceExposesTypedHomeSystemBars() {
-        val appearance =
-            AppearanceSettings(
-                fullscreenHome = true,
-                hideStatusBarOnHome = true,
-                hideNavigationBarOnHome = false,
-            )
+        val appearance = AppearanceSettings(hideStatusBarOnHome = true)
 
-        assertEquals(
-            HomeSystemBars(
-                fullscreenHome = true,
-                hideStatusBarOnHome = true,
-                hideNavigationBarOnHome = false,
-            ),
-            appearance.homeSystemBars,
-        )
+        assertEquals(HomeSystemBars(hideStatusBarOnHome = true), appearance.homeSystemBars)
     }
 }

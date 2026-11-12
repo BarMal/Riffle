@@ -45,17 +45,20 @@ internal fun SettingsHomeAppSetting(
     status: HomeRoleStatus,
     firstRunStatus: FirstRunStatus,
     onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val presentation = homeAppSettingsPresentation(status, firstRunStatus)
     if (presentation.actionLabel == null) {
         SettingsListRow(
-            title = "Default home app",
+            modifier = modifier,
+            title = SettingKey.ACCESS_DEFAULT_HOME.label(),
             subtitle = presentation.statusLabel,
             trailingContent = { SettingsButtonText(text = presentation.trailingLabel) },
         )
     } else {
         SettingsClickableRow(
-            title = "Default home app",
+            modifier = modifier,
+            title = SettingKey.ACCESS_DEFAULT_HOME.label(),
             subtitle = presentation.statusLabel,
             onClick = { onAction(LauncherShellAction.RequestDefaultHome) },
             trailingContent = {

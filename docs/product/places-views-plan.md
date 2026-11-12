@@ -176,6 +176,8 @@ exclusion and content-level tests), the Search source plumbing (no Place uses it
 
 ### P9. Settings by Place
 
+Status: **built**; see [`settings.md`](settings.md), "as built", for the tree, the removals and the differences.
+
 Build the page tree, renames, removals and rules in [`settings.md`](settings.md). Slices P1 to P8 have
 already removed the settings of what they removed; this slice does the reorganisation, the dead-setting
 removal, shared rows everywhere, per-setting search, Back targets, reading the codec version, and backup

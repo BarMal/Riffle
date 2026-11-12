@@ -4,12 +4,14 @@ import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
+import com.riffle.core.domain.launcher.workspace.sources.ics.IcsFeedSettings
 
 /**
  * The backup flow's view of the stored workspace data, kept as an interface so the flow stays testable
  * without a device. The current* functions return null when nothing is stored (the section is then omitted
  * from the backup); the restore* functions replace the stored value and must not throw.
  */
+@Suppress("TooManyFunctions")
 interface WorkspaceBackupPort {
     /** Starts loading stored data without blocking; called when the user taps Export, before the picker opens. */
     fun prepareExport() = Unit
@@ -24,6 +26,9 @@ interface WorkspaceBackupPort {
     /** How the Stream is arranged (P4); null when nothing was ever stored, so the section is omitted. */
     fun currentStreamLayouts(): StreamLayouts? = null
 
+    /** The calendar feed list (links included, never events); null when none is stored, so the section is omitted. */
+    fun currentCalendarFeeds(): IcsFeedSettings? = null
+
     fun restoreWorkspaceSet(set: WorkspaceSet)
 
     fun restoreExclusions(rules: LayoutExclusionRules)
@@ -31,4 +36,6 @@ interface WorkspaceBackupPort {
     fun restorePool(state: PoolStoreState)
 
     fun restoreStreamLayouts(layouts: StreamLayouts) = Unit
+
+    fun restoreCalendarFeeds(feeds: IcsFeedSettings) = Unit
 }
