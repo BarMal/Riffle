@@ -83,6 +83,25 @@ Not in this slice: deleting theme presets (P2); the adaptive stage card surface,
 - One fixed query per section (what, grouped how, sorted how, how many) as plain code, with the two or
   three per-section options the ADR allows. Unit tests for each.
 
+### P3b. Real data behind the typed content
+
+P3 mapped the typed content from `Item`, so it carries no more than `Item` did. This slice gives each type
+the data that makes it worth having (ADR 0003, finding F4).
+
+- **Media:** read the active media sessions (`MediaSessionManager` through the existing notification
+  listener access): title, artist, artwork handle, play state, position and duration, the queue when the
+  session exposes one, and transport actions (play, pause, next, previous, seek). `MediaContent` actions
+  become real. Nothing about media is persisted.
+- **Notifications:** message history for messaging-style notifications (thread expansion), and the reply,
+  dismiss and snooze actions, reusing `NotificationStageActionGateway` /
+  `AndroidNotificationStageActionGateway` where they already do this for the adaptive stage.
+- **Alarm:** a platform `NextAlarmProvider` from `AlarmManager.getNextAlarmClock()`.
+- **Recents:** include frequent apps if the usage source can rank them; otherwise leave Recents as it is.
+- **Agenda:** the Stream's Agenda query is not bound by the lens page limit of five device-calendar events;
+  give it its own window (today and the next seven days), without changing lens behaviour.
+- **Articles:** `MARK_READ` backed by the RSS store if it tracks read state; otherwise drop the action.
+- Platform adapters live in `app` behind domain interfaces; domain logic is unit tested with fakes.
+
 ### P4. The Stream
 
 - Domain: `StreamLayout` per posture (sections on or off, order, `StreamView { Stack, List }` per section),
