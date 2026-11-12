@@ -4,26 +4,13 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.riffle.app.R
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
-import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
@@ -44,7 +31,6 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 @Composable
 internal fun DockSetting(
     dock: DockModel,
-    notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -56,63 +42,55 @@ internal fun DockSetting(
             enabled = dock.isEnabled,
             onAction = onAction,
         )
-        DockCapacitySetting(
-            capacity = dock.capacity,
-            onAction = onAction,
-        )
-        DockLiveAppSlotsSetting(
-            slots = dock.liveAppSlots,
-            notificationAccessStatus = notificationAccessStatus,
-            onAction = onAction,
-        )
         DockPositionSetting(
             position = dock.position,
             // One dock shared by every mode (#1205), so only the edges every mode can draw it on.
             placeablePositions = sharedDockPositions,
             onAction = onAction,
         )
-        // Hidden while shelf expansion is switched off launcher-wide: the settings would do nothing.
-        if (DockShelfExpansion.enabled) {
-            DockExpandableSetting(
-                expandable = dock.isExpandable,
-                onAction = onAction,
-            )
-        }
-        if (DockShelfExpansion.enabled && dock.isExpandable) {
-            DockExpandAffordanceSetting(
-                affordance = dock.expandAffordance,
-                onAction = onAction,
-            )
-            DockPanelSetting(
-                hasPanel = dock.panel != null,
-                onAction = onAction,
-            )
-        }
         DockIconSizeSetting(
             sizeDp = dock.iconSizeDp,
             onAction = onAction,
         )
-        DockBackgroundAlphaSetting(
-            alphaPercent = dock.backgroundAlphaPercent,
+        DockCapacitySetting(
+            capacity = dock.capacity,
             onAction = onAction,
         )
         DockBackgroundSizingSetting(
             sizing = dock.backgroundSizing,
             onAction = onAction,
         )
+        DockAlignmentSetting(
+            alignment = dock.alignment,
+            onAction = onAction,
+        )
         DockCornerRadiusSetting(
             cornerRadiusDp = dock.cornerRadiusDp,
+            onAction = onAction,
+        )
+        DockBackgroundAlphaSetting(
+            alphaPercent = dock.backgroundAlphaPercent,
             onAction = onAction,
         )
         DockHomeControlsSpacingSetting(
             spacingDp = dock.homeControlsSpacingDp,
             onAction = onAction,
         )
-        DockAlignmentSetting(
-            alignment = dock.alignment,
-            onAction = onAction,
-        )
     }
+}
+
+/** The dock's live apps: its own section on the Dock page, apart from the strip's look. */
+@Composable
+internal fun DockDynamicSideSetting(
+    dock: DockModel,
+    notificationAccessStatus: NotificationAccessStatus,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    DockLiveAppSlotsSetting(
+        slots = dock.liveAppSlots,
+        notificationAccessStatus = notificationAccessStatus,
+        onAction = onAction,
+    )
 }
 
 /**
@@ -151,7 +129,8 @@ private fun DockCapacitySetting(
     capacity: Int,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Pinned icons",
+    title = SettingKey.DOCK_PINNED_ICONS.label(),
+    modifier = Modifier.settingAnchor(SettingKey.DOCK_PINNED_ICONS),
     value = capacity,
     valueRange = MIN_DOCK_CAPACITY..MAX_DOCK_CAPACITY,
     valueLabel = { count -> if (count == 1) "1 icon" else "$count icons" },
@@ -170,7 +149,8 @@ private fun DockLiveAppSlotsSetting(
 ) {
     Column {
         DiscreteSettingSlider(
-            title = stringResource(R.string.dock_live_app_slots_title),
+            modifier = Modifier.settingAnchor(SettingKey.DOCK_LIVE_APPS),
+            title = SettingKey.DOCK_LIVE_APPS.label(),
             value = slots,
             valueRange = MIN_DOCK_LIVE_APP_SLOTS..MAX_DOCK_LIVE_APP_SLOTS,
             valueLabel = { count -> dockLiveAppSlotsLabel(count) },
@@ -202,7 +182,8 @@ private fun DockIconSizeSetting(
     sizeDp: Int,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Dock height",
+    title = SettingKey.DOCK_ICON_SIZE.label(),
+    modifier = Modifier.settingAnchor(SettingKey.DOCK_ICON_SIZE),
     value = sizeDp,
     valueRange = MIN_DOCK_ICON_SIZE_DP..MAX_DOCK_ICON_SIZE_DP,
     valueLabel = { "$it dp" },
@@ -214,7 +195,8 @@ private fun DockBackgroundAlphaSetting(
     alphaPercent: Int,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Dock background",
+    title = SettingKey.DOCK_BACKGROUND.label(),
+    modifier = Modifier.settingAnchor(SettingKey.DOCK_BACKGROUND),
     value = alphaPercent,
     valueRange = MIN_DOCK_BACKGROUND_ALPHA_PERCENT..MAX_DOCK_BACKGROUND_ALPHA_PERCENT,
     valueLabel = { "$it%" },
@@ -226,35 +208,24 @@ private fun DockBackgroundSizingSetting(
     sizing: DockBackgroundSizing,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Dock width",
-            subtitle =
-                when (sizing) {
-                    DockBackgroundSizing.DYNAMIC -> "Fits dock items"
-                    DockBackgroundSizing.FIXED -> "Uses available width, showing more icons before scrolling"
-                },
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = sizing != DockBackgroundSizing.DYNAMIC,
-                onClick = { onAction(LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.DYNAMIC)) },
-            ) {
-                SettingsButtonText(text = "Fit content")
+    SettingsChoiceRow(
+        modifier = Modifier.settingAnchor(SettingKey.DOCK_WIDTH),
+        title = SettingKey.DOCK_WIDTH.label(),
+        subtitle =
+            when (sizing) {
+                DockBackgroundSizing.DYNAMIC -> "Fits dock items"
+                DockBackgroundSizing.FIXED -> "Uses available width, showing more icons before scrolling"
+            },
+        options = DockBackgroundSizing.entries,
+        selected = sizing,
+        onSelect = { candidate -> onAction(LauncherShellAction.SelectDockBackgroundSizing(candidate)) },
+        label = { candidate ->
+            when (candidate) {
+                DockBackgroundSizing.DYNAMIC -> "Fit content"
+                DockBackgroundSizing.FIXED -> "Full width"
             }
-            TextButton(
-                enabled = sizing != DockBackgroundSizing.FIXED,
-                onClick = { onAction(LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED)) },
-            ) {
-                SettingsButtonText(text = "Full width")
-            }
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -262,7 +233,8 @@ private fun DockCornerRadiusSetting(
     cornerRadiusDp: Int,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Dock corner radius",
+    title = SettingKey.DOCK_CORNER_RADIUS.label(),
+    modifier = Modifier.settingAnchor(SettingKey.DOCK_CORNER_RADIUS),
     value = cornerRadiusDp,
     valueRange = MIN_DOCK_CORNER_RADIUS_DP..MAX_DOCK_CORNER_RADIUS_DP,
     valueLabel = { "$it dp" },
@@ -274,7 +246,8 @@ private fun DockHomeControlsSpacingSetting(
     spacingDp: Int,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Grid to dock controls spacing",
+    title = SettingKey.DOCK_GRID_SPACING.label(),
+    modifier = Modifier.settingAnchor(SettingKey.DOCK_GRID_SPACING),
     value = spacingDp,
     valueRange = MIN_DOCK_HOME_CONTROLS_SPACING_DP..MAX_DOCK_HOME_CONTROLS_SPACING_DP,
     valueLabel = { "$it dp" },
@@ -286,34 +259,21 @@ private fun DockAlignmentSetting(
     alignment: DockAlignment,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Column(
-        modifier = Modifier.selectableGroup(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        SettingsTextColumn(
-            title = "Dock alignment",
-            subtitle = "Places a content-sized dock on the home screen",
-        )
-        DockAlignment.entries.forEach { candidate ->
-            TextButton(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .semantics { selected = candidate == alignment },
-                enabled = candidate != alignment,
-                onClick = { onAction(LauncherShellAction.SelectDockAlignment(candidate)) },
-            ) {
-                SettingsButtonText(
-                    text =
-                        when (candidate) {
-                            DockAlignment.START -> "Start"
-                            DockAlignment.CENTER -> "Center"
-                            DockAlignment.END -> "End"
-                        },
-                )
+    SettingsChoiceRow(
+        modifier = Modifier.settingAnchor(SettingKey.DOCK_ALIGNMENT),
+        title = SettingKey.DOCK_ALIGNMENT.label(),
+        subtitle = "Places a content-sized dock on the home screen",
+        options = DockAlignment.entries,
+        selected = alignment,
+        onSelect = { candidate -> onAction(LauncherShellAction.SelectDockAlignment(candidate)) },
+        label = { candidate ->
+            when (candidate) {
+                DockAlignment.START -> "Start"
+                DockAlignment.CENTER -> "Centre"
+                DockAlignment.END -> "End"
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -322,7 +282,8 @@ private fun DockVisibilitySetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSwitchRow(
-        title = "Show dock",
+        modifier = Modifier.settingAnchor(SettingKey.DOCK_SHOW),
+        title = SettingKey.DOCK_SHOW.label(),
         subtitle = if (enabled) "Dock visible on home" else "Home grid uses dock space",
         checked = enabled,
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockEnabled(value)) },
@@ -334,38 +295,21 @@ private fun DockVisibilitySetting(
  * layout the settings screen is showing, the same as every control beside it.
  */
 @Composable
-@OptIn(ExperimentalLayoutApi::class)
 private fun DockPositionSetting(
     position: DockPosition?,
     placeablePositions: List<DockPosition>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SettingsTextColumn(
-            title = "Dock position",
-            subtitle = dockPositionSubtitle(position, placeablePositions),
-        )
-        // Wrapping, because four edges do not fit across a phone: a plain Row measured the last
-        // one to nothing, so a Cards layout could never reach whichever edge fell off the end.
-        FlowRow(
-            modifier = Modifier.fillMaxWidth().selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            placeablePositions.forEach { candidate ->
-                TextButton(
-                    modifier =
-                        Modifier
-                            .testTag("dock-position-${candidate.name}")
-                            .semantics { selected = candidate == position },
-                    enabled = candidate != position,
-                    onClick = { onAction(LauncherShellAction.SelectDockPosition(candidate)) },
-                ) {
-                    SettingsButtonText(text = candidate.label())
-                }
-            }
-        }
-    }
+    SettingsChoiceRow(
+        modifier = Modifier.settingAnchor(SettingKey.DOCK_POSITION),
+        title = SettingKey.DOCK_POSITION.label(),
+        subtitle = dockPositionSubtitle(position, placeablePositions),
+        options = placeablePositions,
+        selected = position?.takeIf { it in placeablePositions },
+        onSelect = { candidate -> onAction(LauncherShellAction.SelectDockPosition(candidate)) },
+        label = { candidate -> candidate.label() },
+        optionTag = { candidate -> "dock-position-${candidate.name}" },
+    )
 }
 
 /**
@@ -381,7 +325,7 @@ private fun dockPositionSubtitle(
     placeablePositions: List<DockPosition>,
 ): String =
     when {
-        position == null -> "Following the active Cards template"
+        position == null -> "Bottom edge"
         position in placeablePositions -> position.label()
         else -> "${position.label()} is not available on this layout, so the dock is on the bottom edge"
     }
@@ -393,84 +337,6 @@ private fun DockPosition.label(): String =
         DockPosition.TOP -> "Top edge"
         DockPosition.BOTTOM -> "Bottom edge"
     }
-
-@Composable
-private fun DockExpandableSetting(
-    expandable: Boolean,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsSwitchRow(
-        title = "Expandable dock",
-        subtitle =
-            if (expandable) {
-                "Dock opens a shelf for overflow and notification cards"
-            } else {
-                "Dock stays a single strip of shortcuts"
-            },
-        checked = expandable,
-        onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockExpandable(value)) },
-    )
-}
-
-@Composable
-private fun DockExpandAffordanceSetting(
-    affordance: DockExpandAffordance,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Open the shelf with",
-            subtitle =
-                when (affordance) {
-                    DockExpandAffordance.GESTURE -> "Swipe up on the dock"
-                    DockExpandAffordance.BUTTON -> "A button on the dock; swiping it does nothing"
-                },
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                modifier = Modifier.testTag("dock-expand-affordance-${DockExpandAffordance.GESTURE.name}"),
-                enabled = affordance != DockExpandAffordance.GESTURE,
-                onClick = {
-                    onAction(LauncherShellAction.SelectDockExpandAffordance(DockExpandAffordance.GESTURE))
-                },
-            ) {
-                SettingsButtonText(text = "Swipe")
-            }
-            TextButton(
-                modifier = Modifier.testTag("dock-expand-affordance-${DockExpandAffordance.BUTTON.name}"),
-                enabled = affordance != DockExpandAffordance.BUTTON,
-                onClick = {
-                    onAction(LauncherShellAction.SelectDockExpandAffordance(DockExpandAffordance.BUTTON))
-                },
-            ) {
-                SettingsButtonText(text = "Button")
-            }
-        }
-    }
-}
-
-@Composable
-private fun DockPanelSetting(
-    hasPanel: Boolean,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsSwitchRow(
-        title = "Dock panel",
-        subtitle =
-            if (hasPanel) {
-                "A small grid of widgets and shortcuts on the expanded dock"
-            } else {
-                "Turning this on adds an empty grid; turning it off removes it and anything on it"
-            },
-        checked = hasPanel,
-        onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockPanelEnabled(value)) },
-    )
-}
 
 /**
  * The actions for moving the live app slots to [slots]: the edit, and the notification access request when live apps

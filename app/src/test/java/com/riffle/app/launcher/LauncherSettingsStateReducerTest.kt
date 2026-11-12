@@ -6,8 +6,6 @@ import com.riffle.app.launcher.rss.FeedCacheResult
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -15,18 +13,14 @@ import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
-import com.riffle.core.domain.launcher.settings.MAX_CARDS_PAGE_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
-import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
-import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.junit.Assert.assertEquals
@@ -128,152 +122,12 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
-    fun replacesAndCoercesTheCompleteAdaptiveStageProfileAtomically() {
-        val repository = FakeLauncherSettingsRepository()
-        val requested =
-            AdaptiveStageAppearanceSettings.modern().copy(
-                geometry = AdaptiveStageAppearanceSettings.modern().geometry.copy(visibleDepth = 99),
-                surface = AdaptiveStageAppearanceSettings.modern().surface.copy(blurStrengthPercent = -5),
-            )
-
-        val updatedState =
-            reducer(launcherSettingsRepository = repository).reduce(
-                state = LauncherShellState(),
-                action = LauncherShellAction.UpdateAdaptiveStageAppearance(requested),
-            )
-
-        assertEquals(8, updatedState.launcherSettings.cards.adaptiveStageAppearance.geometry.visibleDepth)
-        assertEquals(0, updatedState.launcherSettings.cards.adaptiveStageAppearance.surface.blurStrengthPercent)
-        assertEquals(updatedState.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
-    fun persistsAdaptiveStagePaneArrangementSelection() {
-        val repository = FakeLauncherSettingsRepository()
-
-        val updatedState =
-            reducer(launcherSettingsRepository = repository).reduce(
-                state = LauncherShellState(),
-                action = LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
-            )
-
-        assertEquals(
-            AdaptiveStagePaneArrangement.SPLIT,
-            updatedState.launcherSettings.cards.adaptiveStagePaneArrangement,
-        )
-        assertEquals(updatedState.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
-    fun persistsThreadMessageOrderSelection() {
-        val repository = FakeLauncherSettingsRepository()
-
-        val updatedState =
-            reducer(launcherSettingsRepository = repository).reduce(
-                state = LauncherShellState(),
-                action = LauncherShellAction.SelectThreadMessageOrder(ThreadMessageOrder.RECENT_FIRST),
-            )
-
-        assertEquals(ThreadMessageOrder.RECENT_FIRST, updatedState.launcherSettings.cards.threadMessageOrder)
-        assertEquals(updatedState.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
-    fun persistsThreadCardGroupingSelection() {
-        val repository = FakeLauncherSettingsRepository()
-
-        val updatedState =
-            reducer(launcherSettingsRepository = repository).reduce(
-                state = LauncherShellState(),
-                action = LauncherShellAction.SelectThreadCardGrouping(ThreadCardGrouping.PER_MESSAGE),
-            )
-
-        assertEquals(ThreadCardGrouping.PER_MESSAGE, updatedState.launcherSettings.cards.threadCardGrouping)
-        assertEquals(updatedState.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
-    fun persistsTheStageSpineToggle() {
-        val repository = FakeLauncherSettingsRepository()
-
-        val updatedState =
-            reducer(launcherSettingsRepository = repository).reduce(
-                state = LauncherShellState(),
-                action = LauncherShellAction.SelectCardsShowStageSpine(enabled = true),
-            )
-
-        assertEquals(true, updatedState.launcherSettings.cards.showStageSpine)
-        assertEquals(updatedState.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
-    fun persistsAndCoercesThePageVerticalOffset() {
-        val repository = FakeLauncherSettingsRepository()
-
-        val updatedState =
-            reducer(launcherSettingsRepository = repository).reduce(
-                state = LauncherShellState(),
-                action = LauncherShellAction.SelectCardsPageVerticalOffset(offsetDp = 9999),
-            )
-
-        assertEquals(MAX_CARDS_PAGE_VERTICAL_OFFSET_DP, updatedState.launcherSettings.cards.pageVerticalOffsetDp)
-        assertEquals(updatedState.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
-    fun contextualSettingsDefaultOff() {
-        val state = LauncherShellState()
-
-        assertEquals(false, state.launcherSettings.contextual.enabled)
-    }
-
-    @Test
-    fun enablesContextualSettingsAndPersistsSelection() {
-        val repository = FakeLauncherSettingsRepository()
-        val reducer = reducer(launcherSettingsRepository = repository)
-
-        val updatedState =
-            reducer.reduce(
-                state = LauncherShellState(),
-                action = LauncherShellAction.SelectContextualEnabled(enabled = true),
-            )
-
-        assertEquals(true, updatedState.launcherSettings.contextual.enabled)
-        assertEquals(updatedState.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
-    fun disablesContextualSettingsAndPersistsSelection() {
-        val repository = FakeLauncherSettingsRepository()
-        val reducer = reducer(launcherSettingsRepository = repository)
-        val enabledState =
-            LauncherShellState(
-                launcherSettings =
-                    LauncherSettings(
-                        contextual = ContextualSettings(enabled = true),
-                    ),
-            )
-
-        val updatedState =
-            reducer.reduce(
-                state = enabledState,
-                action = LauncherShellAction.SelectContextualEnabled(enabled = false),
-            )
-
-        assertEquals(false, updatedState.launcherSettings.contextual.enabled)
-        assertEquals(updatedState.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
-    fun fullscreenHomeSelectionPreservesIndependentSystemBarSettings() {
+    fun fullscreenHomeActionHidesBothSystemBars() {
         val repository = FakeLauncherSettingsRepository()
         val reducer = reducer(launcherSettingsRepository = repository)
         val state =
             LauncherShellState(
-                launcherSettings =
-                    LauncherSettings(
-                        appearance = AppearanceSettings(hideStatusBarOnHome = true),
-                    ),
+                launcherSettings = LauncherSettings(appearance = AppearanceSettings(hideStatusBarOnHome = true)),
             )
 
         val updatedState =
@@ -282,33 +136,22 @@ class LauncherSettingsStateReducerTest {
                 action = LauncherShellAction.SelectFullscreenHomeEnabled(enabled = true),
             )
 
-        assertEquals(true, updatedState.launcherSettings.appearance.fullscreenHome)
-        assertEquals(true, updatedState.launcherSettings.appearance.hideStatusBarOnHome)
-        assertEquals(false, updatedState.launcherSettings.appearance.hideNavigationBarOnHome)
         assertEquals(
-            HomeSystemBars(
-                fullscreenHome = true,
-                hideStatusBarOnHome = true,
-                hideNavigationBarOnHome = false,
-            ),
+            HomeSystemBars(hideStatusBarOnHome = true, hideNavigationBarOnHome = true),
             updatedState.launcherSettings.appearance.homeSystemBars,
         )
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 
     @Test
-    fun fullscreenHomeClearingRestoresIndependentSystemBarSelection() {
+    fun clearingFullscreenHomeShowsBothSystemBars() {
         val repository = FakeLauncherSettingsRepository()
         val reducer = reducer(launcherSettingsRepository = repository)
         val state =
             LauncherShellState(
                 launcherSettings =
                     LauncherSettings(
-                        appearance =
-                            AppearanceSettings(
-                                fullscreenHome = true,
-                                hideStatusBarOnHome = true,
-                            ),
+                        appearance = AppearanceSettings(hideStatusBarOnHome = true, hideNavigationBarOnHome = true),
                     ),
             )
 
@@ -318,58 +161,19 @@ class LauncherSettingsStateReducerTest {
                 action = LauncherShellAction.SelectFullscreenHomeEnabled(enabled = false),
             )
 
-        assertEquals(false, updatedState.launcherSettings.appearance.fullscreenHome)
-        assertEquals(true, updatedState.launcherSettings.appearance.hideStatusBarOnHome)
-        assertEquals(false, updatedState.launcherSettings.appearance.hideNavigationBarOnHome)
-        assertEquals(
-            HomeSystemBars(
-                fullscreenHome = false,
-                hideStatusBarOnHome = true,
-                hideNavigationBarOnHome = false,
-            ),
-            updatedState.launcherSettings.appearance.homeSystemBars,
-        )
+        assertEquals(HomeSystemBars(), updatedState.launcherSettings.appearance.homeSystemBars)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 
     @Test
-    fun independentSystemBarSelectionUpdatesFullscreenHomeWhenBothAreHidden() {
+    fun theTwoBarSwitchesAreIndependent() {
         val repository = FakeLauncherSettingsRepository()
         val reducer = reducer(launcherSettingsRepository = repository)
         val state =
             LauncherShellState(
                 launcherSettings =
                     LauncherSettings(
-                        appearance = AppearanceSettings(hideNavigationBarOnHome = true),
-                    ),
-            )
-
-        val updatedState =
-            reducer.reduce(
-                state = state,
-                action = LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
-            )
-
-        assertEquals(true, updatedState.launcherSettings.appearance.fullscreenHome)
-        assertEquals(true, updatedState.launcherSettings.appearance.hideStatusBarOnHome)
-        assertEquals(true, updatedState.launcherSettings.appearance.hideNavigationBarOnHome)
-        assertEquals(updatedState.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
-    fun independentSystemBarSelectionClearsFullscreenHomeWhenOneBarIsVisible() {
-        val repository = FakeLauncherSettingsRepository()
-        val reducer = reducer(launcherSettingsRepository = repository)
-        val state =
-            LauncherShellState(
-                launcherSettings =
-                    LauncherSettings(
-                        appearance =
-                            AppearanceSettings(
-                                fullscreenHome = true,
-                                hideStatusBarOnHome = true,
-                                hideNavigationBarOnHome = true,
-                            ),
+                        appearance = AppearanceSettings(hideStatusBarOnHome = true, hideNavigationBarOnHome = true),
                     ),
             )
 
@@ -379,7 +183,6 @@ class LauncherSettingsStateReducerTest {
                 action = LauncherShellAction.SelectHomeNavigationBarHidden(hidden = false),
             )
 
-        assertEquals(false, updatedState.launcherSettings.appearance.fullscreenHome)
         assertEquals(true, updatedState.launcherSettings.appearance.hideStatusBarOnHome)
         assertEquals(false, updatedState.launcherSettings.appearance.hideNavigationBarOnHome)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)

@@ -9,9 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.StateRestorationTester
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -44,15 +43,15 @@ class SettingsSurfaceNavigationTest {
             }
         }
 
-        composeRule.onNode(hasText("Appearance") and hasClickAction()).performScrollTo().performClick()
+        composeRule.onNodeWithTag(settingsMainRowTestTag(SettingsPage.HOME)).performScrollTo().performClick()
         composeRule.onNodeWithText("Hide navigation bar").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Back").performClick()
 
-        composeRule.onNode(hasText("Appearance") and hasClickAction()).assertIsDisplayed()
+        composeRule.onNodeWithTag(settingsMainRowTestTag(SettingsPage.HOME)).assertIsDisplayed()
     }
 
     @Test
-    fun pageScrollStatesKeepTheMainOffsetSeparateFromAppearance() {
+    fun pageScrollStatesKeepTheMainOffsetSeparateFromHome() {
         lateinit var pageScrollStates: Map<SettingsPage, ScrollState>
 
         composeRule.setContent {
@@ -61,10 +60,10 @@ class SettingsSurfaceNavigationTest {
 
         composeRule.runOnIdle {
             val restoredMainScrollState = settingsPageScrollStateFor(pageScrollStates, SettingsPage.MAIN)
-            val currentAppearanceScrollState = settingsPageScrollStateFor(pageScrollStates, SettingsPage.APPEARANCE)
+            val currentHomeScrollState = settingsPageScrollStateFor(pageScrollStates, SettingsPage.HOME)
 
             assertSame(pageScrollStates.getValue(SettingsPage.MAIN), restoredMainScrollState)
-            assertNotSame(restoredMainScrollState, currentAppearanceScrollState)
+            assertNotSame(restoredMainScrollState, currentHomeScrollState)
         }
     }
 }
@@ -87,7 +86,7 @@ class SettingsSurfaceStateRestorationTest {
                 }
             }
 
-            onNode(hasText("Appearance") and hasClickAction()).performScrollTo().performClick()
+            onNodeWithTag(settingsMainRowTestTag(SettingsPage.HOME)).performScrollTo().performClick()
             onNodeWithText("Hide navigation bar").performScrollTo().assertIsDisplayed()
 
             restorationTester.emulateSaveAndRestore()

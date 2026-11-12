@@ -7,13 +7,10 @@ import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
-import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 
 interface LauncherHaptics {
     fun longPress()
-
-    fun adaptiveStageSettle(strength: AdaptiveStageHapticStrength)
 
     /** Plays one semantic [event] from the launcher's haptic vocabulary. */
     fun perform(event: LauncherHapticEvent) = Unit
@@ -45,8 +42,6 @@ enum class LauncherHapticEvent {
 
 object NoopLauncherHaptics : LauncherHaptics {
     override fun longPress() = Unit
-
-    override fun adaptiveStageSettle(strength: AdaptiveStageHapticStrength) = Unit
 }
 
 @Composable
@@ -71,12 +66,6 @@ private class ViewLauncherHaptics(
         }
     }
 
-    override fun adaptiveStageSettle(strength: AdaptiveStageHapticStrength) {
-        strength.adaptiveStageSettleHapticFeedbackConstant()?.let { constant ->
-            view.performHapticFeedback(constant)
-        }
-    }
-
     override fun perform(event: LauncherHapticEvent) {
         if (strength == HapticFeedbackStrength.OFF) return
         view.performHapticFeedback(event.hapticFeedbackConstant())
@@ -89,14 +78,6 @@ internal fun HapticFeedbackStrength.longPressHapticFeedbackConstant(): Int? =
         HapticFeedbackStrength.LIGHT -> HapticFeedbackConstants.CLOCK_TICK
         HapticFeedbackStrength.MEDIUM -> HapticFeedbackConstants.CONTEXT_CLICK
         HapticFeedbackStrength.STRONG -> HapticFeedbackConstants.LONG_PRESS
-    }
-
-internal fun AdaptiveStageHapticStrength.adaptiveStageSettleHapticFeedbackConstant(): Int? =
-    when (this) {
-        AdaptiveStageHapticStrength.OFF -> null
-        AdaptiveStageHapticStrength.LIGHT -> HapticFeedbackConstants.CLOCK_TICK
-        AdaptiveStageHapticStrength.MEDIUM -> HapticFeedbackConstants.CONTEXT_CLICK
-        AdaptiveStageHapticStrength.STRONG -> HapticFeedbackConstants.LONG_PRESS
     }
 
 /**

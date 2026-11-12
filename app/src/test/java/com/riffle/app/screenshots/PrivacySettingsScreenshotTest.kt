@@ -17,8 +17,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.PRIVACY_LEVELS_PREVIEW_OFF_TAG
-import com.riffle.app.launcher.PRIVACY_OPEN_EXCLUSIONS_TAG
-import com.riffle.app.launcher.PRIVACY_OPEN_SOURCES_TAG
 import com.riffle.app.launcher.PRIVACY_SCREEN_SWITCH_TAG
 import com.riffle.app.launcher.SettingsPrivacySections
 import com.riffle.app.launcher.contentLevelTestTag
@@ -35,8 +33,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings > Privacy over fixed values (no runtime, no items: the page never shows item content). Preview on draws
- * the content levels and the links; preview off draws only the screenshot switch and the notes.
+ * Privacy and access > Privacy over fixed values (no runtime, no items: the page never shows item content). Preview on
+ * draws the content levels; preview off draws only the screenshot switch and the notes.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -47,8 +45,6 @@ class PrivacySettingsScreenshotTest {
 
     private val switched = mutableListOf<Boolean>()
     private val picked = mutableListOf<Pair<SourceId, SourceContentLevel>>()
-    private var openedExclusions = 0
-    private var openedSources = 0
 
     private val rows =
         listOf(
@@ -76,8 +72,6 @@ class PrivacySettingsScreenshotTest {
                         onProtectScreenContent = { switched += it },
                         contentLevels = if (preview) rows else null,
                         onSelectLevel = { id, level -> picked += id to level },
-                        onOpenExclusions = if (preview) ({ openedExclusions++ }) else null,
-                        onOpenSources = if (preview) ({ openedSources++ }) else null,
                     )
                 }
             }
@@ -120,8 +114,6 @@ class PrivacySettingsScreenshotTest {
         render(preview = false)
 
         composeRule.onNodeWithTag(PRIVACY_LEVELS_PREVIEW_OFF_TAG).performScrollTo().assertExists()
-        composeRule.onNodeWithTag(PRIVACY_OPEN_EXCLUSIONS_TAG).assertDoesNotExist()
-        composeRule.onNodeWithTag(PRIVACY_OPEN_SOURCES_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(contentLevelTestTag(SourceIds.NOTIFICATIONS, SourceContentLevel.SHOW))
             .assertDoesNotExist()
     }
@@ -156,16 +148,5 @@ class PrivacySettingsScreenshotTest {
         composeRule.onNodeWithTag(contentLevelTestTag(SourceIds.MEDIA, SourceContentLevel.HIDE_TEXT))
             .performScrollTo()
             .assert(hasContentDescription("Media, App icons only", substring = true))
-    }
-
-    @Test
-    fun linksOpenHiddenItemsAndSources() {
-        render()
-
-        composeRule.onNodeWithTag(PRIVACY_OPEN_EXCLUSIONS_TAG).performScrollTo().performClick()
-        composeRule.onNodeWithTag(PRIVACY_OPEN_SOURCES_TAG).performScrollTo().performClick()
-
-        assertEquals(1, openedExclusions)
-        assertEquals(1, openedSources)
     }
 }

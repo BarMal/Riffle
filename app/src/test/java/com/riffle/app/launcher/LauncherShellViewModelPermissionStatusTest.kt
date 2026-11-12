@@ -5,15 +5,23 @@ import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Test
 
 class LauncherShellViewModelPermissionStatusTest {
+    @Before
+    fun installSettingsText() = SettingsTextHolder.install(SettingsTestText)
+
+    @After
+    fun removeSettingsText() = SettingsTextHolder.install(null as SettingsText?)
+
     @Test
     fun refreshesHomeSettingSearchSummaryWhenPlatformStatusesChange() {
         val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
 
-        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("permission"))
+        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("privacy and access"))
         viewModel.onHomeRoleStatusChanged(
             homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
             notificationAccessStatus = NotificationAccessStatus.GRANTED,
@@ -23,7 +31,7 @@ class LauncherShellViewModelPermissionStatusTest {
         val permissionsResult =
             viewModel.state.value.searchSettingsResults
                 .filterIsInstance<LauncherSearchResult.Setting>()
-                .single { result -> result.title == "Permissions" }
+                .single { result -> result.title == "Privacy and access" && result.entry.id.value == "privacy" }
 
         assertEquals(
             "Notifications allowed · Home set · Floating dock allowed",

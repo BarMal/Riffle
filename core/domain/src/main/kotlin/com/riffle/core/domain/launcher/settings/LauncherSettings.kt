@@ -2,25 +2,16 @@ package com.riffle.core.domain.launcher.settings
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateCatalogDefaults
-import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateId
-import com.riffle.core.domain.launcher.cards.AppStagePreferences
-import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.library.LibraryView
-import com.riffle.core.domain.launcher.rss.FeedStagePreferences
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 data class LauncherSettings(
     val appDrawer: AppDrawerSettings = AppDrawerSettings(),
     val appearance: AppearanceSettings = AppearanceSettings(),
-    val cards: CardsSettings = CardsSettings(),
-    val contextual: ContextualSettings = ContextualSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
     val home: HomeBehaviourSettings = HomeBehaviourSettings(),
@@ -48,8 +39,6 @@ data class HomeBehaviourSettings(
 data class AppDrawerSettings(
     val libraryViews: Map<HomeLayoutDeviceClass, LibraryView> = emptyMap(),
     val iconGridColumns: Int = DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS,
-    /** Where the launcher settles after leaving Library, the app drawer (Decision 10, #1243). */
-    val afterLeavingLibrary: LibraryReturnTarget = LibraryReturnTarget.LIBRARY,
 ) {
     /** The view the Library draws on [deviceClass]; landscape phones share the phone's (as workspaces do). */
     fun libraryViewFor(deviceClass: HomeLayoutDeviceClass): LibraryView =
@@ -59,20 +48,6 @@ data class AppDrawerSettings(
         deviceClass: HomeLayoutDeviceClass,
         view: LibraryView,
     ): AppDrawerSettings = copy(libraryViews = libraryViews + (deviceClass.workspaceLayoutClass() to view))
-}
-
-/**
- * Where the launcher settles after an app launch, a Home press or Back from Library, and on a cold
- * start with Library stored: the user's Home, or [LIBRARY] (the default) -- which, despite its name,
- * does not force Library open. It means never force a switch *away* from Library on these triggers,
- * so whatever was actually last showing -- Library or otherwise, since every other trigger already
- * leaves a non-Library mode alone -- is what the launcher settles on (see
- * [com.riffle.core.domain.launcher.home.LibraryExitTrigger.returnsHome], which this value always
- * answers false for). [HOME] is the one case that overrides that: it always leaves Library for Home.
- */
-enum class LibraryReturnTarget {
-    HOME,
-    LIBRARY,
 }
 
 /** The app drawer's old presentation choice; only read to carry a stored value over to a [LibraryView]. */
@@ -98,153 +73,6 @@ enum class SearchResultPresentation {
     LIST,
 }
 
-/** Stored user intent for the AdaptiveStage app-stage surface. */
-data class CardsSettings(
-    val stagePreferencesByLayout: Map<HomeLayoutKey, AppStagePreferences> = emptyMap(),
-    /** Durable pin/select intent for AdaptiveStage feed stages, mirroring [stagePreferencesByLayout]. */
-    val feedStagePreferencesByLayout: Map<HomeLayoutKey, FeedStagePreferences> = emptyMap(),
-    /**
-     * Durable visual intent for the optional AdaptiveStage presentation -- specifically, the *folded*
-     * layout's card stack (the surface that's always present, whether or not a docked rail is also
-     * shown). See [unfoldedAppearance] for the docked rail's independent appearance intent.
-     */
-    val adaptiveStageAppearance: AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings.modern(),
-    /**
-     * Durable visual intent for the *unfolded* layout's docked rail, fully independent of
-     * [adaptiveStageAppearance] -- every field is separately user-adjustable (see #1058). Not yet
-     * exposed in settings UI or persisted; both land in #1058, which owns the field-level UI and the
-     * accompanying JSON codec extension.
-     */
-    val unfoldedAppearance: AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings.unfolded(),
-    val adaptiveStageTemplateId: AdaptiveStageTemplateId = AdaptiveStageTemplateCatalogDefaults.sharedCanvasId,
-    /** User-opted alternative to the full-stack surface: a top detail region over the card stack. */
-    val adaptiveStagePaneArrangement: AdaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.STACK,
-    /**
-     * Message order within a conversation, whichever shape [threadCardGrouping] gives it: the
-     * order of the folded card's own body, and of the thread view that groups message cards.
-     */
-    val threadMessageOrder: ThreadMessageOrder = ThreadMessageOrder.CHRONOLOGICAL,
-    /** Whether a conversation's messages become one card each or one card between them. */
-    val threadCardGrouping: ThreadCardGrouping = ThreadCardGrouping.PER_THREAD,
-    /**
-     * The merged "All notifications" view is always the Cards stage selector's first entry (#1212).
-     * [foldedShowAllNotifications] now only decides whether swiping between stages on the compact
-     * layout also passes through it (off by default). [unfoldedShowAllNotifications] is legacy: kept
-     * so saved settings and backups round-trip, but no longer read.
-     */
-    val foldedShowAllNotifications: Boolean = false,
-    val unfoldedShowAllNotifications: Boolean = false,
-    /**
-     * Whether the stage spine -- the chip strip under the compact stack -- is drawn (#1212). Off by
-     * default, including for settings saved before it existed: in Cards the dock's dynamic section
-     * is the stage selector. The spine still shows whenever the dock cannot host that selector, so
-     * this never strands a stage (see `CardsStageSelector.showsSpine`).
-     */
-    val showStageSpine: Boolean = false,
-    /**
-     * How far the whole AdaptiveStage card-stack surface is shifted vertically within the home
-     * page -- negative moves it up, positive moves it down -- e.g. to leave room above it for a
-     * clock widget, or below it for the dock. Distinct from
-     * [AdaptiveStageAppearanceSettings.geometry]'s `stackPeakPercent`, which only positions the
-     * *focused card* within the stage's own already-placed viewport; this instead repositions that
-     * whole viewport on the page, so the two compose without either one reading the other. Applied
-     * as a plain Compose offset at the surface's own placement site (`CardsHomeSurface`), not fed
-     * into `resolveCardStack`'s sizing math -- a page-position shift isn't a room reservation, so it
-     * doesn't shrink the resolved card size the way a system-bar inset does.
-     */
-    val pageVerticalOffsetDp: Int = 0,
-) {
-    fun coerced(): CardsSettings =
-        copy(
-            pageVerticalOffsetDp =
-                pageVerticalOffsetDp.coerceIn(
-                    MIN_CARDS_PAGE_VERTICAL_OFFSET_DP,
-                    MAX_CARDS_PAGE_VERTICAL_OFFSET_DP,
-                ),
-        )
-}
-
-/**
- * The reachable band for [CardsSettings.pageVerticalOffsetDp]. Signed and symmetric: enough range
- * (±160dp) to clear room for a typical clock/greeting widget above the stage or extra breathing
- * room below it, without an unbounded value letting the whole stage be pushed off-screen -- unlike
- * [AdaptiveStageAppearanceSettings]'s own fields, nothing downstream clips this against the actual
- * viewport, since it is applied as a raw Compose offset outside `resolveCardStack`'s reach.
- */
-const val MIN_CARDS_PAGE_VERTICAL_OFFSET_DP = -160
-const val MAX_CARDS_PAGE_VERTICAL_OFFSET_DP = 160
-
-/**
- * How a messaging notification that carries message history becomes cards.
- *
- * [PER_MESSAGE] was the only prior behaviour: every message in the history becomes its own card.
- * A single conversation therefore spreads across a stack the user pages through, and each card --
- * sized for a whole notification -- carries one short line. Four unread chats read as a dozen
- * near-empty cards.
- *
- * [PER_THREAD] puts the conversation on one card instead, its messages as the body. Fewer cards,
- * and more on each of them, which is the same problem seen from both ends. It is the default
- * because the split was not a deliberate design so much as the shape the data arrived in.
- */
-enum class ThreadCardGrouping {
-    PER_MESSAGE,
-    PER_THREAD,
-}
-
-/** How a conversation's messages are ordered, on a folded card or in its thread view. */
-enum class ThreadMessageOrder {
-    /** Oldest message first, reading top-to-bottom like a conversation. */
-    CHRONOLOGICAL,
-
-    /** Newest message first, matching the main stack's own recency order. */
-    RECENT_FIRST,
-}
-
-/** Resolves AdaptiveStage using the launcher-wide accessibility motion preference. */
-fun LauncherSettings.resolveAdaptiveStageCardStack(
-    viewport: AdaptiveStageViewportDp,
-    capabilities: AdaptiveStageRendererCapabilities = AdaptiveStageRendererCapabilities(),
-): AdaptiveStageCardStackResolution =
-    cards.adaptiveStageAppearance.resolveCardStack(
-        viewport = viewport,
-        capabilities = capabilities,
-        globalReducedMotion = motion.reducedMotion,
-    )
-
-/**
- * Resolves the docked rail's independent [CardsSettings.unfoldedAppearance], sized against [viewport]
- * -- the rail's own physical bounds, not the whole window -- with [AdaptiveStageCardStackRole.RAIL]'s
- * smaller reachability floor.
- */
-fun LauncherSettings.resolveAdaptiveStageRailCardStack(
-    viewport: AdaptiveStageViewportDp,
-    capabilities: AdaptiveStageRendererCapabilities = AdaptiveStageRendererCapabilities(),
-): AdaptiveStageCardStackResolution =
-    cards.unfoldedAppearance.resolveCardStack(
-        viewport = viewport,
-        capabilities = capabilities,
-        globalReducedMotion = motion.reducedMotion,
-        role = AdaptiveStageCardStackRole.RAIL,
-    )
-
-/** Returns variant-specific AdaptiveStage intent. */
-fun CardsSettings.stagePreferencesFor(layoutKey: HomeLayoutKey): AppStagePreferences =
-    stagePreferencesByLayout[layoutKey] ?: AppStagePreferences()
-
-fun CardsSettings.withStagePreferences(
-    layoutKey: HomeLayoutKey,
-    preferences: AppStagePreferences,
-): CardsSettings = copy(stagePreferencesByLayout = stagePreferencesByLayout + (layoutKey to preferences))
-
-/** Returns variant-specific feed stage intent. */
-fun CardsSettings.feedStagePreferencesFor(layoutKey: HomeLayoutKey): FeedStagePreferences =
-    feedStagePreferencesByLayout[layoutKey] ?: FeedStagePreferences()
-
-fun CardsSettings.withFeedStagePreferences(
-    layoutKey: HomeLayoutKey,
-    preferences: FeedStagePreferences,
-): CardsSettings = copy(feedStagePreferencesByLayout = feedStagePreferencesByLayout + (layoutKey to preferences))
-
 data class AppearanceSettings(
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),
     val themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
@@ -253,7 +81,6 @@ data class AppearanceSettings(
     val themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
     /** The optional custom accent. */
     val themeColors: LauncherThemeColors = LauncherThemeColors(),
-    val fullscreenHome: Boolean = false,
     val hideStatusBarOnHome: Boolean = false,
     val hideNavigationBarOnHome: Boolean = false,
     /**

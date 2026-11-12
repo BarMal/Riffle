@@ -10,60 +10,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
-
-@Composable
-internal fun SettingsPermissionsPageContent(
-    state: SettingsSurfaceState,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsPermissionsSection(
-        homeRoleStatus = state.homeRoleStatus,
-        firstRunStatus = state.firstRunStatus,
-        notificationAccessStatus = state.notificationAccessStatus,
-        overlayDockPermissionStatus = state.overlayDockPermissionStatus,
-        calendarAccessStatus = state.calendarAccessStatus,
-        onAction = onAction,
-    )
-}
-
-@Composable
-internal fun SettingsAppsPageContent(
-    state: SettingsSurfaceState,
-    onPageSelected: (SettingsPage) -> Unit,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsSection(title = "Apps") {
-        SettingsListRow(
-            title = "Launchable apps",
-            subtitle = "${state.installedApps.size.appCountLabel()} available",
-        )
-        SettingsClickableRow(
-            title = "Hidden apps",
-            subtitle = "${state.hiddenApps.size.appCountLabel()} hidden",
-            onClick = { onPageSelected(SettingsPage.HIDDEN_APPS) },
-        )
-        AppRefreshSetting(onAction = onAction)
-    }
-}
-
-@Composable
-internal fun SettingsBackupPageContent(onAction: (LauncherShellAction) -> Unit) {
-    SettingsSection(title = "Backup") {
-        BackupSetting(onAction = onAction)
-    }
-}
 
 @Composable
 internal fun SettingsHiddenAppsPageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsSection(title = "Hidden apps") {
+    SettingsSection(title = stringResource(R.string.settings_page_hidden_apps)) {
         HiddenAppsSetting(
             apps = state.hiddenApps,
             onAction = onAction,
@@ -73,7 +33,7 @@ internal fun SettingsHiddenAppsPageContent(
 
 @Composable
 internal fun SettingsVersionPageContent(state: SettingsSurfaceState) {
-    SettingsSection(title = "Version") {
+    SettingsSection(title = stringResource(R.string.settings_page_version)) {
         VersionInformationSetting(
             appVersionLabel = state.appVersionLabel,
             appBuildIdentityLabel = state.appBuildIdentityLabel,
@@ -111,7 +71,8 @@ internal fun HapticStrengthSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsChoiceRow(
-        title = "Feedback strength",
+        modifier = Modifier.settingAnchor(SettingKey.MOTION_HAPTICS),
+        title = SettingKey.MOTION_HAPTICS.label(),
         options = HapticFeedbackStrength.entries,
         selected = selectedStrength,
         onSelect = { strength -> onAction(LauncherShellAction.SelectHapticFeedbackStrength(strength)) },
@@ -210,3 +171,11 @@ private val HapticFeedbackStrength.label: String
             HapticFeedbackStrength.MEDIUM -> "Medium"
             HapticFeedbackStrength.STRONG -> "Strong"
         }
+
+/** Backup: Export and Import as two plain rows, each saying what it covers and what it never includes. */
+@Composable
+internal fun SettingsBackupPageContent(onAction: (LauncherShellAction) -> Unit) {
+    SettingsSection(title = stringResource(R.string.settings_page_backup)) {
+        BackupSetting(onAction = onAction)
+    }
+}

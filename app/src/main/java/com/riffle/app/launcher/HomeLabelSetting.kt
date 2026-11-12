@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
@@ -56,7 +57,8 @@ private fun HomeIconSizeSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "App icon size",
+    title = SettingKey.HOME_ICON_SIZE.label(),
+    modifier = Modifier.settingAnchor(SettingKey.HOME_ICON_SIZE),
     value = settings.iconSizeDp,
     valueRange = MIN_HOME_ICON_SIZE_DP..MAX_HOME_ICON_SIZE_DP,
     valueLabel = { "$it dp" },
@@ -69,7 +71,8 @@ private fun HomeLabelVisibilitySetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSwitchRow(
-        title = "Show labels",
+        modifier = Modifier.settingAnchor(SettingKey.HOME_SHOW_LABELS),
+        title = SettingKey.HOME_SHOW_LABELS.label(),
         subtitle = if (settings.showText) "Labels visible on home" else "Icon-only home",
         checked = settings.showText,
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectHomeLabelTextVisible(value)) },
@@ -81,7 +84,8 @@ private fun HomeLabelBackgroundSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Label background",
+    title = SettingKey.HOME_LABEL_BACKGROUND.label(),
+    modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_BACKGROUND),
     value = settings.backgroundAlphaPercent,
     valueRange = MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT..MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
     valueLabel = { "$it%" },
@@ -93,7 +97,8 @@ private fun HomeLabelTextSizeSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Label text size",
+    title = SettingKey.HOME_LABEL_TEXT_SIZE.label(),
+    modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_TEXT_SIZE),
     value = settings.textSizeSp,
     valueRange = MIN_HOME_LABEL_TEXT_SIZE_SP..MAX_HOME_LABEL_TEXT_SIZE_SP,
     valueLabel = { "$it sp" },
@@ -105,7 +110,8 @@ private fun HomeLabelWidthSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Label width",
+    title = SettingKey.HOME_LABEL_WIDTH.label(),
+    modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_WIDTH),
     value = settings.maxWidthDp,
     valueRange = MIN_HOME_LABEL_MAX_WIDTH_DP..MAX_HOME_LABEL_MAX_WIDTH_DP,
     valueLabel = { homeLabelWidthDescription(settings.copy(maxWidthDp = it)) },
@@ -124,7 +130,8 @@ private fun HomeLabelSizingSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsChoiceRow(
-        title = "Label sizing",
+        modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_SIZING),
+        title = SettingKey.HOME_LABEL_SIZING.label(),
         subtitle = settings.sizing.label,
         options = HomeLabelSizing.values().toList(),
         selected = settings.sizing,
@@ -138,7 +145,8 @@ private fun HomeLabelLineCountSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Label lines",
+    title = SettingKey.HOME_LABEL_LINES.label(),
+    modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_LINES),
     value = settings.maxLines,
     valueRange = MIN_HOME_LABEL_MAX_LINES..MAX_HOME_LABEL_MAX_LINES,
     valueLabel = Int::toString,

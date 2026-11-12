@@ -1,12 +1,14 @@
 package com.riffle.app.launcher
 
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
+import com.riffle.app.launcher.ics.CachedIcsFeedRepository
 import com.riffle.app.launcher.pool.CachedPoolRepository
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
 import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
+import com.riffle.core.domain.launcher.workspace.sources.ics.IcsFeedSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -19,12 +21,14 @@ import kotlinx.coroutines.launch
  * stored, so with the workspace preview never used the backup is unchanged). Restores write to the stores on
  * [scope] and update the in-memory copies when they exist.
  */
+@Suppress("TooManyFunctions")
 internal class AndroidWorkspaceBackupPort(
     private val workspaces: CachedWorkspaceRepository,
     private val exclusions: CachedExclusionRepository,
     private val pool: CachedPoolRepository,
     private val scope: CoroutineScope,
     private val stream: CachedStreamLayoutRepository? = null,
+    private val calendarFeeds: CachedIcsFeedRepository? = null,
     /**
      * True once the standard home renders from the pool (S4): the pool section is then restored together with the
      * backup's home layouts by the home's own restore (`withImportedBackup`), never on its own here.
@@ -74,6 +78,17 @@ internal class AndroidWorkspaceBackupPort(
         stream?.layouts?.value?.takeIf {
             it.byPosture.isNotEmpty()
         } ?: storedStream
+
+    override fun currentCalendarFeeds(): IcsFeedSettings? =
+        calendarFeeds?.takeIf { it.isLoaded }?.settings()?.takeIf { it.feeds.isNotEmpty() }
+
+    override fun restoreCalendarFeeds(feeds: IcsFeedSettings) {
+        val repository = calendarFeeds ?: return
+        scope.launch {
+            runCatching { repository.replaceFromBackup(feeds) }
+                .onFailure { if (it is CancellationException) throw it }
+        }
+    }
 
     override fun restoreStreamLayouts(layouts: StreamLayouts) {
         val repository = stream ?: return

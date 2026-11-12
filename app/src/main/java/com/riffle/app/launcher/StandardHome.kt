@@ -75,7 +75,6 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
@@ -902,7 +901,6 @@ private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspace
                 notificationAccessStatus = presentation.notificationAccessStatus,
                 installedApps = presentation.installedApps,
                 onAction = actions.onAction,
-                adaptiveStageAppearance = presentation.adaptiveStageAppearance,
             ),
     )
 
@@ -936,7 +934,6 @@ internal data class StandardHomePresentation(
     val widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     val widgetPicker: StandardHomeWidgetPickerState = StandardHomeWidgetPickerState(),
     val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
-    val adaptiveStageAppearance: AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings.modern(),
 )
 
 internal data class StandardHomeWidgetPickerState(
@@ -990,7 +987,6 @@ internal data class GeneratedPagePresentation(
     val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
     val installedApps: List<InstalledApp> = emptyList(),
     val onAction: (LauncherShellAction) -> Unit = {},
-    val adaptiveStageAppearance: AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings.modern(),
 )
 
 internal data class HomeItemDragState(

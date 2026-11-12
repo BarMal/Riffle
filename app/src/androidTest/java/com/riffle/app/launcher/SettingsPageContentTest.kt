@@ -39,7 +39,7 @@ class SettingsPageContentTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun appsPageDispatchesLibraryViewAndGridActions() {
+    fun libraryPageDispatchesLibraryViewAndGridActions() {
         val actions = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
@@ -57,7 +57,7 @@ class SettingsPageContentTest {
                                         ),
                                 ),
                         ).settingsSurfaceState(),
-                    page = SettingsPage.APPS,
+                    page = SettingsPage.LIBRARY,
                     onPageSelected = {},
                     onAction = actions::add,
                 )
@@ -77,7 +77,7 @@ class SettingsPageContentTest {
     }
 
     @Test
-    fun legacyFullscreenShowsCheckedIndependentBarControlsThatDispatchActions() {
+    fun hiddenBarsShowCheckedIndependentControlsThatDispatchActions() {
         val actions = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
@@ -88,10 +88,14 @@ class SettingsPageContentTest {
                         LauncherShellState(
                             launcherSettings =
                                 LauncherSettings(
-                                    appearance = AppearanceSettings(fullscreenHome = true),
+                                    appearance =
+                                        AppearanceSettings(
+                                            hideStatusBarOnHome = true,
+                                            hideNavigationBarOnHome = true,
+                                        ),
                                 ),
                         ).settingsSurfaceState(),
-                    page = SettingsPage.APPEARANCE,
+                    page = SettingsPage.HOME,
                     onPageSelected = {},
                     onAction = actions::add,
                 )
@@ -126,7 +130,7 @@ class SettingsPageContentTest {
                 SettingsPageContent(
                     modifier = Modifier,
                     state = LauncherShellState().settingsSurfaceState(),
-                    page = SettingsPage.PERMISSIONS,
+                    page = SettingsPage.PRIVACY,
                     onPageSelected = {},
                     onAction = {},
                 )
@@ -157,7 +161,7 @@ class SettingsPageContentTest {
             }
         }
 
-        composeRule.onNodeWithText("Permissions").assertExists()
+        composeRule.onNodeWithText("Privacy and access").assertExists()
         composeRule
             .onNodeWithText("Notifications not allowed · Home set · Floating dock allowed")
             .assertExists()
@@ -194,7 +198,7 @@ class SettingsPageContentTest {
                             notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                             overlayDockPermissionStatus = OverlayDockPermissionStatus.NOT_GRANTED,
                         ).settingsSurfaceState(),
-                    page = SettingsPage.PERMISSIONS,
+                    page = SettingsPage.PRIVACY,
                     onPageSelected = {},
                     onAction = actions::add,
                 )
@@ -234,7 +238,8 @@ class SettingsPageContentTest {
             }
         }
 
-        listOf(SettingsPage.MAIN, SettingsPage.PERMISSIONS).forEach { page ->
+        // The default home app lives only on Privacy and access now; the main page no longer repeats it.
+        listOf(SettingsPage.PRIVACY).forEach { page ->
             composeRule.runOnIdle { currentPage = page }
             composeRule
                 .onNodeWithText("Default home app")
@@ -254,7 +259,7 @@ class SettingsPageContentTest {
                         LauncherShellState(
                             homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
                         ).settingsSurfaceState(),
-                    page = SettingsPage.PERMISSIONS,
+                    page = SettingsPage.PRIVACY,
                     onPageSelected = {},
                     onAction = {},
                 )

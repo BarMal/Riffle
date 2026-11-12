@@ -95,6 +95,9 @@ private fun Modifier.dockAtRestBackground(
                 backdrop = backdrop,
                 frostStrength = liquidGlass.frostStrengthFraction,
                 refractionStrength = liquidGlass.refractionStrengthFraction,
+                // Over the wallpaper (which the shader cannot sample) the dock is its own setting,
+                // exactly: 0% clear, 100% opaque. Over app content frost and refraction apply.
+                wallpaperTintAlpha = color.alpha,
             )
         }
     }

@@ -7,17 +7,6 @@ import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.AppStageContent
-import com.riffle.core.domain.launcher.cards.AppStageContentKind
-import com.riffle.core.domain.launcher.cards.AppStageContentSnapshot
-import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.AppStageIdentitySnapshot
-import com.riffle.core.domain.launcher.cards.AppStagePlanner
-import com.riffle.core.domain.launcher.cards.AppStageProfileState
-import com.riffle.core.domain.launcher.cards.AppStageSnapshot
-import com.riffle.core.domain.launcher.cards.LauncherCardId
-import com.riffle.core.domain.launcher.cards.dockPinnedStageIds
-import com.riffle.core.domain.launcher.cards.toAppStageId
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -28,14 +17,9 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
-import com.riffle.core.domain.launcher.rss.FeedProfileStatus
 import com.riffle.core.domain.launcher.rss.FeedStageCacheProjection
-import com.riffle.core.domain.launcher.rss.FeedStagePlanner
-import com.riffle.core.domain.launcher.rss.FeedStageSnapshot
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.LauncherSettings
-import com.riffle.core.domain.launcher.settings.feedStagePreferencesFor
-import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 
@@ -85,85 +69,8 @@ data class LauncherShellState(
     /** The latest rejected Dock edit, retained until another Dock edit succeeds. */
     val dockEditRejectionReason: DockEditRejectionReason? = null,
 ) {
-    /**
-     * The first installed app per stage id, built at most once per state instance. Stage labels and
-     * identities are looked up per card and per chip on every frame, so a linear scan of every
-     * installed app each time added up (#1211); scoping the index to the state it is derived from
-     * keeps it consistent with [installedApps] without any shared mutable cache.
-     */
-    val installedAppsByStageId: Map<AppStageId, InstalledApp> by lazy {
-        val index = LinkedHashMap<AppStageId, InstalledApp>(installedApps.size)
-        // First match wins, matching the linear search this replaced.
-        installedApps.forEach { app -> index.putIfAbsent(app.toAppStageId(), app) }
-        index
-    }
-
     /** Profile content policy used by Cards surfaces; profiles without an app-state decision are redacted. */
     fun cardsProfileContentVisibility(): Map<AppProfileId, AppProfileContentVisibility> = profileContentVisibility
-
-    /** Reconciles optional AdaptiveStage stages from the same installed-app/profile/settings snapshot. */
-    fun appStageSnapshot(
-        contentSnapshot: AppStageContentSnapshot = appStageContentSnapshot(),
-        previous: AppStageSnapshot? = null,
-        planner: AppStagePlanner = AppStagePlanner(),
-    ): AppStageSnapshot =
-        planner.reconcile(
-            identitySnapshot =
-                AppStageIdentitySnapshot(
-                    installedStageIds = installedApps.map(InstalledApp::toAppStageId).distinct(),
-                    profileStates = profileStatesForStages(),
-                ),
-            contentSnapshot = contentSnapshot,
-            preferences =
-                launcherSettings
-                    .cards
-                    .stagePreferencesFor(homeLayoutSet.activeKey)
-                    .let { preferences ->
-                        // Pinning a stage now means pinning its app to the dock: the dock's own items
-                        // are the live source of what is pinned. The persisted pinnedStageIds is read
-                        // only as a migration seed, unioned in so a legacy pin never reads as unpinned
-                        // before (or without) that migration materializing its dock item.
-                        preferences.copy(
-                            pinnedStageIds =
-                                (dockPinnedStageIds(homeLayoutSet.activeLayout.dock) + preferences.pinnedStageIds)
-                                    .distinct(),
-                            selectedStageId = preferences.selectedStageId ?: previous?.preferences?.selectedStageId,
-                        )
-                    },
-            previous = previous,
-        )
-
-    /**
-     * Reconciles AdaptiveStage feed stages from [configuredFeeds] and [feedCacheProjections].
-     *
-     * This is a parallel projection alongside [appStageSnapshot] rather than a merge into
-     * [AppStageSnapshot]: feed stages have no package/app identity, and unlike app stages they are
-     * never pruned for being empty (every configured, non-removed-profile feed always projects a
-     * stage). Coexistence with pinned app stages, the selected app-stage focus, and the recent/
-     * frequently-used stack is therefore preserved by construction -- this snapshot only ever adds
-     * an independent, separately selectable list of feed stages for a renderer to also read.
-     */
-    fun feedStageSnapshot(
-        previous: FeedStageSnapshot? = null,
-        planner: FeedStagePlanner = FeedStagePlanner(),
-    ): FeedStageSnapshot =
-        planner.reconcile(
-            configuredFeeds = configuredFeeds,
-            profileStatuses = feedProfileStatusesForStages(),
-            cacheProjections = feedCacheProjections,
-            preferences =
-                launcherSettings
-                    .cards
-                    .feedStagePreferencesFor(homeLayoutSet.activeKey)
-                    .let { preferences ->
-                        if (preferences.selectedStageId == null) {
-                            preferences.copy(selectedStageId = previous?.preferences?.selectedStageId)
-                        } else {
-                            preferences
-                        }
-                    },
-            previous = previous,
-        )
 
     /**
      * Retained for callers migrating from the blocking first-run prompt. Preview-first setup
@@ -181,69 +88,6 @@ enum class WidgetProviderCatalogStatus {
     LOADING,
     READY,
     FAILED,
-}
-
-private fun InstalledApp.toAppStageId(): AppStageId = identity.toAppStageId()
-
-private fun LauncherShellState.appStageContentSnapshot(): AppStageContentSnapshot =
-    if (notificationAccessStatus != NotificationAccessStatus.GRANTED) {
-        AppStageContentSnapshot()
-    } else {
-        AppStageContentSnapshot(
-            notificationGroupsByApp
-                .flatMap(AppNotificationGroup::notifications)
-                .filter { notification ->
-                    profileContentVisibility[notification.profileId] in
-                        setOf(
-                            AppProfileContentVisibility.VISIBLE,
-                            AppProfileContentVisibility.REDACTED_QUIET,
-                        )
-                }.map { notification ->
-                    AppStageContent(
-                        id =
-                            LauncherCardId(
-                                "stage-notification:${notification.profileId.value}:${notification.key.value}",
-                            ),
-                        stageId = AppStageId(notification.packageName, notification.profileId),
-                        kind =
-                            if (notification.isMediaSession) {
-                                AppStageContentKind.MEDIA
-                            } else {
-                                AppStageContentKind.NOTIFICATION
-                            },
-                        meaningfulActivityAtEpochMillis = notification.postedAtEpochMillis.coerceAtLeast(0L),
-                    )
-                },
-        )
-    }
-
-private fun LauncherShellState.profileStatesForStages(): Map<AppProfileId, AppStageProfileState> {
-    return profileContentVisibility.mapValues { (_, visibility) ->
-        when (visibility) {
-            AppProfileContentVisibility.VISIBLE,
-            AppProfileContentVisibility.REDACTED_QUIET,
-            -> AppStageProfileState.AVAILABLE
-
-            AppProfileContentVisibility.REDACTED_LOCKED,
-            AppProfileContentVisibility.REDACTED_UNAVAILABLE,
-            -> AppStageProfileState.LOCKED
-        }
-    }
-}
-
-/** Mirrors profileStatesForStages() above for feed profile-lock handling. */
-private fun LauncherShellState.feedProfileStatusesForStages(): Map<AppProfileId, FeedProfileStatus> {
-    return profileContentVisibility.mapValues { (_, visibility) ->
-        when (visibility) {
-            AppProfileContentVisibility.VISIBLE,
-            AppProfileContentVisibility.REDACTED_QUIET,
-            -> FeedProfileStatus.AVAILABLE
-
-            AppProfileContentVisibility.REDACTED_LOCKED,
-            AppProfileContentVisibility.REDACTED_UNAVAILABLE,
-            -> FeedProfileStatus.LOCKED
-        }
-    }
 }
 
 enum class FirstRunStatus {

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -221,7 +222,9 @@ class PreviewFirstSetupTest {
             )
         }
 
-        composeRule.onNodeWithText("Default home app").assertHasClickAction().performClick()
+        // The default home app moved from the main page to Privacy and access (docs/product/settings.md).
+        composeRule.onNodeWithTag(settingsMainRowTestTag(SettingsPage.PRIVACY)).performScrollTo().performClick()
+        composeRule.onNodeWithText("Default home app").performScrollTo().assertHasClickAction().performClick()
 
         assertEquals(listOf(LauncherShellAction.RequestDefaultHome), actions)
     }

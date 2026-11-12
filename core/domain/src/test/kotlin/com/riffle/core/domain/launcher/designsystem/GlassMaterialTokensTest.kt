@@ -76,4 +76,18 @@ class GlassMaterialTokensTest {
         assertEquals(1f, GlassMaterialTokens.REDUCED_TRANSPARENCY_TINT_ALPHA)
         assertTrue(GlassMaterialTokens.REDUCED_TRANSPARENCY_SHEEN_SCALE in 0f..0.5f)
     }
+
+    @Test
+    fun overTheWallpaperNoWeightFallsBelowItsFloorAndHeavierIsNeverLighter() {
+        ordered.forEach { tokens ->
+            listOf(0f, 0.5f, 1f).forEach { frost ->
+                assertTrue(tokens.shaderTintAlphaOverWallpaper(frost) >= tokens.shaderTintAlpha(frost))
+                assertTrue(tokens.shaderTintAlphaOverWallpaper(frost) >= tokens.wallpaperTintAlpha)
+            }
+        }
+        ordered.zipWithNext().forEach { (lighter, heavier) ->
+            assertTrue(lighter.wallpaperTintAlpha <= heavier.wallpaperTintAlpha)
+        }
+        assertEquals(0.66f, GlassMaterialTokens.regular.shaderTintAlphaOverWallpaper(frost = 0.45f))
+    }
 }

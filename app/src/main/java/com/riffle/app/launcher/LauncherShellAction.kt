@@ -10,7 +10,6 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -38,7 +37,6 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
@@ -49,15 +47,12 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
-import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
-import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
-import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
@@ -80,7 +75,11 @@ sealed interface LauncherShellAction {
     /** Opens the Stream over Home (a gesture bound to `OPEN_STREAM`, the Dock's "Open Stream" action). */
     data object OpenStream : LauncherShellAction
 
-    data class OpenSettingsPage(val page: SettingsPage) : LauncherShellAction
+    data class OpenSettingsPage(
+        val page: SettingsPage,
+        /** The setting to scroll to on that page, when the request came from search. */
+        val anchor: SettingKey? = null,
+    ) : LauncherShellAction
 
     data object RequestNotificationAccess : LauncherShellAction
 
@@ -420,14 +419,8 @@ sealed interface LauncherShellAction {
         val columns: Int,
     ) : LauncherShellAction
 
-    /** Chooses where the launcher settles after leaving Library (#1243). */
-    data class SelectLibraryReturnTarget(
-        val target: LibraryReturnTarget,
-    ) : LauncherShellAction
-
     /**
-     * Library may have been left by [trigger]: returns to Home when the user's setting says so, and
-     * does nothing on Home or when the setting keeps Library (#1243).
+     * Library may have been left by [trigger]; nothing changes the shown surface any more.
      */
     data class LeaveLibrary(
         val trigger: LibraryExitTrigger,
@@ -487,46 +480,6 @@ sealed interface LauncherShellAction {
     data class SelectMotionPerformanceTargetFps(
         val targetFps: MotionPerformanceTargetFps,
     ) : LauncherShellAction
-
-    data class SelectContextualEnabled(val enabled: Boolean) : LauncherShellAction
-
-    /** Replaces the complete folded AdaptiveStage profile in one persisted, atomic update. */
-    data class UpdateAdaptiveStageAppearance(
-        val appearance: AdaptiveStageAppearanceSettings,
-    ) : LauncherShellAction
-
-    /** Replaces the complete unfolded (docked-rail) AdaptiveStage profile, independent of the folded one. */
-    data class UpdateUnfoldedAdaptiveStageAppearance(
-        val appearance: AdaptiveStageAppearanceSettings,
-    ) : LauncherShellAction
-
-    data class SelectAdaptiveStagePaneArrangement(val arrangement: AdaptiveStagePaneArrangement) : LauncherShellAction
-
-    data class SelectThreadMessageOrder(val order: ThreadMessageOrder) : LauncherShellAction
-
-    data class SelectThreadCardGrouping(val grouping: ThreadCardGrouping) : LauncherShellAction
-
-    /**
-     * Whether swiping between stages on the folded (compact) Cards layout passes through the merged
-     * "All notifications" view. The view itself is always the stage selector's first entry (#1212).
-     */
-    data class SelectCardsFoldedShowAllNotifications(val enabled: Boolean) : LauncherShellAction
-
-    /**
-     * Legacy: whether the merged view was offered on the unfolded layout. Still persisted for
-     * backups, but no longer read or offered in settings -- "All" is always in the selector (#1212).
-     */
-    data class SelectCardsUnfoldedShowAllNotifications(val enabled: Boolean) : LauncherShellAction
-
-    /** Whether the compact Cards layout draws the stage spine under the stack (off by default). */
-    data class SelectCardsShowStageSpine(val enabled: Boolean) : LauncherShellAction
-
-    /**
-     * How far the whole AdaptiveStage card-stack surface is shifted vertically within the home
-     * page -- negative moves it up, positive moves it down. See
-     * [com.riffle.core.domain.launcher.settings.CardsSettings.pageVerticalOffsetDp].
-     */
-    data class SelectCardsPageVerticalOffset(val offsetDp: Int) : LauncherShellAction
 
     data class SelectDockPosition(val position: DockPosition) : LauncherShellAction
 

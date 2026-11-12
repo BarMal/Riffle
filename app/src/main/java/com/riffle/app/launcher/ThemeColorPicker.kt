@@ -49,9 +49,12 @@ internal fun ThemeColorsSetting(
     colors: LauncherThemeColors,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_CUSTOM_ACCENT),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         SettingsTextColumn(
-            title = "Custom accent",
+            title = SettingKey.APPEARANCE_CUSTOM_ACCENT.label(),
             subtitle = "Pick your own accent colour. Hex values include alpha.",
         )
         ThemeColorPicker(

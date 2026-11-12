@@ -24,7 +24,6 @@ class LauncherShellAppearanceSettingsTest {
             LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
         )
 
-        assertFalse(viewModel.state.value.launcherSettings.appearance.fullscreenHome)
         assertTrue(viewModel.state.value.launcherSettings.appearance.hideStatusBarOnHome)
         assertFalse(viewModel.state.value.launcherSettings.appearance.hideNavigationBarOnHome)
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)

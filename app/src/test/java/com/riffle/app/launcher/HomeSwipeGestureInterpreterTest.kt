@@ -271,12 +271,12 @@ class HomeSwipeGestureInterpreterTest {
 
     @Test
     fun labelsPageOverviewGestureActionForSettings() {
-        assertEquals("Manage pages", LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW.label)
+        assertEquals("Page overview", LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW.label)
     }
 
     @Test
     fun labelsFullscreenGestureActionForSettings() {
-        assertEquals("Fullscreen home", LauncherGestureAction.ENTER_FULLSCREEN_HOME.label)
+        assertEquals("Full-screen Home", LauncherGestureAction.ENTER_FULLSCREEN_HOME.label)
     }
 
     @Test
@@ -291,7 +291,7 @@ class HomeSwipeGestureInterpreterTest {
             )
 
         assertEquals(
-            "Conflicting gestures: Notifications: Swipe up, Two-finger swipe up, Pinch out",
+            "Conflicting gestures: Open notifications: One-finger swipe up, Two-finger swipe up, Pinch out",
             homeGestureConflictSummary(GestureSettings(homeGestures = settings)),
         )
     }

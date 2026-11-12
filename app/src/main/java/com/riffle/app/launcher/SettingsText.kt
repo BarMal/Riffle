@@ -33,9 +33,8 @@ internal fun SettingsPrimaryText(
     Text(
         modifier = modifier,
         text = text,
-        maxLines = 1,
+        maxLines = 2,
         overflow = TextOverflow.Ellipsis,
-        softWrap = false,
         style = MaterialTheme.typography.bodyLarge,
     )
 }
@@ -44,9 +43,8 @@ internal fun SettingsPrimaryText(
 internal fun SettingsSecondaryText(text: String) {
     Text(
         text = text,
-        maxLines = 1,
+        maxLines = 3,
         overflow = TextOverflow.Ellipsis,
-        softWrap = false,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

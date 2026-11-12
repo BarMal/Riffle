@@ -6,17 +6,13 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.library.LibraryView
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
-import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
-import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -27,18 +23,11 @@ class LauncherSettingsActionRouteTest {
         val actions =
             listOf(
                 LauncherShellAction.SelectReducedMotionPreference(ReducedMotionPreference.ON),
-                LauncherShellAction.SelectContextualEnabled(enabled = true),
                 LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING),
                 LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
                 LauncherShellAction.SelectHomeNavigationBarHidden(hidden = true),
                 LauncherShellAction.SelectLibraryView(LibraryView.Grid),
                 LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
-                LauncherShellAction.UpdateAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.modern()),
-                LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.unfolded()),
-                LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
-                LauncherShellAction.SelectThreadMessageOrder(ThreadMessageOrder.RECENT_FIRST),
-                LauncherShellAction.SelectThreadCardGrouping(ThreadCardGrouping.PER_MESSAGE),
-                LauncherShellAction.SelectCardsShowStageSpine(enabled = true),
             )
 
         actions.forEach { action ->

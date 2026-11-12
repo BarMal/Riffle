@@ -2,8 +2,10 @@ package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
-import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
+import androidx.compose.ui.res.stringResource
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 
 @Composable
@@ -11,7 +13,7 @@ internal fun SettingsMotionPageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsSection(title = "Motion") {
+    SettingsSection(title = stringResource(R.string.settings_section_motion)) {
         val performanceTargetFps = state.settings.motion.performanceTargetFps
         val view = LocalView.current
         val frameRateGateway =
@@ -25,41 +27,33 @@ internal fun SettingsMotionPageContent(
         val effectiveChoice = frameRateAvailability.effectiveChoice
         if (effectiveChoice == null) {
             SettingsListRow(
-                title = "Animation performance",
+                modifier = Modifier.settingAnchor(SettingKey.MOTION_PERFORMANCE),
+                title = SettingKey.MOTION_PERFORMANCE.label(),
                 subtitle = frameRateAvailability.settingsDescription(),
                 trailingContent = {
-                    SettingsButtonText(text = "Unavailable")
+                    SettingsButtonText(text = stringResource(R.string.settings_motion_unavailable))
                 },
             )
         } else {
-            SettingsClickableRow(
-                title = "Animation performance",
+            SettingsChoiceRow(
+                modifier = Modifier.settingAnchor(SettingKey.MOTION_PERFORMANCE),
+                title = SettingKey.MOTION_PERFORMANCE.label(),
                 subtitle = frameRateAvailability.settingsDescription(),
-                onClick = {
-                    onAction(
-                        LauncherShellAction.SelectMotionPerformanceTargetFps(
-                            nextDockShelfFrameRateTarget(
-                                effectiveChoice.targetFps,
-                                frameRateAvailability.choices,
-                            ),
-                        ),
-                    )
-                },
-                trailingContent = {
-                    SettingsButtonText(text = "${effectiveChoice.targetFps.framesPerSecond} fps")
-                },
+                options = frameRateAvailability.choices.map(DockShelfFrameRateChoice::targetFps),
+                selected = effectiveChoice.targetFps,
+                onSelect = { target -> onAction(LauncherShellAction.SelectMotionPerformanceTargetFps(target)) },
+                label = { target -> "${target.framesPerSecond} fps" },
             )
         }
         val motion = state.settings.motion
-        SettingsClickableRow(
-            title = "Reduced motion",
+        SettingsChoiceRow(
+            modifier = Modifier.settingAnchor(SettingKey.MOTION_REDUCED),
+            title = SettingKey.MOTION_REDUCED.label(),
             subtitle = reducedMotionDescription(motion.reducedMotionPreference, motion.systemReducedMotion),
-            onClick = {
-                onAction(LauncherShellAction.SelectReducedMotionPreference(motion.reducedMotionPreference.next()))
-            },
-            trailingContent = {
-                SettingsButtonText(text = motion.reducedMotionPreference.settingsLabel())
-            },
+            options = ReducedMotionPreference.entries,
+            selected = motion.reducedMotionPreference,
+            onSelect = { preference -> onAction(LauncherShellAction.SelectReducedMotionPreference(preference)) },
+            label = { preference -> preference.settingsLabel() },
         )
         HapticStrengthSetting(
             selectedStrength = state.settings.haptics.feedbackStrength,
@@ -89,16 +83,6 @@ internal fun reducedMotionDescription(
         ReducedMotionPreference.ON -> "Minimise launcher animations"
         ReducedMotionPreference.OFF -> "Always animate, even when system animations are off"
     }
-
-internal fun nextDockShelfFrameRateTarget(
-    currentTargetFps: MotionPerformanceTargetFps,
-    choices: List<DockShelfFrameRateChoice>,
-): MotionPerformanceTargetFps {
-    val targets = choices.map(DockShelfFrameRateChoice::targetFps)
-    if (targets.isEmpty()) return currentTargetFps
-    val currentIndex = targets.indexOf(currentTargetFps)
-    return targets[(currentIndex + 1) % targets.size]
-}
 
 private fun DockShelfFrameRateAvailability.settingsDescription(): String {
     val effectiveFrameRateChoice = effectiveChoice

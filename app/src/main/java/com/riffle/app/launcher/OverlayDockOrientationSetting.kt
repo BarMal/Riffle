@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 
 @Composable
@@ -9,7 +10,8 @@ internal fun OverlayDockExpandedOrientationSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsChoiceRow(
-        title = "Expanded orientation",
+        modifier = Modifier.settingAnchor(SettingKey.FLOATING_ORIENTATION),
+        title = SettingKey.FLOATING_ORIENTATION.label(),
         subtitle = orientation.label,
         options = OverlayDockExpandedOrientation.entries,
         selected = orientation,

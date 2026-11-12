@@ -14,7 +14,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.home.DockModel
-import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,23 +24,22 @@ class DockSettingLayoutTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun simplifiedDockSettingsKeepHeightAndWidthControlsWithoutSlotPlaceholders() {
+    fun simplifiedDockSettingsKeepIconSizeAndWidthControlsWithoutSlotPlaceholders() {
         composeRule.setContent {
             MaterialTheme {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     DockSetting(
                         dock = DockModel(capacity = 4),
-                        notificationAccessStatus = NotificationAccessStatus.GRANTED,
                         onAction = {},
                     )
                 }
             }
         }
 
-        composeRule.onNodeWithText("Dock height").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Icon size").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Dock width").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Dock corner radius").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Grid to dock controls spacing").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Spacing to the grid").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Fit content").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Full width").performScrollTo().assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Dock alignment").performScrollTo().assertIsDisplayed()
@@ -51,7 +49,7 @@ class DockSettingLayoutTest {
             .assertIsDisplayed()
             .assertHasClickAction()
             .assertIsNotSelected()
-        composeRule.onNodeWithText("Center").performScrollTo().assertIsDisplayed().assertIsSelected()
+        composeRule.onNodeWithText("Centre").performScrollTo().assertIsDisplayed().assertIsSelected()
         composeRule.onNodeWithText("End").performScrollTo().assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Dock slots").assertDoesNotExist()
         composeRule.onNodeWithText("Dock item spacing").assertDoesNotExist()

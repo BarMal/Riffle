@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,27 +27,46 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun SettingsSurface(
     state: SettingsSurfaceState,
     initialPage: SettingsPage = SettingsPage.MAIN,
+    initialAnchor: SettingKey? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     // Keep the active page and its per-page scroll position through activity recreation,
     // while this settings session remains open. Leaving Settings removes this state.
     val selectedPage = rememberSaveable(initialPage) { mutableStateOf(initialPage) }
+    val pendingAnchor = rememberSaveable(initialPage, initialAnchor) { mutableStateOf(initialAnchor) }
     val pageScrollStates = settingsPageScrollStates()
     val snackbarHostState = remember { SnackbarHostState() }
+    val anchors = remember { SettingsAnchors() }
+    ScrollToPendingAnchor(
+        page = selectedPage.value,
+        anchor = pendingAnchor.value,
+        anchors = anchors,
+        onScrolled = { pendingAnchor.value = null },
+    )
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
+        pendingAnchor.value = null
         selectedPage.value = settingsBackTarget(selectedPage.value)
     }
 
@@ -62,10 +82,13 @@ fun SettingsSurface(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             SettingsPageHeader(
-                title = selectedPage.value.title,
+                title = stringResource(selectedPage.value.titleRes),
                 appVersionLabel = state.appVersionLabel,
                 showBack = selectedPage.value != SettingsPage.MAIN,
-                onBack = { selectedPage.value = settingsBackTarget(selectedPage.value) },
+                onBack = {
+                    pendingAnchor.value = null
+                    selectedPage.value = settingsBackTarget(selectedPage.value)
+                },
                 onAction = onAction,
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -79,13 +102,23 @@ fun SettingsSurface(
             // rather than sharing this page-wide scroll container.
             val settingsContentModifier =
                 pageContentModifier.verticalScroll(settingsPageScrollStateFor(pageScrollStates, selectedPage.value))
-            CompositionLocalProvider(LocalSettingsSnackbarHostState provides snackbarHostState) {
+            CompositionLocalProvider(
+                LocalSettingsSnackbarHostState provides snackbarHostState,
+                LocalSettingsAnchors provides anchors,
+            ) {
                 SettingsPageContent(
                     modifier = settingsContentModifier,
                     state = state,
                     page = selectedPage.value,
-                    onPageSelected = { page -> selectedPage.value = page },
+                    onPageSelected = { page ->
+                        pendingAnchor.value = null
+                        selectedPage.value = page
+                    },
                     onAction = onAction,
+                    onSettingSelected = { target ->
+                        pendingAnchor.value = target.anchor
+                        selectedPage.value = target.page
+                    },
                 )
             }
             // Takes no room until a page announces something (the Workspaces page's confirmations and Undo).
@@ -113,6 +146,7 @@ private fun ColumnScope.SettingsPageHeader(
     ) {
         Column {
             Text(
+                modifier = Modifier.semantics { heading() },
                 text = title,
                 style = MaterialTheme.typography.displaySmall,
             )
@@ -125,11 +159,11 @@ private fun ColumnScope.SettingsPageHeader(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (showBack) {
                 TextButton(onClick = onBack) {
-                    SettingsButtonText(text = "Back")
+                    SettingsButtonText(text = stringResource(R.string.settings_back))
                 }
             }
             TextButton(onClick = { onAction(LauncherShellAction.OpenDefaultHome) }) {
-                SettingsButtonText(text = "Home")
+                SettingsButtonText(text = stringResource(R.string.settings_home))
             }
         }
     }
@@ -199,3 +233,25 @@ internal fun settingsPageScrollStateFor(
 ): ScrollState = pageScrollStates.getValue(page)
 
 private const val SETTINGS_PAGE_MAX_WIDTH_DP = 840
+
+/**
+ * Once the page that holds [anchor] has composed its row, scrolls it into view (after a frame, so it is laid out) and
+ * clears the request. A page with no such row clears nothing until the page changes.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ScrollToPendingAnchor(
+    page: SettingsPage,
+    anchor: SettingKey?,
+    anchors: SettingsAnchors,
+    onScrolled: () -> Unit,
+) {
+    LaunchedEffect(page, anchor) {
+        if (anchor == null || anchor.page != page) return@LaunchedEffect
+        val requester = snapshotFlow { anchors.requesters[anchor] }.filterNotNull().first()
+        withFrameNanos { }
+        withFrameNanos { }
+        requester.bringIntoView()
+        onScrolled()
+    }
+}

@@ -73,9 +73,8 @@ class SourcesSettingsTextTest {
     }
 
     @Test
-    fun theExclusionRulesEntryPointIsTheRealPage() {
-        assertEquals(ExclusionsSettingsText.TITLE, SettingsPage.EXCLUSIONS.title)
-        assertEquals("Hidden items and rules", ExclusionsSettingsText.TITLE)
+    fun theHiddenItemsPageIsNamedHiddenItems() {
+        assertEquals("Hidden items", ExclusionsSettingsText.TITLE)
         assertFalse(ExclusionsSettingsText.TITLE.contains("soon"))
     }
 

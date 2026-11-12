@@ -66,12 +66,9 @@ class LiquidGlassSettingsTest {
     }
 
     @Test
-    fun withReducedTransparencyKeepsTheAdaptiveStageCopiesInStep() {
+    fun withReducedTransparencyCanBeTurnedBackOff() {
         val reduced = LauncherSettings().withReducedTransparency(true)
 
-        assertTrue(reduced.cards.adaptiveStageAppearance.motion.reducedTransparency)
-        assertTrue(reduced.cards.unfoldedAppearance.motion.reducedTransparency)
-        assertFalse(reduced.withReducedTransparency(false).cards.adaptiveStageAppearance.motion.reducedTransparency)
         assertFalse(reduced.withReducedTransparency(false).appearance.reducedTransparency)
     }
 

@@ -11,7 +11,6 @@ import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -39,7 +38,6 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
@@ -49,15 +47,12 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
-import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
-import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
-import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -377,10 +372,6 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
                 ),
                 settings(
-                    "SelectLibraryReturnTarget",
-                    LauncherShellAction.SelectLibraryReturnTarget(LibraryReturnTarget.LIBRARY),
-                ),
-                settings(
                     "AddRssFeed",
                     LauncherShellAction.AddRssFeed(FeedUrl.parse("https://example.com/feed.xml").getOrThrow()),
                 ),
@@ -488,42 +479,6 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectMotionPerformanceTargetFps",
                     LauncherShellAction.SelectMotionPerformanceTargetFps(MotionPerformanceTargetFps.FPS_120),
-                ),
-                settings("SelectContextualEnabled", LauncherShellAction.SelectContextualEnabled(enabled = true)),
-                settings(
-                    "UpdateAdaptiveStageAppearance",
-                    LauncherShellAction.UpdateAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.modern()),
-                ),
-                settings(
-                    "UpdateUnfoldedAdaptiveStageAppearance",
-                    LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance(
-                        AdaptiveStageAppearanceSettings.unfolded(),
-                    ),
-                ),
-                settings(
-                    "SelectAdaptiveStagePaneArrangement",
-                    LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
-                ),
-                settings(
-                    "SelectThreadMessageOrder",
-                    LauncherShellAction.SelectThreadMessageOrder(ThreadMessageOrder.RECENT_FIRST),
-                ),
-                settings(
-                    "SelectThreadCardGrouping",
-                    LauncherShellAction.SelectThreadCardGrouping(ThreadCardGrouping.PER_MESSAGE),
-                ),
-                settings(
-                    "SelectCardsFoldedShowAllNotifications",
-                    LauncherShellAction.SelectCardsFoldedShowAllNotifications(enabled = true),
-                ),
-                settings(
-                    "SelectCardsUnfoldedShowAllNotifications",
-                    LauncherShellAction.SelectCardsUnfoldedShowAllNotifications(enabled = true),
-                ),
-                settings("SelectCardsShowStageSpine", LauncherShellAction.SelectCardsShowStageSpine(enabled = true)),
-                settings(
-                    "SelectCardsPageVerticalOffset",
-                    LauncherShellAction.SelectCardsPageVerticalOffset(offsetDp = 24),
                 ),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),

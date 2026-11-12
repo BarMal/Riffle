@@ -16,10 +16,12 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Versioned JSON for the two device-local ICS stores. Neither document is ever part of the launcher backup
- * or Auto Backup (feed URLs can carry secret tokens): the settings document holds the URLs, the cache document
- * holds parsed events and no URL. Decoding is defensive: an unknown version or unreadable document reads as
- * nothing stored, an unreadable entry is dropped, and every URL is validated again (https, public host).
+ * Versioned JSON for the two device-local ICS stores. The cache is never part of any backup. The settings document
+ * holds the feed URLs, which can carry a private key: it is excluded from Android Auto Backup and device transfer, and
+ * goes into the launcher's own backup file only because the user exports that file by hand (the Backup page says so).
+ * The cache document holds parsed events and no URL. Decoding is defensive: an unknown version or unreadable
+ * document reads as nothing stored, an unreadable entry is dropped, and every URL is validated again (https, public
+ * host).
  */
 internal object IcsJsonCodecs {
     const val CURRENT_SETTINGS_VERSION = 1

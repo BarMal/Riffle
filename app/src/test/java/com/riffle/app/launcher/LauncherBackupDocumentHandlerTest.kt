@@ -132,7 +132,6 @@ class LauncherBackupDocumentHandlerTest {
                 LauncherSettings(
                     appearance =
                         AppearanceSettings(
-                            fullscreenHome = true,
                             hideStatusBarOnHome = true,
                             hideNavigationBarOnHome = true,
                         ),

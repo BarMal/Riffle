@@ -72,7 +72,6 @@ class LauncherBackupExportCoordinatorTest {
                 appearance =
                     AppearanceSettings(
                         wallpaper = WallpaperSettings(source = WallpaperSource.SOLID_COLOR),
-                        fullscreenHome = false,
                         hideStatusBarOnHome = true,
                         hideNavigationBarOnHome = false,
                     ),

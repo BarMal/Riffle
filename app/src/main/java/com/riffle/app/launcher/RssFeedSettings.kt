@@ -12,9 +12,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.RssSettings
@@ -31,7 +32,7 @@ internal fun SettingsRssPageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsSection(title = "RSS feeds") {
+    SettingsSection(title = stringResource(R.string.settings_page_stream_feeds)) {
         RssFeedSettings(settings = state.settings.rss, onAction = onAction)
     }
 }
@@ -42,7 +43,7 @@ private fun RssFeedSettings(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SettingsTextColumn(
+        SettingsListRow(
             title = "Privacy",
             subtitle =
                 "Riffle stores only the feed URLs you add, their enabled state, and your background " +
@@ -67,8 +68,9 @@ private fun RssFeedListSetting(
     feeds: List<FeedConfiguration>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsTextColumn(
-        title = "Configured feeds",
+    SettingsListRow(
+        modifier = Modifier.settingAnchor(SettingKey.FEEDS_LIST),
+        title = SettingKey.FEEDS_LIST.label(),
         subtitle = feeds.feedCountLabel(),
     )
     val coordinator = LocalFeedRefreshCoordinator.current
@@ -90,32 +92,27 @@ private fun RssFeedRow(
     statusText: String?,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = feed.url.value,
-            subtitle =
-                if (feed.enabled) {
-                    statusText?.let { status -> "Enabled. $status" } ?: "Enabled"
-                } else {
-                    "Disabled"
-                },
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                onClick = { onAction(LauncherShellAction.SetRssFeedEnabled(feed.id, !feed.enabled)) },
-            ) {
-                SettingsButtonText(text = if (feed.enabled) "Disable" else "Enable")
+    SettingsListRow(
+        title = feed.url.value,
+        subtitle =
+            if (feed.enabled) {
+                statusText?.let { status -> "Enabled. $status" } ?: "Enabled"
+            } else {
+                "Disabled"
+            },
+        trailingContent = {
+            Row {
+                TextButton(
+                    onClick = { onAction(LauncherShellAction.SetRssFeedEnabled(feed.id, !feed.enabled)) },
+                ) {
+                    SettingsButtonText(text = if (feed.enabled) "Disable" else "Enable")
+                }
+                TextButton(onClick = { onAction(LauncherShellAction.RemoveRssFeed(feed.id)) }) {
+                    SettingsButtonText(text = "Remove")
+                }
             }
-            TextButton(onClick = { onAction(LauncherShellAction.RemoveRssFeed(feed.id)) }) {
-                SettingsButtonText(text = "Remove")
-            }
-        }
-    }
+        },
+    )
 }
 
 private const val GENERIC_INVALID_FEED_URL_MESSAGE = "Enter a valid https feed URL"
@@ -125,7 +122,7 @@ private fun RssAddFeedSetting(onAction: (LauncherShellAction) -> Unit) {
     var url by rememberSaveable { mutableStateOf("") }
     var errorText by rememberSaveable { mutableStateOf<String?>(null) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = Modifier.settingAnchor(SettingKey.FEEDS_ADD), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         OutlinedTextField(
             modifier = Modifier.fillMaxWidth(),
             value = url,

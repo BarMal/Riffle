@@ -1,11 +1,6 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.apps.AppProfileType
-import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.contextual.ContextualBehaviorSelector
-import com.riffle.core.domain.launcher.contextual.ContextualSignalPlanInput
-import com.riffle.core.domain.launcher.contextual.ContextualSignalPlanner
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanApplier
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanApplyRejectionReason
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanApplyResult
@@ -52,7 +47,7 @@ internal fun LauncherShellState.refreshedGeneratedPages(layout: HomeLayout): Hom
                             }
                     }
                 },
-        ).withContextualGeneratedPageSelected(contextualGeneratedPageKinds())
+        )
 }
 
 private fun LauncherShellState.generatedPageInput() =
@@ -60,36 +55,6 @@ private fun LauncherShellState.generatedPageInput() =
         installedApps = installedApps,
         appCategoriesAvailable = installedApps.any { app -> !app.category.isNullOrBlank() },
     )
-
-private fun LauncherShellState.contextualGeneratedPageKinds(): List<GeneratedLauncherPageKind> =
-    ContextualBehaviorSelector
-        .select(
-            settings = launcherSettings.contextual,
-            signals =
-                ContextualSignalPlanner.plan(
-                    ContextualSignalPlanInput(
-                        personalInstalledAppCount = installedApps.countProfile(AppProfileType.PERSONAL),
-                        workInstalledAppCount = installedApps.countProfile(AppProfileType.WORK),
-                        notificationGroupCount = notificationGroupsByApp.size,
-                        notificationCount = notificationCountsByCategory.values.sum(),
-                    ),
-                ),
-        ).pageKinds
-
-@Suppress("MaxLineLength")
-private fun List<InstalledApp>.countProfile(type: AppProfileType): Int =
-    count { app -> app.identity.profile.type == type }
-
-@Suppress("MaxLineLength")
-private fun HomeLayout.withContextualGeneratedPageSelected(
-    contextualPageKinds: List<GeneratedLauncherPageKind>,
-): HomeLayout {
-    val pageId =
-        contextualPageKinds.firstNotNullOfOrNull { kind ->
-            pages.firstOrNull { page -> (page.type as? LauncherPageType.Generated)?.kind == kind }?.id
-        } ?: return this
-    return if (pageId == selectedPageId) this else copy(selectedPageId = pageId)
-}
 
 private val appBackedGeneratedPageKinds =
     setOf(

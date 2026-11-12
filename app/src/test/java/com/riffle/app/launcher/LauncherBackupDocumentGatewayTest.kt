@@ -92,7 +92,6 @@ class LauncherBackupDocumentGatewayTest {
                 LauncherSettings(
                     appearance =
                         AppearanceSettings(
-                            fullscreenHome = false,
                             hideStatusBarOnHome = true,
                             hideNavigationBarOnHome = false,
                         ),

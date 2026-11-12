@@ -6,12 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
-import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateId
-import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -22,14 +17,8 @@ import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
-import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
-import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
-import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
-import com.riffle.core.domain.launcher.settings.AdaptiveStageTypography
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
-import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HomeBehaviourSettings
@@ -39,13 +28,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
-import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
-import com.riffle.core.domain.launcher.settings.MAX_STACK_CURVE_FRACTION
-import com.riffle.core.domain.launcher.settings.MAX_STACK_HORIZONTAL_OFFSET_FRACTION
-import com.riffle.core.domain.launcher.settings.MAX_STACK_VERTICAL_SPACING_FRACTION
-import com.riffle.core.domain.launcher.settings.MIN_STACK_HORIZONTAL_OFFSET_FRACTION
-import com.riffle.core.domain.launcher.settings.MIN_STACK_VERTICAL_SPACING_FRACTION
 import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -62,15 +45,12 @@ import com.riffle.core.domain.launcher.settings.withReducedTransparency
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.json.JSONArray
 import org.json.JSONObject
-import kotlin.math.roundToInt
 
 fun encodeLauncherSettings(settings: LauncherSettings): String =
     JSONObject()
         .put("version", LAUNCHER_SETTINGS_JSON_VERSION)
         .put("appDrawer", encodeAppDrawerSettings(settings.appDrawer))
         .put("appearance", encodeAppearance(settings.appearance))
-        .put("cards", encodeCardsSettings(settings.cards))
-        .put("contextual", encodeContextual(settings.contextual))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
         .put("home", encodeHomeBehaviour(settings.home))
@@ -83,65 +63,81 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("search", encodeSearchSettings(settings.search))
         .toString()
 
+/**
+ * Decodes a stored settings blob. The blob's `version` is read, not assumed: a blob from an older build (missing or
+ * lower version) goes through the legacy folds below, and one from a newer build decodes whatever this build knows,
+ * keeps the default for anything it does not understand and never throws for a changed section (see [guarded]).
+ * Only text that is not a JSON object at all throws; [decodeStoredLauncherSettings] turns that into null.
+ */
 fun decodeLauncherSettings(value: String): LauncherSettings =
     JSONObject(value).let { json ->
-        decodeLauncherSections(json).let { decoded ->
+        decodeLauncherSections(json, version = json.optInt("version", 0)).let { decoded ->
             decoded.withReducedTransparency(json.decodeReducedTransparency(decoded))
         }
     }
 
-private fun decodeLauncherSections(json: JSONObject): LauncherSettings {
+/**
+ * The version a stored blob declares: 0 when it declares none (saved before versions were read), null when it is not a
+ * JSON object.
+ */
+fun storedLauncherSettingsVersion(value: String): Int? =
+    runCatching { JSONObject(value).optInt("version", 0) }.getOrNull()
+
+/** True when [storedBlob] was written by a newer build than this one, so overwriting it must keep a copy first. */
+fun isNewerThanThisBuild(storedBlob: String?): Boolean =
+    storedBlob?.let(::storedLauncherSettingsVersion)?.let { it > LAUNCHER_SETTINGS_JSON_VERSION } == true
+
+private fun decodeLauncherSections(
+    json: JSONObject,
+    version: Int,
+): LauncherSettings {
     val defaults = LauncherSettings()
     return defaults.copy(
-        appDrawer = json.optJSONObject("appDrawer")?.toAppDrawerSettings(defaults.appDrawer) ?: defaults.appDrawer,
-        appearance = json.optJSONObject("appearance")?.toAppearance(defaults.appearance) ?: defaults.appearance,
-        cards = json.optJSONObject("cards")?.toCardsSettings(defaults.cards) ?: defaults.cards,
-        contextual = json.optJSONObject("contextual")?.toContextual(defaults.contextual) ?: defaults.contextual,
-        gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
-        haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
-        home = json.section("home", defaults.home, JSONObject::toHomeBehaviour),
-        liquidGlass =
-            json.optJSONObject("liquidGlass")?.toLiquidGlass(defaults.liquidGlass) ?: defaults.liquidGlass,
-        motion = json.optJSONObject("motion")?.toMotionSettings(defaults.motion) ?: defaults.motion,
+        appDrawer = json.guarded("appDrawer", defaults.appDrawer, JSONObject::toAppDrawerSettings),
+        appearance = json.guarded("appearance", defaults.appearance) { toAppearance(it, version) },
+        gestures = json.guarded("gestures", defaults.gestures, JSONObject::toGestures),
+        haptics = json.guarded("haptics", defaults.haptics, JSONObject::toHaptics),
+        home = json.guarded("home", defaults.home, JSONObject::toHomeBehaviour),
+        liquidGlass = json.guarded("liquidGlass", defaults.liquidGlass, JSONObject::toLiquidGlass),
+        motion = json.guarded("motion", defaults.motion, JSONObject::toMotionSettings),
         notificationHiding =
-            json.optJSONObject("notificationHiding")?.toNotificationHiding(defaults.notificationHiding)
-                ?: defaults.notificationHiding,
-        overlayDock =
-            json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
-        privacy = json.section("privacy", defaults.privacy, JSONObject::toPrivacy),
-        rss = json.optJSONObject("rss")?.toRssSettings(defaults.rss) ?: defaults.rss,
-        search = json.optJSONObject("search")?.toSearchSettings(defaults.search) ?: defaults.search,
+            json.guarded("notificationHiding", defaults.notificationHiding, JSONObject::toNotificationHiding),
+        overlayDock = json.guarded("overlayDock", defaults.overlayDock, JSONObject::toOverlayDock),
+        privacy = json.guarded("privacy", defaults.privacy, JSONObject::toPrivacy),
+        rss = json.guarded("rss", defaults.rss, JSONObject::toRssSettings),
+        search = json.guarded("search", defaults.search, JSONObject::toSearchSettings),
     )
 }
 
+/** Decodes the object under [key] with [parse]; a missing, mistyped or unparseable section reads as [default]. */
+private fun <T> JSONObject.guarded(
+    key: String,
+    default: T,
+    parse: JSONObject.(T) -> T,
+): T = runCatching { optJSONObject(key)?.parse(default) }.getOrNull() ?: default
+
 /**
- * Reduced transparency lives in `appearance`. Settings saved before that carry it only in the
- * adaptive stage's motion block, so a missing top-level key reads the old location (either layout).
+ * Reduced transparency lives in `appearance`. Settings saved before that carry it only in the removed adaptive stage's
+ * motion block (`cards`, either layout), so a missing top-level key reads that old location from the raw JSON.
  */
 private fun JSONObject.decodeReducedTransparency(decoded: LauncherSettings): Boolean =
     optJSONObject("appearance")?.takeIf { it.has("reducedTransparency") }?.optBoolean("reducedTransparency")
-        ?: (
-            decoded.cards.adaptiveStageAppearance.motion.reducedTransparency ||
-                decoded.cards.unfoldedAppearance.motion.reducedTransparency
-        )
+        ?: optJSONObject("cards")?.let { cards ->
+            listOf("timeScapeAppearance", "adaptiveStageUnfoldedAppearance").any { key ->
+                cards.optJSONObject(key)?.optJSONObject("motion")?.optBoolean("reducedTransparency", false) == true
+            }
+        }
+        ?: decoded.appearance.reducedTransparency
 
 private fun encodeAppDrawerSettings(settings: AppDrawerSettings): JSONObject =
     JSONObject()
         .put("libraryViews", encodeLibraryViews(settings.libraryViews))
         .put("iconGridColumns", settings.iconGridColumns)
-        .put("afterLeavingLibrary", settings.afterLeavingLibrary.name)
 
 private fun JSONObject.toAppDrawerSettings(defaults: AppDrawerSettings): AppDrawerSettings =
     AppDrawerSettings(
         libraryViews = decodeLibraryViews(defaults.libraryViews),
         iconGridColumns = optInt("iconGridColumns", defaults.iconGridColumns),
-        // Absent (settings saved before #1243) or unknown: the default, Library (never forces a
-        // switch off whatever mode was last showing).
-        afterLeavingLibrary =
-            optString("afterLeavingLibrary")
-                .takeIf(String::isNotEmpty)
-                ?.let { name -> LibraryReturnTarget.entries.firstOrNull { it.name == name } }
-                ?: defaults.afterLeavingLibrary,
     ).coerced()
 
 private fun encodeLibraryViews(views: Map<HomeLayoutDeviceClass, LibraryView>): JSONObject =
@@ -172,13 +168,6 @@ private fun JSONObject.decodeLibraryViews(
         else -> defaults
     }
 }
-
-/** Decodes the object under [key] with [parse], or returns [default] when it is absent or not an object. */
-private fun <T> JSONObject.section(
-    key: String,
-    default: T,
-    parse: JSONObject.(T) -> T,
-): T = optJSONObject(key)?.parse(default) ?: default
 
 private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
     JSONObject().put("returnBehavior", settings.returnBehavior.name)
@@ -213,598 +202,16 @@ private fun JSONObject.toSearchSettings(defaults: SearchSettings): SearchSetting
                 ?: defaults.resultPresentation,
     )
 
-private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
-    JSONObject()
-        .put("stagePreferencesByLayout", JSONArray(settings.stagePreferencesByLayout.map(::encodeStagePreferences)))
-        .put("timeScapeAppearance", encodeAdaptiveStageAppearance(settings.adaptiveStageAppearance))
-        .put("adaptiveStageUnfoldedAppearance", encodeAdaptiveStageAppearance(settings.unfoldedAppearance))
-        .put("timeScapeTemplateId", settings.adaptiveStageTemplateId.value)
-        .put("timeScapePaneArrangement", settings.adaptiveStagePaneArrangement.name)
-        .put("threadMessageOrder", settings.threadMessageOrder.name)
-        .put("threadCardGrouping", settings.threadCardGrouping.name)
-        .put("foldedShowAllNotifications", settings.foldedShowAllNotifications)
-        .put("unfoldedShowAllNotifications", settings.unfoldedShowAllNotifications)
-        .put("showStageSpine", settings.showStageSpine)
-        .put("pageVerticalOffsetDp", settings.pageVerticalOffsetDp)
-
-private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
-    JSONObject()
-        .put("viewMode", entry.key.viewMode.name)
-        .put("deviceClass", entry.key.deviceClass.name)
-        .put("pinnedStageIds", JSONArray(entry.value.pinnedStageIds.map(::encodeAppStageId)))
-        .put("selectedStageId", entry.value.selectedStageId?.let(::encodeAppStageId))
-
-private fun encodeAppStageId(id: AppStageId): JSONObject =
-    JSONObject().put("packageName", id.packageName.value).put("profileId", id.profileId.value)
-
-private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
-    val stagePreferencesByLayout =
-        optJSONArray("stagePreferencesByLayout")
-            ?.let { entries ->
-                (0 until entries.length())
-                    .mapNotNull { index -> entries.optJSONObject(index)?.toStagePreferencesEntry() }
-                    .toMap()
-            }
-            ?: legacyStagePreferences()?.let { preferences ->
-                HomeLayoutDeviceClass.entries.associate { deviceClass ->
-                    HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, deviceClass) to preferences
-                }
-            }
-            ?: defaults.stagePreferencesByLayout
-    return CardsSettings(
-        stagePreferencesByLayout = stagePreferencesByLayout,
-        adaptiveStageAppearance =
-            optJSONObject("timeScapeAppearance")?.toAdaptiveStageAppearance(defaults.adaptiveStageAppearance)
-                ?: defaults.adaptiveStageAppearance,
-        unfoldedAppearance =
-            optJSONObject("adaptiveStageUnfoldedAppearance")?.toAdaptiveStageAppearance(defaults.unfoldedAppearance)
-                ?: defaults.unfoldedAppearance,
-        adaptiveStageTemplateId =
-            optString("timeScapeTemplateId", defaults.adaptiveStageTemplateId.value)
-                .takeIf(String::isNotBlank)
-                ?.let(::AdaptiveStageTemplateId)
-                ?: defaults.adaptiveStageTemplateId,
-        adaptiveStagePaneArrangement = enumOrDefault("timeScapePaneArrangement", defaults.adaptiveStagePaneArrangement),
-        threadMessageOrder = enumOrDefault("threadMessageOrder", defaults.threadMessageOrder),
-        threadCardGrouping = enumOrDefault("threadCardGrouping", defaults.threadCardGrouping),
-        foldedShowAllNotifications = optBoolean("foldedShowAllNotifications", defaults.foldedShowAllNotifications),
-        unfoldedShowAllNotifications =
-            optBoolean("unfoldedShowAllNotifications", defaults.unfoldedShowAllNotifications),
-        // Absent from settings saved before #1212, which takes the default: off.
-        showStageSpine = optBoolean("showStageSpine", defaults.showStageSpine),
-        pageVerticalOffsetDp = optInt("pageVerticalOffsetDp", defaults.pageVerticalOffsetDp),
-    ).coerced()
-}
-
-private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSettings): JSONObject =
-    settings.coerce().let { appearance ->
-        JSONObject()
-            .put("version", appearance.version)
-            .put(
-                "geometry",
-                JSONObject().put(
-                    "cardAspectRatioPercent",
-                    appearance.geometry.cardAspectRatioPercent,
-                ).put(
-                    "cardSizePercent",
-                    appearance.geometry.cardSizePercent,
-                ).put(
-                    "focusedScalePercent",
-                    appearance.geometry.focusedScalePercent,
-                ).put(
-                    "focusedGapDp",
-                    appearance.geometry.focusedGapDp,
-                ).put(
-                    "visibleDepth",
-                    appearance.geometry.visibleDepth,
-                ).put(
-                    "aboveFocusDepth",
-                    appearance.geometry.aboveFocusDepth,
-                ).put(
-                    "stackPeakPercent",
-                    appearance.geometry.stackPeakPercent,
-                ).put(
-                    "overlapPercent",
-                    appearance.geometry.overlapPercent,
-                ).put(
-                    "verticalSpacingPercent",
-                    appearance.geometry.verticalSpacingPercent,
-                ).put(
-                    "horizontalOffsetPercent",
-                    appearance.geometry.horizontalOffsetPercent,
-                ).put(
-                    "curvePercent",
-                    appearance.geometry.curvePercent,
-                ).put(
-                    "arcWidthPercent",
-                    appearance.geometry.arcWidthPercent,
-                ).put(
-                    "fanDirection",
-                    appearance.geometry.fanDirection.name,
-                ).put(
-                    "verticalFanDirection",
-                    appearance.geometry.verticalFanDirection.name,
-                ).put(
-                    "rotationDegrees",
-                    appearance.geometry.rotationDegrees,
-                ).put(
-                    "cornerRadiusDp",
-                    appearance.geometry.cornerRadiusDp,
-                ).put("contentPaddingDp", appearance.geometry.contentPaddingDp),
-            )
-            .put(
-                "surface",
-                JSONObject().put(
-                    "backgroundSource",
-                    appearance.surface.backgroundSource.name,
-                ).put(
-                    "cardEffect",
-                    appearance.surface.cardEffect.name,
-                ).put(
-                    "customBackgroundArgb",
-                    appearance.surface.customBackgroundArgb,
-                ).put(
-                    "glassTransparencyPercent",
-                    appearance.surface.glassTransparencyPercent,
-                ).put(
-                    "glassTintArgb",
-                    appearance.surface.glassTintArgb,
-                ).put(
-                    "blurStrengthPercent",
-                    appearance.surface.blurStrengthPercent,
-                ).put(
-                    "saturationPercent",
-                    appearance.surface.saturationPercent,
-                ).put(
-                    "contrastPercent",
-                    appearance.surface.contrastPercent,
-                ).put(
-                    "outlineWidthDp",
-                    appearance.surface.outlineWidthDp,
-                ).put(
-                    "highlightPercent",
-                    appearance.surface.highlightPercent,
-                ).put(
-                    "shadowElevationDp",
-                    appearance.surface.shadowElevationDp,
-                ).put("textureIntensityPercent", appearance.surface.textureIntensityPercent),
-            )
-            .put(
-                "typography",
-                JSONObject().put(
-                    "accentSource",
-                    appearance.typography.accentSource.name,
-                ).put(
-                    "customAccentArgb",
-                    appearance.typography.customAccentArgb,
-                ).put(
-                    "automaticForegroundContrast",
-                    appearance.typography.automaticForegroundContrast,
-                ).put(
-                    "contentDensity",
-                    appearance.typography.contentDensity.name,
-                ).put("textScalePercent", appearance.typography.textScalePercent),
-            )
-            .put(
-                "motion",
-                JSONObject().put(
-                    "settleDurationMillis",
-                    appearance.motion.settleDurationMillis,
-                ).put(
-                    "reflowDurationMillis",
-                    appearance.motion.reflowDurationMillis,
-                ).put(
-                    "enterDurationMillis",
-                    appearance.motion.enterDurationMillis,
-                ).put(
-                    "exitDurationMillis",
-                    appearance.motion.exitDurationMillis,
-                ).put(
-                    "expandDurationMillis",
-                    appearance.motion.expandDurationMillis,
-                ).put(
-                    "easing",
-                    appearance.motion.easing.name,
-                ).put(
-                    "springBouncinessPercent",
-                    appearance.motion.springBouncinessPercent,
-                ).put(
-                    "travelIntensityPercent",
-                    appearance.motion.travelIntensityPercent,
-                ).put(
-                    "parallaxIntensityPercent",
-                    appearance.motion.parallaxIntensityPercent,
-                ).put(
-                    "rotationIntensityPercent",
-                    appearance.motion.rotationIntensityPercent,
-                ).put(
-                    "magnetStrengthPercent",
-                    appearance.motion.magnetStrengthPercent,
-                ).put(
-                    "hapticStrength",
-                    appearance.motion.hapticStrength.name,
-                ).put(
-                    "reducedMotion",
-                    appearance.motion.reducedMotion,
-                ).put("reducedTransparency", appearance.motion.reducedTransparency),
-            )
-    }
-
-private fun JSONObject.toAdaptiveStageAppearance(
-    defaults: AdaptiveStageAppearanceSettings,
-): AdaptiveStageAppearanceSettings {
-    val geometry = optJSONObject("geometry")
-    val surface = optJSONObject("surface")
-    val typography = optJSONObject("typography")
-    val motion = optJSONObject("motion")
-    return AdaptiveStageAppearanceSettings(
-        version = optInt("version", defaults.version),
-        geometry =
-            AdaptiveStageGeometry(
-                cardAspectRatioPercent =
-                    geometry.optIntOrDefault(
-                        "cardAspectRatioPercent",
-                        defaults.geometry.cardAspectRatioPercent,
-                    ),
-                cardSizePercent =
-                    geometry.optIntOrDefault(
-                        "cardSizePercent",
-                        defaults.geometry.cardSizePercent,
-                    ),
-                focusedScalePercent =
-                    geometry.optIntOrDefault(
-                        "focusedScalePercent",
-                        defaults.geometry.focusedScalePercent,
-                    ),
-                focusedGapDp =
-                    geometry.optIntOrDefault(
-                        "focusedGapDp",
-                        defaults.geometry.focusedGapDp,
-                    ),
-                visibleDepth =
-                    geometry.optIntOrDefault(
-                        "visibleDepth",
-                        defaults.geometry.visibleDepth,
-                    ),
-                aboveFocusDepth =
-                    geometry.optIntOrDefault(
-                        "aboveFocusDepth",
-                        defaults.geometry.aboveFocusDepth,
-                    ),
-                stackPeakPercent =
-                    geometry.optIntOrDefault(
-                        "stackPeakPercent",
-                        defaults.geometry.stackPeakPercent,
-                    ),
-                overlapPercent =
-                    geometry.optIntOrDefault(
-                        "overlapPercent",
-                        defaults.geometry.overlapPercent,
-                    ),
-                verticalSpacingPercent =
-                    geometry.optPercentOrMigrateLegacyDp(
-                        percentKey = "verticalSpacingPercent",
-                        legacyDpKey = "verticalSpacingDp",
-                        default = defaults.geometry.verticalSpacingPercent,
-                        minFraction = MIN_STACK_VERTICAL_SPACING_FRACTION,
-                        maxFraction = MAX_STACK_VERTICAL_SPACING_FRACTION,
-                        legacyReferenceDp = LEGACY_REFERENCE_SAFE_HEIGHT_DP,
-                    ),
-                horizontalOffsetPercent =
-                    geometry.optPercentOrMigrateLegacyDp(
-                        percentKey = "horizontalOffsetPercent",
-                        legacyDpKey = "horizontalOffsetDp",
-                        default = defaults.geometry.horizontalOffsetPercent,
-                        minFraction = MIN_STACK_HORIZONTAL_OFFSET_FRACTION,
-                        maxFraction = MAX_STACK_HORIZONTAL_OFFSET_FRACTION,
-                        legacyReferenceDp = LEGACY_REFERENCE_SAFE_WIDTH_DP,
-                    ),
-                curvePercent =
-                    geometry.optPercentOrMigrateLegacyDp(
-                        percentKey = "curvePercent",
-                        legacyDpKey = "curveDp",
-                        default = defaults.geometry.curvePercent,
-                        minFraction = 0f,
-                        maxFraction = MAX_STACK_CURVE_FRACTION,
-                        legacyReferenceDp = LEGACY_REFERENCE_SAFE_HEIGHT_DP,
-                    ),
-                arcWidthPercent =
-                    geometry.optIntOrDefault(
-                        "arcWidthPercent",
-                        defaults.geometry.arcWidthPercent,
-                    ),
-                fanDirection =
-                    geometry.enumOrDefault(
-                        "fanDirection",
-                        defaults.geometry.fanDirection,
-                    ),
-                verticalFanDirection =
-                    geometry.enumOrDefault(
-                        "verticalFanDirection",
-                        defaults.geometry.verticalFanDirection,
-                    ),
-                rotationDegrees =
-                    geometry.optIntOrDefault(
-                        "rotationDegrees",
-                        defaults.geometry.rotationDegrees,
-                    ),
-                cornerRadiusDp =
-                    geometry.optIntOrDefault(
-                        "cornerRadiusDp",
-                        defaults.geometry.cornerRadiusDp,
-                    ),
-                contentPaddingDp =
-                    geometry.optIntOrDefault(
-                        "contentPaddingDp",
-                        defaults.geometry.contentPaddingDp,
-                    ),
-            ),
-        surface =
-            AdaptiveStageSurface(
-                backgroundSource =
-                    surface.enumOrDefault(
-                        "backgroundSource",
-                        defaults.surface.backgroundSource,
-                    ),
-                cardEffect =
-                    surface.enumOrDefault(
-                        "cardEffect",
-                        defaults.surface.cardEffect,
-                    ),
-                customBackgroundArgb =
-                    surface.optLongOrDefault(
-                        "customBackgroundArgb",
-                        defaults.surface.customBackgroundArgb,
-                    ),
-                glassTransparencyPercent =
-                    surface.optIntOrDefault(
-                        "glassTransparencyPercent",
-                        defaults.surface.glassTransparencyPercent,
-                    ),
-                glassTintArgb =
-                    surface.optLongOrDefault(
-                        "glassTintArgb",
-                        defaults.surface.glassTintArgb,
-                    ),
-                blurStrengthPercent =
-                    surface.optIntOrDefault(
-                        "blurStrengthPercent",
-                        defaults.surface.blurStrengthPercent,
-                    ),
-                saturationPercent =
-                    surface.optIntOrDefault(
-                        "saturationPercent",
-                        defaults.surface.saturationPercent,
-                    ),
-                contrastPercent =
-                    surface.optIntOrDefault(
-                        "contrastPercent",
-                        defaults.surface.contrastPercent,
-                    ),
-                outlineWidthDp =
-                    surface.optIntOrDefault(
-                        "outlineWidthDp",
-                        defaults.surface.outlineWidthDp,
-                    ),
-                highlightPercent =
-                    surface.optIntOrDefault(
-                        "highlightPercent",
-                        defaults.surface.highlightPercent,
-                    ),
-                shadowElevationDp =
-                    surface.optIntOrDefault(
-                        "shadowElevationDp",
-                        defaults.surface.shadowElevationDp,
-                    ),
-                textureIntensityPercent =
-                    surface.optIntOrDefault(
-                        "textureIntensityPercent",
-                        defaults.surface.textureIntensityPercent,
-                    ),
-            ),
-        typography =
-            AdaptiveStageTypography(
-                accentSource = typography.enumOrDefault("accentSource", defaults.typography.accentSource),
-                customAccentArgb =
-                    typography.optLongOrDefault(
-                        "customAccentArgb",
-                        defaults.typography.customAccentArgb,
-                    ),
-                automaticForegroundContrast =
-                    typography.optBooleanOrDefault(
-                        "automaticForegroundContrast",
-                        defaults.typography.automaticForegroundContrast,
-                    ),
-                contentDensity = typography.enumOrDefault("contentDensity", defaults.typography.contentDensity),
-                textScalePercent = typography.optIntOrDefault("textScalePercent", defaults.typography.textScalePercent),
-            ),
-        motion =
-            AdaptiveStageMotion(
-                settleDurationMillis =
-                    motion.optIntOrDefault(
-                        "settleDurationMillis",
-                        defaults.motion.settleDurationMillis,
-                    ),
-                reflowDurationMillis =
-                    motion.optIntOrDefault(
-                        "reflowDurationMillis",
-                        defaults.motion.reflowDurationMillis,
-                    ),
-                enterDurationMillis =
-                    motion.optIntOrDefault(
-                        "enterDurationMillis",
-                        defaults.motion.enterDurationMillis,
-                    ),
-                exitDurationMillis =
-                    motion.optIntOrDefault(
-                        "exitDurationMillis",
-                        defaults.motion.exitDurationMillis,
-                    ),
-                expandDurationMillis =
-                    motion.optIntOrDefault(
-                        "expandDurationMillis",
-                        defaults.motion.expandDurationMillis,
-                    ),
-                easing =
-                    motion.enumOrDefault(
-                        "easing",
-                        defaults.motion.easing,
-                    ),
-                springBouncinessPercent =
-                    motion.optIntOrDefault(
-                        "springBouncinessPercent",
-                        defaults.motion.springBouncinessPercent,
-                    ),
-                travelIntensityPercent =
-                    motion.optIntOrDefault(
-                        "travelIntensityPercent",
-                        defaults.motion.travelIntensityPercent,
-                    ),
-                parallaxIntensityPercent =
-                    motion.optIntOrDefault(
-                        "parallaxIntensityPercent",
-                        defaults.motion.parallaxIntensityPercent,
-                    ),
-                magnetStrengthPercent =
-                    motion.optIntOrDefault(
-                        "magnetStrengthPercent",
-                        defaults.motion.magnetStrengthPercent,
-                    ),
-                rotationIntensityPercent =
-                    motion.optIntOrDefault(
-                        "rotationIntensityPercent",
-                        defaults.motion.rotationIntensityPercent,
-                    ),
-                hapticStrength =
-                    motion.enumOrDefault(
-                        "hapticStrength",
-                        defaults.motion.hapticStrength,
-                    ),
-                reducedMotion =
-                    motion.optBooleanOrDefault(
-                        "reducedMotion",
-                        defaults.motion.reducedMotion,
-                    ),
-                reducedTransparency =
-                    motion.optBooleanOrDefault(
-                        "reducedTransparency",
-                        defaults.motion.reducedTransparency,
-                    ),
-            ),
-    ).coerce()
-}
-
-private fun JSONObject?.optIntOrDefault(
-    name: String,
-    default: Int,
-): Int = this?.optInt(name, default) ?: default
-
-/**
- * Reads a 0..100 percent field, migrating a pre-#1291 payload's raw dp value (still present under
- * [legacyDpKey] whenever [percentKey] is absent) into the equivalent percent. The migration is
- * necessarily approximate: the original dp value was resolved against whatever device rendered it
- * at the time, and this runs before any viewport is known, so it re-derives a percent against a
- * single representative reference dimension ([legacyReferenceDp]) rather than the actual one. A
- * fresh install with neither key present gets [default] untouched.
- */
-@Suppress("ReturnCount")
-private fun JSONObject?.optPercentOrMigrateLegacyDp(
-    percentKey: String,
-    legacyDpKey: String,
-    default: Int,
-    minFraction: Float,
-    maxFraction: Float,
-    legacyReferenceDp: Int,
-): Int {
-    if (this == null) return default
-    if (has(percentKey)) return optInt(percentKey, default)
-    if (!has(legacyDpKey)) return default
-    val legacyFraction = optInt(legacyDpKey, 0).toFloat() / legacyReferenceDp
-    val fractionRange = maxFraction - minFraction
-    if (fractionRange <= 0f) return default
-    return (((legacyFraction - minFraction) / fractionRange) * 100f)
-        .roundToInt()
-        .coerceIn(0, 100)
-}
-
-/**
- * Representative safe-viewport dimensions used only to migrate a legacy raw-dp appearance value
- * (see [optPercentOrMigrateLegacyDp]) into the new percent-of-viewport field it replaced -- not
- * used anywhere else, since real resolution always uses the actual device viewport.
- */
-private const val LEGACY_REFERENCE_SAFE_HEIGHT_DP = 760
-private const val LEGACY_REFERENCE_SAFE_WIDTH_DP = 380
-
-private fun JSONObject?.optLongOrDefault(
-    name: String,
-    default: Long,
-): Long = this?.optLong(name, default) ?: default
-
-private fun JSONObject?.optBooleanOrDefault(
-    name: String,
-    default: Boolean,
-): Boolean = this?.optBoolean(name, default) ?: default
-
 private inline fun <reified T : Enum<T>> JSONObject?.enumOrDefault(
     name: String,
     default: T,
-): T =
-    this?.optString(name)?.let { value ->
-        enumValues<T>().firstOrNull {
-            it.name == value
-        }
-    } ?: default
+): T = enumOrNull<T>(name) ?: default
 
 private inline fun <reified T : Enum<T>> JSONObject?.enumOrNull(name: String): T? =
-    this?.optString(name)?.let { value ->
-        enumValues<T>().firstOrNull {
-            it.name == value
-        }
-    }
-
-private fun JSONObject.toStagePreferencesEntry(): Pair<HomeLayoutKey, AppStagePreferences>? =
-    runCatching { LauncherViewMode.valueOf(optString("viewMode")) }.getOrNull()?.let { viewMode ->
-        runCatching { HomeLayoutDeviceClass.valueOf(optString("deviceClass")) }.getOrNull()?.let { deviceClass ->
-            HomeLayoutKey(viewMode, deviceClass) to
-                AppStagePreferences(
-                    pinnedStageIds =
-                        optJSONArray("pinnedStageIds")
-                            ?.let { ids ->
-                                (0 until ids.length())
-                                    .mapNotNull { index -> ids.optJSONObject(index)?.toAppStageId() }
-                                    .distinct()
-                            }
-                            .orEmpty(),
-                    selectedStageId = optJSONObject("selectedStageId")?.toAppStageId(),
-                )
-        }
-    }
-
-private fun JSONObject.toAppStageId(): AppStageId? =
-    optString("packageName").takeIf(String::isNotBlank)?.let { packageName ->
-        optString("profileId").takeIf(String::isNotBlank)?.let { profileId ->
-            AppStageId(AppPackageName(packageName), AppProfileId(profileId))
-        }
-    }
-
-private fun JSONObject.legacyStagePreferences(): AppStagePreferences? {
-    val pinnedStageIds =
-        optJSONArray("pinnedChapterIds")
-            ?.let { ids ->
-                (0 until ids.length())
-                    .mapNotNull { index -> ids.optJSONObject(index)?.toAppStageId() }
-                    .distinct()
-            } ?: return null
-    val selectedStageId =
-        optJSONObject("selectedChapterId")
-            ?.takeIf { selected -> selected.optString("kind") == "app" }
-            ?.toAppStageId()
-    return AppStagePreferences(pinnedStageIds = pinnedStageIds, selectedStageId = selectedStageId)
-}
+    this?.optString(name)?.let { value -> enumValues<T>().firstOrNull { it.name == value } }
 
 private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
     JSONObject()
-        .put("fullscreenHome", settings.homeSystemBars.fullscreenHome)
         .put("hideStatusBarOnHome", settings.homeSystemBars.hideStatusBarOnHome)
         .put("hideNavigationBarOnHome", settings.homeSystemBars.hideNavigationBarOnHome)
         .put("reducedTransparency", settings.reducedTransparency)
@@ -815,13 +222,16 @@ private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
         .put("themeColors", encodeThemeColors(settings.themeColors))
         .put("wallpaper", encodeWallpaper(settings.wallpaper))
 
-private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSettings {
-    val fullscreenHome = optBoolean("fullscreenHome", defaults.homeSystemBars.fullscreenHome)
+private fun JSONObject.toAppearance(
+    defaults: AppearanceSettings,
+    version: Int,
+): AppearanceSettings {
+    // Before version 11 an all-in-one "fullscreenHome" flag meant both bars hidden; it is folded into the two.
+    val legacyFullscreen = version < LAUNCHER_SETTINGS_JSON_VERSION && optBoolean("fullscreenHome", false)
     val homeSystemBars =
         defaults.homeSystemBars.copy(
-            fullscreenHome = fullscreenHome,
-            hideStatusBarOnHome = optBoolean("hideStatusBarOnHome", fullscreenHome),
-            hideNavigationBarOnHome = optBoolean("hideNavigationBarOnHome", fullscreenHome),
+            hideStatusBarOnHome = legacyFullscreen || optBoolean("hideStatusBarOnHome", false),
+            hideNavigationBarOnHome = legacyFullscreen || optBoolean("hideNavigationBarOnHome", false),
         )
     return defaults
         .copy(
@@ -1050,4 +460,5 @@ private fun JSONObject.toFeedProfile(): AppProfile? =
         }
     }
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 10
+/** 11: P9 removed the stage cards settings, contextual behaviour, the after-leaving-Library target and fullscreenHome. */
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 11

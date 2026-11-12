@@ -78,23 +78,6 @@ data class ResolvedLiquidGlass(
 
 private const val MILLIS_PER_SECOND = 1000f
 
-/**
- * Sets the one top-level reduced-transparency switch ([AppearanceSettings.reducedTransparency]).
- * Until the adaptive stage's own surface is replaced it still reads its own copy in
- * [AdaptiveStageMotion], so both are kept in step here; nothing else writes either.
- */
+/** Sets the one top-level reduced-transparency switch ([AppearanceSettings.reducedTransparency]). */
 fun LauncherSettings.withReducedTransparency(reduced: Boolean): LauncherSettings =
-    copy(
-        appearance = appearance.copy(reducedTransparency = reduced),
-        cards =
-            cards.copy(
-                adaptiveStageAppearance =
-                    cards.adaptiveStageAppearance.copy(
-                        motion = cards.adaptiveStageAppearance.motion.copy(reducedTransparency = reduced),
-                    ),
-                unfoldedAppearance =
-                    cards.unfoldedAppearance.copy(
-                        motion = cards.unfoldedAppearance.motion.copy(reducedTransparency = reduced),
-                    ),
-            ),
-    )
+    copy(appearance = appearance.copy(reducedTransparency = reduced))

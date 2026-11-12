@@ -60,19 +60,4 @@ class ReducedMotionPreferenceTest {
         assertEquals(stored.motion.reducedMotionPreference, projected.motion.reducedMotionPreference)
         assertSame(stored, stored.withSystemReducedMotion(false))
     }
-
-    @Test
-    fun systemReducedMotionReachesAdaptiveStageResolutionUnlessOverriddenOff() {
-        val viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200)
-
-        assertTrue(
-            LauncherSettings().withSystemReducedMotion(true).resolveAdaptiveStageCardStack(viewport).reducedMotion,
-        )
-        assertFalse(
-            LauncherSettings(motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.OFF))
-                .withSystemReducedMotion(true)
-                .resolveAdaptiveStageCardStack(viewport)
-                .reducedMotion,
-        )
-    }
 }

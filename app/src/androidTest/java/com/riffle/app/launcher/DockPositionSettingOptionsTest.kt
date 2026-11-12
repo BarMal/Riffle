@@ -23,7 +23,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.sharedDockPositions
-import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,7 +59,6 @@ class DockPositionSettingOptionsTest {
                     Box(modifier = Modifier.width(240.dp).verticalScroll(rememberScrollState())) {
                         DockSetting(
                             dock = DockModel(capacity = 4),
-                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
                             onAction = {},
                         )
                     }
@@ -97,7 +95,6 @@ class DockPositionSettingOptionsTest {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     DockSetting(
                         dock = DockModel(capacity = 4, position = position),
-                        notificationAccessStatus = NotificationAccessStatus.GRANTED,
                         onAction = {},
                     )
                 }

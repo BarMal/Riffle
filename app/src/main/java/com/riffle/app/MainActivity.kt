@@ -41,6 +41,7 @@ import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
 import com.riffle.app.launcher.LocalFeedRefreshCoordinator
+import com.riffle.app.launcher.SettingsTextHolder
 import com.riffle.app.launcher.WallpaperPickerLaunchResult
 import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.calendar.CalendarAccessCoordinator
@@ -518,6 +519,8 @@ class MainActivity : ComponentActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The launcher's own search offers every setting; its reducers have no context, so it reads text from here.
+        SettingsTextHolder.install(applicationContext.resources)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         wallpaperController.applySource(shellViewModel.state.value.launcherSettings.appearance.wallpaper.source)

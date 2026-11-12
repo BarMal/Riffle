@@ -12,24 +12,6 @@ import kotlin.test.assertEquals
 
 class LauncherSettingsTest {
     @Test
-    fun defaultsTheCardsStageSpineToOffBecauseTheDockIsTheSelector() {
-        assertEquals(false, LauncherSettings().cards.showStageSpine)
-    }
-
-    @Test
-    fun defaultsThePageVerticalOffsetToZeroAndCoercesItToItsSignedRange() {
-        assertEquals(0, LauncherSettings().cards.pageVerticalOffsetDp)
-        assertEquals(
-            MAX_CARDS_PAGE_VERTICAL_OFFSET_DP,
-            CardsSettings(pageVerticalOffsetDp = 9999).coerced().pageVerticalOffsetDp,
-        )
-        assertEquals(
-            MIN_CARDS_PAGE_VERTICAL_OFFSET_DP,
-            CardsSettings(pageVerticalOffsetDp = -9999).coerced().pageVerticalOffsetDp,
-        )
-    }
-
-    @Test
     fun defaultsThemeAccentToDefault() {
         assertEquals(LauncherThemeAccent.DEFAULT, LauncherSettings().appearance.themeAccent)
     }
@@ -59,19 +41,6 @@ class LauncherSettingsTest {
             LauncherSettings().appDrawer.libraryViewFor(HomeLayoutDeviceClass.PHONE),
         )
         assertEquals(DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS, LauncherSettings().appDrawer.iconGridColumns)
-    }
-
-    @Test
-    fun cardsDefaultToTheModernAdaptiveStageAppearanceIntent() {
-        assertEquals(AdaptiveStageAppearanceSettings.modern(), LauncherSettings().cards.adaptiveStageAppearance)
-    }
-
-    @Test
-    fun cardsDefaultToTheUnfoldedAppearanceIntentIndependentlyOfTheFoldedOne() {
-        val cards = LauncherSettings().cards
-
-        assertEquals(AdaptiveStageAppearanceSettings.unfolded(), cards.unfoldedAppearance)
-        assertEquals(AdaptiveStageAppearanceSettings.modern(), cards.adaptiveStageAppearance)
     }
 
     @Test
@@ -260,13 +229,6 @@ class LauncherSettingsTest {
         assertEquals(ReducedMotionPreference.SYSTEM, settings.motion.reducedMotionPreference)
         assertEquals(false, settings.motion.reducedMotion)
         assertEquals(true, settings.withSystemReducedMotion(true).motion.reducedMotion)
-    }
-
-    @Test
-    fun defaultsContextualSettingsToDisabled() {
-        val settings = LauncherSettings()
-
-        assertEquals(false, settings.contextual.enabled)
     }
 
     @Test
