@@ -2,6 +2,7 @@
 
 package com.riffle.app.launcher.stream
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -29,9 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -448,13 +450,14 @@ internal fun articleMeta(
     ).joinToString(", ")
 
 /**
- * Today's tasks as one card: a checkbox, the title and the due time for each. There is no task source yet (P10), so the
- * checkbox is shown read-only; this card is what a connected source will draw into.
+ * Today's tasks as one card: a checkbox, the title and the due time for each. The checkbox completes the task (the
+ * source ticks it at once and puts it back if Todoist refuses); the title opens it.
  */
 @Composable
 internal fun TasksCard(
     tasks: List<TaskContent>,
     env: StreamEnvironment,
+    callbacks: StreamCallbacks,
     modifier: Modifier = Modifier,
 ) {
     StreamCardSurface("tasks", null, null, env, modifier) { sourceModifier ->
@@ -462,7 +465,7 @@ internal fun TasksCard(
             modifier = sourceModifier.fillMaxWidth().padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
         ) {
-            tasks.take(MAX_TASKS_ON_CARD).forEach { task -> TaskLine(task, env) }
+            tasks.take(MAX_TASKS_ON_CARD).forEach { task -> TaskLine(task, env, callbacks) }
         }
     }
 }
@@ -473,9 +476,13 @@ private const val MAX_TASKS_ON_CARD = 4
 internal fun TaskLine(
     task: TaskContent,
     env: StreamEnvironment,
+    callbacks: StreamCallbacks,
     modifier: Modifier = Modifier,
 ) {
-    val unavailable = stringResource(R.string.stream_task_checkbox_unavailable)
+    val canComplete = StreamActionPolicy.offers(task, StreamAction.Complete)
+    val canOpen = StreamActionPolicy.offers(task, StreamAction.Open)
+    val title = task.title ?: hiddenText()
+    val completeLabel = stringResource(R.string.stream_task_complete, title)
     Row(
         modifier = modifier.fillMaxWidth().heightIn(min = StreamMinTarget),
         verticalAlignment = Alignment.CenterVertically,
@@ -483,31 +490,50 @@ internal fun TaskLine(
     ) {
         Checkbox(
             checked = task.completed,
-            onCheckedChange = null,
-            enabled = false,
-            modifier = Modifier.semantics { stateDescription = unavailable },
+            onCheckedChange = { checked -> if (checked) callbacks.onAction(task, StreamAction.Complete) },
+            enabled = canComplete,
+            modifier = Modifier.semantics { contentDescription = completeLabel },
         )
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier =
+                Modifier.weight(1f).heightIn(min = StreamMinTarget).then(
+                    if (canOpen) Modifier.clickable { callbacks.onAction(task, StreamAction.Open) } else Modifier,
+                ),
+            verticalArrangement = Arrangement.Center,
+        ) {
             Text(
-                text = task.title ?: hiddenText(),
+                text = title,
                 style = MaterialTheme.typography.bodyLarge,
+                textDecoration = if (task.completed) TextDecoration.LineThrough else null,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            task.dueEpochMillis?.let { due ->
+            taskDueText(task, env)?.let { due ->
                 Text(
-                    text =
-                        if (task.dueHasTime) {
-                            env.formats.time(
-                                due,
-                            )
-                        } else {
-                            stringResource(R.string.stream_task_due, env.formats.age(due))
-                        },
+                    text = due,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color =
+                        if (task.overdue) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun taskDueText(
+    task: TaskContent,
+    env: StreamEnvironment,
+): String? {
+    val due = task.dueEpochMillis ?: return null
+    val whenText = if (task.dueHasTime) env.formats.time(due) else env.formats.age(due)
+    return when {
+        task.overdue -> stringResource(R.string.stream_task_overdue, whenText)
+        task.dueHasTime -> whenText
+        else -> stringResource(R.string.stream_task_due, whenText)
     }
 }

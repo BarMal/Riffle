@@ -201,12 +201,27 @@ private fun StreamSectionBody(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
 ) {
+    if (section == StreamSection.TASKS) {
+        TasksSectionBody(result, callbacks) { StreamSectionResultBody(section, view, result, env, callbacks) }
+    } else {
+        StreamSectionResultBody(section, view, result, env, callbacks)
+    }
+}
+
+@Composable
+private fun StreamSectionResultBody(
+    section: StreamSection,
+    view: StreamView,
+    result: StreamSectionResult,
+    env: StreamEnvironment,
+    callbacks: StreamCallbacks,
+) {
     when (result) {
         StreamSectionResult.Loading ->
             StreamStateMessage(stringResource(R.string.stream_loading), showSpinner = !env.reducedMotion)
         StreamSectionResult.Empty -> StreamStateMessage(stringResource(section.emptyRes()))
         StreamSectionResult.Unavailable -> StreamStateMessage(stringResource(R.string.stream_unavailable))
-        StreamSectionResult.NotConnected -> StreamStateMessage(stringResource(R.string.stream_not_connected_tasks))
+        is StreamSectionResult.NotConnected -> StreamStateMessage(stringResource(R.string.stream_not_connected_tasks))
         StreamSectionResult.Off ->
             StreamStateMessage(
                 message = stringResource(R.string.stream_off_message),
@@ -342,7 +357,7 @@ private fun StreamGroupStack(
     when (section) {
         StreamSection.RECENTS -> RecentAppsRow(group.items, env, callbacks, groupKey)
         StreamSection.TASKS ->
-            TasksCard(group.items.filterIsInstance<TaskContent>(), env, Modifier.fillMaxWidth())
+            TasksCard(group.items.filterIsInstance<TaskContent>(), env, callbacks, Modifier.fillMaxWidth())
         else -> StreamStack(group.items, env, callbacks, groupKey = groupKey ?: "${section.storedId}/${group.key}")
     }
 }

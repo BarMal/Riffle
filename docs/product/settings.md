@@ -40,7 +40,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | Hidden items (under Notifications) | | The rules that hide items, per layout |
 | Agenda (under Stream) | | The device calendar source (status, allow access, on or off); include calendar feeds; Calendar feeds |
 | Calendar feeds (under Agenda) | | The calendar feeds source (on or off), refresh, the feed list, add a feed |
-| Tasks (under Stream) | | A row saying no task provider is connected yet |
+| Tasks (under Stream) | | Todoist: the connection status (Not connected, Connected, or rejected), a password-style API token field with Save and a "Where is my token?" link, and Remove token. See [stream-tasks.md](stream-tasks.md) |
 | Feeds (under Stream) | | The feeds source (on or off), background refresh, only on Wi-Fi, only while charging, refresh now, the feed list, add a feed |
 | **Appearance** | Colour | Colour mode, accent, custom accent |
 | | Glass | Reduced transparency, frost strength, edge refraction, spotlight flow |
@@ -168,7 +168,7 @@ so the links are included and the Backup page and the feed page say to keep the 
   is not a setting.
 - **Set up.** The row keeps the wording "Set up Riffle again" (it re-runs all four steps, not only Home).
 - **Privacy and access > Privacy.** The content-level rows are whatever the sources report as private (Notifications,
-  Media, Calendar, Calendar feeds); there is no Tasks row until a provider exists. Usage access is read from the Recents
+  Media, Calendar, Calendar feeds); Tasks (Todoist) has a row too. Usage access is read from the Recents
   source and opens Android's usage access settings.
 - **Gestures.** The Gestures page keeps the four groups of the old panel (one finger, two, pinch, three), each row a
   menu, plus a Reset.

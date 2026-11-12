@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import com.riffle.app.launcher.AppIconLoader
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
 import com.riffle.app.launcher.expressions.LocalItemHider
+import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
@@ -30,6 +31,8 @@ import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
 import com.riffle.core.domain.launcher.stream.StreamSourceIds
+import com.riffle.core.domain.launcher.stream.TaskActionOutcome
+import com.riffle.core.domain.launcher.stream.TaskActions
 import com.riffle.core.domain.launcher.workspace.SourceId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
@@ -56,6 +59,10 @@ class StreamHost internal constructor(
     internal val posture: StreamPostureHolder = StreamPostureHolder(),
     /** Where the Stream should land when the Dock opens it on a live app or on now playing. */
     internal val focus: StreamFocusRequests = StreamFocusRequests(),
+    /** Adding and refreshing tasks; null where there is no task source (tests, previews). */
+    internal val tasks: TaskActions? = null,
+    /** Settings > Stream > Tasks (the token); null where there is none. */
+    internal val taskSettings: TasksSettingsController? = null,
 )
 
 /** A request to land the Stream on [target]; [id] tells a repeated request for the same target apart. */
@@ -85,6 +92,7 @@ internal class StreamPostureHolder {
  * The stateful Stream: reads the layout of [deviceClass], observes each enabled section (results come off the main
  * thread and are posted back to it), runs actions off the main thread and shows a snackbar when one fails.
  */
+@Suppress("LongParameterList")
 @Composable
 internal fun StreamDestination(
     host: StreamHost,
@@ -94,6 +102,7 @@ internal fun StreamDestination(
     reducedMotion: Boolean,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
+    onConnectTasks: () -> Unit = {},
 ) {
     LaunchedEffect(host) { host.layouts.initialize() }
     SideEffect { host.posture.deviceClass = deviceClass }
@@ -126,6 +135,14 @@ internal fun StreamDestination(
                 }
             },
             onLayoutAction = { action: StreamLayoutAction -> host.layouts.update(deviceClass, action) },
+            onAddTask = { text ->
+                scope.launch(Dispatchers.Default) {
+                    val outcome = runCatching { host.tasks?.add(text) }.getOrNull()
+                    if (outcome != TaskActionOutcome.DONE) failures.tryEmit(Unit)
+                }
+            },
+            onRefreshTasks = { scope.launch(Dispatchers.Default) { host.tasks?.refresh() } },
+            onConnectTasks = onConnectTasks,
             onRequestAccess = { sources ->
                 sources.firstOrNull()?.let { host.requestAccess(StreamSourceIds.userSourceOf(it)) }
             },

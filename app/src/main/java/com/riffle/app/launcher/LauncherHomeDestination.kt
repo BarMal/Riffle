@@ -71,6 +71,8 @@ fun HomeDestination(
 ) {
     val dockHost = rememberHomeDockHostState()
     val dockPull = rememberDockPullState()
+    // "Connect Todoist" in the Tasks section: Settings > Stream > Tasks.
+    val openTasksSettings = { onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.STREAM_TASKS)) }
     val presentation = standardHomePresentation(state, widgetRenderers)
     val plan = rememberHomeSurfacePlan(state)
     // A committed pull stands in for the shell's answer until the shell shows it, so the surfaces do not flicker back.
@@ -222,6 +224,7 @@ fun HomeDestination(
                             installedApps = dockHostState.installedApps,
                             appIconLoader = appIconLoader,
                             reducedMotion = state.reducedMotion(),
+                            onConnectTasks = openTasksSettings,
                             contentPadding =
                                 streamPaneInsets(
                                     insets =
@@ -242,6 +245,7 @@ fun HomeDestination(
                         dockHost = dockHost,
                         dockPosition = plan.dockEdge,
                         appIconLoader = appIconLoader,
+                        onConnectTasks = openTasksSettings,
                         modifier = pull.streamModifier(libraryShown = shownLibrary).then(coveredSemantics),
                     )
                 }
@@ -412,6 +416,7 @@ private fun StreamHomeSurface(
     dockHost: HomeDockHostState,
     dockPosition: DockPosition,
     appIconLoader: AppIconLoader,
+    onConnectTasks: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
@@ -432,6 +437,7 @@ private fun StreamHomeSurface(
             appIconLoader = appIconLoader,
             reducedMotion = state.launcherSettings.motion.reducedMotion,
             contentPadding = insets,
+            onConnectTasks = onConnectTasks,
         )
     }
 }

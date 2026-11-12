@@ -42,7 +42,8 @@ object StreamSectionEvaluator {
                         StreamSourceIds.userSourceOf(it.source)
                     }.distinct(),
                 )
-            states.any { it is Slot.NotConnected } -> StreamSectionResult.NotConnected
+            states.any { it is Slot.NotConnected } ->
+                StreamSectionResult.NotConnected(states.filterIsInstance<Slot.NotConnected>().first().reason)
             states.any { it is Slot.Ready } -> StreamSectionResult.Empty
             states.any { it is Slot.Unavailable } -> StreamSectionResult.Unavailable
             else -> StreamSectionResult.Off
@@ -67,7 +68,7 @@ object StreamSectionEvaluator {
 
         data class Permission(val source: SourceId) : Slot
 
-        data object NotConnected : Slot
+        data class NotConnected(val reason: NotConnectedReason) : Slot
 
         data object Unavailable : Slot
 
@@ -101,7 +102,7 @@ object StreamSectionEvaluator {
                 when (state) {
                     TypedSourceState.Loading -> Loading
                     TypedSourceState.PermissionRequired -> Permission(id)
-                    TypedSourceState.NotConnected -> NotConnected
+                    is TypedSourceState.NotConnected -> NotConnected(state.reason)
                     TypedSourceState.Unavailable -> Unavailable
                     TypedSourceState.Off -> Off
                     is TypedSourceState.Ready<*> ->

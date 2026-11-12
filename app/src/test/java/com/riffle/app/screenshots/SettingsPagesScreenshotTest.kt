@@ -4,12 +4,18 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.riffle.app.launcher.LocalStreamLayoutRepository
+import com.riffle.app.launcher.LocalTasksSettings
 import com.riffle.app.launcher.SettingsPage
 import com.riffle.app.launcher.SettingsSurface
 import com.riffle.app.launcher.settingsSurfaceState
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
 import com.riffle.app.launcher.stream.StreamLayoutStorePort
+import com.riffle.app.launcher.stream.todoist.TasksSettingsController
+import com.riffle.app.launcher.stream.todoist.TodoistToken
+import com.riffle.app.launcher.stream.todoist.TodoistTokenStore
 import com.riffle.core.domain.launcher.stream.StreamLayouts
+import com.riffle.core.domain.launcher.stream.TaskConnectionState
+import com.riffle.core.domain.launcher.stream.TaskConnectionStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -56,7 +62,19 @@ class SettingsPagesScreenshotTest {
 
     @Test fun floatingDock() = composeRule.renderSettingsPage(SettingsPage.FLOATING_DOCK)
 
-    @Test fun streamTasks() = composeRule.renderSettingsPage(SettingsPage.STREAM_TASKS)
+    @Test fun streamTasks() = composeRule.renderSettingsPage(SettingsPage.STREAM_TASKS, tasksSettings())
+
+    @Test fun streamTasksConnected() =
+        composeRule.renderSettingsPage(
+            SettingsPage.STREAM_TASKS,
+            tasksSettings(TaskConnectionState.CONNECTED),
+        )
+
+    @Test fun streamTasksRejected() =
+        composeRule.renderSettingsPage(
+            SettingsPage.STREAM_TASKS,
+            tasksSettings(TaskConnectionState.TOKEN_REJECTED),
+        )
 
     @Test fun streamAgenda() = composeRule.renderSettingsPage(SettingsPage.STREAM_AGENDA)
 
@@ -70,7 +88,10 @@ class SettingsPagesScreenshotTest {
 }
 
 /** Renders [page] in the Settings surface and records it; shared by the compact and expanded classes. */
-internal fun ComposeContentTestRule.renderSettingsPage(page: SettingsPage) {
+internal fun ComposeContentTestRule.renderSettingsPage(
+    page: SettingsPage,
+    tasks: TasksSettingsController? = null,
+) {
     val state =
         ScreenshotFixtures.cardsState().settingsSurfaceState(
             appVersionLabel = "Riffle 1.0 (test)",
@@ -78,7 +99,10 @@ internal fun ComposeContentTestRule.renderSettingsPage(page: SettingsPage) {
         )
     setContent {
         ScreenshotBackdrop {
-            CompositionLocalProvider(LocalStreamLayoutRepository provides settingsStreamLayoutRepository()) {
+            CompositionLocalProvider(
+                LocalStreamLayoutRepository provides settingsStreamLayoutRepository(),
+                LocalTasksSettings provides tasks,
+            ) {
                 SettingsSurface(state = state, initialPage = page, onAction = {})
             }
         }
@@ -95,4 +119,20 @@ internal fun settingsStreamLayoutRepository(): CachedStreamLayoutRepository =
             override suspend fun write(layouts: StreamLayouts) = Unit
         },
         CoroutineScope(Dispatchers.Unconfined + Job()),
+    )
+
+/** A Tasks controller over nothing stored, showing [connection]. */
+internal fun tasksSettings(connection: TaskConnectionState = TaskConnectionState.NOT_CONNECTED) =
+    TasksSettingsController(
+        store =
+            object : TodoistTokenStore {
+                override fun read(): TodoistToken? = null
+
+                override fun save(token: TodoistToken) = Unit
+
+                override fun clear() = Unit
+            },
+        status = TaskConnectionStatus(connection),
+        executor = { it.run() },
+        onTokenChanged = {},
     )

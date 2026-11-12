@@ -242,19 +242,23 @@ internal object StreamFixtures {
     val tasks =
         listOf(
             TaskContent(
-                StreamContentId("task:1"),
+                StreamContentId("todoist:1"),
                 "Renew passport",
                 listName = "Errands",
-                dueEpochMillis = NOW + 3 * 60 * MINUTE,
+                dueEpochMillis = NOW - 26 * 60 * MINUTE,
+                overdue = true,
+                priority = 4,
             ),
             TaskContent(
-                StreamContentId("task:2"),
+                StreamContentId("todoist:2"),
                 "Send the invoice",
                 dueEpochMillis = NOW + 5 * 60 * MINUTE,
                 dueHasTime = true,
             ),
-            TaskContent(StreamContentId("task:3"), "Water the plants"),
+            TaskContent(StreamContentId("todoist:3"), "Water the plants", dueEpochMillis = NOW),
         )
+
+    val staleTasks = tasks.map { it.copy(stale = true) }
 
     private fun group(
         key: String,

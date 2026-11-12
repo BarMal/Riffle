@@ -35,7 +35,7 @@
     <string name="stream_empty_feeds">No articles yet. Add a feed in Settings.</string>
     <string name="stream_permission_message">Allow access to show this</string>
     <string name="stream_permission_action">Allow access</string>
-    <string name="stream_not_connected_tasks">No to-do account is connected, so there are no tasks to show yet.</string>
+    <string name="stream_not_connected_tasks">Todoist is not connected, so there are no tasks to show.</string>
     <string name="stream_unavailable">This can\'t be shown right now.</string>
     <string name="stream_off_message">This section is turned off.</string>
     <string name="stream_off_action">Turn on</string>
@@ -105,7 +105,17 @@
     <string name="stream_article_stale">Not updated recently</string>
 
     <!-- Tasks -->
-    <string name="stream_task_checkbox_unavailable">Completing tasks is not available yet</string>
+    <string name="stream_task_complete">Mark %1$s done</string>
+    <string name="stream_task_overdue">Overdue, %1$s</string>
+    <string name="stream_task_add_label">Add a task for today</string>
+    <string name="stream_task_add">Add task</string>
+    <string name="stream_task_refresh">Refresh tasks</string>
+    <string name="stream_task_stale">Can\'t reach Todoist. Showing the tasks from the last refresh.</string>
+    <string name="stream_task_retry">Retry</string>
+    <string name="stream_tasks_unavailable">Can\'t reach Todoist, and there are no saved tasks to show.</string>
+    <string name="stream_tasks_connect">Connect Todoist</string>
+    <string name="stream_tasks_replace_token">Replace token</string>
+    <string name="stream_tasks_token_rejected">Todoist did not accept the saved token. Paste a new one in Settings.</string>
     <string name="stream_task_due">Due %1$s</string>
 
     <!-- Recents -->
@@ -184,7 +194,7 @@
     <string name="settings_page_calendar_feeds_summary">Add, remove and refresh calendar links</string>
     <string name="settings_page_calendar_feeds_keywords">calendar feeds ics subscribe</string>
     <string name="settings_page_stream_tasks">Tasks</string>
-    <string name="settings_page_stream_tasks_summary">No task provider is connected yet</string>
+    <string name="settings_page_stream_tasks_summary">Connect Todoist with a personal token</string>
     <string name="settings_page_stream_tasks_keywords">tasks todo to-do</string>
     <string name="settings_page_stream_feeds">Feeds</string>
     <string name="settings_page_stream_feeds_summary">Feed list and background refresh</string>
@@ -465,7 +475,18 @@
     <string name="settings_stream_show_as_subtitle">Stack of cards or a List of rows</string>
     <string name="settings_stream_show_as_option">%1$s shown as %2$s</string>
     <string name="settings_agenda_include_feeds_subtitle">Events from your calendar feeds join the device calendar in the Agenda</string>
-    <string name="settings_tasks_not_connected">No task provider is connected yet. Tasks will appear in the Stream once one is.</string>
+    <string name="settings_tasks_intro">Riffle can show the tasks you have due today, and the ones that are overdue, from Todoist. In Todoist open Settings, Integrations, Developer, copy your API token and paste it here. The token is kept encrypted on this phone only.</string>
+    <string name="settings_tasks_status_title">Todoist</string>
+    <string name="settings_tasks_status_connected">Connected</string>
+    <string name="settings_tasks_status_not_connected">Not connected</string>
+    <string name="settings_tasks_status_rejected">Todoist did not accept the token. Paste a new one or remove it.</string>
+    <string name="settings_tasks_token_label">API token</string>
+    <string name="settings_tasks_save">Save</string>
+    <string name="settings_tasks_find_token">Where is my token?</string>
+    <string name="settings_tasks_remove_title">Disconnect</string>
+    <string name="settings_tasks_remove_summary">Deletes the saved token from this phone. Your tasks stay in Todoist.</string>
+    <string name="settings_tasks_remove">Remove token</string>
+    <string name="settings_tasks_privacy">Riffle asks Todoist only for tasks due today or overdue, and sends the tasks you complete or add. The token is not backed up, not exported and not shared. Task text follows the Tasks content setting under Privacy.</string>
     <string name="settings_source_status">Status</string>
     <string name="settings_source_use">Use %1$s</string>
     <string name="settings_source_on">On</string>

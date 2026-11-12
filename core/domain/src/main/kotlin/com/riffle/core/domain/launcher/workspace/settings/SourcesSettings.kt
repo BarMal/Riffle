@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.settings
 
+import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.workspace.SourceDescriptor
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
@@ -49,6 +50,8 @@ object SourceCatalog {
             SourceIds.SEARCH to SourceInfo("Search", "Results for the query a search lens carries."),
             SourceIds.ICS to
                 SourceInfo("Calendar feeds", "Events from the calendar feeds you added, as last refreshed."),
+            // The Stream's Tasks section (Todoist). It has a content level but is not a source of its own.
+            StreamSourceIds.TASKS to SourceInfo("Tasks", "Tasks due today and overdue, from Todoist."),
         )
 
     fun infoFor(id: SourceId): SourceInfo = infos[id] ?: SourceInfo(id.value, "Another source.")

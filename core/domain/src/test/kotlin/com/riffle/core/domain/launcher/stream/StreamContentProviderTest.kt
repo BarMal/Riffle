@@ -117,7 +117,7 @@ class StreamContentProviderTest {
     @Test
     fun `the tasks section reads not connected by default and the now section needs no alarm source`() {
         val (tasks, _) = collect(StreamSection.TASKS)
-        assertEquals(StreamSectionResult.NotConnected, tasks.last())
+        assertEquals(StreamSectionResult.NotConnected(), tasks.last())
 
         val (now, _) = collect(StreamSection.NOW)
         registry.sinks.getValue(SourceIds.MEDIA).emit(SourceState.Ready(emptyList()))

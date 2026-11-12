@@ -19,7 +19,10 @@ import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
 import com.riffle.core.domain.launcher.stream.StreamActionResult
 import com.riffle.core.domain.launcher.stream.StreamContent
+import com.riffle.core.domain.launcher.stream.TaskActionOutcome
+import com.riffle.core.domain.launcher.stream.TaskActions
 import com.riffle.core.domain.launcher.stream.TaskContent
+import com.riffle.core.domain.launcher.stream.TodoistLinks
 import com.riffle.core.domain.launcher.workspace.ItemTarget
 
 /**
@@ -42,6 +45,7 @@ internal class AndroidStreamActionGateway(
     private val feedChanged: () -> Unit,
     private val launch: ItemLaunchPort,
     private val openClock: () -> Boolean,
+    private val tasks: TaskActions? = null,
 ) : StreamActionGateway {
     override fun perform(
         content: StreamContent,
@@ -60,7 +64,7 @@ internal class AndroidStreamActionGateway(
             is EventContent -> if (content.kind == EventKind.ALARM) openClock().result() else openTarget(content.target)
             is ArticleContent -> article(content, action)
             is RecentAppContent -> launchApp(content)
-            is TaskContent -> StreamActionResult.NotOffered
+            is TaskContent -> task(content, action)
         }
 
     private fun notification(
@@ -111,6 +115,30 @@ internal class AndroidStreamActionGateway(
                 StreamActionResult.Performed
             }
             else -> openTarget(content.target)
+        }
+
+    private fun task(
+        content: TaskContent,
+        action: StreamAction,
+    ): StreamActionResult =
+        when (action) {
+            StreamAction.Complete ->
+                when (tasks?.complete(content)) {
+                    TaskActionOutcome.DONE -> StreamActionResult.Performed
+                    null -> StreamActionResult.NotOffered
+                    else -> StreamActionResult.Failed
+                }
+            // The Todoist app when it is installed, else the task's page on the web.
+            else -> {
+                val appLink = TodoistLinks.remoteId(content.id)?.let(TodoistLinks::appLink)
+                if (appLink != null && launch.openDeepLink(appLink)) {
+                    StreamActionResult.Performed
+                } else {
+                    openTarget(
+                        content.target,
+                    )
+                }
+            }
         }
 
     private fun launchApp(content: RecentAppContent): StreamActionResult {

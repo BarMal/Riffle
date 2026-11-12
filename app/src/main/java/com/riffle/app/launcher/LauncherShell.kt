@@ -61,6 +61,9 @@ import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
+import com.riffle.core.domain.launcher.stream.StreamSourceIds
+import com.riffle.core.domain.launcher.workspace.SourceCapability
+import com.riffle.core.domain.launcher.workspace.SourceDescriptor
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 import kotlinx.coroutines.delay
 
@@ -149,7 +152,11 @@ private fun rememberWorkspaceSettingsHost(
                 contentLevels =
                     SourceContentLevelsController(
                         privacy = runtime.contentPrivacy,
-                        descriptors = { runtime.registry.descriptors() },
+                        // Tasks (Todoist) is not an item source, but its text has a content level like any other.
+                        descriptors = {
+                            runtime.registry.descriptors() +
+                                SourceDescriptor(StreamSourceIds.TASKS, setOf(SourceCapability.PRIVACY_SENSITIVE))
+                        },
                     ),
                 version = host.workspaceVersion,
                 currentLayout = currentLayout,
@@ -484,7 +491,10 @@ private fun LauncherDestination(
             )
 
         ShellDestination.SETTINGS ->
-            CompositionLocalProvider(LocalStreamLayoutRepository provides stream?.layouts) {
+            CompositionLocalProvider(
+                LocalStreamLayoutRepository provides stream?.layouts,
+                LocalTasksSettings provides stream?.taskSettings,
+            ) {
                 SettingsSurface(
                     state = settingsState,
                     initialPage = settingsPageActionRouter.initialSettingsPage,

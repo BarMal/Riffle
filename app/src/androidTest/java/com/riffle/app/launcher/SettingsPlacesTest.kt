@@ -21,11 +21,15 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
 import com.riffle.app.launcher.stream.StreamLayoutStorePort
+import com.riffle.app.launcher.stream.todoist.TasksSettingsController
+import com.riffle.app.launcher.stream.todoist.TodoistToken
+import com.riffle.app.launcher.stream.todoist.TodoistTokenStore
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamView
+import com.riffle.core.domain.launcher.stream.TaskConnectionStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -136,16 +140,51 @@ class SettingsPlacesTest {
     }
 
     @Test
-    fun theTasksPageOnlySaysNoProviderIsConnectedYet() {
-        setSurface()
+    fun theTasksPageSavesTheTokenAndNeverEchoesItBack() {
+        var saved: TodoistToken? = null
+        val store =
+            object : TodoistTokenStore {
+                override fun read() = saved
+
+                override fun save(token: TodoistToken) {
+                    saved = token
+                }
+
+                override fun clear() {
+                    saved = null
+                }
+            }
+        val controller =
+            TasksSettingsController(store, TaskConnectionStatus(), { it.run() }, onTokenChanged = {})
+        composeRule.setContent {
+            MaterialTheme {
+                CompositionLocalProvider(
+                    LocalStreamLayoutRepository provides streamRepository(),
+                    LocalTasksSettings provides controller,
+                ) {
+                    Box(modifier = Modifier.height(900.dp)) {
+                        SettingsSurface(state = LauncherShellState().settingsSurfaceState(), onAction = {})
+                    }
+                }
+            }
+        }
 
         composeRule.onNodeWithTag(settingsMainRowTestTag(SettingsPage.STREAM)).performScrollTo().performClick()
-        composeRule.onNodeWithText("No task provider is connected yet").performScrollTo().performClick()
+        composeRule.onNodeWithText("Connect Todoist with a personal token").performScrollTo().performClick()
+        composeRule.onNodeWithText("Not connected").assertIsDisplayed()
 
-        composeRule
-            .onNodeWithText("No task provider is connected yet. Tasks will appear in the Stream once one is.")
-            .assertIsDisplayed()
-        // Nothing to enter yet: no token field on this page.
-        composeRule.onNodeWithText("Token").assertDoesNotExist()
+        composeRule.onNodeWithTag(TASKS_TOKEN_FIELD_TEST_TAG).performScrollTo().performTextInput("fake-token-123")
+        composeRule.onNodeWithTag(TASKS_SAVE_TEST_TAG).performScrollTo().performClick()
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Connected").assertIsDisplayed()
+        composeRule.onNodeWithTag(TASKS_TOKEN_FIELD_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithText("fake-token-123").assertDoesNotExist()
+        assertEquals("fake-token-123", saved?.reveal())
+
+        composeRule.onNodeWithTag(TASKS_REMOVE_TEST_TAG).performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Not connected").assertIsDisplayed()
+        assertEquals(null, saved)
     }
 }

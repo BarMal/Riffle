@@ -37,6 +37,15 @@ has **never been compiled, run or screenshotted**.
 - **Applies at once.** `StoredSourceContentPrivacy` is also a `ContextChanges`; the lens provider watches it (merged with
   the exclusion repository through `mergedContextChanges`), so changing a level re-evaluates every observed page.
 
+### Tasks (P10)
+
+Tasks come from Todoist and are the only Stream content that leaves the device's own sources: the app sends the
+personal API token (an Authorization header, never a URL or log) to `api.todoist.com` and asks for tasks due today or
+overdue; completing or adding a task sends that task's id or text. Task text follows the Tasks content level on
+Settings > Privacy (Hide text removes titles and project names and the tick box, like any other source). Tasks exist
+in memory only. The token is stored encrypted with an Android Keystore key and is excluded from Auto Backup, device
+transfer and Riffle's own backup. See [stream-tasks.md](stream-tasks.md).
+
 ### Stream data (P3b)
 
 The Stream's typed content carries more than an `Item` did, and the same rules gate it before any consumer sees it.

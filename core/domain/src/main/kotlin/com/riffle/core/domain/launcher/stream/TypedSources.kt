@@ -10,8 +10,9 @@ sealed interface TypedSourceState<out T> {
 
     data object PermissionRequired : TypedSourceState<Nothing>
 
-    /** No account is connected (tasks before P10). Never a prompt. */
-    data object NotConnected : TypedSourceState<Nothing>
+    /** No account is connected, or the one that was is no longer accepted ([reason]). Never a prompt. */
+    data class NotConnected(val reason: NotConnectedReason = NotConnectedReason.NO_ACCOUNT) :
+        TypedSourceState<Nothing>
 
     data object Unavailable : TypedSourceState<Nothing>
 
@@ -27,7 +28,7 @@ interface TypedSource<out T> {
 }
 
 /**
- * The seam P10 implements with Todoist. Until then [NotConnectedTaskProvider] is used and the Tasks section
+ * The seam [TodoistTaskProvider] implements. With no account, [NotConnectedTaskProvider] is used and the Tasks section
  * reads [StreamSectionResult.NotConnected]. Task text is user content: it is redacted through the
  * [StreamSourceIds.TASKS] content level like any other source.
  */
@@ -36,7 +37,7 @@ interface TaskProvider : TypedSource<TaskContent>
 /** The task provider when no account is connected. */
 object NotConnectedTaskProvider : TaskProvider {
     override fun subscribe(observer: (TypedSourceState<TaskContent>) -> Unit): SourceSubscription {
-        observer(TypedSourceState.NotConnected)
+        observer(TypedSourceState.NotConnected())
         return SourceSubscription { }
     }
 }
@@ -64,4 +65,13 @@ object NoAlarmProvider : NextAlarmProvider {
         observer(TypedSourceState.Ready(emptyList()))
         return SourceSubscription { }
     }
+}
+
+/** Why a section that needs an account is not connected. */
+enum class NotConnectedReason {
+    /** Nothing has been connected (or it was removed). */
+    NO_ACCOUNT,
+
+    /** The service answered 401 or 403: the saved token is no longer accepted and must be replaced. */
+    TOKEN_REJECTED,
 }

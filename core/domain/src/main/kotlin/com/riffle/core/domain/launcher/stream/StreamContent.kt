@@ -185,7 +185,10 @@ enum class TaskAction {
     OPEN,
 }
 
-/** One to-do. There is no source yet (P10 adds Todoist); see [TaskProvider]. */
+/**
+ * One to-do (Todoist, see [TodoistTaskProvider]). [priority] is 1 (normal) to 4 (urgent). [stale] says the list it
+ * came from could not be refreshed and is the last one fetched.
+ */
 data class TaskContent(
     override val id: StreamContentId,
     val title: String?,
@@ -194,6 +197,9 @@ data class TaskContent(
     /** The due value carries a time of day, not only a date. */
     val dueHasTime: Boolean = false,
     val completed: Boolean = false,
+    val overdue: Boolean = false,
+    val priority: Int = 1,
+    val stale: Boolean = false,
     val target: ItemTarget = ItemTarget.None,
     val actions: Set<TaskAction> = setOf(TaskAction.COMPLETE, TaskAction.OPEN),
     override val privacy: StreamPrivacy = StreamPrivacy.VISIBLE,
