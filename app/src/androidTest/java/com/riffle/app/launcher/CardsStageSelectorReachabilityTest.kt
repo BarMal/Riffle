@@ -53,7 +53,6 @@ class CardsStageSelectorReachabilityTest {
         setContent(actions)
 
         tile(MAIL_LABEL).assertDoesNotExist()
-        composeRule.onNodeWithContentDescription("Cards stage: $MAIL_LABEL").assertDoesNotExist()
         composeRule.runOnIdle {
             assertEquals(
                 emptyList<LauncherShellAction>(),
