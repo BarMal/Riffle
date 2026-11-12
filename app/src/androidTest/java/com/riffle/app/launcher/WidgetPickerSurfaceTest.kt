@@ -17,11 +17,14 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.IntSize
@@ -95,7 +98,9 @@ class WidgetPickerSurfaceTest {
         val tiles = composeRule.onAllNodesWithTag(WIDGET_PROVIDER_TILE_TEST_TAG)
         val first = tiles[0].fetchSemanticsNode().config[SemanticsActions.CustomActions].map { it.label }
         assertTrue(first.any { label -> label == "Add Next event to Home" || label == "Add Now playing to Home" })
-        composeRule.onNodeWithText("Top story").assertExists()
+        // The grid is lazy: on a short screen the third tile is not composed until the grid is scrolled to it.
+        composeRule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Top story"))
+        composeRule.onNodeWithText("Top story").assertIsDisplayed()
     }
 
     @Test
