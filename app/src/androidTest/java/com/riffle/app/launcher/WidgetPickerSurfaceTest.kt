@@ -90,7 +90,8 @@ class WidgetPickerSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithText("Riffle (3)").assertIsDisplayed()
+        // The header's text carries its expand state ("Riffle (3), collapse"), so match the title within it.
+        composeRule.onNodeWithText("Riffle (3)", substring = true).assertIsDisplayed()
         val tiles = composeRule.onAllNodesWithTag(WIDGET_PROVIDER_TILE_TEST_TAG)
         val first = tiles[0].fetchSemanticsNode().config[SemanticsActions.CustomActions].map { it.label }
         assertTrue(first.any { label -> label == "Add Next event to Home" || label == "Add Now playing to Home" })
