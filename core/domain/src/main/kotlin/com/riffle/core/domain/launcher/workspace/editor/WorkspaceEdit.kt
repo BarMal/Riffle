@@ -58,9 +58,6 @@ sealed interface WorkspaceEdit {
 
     /** Sets (or clears, when null) the dock's dynamic section lens. */
     data class SetDockSection(val binding: LensBinding?) : WorkspaceEdit
-
-    /** Sets (or clears, when null) the per-workspace skin override. */
-    data class SetSkinOverride(val skinId: String?) : WorkspaceEdit
 }
 
 sealed interface EditRejection {
@@ -78,8 +75,6 @@ sealed interface EditRejection {
     data class NotABoundPage(val id: ContainerId) : EditRejection
 
     data object BlankName : EditRejection
-
-    data object BlankSkinId : EditRejection
 }
 
 sealed interface EditResult {

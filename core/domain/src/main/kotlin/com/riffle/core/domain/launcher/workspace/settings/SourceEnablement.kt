@@ -77,3 +77,28 @@ class InMemoryDisabledSourcesStore(var stored: Set<String> = emptySet()) : Disab
         stored = ids
     }
 }
+
+/**
+ * Reads [aliases] through to the source they follow (the Stream's agenda follows the calendar), so turning the
+ * calendar off turns its alias off too. Writes and the disabled list are the wrapped enablement's own, and a change
+ * of the followed source is reported for every alias of it as well.
+ */
+class AliasedSourceEnablement(
+    private val delegate: SourceEnablement,
+    private val aliases: Map<SourceId, SourceId>,
+) : SourceEnablement {
+    override fun isEnabled(id: SourceId): Boolean = delegate.isEnabled(aliases[id] ?: id)
+
+    override fun disabledIds(): Set<SourceId> = delegate.disabledIds()
+
+    override fun setEnabled(
+        id: SourceId,
+        enabled: Boolean,
+    ) = delegate.setEnabled(aliases[id] ?: id, enabled)
+
+    override fun observe(listener: SourceEnablementListener): SourceSubscription =
+        delegate.observe { changed ->
+            listener.onChanged(changed)
+            aliases.forEach { (alias, followed) -> if (followed == changed) listener.onChanged(alias) }
+        }
+}

@@ -132,9 +132,8 @@ internal fun LauncherShellState.withAppearanceSettingsAction(
             )
 
         is LauncherShellAction.SelectLauncherThemeMode,
-        is LauncherShellAction.SelectLauncherThemePreset,
         is LauncherShellAction.SelectLauncherThemeAccent,
-        is LauncherShellAction.SelectLauncherThemeColor,
+        is LauncherShellAction.SelectCustomAccent,
         is LauncherShellAction.SelectLauncherThemeCornerStyle,
         is LauncherShellAction.SelectLauncherThemeTypography,
         -> withThemeSelectionAction(action, launcherSettingsRepository)
@@ -193,14 +192,11 @@ private fun LauncherShellState.withThemeSelectionAction(
             is LauncherShellAction.SelectLauncherThemeMode ->
                 launcherSettings.appearance.copy(themeMode = action.mode)
 
-            is LauncherShellAction.SelectLauncherThemePreset ->
-                launcherSettings.appearance.copy(themePreset = action.preset)
-
             is LauncherShellAction.SelectLauncherThemeAccent ->
                 launcherSettings.appearance.copy(themeAccent = action.accent)
-            is LauncherShellAction.SelectLauncherThemeColor ->
+            is LauncherShellAction.SelectCustomAccent ->
                 launcherSettings.appearance.copy(
-                    themeColors = launcherSettings.appearance.themeColors.withColor(action.target, action.argb),
+                    themeColors = launcherSettings.appearance.themeColors.copy(accentArgb = action.argb),
                 )
             is LauncherShellAction.SelectLauncherThemeCornerStyle ->
                 launcherSettings.appearance.copy(themeCornerStyle = action.style)

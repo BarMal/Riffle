@@ -18,7 +18,6 @@ import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -49,7 +48,6 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
-import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
@@ -171,6 +169,7 @@ class LauncherActionDomainTest {
                 activity("OpenSearch", LauncherShellAction.OpenSearch),
                 activity("OpenNotifications", LauncherShellAction.OpenNotifications),
                 activity("OpenSettings", LauncherShellAction.OpenSettings),
+                activity("OpenStream", LauncherShellAction.OpenStream),
                 activity("OpenSettingsPage", LauncherShellAction.OpenSettingsPage(SettingsPage.APPEARANCE)),
                 activity("OpenWorkspaceMenu", LauncherShellAction.OpenWorkspaceMenu),
                 settings("RequestNotificationAccess", LauncherShellAction.RequestNotificationAccess),
@@ -296,10 +295,6 @@ class LauncherActionDomainTest {
                 activity("SelectDockCapacity", LauncherShellAction.SelectDockCapacity(capacity = 6)),
                 activity("SelectDockIconSize", LauncherShellAction.SelectDockIconSize(sizeDp = 52)),
                 activity("SelectDockBackgroundAlpha", LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 80)),
-                activity(
-                    "SelectDockVisualEffect",
-                    LauncherShellAction.SelectDockVisualEffect(DockVisualEffect.OUTLINED),
-                ),
                 activity(
                     "SelectDockBackgroundSizing",
                     LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED),
@@ -449,22 +444,10 @@ class LauncherActionDomainTest {
                     ),
                 ),
                 settings(
-                    "SelectLauncherThemePreset",
-                    LauncherShellAction.SelectLauncherThemePreset(
-                        com.riffle.core.domain.launcher.settings.LauncherThemePreset.RETRO,
-                    ),
-                ),
-                settings(
                     "SelectLauncherThemeAccent",
                     LauncherShellAction.SelectLauncherThemeAccent(LauncherThemeAccent.TEAL),
                 ),
-                settings(
-                    "SelectLauncherThemeColor",
-                    LauncherShellAction.SelectLauncherThemeColor(
-                        LauncherThemeColorTarget.ACCENT,
-                        0xFF405060.toInt(),
-                    ),
-                ),
+                settings("SelectCustomAccent", LauncherShellAction.SelectCustomAccent(0xFF405060.toInt())),
                 settings(
                     "SelectLauncherThemeCornerStyle",
                     LauncherShellAction.SelectLauncherThemeCornerStyle(LauncherThemeCornerStyle.ROUNDED),
@@ -487,8 +470,8 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectHomeNavigationBarHidden(hidden = true),
                 ),
                 settings(
-                    "SelectLiquidGlassEnabled",
-                    LauncherShellAction.SelectLiquidGlassEnabled(enabled = false),
+                    "SelectReducedTransparency",
+                    LauncherShellAction.SelectReducedTransparency(reduced = true),
                 ),
                 settings(
                     "SelectLiquidGlassFrostStrength",

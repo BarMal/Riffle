@@ -6,8 +6,9 @@ const val CURRENT_WORKSPACE_SCHEMA_VERSION = 1
  * Encodes and decodes [Lens] and [Workspace] to [StoredValue].
  *
  * Decoding is safe: unknown enum values and unknown filter or group types fall back to a default,
- * malformed containers and unrecoverable entries are dropped, and it never throws. There is
- * deliberately no codec for [Item]: item content is transient and must never be persisted.
+ * a stored `skin` (the removed per-workspace skin override) is ignored, malformed containers and
+ * unrecoverable entries are dropped, and it never throws. There is deliberately no codec for
+ * [Item]: item content is transient and must never be persisted.
  */
 object WorkspaceCodec {
     fun encode(workspace: Workspace): StoredValue.Obj =
@@ -18,7 +19,6 @@ object WorkspaceCodec {
             "pages" to arr(workspace.pages.map(PageCodec::encode)),
             "dock" to encodeDock(workspace.dock),
             "gestures" to StoredValue.Obj(workspace.gestureBindings.mapValues { str(it.value) }),
-            "skin" to workspace.skinOverrideId?.let(::str),
             "preset" to workspace.presetId?.let(::str),
             "start" to workspace.startPageId?.let { str(it.value) },
             "newApps" to workspace.newApps?.let(WorkspaceExtrasCodec::encodeNewApps),
@@ -39,7 +39,6 @@ object WorkspaceCodec {
                     root.obj("gestures")?.fields.orEmpty()
                         .mapNotNull { (k, v) -> (v as? StoredValue.Str)?.let { k to it.value } }
                         .toMap(),
-                skinOverrideId = root.string("skin"),
                 presetId = root.string("preset")?.takeIf { it.isNotBlank() },
                 startPageId = root.string("start")?.takeIf { it.isNotBlank() }?.let(::ContainerId),
                 newApps = WorkspaceExtrasCodec.decodeNewApps(root.obj("newApps")),

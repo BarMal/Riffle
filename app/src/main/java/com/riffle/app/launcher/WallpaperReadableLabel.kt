@@ -32,7 +32,7 @@ fun WallpaperReadableLabel(
 
     val metrics = HomeGridLayoutMetrics()
     val fixedWidthDp = metrics.fixedHomeLabelContainerWidthDp(settings)
-    val colors = wallpaperReadableLabelColors(LocalLauncherThemeColorOverrides.current, MaterialTheme.colorScheme)
+    val colors = wallpaperReadableLabelColors(MaterialTheme.colorScheme)
 
     Box(
         modifier =
@@ -70,13 +70,10 @@ internal data class WallpaperReadableLabelColors(
     val background: Color,
 )
 
-internal fun wallpaperReadableLabelColors(
-    overrides: LauncherThemeColorOverrides,
-    colorScheme: ColorScheme,
-): WallpaperReadableLabelColors {
-    val background = overrides.labelBackground ?: colorScheme.scrim
+internal fun wallpaperReadableLabelColors(colorScheme: ColorScheme): WallpaperReadableLabelColors {
+    val background = colorScheme.scrim
     return WallpaperReadableLabelColors(
-        text = overrides.label ?: background.contentColor(Color.White),
+        text = background.contentColor(Color.White),
         background = background,
     )
 }

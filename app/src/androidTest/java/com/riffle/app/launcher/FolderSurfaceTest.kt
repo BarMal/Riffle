@@ -11,11 +11,12 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.core.domain.launcher.designsystem.GlassMaterialTokens
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.settings.LauncherThemeColors
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -31,10 +32,7 @@ class FolderSurfaceTest {
         val wallpaper = Color.Red
         composeRule.setContent {
             Box(modifier = Modifier.fillMaxSize().background(wallpaper)) {
-                RiffleLauncherTheme(
-                    themePreset = LauncherThemePreset.GLASS,
-                    themeColors = LauncherThemeColors(backgroundArgb = 0xFF0000FF.toInt()),
-                ) {
+                RiffleLauncherTheme(themeMode = LauncherThemeMode.LIGHT, dynamicColor = false) {
                     FolderSurface(
                         folder =
                             FolderItem(
@@ -57,31 +55,39 @@ class FolderSurfaceTest {
         // transparent and shows the wallpaper. Sample the interior instead.
         val actual = image[image.width / 2, image.height / 2]
         val corner = image[0, 0]
+        // The surface is Regular glass: the panel tint at that weight's tint alpha over whatever is behind it.
+        // The sheen and the content scrim add a little on top, hence the wider tolerance.
+        val glass = GlassMaterialTokens.forWeight(GlassWeight.Regular)
         val expected =
-            launcherThemeSurfaceTokens(
-                themePreset = LauncherThemePreset.GLASS,
-                colorScheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF0000FF.toInt())),
-            ).panelColor.compositeOver(wallpaper)
+            launcherThemeSurfaceTokens(colorScheme = lightScheme)
+                .panelColor
+                .copy(alpha = glass.softwareTintAlpha(supportsBlur = true))
+                .compositeOver(wallpaper)
 
-        assertColorClose(expected, actual)
+        assertColorClose(expected, actual, tolerance = GLASS_TOLERANCE)
         assertColorClose(wallpaper, corner)
     }
 
     private fun assertColorClose(
         expected: Color,
         actual: Color,
+        tolerance: Float = 0.02f,
     ) {
         assertTrue(
             "red channel differs: expected=$expected actual=$actual",
-            kotlin.math.abs(expected.red - actual.red) < 0.02f,
+            kotlin.math.abs(expected.red - actual.red) < tolerance,
         )
         assertTrue(
             "green channel differs: expected=$expected actual=$actual",
-            kotlin.math.abs(expected.green - actual.green) < 0.02f,
+            kotlin.math.abs(expected.green - actual.green) < tolerance,
         )
         assertTrue(
             "blue channel differs: expected=$expected actual=$actual",
-            kotlin.math.abs(expected.blue - actual.blue) < 0.02f,
+            kotlin.math.abs(expected.blue - actual.blue) < tolerance,
         )
+    }
+
+    private companion object {
+        const val GLASS_TOLERANCE = 0.06f
     }
 }

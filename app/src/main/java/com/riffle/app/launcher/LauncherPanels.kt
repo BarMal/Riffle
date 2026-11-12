@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 
 @Composable
@@ -149,16 +149,16 @@ fun LauncherPanel(
                 .padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
+        GlassSurface(
             modifier =
                 Modifier
                     .widthIn(max = PANEL_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
                     .fillMaxHeight(),
+            weight = GlassWeight.Thick,
             shape = LocalLauncherPanelShape.current,
-            color = launcherPanelSurfaceColor(),
+            tint = launcherPanelSurfaceColor(),
             contentColor = launcherPanelContentColor(),
-            tonalElevation = 6.dp,
         ) {
             Column(
                 modifier =

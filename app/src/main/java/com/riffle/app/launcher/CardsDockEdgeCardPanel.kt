@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStage
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -108,6 +109,7 @@ internal fun CardsDockEdgeCardPanel(
                 .testTag(CARDS_DOCK_EDGE_CARD_PANEL_TEST_TAG)
                 .widthIn(max = CARDS_DOCK_EDGE_CARD_PANEL_MAX_WIDTH_DP.dp)
                 .heightIn(max = CARDS_DOCK_EDGE_CARD_PANEL_MAX_HEIGHT_DP.dp),
+        weight = GlassWeight.Regular,
         shape = MaterialTheme.shapes.large,
     ) {
         if (position.isHorizontalEdge) {

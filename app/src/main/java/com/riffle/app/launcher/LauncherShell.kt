@@ -45,6 +45,7 @@ import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
 import com.riffle.app.launcher.onboarding.LocalWalkthroughLauncher
 import com.riffle.app.launcher.onboarding.OnboardingHost
 import com.riffle.app.launcher.onboarding.OnboardingLayer
+import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.wizard.WizardRequest
 import com.riffle.app.launcher.workspace.LensesSettingsController
 import com.riffle.app.launcher.workspace.LocalWorkspaceHomePages
@@ -74,7 +75,6 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.workspace.Workspace
-import com.riffle.core.domain.launcher.workspace.WorkspaceSkin
 import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuEffect
 import com.riffle.core.domain.launcher.workspace.withWorkspaceHome
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
@@ -90,6 +90,7 @@ fun LauncherShell(
     adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
     workspacePreview: WorkspacePreviewHost? = null,
     onboarding: OnboardingHost? = null,
+    stream: StreamHost? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val storedState by viewModel.state.collectAsState()
@@ -148,6 +149,7 @@ fun LauncherShell(
                     onSetupCardDismissed = viewModel::onSetupCardDismissed,
                     onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
                     workspace = workspaceHome?.workspace,
+                    stream = stream,
                 )
             }
         }
@@ -288,10 +290,12 @@ fun LauncherShellContent(
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
     workspaceMenu: WorkspaceMenuHost? = null,
     /**
-     * The active workspace (S9): its skin override applies to the launcher's theme ([WorkspaceSkin.resolve]), and its
-     * gesture bindings and dock override to the home ([withWorkspaceHome]). Null draws the global settings.
+     * The active workspace (S9): its gesture bindings and dock
+     * override apply to the home ([withWorkspaceHome]). Null draws the global settings.
      */
     workspace: Workspace? = null,
+    /** The Stream's content, layouts and actions; null draws Home even when the Stream is the destination. */
+    stream: StreamHost? = null,
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
 
@@ -304,17 +308,14 @@ fun LauncherShellContent(
 
     RiffleLauncherTheme(
         themeMode = state.launcherSettings.appearance.themeMode,
-        themePreset = WorkspaceSkin.resolve(state.launcherSettings.appearance.themePreset, workspace),
         themeAccent = state.launcherSettings.appearance.themeAccent,
         themeColors = state.launcherSettings.appearance.themeColors,
         themeCornerStyle = state.launcherSettings.appearance.themeCornerStyle,
         themeTypography = state.launcherSettings.appearance.themeTypography,
-        reducedTransparency = state.launcherSettings.cards.adaptiveStageAppearance.motion.reducedTransparency,
+        reducedTransparency = state.launcherSettings.appearance.reducedTransparency,
         liquidGlass = state.launcherSettings.resolveLiquidGlass(),
     ) {
-        val usesSystemWallpaper =
-            state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM &&
-                state.launcherSettings.appearance.themeColors.backgroundArgb == null
+        val usesSystemWallpaper = state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM
         val rootModifier =
             if (usesSystemWallpaper) {
                 Modifier.fillMaxSize()
@@ -344,6 +345,7 @@ fun LauncherShellContent(
                 workspaceMenu = workspaceMenu,
                 onAction = onAction,
                 workspace = workspace,
+                stream = stream,
             )
             if (state.destination == ShellDestination.HOME && state.shouldShowSetupCard) {
                 PreviewSetupCard(
@@ -604,6 +606,7 @@ private fun LauncherDestination(
     workspaceMenu: WorkspaceMenuHost?,
     onAction: (LauncherShellAction) -> Unit,
     workspace: Workspace? = null,
+    stream: StreamHost? = null,
 ) {
     val settingsPageActionRouter = rememberSettingsPageActionRouter(onAction)
     // Ephemeral, not part of durable LauncherShellState -- it's a settings-page-triggered
@@ -615,7 +618,9 @@ private fun LauncherDestination(
     var adaptiveStageAppearanceTuning by remember { mutableStateOf(false) }
 
     when (state.destination) {
-        ShellDestination.HOME ->
+        // The Stream replaces Home and keeps the Dock under it, so both are the one HomeDestination; without a Stream
+        // host the destination falls back to Home (Back and the Home button return there either way).
+        ShellDestination.HOME, ShellDestination.STREAM ->
             HomeDestination(
                 // Render only: the workspace's gestures and dock override; Settings keeps the global values.
                 state = remember(state, workspace) { state.withWorkspaceHome(workspace) },
@@ -626,6 +631,8 @@ private fun LauncherDestination(
                 onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 haptics = haptics,
                 workspaceMenu = workspaceMenu,
+                stream = stream,
+                streamShown = state.destination == ShellDestination.STREAM && stream != null,
                 onAction = settingsPageActionRouter.onAction,
             )
 

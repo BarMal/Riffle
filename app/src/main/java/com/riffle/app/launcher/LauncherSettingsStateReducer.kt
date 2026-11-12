@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.coerced
+import com.riffle.core.domain.launcher.settings.withReducedTransparency
 
 internal class LauncherSettingsStateReducer(
     private val homeLayoutRepository: HomeLayoutRepository,
@@ -71,12 +72,9 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectLiquidGlassEnabled ->
+                is LauncherShellAction.SelectReducedTransparency ->
                     state.withLauncherSettings(
-                        settings =
-                            state.launcherSettings.copy(
-                                liquidGlass = state.launcherSettings.liquidGlass.copy(enabled = action.enabled),
-                            ),
+                        settings = state.launcherSettings.withReducedTransparency(action.reduced),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
@@ -353,9 +351,8 @@ private val LauncherShellAction.isAppearanceSettingsAction: Boolean
         when (this) {
             is LauncherShellAction.SelectWallpaperSource,
             is LauncherShellAction.SelectLauncherThemeMode,
-            is LauncherShellAction.SelectLauncherThemePreset,
             is LauncherShellAction.SelectLauncherThemeAccent,
-            is LauncherShellAction.SelectLauncherThemeColor,
+            is LauncherShellAction.SelectCustomAccent,
             is LauncherShellAction.SelectLauncherThemeCornerStyle,
             is LauncherShellAction.SelectLauncherThemeTypography,
             is LauncherShellAction.SelectWallpaperScrollMode,

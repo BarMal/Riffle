@@ -42,7 +42,6 @@ class WorkspaceSetTest {
             widgetPage("pg-$id"),
             PageContainer(ContainerId("l-$id"), PageContent.Bound(LensBinding(apps, expression))),
         ),
-        skinOverrideId = "skin",
         gestureBindings = mapOf("swipe_up" to "open_finder"),
     )
 
@@ -85,7 +84,6 @@ class WorkspaceSetTest {
         assertTrue(sourceIds.intersect(copiedIds).isEmpty())
         assertEquals(sourceIds.size, copiedIds.size)
         // Content other than ids is copied as is, and the source layout is untouched.
-        assertEquals("skin", copied.active.skinOverrideId)
         assertEquals(mapOf("swipe_up" to "open_finder"), copied.active.gestureBindings)
         assertSame(source, set.workspacesFor(foldable))
     }

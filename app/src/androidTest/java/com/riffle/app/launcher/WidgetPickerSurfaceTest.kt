@@ -130,9 +130,7 @@ class WidgetPickerSurfaceTest {
     @Test
     fun widgetPickerAddMenuUsesTheSharedLauncherOverlay() {
         composeRule.setContent {
-            RiffleLauncherTheme(
-                themePreset = com.riffle.core.domain.launcher.settings.LauncherThemePreset.GLASS,
-            ) {
+            RiffleLauncherTheme {
                 WidgetPickerSurface(
                     providers = listOf(widgetProvider()),
                     onAction = {},

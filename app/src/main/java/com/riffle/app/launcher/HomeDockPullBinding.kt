@@ -112,6 +112,8 @@ internal fun rememberHomeDockPullBinding(
      * keeps the mode pull.
      */
     onOpenWorkspaceMenu: (() -> Unit)? = null,
+    /** False while a surface that is not Home or Library (the Stream) is up: the pull is inert there. */
+    pullEnabled: Boolean = true,
 ): HomeDockPullBinding {
     val rootSize = remember { mutableStateOf(IntSize.Zero) }
     val reducedMotion = state.launcherSettings.motion.reducedMotion
@@ -123,7 +125,7 @@ internal fun rememberHomeDockPullBinding(
     val menu = rememberDockMenuPull(browsing, pullDirection, onOpenWorkspaceMenu)
     // With the workspace menu the pull no longer moves between modes, so the reorient transition never starts; while
     // the workspaces are still loading (no menu yet) it is inert rather than the old mode switch.
-    val canPull = browsing && !menu.isPresent && LocalDockModePullEnabled.current
+    val canPull = pullEnabled && browsing && !menu.isPresent && LocalDockModePullEnabled.current
     val edges = plan.edges
     val frameState = remember(dockPull, edges) { derivedStateOf { dockPull.transition.frame(edges) } }
     val transitioning = remember(dockPull) { derivedStateOf { dockPull.transition !is DockPullTransitionState.Idle } }

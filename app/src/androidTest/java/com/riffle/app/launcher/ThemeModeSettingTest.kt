@@ -12,7 +12,6 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import org.junit.Rule
 import org.junit.Test
@@ -36,7 +35,6 @@ class ThemeModeSettingTest {
                                     appearance =
                                         AppearanceSettings(
                                             themeMode = LauncherThemeMode.DARK,
-                                            themePreset = LauncherThemePreset.GLASS,
                                             themeAccent = LauncherThemeAccent.TEAL,
                                             themeCornerStyle = LauncherThemeCornerStyle.ROUNDED,
                                             themeTypography = LauncherThemeTypography.MONOSPACE,
@@ -51,7 +49,6 @@ class ThemeModeSettingTest {
         }
 
         composeRule.onNodeWithText("Dark").assertIsSelected()
-        composeRule.onNodeWithText("Glass").assertIsSelected()
         composeRule.onNodeWithText("Teal").assertIsSelected()
         composeRule.onNodeWithText("Rounded").assertIsSelected()
         composeRule.onNodeWithText("Monospace").assertIsSelected()

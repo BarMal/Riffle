@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.rss.FeedId
  * hex value -- never by URL, title, or any URL-derived string. Cached content is device-local: it
  * is never part of the in-app JSON launcher backup and is excluded from OS-level Auto Backup.
  */
+@Suppress("TooManyFunctions") // One cache seam: articles, images, and read/dismiss state.
 interface FeedArticleCacheRepository : FeedRefreshStateStore {
     /** Loads the last cached snapshot for [feedId], if any, marking it stale when past [staleAfterMillis]. */
     fun loadFeed(
@@ -26,6 +27,9 @@ interface FeedArticleCacheRepository : FeedRefreshStateStore {
     fun clearFeed(feedId: FeedId)
 
     fun isRead(digest: String): Boolean
+
+    /** Every digest marked read, in one read; for callers that would otherwise ask [isRead] per article. */
+    fun readDigests(): Set<String> = emptySet()
 
     fun markRead(digest: String)
 

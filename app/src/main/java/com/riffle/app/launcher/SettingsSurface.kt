@@ -32,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 
 @Composable
 fun SettingsSurface(
@@ -164,54 +165,30 @@ internal fun SettingsSection(
 }
 
 /**
- * The per-section rounded "card" container behind every [SettingsSection]'s rows.
- *
- * When liquid glass is switched on ([LocalLiquidGlassSettings.current.enabled]), this uses the
- * shared [GlassSurface] material -- the same one Settings' own "Cards appearance" tuning sheet
- * (`AdaptiveStageAppearanceTuningOverlay.kt`) already renders with -- tinted with today's
- * [ColorScheme.surfaceContainerLow] so a glassy section still reads as a Settings surface rather
- * than a color change. Settings is reached as its own top-level [ShellDestination], composed as a
- * sibling of [HomeDestination] rather than inside it (see `LauncherShell.kt`'s
- * `when (state.destination)`), so [LocalLiquidGlassBackdrop] is never installed here and
- * `GlassSurface` always takes its below-API-33/no-backdrop fallback: a blurred flat tint layer, not
- * true backdrop refraction. That is a deliberate, scoped limitation (see this PR's description) --
- * there is nothing interesting behind a settings section worth refracting (just the flat screen
- * background from [SettingsSurface]'s own root `Surface`, left untouched by this change) -- rather
- * than installing a second, pointless backdrop capture just to say the "real" shader path runs here.
- *
- * When liquid glass is switched off, this renders exactly today's flat [Surface] fill -- unchanged
- * pixels, zero regression -- since [GlassSurface]'s own disabled-state fallback is a translucent
- * blurred tint, not the flat opaque fill this container had before liquid glass existed.
+ * The per-section rounded container behind every [SettingsSection]'s rows: Thick [GlassSurface],
+ * tinted with [ColorScheme.surfaceContainerLow] so a glassy section still reads as a Settings
+ * surface rather than a colour change. Settings is reached as its own top-level [ShellDestination],
+ * composed as a sibling of [HomeDestination] rather than inside it (see `LauncherShell.kt`'s
+ * `when (state.destination)`), so [LocalLiquidGlassBackdrop] is never installed here and the glass
+ * always takes its no-backdrop fallback: a blurred flat tint layer, not true backdrop refraction.
+ * That is a deliberate, scoped limitation -- there is nothing interesting behind a settings section
+ * worth refracting (just the flat screen background from [SettingsSurface]'s own root `Surface`)
+ * -- rather than installing a second, pointless backdrop capture just to say the "real" shader
+ * path runs here. With liquid glass switched off [GlassSurface] draws today's flat fill.
  */
 @Composable
 private fun SettingsSectionContainer(content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(24.dp)
-    val tint = MaterialTheme.colorScheme.surfaceContainerLow
-    if (LocalLiquidGlassSettings.current.enabled) {
-        GlassSurface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = shape,
-            tint = tint,
+    GlassSurface(
+        modifier = Modifier.fillMaxWidth(),
+        weight = GlassWeight.Thick,
+        shape = RoundedCornerShape(24.dp),
+        tint = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp),
-            ) {
-                content()
-            }
-        }
-    } else {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = shape,
-            color = tint,
-        ) {
-            Column(
-                modifier = Modifier.padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp),
-            ) {
-                content()
-            }
+            content()
         }
     }
 }

@@ -71,5 +71,6 @@ class LauncherShellStateReducer {
                 ShellNavigationAction.OpenSearch -> ShellDestination.SEARCH
                 ShellNavigationAction.OpenNotifications -> ShellDestination.NOTIFICATIONS
                 ShellNavigationAction.OpenSettings -> ShellDestination.SETTINGS
+                ShellNavigationAction.OpenStream -> ShellDestination.STREAM
             }
 }

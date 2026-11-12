@@ -87,7 +87,6 @@ class EditorTextTest {
                 EditRejection.NotAGridPage(id),
                 EditRejection.NotABoundPage(id),
                 EditRejection.BlankName,
-                EditRejection.BlankSkinId,
             )
         assertAllNonBlank(rejections.map { EditorReasonText.rejection(it) })
     }

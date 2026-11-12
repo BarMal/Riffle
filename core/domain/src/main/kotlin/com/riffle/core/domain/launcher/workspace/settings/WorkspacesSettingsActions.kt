@@ -2,7 +2,6 @@ package com.riffle.core.domain.launcher.workspace.settings
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.workspace.DockMenuReachability
 import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
@@ -11,7 +10,6 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
-import com.riffle.core.domain.launcher.workspace.WorkspaceSkin
 import com.riffle.core.domain.launcher.workspace.preset.PresetLensInstaller
 import com.riffle.core.domain.launcher.workspace.preset.PresetPosture
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
@@ -33,9 +31,6 @@ sealed interface WorkspacesSettingsMessage {
     data class Reset(val name: String, val presetName: String) : WorkspacesSettingsMessage
 
     data class Installed(val name: String) : WorkspacesSettingsMessage
-
-    /** [skin] is the override now applied; null when the workspace follows the global appearance again. */
-    data class SkinChanged(val name: String, val skin: LauncherThemePreset?) : WorkspacesSettingsMessage
 
     data class Copied(val source: HomeLayoutDeviceClass, val replaced: Int, val copied: Int) :
         WorkspacesSettingsMessage
@@ -142,20 +137,6 @@ sealed interface WorkspacesSettingsAction {
             layout: HomeLayoutDeviceClass,
             ids: WorkspaceIdFactory,
         ) = set.edit(layout, { WorkspacesSettingsMessage.MadeDefault(it.nameOf(id)) }) { it.withDefault(id) }
-    }
-
-    /**
-     * Sets this workspace's appearance (Q15): [skin] overrides the global theme preset while it is active; null
-     * follows Settings > Appearance again. Never changes the global setting or any other workspace.
-     */
-    data class SetSkin(val id: WorkspaceId, val skin: LauncherThemePreset?) : WorkspacesSettingsAction {
-        override fun applyTo(
-            set: WorkspaceSet,
-            layout: HomeLayoutDeviceClass,
-            ids: WorkspaceIdFactory,
-        ) = set.edit(layout, { WorkspacesSettingsMessage.SkinChanged(it.nameOf(id), skin) }) { stored ->
-            stored.replace(id) { it.copy(skinOverrideId = skin?.let(WorkspaceSkin::idOf)) }
-        }
     }
 
     /** Removes a workspace; never the last one. Undoable. */

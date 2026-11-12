@@ -23,7 +23,7 @@ import kotlin.math.ceil
  *
  * The content is drawn into an offscreen layer (only while there is something to fade) and
  * masked with a baked one-pixel ramp, stretched across the run -- the same no-gradient-shader
- * approach as the dock's glass, see `DockGlassSheenStrength.kt`.
+ * approach as the dock's glass, see `GlassSheenStrength.kt`.
  */
 internal fun Modifier.dockOverflowMask(
     runsHorizontally: Boolean,

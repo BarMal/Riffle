@@ -232,71 +232,34 @@ fun CardsSettings.withFeedStagePreferences(
 data class AppearanceSettings(
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),
     val themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
-    val themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
     val themeAccent: LauncherThemeAccent = LauncherThemeAccent.DEFAULT,
     val themeCornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
     val themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
-    /** Optional ARGB overrides for the launcher surfaces that are visible on Home. */
+    /** The optional custom accent. */
     val themeColors: LauncherThemeColors = LauncherThemeColors(),
     val fullscreenHome: Boolean = false,
     val hideStatusBarOnHome: Boolean = false,
     val hideNavigationBarOnHome: Boolean = false,
+    /**
+     * The one off switch for glass: every glass surface draws an opaque tint, samples no backdrop and
+     * keeps its sheen faint. Replaces the copy that lived in the adaptive stage's motion settings.
+     */
+    val reducedTransparency: Boolean = false,
 )
 
 /**
- * Renderer-independent custom colour intent. A null value leaves the corresponding theme role intact.
- * Values use Android's packed ARGB representation so alpha survives backup and restore.
+ * The one custom colour left: an accent. Null keeps the accent chosen by [LauncherThemeAccent]. The value
+ * is Android's packed ARGB so alpha survives backup and restore. The removed background, dock, label and
+ * label-background colours are ignored when old data is decoded.
  */
 data class LauncherThemeColors(
-    val backgroundArgb: Int? = null,
     val accentArgb: Int? = null,
-    val dockArgb: Int? = null,
-    val labelArgb: Int? = null,
-    val labelBackgroundArgb: Int? = null,
-) {
-    fun colorFor(target: LauncherThemeColorTarget): Int? =
-        when (target) {
-            LauncherThemeColorTarget.BACKGROUND -> backgroundArgb
-            LauncherThemeColorTarget.ACCENT -> accentArgb
-            LauncherThemeColorTarget.DOCK -> dockArgb
-            LauncherThemeColorTarget.LABEL -> labelArgb
-            LauncherThemeColorTarget.LABEL_BACKGROUND -> labelBackgroundArgb
-        }
-
-    fun withColor(
-        target: LauncherThemeColorTarget,
-        argb: Int?,
-    ): LauncherThemeColors =
-        when (target) {
-            LauncherThemeColorTarget.BACKGROUND -> copy(backgroundArgb = argb)
-            LauncherThemeColorTarget.ACCENT -> copy(accentArgb = argb)
-            LauncherThemeColorTarget.DOCK -> copy(dockArgb = argb)
-            LauncherThemeColorTarget.LABEL -> copy(labelArgb = argb)
-            LauncherThemeColorTarget.LABEL_BACKGROUND -> copy(labelBackgroundArgb = argb)
-        }
-}
-
-enum class LauncherThemeColorTarget {
-    BACKGROUND,
-    ACCENT,
-    DOCK,
-    LABEL,
-    LABEL_BACKGROUND,
-}
+)
 
 enum class LauncherThemeMode {
     SYSTEM,
     LIGHT,
     DARK,
-}
-
-enum class LauncherThemePreset {
-    MATERIAL,
-    MINIMAL,
-    RETRO,
-    GLASS,
-    TERMINAL,
-    CUSTOM,
 }
 
 /** User-selected colour family applied consistently to Material theme roles. */
@@ -308,9 +271,9 @@ enum class LauncherThemeAccent {
     AMBER,
 }
 
-/** Optional corner override for launcher cards, panels, dock, and settings rows. */
+/** Corner choice for launcher cards, panels, the dock and settings rows ("Corners" in Settings). */
 enum class LauncherThemeCornerStyle {
-    /** Keep the shape supplied by the selected theme preset. */
+    /** The standard corners ("Standard" in Settings). */
     PRESET,
     COMPACT,
     ROUNDED,
@@ -318,7 +281,7 @@ enum class LauncherThemeCornerStyle {
 
 /** Optional typography override applied through the shared launcher theme. */
 enum class LauncherThemeTypography {
-    /** Keep the typeface supplied by the selected theme preset. */
+    /** The standard typeface; the same as [SYSTEM]. */
     PRESET,
     SYSTEM,
     MONOSPACE,
@@ -563,6 +526,12 @@ enum class LauncherGestureAction {
      * this is how a workspace without a dock (Niagara) or a person who prefers a gesture reaches it.
      */
     OPEN_WORKSPACE_MENU,
+
+    /**
+     * Opens the Stream (ADR 0003): the actions centre that replaces Home until Back or the Home button. Added by P4;
+     * stored settings written before it never name it, and a stored name this build does not know decodes to no action.
+     */
+    OPEN_STREAM,
     ;
 
     /** Actions that need the workspace menu (always present since S9; kept for callers that filter on it). */

@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -19,14 +20,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppIdentity
-import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.isHorizontalEdge
+import com.riffle.core.domain.launcher.designsystem.GlassMaterialTokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
@@ -34,14 +37,20 @@ import kotlin.math.abs
 import kotlin.math.ceil
 
 /*
- * The dock's spotlight: each icon's own colour glows onto the dock's two long edges at the point
- * along the run where that icon sits, as one continuous gradient, fading inward from the edge.
+ * The glass spotlight: each coloured thing's own colour glows onto the surface's two long edges at
+ * the point along its run where that thing sits, as one continuous gradient, fading inward from the
+ * edge. Used by the dock (icons) and by every glass surface that holds coloured things: open
+ * folders, the search results panel, Stream cards.
  *
  * Ported from the desktop glass theme (the window edge-border compositor plugin and the status
  * bar's zone-colour edge strips): the surface's rim is lit by what it holds rather than by a fixed
  * accent, so a dock of blue and orange apps reads blue at one end and orange at the other. The
  * edge facing into the screen carries the stronger glow; the edge against the screen's own edge a
- * weaker one, like light spilling out of the dock.
+ * weaker one, like light spilling out of the surface.
+ *
+ * The run is the surface's longer axis by default ([GlassSpotlightAxis.Longest]), or fixed (the
+ * dock's, which follows its edge). A source's colour is projected onto that axis wherever it sits
+ * inside the surface; the outline it follows is the surface's own [androidx.compose.ui.graphics.Shape].
  *
  * Only icons with a vivid enough dominant colour light the edge (see `dominantColorOf`). Grey icons,
  * folders and widgets are still placed on the run, but as unlit points: the glow fades out across
@@ -50,11 +59,11 @@ import kotlin.math.ceil
  */
 
 /**
- * One point along the dock's run: [position] is 0..1 from the run's start. An unlit point (an icon
+ * One point along the surface's run: [position] is 0..1 from the run's start. An unlit point (an icon
  * with no colour of its own) carries its nearest lit neighbour's colour at zero alpha, so the glow
  * fades out toward it without the gradient passing through black on the way.
  */
-internal data class DockSpotlightStop(
+internal data class GlassSpotlightStop(
     val position: Float,
     val color: Color,
 )
@@ -65,21 +74,21 @@ internal data class DockSpotlightStop(
  * visible run -- icons scrolled out of the strip -- are dropped, so the glow follows what is
  * actually on screen. Nothing lit, nothing to draw.
  */
-internal fun dockSpotlightStops(
+internal fun glassSpotlightStops(
     centers: List<Pair<Float, Color?>>,
     runLengthPx: Float,
-): List<DockSpotlightStop> {
+): List<GlassSpotlightStop> {
     val visible =
         centers
             .filter { (centerPx, _) -> runLengthPx > 0f && centerPx in 0f..runLengthPx }
-            .map { (centerPx, color) -> centerPx / runLengthPx to color?.let(::dockSpotlightGlowColor) }
+            .map { (centerPx, color) -> centerPx / runLengthPx to color?.let(::glassSpotlightGlowColor) }
             .sortedBy { (position, _) -> position }
     val lit = visible.mapNotNull { (position, color) -> color?.let { position to it } }
     return if (lit.isEmpty()) {
         emptyList()
     } else {
         visible.map { (position, color) ->
-            DockSpotlightStop(
+            GlassSpotlightStop(
                 position = position,
                 color = color ?: lit.minBy { (litPosition, _) -> abs(litPosition - position) }.second.copy(alpha = 0f),
             )
@@ -92,7 +101,7 @@ internal fun dockSpotlightStops(
  * brightness toward a max channel of 1 (fully would turn muted icons neon), then mixes a little
  * white in. Same two steps, same constants, as the desktop plugin's vivid-glow path.
  */
-internal fun dockSpotlightGlowColor(color: Color): Color {
+internal fun glassSpotlightGlowColor(color: Color): Color {
     val max = maxOf(color.red, color.green, color.blue)
     val scale = if (max > MIN_CHANNEL) (1f - SPOTLIGHT_VIVID_NORM) + SPOTLIGHT_VIVID_NORM / max else 1f
     val lift = { channel: Float ->
@@ -106,8 +115,8 @@ internal fun dockSpotlightGlowColor(color: Color): Color {
  * The gradient stops along one edge: the lit points themselves, held flat out to both ends of the
  * run so the nearest icon's colour reaches each corner instead of the glow stopping short of it.
  */
-internal fun dockSpotlightEdgeStops(
-    stops: List<DockSpotlightStop>,
+internal fun glassSpotlightEdgeStops(
+    stops: List<GlassSpotlightStop>,
     alpha: Float,
 ): Array<Pair<Float, Color>> {
     if (stops.isEmpty() || alpha <= 0f) return emptyArray()
@@ -115,15 +124,49 @@ internal fun dockSpotlightEdgeStops(
     return (listOf(0f to lit.first().second) + lit + listOf(1f to lit.last().second)).toTypedArray()
 }
 
+/** Which way a surface's spotlight runs. */
+internal enum class GlassSpotlightAxis {
+    Horizontal,
+    Vertical,
+
+    /** Along whichever of width and height is longer, so a card or a panel needs no choice. */
+    Longest,
+}
+
+/** Whether the run goes along the x axis for a surface of [size] (a square runs horizontally). */
+internal fun GlassSpotlightAxis.runsHorizontally(size: Size): Boolean =
+    when (this) {
+        GlassSpotlightAxis.Horizontal -> true
+        GlassSpotlightAxis.Vertical -> false
+        GlassSpotlightAxis.Longest -> size.width >= size.height
+    }
+
+/**
+ * The corner radius, in px, the glow follows for a surface of [size] drawn as [shape]: the shape's
+ * own radius when it has one (rounded and continuous corners alike), a square surface's none, and
+ * half the short side (a pill) for any other outline, which is the closest a plain rounded
+ * rectangle comes to an arbitrary one.
+ */
+internal fun glassSpotlightCornerRadiusPx(
+    shape: Shape,
+    size: Size,
+    density: Density,
+): Float =
+    when (shape) {
+        is CornerBasedShape -> shape.topStart.toPx(size, density)
+        RectangleShape -> 0f
+        else -> minOf(size.width, size.height) / 2f
+    }.coerceIn(0f, minOf(size.width, size.height) / 2f)
+
 /**
  * Collects where each icon currently sits and what colour it is, and eases the glow on screen
- * toward what that describes (see `DockSpotlightFlow.kt`). Positions are reported in root
- * coordinates by [dockSpotlightSource]; nothing here recomposes the dock -- the glow is redrawn
+ * toward what that describes (see `GlassSpotlightFlow.kt`). Positions are reported in root
+ * coordinates by [glassSpotlightSource]; nothing here recomposes the surface -- the glow is redrawn
  * from [shown], and only on the frames it actually changes.
  */
 @Stable
-internal class DockSpotlightState(
-    private val runsHorizontally: Boolean,
+internal class GlassSpotlightState(
+    private val axis: GlassSpotlightAxis = GlassSpotlightAxis.Longest,
 ) {
     private val sources = mutableStateMapOf<Any, Pair<Offset, Color?>>()
     private var originInRoot by mutableStateOf(Offset.Zero)
@@ -131,8 +174,8 @@ internal class DockSpotlightState(
 
     // One array, eased in place on the main thread by [run]; re-set after every change under a
     // never-equal policy, so whatever reads [shown] (the draw cache) sees each change.
-    private val shownState = mutableStateOf(emptyDockSpotlightProfile(), neverEqualPolicy())
-    private val scratch = emptyDockSpotlightProfile()
+    private val shownState = mutableStateOf(emptyGlassSpotlightProfile(), neverEqualPolicy())
+    private val scratch = emptyGlassSpotlightProfile()
 
     // The last display frame a settle stepped on, kept across restarts: while the icons keep
     // moving (a scroll), every frame brings a new target and restarts the settle, and each restart
@@ -140,7 +183,7 @@ internal class DockSpotlightState(
     private var lastFrameNanos = 0L
 
     /** Bakes [shown] into the image drawn; reuses its buffers between frames. */
-    val glowBaker = DockSpotlightGlowBaker()
+    val glowBaker = GlassSpotlightGlowBaker()
 
     /** The glow currently on screen. Reading it in a draw cache ties the cache to its changes. */
     val shown: FloatArray
@@ -168,11 +211,15 @@ internal class DockSpotlightState(
         layoutSize = size
     }
 
+    /** Whether the glow runs along x for the surface as last laid out. */
+    val runsHorizontally: Boolean
+        get() = axis.runsHorizontally(layoutSize)
+
     fun stopsFor(
         size: Size,
         runsHorizontally: Boolean,
-    ): List<DockSpotlightStop> =
-        dockSpotlightStops(
+    ): List<GlassSpotlightStop> =
+        glassSpotlightStops(
             centers =
                 sources.values.map { (center, color) ->
                     val local = center - originInRoot
@@ -182,21 +229,21 @@ internal class DockSpotlightState(
         )
 
     /**
-     * Follows the icons for as long as the dock is on screen: each time they move, arrive, leave
+     * Follows the icons for as long as the surface is on screen: each time they move, arrive, leave
      * or change colour, [shown] eases toward the new glow, one display frame at a time, then the
-     * frame loop stops -- a dock at rest asks for no frames at all. With [animate] off (reduced
+     * frame loop stops -- a surface at rest asks for no frames at all. With [animate] off (reduced
      * motion, or a flow of 0), and whenever nothing is lit yet, it jumps straight there instead, so
-     * a dock never fades its glow in on launch or as icon colours finish loading.
+     * a surface never fades its glow in on launch or as icon colours finish loading.
      * [flowSeconds] is the flow's time constant (the "Spotlight flow" setting).
      */
     suspend fun run(
         animate: Boolean,
         flowSeconds: Float,
     ) {
-        snapshotFlow { dockSpotlightTargetProfile(stopsFor(layoutSize, runsHorizontally)) }
+        snapshotFlow { glassSpotlightTargetProfile(stopsFor(layoutSize, runsHorizontally)) }
             .collectLatest { target ->
                 if (!target.contentEquals(shown)) {
-                    if (animate && flowSeconds > 0f && dockSpotlightProfileIsLit(shown)) {
+                    if (animate && flowSeconds > 0f && glassSpotlightProfileIsLit(shown)) {
                         settleTowards(target, flowSeconds)
                     } else {
                         showNow(target)
@@ -229,8 +276,8 @@ internal class DockSpotlightState(
             lastFrameNanos = frame
             elapsed += dt
             val profile = shownState.value
-            settled = stepDockSpotlightProfile(profile, target, dt, flowSeconds, scratch) ||
-                elapsed >= dockSpotlightMaxSettleSeconds(flowSeconds)
+            settled = stepGlassSpotlightProfile(profile, target, dt, flowSeconds, scratch) ||
+                elapsed >= glassSpotlightMaxSettleSeconds(flowSeconds)
             if (settled) {
                 target.copyInto(profile)
                 lastFrameNanos = 0L
@@ -245,23 +292,22 @@ private const val NANOS_PER_SECOND = 1_000_000_000f
 /** The step taken on the first frame of a settle, with no previous frame to measure from. */
 private const val FIRST_FRAME_SECONDS = 1f / 60f
 
-/** The spotlight the dock strip around this composable is collecting into, if it has one. */
-internal val LocalDockSpotlight = staticCompositionLocalOf<DockSpotlightState?> { null }
+/** The spotlight the glass surface around this composable is collecting into, if it has one. */
+internal val LocalGlassSpotlight = staticCompositionLocalOf<GlassSpotlightState?> { null }
 
 /**
- * Remembers a spotlight for one dock strip running along [position]'s edge, and keeps its glow
- * following the icons -- or returns null, and runs nothing, when the glass theme is switched off
- * or this strip draws no background of its own ([enabled] false).
+ * Remembers a spotlight for one glass surface running along [axis], and keeps its glow following
+ * the coloured things inside it -- or returns null, and runs nothing, when this surface draws no
+ * background of its own ([enabled] false).
  */
 @Composable
-internal fun rememberDockSpotlightState(
-    position: DockPosition,
-    enabled: Boolean,
-): DockSpotlightState? {
+internal fun rememberGlassSpotlightState(
+    axis: GlassSpotlightAxis = GlassSpotlightAxis.Longest,
+    enabled: Boolean = true,
+): GlassSpotlightState? {
     val glass = LocalLiquidGlassSettings.current
-    val active = enabled && glass.enabled
-    val runsHorizontally = position.isHorizontalEdge
-    val state = remember(runsHorizontally) { DockSpotlightState(runsHorizontally) }
+    val active = enabled
+    val state = remember(axis) { GlassSpotlightState(axis) }
     if (active) {
         LaunchedEffect(state, glass.reducedMotion, glass.spotlightFlowSeconds) {
             state.run(animate = !glass.reducedMotion, flowSeconds = glass.spotlightFlowSeconds)
@@ -272,15 +318,15 @@ internal fun rememberDockSpotlightState(
 
 /**
  * The dominant colour of [identity]'s icon, loaded off the main thread the same way the generated
- * page's cards load theirs. Null outside a spotlit dock (nothing to load for), for a non-app slot,
+ * page's cards load theirs. Null outside a spotlit surface (nothing to load for), for a non-app slot,
  * or for an icon with no vivid colour.
  */
 @Composable
-internal fun rememberDockSpotlightColor(
+internal fun rememberGlassSpotlightColor(
     identity: AppIdentity?,
     appIconLoader: AppIconLoader,
 ): Color? {
-    val spotlit = LocalDockSpotlight.current != null
+    val spotlit = LocalGlassSpotlight.current != null
     var color by remember(identity, appIconLoader, spotlit) {
         mutableStateOf(identity?.takeIf { spotlit }?.let(appIconLoader::cachedColorFor))
     }
@@ -294,16 +340,16 @@ internal fun rememberDockSpotlightColor(
 }
 
 /**
- * Reports the centre of this icon's visible part and its [color] to the enclosing dock's spotlight
+ * Reports the centre of this icon's visible part and its [color] to the enclosing surface's spotlight
  * -- null [color] for an icon with none, which still marks its place on the run as unlit. A no-op
- * outside a spotlit dock.
+ * outside a spotlit surface.
  */
 @Composable
-internal fun Modifier.dockSpotlightSource(
+internal fun Modifier.glassSpotlightSource(
     key: Any,
     color: Color?,
 ): Modifier {
-    val spotlight = LocalDockSpotlight.current ?: return this
+    val spotlight = LocalGlassSpotlight.current ?: return this
     DisposableEffect(spotlight, key, color) {
         onDispose { spotlight.remove(key) }
     }
@@ -321,41 +367,48 @@ internal fun Modifier.dockSpotlightSource(
 }
 
 /**
- * Draws [spotlight]'s edge glow behind this node's content, following the dock's outline rounded
- * to [cornerRadiusDp]. Chain it after the dock's own background, which already clips to that
- * shape. [alphaProvider] is the dock pull's background fade, read at draw time.
+ * Draws [spotlight]'s edge glow behind this node's content, following [shape]'s outline. Chain it
+ * after the surface's own background, which already clips to that shape. [innerAtStart] says which
+ * long edge faces into the screen and carries the stronger glow (the top of a bottom dock, say).
+ * [alphaProvider] is the surface's own fade (the dock pull's background fade), read at draw time.
+ * Under reduced transparency the glow is kept at half strength.
  */
-internal fun Modifier.dockSpotlight(
-    spotlight: DockSpotlightState?,
-    position: DockPosition,
-    cornerRadiusDp: Int,
-    alphaProvider: () -> Float,
+@Composable
+internal fun Modifier.glassSpotlight(
+    spotlight: GlassSpotlightState?,
+    shape: Shape,
+    innerAtStart: Boolean = true,
+    alphaProvider: () -> Float = { 1f },
 ): Modifier {
     if (spotlight == null) return this
+    val reducedScale =
+        if (LocalLiquidGlassSettings.current.reducedTransparency) {
+            GlassMaterialTokens.REDUCED_TRANSPARENCY_SPOTLIGHT_SCALE
+        } else {
+            1f
+        }
     return onGloballyPositioned { coordinates ->
         val size = coordinates.size
         spotlight.updateLayout(coordinates.positionInRoot(), Size(size.width.toFloat(), size.height.toFloat()))
     }.drawWithCache {
         // Reading the glow here ties the cache to it: it is rebaked only on frames it changes
-        // (while it flows) and when the dock resizes -- never for a dock at rest.
+        // (while it flows) and when the surface resizes -- never for a surface at rest.
         val profile = spotlight.shown
-        val runsHorizontally = position.isHorizontalEdge
+        val runsHorizontally = spotlight.runsHorizontally
         val runPx = if (runsHorizontally) size.width else size.height
         val crossPx = if (runsHorizontally) size.height else size.width
         val maxCrossDepth = crossPx * MAX_DEPTH_FRACTION
         val glow =
-            if (dockSpotlightProfileIsLit(profile) && runPx >= 1f && crossPx >= 1f) {
+            if (glassSpotlightProfileIsLit(profile) && runPx >= 1f && crossPx >= 1f) {
                 spotlight.glowBaker.bake(
                     profile = profile,
                     runPx = runPx,
                     crossPx = crossPx,
-                    cornerRadiusPx = cornerRadiusDp.dp.toPx(),
-                    // The edge facing into the screen is the inner one: the top of a bottom dock,
-                    // the right of a left dock, and so on.
-                    innerAtStart = position == DockPosition.BOTTOM || position == DockPosition.RIGHT,
+                    cornerRadiusPx = glassSpotlightCornerRadiusPx(shape, size, this),
+                    innerAtStart = innerAtStart,
                     runsHorizontally = runsHorizontally,
                     edges =
-                        DockSpotlightGlowEdges(
+                        GlassSpotlightGlowEdges(
                             innerDepthPx = SPOTLIGHT_INNER_DEPTH_DP.dp.toPx().coerceAtMost(maxCrossDepth),
                             outerDepthPx = SPOTLIGHT_OUTER_DEPTH_DP.dp.toPx().coerceAtMost(maxCrossDepth),
                             endDepthPx = SPOTLIGHT_END_DEPTH_DP.dp.toPx().coerceAtMost(runPx * MAX_DEPTH_FRACTION),
@@ -370,7 +423,7 @@ internal fun Modifier.dockSpotlight(
             }
         val dstSize = IntSize(ceil(size.width).toInt(), ceil(size.height).toInt())
         onDrawBehind {
-            val fade = alphaProvider().coerceIn(0f, 1f)
+            val fade = alphaProvider().coerceIn(0f, 1f) * reducedScale
             if (glow != null && fade > 0f) {
                 drawImage(image = glow, dstSize = dstSize, alpha = fade, filterQuality = FilterQuality.Low)
             }

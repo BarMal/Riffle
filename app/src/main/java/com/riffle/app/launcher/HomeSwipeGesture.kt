@@ -134,6 +134,7 @@ class HomeSwipeGestureActionMapper {
             LauncherGestureAction.LAUNCH_APP -> launchTarget.launchAppAction()
             LauncherGestureAction.LAUNCH_APP_SHORTCUT -> launchTarget.launchShortcutAction()
             LauncherGestureAction.OPEN_WORKSPACE_MENU -> LauncherShellAction.OpenWorkspaceMenu
+            LauncherGestureAction.OPEN_STREAM -> LauncherShellAction.OpenStream
         }
 
     private fun LauncherGestureLaunchTarget?.launchAppAction(): LauncherShellAction? =

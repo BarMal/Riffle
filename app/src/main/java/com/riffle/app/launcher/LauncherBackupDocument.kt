@@ -4,9 +4,13 @@ import com.riffle.app.launcher.exclusions.decodeExclusionRules
 import com.riffle.app.launcher.exclusions.encodeExclusionRules
 import com.riffle.app.launcher.pool.decodePoolStore
 import com.riffle.app.launcher.pool.encodePoolStore
+import com.riffle.app.launcher.stream.decodeStreamLayouts
+import com.riffle.app.launcher.stream.encodeStreamLayouts
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.stream.StreamLayoutBackup
+import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.backup.WorkspaceBackup
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
@@ -32,6 +36,8 @@ data class LauncherBackupDocument(
      * re-imported into the pool on restore. Older builds ignore the key and restore [homeLayoutSet] as before.
      */
     val homeFromPool: Boolean = false,
+    /** How the Stream is arranged per posture (sections, order, views, options). Absent in older backups. */
+    val stream: StreamLayouts? = null,
 )
 
 fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
@@ -49,6 +55,8 @@ fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
                 ?.let { rules -> json.put("exclusions", JSONObject(encodeExclusionRules(rules))) }
             WorkspaceBackup.exportPool(document.pool)
                 ?.let { state -> json.put("pool", JSONObject(encodePoolStore(state))) }
+            StreamLayoutBackup.export(document.stream)
+                ?.let { layouts -> json.put("stream", JSONObject(encodeStreamLayouts(layouts))) }
             if (document.homeFromPool) json.put("homeFromPool", true)
         }
         .toString()
@@ -81,6 +89,7 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
             exclusions = json.optExclusions(),
             pool = json.optPool(),
             homeFromPool = json.optBoolean("homeFromPool", false),
+            stream = json.optStream(),
         )
     }.getOrElse { error ->
         when (error) {
@@ -117,6 +126,13 @@ private fun JSONObject.optPool(): PoolStoreState? =
             ?.let { decodePoolStore(it.toString()) }
             ?.let(WorkspaceBackup::restorePool)
             ?.state
+    }.getOrNull()
+
+private fun JSONObject.optStream(): StreamLayouts? =
+    runCatching {
+        optJSONObject("stream")
+            ?.let { decodeStreamLayouts(it.toString()) }
+            ?.let(StreamLayoutBackup::restore)
     }.getOrNull()
 
 private fun JSONObject.optHiddenAppIdentities(): Set<AppIdentity> =

@@ -9,6 +9,7 @@ import com.riffle.app.launcher.calendar.CalendarAccessChanges
 import com.riffle.app.launcher.calendar.CalendarAccessGateway
 import com.riffle.app.launcher.calendar.sourceAccess
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
+import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnection
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
@@ -16,6 +17,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.workspace.SourceRegistry
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * Wires the built-in item sources to the launcher's existing platform repositories (pass the instances
@@ -37,39 +39,88 @@ internal fun androidItemSources(
     hideRules: () -> List<NotificationHideRule>,
     calendar: CalendarSourceDependencies,
     content: ContentSourceDependencies = ContentSourceDependencies(),
-): SourceRegistry {
+): SourceRegistry =
+    builtInSourceRegistry(
+        androidBuiltInSourceDependencies(
+            installedApps,
+            appVisibility,
+            recentApps,
+            notificationRepository,
+            notificationAccess,
+            hideRules,
+            calendar,
+            content,
+        ),
+    )
+
+/**
+ * The same sources as [androidItemSources] plus the Stream's agenda view of the calendar, with live media sessions
+ * behind the media source ([media]). Read it through `AliasedSourceEnablement` so the agenda follows the calendar.
+ */
+@Suppress("LongParameterList") // One wiring seam over the platform repositories the activity already holds.
+internal fun androidStreamSources(
+    installedApps: PackageManagerInstalledAppRepository,
+    appVisibility: AppVisibilityRepository,
+    recentApps: AndroidRecentAppRepository,
+    notificationRepository: DataStoreActiveNotificationRepository,
+    notificationAccess: AndroidNotificationAccessGateway,
+    hideRules: () -> List<NotificationHideRule>,
+    calendar: CalendarSourceDependencies,
+    media: MediaSourceDependencies,
+    content: ContentSourceDependencies = ContentSourceDependencies(),
+): SourceRegistry =
+    streamSourceRegistry(
+        androidBuiltInSourceDependencies(
+            installedApps, appVisibility, recentApps, notificationRepository, notificationAccess,
+            hideRules, calendar, content, media,
+        ),
+    )
+
+@Suppress("LongParameterList")
+private fun androidBuiltInSourceDependencies(
+    installedApps: PackageManagerInstalledAppRepository,
+    appVisibility: AppVisibilityRepository,
+    recentApps: AndroidRecentAppRepository,
+    notificationRepository: DataStoreActiveNotificationRepository,
+    notificationAccess: AndroidNotificationAccessGateway,
+    hideRules: () -> List<NotificationHideRule>,
+    calendar: CalendarSourceDependencies,
+    content: ContentSourceDependencies,
+    media: MediaSourceDependencies = MediaSourceDependencies.NONE,
+): BuiltInSourceDependencies {
     val snapshotChanges =
         SourceChangeSource { onChanged -> notificationRepository.observeActiveNotifications(onChanged) }
     val listenerConnectionChanges =
         SourceChangeSource { onChanged -> RiffleNotificationListenerConnection.observeConnection(onChanged) }
-    return builtInSourceRegistry(
-        BuiltInSourceDependencies(
-            executor =
-                Executors.newSingleThreadExecutor { task ->
-                    Thread(task, "riffle-item-sources").apply { isDaemon = true }
+    return BuiltInSourceDependencies(
+        executor =
+            Executors.newSingleThreadExecutor { task ->
+                Thread(task, "riffle-item-sources").apply { isDaemon = true }
+            },
+        nowEpochMillis = System::currentTimeMillis,
+        apps =
+            AppSourceDependencies(
+                installedApps = RepositoryInstalledAppSnapshotProvider(installedApps, appVisibility),
+                shortcuts = installedApps,
+                recentApps = recentApps,
+                recentAppsAccess = {
+                    if (recentApps.canReadRecentApps()) SourceAccess.GRANTED else SourceAccess.REQUIRED
                 },
-            nowEpochMillis = System::currentTimeMillis,
-            apps =
-                AppSourceDependencies(
-                    installedApps = RepositoryInstalledAppSnapshotProvider(installedApps, appVisibility),
-                    shortcuts = installedApps,
-                    recentApps = recentApps,
-                    recentAppsAccess = {
-                        if (recentApps.canReadRecentApps()) SourceAccess.GRANTED else SourceAccess.REQUIRED
-                    },
-                ),
-            notifications =
-                NotificationSourceDependencies(
-                    repository = notificationRepository,
-                    access = notificationAccess::getNotificationAccessStatus,
-                    changes = SourceChangeSource.merge(listOf(snapshotChanges, listenerConnectionChanges)),
-                    hideRules = hideRules,
-                ),
-            calendar = calendar,
-            feeds = content.feeds,
-            search = content.search,
-            ics = content.ics,
-        ),
+            ),
+        notifications =
+            NotificationSourceDependencies(
+                repository = notificationRepository,
+                access = notificationAccess::getNotificationAccessStatus,
+                changes = SourceChangeSource.merge(listOf(snapshotChanges, listenerConnectionChanges)),
+                hideRules = hideRules,
+                canReply = { key -> AndroidNotificationStageActionGateway.replyActionId(key) != null },
+                canSnooze = { RiffleNotificationListenerConnection.isConnected() },
+            ),
+        calendar = calendar,
+        media = media,
+        feeds = content.feeds,
+        search = content.search,
+        ics = content.ics,
     )
 }
 
@@ -86,7 +137,15 @@ internal fun androidCalendarSourceDependencies(
 ): CalendarSourceDependencies =
     CalendarSourceDependencies(
         repository = AndroidCalendarEventRepository(contentResolver),
+        agendaRepository =
+            AndroidCalendarEventRepository(
+                contentResolver,
+                windowMillis = TimeUnit.DAYS.toMillis(AGENDA_WINDOW_DAYS),
+            ),
         access = access::sourceAccess,
         changes =
             SourceChangeSource.merge(listOf(AndroidCalendarChangeSource(contentResolver), accessChanges)),
     )
+
+/** Today and the next seven days, with a day of slack so an event late on the seventh day is read. */
+private const val AGENDA_WINDOW_DAYS = 8L

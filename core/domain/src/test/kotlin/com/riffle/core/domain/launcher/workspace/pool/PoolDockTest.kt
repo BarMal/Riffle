@@ -6,7 +6,6 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -40,7 +39,6 @@ internal fun dockedLayoutSet(): HomeLayoutSet {
                     ),
                 ),
             iconSizeDp = 40,
-            visualEffect = DockVisualEffect.OUTLINED,
             alignment = DockAlignment.END,
             position = DockPosition.BOTTOM,
             panel =
@@ -85,7 +83,6 @@ class PoolDockTest {
         )
         assertEquals(6, dock.settings.capacity)
         assertEquals(40, dock.settings.iconSizeDp)
-        assertEquals(DockVisualEffect.OUTLINED, dock.settings.visualEffect)
         assertEquals(DockAlignment.END, dock.settings.alignment)
         assertEquals(DockPosition.BOTTOM, dock.settings.position)
         assertEquals(DockPosition.RIGHT, dock.settings.libraryPosition)
@@ -138,6 +135,23 @@ class PoolDockTest {
         assertNull(PoolCodec.decode(legacy).pool.dock)
         val garbage = StoredValue.Obj(PoolCodec.encode(pool).fields + ("dock" to StoredValue.Str("x")))
         assertNull(PoolCodec.decode(garbage).pool.dock)
+    }
+
+    @Test
+    fun aStoredDockEffectFromAnOlderBuildIsIgnored() {
+        val encoded = PoolCodec.encode(pool)
+        val dock = encoded.fields.getValue("dock") as StoredValue.Obj
+        val settings = dock.fields.getValue("settings") as StoredValue.Obj
+        for (effect in listOf("OUTLINED", "ELEVATED", "FLAT", "from_the_future")) {
+            val old = settings.fields + ("visualEffect" to StoredValue.Str(effect))
+            val withOld =
+                StoredValue.Obj(
+                    encoded.fields + ("dock" to StoredValue.Obj(dock.fields + ("settings" to StoredValue.Obj(old)))),
+                )
+            val decoded = PoolCodec.decode(withOld)
+            assertEquals(pool.dock, decoded.pool.dock)
+            assertEquals(emptyList(), decoded.issues)
+        }
     }
 
     @Test

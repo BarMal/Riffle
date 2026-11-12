@@ -3,7 +3,10 @@ package com.riffle.app.launcher.expressions
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.AppIconLoader
+import com.riffle.app.launcher.EmptyAppIconLoader
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemGroup
 import com.riffle.core.domain.launcher.workspace.LensResult
@@ -45,6 +48,10 @@ data class ExpressionEnvironment(
     val timeFormatter: ExpressionTimeFormatter = RelativeExpressionTimeFormatter,
     val contentPadding: PaddingValues = PaddingValues(),
     val reducedMotion: Boolean = false,
+    /** Loads the colour a card's glass is lit with, from the app an item belongs to. */
+    val appIconLoader: AppIconLoader = EmptyAppIconLoader,
+    /** The app behind an item, when it has one; null lights nothing. */
+    val appIdentityFor: (Item) -> AppIdentity? = { null },
 )
 
 /** User-visible fallbacks shared by every expression. */

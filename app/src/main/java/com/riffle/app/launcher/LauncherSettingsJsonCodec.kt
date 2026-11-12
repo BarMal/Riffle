@@ -38,7 +38,6 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
@@ -59,6 +58,7 @@ import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
+import com.riffle.core.domain.launcher.settings.withReducedTransparency
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.json.JSONArray
 import org.json.JSONObject
@@ -85,28 +85,45 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
 
 fun decodeLauncherSettings(value: String): LauncherSettings =
     JSONObject(value).let { json ->
-        val defaults = LauncherSettings()
-        defaults.copy(
-            appDrawer = json.optJSONObject("appDrawer")?.toAppDrawerSettings(defaults.appDrawer) ?: defaults.appDrawer,
-            appearance = json.optJSONObject("appearance")?.toAppearance(defaults.appearance) ?: defaults.appearance,
-            cards = json.optJSONObject("cards")?.toCardsSettings(defaults.cards) ?: defaults.cards,
-            contextual = json.optJSONObject("contextual")?.toContextual(defaults.contextual) ?: defaults.contextual,
-            gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
-            haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
-            home = json.section("home", defaults.home, JSONObject::toHomeBehaviour),
-            liquidGlass =
-                json.optJSONObject("liquidGlass")?.toLiquidGlass(defaults.liquidGlass) ?: defaults.liquidGlass,
-            motion = json.optJSONObject("motion")?.toMotionSettings(defaults.motion) ?: defaults.motion,
-            notificationHiding =
-                json.optJSONObject("notificationHiding")?.toNotificationHiding(defaults.notificationHiding)
-                    ?: defaults.notificationHiding,
-            overlayDock =
-                json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
-            privacy = json.section("privacy", defaults.privacy, JSONObject::toPrivacy),
-            rss = json.optJSONObject("rss")?.toRssSettings(defaults.rss) ?: defaults.rss,
-            search = json.optJSONObject("search")?.toSearchSettings(defaults.search) ?: defaults.search,
-        )
+        decodeLauncherSections(json).let { decoded ->
+            decoded.withReducedTransparency(json.decodeReducedTransparency(decoded))
+        }
     }
+
+private fun decodeLauncherSections(json: JSONObject): LauncherSettings {
+    val defaults = LauncherSettings()
+    return defaults.copy(
+        appDrawer = json.optJSONObject("appDrawer")?.toAppDrawerSettings(defaults.appDrawer) ?: defaults.appDrawer,
+        appearance = json.optJSONObject("appearance")?.toAppearance(defaults.appearance) ?: defaults.appearance,
+        cards = json.optJSONObject("cards")?.toCardsSettings(defaults.cards) ?: defaults.cards,
+        contextual = json.optJSONObject("contextual")?.toContextual(defaults.contextual) ?: defaults.contextual,
+        gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
+        haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
+        home = json.section("home", defaults.home, JSONObject::toHomeBehaviour),
+        liquidGlass =
+            json.optJSONObject("liquidGlass")?.toLiquidGlass(defaults.liquidGlass) ?: defaults.liquidGlass,
+        motion = json.optJSONObject("motion")?.toMotionSettings(defaults.motion) ?: defaults.motion,
+        notificationHiding =
+            json.optJSONObject("notificationHiding")?.toNotificationHiding(defaults.notificationHiding)
+                ?: defaults.notificationHiding,
+        overlayDock =
+            json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
+        privacy = json.section("privacy", defaults.privacy, JSONObject::toPrivacy),
+        rss = json.optJSONObject("rss")?.toRssSettings(defaults.rss) ?: defaults.rss,
+        search = json.optJSONObject("search")?.toSearchSettings(defaults.search) ?: defaults.search,
+    )
+}
+
+/**
+ * Reduced transparency lives in `appearance`. Settings saved before that carry it only in the
+ * adaptive stage's motion block, so a missing top-level key reads the old location (either layout).
+ */
+private fun JSONObject.decodeReducedTransparency(decoded: LauncherSettings): Boolean =
+    optJSONObject("appearance")?.takeIf { it.has("reducedTransparency") }?.optBoolean("reducedTransparency")
+        ?: (
+            decoded.cards.adaptiveStageAppearance.motion.reducedTransparency ||
+                decoded.cards.unfoldedAppearance.motion.reducedTransparency
+        )
 
 private fun encodeAppDrawerSettings(settings: AppDrawerSettings): JSONObject =
     JSONObject()
@@ -765,8 +782,8 @@ private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
         .put("fullscreenHome", settings.homeSystemBars.fullscreenHome)
         .put("hideStatusBarOnHome", settings.homeSystemBars.hideStatusBarOnHome)
         .put("hideNavigationBarOnHome", settings.homeSystemBars.hideNavigationBarOnHome)
+        .put("reducedTransparency", settings.reducedTransparency)
         .put("themeMode", settings.themeMode.name)
-        .put("themePreset", settings.themePreset.name)
         .put("themeAccent", settings.themeAccent.name)
         .put("themeCornerStyle", settings.themeCornerStyle.name)
         .put("themeTypography", settings.themeTypography.name)
@@ -783,12 +800,10 @@ private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSet
         )
     return defaults
         .copy(
+            reducedTransparency = optBoolean("reducedTransparency", defaults.reducedTransparency),
             themeMode =
                 runCatching { LauncherThemeMode.valueOf(optString("themeMode")) }
                     .getOrDefault(defaults.themeMode),
-            themePreset =
-                runCatching { LauncherThemePreset.valueOf(optString("themePreset")) }
-                    .getOrDefault(defaults.themePreset),
             themeAccent =
                 runCatching { LauncherThemeAccent.valueOf(optString("themeAccent")) }
                     .getOrDefault(defaults.themeAccent),
@@ -803,22 +818,13 @@ private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSet
         ).withHomeSystemBars(homeSystemBars)
 }
 
+// Only the accent is stored. Older data also carried backgroundArgb, dockArgb, labelArgb and
+// labelBackgroundArgb, and a `themePreset`; those are ignored here, so removed values decode to glass.
 private fun encodeThemeColors(colors: LauncherThemeColors): JSONObject =
-    JSONObject()
-        .put("backgroundArgb", colors.backgroundArgb)
-        .put("accentArgb", colors.accentArgb)
-        .put("dockArgb", colors.dockArgb)
-        .put("labelArgb", colors.labelArgb)
-        .put("labelBackgroundArgb", colors.labelBackgroundArgb)
+    JSONObject().put("accentArgb", colors.accentArgb)
 
 private fun JSONObject.toThemeColors(defaults: LauncherThemeColors): LauncherThemeColors =
-    defaults.copy(
-        backgroundArgb = optNullableInt("backgroundArgb", defaults.backgroundArgb),
-        accentArgb = optNullableInt("accentArgb", defaults.accentArgb),
-        dockArgb = optNullableInt("dockArgb", defaults.dockArgb),
-        labelArgb = optNullableInt("labelArgb", defaults.labelArgb),
-        labelBackgroundArgb = optNullableInt("labelBackgroundArgb", defaults.labelBackgroundArgb),
-    )
+    defaults.copy(accentArgb = optNullableInt("accentArgb", defaults.accentArgb))
 
 private fun JSONObject.optNullableInt(
     name: String,
@@ -860,14 +866,12 @@ private fun JSONObject.toHaptics(defaults: HapticSettings): HapticSettings =
 
 private fun encodeLiquidGlass(settings: LiquidGlassSettings): JSONObject =
     JSONObject()
-        .put("enabled", settings.enabled)
         .put("frostStrengthPercent", settings.frostStrengthPercent)
         .put("refractionStrengthPercent", settings.refractionStrengthPercent)
         .put("spotlightFlowMillis", settings.spotlightFlowMillis)
 
 private fun JSONObject.toLiquidGlass(defaults: LiquidGlassSettings): LiquidGlassSettings =
     LiquidGlassSettings(
-        enabled = optBoolean("enabled", defaults.enabled),
         frostStrengthPercent = optInt("frostStrengthPercent", defaults.frostStrengthPercent),
         refractionStrengthPercent = optInt("refractionStrengthPercent", defaults.refractionStrengthPercent),
         spotlightFlowMillis = optInt("spotlightFlowMillis", defaults.spotlightFlowMillis),

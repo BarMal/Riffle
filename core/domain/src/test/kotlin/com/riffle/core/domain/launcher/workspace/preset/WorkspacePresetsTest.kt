@@ -186,7 +186,6 @@ class WorkspacePresetsTest {
     fun `an installed preset is an ordinary workspace that validates and can be edited`() {
         val installed = WorkspacePresets.installPreset(WorkspacePresets.ios, PresetPosture.COMPACT, Counter())
         assertEquals(emptyList(), WorkspaceValidation.validate(installed, sources = sources))
-        assertEquals(null, installed.skinOverrideId)
         val edited = installed.copy(name = "Mine", pages = installed.pages.drop(1))
         assertEquals(emptyList(), WorkspaceValidation.validate(edited, sources = sources))
     }

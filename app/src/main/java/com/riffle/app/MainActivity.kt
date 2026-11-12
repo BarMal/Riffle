@@ -125,6 +125,19 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    /**
+     * The Stream (ADR 0003): sources, layouts and actions behind the surface that replaces Home. It shares the Sources
+     * page's enablement and the Privacy page's content levels, and reaches access through the existing explicit flows.
+     */
+    private val streamHost by lazy {
+        dependencies.streamHost(
+            launcherSettings = { shellViewModel.state.value.launcherSettings },
+            enablement = workspaceRuntime.enablement,
+            contentPrivacy = workspaceRuntime.contentPrivacy,
+            requestAccess = { sourceId -> sourceAccessLaunchers.request(sourceId) },
+        )
+    }
+
     /** Where the content wizard writes: the workspace store and the pool, under the home's read-only and S9 rules. */
     private val wizardStores by lazy {
         val home = dependencies.homeLayoutRuntime
@@ -582,6 +595,7 @@ class MainActivity : ComponentActivity() {
                             adaptiveStageWindowLayout = adaptiveStageWindowLayout,
                             workspacePreview = workspacePreviewHost,
                             onboarding = onboardingHost,
+                            stream = streamHost,
                             onAction = launcherActionRouter::handle,
                         )
                     }

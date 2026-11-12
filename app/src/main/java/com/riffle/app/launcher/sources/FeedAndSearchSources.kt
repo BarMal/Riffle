@@ -18,7 +18,9 @@ import com.riffle.core.domain.launcher.rss.FeedStagePlanner
 import com.riffle.core.domain.launcher.rss.NoConfiguredFeedSource
 import com.riffle.core.domain.launcher.search.LauncherSearchProvider
 import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntry
+import com.riffle.core.domain.launcher.stream.StreamContentMapper
 import com.riffle.core.domain.launcher.workspace.Item
+import com.riffle.core.domain.launcher.workspace.ItemExtValue
 import com.riffle.core.domain.launcher.workspace.ItemSource
 import com.riffle.core.domain.launcher.workspace.ParameterizedItemSource
 import com.riffle.core.domain.launcher.workspace.SourceCapability
@@ -155,7 +157,21 @@ private fun feedItems(deps: FeedSourceDependencies): List<Item> {
             profileStatuses = statuses,
             cacheProjections = cached.mapValues { (_, result) -> result.toProjection() },
         )
-    return FeedItemMapper().feedItems(snapshot, feeds, cached.mapValues { (_, result) -> result.toContent() })
+    val items = FeedItemMapper().feedItems(snapshot, feeds, cached.mapValues { (_, result) -> result.toContent() })
+    val read = deps.cache.readDigests()
+    // The article digest (the opaque hex the cache keys read state by, never a URL or title) and whether it was read:
+    // what the Stream's mark-read action is backed by.
+    return items.map { item ->
+        val digest = item.id.value.substringAfterLast(':')
+        item.copy(
+            ext =
+                item.ext +
+                    mapOf(
+                        StreamContentMapper.ARTICLE_DIGEST to ItemExtValue.Text(digest),
+                        StreamContentMapper.ARTICLE_READ to ItemExtValue.Flag(digest in read),
+                    ),
+        )
+    }
 }
 
 private fun FeedCacheResult.toProjection(): FeedStageCacheProjection =

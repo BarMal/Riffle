@@ -2,7 +2,6 @@ package com.riffle.core.domain.launcher.workspace.settings
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.workspace.DockMenuReachability
 import com.riffle.core.domain.launcher.workspace.DockPresentation
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
@@ -16,7 +15,6 @@ import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
 import com.riffle.core.domain.launcher.workspace.WorkspaceResolution
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
-import com.riffle.core.domain.launcher.workspace.WorkspaceSkin
 import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
@@ -40,8 +38,6 @@ data class WorkspaceRow(
     val newApps: WorkspaceNewApps = NewAppDefaults.MIGRATED,
     /** True while [newApps] is the preset's default rather than the workspace's own choice. */
     val newAppsFollowPreset: Boolean = true,
-    /** The theme preset this workspace overrides the global one with; null follows Settings > Appearance. */
-    val skin: LauncherThemePreset? = null,
 ) {
     val canReset: Boolean get() = presetName != null
 }
@@ -127,7 +123,6 @@ object WorkspacesSettingsPlanner {
         canHideDock = DockMenuReachability.canHideDock(workspace, globalGestureActions),
         newApps = NewAppDefaults.resolve(workspace),
         newAppsFollowPreset = workspace.newApps == null,
-        skin = WorkspaceSkin.overrideOf(workspace),
     )
 
     /** The preset [workspace] records as its origin; never guessed from its name or content. */

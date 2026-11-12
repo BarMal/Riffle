@@ -25,14 +25,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.app.launcher.designsystem.RiffleShapes
-import com.riffle.core.domain.launcher.home.DockModel
-import com.riffle.core.domain.launcher.home.DockVisualEffect
-import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
-import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -55,7 +50,7 @@ class ThemeCustomizationTest {
         composeRule.setContent {
             RiffleLauncherTheme(
                 themeMode = mode,
-                themePreset = LauncherThemePreset.GLASS,
+                dynamicColor = false,
                 themeAccent = LauncherThemeAccent.TEAL,
                 themeCornerStyle = LauncherThemeCornerStyle.COMPACT,
                 themeTypography = LauncherThemeTypography.MONOSPACE,
@@ -90,7 +85,7 @@ class ThemeCustomizationTest {
     @Test
     fun appearanceAndDockControlsDispatchAccessibleCustomizationActions() {
         val selectedAccents = mutableListOf<LauncherThemeAccent>()
-        val selectedDockEffects = mutableListOf<DockVisualEffect>()
+        val selectedCornerStyles = mutableListOf<LauncherThemeCornerStyle>()
 
         composeRule.setContent {
             // Scrollable: this is about the controls dispatching the right actions, not about the
@@ -104,12 +99,11 @@ class ThemeCustomizationTest {
                         }
                     },
                 )
-                DockSetting(
-                    dock = DockModel(capacity = 4),
-                    notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                ThemeCornerStyleSetting(
+                    selectedStyle = LauncherThemeCornerStyle.PRESET,
                     onAction = { action ->
-                        if (action is LauncherShellAction.SelectDockVisualEffect) {
-                            selectedDockEffects += action.effect
+                        if (action is LauncherShellAction.SelectLauncherThemeCornerStyle) {
+                            selectedCornerStyles += action.style
                         }
                     },
                 )
@@ -121,28 +115,23 @@ class ThemeCustomizationTest {
             assertEquals(listOf(LauncherThemeAccent.TEAL), selectedAccents)
         }
 
-        composeRule.onNodeWithText("Elevated").performScrollTo().assertHasClickAction().performClick()
+        composeRule.onNodeWithText("Rounded").performScrollTo().assertHasClickAction().performClick()
         composeRule.runOnIdle {
-            assertEquals(listOf(DockVisualEffect.ELEVATED), selectedDockEffects)
+            assertEquals(listOf(LauncherThemeCornerStyle.ROUNDED), selectedCornerStyles)
         }
     }
 
     @Test
-    fun resetColorPickerUsesTheActiveDarkPresetColourAndExposesAdjustableControls() {
+    fun resetColorPickerUsesTheActiveDarkAccentAndExposesAdjustableControls() {
         var selectedArgb: Int? by mutableStateOf(0xFFFF0000.toInt())
-        val expectedDefault =
-            fallbackScheme(
-                darkTheme = true,
-                themePreset = LauncherThemePreset.RETRO,
-            ).primary.toThemeHex()
+        val expectedDefault = fallbackScheme(darkTheme = true).primary.toThemeHex()
 
         composeRule.setContent {
             RiffleLauncherTheme(
                 themeMode = LauncherThemeMode.DARK,
-                themePreset = LauncherThemePreset.RETRO,
+                dynamicColor = false,
             ) {
                 ThemeColorPicker(
-                    target = LauncherThemeColorTarget.ACCENT,
                     argb = selectedArgb,
                     defaultColor = MaterialTheme.colorScheme.primary,
                     onColorChanged = { selectedArgb = it },

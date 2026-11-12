@@ -51,7 +51,7 @@ internal fun WorkspaceEditorLayer(
             }
         // A source page's wizard that handed over to the advanced builder opens the editor on that flow, once.
         val handoff = remember(workspaceId) { host.wizardRequests.takeEditorHandoff() }
-        WorkspacePreviewTheme(state, workspace) {
+        WorkspacePreviewTheme(state) {
             EditorEntry(
                 workspace = workspace,
                 sources = sources,

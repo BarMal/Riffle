@@ -259,15 +259,10 @@ private fun SettingsAppearancePageContent(
 
     SettingsSection(title = "Theme") {
         ThemeModeSetting(selectedMode = appearance.themeMode, onAction = onAction)
-        ThemePresetSetting(selectedPreset = appearance.themePreset, onAction = onAction)
         ThemeAccentSetting(selectedAccent = appearance.themeAccent, onAction = onAction)
         ThemeCornerStyleSetting(selectedStyle = appearance.themeCornerStyle, onAction = onAction)
         ThemeTypographySetting(selectedTypography = appearance.themeTypography, onAction = onAction)
-        ThemeColorsSetting(
-            colors = appearance.themeColors,
-            dock = state.homeLayout.dock,
-            onAction = onAction,
-        )
+        ThemeColorsSetting(colors = appearance.themeColors, onAction = onAction)
     }
     SettingsSection(title = "Wallpaper") {
         WallpaperSourceSetting(
@@ -285,9 +280,10 @@ private fun SettingsAppearancePageContent(
             onClick = { onAction(LauncherShellAction.ChangeWallpaper) },
         )
     }
-    SettingsSection(title = "Liquid glass") {
+    SettingsSection(title = "Glass") {
         LiquidGlassSetting(
             settings = state.settings.liquidGlass,
+            reducedTransparency = appearance.reducedTransparency,
             onAction = onAction,
         )
     }

@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Typed Stream content in the domain: `StreamContent` (notification, media with an optional queue, event including calendar feeds and the next alarm, article, task, recent app), the six `StreamSection`s and `StreamContentProvider`, which observes a section as loading, ready, empty, permission required, not connected, unavailable or off, with Hide rules and content levels applied and each section's fixed grouping, sorting and limits. Nothing draws it yet.
+- Real data behind the typed content: live media sessions (play state, position, duration, queue, artwork and transport controls) on media cards, message history, reply and snooze on notification cards, the next alarm from `AlarmManager`, frequent apps after the recent ones, a Stream-only agenda window of today and the next seven days, and mark-read for articles backed by the RSS cache. `StreamActionGateway` is the one entry point for acting on Stream content. None of it is persisted, and sensitive or hidden content exposes no history and no reply.
+
+- The Stream (ADR 0003): a full surface that replaces Home, with the Dock still drawn under it, holding six sections (Now, Notifications, Recents, Agenda, Tasks, Feeds), each drawn as a Stack of cards or a List of rows. Cards and rows are built per content type: now playing has transport controls, a scrubber and an expandable queue; a notification expands to its conversation with reply; events show their time span and a countdown; articles carry a lead image. Long-press a section header (or use its options button) for "Show as" Stack or List, which redraws at once and offers Undo; sections can also be moved and hidden there. Each section has honest empty, permission ("Allow access to show this"), not-connected (Tasks, until P10), off and unavailable states. Reach it with the new "Stream" home gesture action or the Dock's "Open Stream" accessibility action; Back and the Home button return to Home. Which sections are on, their order, their view and their options are kept per posture in their own storage and are included in backups (older backups still import).
+
+### Changed
+
+- One glass material: `GlassSurface` now takes a weight (Thin, Regular, Thick) that owns frost, tint, contrast scrim, hairline and shadow, and draws the dock's glass sheen on every surface.
+- The dock's icon-colour spotlight is generalised to any glass surface and now also lights open folders, the search results panel and Stream-style item cards from the colours of what they hold.
+- The search pill and results panel, the launcher panel, folders, the widget picker, widget frames, the context menu, dock notification cards, the page indicator, page overview cards and Settings sections all use `GlassSurface`.
+- Reduced transparency is now one top-level Appearance setting honoured by every glass surface, the sheen and the spotlight. Settings saved with it under the card stack's motion options are migrated.
+- Glass is the only look. The Material, Minimal, Retro, Terminal and Custom theme presets are gone (a saved preset becomes glass), as is the per-workspace Appearance override (a saved skin is ignored). Wallpaper-derived colour stays.
+- The Liquid glass on/off switch is gone: glass is always on and Reduced transparency is the off switch. The Settings section is now "Glass".
+- The dock effect choice (flat, elevated, outlined) is gone; the dock uses the standard glass sheen.
+- Custom colours are reduced to a custom accent; the background, dock, label and label background colours are ignored. "Card corners" is now "Corners".
+
 ## Alpha 192
 
 Release notes for the next alpha after Alpha 191.

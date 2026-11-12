@@ -10,7 +10,6 @@ import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,29 +37,6 @@ class LauncherThemeTest {
     @Test
     fun fallbackThemeUsesDarkSchemeWhenSystemIsDark() {
         assertSame(darkScheme, fallbackScheme(darkTheme = true))
-    }
-
-    @Test
-    fun nonMaterialPresetsUseDistinctFallbackPrimaryColors() {
-        val materialPrimary = fallbackScheme(darkTheme = false).primary
-
-        LauncherThemePreset.entries
-            .filterNot { preset -> preset in setOf(LauncherThemePreset.MATERIAL, LauncherThemePreset.CUSTOM) }
-            .forEach { preset ->
-                assertNotEquals(
-                    "preset=$preset",
-                    materialPrimary,
-                    fallbackScheme(darkTheme = false, themePreset = preset).primary,
-                )
-            }
-    }
-
-    @Test
-    fun customPresetKeepsTheMaterialFallbackUntilCustomTokensExist() {
-        assertSame(
-            lightScheme,
-            fallbackScheme(darkTheme = false, themePreset = LauncherThemePreset.CUSTOM),
-        )
     }
 
     @Test
@@ -124,15 +100,13 @@ class LauncherThemeTest {
     }
 
     @Test
-    fun customThemeColoursOverrideUserReachableBackgroundAndAccentRoles() {
-        val colors = LauncherThemeColors(backgroundArgb = 0xFF102030.toInt(), accentArgb = 0xFF405060.toInt())
+    fun customAccentOverridesTheAccentRolesOnly() {
+        val colors = LauncherThemeColors(accentArgb = 0xFF405060.toInt())
 
         val scheme = lightScheme.withThemeColors(colors)
 
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.background)
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.surface)
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.surfaceContainerLow)
-        assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.surfaceContainerHigh)
+        assertEquals(lightScheme.background, scheme.background)
+        assertEquals(lightScheme.surface, scheme.surface)
         assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.primary)
         assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.secondary)
         assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.secondaryContainer)
@@ -140,26 +114,18 @@ class LauncherThemeTest {
     }
 
     @Test
-    fun glassPresetProvidesTranslucentLauncherOverlayTokens() {
-        val glassTokens = launcherThemeSurfaceTokens(LauncherThemePreset.GLASS, lightScheme)
-        val materialTokens = launcherThemeSurfaceTokens(LauncherThemePreset.MATERIAL, lightScheme)
+    fun glassProvidesTranslucentLauncherOverlayTokens() {
+        val glassTokens = launcherThemeSurfaceTokens(lightScheme)
 
         assertEquals(0.78f, glassTokens.overlayAlpha)
         assertEquals(glassTokens.overlayAlpha, glassTokens.panelColor.alpha, 0.01f)
         assertEquals(glassTokens.overlayAlpha, glassTokens.menuColor.alpha, 0.01f)
-        assertEquals(1f, materialTokens.overlayAlpha)
-        assertEquals(1f, materialTokens.panelColor.alpha)
-        assertEquals(1f, materialTokens.menuColor.alpha)
     }
 
     @Test
-    fun reducedTransparencyUsesOpaqueLauncherOverlayTokensForGlass() {
+    fun reducedTransparencyUsesOpaqueLauncherOverlayTokens() {
         val tokens =
-            launcherThemeSurfaceTokens(
-                themePreset = LauncherThemePreset.GLASS,
-                colorScheme = lightScheme,
-                reducedTransparency = true,
-            )
+            launcherThemeSurfaceTokens(colorScheme = lightScheme, reducedTransparency = true)
 
         assertEquals(1f, tokens.overlayAlpha)
         assertEquals(1f, tokens.panelColor.alpha)
@@ -168,8 +134,8 @@ class LauncherThemeTest {
 
     @Test
     fun glassSurfacesKeepSearchWidgetAndMenuContentReadableOverDarkAndLightWallpapers() {
-        val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF808080.toInt()))
-        val tokens = launcherThemeSurfaceTokens(LauncherThemePreset.GLASS, scheme)
+        val scheme = midToneScheme()
+        val tokens = launcherThemeSurfaceTokens(scheme)
         val overlays =
             listOf(
                 "search" to (tokens.panelColor to tokens.panelContentColor),
@@ -191,8 +157,8 @@ class LauncherThemeTest {
 
     @Test
     fun reducedTransparencyUsesOpaqueSurfacesWithoutGlassScrims() {
-        val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF808080.toInt()))
-        val tokens = launcherThemeSurfaceTokens(LauncherThemePreset.GLASS, scheme, reducedTransparency = true)
+        val scheme = midToneScheme()
+        val tokens = launcherThemeSurfaceTokens(scheme, reducedTransparency = true)
 
         assertEquals(scheme.surface, tokens.panelColor)
         assertEquals(scheme.surfaceContainerHigh, tokens.menuColor)
@@ -211,13 +177,8 @@ class LauncherThemeTest {
     }
 
     @Test
-    fun defaultHomeLabelTextContrastsWithItsScrimBackgroundAfterBackgroundCustomisation() {
-        val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFFF0F0F0.toInt()))
-
-        assertEquals(
-            androidx.compose.ui.graphics.Color.White,
-            wallpaperReadableLabelColors(LauncherThemeColorOverrides(), scheme).text,
-        )
+    fun defaultHomeLabelTextContrastsWithItsScrimBackground() {
+        assertEquals(Color.White, wallpaperReadableLabelColors(lightScheme).text)
     }
 
     @Test
@@ -243,53 +204,38 @@ class LauncherThemeTest {
     }
 
     @Test
-    fun cardShapeTokenVariesByPreset() {
-        assertEquals(RiffleShapes.continuous(0.dp), launcherCardShape(LauncherThemePreset.TERMINAL))
-        assertEquals(RiffleShapes.continuous(28.dp), launcherCardShape(LauncherThemePreset.GLASS))
-        assertEquals(RiffleShapes.continuous(24.dp), launcherCardShape(LauncherThemePreset.MATERIAL))
+    fun standardCornersSitOnTheRadiusScale() {
+        assertEquals(RiffleShapes.continuous(24.dp), launcherCardShape())
+        assertEquals(RiffleShapes.continuous(32.dp), launcherPanelShape())
     }
 
     @Test
-    fun panelShapeTokenVariesByPreset() {
-        assertEquals(RiffleShapes.continuous(0.dp), launcherPanelShape(LauncherThemePreset.TERMINAL))
-        assertEquals(RiffleShapes.continuous(36.dp), launcherPanelShape(LauncherThemePreset.GLASS))
-        assertEquals(RiffleShapes.continuous(32.dp), launcherPanelShape(LauncherThemePreset.MATERIAL))
+    fun cornerChoiceChangesCardAndPanelShapes() {
+        assertEquals(RiffleShapes.continuous(8.dp), launcherCardShape(LauncherThemeCornerStyle.COMPACT))
+        assertEquals(RiffleShapes.continuous(28.dp), launcherCardShape(LauncherThemeCornerStyle.ROUNDED))
+        assertEquals(RiffleShapes.continuous(12.dp), launcherPanelShape(LauncherThemeCornerStyle.COMPACT))
+        assertEquals(RiffleShapes.continuous(36.dp), launcherPanelShape(LauncherThemeCornerStyle.ROUNDED))
     }
 
     @Test
-    fun typographyTokenVariesForTerminal() {
-        assertEquals(FontFamily.Monospace, launcherTypography(LauncherThemePreset.TERMINAL).headlineMedium.fontFamily)
-        assertEquals(FontFamily.Monospace, launcherTypography(LauncherThemePreset.TERMINAL).bodyMedium.fontFamily)
-        assertSame(launcherTypography(LauncherThemePreset.MATERIAL), launcherTypography(LauncherThemePreset.CUSTOM))
-    }
-
-    @Test
-    fun cornerOverrideTakesPrecedenceOverPresetShape() {
-        assertEquals(
-            RiffleShapes.continuous(8.dp),
-            launcherCardShape(LauncherThemePreset.GLASS, LauncherThemeCornerStyle.COMPACT),
-        )
-        assertEquals(
-            RiffleShapes.continuous(36.dp),
-            launcherPanelShape(LauncherThemePreset.TERMINAL, LauncherThemeCornerStyle.ROUNDED),
-        )
-    }
-
-    @Test
-    fun typographyOverrideTakesPrecedenceOverPresetTypography() {
+    fun typographyChoiceSwapsOnlyTheFontFamily() {
         assertEquals(
             FontFamily.Monospace,
-            launcherTypography(LauncherThemePreset.MATERIAL, LauncherThemeTypography.MONOSPACE).bodyMedium.fontFamily,
+            launcherTypography(LauncherThemeTypography.MONOSPACE).bodyMedium.fontFamily,
         )
         assertNotEquals(
             FontFamily.Monospace,
-            launcherTypography(LauncherThemePreset.TERMINAL, LauncherThemeTypography.SYSTEM).bodyMedium.fontFamily,
+            launcherTypography(LauncherThemeTypography.SYSTEM).bodyMedium.fontFamily,
+        )
+        assertSame(
+            launcherTypography(LauncherThemeTypography.PRESET),
+            launcherTypography(LauncherThemeTypography.SYSTEM),
         )
     }
 
     @Test
     fun typographyUsesLightDisplayAndTrackedMediumLabels() {
-        val typography = launcherTypography(LauncherThemePreset.MATERIAL)
+        val typography = launcherTypography()
 
         assertEquals(FontWeight.Light, typography.displayLarge.fontWeight)
         assertEquals(FontWeight.Light, typography.displaySmall.fontWeight)
@@ -299,23 +245,21 @@ class LauncherThemeTest {
 
     @Test
     fun monospaceSwapKeepsTheRiffleTypeTuning() {
-        val typography = launcherTypography(LauncherThemePreset.TERMINAL)
+        val typography = launcherTypography(LauncherThemeTypography.MONOSPACE)
 
         assertEquals(FontFamily.Monospace, typography.displayLarge.fontFamily)
         assertEquals(FontWeight.Light, typography.displayLarge.fontWeight)
         assertEquals(
-            launcherTypography(LauncherThemePreset.MATERIAL).labelSmall.letterSpacing,
+            launcherTypography().labelSmall.letterSpacing,
             typography.labelSmall.letterSpacing,
         )
     }
 
     @Test
-    fun materialShapesGoSharpOnlyWhenTheCardCornerIsSharp() {
-        assertEquals(RiffleShapes.materialShapes(square = true), launcherMaterialShapes(LauncherThemePreset.TERMINAL))
-        assertEquals(RiffleShapes.materialShapes(), launcherMaterialShapes(LauncherThemePreset.MATERIAL))
-        assertEquals(
-            RiffleShapes.materialShapes(),
-            launcherMaterialShapes(LauncherThemePreset.TERMINAL, LauncherThemeCornerStyle.ROUNDED),
-        )
+    fun materialShapesStayOnTheRadiusScale() {
+        assertEquals(RiffleShapes.materialShapes(), launcherMaterialShapes())
     }
+
+    private fun midToneScheme() =
+        lightScheme.copy(surface = Color(0xFF808080), surfaceContainerHigh = Color(0xFF808080))
 }

@@ -1,7 +1,9 @@
 package com.riffle.app.launcher.workspace
 
 import androidx.compose.foundation.layout.PaddingValues
+import com.riffle.app.launcher.AppIconLoader
 import com.riffle.app.launcher.CachedWorkspaceRepository
+import com.riffle.app.launcher.EmptyAppIconLoader
 import com.riffle.app.launcher.WorkspacesSettingsText
 import com.riffle.app.launcher.containers.ContainerServices
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
@@ -65,6 +67,8 @@ internal class WorkspaceRuntime(
     val icsFeeds: IcsFeedsController? = null,
     /** The shared search query the Search source reads when a lens has none (memory only; Settings reports on it). */
     val searchQuery: SearchQueryHolder = SearchQueryHolder(),
+    /** Where a card's glass takes the colour of the app behind its item from. */
+    private val appIconLoader: AppIconLoader = EmptyAppIconLoader,
 ) {
     /** Loads the per-layout exclusion rules (migrating the legacy ones once); called when the preview is on. */
     suspend fun prepareExclusions() = exclusionLoader()
@@ -123,6 +127,10 @@ internal class WorkspaceRuntime(
                     imageLoader = imageLoader,
                     contentPadding = contentPadding,
                     reducedMotion = reducedMotion,
+                    appIconLoader = appIconLoader,
+                    appIdentityFor = { item ->
+                        (item.icon?.let(ItemImageKeyParser::parse) as? ParsedImageKey.ActivityIcon)?.identity
+                    },
                 ),
             actions =
                 itemActions.containerActions().copy(

@@ -1,0 +1,513 @@
+@file:Suppress("TooManyFunctions", "MatchingDeclarationName")
+
+package com.riffle.app.launcher.stream
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.riffle.app.R
+import com.riffle.app.launcher.GlassSurface
+import com.riffle.app.launcher.LocalLauncherCardShape
+import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.glassSpotlightSource
+import com.riffle.app.launcher.rememberGlassSpotlightColor
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
+import com.riffle.core.domain.launcher.stream.ArticleAction
+import com.riffle.core.domain.launcher.stream.ArticleContent
+import com.riffle.core.domain.launcher.stream.EventContent
+import com.riffle.core.domain.launcher.stream.EventKind
+import com.riffle.core.domain.launcher.stream.EventTiming
+import com.riffle.core.domain.launcher.stream.NotificationAction
+import com.riffle.core.domain.launcher.stream.NotificationContent
+import com.riffle.core.domain.launcher.stream.StreamAction
+import com.riffle.core.domain.launcher.stream.StreamActionPolicy
+import com.riffle.core.domain.launcher.stream.StreamAppRef
+import com.riffle.core.domain.launcher.stream.StreamPrivacy
+import com.riffle.core.domain.launcher.stream.TaskContent
+import com.riffle.core.domain.launcher.workspace.ItemImageHandle
+
+/** The collapsed height each card type is drawn at in a stack (scaled up with the font size). */
+internal object StreamCardHeights {
+    val notification: Dp = 196.dp
+    val media: Dp = 264.dp
+    val event: Dp = 144.dp
+    val article: Dp = 248.dp
+    val articleWithoutImage: Dp = 140.dp
+    val tasks: Dp = 232.dp
+}
+
+private val CardIconSize = RiffleSpacing.xl
+private val LeadImageHeight = 112.dp
+private const val BODY_LINES = 2
+
+/**
+ * The glass every Stream card is drawn on: regular weight in the launcher's card shape, lit by the colour of the app
+ * the content belongs to (no app, no spotlight: the sheen only). [body] runs inside the glass, so the spotlight
+ * source can be reported from there.
+ */
+@Composable
+internal fun StreamCardSurface(
+    key: String,
+    app: StreamAppRef?,
+    icon: ItemImageHandle?,
+    env: StreamEnvironment,
+    modifier: Modifier = Modifier,
+    weight: GlassWeight = GlassWeight.Regular,
+    body: @Composable (Modifier) -> Unit,
+) {
+    val identity = remember(app, icon, env.installedApps) { env.identityFor(app, icon) }
+    GlassSurface(
+        modifier = modifier,
+        weight = weight,
+        shape = LocalLauncherCardShape.current,
+        tint = MaterialTheme.colorScheme.surfaceContainerHigh,
+        spotlight = identity != null,
+    ) {
+        val color = rememberGlassSpotlightColor(identity = identity, appIconLoader = env.appIconLoader)
+        body(Modifier.glassSpotlightSource(key = key, color = color))
+    }
+}
+
+@Composable
+private fun hiddenText(): String = stringResource(R.string.stream_hidden_content)
+
+/** A notification: app tint, sender, message, inline image; expands to the thread with reply. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+@Suppress("LongMethod")
+internal fun NotificationCard(
+    content: NotificationContent,
+    env: StreamEnvironment,
+    callbacks: StreamCallbacks,
+    groupKey: String?,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
+    StreamCardSurface(content.id.value, content.app, content.icon, env, modifier) { sourceModifier ->
+        Column(
+            modifier =
+                sourceModifier
+                    .fillMaxWidth()
+                    .streamHideActions(hideChoices, content, groupKey, callbacks)
+                    .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
+            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+            ) {
+                StreamIcon(content.icon, env, CardIconSize)
+                Text(
+                    text = content.appLabel.orEmpty(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = env.formats.age(content.postedAtEpochMillis),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
+            }
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = StreamMinTarget)
+                        .streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
+            ) {
+                Text(
+                    text = content.title ?: hiddenText(),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                content.text?.takeIf { it.isNotBlank() }?.let { text ->
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = BODY_LINES,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            if (expanded) {
+                NotificationThread(content)
+                content.takeIf { StreamActionPolicy.offers(it, StreamAction.Reply("x")) }
+                    ?.let { NotificationReplyField(it, callbacks) }
+            } else {
+                content.image?.let { StreamLeadImage(it, env, LeadImageHeight / 2) }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.xs)) {
+                if (NotificationAction.REPLY in content.actions && content.notificationKey != null) {
+                    StreamTextButton(
+                        stringResource(R.string.stream_notification_reply),
+                        { onExpandedChange(!expanded) },
+                    )
+                } else if (content.thread.isNotEmpty()) {
+                    StreamTextButton(
+                        stringResource(
+                            if (expanded) {
+                                R.string.stream_notification_hide_thread
+                            } else {
+                                R.string.stream_notification_show_thread
+                            },
+                        ),
+                        { onExpandedChange(!expanded) },
+                    )
+                }
+                if (StreamActionPolicy.offers(content, StreamAction.Dismiss)) {
+                    StreamTextButton(
+                        stringResource(R.string.stream_notification_dismiss),
+                        { callbacks.onAction(content, StreamAction.Dismiss) },
+                    )
+                }
+                if (StreamActionPolicy.offers(content, StreamAction.Snooze())) {
+                    StreamTextButton(
+                        stringResource(R.string.stream_notification_snooze),
+                        { callbacks.onAction(content, StreamAction.Snooze()) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The message history of a messaging notification, oldest first. Nothing when the notification keeps none. */
+@Composable
+private fun NotificationThread(content: NotificationContent) {
+    if (content.thread.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
+        content.thread.takeLast(MAX_THREAD_LINES).forEach { message ->
+            Text(
+                text =
+                    buildString {
+                        append(message.sender ?: stringResource(R.string.stream_notification_you))
+                        append(": ")
+                        append(message.text)
+                    },
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NotificationReplyField(
+    content: NotificationContent,
+    callbacks: StreamCallbacks,
+) {
+    var reply by remember(content.id) { mutableStateOf("") }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
+    ) {
+        OutlinedTextField(
+            value = reply,
+            onValueChange = { reply = it },
+            modifier = Modifier.weight(1f).heightIn(min = StreamMinTarget),
+            placeholder = { Text(stringResource(R.string.stream_notification_reply_hint)) },
+            singleLine = true,
+        )
+        IconButton(
+            onClick = {
+                callbacks.onAction(content, StreamAction.Reply(reply))
+                reply = ""
+            },
+            enabled = reply.isNotBlank(),
+            modifier = Modifier.size(StreamMinTarget),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Send,
+                contentDescription = stringResource(R.string.stream_notification_send),
+            )
+        }
+    }
+}
+
+private const val MAX_THREAD_LINES = 5
+
+/** An event: its time span, title, place and a countdown to the start. A calendar feed shows its feed name. */
+@Composable
+internal fun EventCard(
+    content: EventContent,
+    env: StreamEnvironment,
+    callbacks: StreamCallbacks,
+    groupKey: String?,
+    modifier: Modifier = Modifier,
+) {
+    val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
+    StreamCardSurface(content.id.value, null, null, env, modifier) { sourceModifier ->
+        Column(
+            modifier =
+                sourceModifier
+                    .fillMaxWidth()
+                    .streamHideActions(hideChoices, content, groupKey, callbacks)
+                    .streamClickable({ callbacks.onAction(content, StreamAction.Open) })
+                    .padding(RiffleSpacing.l),
+            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+            ) {
+                Text(
+                    text = eventSpanText(content, env),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
+            }
+            Text(
+                text = eventTitle(content),
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            (content.location ?: content.calendarName)?.takeIf { it.isNotBlank() }?.let { place ->
+                Text(
+                    text = place,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(
+                text = eventCountdownText(content, env.nowEpochMillis),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun eventTitle(content: EventContent): String =
+    content.title?.takeIf { it.isNotBlank() }
+        ?: if (content.privacy == StreamPrivacy.REDACTED) {
+            hiddenText()
+        } else if (content.kind == EventKind.ALARM) {
+            stringResource(R.string.stream_event_alarm)
+        } else {
+            stringResource(R.string.stream_event_untitled)
+        }
+
+/** "09:00 to 10:00", "All day", or the alarm's time. */
+@Composable
+internal fun eventSpanText(
+    content: EventContent,
+    env: StreamEnvironment,
+): String =
+    when {
+        content.kind == EventKind.ALARM -> env.formats.time(content.startEpochMillis)
+        content.allDay -> stringResource(R.string.stream_event_all_day)
+        content.endEpochMillis != null ->
+            stringResource(
+                R.string.stream_event_time_span,
+                env.formats.time(content.startEpochMillis),
+                env.formats.time(content.endEpochMillis!!),
+            )
+        else -> env.formats.time(content.startEpochMillis)
+    }
+
+/** "Starts in 12 minutes", "Now", "30 minutes left", "Ended". */
+@Composable
+internal fun eventCountdownText(
+    content: EventContent,
+    nowEpochMillis: Long,
+): String =
+    when (val timing = EventTiming.of(content, nowEpochMillis)) {
+        is EventTiming.Upcoming ->
+            if (timing.minutes >= MINUTES_PER_HOUR * 2) {
+                val hours = ((timing.minutes + MINUTES_PER_HOUR / 2) / MINUTES_PER_HOUR).toInt()
+                pluralStringResource(R.plurals.stream_event_starts_in_hours, hours, hours)
+            } else {
+                pluralStringResource(
+                    R.plurals.stream_event_starts_in_minutes,
+                    timing.minutes.toInt(),
+                    timing.minutes.toInt(),
+                )
+            }
+        is EventTiming.Ongoing ->
+            timing.minutesLeft?.let { left ->
+                pluralStringResource(R.plurals.stream_event_minutes_left, left.toInt(), left.toInt())
+            } ?: stringResource(R.string.stream_event_now)
+        EventTiming.Ended -> stringResource(R.string.stream_event_ended)
+        EventTiming.AllDay -> stringResource(R.string.stream_event_all_day)
+    }
+
+private const val MINUTES_PER_HOUR = 60L
+
+/** An article: lead image, headline, feed name and age. */
+@Composable
+internal fun ArticleCard(
+    content: ArticleContent,
+    env: StreamEnvironment,
+    callbacks: StreamCallbacks,
+    groupKey: String?,
+    modifier: Modifier = Modifier,
+) {
+    val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
+    StreamCardSurface(content.id.value, null, null, env, modifier) { sourceModifier ->
+        Column(
+            modifier =
+                sourceModifier
+                    .fillMaxWidth()
+                    .streamHideActions(hideChoices, content, groupKey, callbacks)
+                    .padding(RiffleSpacing.l),
+            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
+                verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+            ) {
+                StreamLeadImage(content.image, env, LeadImageHeight)
+                Text(
+                    text = content.title ?: hiddenText(),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (content.read) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+            ) {
+                Text(
+                    text = articleMeta(content, env),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (content.canMarkRead()) {
+                    StreamTextButton(
+                        stringResource(R.string.stream_article_mark_read),
+                        { callbacks.onAction(content, StreamAction.MarkRead) },
+                    )
+                }
+                StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
+            }
+        }
+    }
+}
+
+private fun ArticleContent.canMarkRead(): Boolean =
+    StreamActionPolicy.offers(this, StreamAction.MarkRead) && ArticleAction.MARK_READ in actions
+
+/** "Feed name, 5 min. ago". */
+@Composable
+internal fun articleMeta(
+    content: ArticleContent,
+    env: StreamEnvironment,
+): String =
+    listOfNotNull(
+        content.feedName?.takeIf { it.isNotBlank() },
+        content.publishedAtEpochMillis?.let(env.formats::age),
+    ).joinToString(", ")
+
+/**
+ * Today's tasks as one card: a checkbox, the title and the due time for each. There is no task source yet (P10), so the
+ * checkbox is shown read-only; this card is what a connected source will draw into.
+ */
+@Composable
+internal fun TasksCard(
+    tasks: List<TaskContent>,
+    env: StreamEnvironment,
+    modifier: Modifier = Modifier,
+) {
+    StreamCardSurface("tasks", null, null, env, modifier) { sourceModifier ->
+        Column(
+            modifier = sourceModifier.fillMaxWidth().padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
+            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
+        ) {
+            tasks.take(MAX_TASKS_ON_CARD).forEach { task -> TaskLine(task, env) }
+        }
+    }
+}
+
+private const val MAX_TASKS_ON_CARD = 4
+
+@Composable
+internal fun TaskLine(
+    task: TaskContent,
+    env: StreamEnvironment,
+    modifier: Modifier = Modifier,
+) {
+    val unavailable = stringResource(R.string.stream_task_checkbox_unavailable)
+    Row(
+        modifier = modifier.fillMaxWidth().heightIn(min = StreamMinTarget),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+    ) {
+        Checkbox(
+            checked = task.completed,
+            onCheckedChange = null,
+            enabled = false,
+            modifier = Modifier.semantics { stateDescription = unavailable },
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = task.title ?: hiddenText(),
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            task.dueEpochMillis?.let { due ->
+                Text(
+                    text =
+                        if (task.dueHasTime) {
+                            env.formats.time(
+                                due,
+                            )
+                        } else {
+                            stringResource(R.string.stream_task_due, env.formats.age(due))
+                        },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}

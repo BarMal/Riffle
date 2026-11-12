@@ -11,24 +11,24 @@ import kotlin.math.floor
 import kotlin.math.sqrt
 
 /*
- * The dock spotlight's glow, baked from its colour profile (see `DockSpotlightFlow.kt`) into one
- * small image of the whole dock.
+ * The surface spotlight's glow, baked from its colour profile (see `GlassSpotlightFlow.kt`) into one
+ * small image of the whole surface.
  *
- * The glow fades with distance from the dock's actual rounded outline, as the desktop plugin's
- * corner textures follow a window's rounding: on a pill-shaped dock it curves round the ends
+ * The glow fades with distance from the surface's actual rounded outline, as the desktop plugin's
+ * corner textures follow a window's rounding: on a pill-shaped surface it curves round the ends
  * instead of four straight bands meeting in a visible inner rectangle. How deep and how strong it
  * is blends by which way the nearest stretch of outline faces -- the inner long edge strongest,
  * the outer one weaker, the ends between -- and its colour is the profile's at that point along
  * the run, so the ends carry the nearest icon's colour.
  *
- * Baked on the CPU, at a coarse texel (the glow is soft) and stretched over the dock, so the GPU
+ * Baked on the CPU, at a coarse texel (the glow is soft) and stretched over the surface, so the GPU
  * draws one plain image: no gradient shader and no offscreen layer, which on the software-rendered
  * CI emulator hung the UI tests. The pixel buffer and bitmap are reused between bakes, so a frame
  * of the glow flowing allocates nothing.
  */
 
 /** How deep and how strong the glow is along each kind of edge, in pixels and 0..1. */
-internal data class DockSpotlightGlowEdges(
+internal data class GlassSpotlightGlowEdges(
     val innerDepthPx: Float,
     val outerDepthPx: Float,
     val endDepthPx: Float,
@@ -39,7 +39,7 @@ internal data class DockSpotlightGlowEdges(
 
 /**
  * How lit the glow is (0..1, before the profile's own coverage) at a point [along] the run and
- * [across] it, in a dock [runLength] by [crossLength] with corners rounded to [cornerRadius]. The
+ * [across] it, in a surface [runLength] by [crossLength] with corners rounded to [cornerRadius]. The
  * across axis starts at the edge [innerAtStart] says is the inner one.
  *
  * The distance to the rounded outline is the exact rounded-rectangle distance; the edge kind is
@@ -47,14 +47,14 @@ internal data class DockSpotlightGlowEdges(
  * so a straight edge is purely itself and the round ends blend smoothly between them.
  */
 @Suppress("LongParameterList")
-internal fun dockSpotlightGlowAlpha(
+internal fun glassSpotlightGlowAlpha(
     along: Float,
     across: Float,
     runLength: Float,
     crossLength: Float,
     cornerRadius: Float,
     innerAtStart: Boolean,
-    edges: DockSpotlightGlowEdges,
+    edges: GlassSpotlightGlowEdges,
 ): Float {
     val halfRun = runLength / 2f
     val halfCross = crossLength / 2f
@@ -84,13 +84,13 @@ internal fun dockSpotlightGlowAlpha(
     return if (depth <= 0f) 0f else alpha * (1f - inside.coerceAtLeast(0f) / depth).coerceIn(0f, 1f)
 }
 
-/** Bakes the glow into one reusable image; one per dock strip, used on the main thread only. */
-internal class DockSpotlightGlowBaker {
+/** Bakes the glow into one reusable image; one per glass surface, used on the main thread only. */
+internal class GlassSpotlightGlowBaker {
     private var bitmap: Bitmap? = null
     private var pixels = IntArray(0)
 
     /**
-     * The glow for [profile] over a dock [runPx] by [crossPx] (in the run's own orientation:
+     * The glow for [profile] over a surface [runPx] by [crossPx] (in the run's own orientation:
      * [runsHorizontally] lays it out on screen), at [texelPx] per texel.
      */
     @Suppress("LongParameterList")
@@ -101,7 +101,7 @@ internal class DockSpotlightGlowBaker {
         cornerRadiusPx: Float,
         innerAtStart: Boolean,
         runsHorizontally: Boolean,
-        edges: DockSpotlightGlowEdges,
+        edges: GlassSpotlightGlowEdges,
         texelPx: Float,
     ): ImageBitmap {
         val alongTexels = ceil(runPx / texelPx).toInt().coerceAtLeast(1)
@@ -111,10 +111,10 @@ internal class DockSpotlightGlowBaker {
         val target = reusableBitmap(width, height)
         for (a in 0 until alongTexels) {
             val along = (a + 0.5f) * runPx / alongTexels
-            val color = dockSpotlightProfileColorAt(profile, along / runPx)
+            val color = glassSpotlightProfileColorAt(profile, along / runPx)
             for (c in 0 until acrossTexels) {
                 val across = (c + 0.5f) * crossPx / acrossTexels
-                val lit = dockSpotlightGlowAlpha(along, across, runPx, crossPx, cornerRadiusPx, innerAtStart, edges)
+                val lit = glassSpotlightGlowAlpha(along, across, runPx, crossPx, cornerRadiusPx, innerAtStart, edges)
                 val index = if (runsHorizontally) c * width + a else a * width + c
                 pixels[index] = glowPixel(color, lit)
             }
@@ -147,7 +147,7 @@ private fun glowPixel(
  * [profile]'s colour [position] (0..1) of the way along the run, unpremultiplied: linear between
  * the two samples either side of it.
  */
-internal fun dockSpotlightProfileColorAt(
+internal fun glassSpotlightProfileColorAt(
     profile: FloatArray,
     position: Float,
 ): Color {

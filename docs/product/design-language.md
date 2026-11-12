@@ -3,7 +3,7 @@
 Status: first slice (#1201). Tokens live in code; this page is the reference for when to use them.
 
 The steer is **"if Apple and Sony designed it together."** Riffle stays a standard Android launcher
-built on Material 3; the design language tunes M3 rather than replacing it. The principles below
+with one glass material on top of the Material 3 component baseline; the design language tunes M3 rather than replacing it. The principles below
 come from the Cards/modes plan (`docs/product/modes-dock-handle-and-cards-plan.md`, W1).
 
 | Principle | Apple cue | Sony cue | In Riffle |
@@ -22,6 +22,7 @@ come from the Cards/modes plan (`docs/product/modes-dock-handle-and-cards-plan.m
 | Values (framework-free, unit tested) | `core/domain/.../launcher/designsystem/RiffleDesignTokens.kt` | Spacing, radius, elevation scales; spring, duration and easing parameters |
 | Geometry (framework-free, unit tested) | `core/domain/.../launcher/designsystem/ContinuousCornerGeometry.kt` | Continuous-corner Bézier construction |
 | Compose wrappers | `app/.../launcher/designsystem/` | `RiffleSpacing`, `RiffleShapes`, `ContinuousRoundedCornerShape`, `RiffleElevation`, `RiffleMotion` |
+| Glass material | `core/domain/.../launcher/designsystem/GlassMaterialTokens.kt` (weights), `app/.../launcher/GlassSurface.kt`, `GlassSheen.kt`, `GlassSpotlight*.kt` | `GlassWeight`, the weight tokens, `GlassSurface`, `glassSheen`, the spotlight |
 | Theme wiring | `app/.../launcher/LauncherTheme.kt` | `MaterialTheme(shapes = …, typography = …)`, `LocalLauncherCardShape`, `LocalLauncherPanelShape` |
 
 New code uses the tokens. Existing raw `dp` literals and ad-hoc `spring()` calls migrate slice by
@@ -89,16 +90,45 @@ Tokens: **elevation** (dp), used for both tonal and shadow elevation.
 |---|---|---|---|---|
 | 0 | 1 | 3 | 6 | 12 |
 
+### One glass, three weights
+
+Glass is the only look (ADR 0003). Every translucent surface is drawn by one primitive,
+`GlassSurface(weight, shape, tint)`, at one of three weights. The weights own the frost, the tint
+alpha, the contrast scrim, the hairline and the shadow, so feature code carries no literal surface
+alpha or blur radius. The numbers live in `core/domain/.../designsystem/GlassMaterialTokens.kt`.
+
+| Weight | Used for | Treatment |
+|---|---|---|
+| `Thin` | Dock, chips, row backgrounds, page indicator | Light frost, hairline top highlight, no shadow |
+| `Regular` | Cards, widgets' frames, folders, the search pill and results panel | Full frost, hairline, one soft shadow, tint |
+| `Thick` | Library sheet, menus, pickers, the focused card, settings sections, panels | Heavy frost with a contrast scrim behind text, no shadow of its own |
+
+- **Sheen everywhere.** The dock's glass sheen (`glassSheen`: top specular, caustic spot, inner
+  shadow, rim line, cool border) is part of the primitive for every weight, driven by the surface's
+  own shape. The weight scales it (the hairline most on `Thick`, least on `Thin`).
+- **Spotlight wherever a surface holds coloured things.** `GlassSurface(spotlight = true)` lights its
+  two long edges with the colours of what it holds, each reported by `Modifier.glassSpotlightSource`,
+  and follows the surface's own `Shape` and its longer axis. Used by the Dock, open folders, the
+  search results panel and `ItemCard` (lit by the item's app colour). A surface with no coloured
+  content gets the sheen only. It asks for frames only while its sources change, then stops.
+- **Tint** comes from two places only: the wallpaper (chrome) and an app's own colour (cards,
+  spotlight).
+- **Fallbacks are part of the material, not separate looks.** Reduced transparency (Settings >
+  Appearance, `AppearanceSettings.reducedTransparency`) makes every glass surface an opaque tint with
+  no backdrop sampling, keeps the sheen faint and the spotlight at half strength. Reduced motion
+  makes the spotlight snap. Without a backdrop to sample (a popup window, below API 33) the blurred
+  tint layer applies. Glass is always on: there is no switch for it, and no other theme preset.
+
 Do
 - Express depth with one soft, single-source shadow and a tonal step; add a hairline highlight on
-  glass surfaces.
-- Use the same level for a surface's tonal and shadow elevation.
-- Honour the reduced-transparency setting (the Glass preset already folds a contrast scrim into its
-  surface tokens; real blur is #1202).
+  glass surfaces (the sheen does this).
+- Pick a weight, not an alpha. Use the same level for a surface's tonal and shadow elevation.
+- Honour the reduced-transparency setting: it is one switch, read through `LocalLiquidGlassSettings`.
 
 Don't
 - Don't mix unrelated elevations on siblings, or stack shadows.
 - Don't put text on translucent surfaces without the contrast guarantee in `wallpaperAwareSurface`.
+- Don't draw a translucent background outside `GlassSurface`.
 
 ## 4. Precise typography
 
@@ -111,7 +141,7 @@ Tokens: the M3 type scale, tuned in `riffleTypography`.
 | `labelMedium` | weight Medium, letter spacing 0.6 sp (M3: 0.5) |
 | `labelSmall` | weight Medium, letter spacing 0.7 sp (M3: 0.5) |
 
-Only weight and tracking change, so the user's font-family choice (System / Monospace / preset)
+Only weight and tracking change, so the user's font-family choice (System / Monospace)
 still applies on top.
 
 Do
@@ -137,8 +167,8 @@ radius, degrading to a circular corner.
 
 Material 3 roles map onto the scale: `extraSmall`/`small` → `s`, `medium` → `m`, `large` → `l`,
 `extraLarge` → `xl`. Cards default to `l` and panels to `xl`. The user's corner-style setting
-(Preset / Compact / Rounded) and non-Material presets keep their own radii; when the resolved card
-corner is sharp (Terminal), Material components go sharp too.
+(Standard / Compact / Rounded, "Corners" in Settings) picks the radii for cards, panels, the dock and
+rows; Material components follow the same scale.
 
 Do
 - Use `MaterialTheme.shapes.*`, `LocalLauncherCardShape`, `LocalLauncherPanelShape` or
@@ -176,4 +206,5 @@ Follow-ups:
   (stage settle, a `smooth` candidate) still call `spring()` directly.
 - ~340 raw `dp` literals to move onto `RiffleSpacing` / `RiffleShapes` / `RiffleElevation`.
 - A lint/detekt check against new raw `spring(` and `RoundedCornerShape(` in feature code.
-- Materials (blur, hairlines) in #1202; system animation scale in #1203.
+- Materials (blur, hairlines) in #1202 and, as one primitive at three weights, in places-views slice P1;
+  system animation scale in #1203. The adaptive stage card surface still has its own treatment until P4.

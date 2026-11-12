@@ -88,6 +88,12 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
         }
     }
 
+    /** The provider action that takes an inline reply for [key], or null when it has none (or is not live). */
+    fun replyActionId(key: LauncherNotificationKey): String? =
+        targets[key]?.providerActions?.entries
+            ?.firstOrNull { (_, target) -> !target.action.remoteInputs.isNullOrEmpty() }
+            ?.key
+
     override fun perform(
         key: LauncherNotificationKey,
         action: NotificationStageAction,

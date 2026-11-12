@@ -40,8 +40,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.riffle.core.domain.launcher.home.DockModel
-import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -49,25 +47,18 @@ import kotlin.math.hypot
 @Composable
 internal fun ThemeColorsSetting(
     colors: LauncherThemeColors,
-    dock: DockModel,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    var selectedTarget by remember { mutableStateOf(LauncherThemeColorTarget.ACCENT) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SettingsChoiceRow(
-            title = "Custom colours",
-            subtitle = "Set Home, dock, and label colours. Hex values include alpha.",
-            options = LauncherThemeColorTarget.entries,
-            selected = selectedTarget,
-            onSelect = { target -> selectedTarget = target },
-            label = { target -> themeColorTargetLabel(target, selected = false) },
+        SettingsTextColumn(
+            title = "Custom accent",
+            subtitle = "Pick your own accent colour. Hex values include alpha.",
         )
         ThemeColorPicker(
-            target = selectedTarget,
-            argb = colors.colorFor(selectedTarget),
-            defaultColor = themeDefaultColor(selectedTarget, dock),
-            onColorChanged = { argb -> onAction(LauncherShellAction.SelectLauncherThemeColor(selectedTarget, argb)) },
-            onReset = { onAction(LauncherShellAction.SelectLauncherThemeColor(selectedTarget, null)) },
+            argb = colors.accentArgb,
+            defaultColor = MaterialTheme.colorScheme.primary,
+            onColorChanged = { argb -> onAction(LauncherShellAction.SelectCustomAccent(argb)) },
+            onReset = { onAction(LauncherShellAction.SelectCustomAccent(null)) },
         )
     }
 }
@@ -75,18 +66,17 @@ internal fun ThemeColorsSetting(
 @Composable
 @Suppress("LongMethod")
 internal fun ThemeColorPicker(
-    target: LauncherThemeColorTarget,
     argb: Int?,
     defaultColor: Color,
     onColorChanged: (Int) -> Unit,
     onReset: () -> Unit,
 ) {
     val initial = argb?.let(::Color) ?: defaultColor
-    var hue by remember(target, argb, defaultColor) { mutableFloatStateOf(initial.toHsv().first) }
-    var saturation by remember(target, argb, defaultColor) { mutableFloatStateOf(initial.toHsv().second) }
-    var value by remember(target, argb, defaultColor) { mutableFloatStateOf(initial.toHsv().third) }
-    var alpha by remember(target, argb, defaultColor) { mutableFloatStateOf(initial.alpha) }
-    var hexValue by remember(target, argb, defaultColor) { mutableStateOf(initial.toThemeHex()) }
+    var hue by remember(argb, defaultColor) { mutableFloatStateOf(initial.toHsv().first) }
+    var saturation by remember(argb, defaultColor) { mutableFloatStateOf(initial.toHsv().second) }
+    var value by remember(argb, defaultColor) { mutableFloatStateOf(initial.toHsv().third) }
+    var alpha by remember(argb, defaultColor) { mutableFloatStateOf(initial.alpha) }
+    var hexValue by remember(argb, defaultColor) { mutableStateOf(initial.toThemeHex()) }
     var wheelSize by remember { mutableStateOf(IntSize.Zero) }
 
     fun publish() {
@@ -113,8 +103,8 @@ internal fun ThemeColorPicker(
                         .size(160.dp)
                         .onSizeChanged { wheelSize = it }
                         .clip(CircleShape)
-                        .pointerInput(target, argb) { detectTapGestures(onTap = ::selectAt) }
-                        .pointerInput(target, argb) {
+                        .pointerInput(argb) { detectTapGestures(onTap = ::selectAt) }
+                        .pointerInput(argb) {
                             detectDragGestures(
                                 onDragStart = ::selectAt,
                                 onDrag = { change, _ ->
@@ -124,7 +114,7 @@ internal fun ThemeColorPicker(
                             )
                         }
                         .semantics {
-                            contentDescription = "Hue and saturation wheel for ${themeColorTargetTitle(target)}"
+                            contentDescription = "Hue and saturation wheel for the custom accent"
                         },
             ) {
                 drawCircle(
@@ -149,7 +139,7 @@ internal fun ThemeColorPicker(
                         .background(Color.hsv(hue, saturation, value, alpha))
                         .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                         .semantics {
-                            contentDescription = "Selected ${themeColorTargetTitle(target)} colour $hexValue"
+                            contentDescription = "Selected accent colour $hexValue"
                         },
             )
         }
@@ -244,33 +234,3 @@ private fun Color.toHsv(): Triple<Float, Float, Float> {
         }.let { if (it < 0f) it + 360f else it }
     return Triple(hue, if (maximum == 0f) 0f else delta / maximum, maximum)
 }
-
-@Composable
-private fun themeDefaultColor(
-    target: LauncherThemeColorTarget,
-    dock: DockModel,
-): Color =
-    when (target) {
-        LauncherThemeColorTarget.BACKGROUND -> MaterialTheme.colorScheme.background
-        LauncherThemeColorTarget.ACCENT -> MaterialTheme.colorScheme.primary
-        LauncherThemeColorTarget.DOCK -> dockBaseSurfaceColor(dock)
-        LauncherThemeColorTarget.LABEL -> MaterialTheme.colorScheme.onSurface
-        LauncherThemeColorTarget.LABEL_BACKGROUND -> MaterialTheme.colorScheme.scrim
-    }
-
-private fun themeColorTargetTitle(target: LauncherThemeColorTarget): String =
-    when (target) {
-        LauncherThemeColorTarget.BACKGROUND -> "background"
-        LauncherThemeColorTarget.ACCENT -> "accent"
-        LauncherThemeColorTarget.DOCK -> "dock"
-        LauncherThemeColorTarget.LABEL -> "label"
-        LauncherThemeColorTarget.LABEL_BACKGROUND -> "label background"
-    }
-
-private fun themeColorTargetLabel(
-    target: LauncherThemeColorTarget,
-    selected: Boolean,
-): String =
-    themeColorTargetTitle(target).replaceFirstChar(Char::uppercase).let { title ->
-        if (selected) "$title (selected)" else title
-    }

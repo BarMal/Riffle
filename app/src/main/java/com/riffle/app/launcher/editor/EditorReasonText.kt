@@ -64,7 +64,6 @@ internal object EditorReasonText {
             is EditRejection.NotAGridPage -> "That page does not hold widgets"
             is EditRejection.NotABoundPage -> "That page holds widgets; change a widget instead"
             EditRejection.BlankName -> "A workspace needs a name"
-            EditRejection.BlankSkinId -> "Choose a skin or follow the launcher's"
         }
 
     /** Why an expression is not offered, as one line. Empty when it is. */

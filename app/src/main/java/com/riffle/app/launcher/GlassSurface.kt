@@ -7,10 +7,12 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -30,17 +33,21 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.designsystem.GlassMaterialTokens
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
+import com.riffle.core.domain.launcher.designsystem.GlassWeightTokens
 
 /**
- * Riffle's glass material: a tinted, edge-refracting, blurred layer with a 1dp top hairline
- * highlight, used for floating chrome (sheets, pills, the card-stack header's pill and action
- * capsule) so it reads as a distinct surface above whatever sits behind it rather than a flat,
- * abruptly-cut card.
+ * Riffle's one glass material (ADR 0003): a tinted, edge-refracting, blurred layer with the glass
+ * sheen on top, drawn at one of three [GlassWeight]s. It is the only way a surface gets a
+ * translucent background: the weight owns the frost, tint alpha, contrast scrim, hairline and
+ * shadow (see `GlassMaterialTokens`), so call sites carry no literal surface alpha or blur radius.
  *
  * At API 33+ (AGSL/[RuntimeShader]) this samples the *actual* backdrop -- content recorded into
  * [LocalLiquidGlassBackdrop] near Home's root (see `LiquidGlassBackdrop.kt`) -- through a shader
@@ -50,29 +57,80 @@ import androidx.compose.ui.unit.dp
  * rim), blurs more strongly toward the interior than right at the edge (so the rim's dispersion and
  * specular stay crisp), and lays a Fresnel-style specular highlight on top near the rim facing a
  * fixed virtual light -- no gyroscope, per the design note this shipped against. Below API 33, or
- * with no backdrop installed above this composable (see [ProvideLiquidGlassBackdrop]), or with
- * liquid glass switched off in settings, this falls back to today's cosmetic treatment: a blurred
- * *tint layer* (not the backdrop) with a stronger flat scrim below API 31, where
+ * with no backdrop installed above this composable (see [ProvideLiquidGlassBackdrop]), this falls
+ * back to a blurred *tint layer* (not the backdrop) with a stronger flat scrim below API 31, where
  * [android.graphics.RenderEffect] does not exist at all.
+ *
+ * Glass is always on. The one fallback that is part of the material is reduced transparency
+ * ([ResolvedLiquidGlass.reducedTransparency]): an opaque [tint], no backdrop sampling, the sheen
+ * kept but faint, the spotlight at half strength.
+ *
+ * **Sheen**: the dock's glass sheen (`glassSheen`) is drawn over every weight, driven by [shape].
+ *
+ * **Spotlight**: with [spotlight] true the surface lights its long edges with the colours of the
+ * things it holds -- content reports each through [glassSpotlightSource] -- and otherwise carries
+ * the sheen only. Use it wherever a surface holds coloured things; it asks for frames only while
+ * those colours move (see `GlassSpotlight.kt`).
  *
  * **Known simplification**: AGSL cannot introspect an arbitrary Compose [Shape], so the shader's
  * own rim/rounded-rect falloff uses a plain rounded-rect signed-distance-field, with a corner
- * radius read from [shape] only when it is a [RoundedCornerShape] (a fixed fallback radius
+ * radius read from [shape] only when it is a [CornerBasedShape] (a fixed fallback radius
  * otherwise). This only affects *where the refraction/blur/specular intensity ramps up* -- the
  * surface's actual visible silhouette is still clipped exactly to [shape] by the surrounding
  * `Modifier.clip(shape)`, as before.
  *
- * [content] is drawn on top of the glass layer, clipped to the same [shape].
+ * [tint] supplies the colour only; its alpha is the weight's to set (except under reduced
+ * transparency, which uses a near-opaque alpha). [content] is drawn on top of the glass layer, clipped to the same
+ * [shape], with [contentColor] (default: the colour that contrasts [tint]).
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun GlassSurface(
     modifier: Modifier = Modifier,
+    weight: GlassWeight = GlassWeight.Regular,
     shape: Shape = RectangleShape,
     tint: Color = MaterialTheme.colorScheme.surface,
+    contentColor: Color = Color.Unspecified,
+    spotlight: Boolean = false,
     content: @Composable () -> Unit = {},
 ) {
     val liquidGlass = LocalLiquidGlassSettings.current
+    val tokens = GlassMaterialTokens.forWeight(weight)
+    val spotlightState = rememberGlassSpotlightState(enabled = spotlight)
+    val resolvedContentColor = contentColor.takeOrElse { contentColorFor(tint) }
+
+    // The one soft shadow sits outside the clip. A flat or opaque surface casts none.
+    val shadow =
+        if (tokens.shadowElevationDp > 0 && liquidGlass.samplesBackdrop) {
+            Modifier.shadow(tokens.shadowElevationDp.dp, shape, clip = false)
+        } else {
+            Modifier
+        }
+    Box(modifier = modifier.then(shadow).clip(shape)) {
+        GlassBackground(weight = weight, shape = shape, tint = tint)
+        GlassSheenLayer(shape = shape, tint = tint, tokens = tokens)
+        if (spotlightState != null) {
+            Box(Modifier.matchParentSize().glassSpotlight(spotlightState, shape))
+        }
+        CompositionLocalProvider(
+            LocalContentColor provides resolvedContentColor,
+            LocalGlassSpotlight provides spotlightState,
+        ) {
+            content()
+        }
+    }
+}
+
+/** The surface's own fill: the flat fallbacks, the backdrop shader, or the blurred tint layer. */
+@Composable
+private fun BoxScope.GlassBackground(
+    weight: GlassWeight,
+    shape: Shape,
+    tint: Color,
+) {
+    val liquidGlass = LocalLiquidGlassSettings.current
     val backdrop = LocalLiquidGlassBackdrop.current
+    val tokens = GlassMaterialTokens.forWeight(weight)
     val supportsLegacyBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     // Robolectric's native graphics mode (used by the JVM-side Roborazzi screenshot suite) shadows
@@ -84,46 +142,63 @@ internal fun GlassSurface(
     // screenshot test that renders any glass surface.
     val runningUnderRobolectric = Build.FINGERPRINT == "robolectric"
 
-    Box(modifier = modifier.clip(shape)) {
+    if (liquidGlass.reducedTransparency) {
+        FlatGlassLayer(tint = tint.copy(alpha = GlassMaterialTokens.REDUCED_TRANSPARENCY_TINT_ALPHA))
+    } else if (!runningUnderRobolectric) {
         // Nested rather than one compound condition so the inner if -- unchanged from the version
-        // Android Lint's NewApi check already traces correctly -- keeps doing so; folding
-        // !runningUnderRobolectric into that same condition would push it over detekt's
-        // ComplexCondition threshold instead.
-        if (!runningUnderRobolectric) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
-                LiquidGlassShaderLayer(
-                    shape = shape,
-                    tint = tint,
-                    backdrop = backdrop,
-                    frostStrength = liquidGlass.frostStrengthFraction,
-                    refractionStrength = liquidGlass.refractionStrengthFraction,
-                )
-            } else {
-                LegacyGlassTintLayer(supportsBlur = supportsLegacyBlur, tint = tint)
-            }
+        // Android Lint's NewApi check already traces correctly -- keeps doing so.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && backdrop != null) {
+            LiquidGlassShaderLayer(
+                shape = shape,
+                tint = tint,
+                backdrop = backdrop,
+                frostStrength = tokens.effectiveFrost(liquidGlass.frostStrengthFraction),
+                refractionStrength = liquidGlass.refractionStrengthFraction,
+                tokens = tokens,
+            )
         } else {
-            LegacyGlassTintLayer(supportsBlur = supportsLegacyBlur, tint = tint)
+            LegacyGlassTintLayer(supportsBlur = supportsLegacyBlur, tint = tint, tokens = tokens)
         }
-        Box(
-            modifier =
-                Modifier
-                    .matchParentSize()
-                    .height(GLASS_HIGHLIGHT_HEIGHT_DP.dp)
-                    .background(Color.White.copy(alpha = GLASS_HIGHLIGHT_ALPHA)),
-        )
-        content()
+    } else {
+        LegacyGlassTintLayer(supportsBlur = supportsLegacyBlur, tint = tint, tokens = tokens)
     }
+    if (tokens.contentScrimAlpha > 0f && liquidGlass.samplesBackdrop) {
+        Box(Modifier.matchParentSize().background(tint.copy(alpha = tokens.contentScrimAlpha)))
+    }
+}
+
+/** The reduced-transparency fill: a flat, near-opaque [tint]. */
+@Composable
+private fun BoxScope.FlatGlassLayer(tint: Color) {
+    Box(Modifier.matchParentSize().background(tint))
+}
+
+/** The sheen over the fill, scaled by the weight and by how light the glass reads. */
+@Composable
+private fun BoxScope.GlassSheenLayer(
+    shape: Shape,
+    tint: Color,
+    tokens: GlassWeightTokens,
+) {
+    val seen = tint.copy(alpha = tokens.tintAlpha)
+    val strength =
+        glassSheenStrength(seen).scaled(
+            highlight = tokens.highlightScale,
+            shadow = tokens.innerShadowScale,
+            border = tokens.hairlineScale,
+        )
+    Box(Modifier.matchParentSize().glassSheen(shape, strength))
 }
 
 /**
  * A liquid-glass scrim [Modifier] for callers outside [GlassSurface] itself -- currently
  * `AdaptiveStageCardSurface`'s GLASS/FROSTED content-face scrim -- that want the real
  * backdrop-refraction material as a plain background fill in their own modifier chain, with the
- * same eligibility gate [GlassSurface] applies (API 33+, liquid glass enabled in settings, a
+ * same eligibility gate [GlassSurface] applies (API 33+, a
  * backdrop installed above the caller via [ProvideLiquidGlassBackdrop], not under Robolectric).
  * Falls back to a flat [tint] fill -- `Modifier.background(tint, shape)`, pixel-for-pixel what
  * callers drew before this existed -- whenever any of that is not the case, so a caller can use
- * this unconditionally and get today's exact look when liquid glass is off or unavailable.
+ * this unconditionally and get today's exact look when the backdrop is unavailable or transparency is reduced.
  */
 @Composable
 internal fun rememberLiquidGlassScrimModifier(
@@ -140,7 +215,7 @@ internal fun rememberLiquidGlassScrimModifier(
     // Build.VERSION.SDK_INT comparison rather than a precomputed boolean (Android Lint's NewApi
     // check does not trace SDK_INT across a function-call boundary otherwise).
     return if (!runningUnderRobolectric) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.samplesBackdrop && backdrop != null) {
             Modifier.clip(shape).liquidGlassShaderBackground(
                 shape = shape,
                 tint = tint,
@@ -156,19 +231,19 @@ internal fun rememberLiquidGlassScrimModifier(
     }
 }
 
-/** Today's pre-AGSL treatment: a blurred flat tint layer, or a stronger flat scrim below API 31. */
+/** The pre-AGSL treatment: a blurred flat tint layer, or a stronger flat scrim below API 31. */
 @Composable
 private fun BoxScope.LegacyGlassTintLayer(
     supportsBlur: Boolean,
     tint: Color,
+    tokens: GlassWeightTokens,
 ) {
-    val tintAlpha = if (supportsBlur) GLASS_TINT_ALPHA else GLASS_FALLBACK_SCRIM_ALPHA
     Box(
         modifier =
             Modifier
                 .matchParentSize()
-                .then(if (supportsBlur) Modifier.blur(GLASS_BLUR_RADIUS_DP.dp) else Modifier)
-                .background(tint.copy(alpha = tintAlpha)),
+                .then(if (supportsBlur) Modifier.blur(tokens.blurRadiusDp.dp) else Modifier)
+                .background(tint.copy(alpha = tokens.softwareTintAlpha(supportsBlur))),
     )
 }
 
@@ -187,6 +262,7 @@ private fun BoxScope.LiquidGlassShaderLayer(
     backdrop: GraphicsLayer,
     frostStrength: Float,
     refractionStrength: Float,
+    tokens: GlassWeightTokens,
 ) {
     Box(
         modifier =
@@ -198,6 +274,7 @@ private fun BoxScope.LiquidGlassShaderLayer(
                     backdrop = backdrop,
                     frostStrength = frostStrength,
                     refractionStrength = refractionStrength,
+                    tokens = tokens,
                 ),
     )
 }
@@ -212,7 +289,7 @@ private fun BoxScope.LiquidGlassShaderLayer(
  *
  * Tracks this node's own position and size via [onGloballyPositioned], exactly as
  * [LiquidGlassShaderLayer] did inline, then applies [liquidGlassRefraction] using those. Callers are
- * responsible for their own eligibility gating (API 33+, liquid glass enabled, a non-null backdrop,
+ * responsible for their own eligibility gating (API 33+, a non-null backdrop,
  * not under Robolectric) and, if a clipped silhouette narrower than their own layout bounds is
  * needed (see [rememberLiquidGlassScrimModifier]'s `Modifier.clip(shape)` call), for chaining that
  * themselves -- same as before extraction, this function carries no fallback or clip of its own.
@@ -226,6 +303,7 @@ internal fun Modifier.liquidGlassShaderBackground(
     backdrop: GraphicsLayer,
     frostStrength: Float,
     refractionStrength: Float,
+    tokens: GlassWeightTokens = GlassMaterialTokens.regular,
 ): Modifier {
     val density = LocalDensity.current
     var positionInRoot by remember { mutableStateOf(Offset.Zero) }
@@ -234,7 +312,7 @@ internal fun Modifier.liquidGlassShaderBackground(
     val shader = remember { RuntimeShader(LIQUID_GLASS_SHADER_SRC) }
     val cornerRadiusPx =
         remember(shape, sizePx, density) {
-            (shape as? RoundedCornerShape)
+            (shape as? CornerBasedShape)
                 ?.topStart
                 ?.toPx(Size(sizePx.width.toFloat(), sizePx.height.toFloat()), density)
                 ?: with(density) { GLASS_FALLBACK_CORNER_RADIUS_DP.dp.toPx() }
@@ -253,6 +331,7 @@ internal fun Modifier.liquidGlassShaderBackground(
         frostStrength = frostStrength,
         refractionStrength = refractionStrength,
         tint = tint,
+        tokens = tokens,
     )
 }
 
@@ -274,6 +353,7 @@ private fun Modifier.liquidGlassRefraction(
     frostStrength: Float,
     refractionStrength: Float,
     tint: Color,
+    tokens: GlassWeightTokens,
 ): Modifier =
     drawBehind {
         val size = sizePx()
@@ -295,7 +375,7 @@ private fun Modifier.liquidGlassRefraction(
             tint.red,
             tint.green,
             tint.blue,
-            tint.alpha * (LIQUID_GLASS_TINT_BASE_ALPHA + LIQUID_GLASS_TINT_FROST_ALPHA * frostStrength),
+            tint.alpha * tokens.shaderTintAlpha(frostStrength),
         )
         localLayer.renderEffect =
             RenderEffect
@@ -390,11 +470,4 @@ private const val LIQUID_GLASS_SHADER_SRC = """
     }
 """
 
-private const val GLASS_TINT_ALPHA = 0.55f
-private const val GLASS_FALLBACK_SCRIM_ALPHA = 0.75f
-private const val GLASS_BLUR_RADIUS_DP = 24
-private const val GLASS_HIGHLIGHT_HEIGHT_DP = 1
-private const val GLASS_HIGHLIGHT_ALPHA = 0.12f
 private const val GLASS_FALLBACK_CORNER_RADIUS_DP = 16
-private const val LIQUID_GLASS_TINT_BASE_ALPHA = 0.35f
-private const val LIQUID_GLASS_TINT_FROST_ALPHA = 0.45f

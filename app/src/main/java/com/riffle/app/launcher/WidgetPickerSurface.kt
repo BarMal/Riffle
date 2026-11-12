@@ -2,7 +2,6 @@
 
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,7 +29,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -68,9 +66,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 @Composable
@@ -141,26 +141,18 @@ fun WidgetPickerSurface(
             val panelPadding = widgetPickerPanelPadding(maxWidth)
             val tileMinWidth = widgetPickerTileMinWidth(maxWidth)
 
-            Surface(
+            GlassSurface(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .testTag(WIDGET_PICKER_PANEL_TEST_TAG),
+                        .testTag(WIDGET_PICKER_PANEL_TEST_TAG)
+                        // While a widget is dragged out of the picker the panel gives way entirely,
+                        // so the drag lands on the page beneath.
+                        .alpha(if (isDragHandoffActive) 0f else 1f),
+                weight = GlassWeight.Thick,
                 shape = LocalLauncherPanelShape.current,
-                color =
-                    if (isDragHandoffActive) {
-                        androidx.compose.ui.graphics.Color.Transparent
-                    } else {
-                        launcherPanelSurfaceColor()
-                    },
+                tint = launcherPanelSurfaceColor(),
                 contentColor = launcherPanelContentColor(),
-                border =
-                    if (isDragHandoffActive) {
-                        null
-                    } else {
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.48f))
-                    },
-                tonalElevation = 0.dp,
             ) {
                 Column(
                     modifier =
@@ -586,15 +578,15 @@ private fun WidgetPickerAccessiblePlacementControls(
         if (!isLaidOut) return@LaunchedEffect
         cancelFocusRequester.requestFocus()
     }
-    Surface(
+    GlassSurface(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG),
-        shape = RoundedCornerShape(16.dp),
-        color = launcherPanelSurfaceColor(),
+        weight = GlassWeight.Regular,
+        shape = RiffleShapes.medium,
+        tint = launcherPanelSurfaceColor(),
         contentColor = launcherPanelContentColor(),
-        tonalElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = "Placement preview", style = MaterialTheme.typography.titleMedium)

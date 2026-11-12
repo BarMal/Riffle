@@ -31,6 +31,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacementEngine
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -65,62 +66,66 @@ internal fun HomeWidgetPlaceholder(
         }
     }
 
-    BoxWithConstraints(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .clip(LocalLauncherCardShape.current)
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-        contentAlignment = Alignment.Center,
+    // The widget's frame: Regular glass in the launcher's card shape, behind the hosted view.
+    GlassSurface(
+        modifier = Modifier.fillMaxSize(),
+        weight = GlassWeight.Regular,
+        shape = LocalLauncherCardShape.current,
+        tint = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) {
-        val widthDp = maxWidth.value.roundToInt().coerceAtLeast(1)
-        val heightDp = maxHeight.value.roundToInt().coerceAtLeast(1)
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            val widthDp = maxWidth.value.roundToInt().coerceAtLeast(1)
+            val heightDp = maxHeight.value.roundToInt().coerceAtLeast(1)
 
-        LaunchedEffect(widget.appWidgetId, widthDp, heightDp) {
-            widgetViewFactory.updateHostedWidgetSize(
+            LaunchedEffect(widget.appWidgetId, widthDp, heightDp) {
+                widgetViewFactory.updateHostedWidgetSize(
+                    widget = widget,
+                    widthDp = widthDp,
+                    heightDp = heightDp,
+                )
+            }
+            if (hostedWidgetView == null) {
+                HomeWidgetFallbackLabel(widget)
+            } else {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { hostedWidgetView },
+                    update = { view ->
+                        view.setOnLongClickListener(null)
+                    },
+                )
+            }
+            WidgetGestureLayer(
                 widget = widget,
-                widthDp = widthDp,
-                heightDp = heightDp,
+                dragState = dragState,
+                workspaceActions = workspaceActions,
+                onStationaryLongPress = { isContextMenuExpanded.value = true },
             )
-        }
-        if (hostedWidgetView == null) {
-            HomeWidgetFallbackLabel(widget)
-        } else {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { hostedWidgetView },
-                update = { view ->
-                    view.setOnLongClickListener(null)
-                },
-            )
-        }
-        WidgetGestureLayer(
-            widget = widget,
-            dragState = dragState,
-            workspaceActions = workspaceActions,
-            onStationaryLongPress = { isContextMenuExpanded.value = true },
-        )
-        if (isEditing) {
-            WidgetEditHandles(
-                widget = widget,
-                grid = dragState?.grid,
-                pageItems = dragState?.pageItems ?: listOf(widget),
-                contextSurface = contextSurface,
-                onAction = onAction,
-            )
-        }
-        ShortcutContextMenu(
-            expanded = isContextMenuExpanded.value,
-            items =
-                widgetPlaceholderContextMenuItems(
+            if (isEditing) {
+                WidgetEditHandles(
                     widget = widget,
                     grid = dragState?.grid,
                     pageItems = dragState?.pageItems ?: listOf(widget),
                     contextSurface = contextSurface,
-                ),
-            onDismissRequest = { isContextMenuExpanded.value = false },
-            onAction = onAction,
-        )
+                    onAction = onAction,
+                )
+            }
+            ShortcutContextMenu(
+                expanded = isContextMenuExpanded.value,
+                items =
+                    widgetPlaceholderContextMenuItems(
+                        widget = widget,
+                        grid = dragState?.grid,
+                        pageItems = dragState?.pageItems ?: listOf(widget),
+                        contextSurface = contextSurface,
+                    ),
+                onDismissRequest = { isContextMenuExpanded.value = false },
+                onAction = onAction,
+            )
+        }
     }
 }
 

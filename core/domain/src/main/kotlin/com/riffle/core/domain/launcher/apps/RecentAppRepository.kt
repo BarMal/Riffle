@@ -10,6 +10,8 @@ package com.riffle.core.domain.launcher.apps
 data class RecentAppUsage(
     val packageName: AppPackageName,
     val lastUsedAtMillis: Long,
+    /** Foreground time within the platform's lookback window; zero when the source cannot say. Ranks frequent apps. */
+    val foregroundMillis: Long = 0L,
 )
 
 /**

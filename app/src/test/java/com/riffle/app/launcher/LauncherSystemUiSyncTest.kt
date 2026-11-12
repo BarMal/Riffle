@@ -67,6 +67,20 @@ class LauncherSystemUiSyncTest {
     }
 
     @Test
+    fun theStreamKeepsHomesHiddenBars() {
+        val mode =
+            LauncherSystemUiMode(
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = true,
+                destination = ShellDestination.STREAM,
+                themeMode = LauncherThemeMode.SYSTEM,
+            )
+
+        assertEquals(true, mode.shouldHideStatusBars)
+        assertEquals(true, mode.shouldHideNavigationBars)
+    }
+
+    @Test
     fun createsDistinctModesForIndependentSystemBarSelections() {
         val statusOnly =
             LauncherSystemUiMode(

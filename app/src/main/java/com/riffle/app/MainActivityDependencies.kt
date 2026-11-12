@@ -49,6 +49,7 @@ import com.riffle.app.launcher.ics.IcsRefreshCoordinator
 import com.riffle.app.launcher.ics.defaultIcsEngine
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
+import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnection
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
@@ -65,9 +66,22 @@ import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.sources.ContentSourceDependencies
 import com.riffle.app.launcher.sources.FeedSourceDependencies
 import com.riffle.app.launcher.sources.IcsSourceDependencies
+import com.riffle.app.launcher.sources.MediaSourceDependencies
 import com.riffle.app.launcher.sources.SearchSourceDependencies
+import com.riffle.app.launcher.sources.SourceChangeSource
 import com.riffle.app.launcher.sources.androidCalendarSourceDependencies
 import com.riffle.app.launcher.sources.androidItemSources
+import com.riffle.app.launcher.sources.androidStreamSources
+import com.riffle.app.launcher.stream.AndroidMediaSessions
+import com.riffle.app.launcher.stream.AndroidNextAlarm
+import com.riffle.app.launcher.stream.AndroidStreamActionGateway
+import com.riffle.app.launcher.stream.AndroidStreamImageLoader
+import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
+import com.riffle.app.launcher.stream.DataStoreStreamLayoutStore
+import com.riffle.app.launcher.stream.ManualChangeSource
+import com.riffle.app.launcher.stream.StreamHost
+import com.riffle.app.launcher.stream.StreamPlatform
+import com.riffle.app.launcher.stream.StreamPostureHolder
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
@@ -89,18 +103,30 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.stream.StreamContentProvider
+import com.riffle.core.domain.launcher.stream.StreamContext
+import com.riffle.core.domain.launcher.stream.StreamSourceIds
+import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
+import com.riffle.core.domain.launcher.workspace.lens.ZoneDayBucketer
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
+import com.riffle.core.domain.launcher.workspace.settings.AliasedSourceEnablement
+import com.riffle.core.domain.launcher.workspace.settings.SourceContentPrivacy
+import com.riffle.core.domain.launcher.workspace.settings.SourceEnablement
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceContentPrivacy
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
+import com.riffle.core.domain.launcher.workspace.settings.mergedContextChanges
 import com.riffle.core.domain.launcher.workspace.sources.EnablementSourceRegistry
 import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import java.time.ZoneId
 import java.util.concurrent.Executors
 
+@Suppress("TooManyFunctions")
 internal class MainActivityDependencies(
     private val activity: Activity,
 ) {
@@ -116,6 +142,9 @@ internal class MainActivityDependencies(
         )
     }
     val exclusionRepository by lazy { CachedExclusionRepository(DataStoreExclusionStore(activity)) }
+
+    /** How the Stream is arranged per posture; the backup and the Stream both go through this one repository. */
+    val streamLayoutRepository by lazy { CachedStreamLayoutRepository(DataStoreStreamLayoutStore(activity)) }
 
     /**
      * The process's one pool repository, shared by the standard home (once cut over it is loaded at startup), the
@@ -283,6 +312,7 @@ internal class MainActivityDependencies(
                     },
                 ),
             imageLoader = AndroidExpressionImageLoader(activity.packageManager),
+            appIconLoader = appIconLoader,
             itemActions = WorkspaceItemActions(AndroidItemLaunchPort(activity, appLauncher)),
             exclusionLoader = {
                 exclusionRepository.initialize(
@@ -303,6 +333,116 @@ internal class MainActivityDependencies(
             exclusions = exclusionRepository,
             icsFeeds = IcsFeedsController(icsFeedRepository, icsRefreshCoordinator),
             searchQuery = searchQuery,
+        )
+    }
+
+    /**
+     * The platform behind the Stream (P3b): item sources with live media sessions and the agenda's own calendar
+     * view, the next alarm, and the one action gateway. Pass the SAME [enablement] the Sources settings page writes
+     * to. Nothing subscribes or reads until a Stream section is observed.
+     */
+    fun streamPlatform(
+        launcherSettings: () -> LauncherSettings,
+        enablement: SourceEnablement,
+    ): StreamPlatform {
+        val executor =
+            Executors.newSingleThreadExecutor { task -> Thread(task, "riffle-stream").apply { isDaemon = true } }
+        val mediaSessions = AndroidMediaSessions(activity)
+        val feedReadChanges = ManualChangeSource()
+        val registry =
+            androidStreamSources(
+                installedApps = installedAppRepository,
+                appVisibility = appVisibilityRepository,
+                recentApps = recentAppRepository,
+                notificationRepository = activeNotificationRepository,
+                notificationAccess = notificationAccessGateway,
+                hideRules = { launcherSettings().notificationHiding.rules },
+                calendar =
+                    androidCalendarSourceDependencies(
+                        contentResolver = activity.contentResolver,
+                        access = calendarAccessGateway,
+                        accessChanges = calendarAccessChanges,
+                    ),
+                media = MediaSourceDependencies(sessions = mediaSessions, changes = mediaSessions),
+                content =
+                    ContentSourceDependencies(
+                        feeds =
+                            FeedSourceDependencies(
+                                configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
+                                cache = feedArticleCacheRepository,
+                                changes =
+                                    SourceChangeSource.merge(
+                                        listOf(feedRefreshCoordinator.cacheChanges, feedReadChanges),
+                                    ),
+                            ),
+                        ics =
+                            IcsSourceDependencies(
+                                feeds = { icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds },
+                                cachedEvents = { id -> icsFeedRepository.cached(id)?.events },
+                                engine = icsEngine,
+                                changes = icsFeedRepository,
+                            ),
+                    ),
+            )
+        val alarm = AndroidNextAlarm(activity, executor)
+        return StreamPlatform(
+            registry =
+                EnablementSourceRegistry(
+                    registry,
+                    AliasedSourceEnablement(enablement, mapOf(StreamSourceIds.AGENDA to SourceIds.CALENDAR)),
+                ),
+            alarms = alarm.provider,
+            actions =
+                AndroidStreamActionGateway(
+                    notifications = AndroidNotificationStageActionGateway,
+                    replyActionId = AndroidNotificationStageActionGateway::replyActionId,
+                    snooze = RiffleNotificationListenerConnection::snoozeNotification,
+                    media = mediaSessions,
+                    feedCache = feedArticleCacheRepository,
+                    feedChanged = feedReadChanges::changed,
+                    launch = AndroidItemLaunchPort(activity, appLauncher),
+                    openClock = alarm::openClock,
+                ),
+        )
+    }
+
+    /**
+     * What the shell shows the Stream with: the typed-content provider over [streamPlatform], reading the same Hide
+     * rules, content levels and source on/off choices the lens pages do, with the per-section options of the layout of
+     * the posture on screen. Nothing is read until a section is observed. Pass the same [enablement] and
+     * [contentPrivacy] the Settings pages write to, and [requestAccess] for the existing explicit access flows.
+     */
+    fun streamHost(
+        launcherSettings: () -> LauncherSettings,
+        enablement: SourceEnablement,
+        contentPrivacy: SourceContentPrivacy,
+        requestAccess: (SourceId) -> Unit,
+    ): StreamHost {
+        val platform = streamPlatform(launcherSettings, enablement)
+        val posture = StreamPostureHolder()
+        val provider =
+            StreamContentProvider(
+                registry = platform.registry,
+                alarms = platform.alarms,
+                contextChanges = mergedContextChanges(exclusionRepository, contentPrivacy, streamLayoutRepository),
+                context = {
+                    StreamContext(
+                        nowEpochMillis = System.currentTimeMillis(),
+                        options = streamLayoutRepository.layoutFor(posture.deviceClass).options,
+                        exclusions = exclusionRepository.rules(posture.deviceClass),
+                        contentLevels = contentPrivacy.levels(),
+                        dayBucketer = ZoneDayBucketer(ZoneId.systemDefault()),
+                    )
+                },
+            )
+        return StreamHost(
+            provider = provider,
+            layouts = streamLayoutRepository,
+            actions = platform.actions,
+            imageLoader = AndroidStreamImageLoader(activity.packageManager),
+            requestAccess = requestAccess,
+            enableSources = { ids -> ids.forEach { id -> enablement.setEnabled(id, true) } },
+            posture = posture,
         )
     }
 
@@ -366,6 +506,7 @@ internal class MainActivityDependencies(
             exclusions = exclusionRepository,
             pool = poolRepository,
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            stream = streamLayoutRepository,
             poolOwnsHome = { homeLayoutRuntime.poolHome != null },
         )
     }

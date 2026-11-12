@@ -52,6 +52,7 @@ private fun LauncherShellAction.navigationAction(): ShellNavigationAction? =
         LauncherShellAction.OpenSearch -> ShellNavigationAction.OpenSearch
         LauncherShellAction.OpenNotifications -> ShellNavigationAction.OpenNotifications
         LauncherShellAction.OpenSettings -> ShellNavigationAction.OpenSettings
+        LauncherShellAction.OpenStream -> ShellNavigationAction.OpenStream
         is LauncherShellAction.OpenSettingsPage -> ShellNavigationAction.OpenSettings
         else -> null
     }
@@ -91,7 +92,6 @@ private fun LauncherShellAction.isDockEditAction(): Boolean =
         is LauncherShellAction.SelectDockCapacity,
         is LauncherShellAction.SelectDockIconSize,
         is LauncherShellAction.SelectDockBackgroundAlpha,
-        is LauncherShellAction.SelectDockVisualEffect,
         is LauncherShellAction.SelectDockBackgroundSizing,
         is LauncherShellAction.SelectDockAlignment,
         is LauncherShellAction.SelectDockItemSpacing,

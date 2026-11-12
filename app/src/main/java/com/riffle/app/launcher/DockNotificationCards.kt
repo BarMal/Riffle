@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.DEFAULT_MAX_DOCK_NOTIFICATION_CARDS
 import com.riffle.core.domain.launcher.home.DockCompositionPlanner
 import com.riffle.core.domain.launcher.home.DockModel
@@ -144,7 +144,7 @@ private fun DockNotificationPermissionCard(
     state: DockNotificationShelfState.PermissionPrompt,
     interactions: DockInteractions,
 ) {
-    Surface(
+    GlassSurface(
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -157,8 +157,9 @@ private fun DockNotificationPermissionCard(
                         )
                 }
                 .clickable(onClick = { interactions.onAction(LauncherShellAction.RequestNotificationAccess) }),
+        weight = GlassWeight.Regular,
         shape = LocalLauncherCardShape.current,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = DOCK_NOTIFICATION_CARD_ALPHA),
+        tint = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -215,7 +216,7 @@ private fun DockNotificationCard(
     val label = dockNotificationCardLabel(card)
     val identity = card.app?.identity
 
-    Surface(
+    GlassSurface(
         modifier =
             Modifier
                 .defaultMinSize(minWidth = 164.dp, minHeight = 84.dp)
@@ -225,8 +226,9 @@ private fun DockNotificationCard(
                 .clickable(enabled = identity != null) {
                     identity?.let { appIdentity -> onAction(LauncherShellAction.LaunchApp(appIdentity)) }
                 },
+        weight = GlassWeight.Regular,
         shape = LocalLauncherCardShape.current,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = DOCK_NOTIFICATION_CARD_ALPHA),
+        tint = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -395,8 +397,6 @@ internal fun dockNotificationClearContentDescription(
     label: String,
     clearableCount: Int,
 ): String = "Clear $label ${if (clearableCount == 1) "notification" else "notifications"}"
-
-private const val DOCK_NOTIFICATION_CARD_ALPHA = 0.78f
 
 private val DockNotificationPermissionFallbackReason.notificationAccessStatus: NotificationAccessStatus
     get() =

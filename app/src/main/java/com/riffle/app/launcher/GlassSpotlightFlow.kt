@@ -7,13 +7,13 @@ import kotlin.math.exp
 /*
  * The spotlight's colour flow: rather than jumping when icons move, the glow on screen eases
  * toward where it should be, and spreads sideways as it goes, so colour reads as flowing along
- * the dock's rim. The same two ideas as the desktop plugin's edge borders -- a temporal blend
+ * the surface's rim. The same two ideas as the desktop plugin's edge borders -- a temporal blend
  * toward each new sample (its EMA_NEW) and an along-edge blur (its SMOOTH_RADIUS) -- applied to
- * the change rather than the glow itself, so a dock at rest shows exactly what its icons say.
+ * the change rather than the glow itself, so a surface at rest shows exactly what its icons say.
  *
  * A profile is [DOCK_SPOTLIGHT_PROFILE_SAMPLES] premultiplied RGBA samples spread evenly along the
  * run: small enough that easing one costs nothing per frame, and it bakes straight into the edge
- * image (see `DockSpotlightGlowBaker.kt`) at that same resolution.
+ * image (see `GlassSpotlightGlowBaker.kt`) at that same resolution.
  */
 
 /** Samples along the run; the desktop plugin's own per-edge resolution. */
@@ -22,19 +22,19 @@ internal const val DOCK_SPOTLIGHT_PROFILE_SAMPLES = 96
 private const val CHANNELS = 4
 
 /** A fresh, unlit profile. */
-internal fun emptyDockSpotlightProfile(): FloatArray = FloatArray(DOCK_SPOTLIGHT_PROFILE_SAMPLES * CHANNELS)
+internal fun emptyGlassSpotlightProfile(): FloatArray = FloatArray(DOCK_SPOTLIGHT_PROFILE_SAMPLES * CHANNELS)
 
 /**
  * The profile [stops] describe: the colour along the run, unlit (all zero) where nothing glows.
  * Premultiplied, so easing and spreading toward or away from an unlit stretch never passes
  * through a darkened colour.
  */
-internal fun dockSpotlightTargetProfile(stops: List<DockSpotlightStop>): FloatArray {
-    val profile = emptyDockSpotlightProfile()
-    val edgeStops = dockSpotlightEdgeStops(stops, alpha = 1f)
+internal fun glassSpotlightTargetProfile(stops: List<GlassSpotlightStop>): FloatArray {
+    val profile = emptyGlassSpotlightProfile()
+    val edgeStops = glassSpotlightEdgeStops(stops, alpha = 1f)
     if (edgeStops.isNotEmpty()) {
         for (sample in 0 until DOCK_SPOTLIGHT_PROFILE_SAMPLES) {
-            val color = dockSpotlightColorAt(edgeStops, (sample + 0.5f) / DOCK_SPOTLIGHT_PROFILE_SAMPLES)
+            val color = glassSpotlightColorAt(edgeStops, (sample + 0.5f) / DOCK_SPOTLIGHT_PROFILE_SAMPLES)
             val base = sample * CHANNELS
             profile[base] = color.red * color.alpha
             profile[base + 1] = color.green * color.alpha
@@ -50,7 +50,7 @@ internal fun dockSpotlightTargetProfile(stops: List<DockSpotlightStop>): FloatAr
  * [edgeStops] either side of it, in unpremultiplied colour -- what a linear gradient through the
  * same stops draws.
  */
-internal fun dockSpotlightColorAt(
+internal fun glassSpotlightColorAt(
     edgeStops: Array<Pair<Float, Color>>,
     position: Float,
 ): Color {
@@ -75,7 +75,7 @@ internal fun dockSpotlightColorAt(
 }
 
 /** Whether [profile] lights anything at all. */
-internal fun dockSpotlightProfileIsLit(profile: FloatArray): Boolean =
+internal fun glassSpotlightProfileIsLit(profile: FloatArray): Boolean =
     (0 until DOCK_SPOTLIGHT_PROFILE_SAMPLES).any { sample -> profile[sample * CHANNELS + 3] > SETTLED_EPSILON }
 
 /**
@@ -90,7 +90,7 @@ internal fun dockSpotlightProfileIsLit(profile: FloatArray): Boolean =
  * average can cancel out for a sample whose neighbours moved the other way. [scratch] is reused
  * for the spread distances, so a frame allocates nothing.
  */
-internal fun stepDockSpotlightProfile(
+internal fun stepGlassSpotlightProfile(
     shown: FloatArray,
     target: FloatArray,
     dtSeconds: Float,
@@ -133,11 +133,11 @@ internal fun stepDockSpotlightProfile(
 
 /**
  * Hard ceiling on one settle, so the frame loop always ends -- an animation that never settles
- * would keep the dock redrawing for good. Scales with the chosen pace, as a slow flow legitimately
+ * would keep the surface redrawing for good. Scales with the chosen pace, as a slow flow legitimately
  * takes longer: a change settles in about 5.5 time constants (90% there after about 2), so 8 is
  * never normally reached.
  */
-internal fun dockSpotlightMaxSettleSeconds(timeConstantSeconds: Float): Float =
+internal fun glassSpotlightMaxSettleSeconds(timeConstantSeconds: Float): Float =
     timeConstantSeconds * MAX_SETTLE_TIME_CONSTANTS
 
 private const val MAX_SETTLE_TIME_CONSTANTS = 8f

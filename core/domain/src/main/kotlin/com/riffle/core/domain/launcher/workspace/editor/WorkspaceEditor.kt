@@ -55,7 +55,6 @@ object WorkspaceEditor {
             is WorkspaceEdit.Rename -> rename(workspace, edit.name)
             is WorkspaceEdit.SetDockSection -> applied(workspace.copy(dock = WorkspaceDock(edit.binding)))
             is WorkspaceEdit.SetStartPage -> PageEdits.setStartPage(workspace, edit.pageId)
-            is WorkspaceEdit.SetSkinOverride -> setSkin(workspace, edit.skinId)
             is WorkspaceEdit.AddWidget,
             is WorkspaceEdit.MoveWidget,
             is WorkspaceEdit.ResizeWidget,
@@ -73,14 +72,4 @@ object WorkspaceEditor {
         name: String,
     ): EditResult =
         if (name.isBlank()) rejected(EditRejection.BlankName) else applied(workspace.copy(name = name.trim()))
-
-    private fun setSkin(
-        workspace: Workspace,
-        skinId: String?,
-    ): EditResult =
-        if (skinId != null && skinId.isBlank()) {
-            rejected(EditRejection.BlankSkinId)
-        } else {
-            applied(workspace.copy(skinOverrideId = skinId))
-        }
 }

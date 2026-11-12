@@ -51,6 +51,7 @@ class LauncherBackupDocumentHandler(
         document.workspaceSet?.let { set -> runCatching { port.restoreWorkspaceSet(set) } }
         document.exclusions?.let { rules -> runCatching { port.restoreExclusions(rules) } }
         document.pool?.let { state -> runCatching { port.restorePool(state) } }
+        document.stream?.let { layouts -> runCatching { port.restoreStreamLayouts(layouts) } }
     }
 }
 

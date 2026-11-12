@@ -67,11 +67,13 @@ internal data class LauncherSystemUiMode(
     val destination: ShellDestination,
     val themeMode: LauncherThemeMode,
 ) {
-    val shouldHideStatusBars: Boolean =
-        destination == ShellDestination.HOME && hideStatusBarOnHome
+    // The Stream replaces Home with the same Dock under it, so it keeps Home's bars rather than changing them on open.
+    private val showsHomeBars: Boolean =
+        destination == ShellDestination.HOME || destination == ShellDestination.STREAM
 
-    val shouldHideNavigationBars: Boolean =
-        destination == ShellDestination.HOME && hideNavigationBarOnHome
+    val shouldHideStatusBars: Boolean = showsHomeBars && hideStatusBarOnHome
+
+    val shouldHideNavigationBars: Boolean = showsHomeBars && hideNavigationBarOnHome
 
     fun usesLightStatusBarAppearance(systemIsDarkTheme: Boolean): Boolean =
         when (themeMode) {

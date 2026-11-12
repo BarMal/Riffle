@@ -1,11 +1,9 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -14,11 +12,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.designsystem.RiffleElevation
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.WidgetItem
 
@@ -146,13 +146,23 @@ internal fun RiffleContextMenu(
         modifier = modifier.testTag(RIFFLE_CONTEXT_MENU_TEST_TAG),
         offset = offset,
         shape = LocalLauncherPanelShape.current,
-        containerColor = launcherMenuSurfaceColor(),
-        tonalElevation = 6.dp,
-        shadowElevation = 8.dp,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        // The popup draws nothing of its own: the glass below is the menu's whole surface, so it
+        // is the same material as every other panel. A menu lives in its own window, so it cannot
+        // sample Home's backdrop and takes the material's tint-layer fallback instead.
+        containerColor = Color.Transparent,
+        tonalElevation = RiffleElevation.level0,
+        shadowElevation = RiffleElevation.level3,
+        border = null,
         content = {
-            CompositionLocalProvider(LocalContentColor provides launcherMenuContentColor()) {
-                content()
+            CompositionLocalProvider(LocalLiquidGlassBackdrop provides null) {
+                GlassSurface(
+                    weight = GlassWeight.Thick,
+                    shape = LocalLauncherPanelShape.current,
+                    tint = launcherMenuSurfaceColor(),
+                    contentColor = launcherMenuContentColor(),
+                ) {
+                    Column { content() }
+                }
             }
         },
     )

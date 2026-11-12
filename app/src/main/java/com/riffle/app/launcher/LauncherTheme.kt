@@ -29,20 +29,20 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.ResolvedLiquidGlass
 
 @Composable
 fun RiffleLauncherTheme(
     themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
-    themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
     themeAccent: LauncherThemeAccent = LauncherThemeAccent.DEFAULT,
     themeColors: LauncherThemeColors = LauncherThemeColors(),
     themeCornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
     themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
     reducedTransparency: Boolean = false,
-    liquidGlass: ResolvedLiquidGlass = ResolvedLiquidGlass(true, 0.45f, 0.2f, false),
+    /** Wallpaper-derived Material colour on Android 12+; tests pass false for the fixed fallback scheme. */
+    dynamicColor: Boolean = true,
+    liquidGlass: ResolvedLiquidGlass = ResolvedLiquidGlass(0.45f, 0.2f, false),
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -54,32 +54,27 @@ fun RiffleLauncherTheme(
     val context = LocalContext.current
     val baseColorScheme =
         when {
-            themePreset == LauncherThemePreset.MATERIAL &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                darkTheme -> dynamicDarkColorScheme(context)
-
-            themePreset == LauncherThemePreset.MATERIAL &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
-            else -> fallbackScheme(darkTheme = darkTheme, themePreset = themePreset)
+            dynamicColor && supportsDynamicMaterialColor(Build.VERSION.SDK_INT) && darkTheme ->
+                dynamicDarkColorScheme(context)
+            dynamicColor && supportsDynamicMaterialColor(Build.VERSION.SDK_INT) -> dynamicLightColorScheme(context)
+            else -> fallbackScheme(darkTheme = darkTheme)
         }
     val colorScheme = baseColorScheme.withThemeAccent(themeAccent, darkTheme).withThemeColors(themeColors)
 
     CompositionLocalProvider(
-        LocalLauncherCardShape provides launcherCardShape(themePreset, themeCornerStyle),
-        LocalLauncherPanelShape provides launcherPanelShape(themePreset, themeCornerStyle),
+        LocalLauncherCardShape provides launcherCardShape(themeCornerStyle),
+        LocalLauncherPanelShape provides launcherPanelShape(themeCornerStyle),
         LocalLauncherThemeSurfaceTokens provides
             launcherThemeSurfaceTokens(
-                themePreset = themePreset,
                 colorScheme = colorScheme,
                 reducedTransparency = reducedTransparency,
             ),
-        LocalLauncherThemeColorOverrides provides themeColors.toColorOverrides(),
         LocalLiquidGlassSettings provides liquidGlass,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            shapes = launcherMaterialShapes(themePreset, themeCornerStyle),
-            typography = launcherTypography(themePreset, themeTypography),
+            shapes = launcherMaterialShapes(),
+            typography = launcherTypography(themeTypography),
             content = content,
         )
     }
@@ -89,7 +84,6 @@ internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RiffleSh
 internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RiffleShapes.extraLarge }
 internal val LocalLauncherThemeSurfaceTokens =
     staticCompositionLocalOf { LauncherThemeSurfaceTokens() }
-internal val LocalLauncherThemeColorOverrides = staticCompositionLocalOf { LauncherThemeColorOverrides() }
 
 /**
  * The app-wide resolved liquid-glass intent (see [ResolvedLiquidGlass]), read by [GlassSurface] so
@@ -97,7 +91,7 @@ internal val LocalLauncherThemeColorOverrides = staticCompositionLocalOf { Launc
  * parameter list. Provided once here, alongside every other app-wide theme/appearance local.
  */
 internal val LocalLiquidGlassSettings =
-    staticCompositionLocalOf { ResolvedLiquidGlass(enabled = true, 0.45f, 0.2f, reducedMotion = false) }
+    staticCompositionLocalOf { ResolvedLiquidGlass(0.45f, 0.2f, reducedMotion = false) }
 
 internal data class LauncherThemeSurfaceTokens(
     val panelColor: Color = Color.Unspecified,
@@ -107,23 +101,11 @@ internal data class LauncherThemeSurfaceTokens(
     val overlayAlpha: Float = 1f,
 )
 
-internal data class LauncherThemeColorOverrides(
-    val dock: Color? = null,
-    val label: Color? = null,
-    val labelBackground: Color? = null,
-)
-
 internal fun launcherThemeSurfaceTokens(
-    themePreset: LauncherThemePreset,
     colorScheme: ColorScheme,
     reducedTransparency: Boolean = false,
 ): LauncherThemeSurfaceTokens {
-    val overlayAlpha =
-        if (themePreset == LauncherThemePreset.GLASS && !reducedTransparency) {
-            0.78f
-        } else {
-            1f
-        }
+    val overlayAlpha = if (reducedTransparency) 1f else GLASS_OVERLAY_ALPHA
     val panelSurface = wallpaperAwareSurface(colorScheme.surface, overlayAlpha, colorScheme.onSurface)
     val menuSurface = wallpaperAwareSurface(colorScheme.surfaceContainerHigh, overlayAlpha, colorScheme.onSurface)
     return LauncherThemeSurfaceTokens(
@@ -218,83 +200,42 @@ private fun minimumScrimAlpha(
     return high
 }
 
+/** The panel and menu tint's alpha while transparency is not reduced. */
+private const val GLASS_OVERLAY_ALPHA = 0.78f
 private const val MINIMUM_TEXT_CONTRAST = 4.5f
 private const val SCRIM_ALPHA_SEARCH_STEPS = 24
 
-/**
- * Card corner radius. Material/Custom sit on the Riffle radius scale; other presets and the user's
- * corner-style override keep their own radii. Rendered with continuous corners.
- */
-internal fun launcherCardCornerRadius(
-    themePreset: LauncherThemePreset,
-    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
-): Dp =
+/** Card corner radius: the standard one, or the user's compact or rounded choice. Continuous corners. */
+internal fun launcherCardCornerRadius(cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET): Dp =
     when (cornerStyle) {
         LauncherThemeCornerStyle.COMPACT -> RiffleShapes.radiusS
         LauncherThemeCornerStyle.ROUNDED -> 28.dp
-        LauncherThemeCornerStyle.PRESET ->
-            when (themePreset) {
-                LauncherThemePreset.MINIMAL -> RiffleShapes.radiusS
-                LauncherThemePreset.RETRO -> 12.dp
-                LauncherThemePreset.GLASS -> 28.dp
-                LauncherThemePreset.TERMINAL -> 0.dp
-                LauncherThemePreset.MATERIAL,
-                LauncherThemePreset.CUSTOM,
-                -> RiffleShapes.radiusL
-            }
+        LauncherThemeCornerStyle.PRESET -> RiffleShapes.radiusL
     }
 
 /** Panel corner radius; see [launcherCardCornerRadius]. */
-internal fun launcherPanelCornerRadius(
-    themePreset: LauncherThemePreset,
-    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
-): Dp =
+internal fun launcherPanelCornerRadius(cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET): Dp =
     when (cornerStyle) {
         LauncherThemeCornerStyle.COMPACT -> 12.dp
         LauncherThemeCornerStyle.ROUNDED -> 36.dp
-        LauncherThemeCornerStyle.PRESET ->
-            when (themePreset) {
-                LauncherThemePreset.MINIMAL -> 12.dp
-                LauncherThemePreset.RETRO -> 20.dp
-                LauncherThemePreset.GLASS -> 36.dp
-                LauncherThemePreset.TERMINAL -> 0.dp
-                LauncherThemePreset.MATERIAL,
-                LauncherThemePreset.CUSTOM,
-                -> RiffleShapes.radiusXl
-            }
+        LauncherThemeCornerStyle.PRESET -> RiffleShapes.radiusXl
     }
 
-internal fun launcherCardShape(
-    themePreset: LauncherThemePreset,
-    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
-): Shape = RiffleShapes.continuous(launcherCardCornerRadius(themePreset, cornerStyle))
+internal fun launcherCardShape(cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET): Shape =
+    RiffleShapes.continuous(launcherCardCornerRadius(cornerStyle))
 
-internal fun launcherPanelShape(
-    themePreset: LauncherThemePreset,
-    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
-): Shape = RiffleShapes.continuous(launcherPanelCornerRadius(themePreset, cornerStyle))
+internal fun launcherPanelShape(cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET): Shape =
+    RiffleShapes.continuous(launcherPanelCornerRadius(cornerStyle))
 
-/**
- * Material component shapes on the Riffle radius scale. When the resolved card corner is sharp
- * (Terminal preset), Material components go sharp too, so the corner setting reads consistently.
- */
-internal fun launcherMaterialShapes(
-    themePreset: LauncherThemePreset,
-    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
-): Shapes = RiffleShapes.materialShapes(square = launcherCardCornerRadius(themePreset, cornerStyle) == 0.dp)
+/** Material component shapes on the Riffle radius scale. */
+internal fun launcherMaterialShapes(): Shapes = RiffleShapes.materialShapes()
 
-internal fun launcherTypography(
-    themePreset: LauncherThemePreset,
-    typography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
-): Typography =
+internal fun launcherTypography(typography: LauncherThemeTypography = LauncherThemeTypography.PRESET): Typography =
     when (typography) {
-        LauncherThemeTypography.SYSTEM -> defaultLauncherTypography
+        LauncherThemeTypography.PRESET,
+        LauncherThemeTypography.SYSTEM,
+        -> defaultLauncherTypography
         LauncherThemeTypography.MONOSPACE -> defaultLauncherTypography.withFontFamily(FontFamily.Monospace)
-        LauncherThemeTypography.PRESET ->
-            when (themePreset) {
-                LauncherThemePreset.TERMINAL -> defaultLauncherTypography.withFontFamily(FontFamily.Monospace)
-                else -> defaultLauncherTypography
-            }
     }
 
 private val defaultLauncherTypography = riffleTypography(Typography())
@@ -334,12 +275,7 @@ private fun Typography.withFontFamily(fontFamily: FontFamily): Typography =
 
 internal fun supportsDynamicMaterialColor(sdkInt: Int): Boolean = sdkInt >= Build.VERSION_CODES.S
 
-internal fun fallbackScheme(
-    darkTheme: Boolean,
-    themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
-): ColorScheme =
-    (if (darkTheme) darkScheme else lightScheme)
-        .withThemePreset(themePreset)
+internal fun fallbackScheme(darkTheme: Boolean): ColorScheme = if (darkTheme) darkScheme else lightScheme
 
 internal fun ColorScheme.withThemeAccent(
     accent: LauncherThemeAccent,
@@ -371,45 +307,24 @@ internal fun ColorScheme.withThemeAccent(
     } ?: this
 
 internal fun ColorScheme.withThemeColors(colors: LauncherThemeColors): ColorScheme {
-    val background = colors.backgroundArgb?.let(::Color)
-    val accent = colors.accentArgb?.let(::Color)
+    val accent = colors.accentArgb?.let(::Color) ?: return this
     return copy(
-        background = background ?: this.background,
-        onBackground = background?.contentColor(onBackground) ?: onBackground,
-        surface = background ?: surface,
-        onSurface = background?.contentColor(onSurface) ?: onSurface,
-        surfaceDim = background ?: surfaceDim,
-        surfaceBright = background ?: surfaceBright,
-        surfaceContainerLowest = background ?: surfaceContainerLowest,
-        surfaceContainerLow = background ?: surfaceContainerLow,
-        surfaceContainer = background ?: surfaceContainer,
-        surfaceContainerHigh = background ?: surfaceContainerHigh,
-        surfaceContainerHighest = background ?: surfaceContainerHighest,
-        surfaceVariant = background ?: surfaceVariant,
-        onSurfaceVariant = background?.contentColor(onSurfaceVariant) ?: onSurfaceVariant,
-        primary = accent ?: primary,
-        onPrimary = accent?.contentColor(onPrimary) ?: onPrimary,
-        primaryContainer = accent ?: primaryContainer,
-        onPrimaryContainer = accent?.contentColor(onPrimaryContainer) ?: onPrimaryContainer,
-        secondary = accent ?: secondary,
-        onSecondary = accent?.contentColor(onSecondary) ?: onSecondary,
-        secondaryContainer = accent ?: secondaryContainer,
-        onSecondaryContainer = accent?.contentColor(onSecondaryContainer) ?: onSecondaryContainer,
-        tertiary = accent ?: tertiary,
-        onTertiary = accent?.contentColor(onTertiary) ?: onTertiary,
-        tertiaryContainer = accent ?: tertiaryContainer,
-        onTertiaryContainer = accent?.contentColor(onTertiaryContainer) ?: onTertiaryContainer,
-        surfaceTint = accent ?: surfaceTint,
-        inversePrimary = accent ?: inversePrimary,
+        primary = accent,
+        onPrimary = accent.contentColor(onPrimary),
+        primaryContainer = accent,
+        onPrimaryContainer = accent.contentColor(onPrimaryContainer),
+        secondary = accent,
+        onSecondary = accent.contentColor(onSecondary),
+        secondaryContainer = accent,
+        onSecondaryContainer = accent.contentColor(onSecondaryContainer),
+        tertiary = accent,
+        onTertiary = accent.contentColor(onTertiary),
+        tertiaryContainer = accent,
+        onTertiaryContainer = accent.contentColor(onTertiaryContainer),
+        surfaceTint = accent,
+        inversePrimary = accent,
     )
 }
-
-private fun LauncherThemeColors.toColorOverrides(): LauncherThemeColorOverrides =
-    LauncherThemeColorOverrides(
-        dock = dockArgb?.let(::Color),
-        label = labelArgb?.let(::Color),
-        labelBackground = labelBackgroundArgb?.let(::Color),
-    )
 
 internal fun Color.contentColor(fallback: Color): Color =
     if (alpha < 0.5f) {
@@ -530,18 +445,6 @@ private val amberDarkAccent =
         tertiaryContainer = Color(0xFF3C4C28), onTertiaryContainer = Color(0xFFD7EABA),
         inversePrimary = Color(0xFF825500),
     )
-
-private fun ColorScheme.withThemePreset(preset: LauncherThemePreset): ColorScheme =
-    when (preset) {
-        LauncherThemePreset.MATERIAL,
-        LauncherThemePreset.CUSTOM,
-        -> this
-
-        LauncherThemePreset.MINIMAL -> copy(primary = Color(0xFF5B5F66), secondary = Color(0xFF5B5F66))
-        LauncherThemePreset.RETRO -> copy(primary = Color(0xFF875A00), secondary = Color(0xFF006B5F))
-        LauncherThemePreset.GLASS -> copy(primary = Color(0xFF356F8A), secondary = Color(0xFF4D5C92))
-        LauncherThemePreset.TERMINAL -> copy(primary = Color(0xFF1D7A45), secondary = Color(0xFF1D7A45))
-    }
 
 internal val lightScheme =
     lightColorScheme(

@@ -45,7 +45,6 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LibraryReturnTarget
 import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
@@ -74,8 +73,10 @@ import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.homeSystemBars
+import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
+import com.riffle.core.domain.launcher.settings.withReducedTransparency
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -416,7 +417,7 @@ class LauncherSettingsJsonCodecTest {
                                     ),
                             ),
                     ),
-            )
+            ).withReducedTransparency(true)
 
         assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
 
@@ -440,6 +441,58 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(0, imported.surface.blurStrengthPercent)
         assertEquals(600, imported.motion.settleDurationMillis)
         assertEquals(100, imported.motion.magnetStrengthPercent)
+    }
+
+    @Test
+    fun roundTripsReducedTransparencyAsATopLevelAppearanceSetting() {
+        val settings = LauncherSettings().withReducedTransparency(true)
+
+        val json = JSONObject(encodeLauncherSettings(settings))
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertTrue(json.getJSONObject("appearance").getBoolean("reducedTransparency"))
+        assertTrue(decoded.appearance.reducedTransparency)
+        assertFalse(decodeLauncherSettings(encodeLauncherSettings(LauncherSettings())).appearance.reducedTransparency)
+    }
+
+    @Test
+    fun settingsSavedWithReducedTransparencyInTheAdaptiveMotionBlockDecodeItIntoAppearance() {
+        val legacy =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": { "timeScapeAppearance": { "motion": { "reducedTransparency": true } } }
+                }
+                """.trimIndent(),
+            )
+        val legacyUnfolded =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": { "adaptiveStageUnfoldedAppearance": { "motion": { "reducedTransparency": true } } }
+                }
+                """.trimIndent(),
+            )
+
+        assertTrue(legacy.appearance.reducedTransparency)
+        assertTrue(legacy.resolveLiquidGlass().reducedTransparency)
+        assertTrue(legacyUnfolded.appearance.reducedTransparency)
+    }
+
+    @Test
+    fun anExplicitTopLevelReducedTransparencyValueWinsOverTheLegacyOne() {
+        val decoded =
+            decodeLauncherSettings(
+                """
+                {
+                  "appearance": { "reducedTransparency": false },
+                  "cards": { "timeScapeAppearance": { "motion": { "reducedTransparency": true } } }
+                }
+                """.trimIndent(),
+            )
+
+        assertFalse(decoded.appearance.reducedTransparency)
+        assertFalse(decoded.cards.adaptiveStageAppearance.motion.reducedTransparency)
     }
 
     @Test
@@ -687,15 +740,6 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsThemePreset() {
-        val settings = LauncherSettings(appearance = AppearanceSettings(themePreset = LauncherThemePreset.RETRO))
-
-        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
-
-        assertEquals(LauncherThemePreset.RETRO, decodedSettings.appearance.themePreset)
-    }
-
-    @Test
     fun roundTripsThemeAccent() {
         val settings = LauncherSettings(appearance = AppearanceSettings(themeAccent = LauncherThemeAccent.TEAL))
 
@@ -706,15 +750,9 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsCustomThemeColoursIncludingAlpha() {
+    fun roundTripsCustomAccentIncludingAlpha() {
         val colors =
-            LauncherThemeColors(
-                backgroundArgb = 0xCC102030.toInt(),
-                accentArgb = 0xFF405060.toInt(),
-                dockArgb = 0x80405060.toInt(),
-                labelArgb = 0xFFE0E0E0.toInt(),
-                labelBackgroundArgb = 0x99000000.toInt(),
-            )
+            LauncherThemeColors(accentArgb = 0x80405060.toInt())
 
         val decoded =
             decodeLauncherSettings(
@@ -768,25 +806,32 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun defaultsMissingOrInvalidThemePreset() {
-        assertEquals(
-            LauncherThemePreset.MATERIAL,
-            decodeLauncherSettings("{\"appearance\": {}}").appearance.themePreset,
-        )
-        assertEquals(
-            LauncherThemePreset.MATERIAL,
-            decodeLauncherSettings("{\"appearance\": {\"themePreset\": \"UNKNOWN\"}}").appearance.themePreset,
-        )
+    fun aStoredThemePresetFromAnOlderBuildIsIgnored() {
+        val expected = decodeLauncherSettings("{\"appearance\": {}}").appearance
+        val presets = listOf("MATERIAL", "MINIMAL", "RETRO", "GLASS", "TERMINAL", "CUSTOM", "VICTORIAN", "UNKNOWN")
+        presets.forEach { preset ->
+            assertEquals(
+                expected,
+                decodeLauncherSettings("{\"appearance\": {\"themePreset\": \"$preset\"}}").appearance,
+            )
+        }
     }
 
     @Test
-    fun migratesHistoricalVictorianThemePresetToMaterial() {
-        assertEquals(
-            LauncherThemePreset.MATERIAL,
-            decodeLauncherSettings(
-                "{\"appearance\": {\"themePreset\": \"VICTORIAN\"}}",
-            ).appearance.themePreset,
-        )
+    fun removedCustomColourTargetsAreIgnoredAndTheAccentIsKept() {
+        val old =
+            """{"appearance": {"themeColors": {"backgroundArgb": 1, "accentArgb": 305419896, "dockArgb": 2,
+                "labelArgb": 3, "labelBackgroundArgb": 4}}}"""
+
+        assertEquals(LauncherThemeColors(accentArgb = 305419896), decodeLauncherSettings(old).appearance.themeColors)
+    }
+
+    @Test
+    fun theRemovedLiquidGlassEnabledFlagIsIgnored() {
+        val off = decodeLauncherSettings("""{"liquidGlass": {"enabled": false, "frostStrengthPercent": 70}}""")
+
+        assertEquals(LiquidGlassSettings(frostStrengthPercent = 70), off.liquidGlass)
+        assertFalse(JSONObject(encodeLauncherSettings(off)).getJSONObject("liquidGlass").has("enabled"))
     }
 
     @Test
@@ -926,7 +971,6 @@ class LauncherSettingsJsonCodecTest {
             LauncherSettings(
                 liquidGlass =
                     LiquidGlassSettings(
-                        enabled = false,
                         frostStrengthPercent = 70,
                         refractionStrengthPercent = 35,
                         spotlightFlowMillis = 650,

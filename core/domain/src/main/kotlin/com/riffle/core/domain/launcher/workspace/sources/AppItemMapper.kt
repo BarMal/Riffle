@@ -6,6 +6,8 @@ import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.RecentAppUsage
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemAction
+import com.riffle.core.domain.launcher.workspace.ItemExtKey
+import com.riffle.core.domain.launcher.workspace.ItemExtValue
 import com.riffle.core.domain.launcher.workspace.ItemId
 import com.riffle.core.domain.launcher.workspace.ItemTarget
 import com.riffle.core.domain.launcher.workspace.SourceId
@@ -38,7 +40,15 @@ class AppItemMapper(
             .sortedByDescending { usage -> usage.lastUsedAtMillis }
             .distinctBy { usage -> usage.packageName }
             .mapNotNull { usage ->
-                byPackage[usage.packageName]?.toItem(SourceIds.RECENT_APPS, usage.lastUsedAtMillis.coerceAtLeast(0L))
+                byPackage[usage.packageName]
+                    ?.toItem(SourceIds.RECENT_APPS, usage.lastUsedAtMillis.coerceAtLeast(0L))
+                    ?.let { item ->
+                        if (usage.foregroundMillis > 0L) {
+                            item.copy(ext = item.ext + (FOREGROUND_KEY to ItemExtValue.Number(usage.foregroundMillis)))
+                        } else {
+                            item
+                        }
+                    }
             }
             .take(limit.coerceAtLeast(0))
     }
@@ -62,7 +72,9 @@ class AppItemMapper(
         )
     }
 
-    private companion object {
-        const val DEFAULT_RECENT_LIMIT = 20
+    companion object {
+        /** Foreground time of a recent app, for the Stream's frequent apps. */
+        val FOREGROUND_KEY = ItemExtKey("apps.foreground")
+        private const val DEFAULT_RECENT_LIMIT = 20
     }
 }

@@ -81,6 +81,8 @@ class DataStoreFeedArticleCacheRepository(
 
     override fun isRead(digest: String): Boolean = digest in readCacheDocument(dataStore).readDigests
 
+    override fun readDigests(): Set<String> = readCacheDocument(dataStore).readDigests
+
     override fun markRead(digest: String) {
         mutateCacheDocument(dataStore) { document -> document.copy(readDigests = document.readDigests + digest) }
     }

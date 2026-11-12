@@ -5,13 +5,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.sqrt
 
-class DockSpotlightGlowTest {
+class GlassSpotlightGlowTest {
     // A pill: 400 x 100 with fully rounded ends (radius 50).
     private val run = 400f
     private val cross = 100f
     private val radius = 50f
     private val uniform =
-        DockSpotlightGlowEdges(
+        GlassSpotlightGlowEdges(
             innerDepthPx = 20f,
             outerDepthPx = 20f,
             endDepthPx = 20f,
@@ -23,8 +23,8 @@ class DockSpotlightGlowTest {
     private fun glow(
         along: Float,
         across: Float,
-        edges: DockSpotlightGlowEdges = uniform,
-    ) = dockSpotlightGlowAlpha(along, across, run, cross, radius, innerAtStart = true, edges = edges)
+        edges: GlassSpotlightGlowEdges = uniform,
+    ) = glassSpotlightGlowAlpha(along, across, run, cross, radius, innerAtStart = true, edges = edges)
 
     @Test
     fun followsTheRoundedEndRatherThanAStraightBand() {
@@ -76,7 +76,7 @@ class DockSpotlightGlowTest {
 
     @Test
     fun aSquareCorneredDockStillLightsItsStraightEnds() {
-        val square = dockSpotlightGlowAlpha(0f, cross / 2f, run, cross, 0f, innerAtStart = true, edges = uniform)
+        val square = glassSpotlightGlowAlpha(0f, cross / 2f, run, cross, 0f, innerAtStart = true, edges = uniform)
 
         assertEquals(1f, square, 1e-4f)
     }
