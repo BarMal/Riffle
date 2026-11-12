@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.stream
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.split.SplitMode
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 /**
@@ -25,6 +26,42 @@ data class StreamSectionLayout(
 )
 
 /**
+ * How Home and the Stream share an expanded posture (ADR 0003, Folded and unfolded), remembered per posture: the
+ * Stream's [fraction] of the room when split, and the [lastShown] state the Stream button returns to ([SplitMode.SPLIT]
+ * or [SplitMode.STREAM_ONLY], never Home only). Folded and phone postures store the defaults and never read them.
+ */
+data class StreamSplit(
+    val fraction: Float = DEFAULT_FRACTION,
+    val lastShown: SplitMode = SplitMode.SPLIT,
+) {
+    init {
+        require(fraction in MIN_FRACTION..MAX_FRACTION) {
+            "A split fraction is within $MIN_FRACTION..$MAX_FRACTION: $fraction"
+        }
+        require(lastShown != SplitMode.HOME_ONLY) { "The last-used shown state is a split or Stream only." }
+    }
+
+    companion object {
+        /** The Stream may take at least this much of the room in a split, and at most [MAX_FRACTION]. */
+        const val MIN_FRACTION = 0.25f
+        const val MAX_FRACTION = 0.75f
+
+        /** The Stream takes a little less than half: Home stays the larger, the start page. */
+        const val DEFAULT_FRACTION = 0.4f
+
+        /** A split with any [fraction] (clamped into range) and [lastShown] (Home only reads as split). */
+        fun of(
+            fraction: Float,
+            lastShown: SplitMode,
+        ): StreamSplit =
+            StreamSplit(
+                fraction = if (fraction.isNaN()) DEFAULT_FRACTION else fraction.coerceIn(MIN_FRACTION, MAX_FRACTION),
+                lastShown = if (lastShown == SplitMode.HOME_ONLY) SplitMode.SPLIT else lastShown,
+            )
+    }
+}
+
+/**
  * What the Stream shows on one posture: the six fixed sections (each exactly once) in the user's order, each on or
  * off and drawn as a Stack or a List, plus the few per-section [options] the ADR allows. Holds no content. The
  * sections are fixed by [StreamSection]; the user only chooses which are on, their order and their view.
@@ -32,6 +69,8 @@ data class StreamSectionLayout(
 data class StreamLayout(
     val sections: List<StreamSectionLayout> = defaultSections(),
     val options: StreamSectionOptions = StreamSectionOptions(),
+    /** How an expanded posture splits the screen with Home; the defaults elsewhere. */
+    val split: StreamSplit = StreamSplit(),
 ) {
     init {
         require(

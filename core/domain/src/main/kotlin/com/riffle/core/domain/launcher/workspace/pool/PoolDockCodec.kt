@@ -4,6 +4,9 @@ import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.MAX_DOCK_LIVE_APP_SLOTS
+import com.riffle.core.domain.launcher.home.MIN_DOCK_LIVE_APP_SLOTS
+import com.riffle.core.domain.launcher.home.dockLiveAppSlotsFromLegacy
 import com.riffle.core.domain.launcher.workspace.StoredValue
 import com.riffle.core.domain.launcher.workspace.arr
 import com.riffle.core.domain.launcher.workspace.array
@@ -41,8 +44,7 @@ internal object PoolDockCodec {
         obj(
             "capacity" to num(s.capacity),
             "enabled" to StoredValue.Bool(s.isEnabled),
-            "cards" to StoredValue.Bool(s.showNotificationCards),
-            "cardSlots" to num(s.notificationSlotCount),
+            "liveSlots" to num(s.liveAppSlots),
             "iconSize" to num(s.iconSizeDp),
             "backgroundAlpha" to num(s.backgroundAlphaPercent),
             "backgroundSizing" to str(s.backgroundSizing.name),
@@ -61,8 +63,10 @@ internal object PoolDockCodec {
         return decodeAppearance(root, d).copy(
             capacity = root.int("capacity") ?: d.capacity,
             isEnabled = root.bool("enabled") ?: d.isEnabled,
-            showNotificationCards = root.bool("cards") ?: d.showNotificationCards,
-            notificationSlotCount = root.int("cardSlots") ?: d.notificationSlotCount,
+            // "cards" and "cardSlots" are what a dock stored before the Stream wrote; they decode to the one setting.
+            liveAppSlots =
+                (root.int("liveSlots") ?: dockLiveAppSlotsFromLegacy(root.bool("cards"), root.int("cardSlots")))
+                    .coerceIn(MIN_DOCK_LIVE_APP_SLOTS, MAX_DOCK_LIVE_APP_SLOTS),
             isExpandable = root.bool("expandable") ?: d.isExpandable,
             expandAffordance =
                 enumOrNull<DockExpandAffordance>(root.string("expandAffordance")) ?: d.expandAffordance,

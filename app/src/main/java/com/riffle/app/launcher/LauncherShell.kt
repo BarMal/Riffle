@@ -131,7 +131,6 @@ fun LauncherShell(
             LocalWorkspaceSettingsHost provides settingsHost,
             LocalWorkspaceHomePages provides workspaceHome?.pages,
             LocalHomeSelectionRequests provides viewModel.homeSelectionRequests,
-            LocalDockModePullEnabled provides !workspacesLoading,
             LocalWalkthroughLauncher provides onboarding?.controller?.let { controller -> controller::rerun },
         ) {
             PreviewHideHost(workspaceHome?.hideController, deviceClass.workspaceLayoutClass(), 0.dp) {

@@ -26,6 +26,15 @@ class DockModelTest {
         assertEquals(2, dock.availableSlots)
     }
 
+    @Test
+    fun theEarlierCardSettingsMapToLiveAppSlots() {
+        assertEquals(4, dockLiveAppSlotsFromLegacy(showNotificationCards = true, notificationSlotCount = 4))
+        assertEquals(DEFAULT_DOCK_LIVE_APP_SLOTS, dockLiveAppSlotsFromLegacy(true, null))
+        assertEquals(MAX_DOCK_LIVE_APP_SLOTS, dockLiveAppSlotsFromLegacy(true, 40))
+        assertEquals(0, dockLiveAppSlotsFromLegacy(showNotificationCards = false, notificationSlotCount = 4))
+        assertEquals(DEFAULT_DOCK_LIVE_APP_SLOTS, dockLiveAppSlotsFromLegacy(null, null))
+    }
+
     private fun widgetItem(id: String): WidgetItem =
         WidgetItem(
             id = LauncherItemId(id),

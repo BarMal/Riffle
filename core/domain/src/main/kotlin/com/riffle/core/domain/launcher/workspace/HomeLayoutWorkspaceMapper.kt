@@ -39,7 +39,7 @@ internal object HomeLayoutWorkspaceMapper {
             id = workspaceId(deviceClass, mode),
             name = modeName(mode),
             pages = allPages,
-            dock = WorkspaceDock(dynamicSection = dockDynamicSection(layout)),
+            dock = WorkspaceDock(),
         )
     }
 
@@ -48,20 +48,6 @@ internal object HomeLayoutWorkspaceMapper {
             LauncherViewMode.STANDARD_APP_DRAWER -> "Standard"
             LauncherViewMode.HOME_SCREEN_LIBRARY -> "Library"
             LauncherViewMode.CARD_INTERFACE -> "Cards"
-        }
-
-    /** The dock's notification strip becomes its dynamic section: newest notifications as icons, one per slot. */
-    private fun dockDynamicSection(layout: HomeLayout): LensBinding? =
-        layout.dock.takeIf { it.showNotificationCards }?.let { dock ->
-            LensBinding(
-                lens =
-                    Lens(
-                        sources = listOf(SourceIds.NOTIFICATIONS),
-                        sort = LensSort(LensSortField.TIME, SortDirection.DESCENDING),
-                        limit = dock.notificationSlotCount.coerceAtLeast(1),
-                    ),
-                expression = ExpressionKind.ICON_ROW,
-            )
         }
 
     private fun uniquePages(pages: List<LauncherPage>): List<PageHost> {

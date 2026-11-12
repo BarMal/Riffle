@@ -131,7 +131,7 @@ class WorkspaceHomeTest {
         assertSame(global, WorkspaceHome.gestures(global, nova))
         val niagara = checkNotNull(WorkspacePresets.byId("niagara")).compact
         val applied = WorkspaceHome.gestures(global, niagara)
-        assertEquals(LauncherGestureAction.OPEN_WORKSPACE_MENU, applied.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherGestureAction.OPEN_LIBRARY, applied.actionFor(HomeGesture.ONE_FINGER_UP))
         val hostile =
             nova.copy(
                 gestureBindings =
@@ -160,7 +160,7 @@ class WorkspaceHomeTest {
         assertFalse(home.homeLayout.dock.isEnabled)
         assertEquals(state.homeLayout.dock.items, home.homeLayout.dock.items)
         assertEquals(
-            LauncherGestureAction.OPEN_WORKSPACE_MENU,
+            LauncherGestureAction.OPEN_LIBRARY,
             home.launcherSettings.gestures.homeGestures.actionFor(HomeGesture.ONE_FINGER_UP),
         )
 

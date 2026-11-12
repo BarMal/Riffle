@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
+import com.riffle.core.domain.launcher.dock.DockDynamicSide
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -113,8 +114,8 @@ internal fun dockSurfaceMetrics(
     val dynamicSectionMainAxisDp =
         dockDynamicSectionMainAxisDp(
             entryCount = dynamicEntryCount,
-            notificationSlotCount = dock.notificationSlotCount,
-            entryExtentDp = dock.iconSizeDp,
+            slotLimit = dock.liveAppSlots + DockDynamicSide.FIXED_ENTRY_COUNT,
+            entryExtentDp = dockDynamicEntryExtentDp(dock.iconSizeDp),
             entrySpacingDp = dock.itemSpacingDp,
             maxRunMainAxisDp = (maxRunMainAxisDp - minStaticMainAxisDp).coerceAtLeast(0),
         )

@@ -218,7 +218,7 @@ class HomeSwipeGestureInterpreterTest {
                         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                         HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
                         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.ENTER_FULLSCREEN_HOME,
-                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_APP_STAGE,
+                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_STREAM,
                     ),
             )
 
@@ -238,7 +238,7 @@ class HomeSwipeGestureInterpreterTest {
             actionMapper.actionFor(HomeGesture.TWO_FINGER_RIGHT, settings),
         )
         assertEquals(
-            LauncherShellAction.SelectNextAppStage,
+            LauncherShellAction.OpenStream,
             actionMapper.actionFor(HomeGesture.THREE_FINGER_LEFT, settings),
         )
     }
@@ -251,22 +251,19 @@ class HomeSwipeGestureInterpreterTest {
     }
 
     @Test
-    fun mapsStageActions() {
+    fun mapsStreamAndLibraryActions() {
         val settings =
             HomeGestureSettings(
                 actions =
                     mapOf(
-                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_APP_STAGE,
-                        HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE,
+                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_STREAM,
+                        HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.OPEN_LIBRARY,
                     ),
             )
 
+        assertEquals(LauncherShellAction.OpenStream, actionMapper.actionFor(HomeGesture.TWO_FINGER_LEFT, settings))
         assertEquals(
-            LauncherShellAction.SelectNextAppStage,
-            actionMapper.actionFor(HomeGesture.TWO_FINGER_LEFT, settings),
-        )
-        assertEquals(
-            LauncherShellAction.SelectPreviousAppStage,
+            LauncherShellAction.OpenAppDrawer,
             actionMapper.actionFor(HomeGesture.TWO_FINGER_RIGHT, settings),
         )
     }

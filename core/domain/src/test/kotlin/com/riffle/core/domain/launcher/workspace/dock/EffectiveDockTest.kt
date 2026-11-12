@@ -30,7 +30,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class EffectiveDockTest {
-    private val menuGesture = LauncherGestureAction.OPEN_WORKSPACE_MENU
+    private val menuGesture = LauncherGestureAction.OPEN_LIBRARY
     private val shared =
         PoolDock(
             pins = listOf(PoolItemId("a"), PoolItemId("b")),

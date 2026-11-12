@@ -147,7 +147,7 @@ private fun HomeGestureRow(
                 expanded = isExpanded.value,
                 onDismissRequest = { isExpanded.value = false },
             ) {
-                gestureActionOptions(workspaceMenuEnabled = true, current = action).forEach { option ->
+                gestureActionOptions().forEach { option ->
                     DropdownMenuItem(
                         text = { Text(text = option.label) },
                         onClick = {
@@ -170,17 +170,8 @@ private fun HomeGestureRow(
     }
 }
 
-/**
- * The actions a home gesture can be bound to, in menu order. "Workspace menu" is offered only while the workspace
- * menu feature is on, or when [current] already uses it (so the row never shows a choice the menu can't list).
- */
-internal fun gestureActionOptions(
-    workspaceMenuEnabled: Boolean,
-    current: LauncherGestureAction,
-): List<LauncherGestureAction> =
-    LauncherGestureAction.entries.filter { option ->
-        !option.needsWorkspaceMenu || workspaceMenuEnabled || option == current
-    }
+/** The actions a home gesture can be bound to, in menu order. */
+internal fun gestureActionOptions(): List<LauncherGestureAction> = LauncherGestureAction.entries
 
 internal val LauncherGestureAction.label: String
     get() =
@@ -194,12 +185,10 @@ internal val LauncherGestureAction.label: String
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> "Fullscreen home"
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> "Next page"
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> "Previous page"
-            LauncherGestureAction.SELECT_NEXT_APP_STAGE -> "Next stage"
-            LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE -> "Previous stage"
             LauncherGestureAction.LAUNCH_APP -> "Launch app"
             LauncherGestureAction.LAUNCH_APP_SHORTCUT -> "Launch shortcut"
-            LauncherGestureAction.OPEN_WORKSPACE_MENU -> "Workspace menu"
             LauncherGestureAction.OPEN_STREAM -> "Stream"
+            LauncherGestureAction.OPEN_LIBRARY -> "Library"
         }
 
 private val LauncherGestureAction.requiresLaunchTarget: Boolean

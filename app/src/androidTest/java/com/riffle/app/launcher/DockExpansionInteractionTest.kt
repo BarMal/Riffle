@@ -202,7 +202,7 @@ class DockExpansionInteractionTest {
                 dock =
                     standardLayout.dock.copy(
                         items = listOf(docked),
-                        showNotificationCards = wantsNotifications,
+                        liveAppSlots = if (wantsNotifications) 3 else 0,
                         isExpandable = isExpandable,
                         expandAffordance = expandAffordance,
                         panel = panel,

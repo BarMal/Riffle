@@ -279,10 +279,6 @@ class LauncherActionDomainTest {
                 ),
                 activity("SelectDockEnabled", LauncherShellAction.SelectDockEnabled(enabled = true)),
                 activity(
-                    "SelectDockNotificationCardsEnabled",
-                    LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = false),
-                ),
-                activity(
                     "SelectDockExpandable",
                     LauncherShellAction.SelectDockExpandable(expandable = false),
                 ),
@@ -306,10 +302,7 @@ class LauncherActionDomainTest {
                     "SelectDockHomeControlsSpacing",
                     LauncherShellAction.SelectDockHomeControlsSpacing(spacingDp = 16),
                 ),
-                activity(
-                    "SelectDockNotificationSlotCount",
-                    LauncherShellAction.SelectDockNotificationSlotCount(slotCount = 2),
-                ),
+                activity("SelectDockLiveAppSlots", LauncherShellAction.SelectDockLiveAppSlots(slots = 2)),
                 app("AppDrawerQueryChanged", LauncherShellAction.AppDrawerQueryChanged("query")),
                 app("RefreshInstalledApps", LauncherShellAction.RefreshInstalledApps),
                 app(

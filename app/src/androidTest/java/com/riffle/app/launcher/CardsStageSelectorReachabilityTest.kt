@@ -1,16 +1,8 @@
 package com.riffle.app.launcher
 
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -43,13 +35,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * #1212 (revised #XXXX): in Cards the dock's dynamic section is the stage selector, but only for a
- * stage with something new that is not already pinned -- a pinned stage (Notes here) renders as an
- * ordinary static dock icon instead (see CardsDockPinning.kt), reachable and behaving exactly like
- * any other pinned app until #XXXX (tap-to-navigate for a pinned stage) changes what its tap does.
- * "All" has no entry point on the dock at all pending a dedicated gesture. The spine is off by
- * default, so the dynamic section is the only on-screen selector a compact window has for stages
- * that are not pinned.
+ * P5 (ADR 0003, The Dock is the handle): Cards no longer lists its stages on the dock. The dock's dynamic side is
+ * live apps, now playing and the Stream button in every mode, and it opens the Stream, not a Cards stage; a stage
+ * is selected from the stage pager and the spine (off by default) instead. These cover what is left of the old
+ * stage selector: no stage entry on the dock, pinned or not, no "All" entry, and no spine by default. The dynamic
+ * side itself (its entries, the touch and screen-reader reach of the Stream button) is covered by
+ * DockDynamicSideEntriesTest and StreamHomeDestinationTest on the JVM.
  */
 @RunWith(AndroidJUnit4::class)
 class CardsStageSelectorReachabilityTest {
@@ -57,15 +48,14 @@ class CardsStageSelectorReachabilityTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun anUnpinnedStageWithSomethingNewIsReachableByTouch() {
+    fun anUnpinnedStageWithSomethingNewHasNoDockEntryEither() {
         val actions = mutableListOf<LauncherShellAction>()
         setContent(actions)
 
-        tile(MAIL_LABEL).performScrollTo().performClick()
-
+        tile(MAIL_LABEL).assertDoesNotExist()
         composeRule.runOnIdle {
             assertEquals(
-                listOf(LauncherShellAction.SelectAppStage(mailStageId)),
+                emptyList<LauncherShellAction>(),
                 actions.filterIsInstance<LauncherShellAction.SelectAppStage>(),
             )
         }
@@ -83,24 +73,6 @@ class CardsStageSelectorReachabilityTest {
         setContent(mutableListOf())
 
         composeRule.onNodeWithContentDescription("Cards stage: $CARDS_ALL_ENTRY_LABEL").assertDoesNotExist()
-    }
-
-    @Test
-    fun theDynamicEntryIsReachableByAScreenReader() {
-        val actions = mutableListOf<LauncherShellAction>()
-        setContent(actions)
-
-        tile(MAIL_LABEL)
-            .assert(hasClickAction())
-            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription))
-            .performSemanticsAction(SemanticsActions.OnClick)
-
-        composeRule.runOnIdle {
-            assertEquals(
-                LauncherShellAction.SelectAppStage(mailStageId),
-                actions.filterIsInstance<LauncherShellAction.SelectAppStage>().single(),
-            )
-        }
     }
 
     @Test

@@ -28,9 +28,11 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.stream.STREAM_LIST_TEST_TAG
 import com.riffle.app.launcher.stream.StreamCallbacks
+import com.riffle.app.launcher.stream.StreamFocusRequest
 import com.riffle.app.launcher.stream.StreamSurface
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamContent
+import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutReducer
 import com.riffle.core.domain.launcher.stream.StreamSection
@@ -59,7 +61,12 @@ class StreamBehaviorTest {
     private val accessRequests = mutableListOf<List<com.riffle.core.domain.launcher.workspace.SourceId>>()
     private val enabled = mutableListOf<StreamSection>()
 
-    private fun show(results: Map<StreamSection, StreamSectionResult> = defaultResults()) {
+    private val handledFocus = mutableListOf<Long>()
+
+    private fun show(
+        results: Map<StreamSection, StreamSectionResult> = defaultResults(),
+        focus: StreamFocusRequest? = null,
+    ) {
         composeRule.setContent {
             ScreenshotBackdrop {
                 StreamSurface(
@@ -74,6 +81,8 @@ class StreamBehaviorTest {
                             onEnableSection = { section -> enabled += section },
                         ),
                     contentPadding = PaddingValues(),
+                    focusRequest = focus,
+                    onFocusHandled = { id -> handledFocus += id },
                 )
             }
         }
@@ -89,6 +98,41 @@ class StreamBehaviorTest {
     private fun optionsButton(section: String): SemanticsNodeInteraction {
         scrollTo(hasContentDescription("$section options"))
         return composeRule.onNodeWithContentDescription("$section options")
+    }
+
+    @Test
+    fun landingOnAnAppsStackScrollsItIntoViewAndIsHandledOnce() {
+        show(focus = StreamFocusRequest(7, StreamFocusTarget.AppStack("mail:personal")))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
+        assertEquals(listOf(7L), handledFocus)
+    }
+
+    @Test
+    fun landingOnNowIsHandledWithoutWaitingForNotifications() {
+        show(focus = StreamFocusRequest(8, StreamFocusTarget.Now))
+        composeRule.waitForIdle()
+
+        assertEquals(listOf(8L), handledFocus)
+    }
+
+    @Test
+    fun landingOnAStackThatHasGoneStillLandsOnTheNotificationsSection() {
+        show(focus = StreamFocusRequest(9, StreamFocusTarget.AppStack("gone:personal")))
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Notifications").assertIsDisplayed()
+        assertEquals(listOf(9L), handledFocus)
+    }
+
+    @Test
+    fun landingOnAStackWaitsForTheNotificationsToArrive() {
+        val results = defaultResults() + (StreamSection.NOTIFICATIONS to StreamSectionResult.Loading)
+        show(results, focus = StreamFocusRequest(10, StreamFocusTarget.AppStack("mail:personal")))
+        composeRule.waitForIdle()
+
+        assertTrue(handledFocus.isEmpty())
     }
 
     @Test

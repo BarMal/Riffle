@@ -231,8 +231,6 @@ sealed interface LauncherShellAction {
 
     data class SelectDockEnabled(val enabled: Boolean) : LauncherShellAction
 
-    data class SelectDockNotificationCardsEnabled(val enabled: Boolean) : LauncherShellAction
-
     data class SelectDockExpandable(val expandable: Boolean) : LauncherShellAction
 
     data class SelectDockExpandAffordance(val affordance: DockExpandAffordance) : LauncherShellAction
@@ -257,7 +255,7 @@ sealed interface LauncherShellAction {
 
     data class SelectDockHomeControlsSpacing(val spacingDp: Int) : LauncherShellAction
 
-    data class SelectDockNotificationSlotCount(val slotCount: Int) : LauncherShellAction
+    data class SelectDockLiveAppSlots(val slots: Int) : LauncherShellAction
 
     data class AppDrawerQueryChanged(val query: String) : LauncherShellAction
 

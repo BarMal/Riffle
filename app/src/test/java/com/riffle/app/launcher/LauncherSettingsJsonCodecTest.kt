@@ -849,7 +849,7 @@ class LauncherSettingsJsonCodecTest {
                                         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.OPEN_SETTINGS,
                                         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
                                         HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_NOTIFICATIONS,
-                                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_APP_STAGE,
+                                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_STREAM,
                                         HomeGesture.PINCH_OUT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                                         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.ENTER_FULLSCREEN_HOME,
                                     ),
@@ -868,7 +868,7 @@ class LauncherSettingsJsonCodecTest {
             decodedSettings.gestures.homeGestures.actionFor(HomeGesture.TWO_FINGER_UP),
         )
         assertEquals(
-            LauncherGestureAction.SELECT_NEXT_APP_STAGE,
+            LauncherGestureAction.OPEN_STREAM,
             decodedSettings.gestures.homeGestures.actionFor(HomeGesture.THREE_FINGER_LEFT),
         )
         assertEquals(
@@ -1374,6 +1374,35 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.TWO_FINGER_RIGHT))
         assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.ONE_FINGER_UP))
         assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.PINCH_OUT))
+    }
+
+    @Test
+    fun theWorkspaceMenuAndStageGestureActionsRemovedByTheDockHandleDecodeToNoAction() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "gestures": {
+                    "homeGestures": {
+                      "THREE_FINGER_UP": "OPEN_WORKSPACE_MENU",
+                      "THREE_FINGER_LEFT": "SELECT_NEXT_APP_STAGE",
+                      "THREE_FINGER_RIGHT": "SELECT_PREVIOUS_APP_STAGE",
+                      "TWO_FINGER_UP": "OPEN_SEARCH",
+                      "TWO_FINGER_LEFT": "OPEN_LIBRARY",
+                      "TWO_FINGER_RIGHT": "OPEN_STREAM"
+                    }
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        val gestures = decodedSettings.gestures.homeGestures
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_LEFT))
+        assertEquals(LauncherGestureAction.NONE, gestures.actionFor(HomeGesture.THREE_FINGER_RIGHT))
+        assertEquals(LauncherGestureAction.OPEN_SEARCH, gestures.actionFor(HomeGesture.TWO_FINGER_UP))
+        assertEquals(LauncherGestureAction.OPEN_LIBRARY, gestures.actionFor(HomeGesture.TWO_FINGER_LEFT))
+        assertEquals(LauncherGestureAction.OPEN_STREAM, gestures.actionFor(HomeGesture.TWO_FINGER_RIGHT))
     }
 
     @Test

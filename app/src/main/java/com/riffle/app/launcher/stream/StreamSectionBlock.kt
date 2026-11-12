@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,10 +27,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -274,14 +280,64 @@ private fun StreamSectionContent(
     Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {
         groups.forEach { group ->
             val groupKey = group.key.takeIf { section == StreamSection.NOTIFICATIONS }
-            GroupHeading(section, group, env)
-            if (view == StreamView.LIST) {
-                StreamRowsPanel(section, group, env, callbacks, groupKey)
-            } else {
-                StreamGroupStack(section, group, env, callbacks, groupKey)
+            GroupFocusTarget(groupKey) {
+                GroupHeading(section, group, env)
+                if (view == StreamView.LIST) {
+                    StreamRowsPanel(section, group, env, callbacks, groupKey)
+                } else {
+                    StreamGroupStack(section, group, env, callbacks, groupKey)
+                }
             }
         }
     }
+}
+
+/**
+ * Where the Dock asked the Stream to land: an app's group, scrolled into view once the surface has scrolled to its
+ * section. Transient; never stored.
+ */
+@Stable
+internal class StreamGroupFocus {
+    var groupKey: String? by mutableStateOf(null)
+        private set
+    var nonce: Long by mutableLongStateOf(0L)
+        private set
+
+    fun request(key: String) {
+        groupKey = key
+        nonce++
+    }
+
+    fun handled() {
+        groupKey = null
+    }
+}
+
+internal val LocalStreamGroupFocus = staticCompositionLocalOf<StreamGroupFocus?> { null }
+
+/** A group (its heading and its cards or rows) that scrolls itself into view when the Dock asked for it. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun GroupFocusTarget(
+    groupKey: String?,
+    content: @Composable () -> Unit,
+) {
+    val focus = LocalStreamGroupFocus.current
+    if (groupKey == null || focus == null) {
+        Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) { content() }
+        return
+    }
+    val requester = remember { BringIntoViewRequester() }
+    LaunchedEffect(focus.nonce, focus.groupKey) {
+        if (focus.groupKey == groupKey) {
+            requester.bringIntoView()
+            focus.handled()
+        }
+    }
+    Column(
+        modifier = Modifier.bringIntoViewRequester(requester),
+        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+    ) { content() }
 }
 
 @Composable

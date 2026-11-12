@@ -516,32 +516,26 @@ enum class LauncherGestureAction {
     ENTER_FULLSCREEN_HOME,
     SELECT_NEXT_HOME_PAGE,
     SELECT_PREVIOUS_HOME_PAGE,
-    SELECT_NEXT_APP_STAGE,
-    SELECT_PREVIOUS_APP_STAGE,
     LAUNCH_APP,
     LAUNCH_APP_SHORTCUT,
-
-    /**
-     * Opens the workspace menu (WS10 11.4). No default binding uses it: since S9 the dock pull opens the menu, and
-     * this is how a workspace without a dock (Niagara) or a person who prefers a gesture reaches it.
-     */
-    OPEN_WORKSPACE_MENU,
 
     /**
      * Opens the Stream (ADR 0003): the actions centre that replaces Home until Back or the Home button. Added by P4;
      * stored settings written before it never name it, and a stored name this build does not know decodes to no action.
      */
     OPEN_STREAM,
-    ;
 
-    /** Actions that need the workspace menu (always present since S9; kept for callers that filter on it). */
-    val needsWorkspaceMenu: Boolean get() = this == OPEN_WORKSPACE_MENU
+    /** Opens the Library (the app drawer until P7 reworks it), the same place the Dock's pinned-side pull leads. */
+    OPEN_LIBRARY,
+    ;
 
     companion object {
         /**
          * The action a stored [name] means, or null when it names none. Mode-switching and app-drawer
          * bindings (NEXT_MODE / PREVIOUS_MODE, their older ENTER_ / EXIT_ADAPTIVE_STAGE names, and
-         * OPEN_APP_DRAWER) were removed when the dock pull became the only mode-transition trigger;
+         * OPEN_APP_DRAWER) were removed when the dock pull became the only mode-transition trigger, and the
+         * workspace menu and app stage actions (OPEN_WORKSPACE_MENU, SELECT_NEXT_APP_STAGE,
+         * SELECT_PREVIOUS_APP_STAGE) when the Dock became the handle of the Stream and the Library (P5);
          * like any other unknown name they decode to null, which callers treat as "no action".
          */
         fun fromStoredName(name: String): LauncherGestureAction? = entries.firstOrNull { action -> action.name == name }

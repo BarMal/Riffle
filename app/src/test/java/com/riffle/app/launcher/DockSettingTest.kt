@@ -6,73 +6,85 @@ import org.junit.Test
 
 class DockSettingTest {
     @Test
-    fun dockNotificationCardsSettingSubtitleUsesGenericDisabledCopy() {
+    fun liveAppSlotsSubtitleExplainsNoLiveApps() {
         assertEquals(
-            "Dock only shows what you pinned to it",
-            dockNotificationCardsSettingSubtitle(
-                enabled = false,
-                notificationAccessStatus = NotificationAccessStatus.REVOKED,
-            ),
+            "The dock's second side shows only now playing and the Stream button",
+            dockLiveAppSlotsSubtitle(slots = 0, notificationAccessStatus = NotificationAccessStatus.REVOKED),
         )
     }
 
     @Test
-    fun dockNotificationCardsSettingSubtitleUsesGrantedCopy() {
+    fun liveAppSlotsSubtitleUsesGrantedCopy() {
         assertEquals(
-            "Dock shows apps with notifications beside your pinned ones",
-            dockNotificationCardsSettingSubtitle(
-                enabled = true,
-                notificationAccessStatus = NotificationAccessStatus.GRANTED,
-            ),
+            "Apps with something new sit beside your pinned ones and open the Stream",
+            dockLiveAppSlotsSubtitle(slots = 3, notificationAccessStatus = NotificationAccessStatus.GRANTED),
         )
     }
 
     @Test
-    fun dockNotificationCardsSettingSubtitleExplainsNotGrantedAccess() {
+    fun liveAppSlotsSubtitleExplainsNotGrantedAccess() {
         assertEquals(
-            "Notification cards are on, but access is not allowed",
-            dockNotificationCardsSettingSubtitle(
-                enabled = true,
-                notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
-            ),
+            "Live apps are on, but notification access is not allowed",
+            dockLiveAppSlotsSubtitle(slots = 2, notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
         )
     }
 
     @Test
-    fun dockNotificationCardsSettingSubtitleExplainsRevokedAccess() {
+    fun liveAppSlotsSubtitleExplainsRevokedAccess() {
         assertEquals(
-            "Notification cards are on, but access was revoked",
-            dockNotificationCardsSettingSubtitle(
-                enabled = true,
-                notificationAccessStatus = NotificationAccessStatus.REVOKED,
-            ),
+            "Live apps are on, but notification access was revoked",
+            dockLiveAppSlotsSubtitle(slots = 2, notificationAccessStatus = NotificationAccessStatus.REVOKED),
         )
     }
 
     @Test
-    fun dockNotificationCardsSettingSubtitleExplainsUnknownAccess() {
+    fun liveAppSlotsSubtitleExplainsUnknownAccess() {
         assertEquals(
-            "Notification cards are on, but access has not been checked",
-            dockNotificationCardsSettingSubtitle(
-                enabled = true,
-                notificationAccessStatus = NotificationAccessStatus.UNKNOWN,
-            ),
+            "Live apps are on, but notification access has not been checked",
+            dockLiveAppSlotsSubtitle(slots = 2, notificationAccessStatus = NotificationAccessStatus.UNKNOWN),
         )
     }
 
     @Test
-    fun dockSizeSummaryShowsOnlyPinnedCountWhenNotificationsAreOff() {
+    fun turningLiveAppsOnWithoutAccessAlsoAsksForNotificationAccess() {
         assertEquals(
-            "Shows up to 7 pinned icons",
-            dockSizeSummaryText(capacity = 7, notificationSlotCount = 3, showNotificationCards = false),
+            listOf(LauncherShellAction.SelectDockLiveAppSlots(3), LauncherShellAction.RequestNotificationAccess),
+            dockLiveAppSlotsActions(3, wasSlots = 0, notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+        )
+        assertEquals(
+            listOf<LauncherShellAction>(LauncherShellAction.SelectDockLiveAppSlots(3)),
+            dockLiveAppSlotsActions(3, wasSlots = 0, notificationAccessStatus = NotificationAccessStatus.GRANTED),
+        )
+        assertEquals(
+            listOf<LauncherShellAction>(LauncherShellAction.SelectDockLiveAppSlots(4)),
+            dockLiveAppSlotsActions(4, wasSlots = 3, notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+        )
+        assertEquals(
+            listOf<LauncherShellAction>(LauncherShellAction.SelectDockLiveAppSlots(0)),
+            dockLiveAppSlotsActions(0, wasSlots = 3, notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
         )
     }
 
     @Test
-    fun dockSizeSummarySplitsTheTotalBetweenPinnedAndNotificationsWhenOn() {
+    fun liveAppSlotsReadAsNoneOneAppOrCountedApps() {
+        assertEquals("None", dockLiveAppSlotsLabel(0))
+        assertEquals("1 app", dockLiveAppSlotsLabel(1))
+        assertEquals("4 apps", dockLiveAppSlotsLabel(4))
+    }
+
+    @Test
+    fun dockSizeSummaryNamesThePinnedIconsAndTheDynamicSide() {
         assertEquals(
-            "Shows up to 10 icons: 7 pinned, 3 for notifications",
-            dockSizeSummaryText(capacity = 7, notificationSlotCount = 3, showNotificationCards = true),
+            "Shows up to 7 pinned icons, then now playing and the Stream button",
+            dockSizeSummaryText(capacity = 7, liveAppSlots = 0),
+        )
+        assertEquals(
+            "Shows up to 7 pinned icons, then 1 live app, now playing and the Stream button",
+            dockSizeSummaryText(capacity = 7, liveAppSlots = 1),
+        )
+        assertEquals(
+            "Shows up to 7 pinned icons, then 3 live apps, now playing and the Stream button",
+            dockSizeSummaryText(capacity = 7, liveAppSlots = 3),
         )
     }
 }

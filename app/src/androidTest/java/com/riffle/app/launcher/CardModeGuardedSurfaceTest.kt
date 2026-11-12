@@ -255,7 +255,7 @@ class CardModeGuardedSurfaceTest {
                         standard.dock.copy(
                             capacity = 2,
                             items = listOf(primaryShortcut, overflowShortcut),
-                            showNotificationCards = true,
+                            liveAppSlots = 3,
                         ),
                 )
             }

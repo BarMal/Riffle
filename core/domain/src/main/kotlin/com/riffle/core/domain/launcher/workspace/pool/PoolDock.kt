@@ -5,7 +5,7 @@ import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_CORNER_RADIUS_DP
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_HOME_CONTROLS_SPACING_DP
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_ITEM_SPACING_DP
-import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_NOTIFICATION_SLOT_COUNT
+import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -22,8 +22,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 data class PoolDockSettings(
     val capacity: Int = DEFAULT_CAPACITY,
     val isEnabled: Boolean = true,
-    val showNotificationCards: Boolean = false,
-    val notificationSlotCount: Int = DEFAULT_DOCK_NOTIFICATION_SLOT_COUNT,
+    val liveAppSlots: Int = DEFAULT_DOCK_LIVE_APP_SLOTS,
     val iconSizeDp: Int = DEFAULT_DOCK_ICON_SIZE_DP,
     val backgroundAlphaPercent: Int = DEFAULT_DOCK_BACKGROUND_ALPHA_PERCENT,
     val backgroundSizing: DockBackgroundSizing = DockBackgroundSizing.DYNAMIC,
@@ -47,8 +46,7 @@ data class PoolDockSettings(
             capacity = capacity,
             items = items,
             isEnabled = isEnabled,
-            showNotificationCards = showNotificationCards,
-            notificationSlotCount = notificationSlotCount,
+            liveAppSlots = liveAppSlots,
             iconSizeDp = iconSizeDp,
             backgroundAlphaPercent = backgroundAlphaPercent,
             backgroundSizing = backgroundSizing,
@@ -73,8 +71,7 @@ data class PoolDockSettings(
             PoolDockSettings(
                 capacity = dock.capacity,
                 isEnabled = dock.isEnabled,
-                showNotificationCards = dock.showNotificationCards,
-                notificationSlotCount = dock.notificationSlotCount,
+                liveAppSlots = dock.liveAppSlots,
                 iconSizeDp = dock.iconSizeDp,
                 backgroundAlphaPercent = dock.backgroundAlphaPercent,
                 backgroundSizing = dock.backgroundSizing,

@@ -42,7 +42,7 @@ class HomeLayoutDockUnificationTest {
         val edited =
             standard.withActiveLayout(
                 standard.activeLayout.copy(
-                    dock = standard.activeLayout.dock.copy(capacity = 7, iconSizeDp = 52, notificationSlotCount = 4),
+                    dock = standard.activeLayout.dock.copy(capacity = 7, iconSizeDp = 52, liveAppSlots = 4),
                 ),
             )
 
@@ -50,7 +50,7 @@ class HomeLayoutDockUnificationTest {
             val dock = edited.layoutFor(key(mode)).dock
             assertEquals(7, dock.capacity, "$mode")
             assertEquals(52, dock.iconSizeDp, "$mode")
-            assertEquals(4, dock.notificationSlotCount, "$mode")
+            assertEquals(4, dock.liveAppSlots, "$mode")
         }
     }
 
@@ -342,7 +342,7 @@ class HomeLayoutDockUnificationTest {
             LauncherViewMode.CARD_INTERFACE ->
                 DockModel(
                     capacity = 6,
-                    showNotificationCards = true,
+                    liveAppSlots = 4,
                     position = DockPosition.RIGHT,
                     items = listOf(app("shared"), app("cards-only")),
                 )

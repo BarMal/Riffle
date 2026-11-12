@@ -25,9 +25,10 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
-    fun doesNotLetAGestureOpenTheAppDrawerFromCardsMode() {
-        // No gesture can be bound to the drawer any more; the dock pull reaches Library.
-        assertFalse(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenAppDrawer))
+    fun letsTheLibraryAndStreamGesturesThroughFromCardsMode() {
+        // The Dock's pulls reach them, and so can a home gesture bound to OPEN_LIBRARY / OPEN_STREAM (P5).
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenAppDrawer))
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenStream))
     }
 
     @Test
@@ -39,12 +40,6 @@ class AdaptiveStageAppStageActionFilterTest {
     fun allowsTheSettingsGestureFromCardsModeSoItIsNeverADeadEnd() {
         // #1212: a home gesture bound to Settings used to be filtered out in Cards.
         assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenSettings))
-    }
-
-    @Test
-    fun allowsTheWorkspaceMenuGestureFromCardsMode() {
-        // The menu is drawn above every mode surface, so a gesture bound to it works in Cards too.
-        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenWorkspaceMenu))
     }
 
     @Test

@@ -58,7 +58,7 @@ class LauncherShellDockViewModelTest {
     }
 
     @Test
-    fun updatesDockNotificationCardsVisibilityAndSavesLayout() {
+    fun updatesDockLiveAppSlotsToNoneAndSavesLayout() {
         val repository = FakeHomeLayoutRepository()
         val viewModel =
             LauncherShellViewModel(
@@ -66,9 +66,9 @@ class LauncherShellDockViewModelTest {
                 homeLayoutRepository = repository,
             )
 
-        viewModel.onDockEdited(LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = false))
+        viewModel.onDockEdited(LauncherShellAction.SelectDockLiveAppSlots(slots = 0))
 
-        assertEquals(false, viewModel.state.value.homeLayout.dock.showNotificationCards)
+        assertEquals(0, viewModel.state.value.homeLayout.dock.liveAppSlots)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
@@ -223,7 +223,7 @@ class LauncherShellDockViewModelTest {
     }
 
     @Test
-    fun updatesDockNotificationSlotCountAndSavesLayout() {
+    fun updatesDockLiveAppSlotsAndSavesLayout() {
         val repository = FakeHomeLayoutRepository()
         val viewModel =
             LauncherShellViewModel(
@@ -231,9 +231,9 @@ class LauncherShellDockViewModelTest {
                 homeLayoutRepository = repository,
             )
 
-        viewModel.onDockEdited(LauncherShellAction.SelectDockNotificationSlotCount(slotCount = 2))
+        viewModel.onDockEdited(LauncherShellAction.SelectDockLiveAppSlots(slots = 2))
 
-        assertEquals(2, viewModel.state.value.homeLayout.dock.notificationSlotCount)
+        assertEquals(2, viewModel.state.value.homeLayout.dock.liveAppSlots)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
