@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
+import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -43,6 +44,7 @@ object ArrangementAdapter {
                     label = item.label,
                     resizeConstraints = item.resizeConstraints,
                     placement = at,
+                    glance = GlanceWidgets.kindOf(item.provider),
                 )
         }
 

@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -328,6 +329,10 @@ class LauncherActionDomainTest {
                 activity(
                     "AddHostedWidgetToHome",
                     LauncherShellAction.AddHostedWidgetToHome(HostedWidgetId(42), label = "Weather"),
+                ),
+                activity(
+                    "AddGlanceWidgetToHome",
+                    LauncherShellAction.AddGlanceWidgetToHome(GlanceWidgetKind.NOW_PLAYING, label = "Now playing"),
                 ),
                 activity(
                     "AddHostedWidgetToDock",

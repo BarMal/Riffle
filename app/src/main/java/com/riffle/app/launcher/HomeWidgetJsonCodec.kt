@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -23,6 +24,7 @@ fun encodeWidget(widget: WidgetItem): JSONObject =
         .put("maxRows", widget.resizeConstraints.maxSpan?.rows)
         .put("supportsHorizontalResize", widget.resizeConstraints.supportsHorizontalResize)
         .put("supportsVerticalResize", widget.resizeConstraints.supportsVerticalResize)
+        .put("glance", widget.glance?.storedId)
 
 fun JSONObject.toWidget(): WidgetItem =
     WidgetItem(
@@ -40,4 +42,5 @@ fun JSONObject.toWidget(): WidgetItem =
                 supportsVerticalResize = optBoolean("supportsVerticalResize", true),
             ),
         placement = toPlacementOrNull(),
+        glance = GlanceWidgets.kindOfStoredId(optString("glance").takeIf { it.isNotEmpty() }),
     )

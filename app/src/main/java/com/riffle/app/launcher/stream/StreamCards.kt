@@ -101,7 +101,7 @@ internal fun StreamCardSurface(
 }
 
 @Composable
-private fun hiddenText(): String = stringResource(R.string.stream_hidden_content)
+internal fun hiddenText(): String = stringResource(R.string.stream_hidden_content)
 
 /** A notification: app tint, sender, message, inline image; expands to the thread with reply. */
 @OptIn(ExperimentalLayoutApi::class)

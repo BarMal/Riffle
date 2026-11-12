@@ -1,5 +1,7 @@
 package com.riffle.core.domain.launcher.workspace.backup
 
+import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
+import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
@@ -115,6 +117,34 @@ class WorkspaceBackupTest {
         assertEquals(before.items[PoolItemId("a")], restored.items[PoolItemId("a")])
         assertEquals(1, restore.widgetPlaceholderCount)
         assertFalse(poolRoundTrip(poolState(migrated = false))!!.state.migrated)
+    }
+
+    @Test
+    fun `a placed glance widget round trips as itself and is not a placeholder`() {
+        val kind = GlanceWidgetKind.TOP_STORY
+        val glance =
+            PoolWidget(
+                id = PoolItemId("g"),
+                label = kind.defaultLabel,
+                resizeConstraints = kind.resizeConstraints,
+                provider = GlanceWidgets.identity(kind),
+            )
+        val state =
+            PoolStoreState(
+                migrated = true,
+                pools =
+                    mapOf(
+                        phone to
+                            emptyPool(listOf(W1))
+                                .add(glance, ws = W1, cell = at(0, 0, 4, 2))
+                                .add(poolWidget("w", host = 41), ws = W1, cell = at(0, 2, 2, 2)),
+                    ),
+            )
+        val restore = poolRoundTrip(state)!!
+        val restored = restore.state.pools.getValue(phone)
+        assertEquals(glance, restored.items.getValue(PoolItemId("g")))
+        assertEquals(state.pools.getValue(phone).arrangements, restored.arrangements)
+        assertEquals(1, restore.widgetPlaceholderCount, "only the platform widget comes back unbound")
     }
 
     @Test

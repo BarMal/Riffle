@@ -63,4 +63,11 @@ class StreamFocusTest {
             StreamFocus.resolve(StreamFocusTarget.AppStack("a:b"), all - StreamSection.NOTIFICATIONS, ready("a:b")),
         )
     }
+
+    @Test
+    fun aGlanceWidgetLandsOnItsWholeSectionOrNothingWhenHidden() {
+        val agenda = StreamFocusTarget.Section(StreamSection.AGENDA)
+        assertEquals(StreamFocusResolution(StreamSection.AGENDA, null), StreamFocus.resolve(agenda, all, null))
+        assertNull(StreamFocus.resolve(agenda, all - StreamSection.AGENDA, null))
+    }
 }

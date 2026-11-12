@@ -223,7 +223,7 @@ private fun MediaTransport(
 }
 
 @Composable
-private fun TransportButton(
+internal fun TransportButton(
     icon: ImageVector,
     label: String,
     enabled: Boolean,

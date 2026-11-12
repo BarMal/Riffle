@@ -515,4 +515,27 @@
     <string name="settings_backup_import_action">Import</string>
     <string name="settings_backup_never_title">What a backup never holds</string>
     <string name="settings_backup_never_subtitle">Notifications, events, articles and other content, and any account token. Calendar feed links can contain a private key, so keep the file private.</string>
+    <!-- Glance widgets (Riffle's own Home widgets) -->
+    <string name="glance_section_riffle">Riffle</string>
+    <string name="glance_now_playing_label">Now playing</string>
+    <string name="glance_next_event_label">Next event</string>
+    <string name="glance_top_story_label">Top story</string>
+    <string name="glance_now_playing_description">The track that is playing, with play, pause and skip.</string>
+    <string name="glance_next_event_description">Your next event, with its time, place and a countdown.</string>
+    <string name="glance_top_story_description">The newest unread article from your feeds.</string>
+    <string name="glance_now_playing_empty">Nothing playing</string>
+    <string name="glance_next_event_empty">No upcoming events</string>
+    <string name="glance_top_story_empty">No unread stories</string>
+    <string name="glance_open_stream">Open Stream</string>
+    <string name="glance_open_event">Open event</string>
+    <string name="glance_open_article">Open article</string>
+    <string name="glance_more_actions">More actions</string>
+    <string name="glance_group_description">%1$s: %2$s</string>
+    <string name="glance_by_artist">%1$s by %2$s</string>
+    <string name="glance_preview_track">Midnight City</string>
+    <string name="glance_preview_artist">M83</string>
+    <string name="glance_preview_event">Design standup</string>
+    <string name="glance_preview_event_time">09:00 to 09:30</string>
+    <string name="glance_preview_story">A new look for the launcher</string>
+    <string name="glance_preview_feed">Riffle blog</string>
 </resources>

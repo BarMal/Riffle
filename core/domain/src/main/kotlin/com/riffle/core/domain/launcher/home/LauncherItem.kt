@@ -2,6 +2,7 @@ package com.riffle.core.domain.launcher.home
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcutId
+import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 
 sealed interface LauncherItem {
     val id: LauncherItemId
@@ -38,6 +39,8 @@ data class WidgetItem(
     val label: String,
     val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
     override val placement: GridPlacement? = null,
+    /** Set for one of Riffle's own glance widgets: drawn by the app, never bound through the widget host. */
+    val glance: GlanceWidgetKind? = null,
 ) : LauncherItem {
     override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
 }

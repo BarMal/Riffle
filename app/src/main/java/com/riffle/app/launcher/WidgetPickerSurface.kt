@@ -67,10 +67,12 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleShapes
+import com.riffle.app.launcher.glance.GlanceWidgetPreview
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
+import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 @Composable
@@ -769,7 +771,13 @@ private fun WidgetProviderPreview(
                 preferredAspectRatio = provider.widgetPickerPreviewAspectRatio(),
             )
 
-        if (preview != null) {
+        val glanceKind = GlanceWidgets.kindOf(provider.identity)
+        if (glanceKind != null) {
+            GlanceWidgetPreview(
+                kind = glanceKind,
+                modifier = Modifier.size(previewSize).testTag(WIDGET_PICKER_PREVIEW_TEST_TAG),
+            )
+        } else if (preview != null) {
             Image(
                 bitmap = preview,
                 contentDescription = "${provider.label} widget preview",

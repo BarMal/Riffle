@@ -214,7 +214,7 @@ internal fun StreamSurface(
 
 /** The environment with its clock refreshed every half minute (countdowns), unless the formats are fixed. */
 @Composable
-private fun StreamEnvironment.withLiveClock(): StreamEnvironment {
+internal fun StreamEnvironment.withLiveClock(): StreamEnvironment {
     var now by remember(formats) { mutableLongStateOf(nowEpochMillis) }
     if (formats.live) {
         LaunchedEffect(formats) {

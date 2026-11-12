@@ -1,5 +1,8 @@
 package com.riffle.core.domain.launcher.home
 
+import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
+import com.riffle.core.domain.launcher.glance.GlanceWidgets
+
 class WidgetEngine(
     private val gridPlacementEngine: GridPlacementEngine = GridPlacementEngine(),
 ) {
@@ -35,6 +38,57 @@ class WidgetEngine(
                     }
                     ?: WidgetEditResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
         }
+
+    /**
+     * Places one of Riffle's glance widgets on a home page, in the first free cells (or at [targetCell]) at the
+     * largest span up to [preferredSpan] that fits. A glance widget has no host id, so several of a kind are allowed;
+     * each gets its own item id.
+     */
+    fun addGlanceWidgetToPage(
+        layout: HomeLayout,
+        kind: GlanceWidgetKind,
+        label: String,
+        preferredSpan: GridSpan = kind.defaultSpan,
+        targetCell: GridCell? = null,
+        targetPageId: LauncherPageId? = null,
+    ): WidgetEditResult =
+        when {
+            targetPageId != null && layout.pages.none { it.id == targetPageId } ->
+                WidgetEditResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+
+            targetPage(layout = layout, targetPageId = targetPageId).type is LauncherPageType.Generated ->
+                WidgetEditResult.Rejected(PlacementRejectionReason.GENERATED_PAGE)
+
+            else ->
+                placeWidget(
+                    page = targetPage(layout = layout, targetPageId = targetPageId),
+                    widget =
+                        WidgetItem(
+                            id = freshGlanceId(layout, kind),
+                            appWidgetId = GlanceWidgets.UNBOUND_HOST_ID,
+                            label = label.ifBlank { kind.defaultLabel },
+                            resizeConstraints = kind.resizeConstraints,
+                            glance = kind,
+                        ),
+                    preferredSpan = preferredSpan,
+                    resizeConstraints = kind.resizeConstraints,
+                    targetCell = targetCell,
+                )
+                    ?.let { (span, page) ->
+                        WidgetEditResult.Updated(layout = layout.withUpdatedPage(page), placedSpan = span)
+                    }
+                    ?: WidgetEditResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
+        }
+
+    private fun freshGlanceId(
+        layout: HomeLayout,
+        kind: GlanceWidgetKind,
+    ): LauncherItemId {
+        val taken = layout.allItems().mapTo(HashSet()) { it.id.value }
+        return generateSequence(1) { it + 1 }
+            .map { LauncherItemId("glance:${kind.storedId}:$it") }
+            .first { it.value !in taken }
+    }
 
     /**
      * Places a widget on the dock's panel.

@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.riffle.app.launcher.glance.rememberRiffleGlanceProviders
 import com.riffle.app.launcher.widgets.loadWidgetPreviewWithFallback
 import com.riffle.app.launcher.widgets.renderWidgetPreviewRemoteViews
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
@@ -75,6 +77,24 @@ class WidgetPickerSurfaceTest {
         composeRule.onNodeWithText("Widgets couldn’t be loaded").assertIsDisplayed()
         composeRule.onNodeWithText("Try again").performClick()
         composeRule.runOnIdle { assertEquals(1, retryCount) }
+    }
+
+    @Test
+    fun theRiffleGroupLeadsThePickerWithItsThreeGlanceWidgets() {
+        composeRule.setContent {
+            MaterialTheme {
+                WidgetPickerSurface(
+                    providers = rememberRiffleGlanceProviders() + listOf(widgetProvider()),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Riffle (3)").assertIsDisplayed()
+        val tiles = composeRule.onAllNodesWithTag(WIDGET_PROVIDER_TILE_TEST_TAG)
+        val first = tiles[0].fetchSemanticsNode().config[SemanticsActions.CustomActions].map { it.label }
+        assertTrue(first.any { label -> label == "Add Next event to Home" || label == "Add Now playing to Home" })
+        composeRule.onNodeWithText("Top story").assertExists()
     }
 
     @Test

@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -359,6 +360,15 @@ sealed interface LauncherShellAction {
         val targetPageId: LauncherPageId? = null,
     ) : LauncherShellAction,
         HostedWidgetAddAction
+
+    /** Places one of Riffle's own glance widgets: no platform binding, so no host id and no configuration step. */
+    data class AddGlanceWidgetToHome(
+        val kind: GlanceWidgetKind,
+        val label: String,
+        val preferredSpan: GridSpan = kind.defaultSpan,
+        val targetCell: GridCell? = null,
+        val targetPageId: LauncherPageId? = null,
+    ) : LauncherShellAction
 
     data class AddHostedWidgetToDock(
         override val hostedWidgetId: HostedWidgetId,

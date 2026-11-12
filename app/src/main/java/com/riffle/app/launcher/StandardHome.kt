@@ -53,9 +53,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.riffle.app.launcher.glance.rememberRiffleGlanceProviders
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
@@ -269,9 +271,13 @@ internal fun StandardHome(
         )
     }
     if (presentation.widgetPicker.isOpen || widgetPickerDragInProgress.value) {
+        val riffleGlance = rememberRiffleGlanceProviders()
+        // Riffle's own widgets belong to the personal profile, which is always usable.
+        val riffleGlanceProfileVisibility = mapOf(AppProfile.personal().id to AppProfileContentVisibility.VISIBLE)
         WidgetPickerSurface(
-            providers = presentation.widgetPicker.providers,
-            profileContentVisibility = presentation.widgetPicker.profileContentVisibility,
+            providers = riffleGlance + presentation.widgetPicker.providers,
+            profileContentVisibility =
+                riffleGlanceProfileVisibility + presentation.widgetPicker.profileContentVisibility,
             catalogStatus = presentation.widgetPicker.catalogStatus,
             previewImageLoader = widgetPreviewImageLoader,
             accessiblePlacement = accessibleWidgetPlacement.value,

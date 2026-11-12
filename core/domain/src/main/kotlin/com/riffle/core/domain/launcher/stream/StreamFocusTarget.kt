@@ -10,6 +10,9 @@ sealed interface StreamFocusTarget {
 
     /** The Notifications group [groupKey] (`package:profile`, the group's own key). */
     data class AppStack(val groupKey: String) : StreamFocusTarget
+
+    /** One whole section: where a glance widget on Home lands (its Now, Agenda or Feeds section). */
+    data class Section(val section: StreamSection) : StreamFocusTarget
 }
 
 /** What a [StreamFocusTarget] resolves to in the Stream as it is now: the section to scroll to and any group. */
@@ -30,6 +33,8 @@ object StreamFocus {
         notifications: StreamSectionResult?,
     ): StreamFocusResolution? =
         when (target) {
+            is StreamFocusTarget.Section ->
+                StreamFocusResolution(target.section, null).takeIf { target.section in enabledSections }
             StreamFocusTarget.Now ->
                 StreamFocusResolution(StreamSection.NOW, null).takeIf { StreamSection.NOW in enabledSections }
             is StreamFocusTarget.AppStack ->

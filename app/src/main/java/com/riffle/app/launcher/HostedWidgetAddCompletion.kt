@@ -17,6 +17,39 @@ internal fun LauncherShellViewModel.completeWidgetAdd(action: HostedWidgetAddAct
         is LauncherShellAction.AddHostedWidgetToDockPanel -> completeDockPanelWidgetAdd(action)
     }
 
+/**
+ * Places a glance widget. Unlike a platform widget there is nothing to bind or configure, so this is the whole add:
+ * the engine finds the cells (the span may come out smaller than asked, never below the kind's minimum), and a page
+ * with no room leaves the layout as it was and reports [HostedWidgetAddCompletionResult.Rejected].
+ */
+internal fun LauncherShellViewModel.completeGlanceWidgetAdd(
+    action: LauncherShellAction.AddGlanceWidgetToHome,
+): HostedWidgetAddCompletionResult {
+    val before = state.value.homeLayout
+    val page = action.targetPageId?.let { id -> before.pages.firstOrNull { it.id == id } } ?: before.selectedPage
+    val beforeIds = page.items.mapTo(HashSet()) { it.id }
+    val fitted =
+        action.copy(preferredSpan = action.preferredSpan.fitWidgetPreferredSpan(page.grid))
+    onHomeShortcutEdited(fitted)
+    val placed =
+        state.value.homeLayout.pages
+            .firstOrNull { it.id == page.id }
+            ?.items
+            .orEmpty()
+            .filterIsInstance<WidgetItem>()
+            .firstOrNull { it.glance == action.kind && it.id !in beforeIds }
+    onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
+    return if (placed == null) {
+        HostedWidgetAddCompletionResult.Rejected
+    } else {
+        HostedWidgetAddCompletionResult.Placed(
+            placed.placement?.span?.let { actual ->
+                widgetSpanAdjustmentToast(label = action.label, idealSpan = action.preferredSpan, actualSpan = actual)
+            },
+        )
+    }
+}
+
 private fun LauncherShellViewModel.completeHomeWidgetAdd(
     action: LauncherShellAction.AddHostedWidgetToHome,
 ): HostedWidgetAddCompletionResult {

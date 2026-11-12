@@ -8,7 +8,7 @@ the home screen. Code: `core/domain/.../launcher/workspace/pool/`. Tracking: #13
 
 | Piece | Where | Notes |
 | --- | --- | --- |
-| Model | `PoolModel.kt`, `PoolDock.kt` | `PoolItem` = `PoolApp` (app or shortcut), `PoolFolder` (value `FolderEntry`s), `PoolWidget` (provider, nullable host id). `Placement`, `ArrangementPage`, `Arrangement`, `PlacedItemPool` (items, arrangements, `dock`). `PoolDock` (pins, panel page, `PoolDockSettings`). |
+| Model | `PoolModel.kt`, `PoolDock.kt` | `PoolItem` = `PoolApp` (app or shortcut), `PoolFolder` (value `FolderEntry`s), `PoolWidget` (provider, nullable host id; a provider with Riffle's own reserved package `com.riffle.app` and a `glance.` class is one of Riffle's glance widgets, see [`glance-widgets.md`](glance-widgets.md): host id always null, drawn by the app, not an unbound placeholder). `Placement`, `ArrangementPage`, `Arrangement`, `PlacedItemPool` (items, arrangements, `dock`). `PoolDock` (pins, panel page, `PoolDockSettings`). |
 | Fork on first edit | `PoolArrangements.kt` | `fork` gives a workspace its own arrangement copied from the one it borrows. |
 | Standard-home projection | `PoolHomeProjection.kt` | `project` / `ingest` between the pool and a `HomeLayout` (S4 cutover). |
 | Derived references, GC, results | `PoolResults.kt` | `PoolReferences` (counts are computed, never stored), `PoolGc`, `PoolEdit`, `PoolRejection`, `HostIdDeletionQueue`. |
