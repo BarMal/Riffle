@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Typed Stream content in the domain: `StreamContent` (notification, media with an optional queue, event including calendar feeds and the next alarm, article, task, recent app), the six `StreamSection`s and `StreamContentProvider`, which observes a section as loading, ready, empty, permission required, not connected, unavailable or off, with Hide rules and content levels applied and each section's fixed grouping, sorting and limits. Nothing draws it yet.
+
 ### Changed
 
 - One glass material: `GlassSurface` now takes a weight (Thin, Regular, Thick) that owns frost, tint, contrast scrim, hairline and shadow, and draws the dock's glass sheen on every surface.
