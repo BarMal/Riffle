@@ -116,6 +116,13 @@
     <string name="stream_dock_open_action">Open Stream</string>
     <string name="stream_dock_close_action">Back to Home</string>
     <string name="dock_open_library_action">Open Library</string>
+    <string name="split_divider_label">Divider between Home and Stream</string>
+    <string name="split_state_home_only">Home only</string>
+    <string name="split_state_split">Split, Stream %1$d percent</string>
+    <string name="split_state_stream_only">Stream only</string>
+    <string name="split_action_home_only">Home only</string>
+    <string name="split_action_split">Split</string>
+    <string name="split_action_stream_only">Stream only</string>
 
     <!-- The Dock's dynamic side: live apps, now playing and the Stream button (ADR 0003) -->
     <string name="dock_live_app_slots_title">Live apps</string>

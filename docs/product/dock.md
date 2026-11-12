@@ -93,6 +93,17 @@ Each side of the dock opens its own world (ADR 0003): the pinned side the Librar
   (`DOCK_PULL_*`) and `DockPullThresholds`. A finger that lands on a settling pull catches it and tracks from where it is.
   From the Stream the same pull slides it away toward the interior and returns Home. Under reduced motion nothing slides:
   Home and the Stream crossfade.
+- **Expanded postures (P6).** On an unfolded foldable, a tablet or a desktop window Home and the Stream can share the
+  screen, so the same pull has three resting places instead of two: Home only, a split, and the Stream only
+  (`SplitMode`). The pull still tracks the finger over the window's extent along the pull axis; the Stream slides in
+  from the dock's edge over the first half of the travel, widening to its split share as it comes, and goes on to fill
+  the screen over the second half. A release settles to the **nearest of the three by where it stopped and how fast it
+  was going** (`SplitSettle`: the release is projected 0.15 s along its velocity and takes the nearest of Home only,
+  split, Stream only), so stopping partway leaves the split, a short pull springs back to Home, a long or fast one goes
+  to the Stream only. A pull on the dynamic side while the Stream shows runs the same scale downward, so it can stop at
+  a split from Stream only, or return Home. The **Stream button** toggles Home only and the last-used shown state
+  (split or Stream only); the **Home press** returns to Home only. Folded and phone postures keep the full switch above.
+  See [The split](#the-split-p6).
 - **The Library pull** moves nothing with the finger; it opens the Library when its release commits by the same rules.
 - The dock itself never moves, re-orients or fades with a pull: it is the handle you are holding.
 - **Accessibility.** The dock (and the Home surface root, so they exist when a layout hides the dock) offers the custom
@@ -107,6 +118,35 @@ Each side of the dock opens its own world (ADR 0003): the pinned side the Librar
   new handle).
 - Fallback, to be decided on a device: if the dynamic side is too narrow a target with one or two entries, the pull may
   start anywhere on the dock and choose the Library or the Stream by the half it started on.
+
+### The split (P6)
+
+On expanded postures (an unfolded foldable, a tablet, a desktop window) Home and the Stream can share the screen with a
+movable divider (ADR 0003, Folded and unfolded). Three states: **Home only**, **split**, **Stream only**. The shell still
+knows only "Stream shown or not"; whether a shown Stream is a split or the Stream alone is the user's last choice on that
+posture (`StreamSplit.lastShown`), stored with the split's fraction in `StreamLayout` (per posture, with the rest of the
+Stream's layout and its backup; layouts stored before P6 read as a 40% split). The pure logic lives in
+`core/domain/.../launcher/split/`; the UI is `launcher/split/SplitSurface.kt`.
+
+- **Which side the Stream takes.** For a bottom or top dock, the side nearer the dock's dynamic side (where the Stream
+  button is), so the pull and the pane are one gesture. For a side dock the Stream takes the side **away from** the dock,
+  so Home keeps the dock's edge. In a stacked (tabletop) split the Stream takes the pane nearer a bottom or top dock, and
+  the lower pane for a side dock.
+- **Room.** The divider moves in the window minus the system insets and the dock's room on the split axis. Each pane keeps
+  at least 280 dp and the Stream between 25% and 75% of the room; narrower than two panes and a gap, there is no split and
+  the Stream button and pull go between Home only and Stream only. The Stream's surface stops at the dock's room (Home
+  pads for it itself), so what it draws is the same from a split to the Stream only.
+- **The hinge.** A vertical hinge splits side by side, a horizontal one (tabletop) stacks the panes. The divider snaps to
+  the hinge when within 32 dp of it, and a pane that would cover the hinge is cut back to its larger side, so content
+  never crosses it. Home only and the Stream only fill the window as they do on a flat screen.
+- **The divider.** A 48 dp target with a thin glass handle, moved with the platform `draggable` (ADR 0002). On release it
+  settles to the nearest of the three states by position and velocity; past the split's limits it goes to Home only
+  (which asks the shell for Home) or the Stream only. It is focusable with the spoken label "Divider between Home and
+  Stream" and a value ("Split, Stream 40 percent"); the arrow keys along the axis move it 5% (and past the end step to
+  the next state); the accessibility actions "Home only", "Split" (the default fraction, or the hinge) and "Stream only"
+  do the same without a gesture; it also exposes a progress value. Reduced motion snaps instead of animating.
+- **Equivalents.** The dock's "Open Stream" / "Back to Home" actions, the Stream button and Ctrl + the pull arrow open the
+  last-used shown state or return to Home only.
 
 ### The dynamic side (P5)
 

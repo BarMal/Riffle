@@ -44,6 +44,8 @@ internal class StreamPullInputs(
     val available: Boolean,
     /** Whether the Stream is showing now, counting a committed switch the shell has not shown yet. */
     val shown: Boolean,
+    /** Where a pull starts on an expanded posture (Home only, split, Stream only), read fresh; null on the phone. */
+    val split: (() -> SplitPullSetup?)? = null,
 )
 
 /**
@@ -67,13 +69,13 @@ internal class HomeDockPullBinding(
     /** For the Home surface: it fades as the Stream comes in, and back in as it leaves. Identity at rest. */
     fun homeModifier(): Modifier =
         Modifier.graphicsLayer {
-            if (dockPull.running) alpha = frame.value.homeAlpha
+            if (dockPull.running && !dockPull.splitting) alpha = frame.value.homeAlpha
         }
 
     /** For the Stream: it slides in from the Dock's edge (or out toward the interior); reduced motion fades it. */
     fun streamModifier(): Modifier =
         Modifier.graphicsLayer {
-            if (dockPull.running) {
+            if (dockPull.running && !dockPull.splitting) {
                 val current = frame.value
                 val direction = dockPull.direction
                 translationX = direction.unitX * current.streamOffsetFraction * size.width
@@ -191,7 +193,9 @@ private fun dockPullActions(
         } else {
             null
         }
-    val open: (DockPullDestination) -> Boolean = { destination -> dockPull.open(destination, direction, reducedMotion) }
+    val open: (DockPullDestination) -> Boolean = { destination ->
+        dockPull.open(destination, direction, reducedMotion, stream.split?.invoke())
+    }
     val modifier =
         if (canPull) {
             Modifier.semantics {
@@ -260,6 +264,8 @@ private fun rememberDockPullGestureHost(
                 val extentPx = if (direction.unitY != 0f) window.height else window.width
                 return extentPx / latestDensity.value
             }
+
+            override fun splitSetup(): SplitPullSetup? = latestStream.value.split?.invoke()
 
             override fun destinationAt(position: Offset): DockPullDestination {
                 val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position

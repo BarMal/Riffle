@@ -63,6 +63,15 @@ dock it started on**:
   commits (a fling back toward the edge cancels; under 8 dp of movement a fling does not count). A commit settles to the
   end and asks the shell (`OpenStream` / `OpenHome`; a committed switch stands in for the shell's answer until it lands);
   a cancel springs back. A finger landing on a settling pull catches it and tracks from there (interruptible).
+- **Expanded postures (P6).** On an unfolded foldable, tablet or desktop the same pull settles to the nearest of three
+  states, Home only, a split (Home and the Stream side by side, or stacked over a tabletop's hinge) and the Stream only,
+  by where it stopped and its velocity (`SplitSettle`; the release is projected 0.15 s ahead along its velocity). The
+  Stream slides in over the first half of the travel while widening to its split share, then fills the screen over the
+  second half; stopping partway leaves the split. A pull on the dynamic side while the Stream shows runs the scale
+  downward: it can stop at a split from the Stream only, or return Home. The pull still never moves the dock, and the
+  commit thresholds above apply only to the phone's full switch. The divider between the panes is a `draggable` (no new
+  pointer loop), focusable, moved by the arrow keys along its axis and by the accessibility actions "Home only", "Split"
+  and "Stream only"; see [The split](dock.md#the-split-p6). Folded and phone postures are unchanged.
 - **Library pull.** It moves nothing with the finger; the release commits by the same rules and asks for the Library.
 - **Equivalents.** The dock's accessibility actions "Open Stream" (or "Back to Home" while the Stream shows) and "Open
   Library", also on the Home surface root so they exist when a layout hides the dock; **Ctrl + the arrow of the pull

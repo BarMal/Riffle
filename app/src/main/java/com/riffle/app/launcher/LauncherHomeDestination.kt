@@ -10,13 +10,26 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.notifications.AppStageShellState
+import com.riffle.app.launcher.split.SplitPaneState
+import com.riffle.app.launcher.split.SplitPanes
+import com.riffle.app.launcher.split.rememberSplitPaneState
+import com.riffle.app.launcher.split.streamPaneInsets
 import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -31,11 +44,15 @@ import com.riffle.core.domain.launcher.home.ModeDockEdges
 import com.riffle.core.domain.launcher.home.ModeSurface
 import com.riffle.core.domain.launcher.home.dockEdgeFor
 import com.riffle.core.domain.launcher.home.modeSurface
+import com.riffle.core.domain.launcher.split.SplitMode
+import com.riffle.core.domain.launcher.split.SplitWindow
+import com.riffle.core.domain.launcher.split.supportsSplit
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
+import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import kotlinx.coroutines.delay
 
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 fun HomeDestination(
     state: LauncherShellState,
@@ -57,6 +74,11 @@ fun HomeDestination(
     val plan = rememberHomeSurfacePlan(state)
     // A committed pull stands in for the shell's answer until the shell shows it, so the surfaces do not flicker back.
     val shownStream = rememberStreamShown(dockPull, streamShown)
+    // On an expanded posture Home and the Stream can share the screen (ADR 0003, Folded and unfolded).
+    val deviceClass = state.homeLayoutSet.activeKey.deviceClass
+    val splitting = stream != null && deviceClass.supportsSplit()
+    val splitPane = rememberSplitPaneState()
+    val splitSetup: () -> SplitPullSetup? = { if (splitting) splitPane.pullSetup() else null }
     // Cards' stages feed both its surface and its reading of the dock, so they are reconciled here, once.
     val cardsShellState = plan.cardsState?.let { cardsState -> rememberAppStageShellState(cardsState) }
     // The one interpreter contract (Decision 2): grid modes take the default reading, Cards supplies its own from
@@ -84,10 +106,23 @@ fun HomeDestination(
             installedApps = state.installedApps,
             deviceClass = state.homeLayoutSet.activeKey.deviceClass,
             onOpenStream = { target ->
-                openStream(stream, dockPull, target, shownStream, plan.dockEdge.pullDirection, state.reducedMotion())
+                openStream(
+                    stream,
+                    dockPull,
+                    target,
+                    shownStream,
+                    plan.dockEdge.pullDirection,
+                    state.reducedMotion(),
+                    splitSetup(),
+                )
             },
             onCloseStream = {
-                dockPull.open(DockPullDestination.HOME, plan.dockEdge.pullDirection, state.reducedMotion())
+                dockPull.open(
+                    DockPullDestination.HOME,
+                    plan.dockEdge.pullDirection,
+                    state.reducedMotion(),
+                    splitSetup(),
+                )
             },
             modeInterpreter = modeInterpreter,
         )
@@ -95,7 +130,12 @@ fun HomeDestination(
         rememberHomeDockPullBinding(
             state = state,
             dockEdge = plan.dockEdge,
-            stream = StreamPullInputs(available = stream != null, shown = shownStream),
+            stream =
+                StreamPullInputs(
+                    available = stream != null,
+                    shown = shownStream,
+                    split = if (splitting) splitSetup else null,
+                ),
             dockPull = dockPull,
             hostState = dockHost,
             onAction = onAction,
@@ -108,12 +148,37 @@ fun HomeDestination(
     val dockPresentation = standardHomePresentation(dockHostState, widgetRenderers)
     val showStream = stream != null && (shownStream || pull.isTransitioning)
     val showHome = !shownStream || pull.isTransitioning
+    var rootSize by remember { mutableStateOf(IntSize.Zero) }
+    if (splitting && stream != null) {
+        RememberSplit(
+            pane = splitPane,
+            dockPull = dockPull,
+            stream = stream,
+            state = dockHostState,
+            plan = plan,
+            dockHost = dockHost,
+            rootSize = rootSize,
+            hinges = adaptiveStageWindowLayout?.separatingHinges.orEmpty(),
+            shownStream = shownStream,
+            onGoHome = {
+                dockPull.pendingStreamShown = false
+                onAction(LauncherShellAction.OpenHome)
+            },
+        )
+    }
 
     // The shared backdrop every liquid-glass surface on Home samples from (see `LiquidGlassBackdrop.kt`): installed
     // here, around this content specifically, since this is exactly the wallpaper-plus-surface subtree every glass
     // surface on Home floats above.
     ProvideLiquidGlassBackdrop { backdropCapture ->
-        Box(modifier = Modifier.fillMaxSize().then(pull.rootModifier).then(backdropCapture)) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .then(pull.rootModifier)
+                    .onSizeChanged { size -> rootSize = size }
+                    .then(backdropCapture),
+        ) {
             // The one dock, outside the mode surface: composed at the same place whichever surface runs below
             // (#1205, Decision 2). Composed first so the mode's overlays cover it; the grid's own frame sits
             // beneath it (see HOME_CONTENT_Z_INDEX). The dock never moves with a pull: it is the handle.
@@ -132,7 +197,7 @@ fun HomeDestination(
             // Home first, then the Stream over it: while a pull runs both are composed and the Stream slides over
             // Home. Both stay direct siblings of the dock, so their zIndex ranks them against it (see
             // HOME_CONTENT_Z_INDEX) and the dock keeps the touches where they overlap.
-            if (showHome) {
+            val homeContent: @Composable () -> Unit = {
                 key(plan.currentMode) {
                     ModeSurfaceContent(
                         mode = plan.currentMode,
@@ -155,15 +220,42 @@ fun HomeDestination(
                     )
                 }
             }
-            if (showStream && stream != null) {
-                StreamHomeSurface(
-                    stream = stream,
-                    state = dockHostState,
-                    dockHost = dockHost,
-                    dockPosition = plan.dockEdge,
-                    appIconLoader = appIconLoader,
-                    modifier = pull.streamModifier(),
+            if (splitting && stream != null) {
+                // Home and the Stream side by side (or one over the other), with the divider between them.
+                SplitPanes(
+                    pane = splitPane,
+                    dockPull = dockPull,
+                    homeContent = homeContent,
+                    streamContent = {
+                        StreamDestination(
+                            host = stream,
+                            deviceClass = deviceClass,
+                            installedApps = dockHostState.installedApps,
+                            appIconLoader = appIconLoader,
+                            reducedMotion = state.reducedMotion(),
+                            contentPadding =
+                                streamPaneInsets(
+                                    insets =
+                                        cardsPanelInsetPolicy(dockHostState).safeDrawingPanelInsets()
+                                            .asPaddingValues(),
+                                    window = splitPane.window,
+                                    split = splitPane.restMode == SplitMode.SPLIT,
+                                ),
+                        )
+                    },
                 )
+            } else {
+                if (showHome) homeContent()
+                if (showStream && stream != null) {
+                    StreamHomeSurface(
+                        stream = stream,
+                        state = dockHostState,
+                        dockHost = dockHost,
+                        dockPosition = plan.dockEdge,
+                        appIconLoader = appIconLoader,
+                        modifier = pull.streamModifier(),
+                    )
+                }
             }
             // Nothing is composed while the feature is off or no workspaces are loaded (#1351).
             if (!shownStream) {
@@ -186,10 +278,11 @@ private fun openStream(
     shown: Boolean,
     direction: DockPullDirection,
     reducedMotion: Boolean,
+    split: SplitPullSetup?,
 ) {
     if (stream == null) return
     target?.let(stream.focus::request)
-    if (!shown) dockPull.open(DockPullDestination.STREAM, direction, reducedMotion)
+    if (!shown) dockPull.open(DockPullDestination.STREAM, direction, reducedMotion, split)
 }
 
 /**
@@ -247,6 +340,65 @@ private fun StreamHomeSurface(
             reducedMotion = state.launcherSettings.motion.reducedMotion,
             contentPadding = insets,
         )
+    }
+}
+
+/**
+ * Keeps [pane] current for an expanded posture: the window (size, insets, the Dock's room and side, hinges), the
+ * remembered split read from and written to the Stream's layout store, and the stand-ins the pane settles through.
+ */
+@Composable
+private fun RememberSplit(
+    pane: SplitPaneState,
+    dockPull: DockPullState,
+    stream: StreamHost,
+    state: LauncherShellState,
+    plan: HomeSurfacePlan,
+    dockHost: HomeDockHostState,
+    rootSize: IntSize,
+    hinges: List<com.riffle.core.domain.launcher.cards.AdaptiveStageHingeBounds>,
+    shownStream: Boolean,
+    onGoHome: () -> Unit,
+) {
+    val deviceClass = state.homeLayoutSet.activeKey.deviceClass
+    val density = LocalDensity.current.density
+    val insets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets().asPaddingValues()
+    val dockExtent = dockHost.reservedExtent(state.homeLayout.visibleTo(state.installedApps), plan.dockEdge)
+    val dockBounds = dockHost.bounds.value
+    val dynamicBounds = dockHost.dynamicBounds.value
+    val dynamicAtRight =
+        if (dockBounds != null && dynamicBounds != null) dynamicBounds.center.x >= dockBounds.center.x else true
+    val window =
+        if (rootSize == IntSize.Zero) {
+            null
+        } else {
+            SplitWindow(
+                widthDp = rootSize.width / density,
+                heightDp = rootSize.height / density,
+                dockEdge = plan.dockEdge,
+                dockExtentDp = dockExtent.value,
+                safeLeftDp = insets.calculateLeftPadding(LayoutDirection.Ltr).value,
+                safeTopDp = insets.calculateTopPadding().value,
+                safeRightDp = insets.calculateRightPadding(LayoutDirection.Ltr).value,
+                safeBottomDp = insets.calculateBottomPadding().value,
+                hinges = hinges,
+                dynamicSideAtRight = dynamicAtRight,
+            )
+        }
+    val layouts by stream.layouts.layouts.collectAsState()
+    val stored = layouts.forPosture(deviceClass).split
+    val shell = rememberUpdatedState(shownStream)
+    LaunchedEffect(stream) { stream.layouts.initialize() }
+    LaunchedEffect(stored) { pane.split = stored }
+    SideEffect {
+        pane.window = window
+        pane.reducedMotion = state.reducedMotion()
+        pane.streamShown = { dockPull.pendingStreamShown ?: shell.value }
+        pane.onGoHome = onGoHome
+        pane.onSplitChanged = { next ->
+            stream.layouts.update(deviceClass, StreamLayoutAction.SetSplit(next.fraction, next.lastShown))
+        }
+        dockPull.onSplitSettled = pane::onPullSettled
     }
 }
 

@@ -30,9 +30,23 @@ import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.DockPullDrag
 import com.riffle.core.domain.launcher.dockpull.SettleOutcome
 import com.riffle.core.domain.launcher.dockpull.dockPullClaimFor
+import com.riffle.core.domain.launcher.split.SplitMode
+import com.riffle.core.domain.launcher.split.SplitModes
+import com.riffle.core.domain.launcher.split.SplitReveal
+import com.riffle.core.domain.launcher.split.SplitSettle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+
+/**
+ * What an expanded posture's pull needs to know where it starts (ADR 0003, Folded and unfolded): the mode it starts
+ * from, the last-used shown mode a Stream button settles at, and whether the screen has room for a split at all.
+ */
+internal class SplitPullSetup(
+    val startMode: SplitMode,
+    val lastShown: SplitMode,
+    val splitAvailable: Boolean,
+)
 
 /**
  * The UI side of the Dock pull (ADR 0003, The Dock is the handle): holds a [DockPullDrag] while the finger is down,
@@ -52,6 +66,7 @@ internal class DockPullState(
     private var destination: DockPullDestination = DockPullDestination.LIBRARY
     private var reducedMotion: Boolean = false
     private var settledTravelDp: Float = 1f
+    private var split: SplitPullSetup? = null
 
     /** Whether the Stream is being pulled in or out, or is settling after it. Changes at a pull's start and end. */
     var running: Boolean by mutableStateOf(false)
@@ -68,6 +83,23 @@ internal class DockPullState(
     /** The direction the running pull moves in: away from the Dock's edge. */
     var direction: DockPullDirection by mutableStateOf(DockPullDirection.UP)
         private set
+
+    /** Whether the running pull moves between Home only, a split and Stream only (an expanded posture). */
+    var splitting: Boolean by mutableStateOf(false)
+        private set
+
+    /**
+     * How much Stream a splitting pull shows, 0 (Home only) to 1 (Stream only), a split at half: the pull's progress
+     * mapped through where it started. Read it in layout and draw blocks, not composition.
+     */
+    val reveal: Float
+        get() = SplitReveal.reveal(progress, splitStartReveal, opening)
+
+    private val splitStartReveal: Float
+        get() = split?.let { SplitSettle.anchorOf(it.startMode) } ?: 0f
+
+    /** Called, before a splitting pull's surfaces rest, with the mode it settled in (even when it did not change). */
+    var onSplitSettled: (SplitMode) -> Unit = {}
 
     /**
      * A committed switch the shell has not shown yet: the Stream (true) or Home (false). While it is set it stands in
@@ -95,8 +127,11 @@ internal class DockPullState(
         direction: DockPullDirection,
         travelDp: Float,
         reducedMotion: Boolean,
+        split: SplitPullSetup? = null,
     ) {
         settleJob?.cancel()
+        this.split = split.takeIf { destination != DockPullDestination.LIBRARY }
+        splitting = this.split != null
         this.destination = destination
         this.reducedMotion = reducedMotion
         this.direction = direction
@@ -125,14 +160,31 @@ internal class DockPullState(
     ) {
         val current = drag ?: return
         drag = null
-        settle(current.release(velocityXDpPerSecond, velocityYDpPerSecond))
+        val setup = split
+        if (setup == null || !running) {
+            settle(current.release(velocityXDpPerSecond, velocityYDpPerSecond))
+            return
+        }
+        // An expanded posture settles to the nearest of the three states by where it stopped and how fast it was going.
+        val startReveal = SplitSettle.anchorOf(setup.startMode)
+        val progressVelocity = current.direction.along(velocityXDpPerSecond, velocityYDpPerSecond) / current.travelDp
+        val mode =
+            SplitSettle.settlePull(
+                reveal = SplitReveal.reveal(current.progress, startReveal, opening),
+                revealVelocityPerSecond = SplitReveal.revealVelocity(progressVelocity, startReveal, opening),
+                gestureDistanceDp = current.gestureDistanceDp,
+                startMode = setup.startMode,
+                splitAvailable = setup.splitAvailable,
+            )
+        settleSplit(setup, mode)
     }
 
     /** The gesture was taken away: spring back. */
     fun cancel() {
         if (drag == null) return
         drag = null
-        settle(SettleOutcome.CANCEL)
+        val setup = split
+        if (setup != null && running) settleSplit(setup, setup.startMode) else settle(SettleOutcome.CANCEL)
     }
 
     /**
@@ -143,16 +195,52 @@ internal class DockPullState(
         destination: DockPullDestination,
         direction: DockPullDirection,
         reducedMotion: Boolean,
+        split: SplitPullSetup? = null,
     ): Boolean {
         val free = !running && drag == null && pendingStreamShown == null
         if (free && destination == DockPullDestination.LIBRARY) {
             onCommitted(destination)
         } else if (free) {
-            start(destination, direction, travelDp = 1f, reducedMotion = reducedMotion)
+            start(destination, direction, travelDp = 1f, reducedMotion = reducedMotion, split = split)
             drag = null
-            settle(SettleOutcome.COMMIT)
+            if (split == null) {
+                settle(SettleOutcome.COMMIT)
+            } else {
+                val mode =
+                    if (destination == DockPullDestination.STREAM) {
+                        SplitModes.shownMode(split.lastShown, split.splitAvailable)
+                    } else {
+                        SplitMode.HOME_ONLY
+                    }
+                settleSplit(split, mode)
+            }
         }
         return free
+    }
+
+    /** Animates a splitting pull to the reveal that [mode] rests at, then tells the host where it ended. */
+    private fun settleSplit(
+        setup: SplitPullSetup,
+        mode: SplitMode,
+    ) {
+        val startReveal = SplitSettle.anchorOf(setup.startMode)
+        val target = SplitReveal.progressFor(SplitSettle.anchorOf(mode), startReveal, opening)
+        val shownChanges = mode.showsStream != setup.startMode.showsStream
+        settleJob?.cancel()
+        settleJob =
+            scope.launch {
+                Animatable(progress).animateTo(target, animationSpec = dockPullSettleSpec(reducedMotion)) {
+                    progress = value
+                }
+                onSplitSettled(mode)
+                if (shownChanges) pendingStreamShown = mode.showsStream
+                running = false
+                splitting = false
+                progress = 0f
+                if (shownChanges) {
+                    onCommitted(if (mode.showsStream) DockPullDestination.STREAM else DockPullDestination.HOME)
+                }
+            }
     }
 
     private fun settle(outcome: SettleOutcome) {
@@ -172,6 +260,7 @@ internal class DockPullState(
                     pendingStreamShown = destination == DockPullDestination.STREAM
                 }
                 running = false
+                splitting = false
                 progress = 0f
                 if (outcome == SettleOutcome.COMMIT) onCommitted(destination)
             }
@@ -206,6 +295,9 @@ internal interface DockPullGestureHost {
 
     /** Where a pull that landed at [position] (in the gesture's own coordinates) leads. */
     fun destinationAt(position: Offset): DockPullDestination
+
+    /** The split a pull on an expanded posture moves through, or null where the Stream and Home swap completely. */
+    fun splitSetup(): SplitPullSetup? = null
 }
 
 /**
@@ -268,6 +360,7 @@ private suspend fun AwaitPointerEventScope.awaitPullClaim(
                                 direction = direction,
                                 travelDp = host.travelDp(direction),
                                 reducedMotion = host.reducedMotion,
+                                split = host.splitSetup(),
                             )
                             // From where the finger landed, so the Stream tracks it 1:1 from the start.
                             host.state.drag(drag.x / density, drag.y / density)
