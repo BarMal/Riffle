@@ -191,7 +191,7 @@ private fun SearchTopControls(
 }
 
 @Composable
-private fun SearchResultList(
+internal fun SearchResultList(
     results: List<SearchGridResult>,
     appListContext: AppListContext,
     emptyText: String,

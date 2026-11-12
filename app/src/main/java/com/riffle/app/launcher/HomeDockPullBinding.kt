@@ -64,24 +64,54 @@ internal class HomeDockPullBinding(
 ) {
     /** Whether the Stream is being pulled in or out (or is settling after it): both surfaces are composed then. */
     val isTransitioning: Boolean
-        get() = dockPull.running
+        get() = dockPull.streamRunning
 
-    /** For the Home surface: it fades as the Stream comes in, and back in as it leaves. Identity at rest. */
-    fun homeModifier(): Modifier =
+    /** Whether the Library's sheet is being pulled up (or is settling after it): it is composed then. */
+    val isLibraryTransitioning: Boolean
+        get() = dockPull.libraryRunning
+
+    /**
+     * How far the Library's sheet still is from fully open while a pull runs, 0 (open) to 1 (away at the Dock's edge),
+     * or null when no pull to the Library runs. Read it in a graphics layer so a pull redraws without recomposing.
+     */
+    fun libraryAwayFraction(): Float? = if (dockPull.libraryRunning) 1f - dockPull.progress.coerceIn(0f, 1f) else null
+
+    /**
+     * For the Home surface: it fades as the Stream comes in, and back in as it leaves; it fades out as the Library's
+     * sheet rises and stays out while that covers it ([libraryShown]). Identity at rest.
+     */
+    fun homeModifier(libraryShown: Boolean = false): Modifier =
         Modifier.graphicsLayer {
-            if (dockPull.running && !dockPull.splitting) alpha = frame.value.homeAlpha
+            alpha = coveredAlpha(libraryShown, streamAlpha = frame.value.homeAlpha)
         }
 
-    /** For the Stream: it slides in from the Dock's edge (or out toward the interior); reduced motion fades it. */
-    fun streamModifier(): Modifier =
+    /**
+     * For the Stream: it slides in from the Dock's edge (or out toward the interior); reduced motion fades it. Under
+     * the Library's sheet it fades out like Home does.
+     */
+    fun streamModifier(libraryShown: Boolean = false): Modifier =
         Modifier.graphicsLayer {
-            if (dockPull.running && !dockPull.splitting) {
+            if (dockPull.streamRunning && !dockPull.splitting) {
                 val current = frame.value
                 val direction = dockPull.direction
                 translationX = direction.unitX * current.streamOffsetFraction * size.width
                 translationY = direction.unitY * current.streamOffsetFraction * size.height
                 alpha = current.streamAlpha
+            } else {
+                alpha = coveredAlpha(libraryShown, streamAlpha = 1f)
             }
+        }
+
+    /** What a surface under the Library shows at: [streamAlpha] while a Stream pull runs, else faded by the sheet. */
+    private fun coveredAlpha(
+        libraryShown: Boolean,
+        streamAlpha: Float,
+    ): Float =
+        when {
+            dockPull.streamRunning && !dockPull.splitting -> streamAlpha
+            dockPull.libraryRunning -> 1f - dockPull.progress.coerceIn(0f, 1f)
+            libraryShown -> 0f
+            else -> 1f
         }
 }
 
@@ -101,7 +131,9 @@ internal fun rememberHomeDockPullBinding(
     val reducedMotion = state.launcherSettings.motion.reducedMotion
     val direction = dockEdge.pullDirection
     // No pull while the layout is being edited (long-press + drag moves dock items then) or a widget is being placed.
-    val canPull = state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen
+    // The Library is already open then: it closes by Back, Home, a pull down on its header or its Close action.
+    val canPull =
+        state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen && !state.destination.isLibrary
     val latestOnAction = rememberUpdatedState(onAction)
     SideEffect {
         dockPull.onCommitted = { destination ->
@@ -260,7 +292,9 @@ private fun rememberDockPullGestureHost(
             override val state: DockPullState = dockPull
 
             override val canPull: Boolean
-                get() = latestCanPull.value && dockPull.pendingStreamShown == null && rootSize.value != IntSize.Zero
+                get() =
+                    latestCanPull.value && dockPull.pendingStreamShown == null && !dockPull.pendingLibraryShown &&
+                        rootSize.value != IntSize.Zero
 
             override val reducedMotion: Boolean
                 get() = latestReducedMotion.value

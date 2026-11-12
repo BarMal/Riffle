@@ -198,10 +198,11 @@ class HomeSwipeGestureInterpreterTest {
         assertNull(actionMapper.actionFor(HomeGesture.PINCH_OUT))
         assertNull(actionMapper.actionFor(HomeGesture.THREE_FINGER_UP))
         assertNull(actionMapper.actionFor(HomeGesture.THREE_FINGER_DOWN))
-        assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeGesture.ONE_FINGER_DOWN))
+        // Swipe down opens the Library with its search field focused (ADR 0003).
+        assertEquals(LauncherShellAction.OpenSearch, actionMapper.actionFor(HomeGesture.ONE_FINGER_DOWN))
         assertEquals(LauncherShellAction.SelectNextHomePage, actionMapper.actionFor(HomeGesture.ONE_FINGER_LEFT))
         assertEquals(LauncherShellAction.SelectPreviousHomePage, actionMapper.actionFor(HomeGesture.ONE_FINGER_RIGHT))
-        assertEquals(LauncherShellAction.OpenSearch, actionMapper.actionFor(HomeGesture.TWO_FINGER_UP))
+        assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeGesture.TWO_FINGER_UP))
         assertEquals(LauncherShellAction.OpenSettings, actionMapper.actionFor(HomeGesture.TWO_FINGER_DOWN))
         assertEquals(LauncherShellAction.EnterHomeEditMode, actionMapper.actionFor(HomeGesture.PINCH_IN))
     }
@@ -284,13 +285,13 @@ class HomeSwipeGestureInterpreterTest {
             HomeGestureSettings(
                 actions =
                     mapOf(
-                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
-                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_SEARCH,
+                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
                     ),
             )
 
         assertEquals(
-            "Conflicting gestures: Search: Swipe up, Two-finger swipe up, Pinch out",
+            "Conflicting gestures: Notifications: Swipe up, Two-finger swipe up, Pinch out",
             homeGestureConflictSummary(GestureSettings(homeGestures = settings)),
         )
     }
@@ -303,7 +304,7 @@ class HomeSwipeGestureInterpreterTest {
                     mapOf(
                         HomeGesture.ONE_FINGER_UP to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                         HomeGesture.TWO_FINGER_UP to LauncherGestureAction.NONE,
-                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_SEARCH,
+                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
                     ),
             )
 

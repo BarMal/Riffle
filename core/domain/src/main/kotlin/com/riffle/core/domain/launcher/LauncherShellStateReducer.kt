@@ -48,7 +48,17 @@ class LauncherShellStateReducer {
     fun navigationActionSelected(
         currentState: LauncherShellState,
         action: ShellNavigationAction,
-    ): LauncherShellState = currentState.copy(destination = action.destination)
+    ): LauncherShellState {
+        val destination = action.destination
+        // The Library rises over whatever showed when it opened, and closing it returns there.
+        val overStream =
+            destination.isLibrary &&
+                (
+                    currentState.destination == ShellDestination.STREAM ||
+                        (currentState.destination.isLibrary && currentState.libraryOverStream)
+                )
+        return currentState.copy(destination = destination, libraryOverStream = overStream)
+    }
 
     private fun firstRunStatusFor(
         currentState: LauncherShellState,

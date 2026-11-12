@@ -8,10 +8,13 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.WallpaperSettings
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.rss.FeedStagePreferences
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
 data class LauncherSettings(
     val appDrawer: AppDrawerSettings = AppDrawerSettings(),
@@ -38,13 +41,25 @@ data class HomeBehaviourSettings(
     val returnBehavior: ReturnBehavior = ReturnBehavior.RESTORE,
 )
 
-/** Durable presentation preferences for the launcher app drawer. */
+/**
+ * Durable presentation preferences for the Library (the app drawer, ADR 0003): which [LibraryView] each device class
+ * draws, and the icon grid's column count. A class with no stored view draws [LibraryView.DEFAULT].
+ */
 data class AppDrawerSettings(
-    val presentation: AppDrawerPresentation = AppDrawerPresentation.LIST,
+    val libraryViews: Map<HomeLayoutDeviceClass, LibraryView> = emptyMap(),
     val iconGridColumns: Int = DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS,
     /** Where the launcher settles after leaving Library, the app drawer (Decision 10, #1243). */
     val afterLeavingLibrary: LibraryReturnTarget = LibraryReturnTarget.LIBRARY,
-)
+) {
+    /** The view the Library draws on [deviceClass]; landscape phones share the phone's (as workspaces do). */
+    fun libraryViewFor(deviceClass: HomeLayoutDeviceClass): LibraryView =
+        libraryViews[deviceClass.workspaceLayoutClass()] ?: LibraryView.DEFAULT
+
+    fun withLibraryView(
+        deviceClass: HomeLayoutDeviceClass,
+        view: LibraryView,
+    ): AppDrawerSettings = copy(libraryViews = libraryViews + (deviceClass.workspaceLayoutClass() to view))
+}
 
 /**
  * Where the launcher settles after an app launch, a Home press or Back from Library, and on a cold
@@ -60,6 +75,7 @@ enum class LibraryReturnTarget {
     LIBRARY,
 }
 
+/** The app drawer's old presentation choice; only read to carry a stored value over to a [LibraryView]. */
 enum class AppDrawerPresentation {
     LIST,
     ICONS,
@@ -372,10 +388,10 @@ enum class HomeGesture {
 val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
     mapOf(
         HomeGesture.ONE_FINGER_UP to LauncherGestureAction.NONE,
-        HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_NOTIFICATIONS,
+        HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_SEARCH,
         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
-        HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
+        HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_NOTIFICATIONS,
         HomeGesture.TWO_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
@@ -494,7 +510,7 @@ const val MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP = 80
 
 data class HomeSwipeGestureSettings(
     val up: LauncherGestureAction = LauncherGestureAction.NONE,
-    val down: LauncherGestureAction = LauncherGestureAction.OPEN_NOTIFICATIONS,
+    val down: LauncherGestureAction = LauncherGestureAction.OPEN_SEARCH,
     val left: LauncherGestureAction = LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
     val right: LauncherGestureAction = LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
 )

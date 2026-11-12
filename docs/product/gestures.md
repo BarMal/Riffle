@@ -14,6 +14,10 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 > longer switches Home and Library. See ["The Dock pull (P5)"](#the-dock-pull-p5). The older sections below are kept as
 > history where they are not restated.
 
+> **P7 (2026-11-12).** The Library is its own surface: a Thick glass sheet that rises over Home or the Stream with the
+> Dock still drawn under it, no longer a workspace Finder page or the full-screen app drawer. Its pull now tracks the
+> finger. See ["The Library (P7)"](#the-library-p7).
+
 > **Plan revision 2026-10-01 (WS10, as built at S9, 2026-10-24).** Workspaces are the launcher's home and the
 > Home/Library mode pair is no longer a user concept (`workspaces-configuration.md` 3.1, 11.5;
 > [`workspaces-default.md`](workspaces-default.md)). The dock pull opened the workspace menu (owner decision Q9) until P5.
@@ -44,7 +48,7 @@ dock it started on**:
 
 | Starts on | Result |
 | --- | --- |
-| The pinned side (pinned apps, the divider, any padding before the dynamic section) | The Library (`OpenAppDrawer`, the app drawer until P7 reworks it) -- from Home and from the Stream |
+| The pinned side (pinned apps, the divider, any padding before the dynamic section) | The Library (`OpenAppDrawer`), tracking the finger -- from Home and from the Stream |
 | The dynamic side (live apps, now playing, the Stream button, and the dock padding beyond them) | The Stream, tracking the finger; from the Stream, Home |
 
 - **Claim.** One finger on the dock body, past touch slop, leading along the natural pull direction (its component along
@@ -72,7 +76,12 @@ dock it started on**:
   commit thresholds above apply only to the phone's full switch. The divider between the panes is a `draggable` (no new
   pointer loop), focusable, moved by the arrow keys along its axis and by the accessibility actions "Home only", "Split"
   and "Stream only"; see [The split](dock.md#the-split-p6). Folded and phone postures are unchanged.
-- **Library pull.** It moves nothing with the finger; the release commits by the same rules and asks for the Library.
+- **Library pull (P7).** The Library's sheet rises from the Dock's edge as the finger moves, 1:1, while what is under it
+  (Home or the Stream) fades out; the Dock does not move. The release commits by the same rules as the Stream pull
+  (`DockPullThresholds`: 30% of the travel or 600 dp/s toward the interior), settles to open (a committed pull stands in
+  for the shell's answer until it lands) or springs back, and a finger landing on a settling pull catches it
+  (interruptible). Reduced motion: the sheet fades in instead of sliding. It never splits, whatever the posture. While
+  the Library shows the Dock pull is not claimed.
 - **Equivalents.** The dock's accessibility actions "Open Stream" (or "Back to Home" while the Stream shows) and "Open
   Library", also on the Home surface root so they exist when a layout hides the dock; **Ctrl + the arrow of the pull
   direction** (Ctrl+Up for a bottom dock) opens the Stream or returns Home, **Ctrl + Shift + that arrow** opens the Library;
@@ -81,6 +90,36 @@ dock it started on**:
   and the shortcut no longer open it.
 - **Taps on the dynamic side.** The Stream button toggles Home and the Stream; a live app opens the Stream on that app's
   stack (the Notifications section scrolls to it and the group comes into view); now playing opens it on the Now section.
+
+## The Library (P7)
+
+The Library (ADR 0003) is a Thick glass sheet over Home or the Stream, sized to what the Dock leaves free and inside the
+system bar insets, with the Dock still drawn and tappable under it. It is `ShellDestination.APP_DRAWER` (the name kept for
+the stored routing), or `SEARCH` when it opens with the search field focused and the keyboard up; the shell remembers
+whether it opened over the Stream (`libraryOverStream`) so closing returns there.
+
+- **Open.** The pinned-side Dock pull (above), the home gesture **Library** (`OPEN_LIBRARY`), the Dock's "Open Library"
+  action, Ctrl + Shift + the pull arrow, and **Search** (`OPEN_SEARCH`), which opens the Library with its field focused
+  and the keyboard up. **Swipe down** (`ONE_FINGER_DOWN`) is bound to Search by default now (it was Notifications); the
+  two-finger swipe up took Notifications' place, so nothing else changes and every binding stays user-configurable. A
+  stored value is kept as it was: only an unset binding takes the new default. The search pill on Home asks for the same
+  thing.
+- **Close.** Back (the open category or the typed query first), the Home button, a pull toward the Dock's edge on the
+  sheet's header (the same commit thresholds as the pull; it tracks the finger), a tap on the margin around the sheet, the
+  header's "Close Library" accessibility action, or launching an app, a shortcut or a web search from it. Back, the
+  header close and the Home button return to what the Library opened over (Home or the Stream).
+- **Header.** Long-press it, or use its options button, for **Show as** Categories, A-Z list or Grid (the same menu and
+  wording as the Stream's section headers): it redraws at once and offers Undo. The view is stored per device class.
+  The header node carries one custom-actions list ("Close Library" and each "Show as" view) for assistive technology.
+- **Search.** The field at the top; typing replaces the view with results (apps first, then app shortcuts, then settings,
+  each in the search source's own order, plus the web panel); Enter launches the top hit; clearing the field restores the
+  view. Results are drawn inside a Regular glass panel with the spotlight.
+- **Icons.** Tap launches; long-press opens the app menu (Add to Home, Pin to Dock, shortcuts, App info, Hide,
+  Uninstall). There is no drag-out of the Library onto Home (the drawer never had one, and a new drag system is out of
+  scope); Add to Home is its equivalent. The Personal and Work chips filter the view when more than one profile exists.
+- **Recents and frequent apps** are not in the Library; they are the Stream's Recents section.
+- **Arbitration.** The header's drag is a platform `draggable` (no new pointer loop); the lists and grids scroll vertically
+  inside the sheet, so they never compete with it. The Dock pull is not claimed while the Library shows.
 
 ## The Stream (P4, entry points restated by P5)
 
@@ -191,7 +230,7 @@ means no default binding, so nothing happens unless the user binds the gesture.
 
 | Region | Input | Std / Lib | Cards |
 | --- | --- | --- | --- |
-| Dock body, pinned side | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the Library (claims past touch slop when the drag leads along the pull); no tracking | same |
+| Dock body, pinned side | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the Library, tracking the finger (claims past touch slop when the drag leads along the pull) | same |
 | Dock body, dynamic side | 1-finger in the natural pull direction | **Dock pull**: opens the Stream, tracking the finger (from the Stream: returns Home) | same |
 | Dock, Stream button / live app / now playing | tap | Stream button toggles Home and the Stream; a live app or now playing opens the Stream on its stack or on Now | same |
 | Dock sections (dynamic, notification row) | 1-finger along the dock run | Section scrolls (owns) | Section scrolls (owns) |
@@ -206,7 +245,7 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Card stack | 2-finger | – | Stack (first finger's drag wins; see limitations) |
 | Card stack | 3-finger | – | **Home claims** (unbound by default) |
 | Grid / workspace | 1-finger horizontal | Page pager (owns) | – |
-| Grid / workspace | 1-finger vertical | Home (up: unbound, down: notifications) | – |
+| Grid / workspace | 1-finger vertical | Home (up: unbound, down: Search, which opens the Library with its field focused) | – |
 | Grid / workspace | long-press + drag | Item drag (owns) | – |
 | Grid / workspace | 2-finger swipe | Home (up: search, down: settings) | – |
 | Grid / workspace | pinch | Home (in: edit mode, out: unbound) | – |

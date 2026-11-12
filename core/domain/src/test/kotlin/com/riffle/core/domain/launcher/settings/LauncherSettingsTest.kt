@@ -3,8 +3,10 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.library.LibraryView
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -50,8 +52,12 @@ class LauncherSettingsTest {
     }
 
     @Test
-    fun defaultsAppDrawerToListPresentationWithFourIconColumns() {
-        assertEquals(AppDrawerPresentation.LIST, LauncherSettings().appDrawer.presentation)
+    fun defaultsTheLibraryToCategoriesWithFourIconColumns() {
+        assertEquals(emptyMap(), LauncherSettings().appDrawer.libraryViews)
+        assertEquals(
+            LibraryView.Categories,
+            LauncherSettings().appDrawer.libraryViewFor(HomeLayoutDeviceClass.PHONE),
+        )
         assertEquals(DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS, LauncherSettings().appDrawer.iconGridColumns)
     }
 
@@ -195,11 +201,11 @@ class LauncherSettingsTest {
         val settings = LauncherSettings()
 
         assertEquals(LauncherGestureAction.NONE, settings.gestures.homeSwipe.up)
-        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, settings.gestures.homeSwipe.down)
+        assertEquals(LauncherGestureAction.OPEN_SEARCH, settings.gestures.homeSwipe.down)
         assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, settings.gestures.homeSwipe.left)
         assertEquals(LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE, settings.gestures.homeSwipe.right)
         assertEquals(
-            LauncherGestureAction.OPEN_SEARCH,
+            LauncherGestureAction.OPEN_NOTIFICATIONS,
             settings.gestures.homeGestures.actionFor(HomeGesture.TWO_FINGER_UP),
         )
         assertEquals(
@@ -222,7 +228,7 @@ class LauncherSettingsTest {
                             HomeGestureSettings(
                                 actions =
                                     mapOf(
-                                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_SEARCH,
+                                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_NOTIFICATIONS,
                                     ),
                             ),
                     ),
@@ -232,7 +238,7 @@ class LauncherSettingsTest {
             listOf(
                 LauncherGestureConflict(
                     surface = LauncherGestureSurface.HOME_PAGE,
-                    action = LauncherGestureAction.OPEN_SEARCH,
+                    action = LauncherGestureAction.OPEN_NOTIFICATIONS,
                     gestures = listOf(LauncherGesture.TWO_FINGER_UP, LauncherGesture.TWO_FINGER_LEFT),
                 ),
             ),

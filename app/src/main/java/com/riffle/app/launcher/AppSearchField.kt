@@ -18,6 +18,8 @@ fun AppSearchField(
     onQueryChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
     label: String = "Search apps",
+    /** Called when the Search or Enter key is pressed, before the keyboard hides (the Library launches the top hit). */
+    onSearch: () -> Unit = {},
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -27,7 +29,13 @@ fun AppSearchField(
         onValueChange = onQueryChanged,
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
+        keyboardActions =
+            KeyboardActions(
+                onSearch = {
+                    onSearch()
+                    keyboardController?.hide()
+                },
+            ),
         label = { Text(text = label) },
         trailingIcon = {
             if (query.isNotEmpty()) {

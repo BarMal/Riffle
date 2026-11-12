@@ -53,9 +53,10 @@ internal class SplitPullSetup(
  * animates the settle after it and reports a committed destination through [onCommitted].
  *
  * Nothing here decides anything: which side a pull started on, what it opens, whether a release commits and how the
- * Stream and Home are drawn along the way are the domain's (`dockpull/`). A pull that opens the Library does not
- * move anything with the finger ([running] stays false); one that opens or closes the Stream tracks the finger 1:1
- * ([progress]), can be caught again mid-settle, and commits by travel or velocity.
+ * Stream and Home are drawn along the way are the domain's (`dockpull/`). A pull that opens the Library raises its
+ * sheet from the Dock's edge and one that opens or closes the Stream slides it; both track the finger 1:1 ([progress]),
+ * can be caught again mid-settle, and commit by travel or velocity ([libraryRunning], [streamRunning] tell them
+ * apart).
  */
 @Stable
 internal class DockPullState(
@@ -63,14 +64,22 @@ internal class DockPullState(
 ) {
     private var settleJob: Job? = null
     private var drag: DockPullDrag? = null
-    private var destination: DockPullDestination = DockPullDestination.LIBRARY
+    private var destination: DockPullDestination by mutableStateOf(DockPullDestination.LIBRARY)
     private var reducedMotion: Boolean = false
     private var settledTravelDp: Float = 1f
     private var split: SplitPullSetup? = null
 
-    /** Whether the Stream is being pulled in or out, or is settling after it. Changes at a pull's start and end. */
+    /** Whether a pull is under way or settling after it. Changes at a pull's start and end. */
     var running: Boolean by mutableStateOf(false)
         private set
+
+    /** Whether the Library's sheet is being pulled up, or is settling after it. */
+    val libraryRunning: Boolean
+        get() = running && destination == DockPullDestination.LIBRARY
+
+    /** Whether the Stream is being pulled in or out, or is settling after it. */
+    val streamRunning: Boolean
+        get() = running && destination != DockPullDestination.LIBRARY
 
     /** How far the Stream and Home have moved from one to the other, 0..1. Read it in draw blocks, not composition. */
     var progress: Float by mutableFloatStateOf(0f)
@@ -107,6 +116,9 @@ internal class DockPullState(
      */
     var pendingStreamShown: Boolean? by mutableStateOf(null)
 
+    /** A committed pull to the Library the shell has not shown yet, so the sheet does not drop away for a frame. */
+    var pendingLibraryShown: Boolean by mutableStateOf(false)
+
     /** Called when a pull commits, with where it leads; the host dispatches the shell action. */
     var onCommitted: (DockPullDestination) -> Unit = {}
 
@@ -130,6 +142,8 @@ internal class DockPullState(
         split: SplitPullSetup? = null,
     ) {
         settleJob?.cancel()
+        // Going to the Stream or Home supersedes a Library the shell has not shown yet.
+        if (destination != DockPullDestination.LIBRARY) pendingLibraryShown = false
         this.split = split.takeIf { destination != DockPullDestination.LIBRARY }
         splitting = this.split != null
         this.destination = destination
@@ -137,11 +151,9 @@ internal class DockPullState(
         this.direction = direction
         settledTravelDp = travelDp
         drag = DockPullDrag(direction, travelDp)
-        if (destination != DockPullDestination.LIBRARY) {
-            opening = destination == DockPullDestination.STREAM
-            progress = 0f
-            running = true
-        }
+        opening = destination != DockPullDestination.HOME
+        progress = 0f
+        running = true
     }
 
     fun drag(
@@ -198,21 +210,21 @@ internal class DockPullState(
         split: SplitPullSetup? = null,
     ): Boolean {
         val free = !running && drag == null && pendingStreamShown == null
-        if (free && destination == DockPullDestination.LIBRARY) {
-            onCommitted(destination)
-        } else if (free) {
-            start(destination, direction, travelDp = 1f, reducedMotion = reducedMotion, split = split)
+        if (free) {
+            // The Library never splits: it is a sheet over whatever shows.
+            val setup = split.takeIf { destination != DockPullDestination.LIBRARY }
+            start(destination, direction, travelDp = 1f, reducedMotion = reducedMotion, split = setup)
             drag = null
-            if (split == null) {
+            if (setup == null) {
                 settle(SettleOutcome.COMMIT)
             } else {
                 val mode =
                     if (destination == DockPullDestination.STREAM) {
-                        SplitModes.shownMode(split.lastShown, split.splitAvailable)
+                        SplitModes.shownMode(setup.lastShown, setup.splitAvailable)
                     } else {
                         SplitMode.HOME_ONLY
                     }
-                settleSplit(split, mode)
+                settleSplit(setup, mode)
             }
         }
         return free
@@ -244,11 +256,7 @@ internal class DockPullState(
     }
 
     private fun settle(outcome: SettleOutcome) {
-        if (!running) {
-            // The Library: nothing moved, so there is nothing to animate; the outcome is the whole answer.
-            if (outcome == SettleOutcome.COMMIT) onCommitted(destination)
-            return
-        }
+        if (!running) return
         val target = if (outcome == SettleOutcome.COMMIT) 1f else 0f
         settleJob?.cancel()
         settleJob =
@@ -257,7 +265,11 @@ internal class DockPullState(
                     progress = value
                 }
                 if (outcome == SettleOutcome.COMMIT) {
-                    pendingStreamShown = destination == DockPullDestination.STREAM
+                    if (destination == DockPullDestination.LIBRARY) {
+                        pendingLibraryShown = true
+                    } else {
+                        pendingStreamShown = destination == DockPullDestination.STREAM
+                    }
                 }
                 running = false
                 splitting = false

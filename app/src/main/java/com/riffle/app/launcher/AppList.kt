@@ -109,7 +109,7 @@ private fun AppDrawerSectionHeader(title: String) {
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun AppDrawerRow(
+internal fun AppDrawerRow(
     state: AppDrawerRowState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
@@ -307,7 +307,7 @@ private fun AppDrawerMainMenuItems(
         )
     }
     AppDrawerRowMenuItem(
-        text = if (state.dockItemId == null) "Add to dock" else "Remove from dock",
+        text = if (state.dockItemId == null) "Pin to Dock" else "Unpin from Dock",
         onClick = {
             when (state.dockItemId) {
                 null -> onAction(LauncherShellAction.AddAppToDock(state.app))

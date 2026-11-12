@@ -2,11 +2,14 @@
 
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -20,11 +23,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.riffle.app.R
+import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.library.LibrarySheet
+import com.riffle.app.launcher.library.libraryState
 import com.riffle.app.launcher.notifications.AppStageShellState
 import com.riffle.app.launcher.split.SplitPaneState
 import com.riffle.app.launcher.split.SplitPanes
@@ -74,6 +83,8 @@ fun HomeDestination(
     val plan = rememberHomeSurfacePlan(state)
     // A committed pull stands in for the shell's answer until the shell shows it, so the surfaces do not flicker back.
     val shownStream = rememberStreamShown(dockPull, streamShown)
+    // The Library is a sheet over Home or the Stream; a committed pull to it stands in for the shell the same way.
+    val shownLibrary = rememberLibraryShown(dockPull, state.destination.isLibrary)
     // On an expanded posture Home and the Stream can share the screen (ADR 0003, Folded and unfolded).
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
     val splitting = stream != null && deviceClass.supportsSplit()
@@ -106,23 +117,33 @@ fun HomeDestination(
             installedApps = state.installedApps,
             deviceClass = state.homeLayoutSet.activeKey.deviceClass,
             onOpenStream = { target ->
-                openStream(
-                    stream,
-                    dockPull,
-                    target,
-                    shownStream,
-                    plan.dockEdge.pullDirection,
-                    state.reducedMotion(),
-                    splitSetup(),
-                )
+                if (state.destination.isLibrary) {
+                    // The Library is open: the Stream button leaves it for the Stream, no pull to animate.
+                    target?.let { stream?.focus?.request(it) }
+                    onAction(LauncherShellAction.OpenStream)
+                } else {
+                    openStream(
+                        stream,
+                        dockPull,
+                        target,
+                        shownStream,
+                        plan.dockEdge.pullDirection,
+                        state.reducedMotion(),
+                        splitSetup(),
+                    )
+                }
             },
             onCloseStream = {
-                dockPull.open(
-                    DockPullDestination.HOME,
-                    plan.dockEdge.pullDirection,
-                    state.reducedMotion(),
-                    splitSetup(),
-                )
+                if (state.destination.isLibrary) {
+                    onAction(LauncherShellAction.OpenHome)
+                } else {
+                    dockPull.open(
+                        DockPullDestination.HOME,
+                        plan.dockEdge.pullDirection,
+                        state.reducedMotion(),
+                        splitSetup(),
+                    )
+                }
             },
             modeInterpreter = modeInterpreter,
         )
@@ -148,6 +169,10 @@ fun HomeDestination(
     val dockPresentation = standardHomePresentation(dockHostState, widgetRenderers)
     val showStream = stream != null && (shownStream || pull.isTransitioning)
     val showHome = !shownStream || pull.isTransitioning
+    val showLibrary = shownLibrary || pull.isLibraryTransitioning
+    // Once the Library's sheet covers Home or the Stream they are invisible, so assistive technology skips them too.
+    val covered = shownLibrary && !pull.isLibraryTransitioning
+    val coveredSemantics = if (covered) Modifier.clearAndSetSemantics {} else Modifier
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
     if (splitting && stream != null) {
         RememberSplit(
@@ -203,7 +228,7 @@ fun HomeDestination(
                         mode = plan.currentMode,
                         state = plan.stateFor(plan.currentMode),
                         dockEdge = plan.edges.edgeFor(plan.currentMode.modeSurface),
-                        surfaceModifier = pull.homeModifier(),
+                        surfaceModifier = pull.homeModifier(libraryShown = shownLibrary).then(coveredSemantics),
                         cardsShellState = cardsShellState,
                         dockHost = dockHost,
                         presentation = presentation,
@@ -253,9 +278,20 @@ fun HomeDestination(
                         dockHost = dockHost,
                         dockPosition = plan.dockEdge,
                         appIconLoader = appIconLoader,
-                        modifier = pull.streamModifier(),
+                        modifier = pull.streamModifier(libraryShown = shownLibrary).then(coveredSemantics),
                     )
                 }
+            }
+            if (showLibrary) {
+                LibraryHomeSurface(
+                    state = dockHostState,
+                    dockHost = dockHost,
+                    dockPosition = plan.dockEdge,
+                    appIconLoader = appIconLoader,
+                    haptics = haptics,
+                    pull = pull,
+                    onAction = onAction,
+                )
             }
             // Nothing is composed while the feature is off or no workspaces are loaded (#1351).
             if (!shownStream) {
@@ -306,6 +342,103 @@ private fun rememberStreamShown(
     }
     return pending ?: shellShown
 }
+
+/**
+ * Whether the Library shows, counting a committed pull to it that the shell has not shown yet. The stand-in clears the
+ * moment the shell agrees and after a timeout, so a refused switch cannot stick.
+ */
+@Composable
+private fun rememberLibraryShown(
+    dockPull: DockPullState,
+    shellShown: Boolean,
+): Boolean {
+    val pending = dockPull.pendingLibraryShown
+    if (pending && shellShown) {
+        SideEffect { dockPull.pendingLibraryShown = false }
+    }
+    LaunchedEffect(pending) {
+        if (pending) {
+            delay(DOCK_PULL_PENDING_TIMEOUT_MILLIS)
+            dockPull.pendingLibraryShown = false
+        }
+    }
+    return pending || shellShown
+}
+
+/**
+ * The Library (ADR 0003) over the Dock's room, as the Stream is: laid out inside what the Dock reserves on its edge,
+ * under the Dock in the draw order so the Dock stays tappable, and inside the system bar insets (the keyboard's too, so
+ * the field stays visible while typing). Launching an app from it closes it.
+ */
+@Composable
+private fun LibraryHomeSurface(
+    state: LauncherShellState,
+    dockHost: HomeDockHostState,
+    dockPosition: DockPosition,
+    appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics,
+    pull: HomeDockPullBinding,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
+    val dockExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
+    val insets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets().asPaddingValues()
+    val libraryState = remember(state) { state.libraryState() }
+    val latestOnAction = rememberUpdatedState(onAction)
+    val close: () -> Unit = {
+        latestOnAction.value(
+            if (libraryState.overStream) LauncherShellAction.OpenStream else LauncherShellAction.OpenHome,
+        )
+    }
+    val context =
+        AppListContext(
+            homeLayout = state.homeLayout,
+            overlayDock = state.launcherSettings.overlayDock,
+            notificationGroupsByApp = state.notificationGroupsByApp,
+            appShortcutsByApp = state.appShortcutsByApp,
+            appIconLoader = appIconLoader,
+            haptics = haptics,
+            onAction = { action ->
+                latestOnAction.value(action)
+                if (action.closesLibrary()) close()
+            },
+        )
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .zIndex(HOME_CONTENT_Z_INDEX)
+                .dockInteractionPadding(dockPosition, dockExtent),
+    ) {
+        // The margin around the sheet belongs to it: a tap there closes the Library instead of reaching what is under.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClickLabel = stringResource(R.string.library_close_action),
+                        onClick = close,
+                    ),
+        )
+        LibrarySheet(
+            modifier = Modifier.padding(insets).padding(RiffleSpacing.s),
+            state = libraryState,
+            context = context,
+            reducedMotion = state.reducedMotion(),
+            direction = dockPosition.pullDirection,
+            awayFraction = pull::libraryAwayFraction,
+            onClose = close,
+        )
+    }
+}
+
+/** What launching does to the Library: starting an app, a shortcut or a web search closes it. */
+private fun LauncherShellAction.closesLibrary(): Boolean =
+    this is LauncherShellAction.LaunchApp ||
+        this is LauncherShellAction.LaunchAppShortcut ||
+        this is LauncherShellAction.SearchWeb
 
 /**
  * The Stream over the Dock's room: laid out inside what the Dock reserves on its edge (as the Cards stage is),

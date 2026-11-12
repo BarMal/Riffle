@@ -21,8 +21,9 @@ import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
-import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -38,7 +39,7 @@ class SettingsPageContentTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun appsPageDispatchesAppDrawerPresentationAndGridActions() {
+    fun appsPageDispatchesLibraryViewAndGridActions() {
         val actions = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
@@ -49,7 +50,11 @@ class SettingsPageContentTest {
                         LauncherShellState(
                             launcherSettings =
                                 LauncherSettings(
-                                    appDrawer = AppDrawerSettings(AppDrawerPresentation.ICONS, iconGridColumns = 4),
+                                    appDrawer =
+                                        AppDrawerSettings(
+                                            libraryViews = mapOf(HomeLayoutDeviceClass.PHONE to LibraryView.Grid),
+                                            iconGridColumns = 4,
+                                        ),
                                 ),
                         ).settingsSurfaceState(),
                     page = SettingsPage.APPS,
@@ -59,12 +64,12 @@ class SettingsPageContentTest {
             }
         }
 
-        composeRule.onNodeWithTag("${APP_DRAWER_PRESENTATION_TEST_TAG_PREFIX}LIST").performClick()
+        composeRule.onNodeWithTag("${LIBRARY_VIEW_TEST_TAG_PREFIX}AlphaList").performClick()
         composeRule.onNodeWithTag("${APP_DRAWER_GRID_COLUMNS_TEST_TAG_PREFIX}6").performClick()
 
         assertEquals(
             listOf(
-                LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.LIST),
+                LauncherShellAction.SelectLibraryView(LibraryView.AlphaList, HomeLayoutDeviceClass.PHONE),
                 LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 6),
             ),
             actions,

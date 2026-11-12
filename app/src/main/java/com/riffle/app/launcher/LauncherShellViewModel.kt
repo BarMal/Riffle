@@ -445,15 +445,14 @@ class LauncherShellViewModel(
                     else -> state
                 }
             }.let { state ->
-                when {
-                    previousDestination == ShellDestination.SEARCH && state.destination != ShellDestination.SEARCH ->
-                        appListActionReducer.reduce(state, LauncherShellAction.SearchQueryChanged("")) ?: state
-
-                    previousDestination == ShellDestination.APP_DRAWER &&
-                        state.destination != ShellDestination.APP_DRAWER ->
-                        appListActionReducer.reduce(state, LauncherShellAction.AppDrawerQueryChanged("")) ?: state
-
-                    else -> state
+                // The Library draws its results from the search query; leaving it clears the query and the old
+                // drawer's query, so it always opens on the view.
+                if (previousDestination.isLibrary && !state.destination.isLibrary) {
+                    state
+                        .let { appListActionReducer.reduce(it, LauncherShellAction.SearchQueryChanged("")) ?: it }
+                        .let { appListActionReducer.reduce(it, LauncherShellAction.AppDrawerQueryChanged("")) ?: it }
+                } else {
+                    state
                 }
             }.copy(dockEditRejectionReason = null)
     }
