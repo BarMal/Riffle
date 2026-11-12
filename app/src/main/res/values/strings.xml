@@ -25,6 +25,21 @@
     <string name="stream_show_hidden_section">Show %1$s</string>
     <string name="stream_current_view">Currently %1$s</string>
 
+    <!-- Pages, the spine and the Stage view -->
+    <plurals name="stream_page_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="stream_spine_marker">%1$s, page %2$d of %3$d</string>
+    <string name="stream_previous_page">Previous page</string>
+    <string name="stream_next_page">Next page</string>
+    <string name="stream_wide_pages">Pages</string>
+    <string name="stream_wide_stage">Stage</string>
+    <string name="stream_shown_as_stream">Stream shown as %1$s</string>
+    <string name="stream_stage_thumb">%1$s, %2$s</string>
+    <string name="stream_stage_bring_forward">Bring %1$s to the front</string>
+    <string name="stream_all_hidden">Every section is hidden. Show one to fill the Stream again.</string>
+
     <!-- Section states -->
     <string name="stream_loading">Loading</string>
     <string name="stream_empty_now">Nothing is playing and nothing is coming up.</string>
@@ -473,6 +488,9 @@
     <string name="settings_stream_move_up_named">Move %1$s up</string>
     <string name="settings_stream_move_down_named">Move %1$s down</string>
     <string name="settings_stream_show_as_subtitle">Stack of cards or a List of rows</string>
+    <string name="settings_stream_wide_title">Show the Stream as</string>
+    <string name="settings_stream_wide_subtitle">Pages swipe sideways, two side by side on a wide screen. Stage keeps a rail of every page beside the one in front.</string>
+    <string name="settings_stream_wide_option">Stream shown as %1$s</string>
     <string name="settings_stream_show_as_option">%1$s shown as %2$s</string>
     <string name="settings_agenda_include_feeds_subtitle">Events from your calendar feeds join the device calendar in the Agenda</string>
     <string name="settings_tasks_intro">Riffle can show the tasks you have due today, and the ones that are overdue, from Todoist. In Todoist open Settings, Integrations, Developer, copy your API token and paste it here. The token is kept encrypted on this phone only.</string>

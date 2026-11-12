@@ -126,6 +126,17 @@ alpha or blur radius. The numbers live in `core/domain/.../designsystem/GlassMat
   makes the spotlight snap. Without a backdrop to sample (a popup window, below API 33) the blurred
   tint layer applies. Glass is always on: there is no switch for it, and no other theme preset.
 
+### Stream card geometry
+
+The Stream's stacks use one set of geometry tokens, taken from Calm's card pages and kept in
+`core/domain/.../launcher/stream/StreamCardStackSpec.kt` (never as literals in the UI): a **168 dp** card, **56 dp**
+between neighbouring cards' tops (what peeks out below the focused card), the focused card in front, two cards ahead and
+two behind visible plus one composed as a margin (seven composed at most), each step 4 percent smaller and 14 percent
+fainter, and the focused card at 12 percent of the free height. Cards are `Regular` glass lit by the owning app's colour,
+page headers, the spine, the card position pill and rows' panels are `Thin`. Content that needs more than 168 dp
+(transport and scrubber, a lead image, a checklist) is taller, and a pile is as tall as its tallest card so the strips
+line up. The Stage rail's thumbnails are miniatures at 88 dp.
+
 Do
 - Express depth with one soft, single-source shadow and a tonal step; add a hairline highlight on
   glass surfaces (the sheen does this).

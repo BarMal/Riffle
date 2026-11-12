@@ -54,17 +54,18 @@ import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
 import com.riffle.core.domain.launcher.stream.StreamAppRef
+import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamPrivacy
 import com.riffle.core.domain.launcher.stream.TaskContent
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
 
 /** The collapsed height each card type is drawn at in a stack (scaled up with the font size). */
 internal object StreamCardHeights {
-    val notification: Dp = 196.dp
+    val notification: Dp = StreamCardStackSpec.CARD_HEIGHT_DP.dp
     val media: Dp = 264.dp
-    val event: Dp = 144.dp
+    val event: Dp = StreamCardStackSpec.CARD_HEIGHT_DP.dp
     val article: Dp = 248.dp
-    val articleWithoutImage: Dp = 140.dp
+    val articleWithoutImage: Dp = StreamCardStackSpec.CARD_HEIGHT_DP.dp
     val tasks: Dp = 232.dp
 }
 
@@ -274,6 +275,8 @@ internal fun EventCard(
     callbacks: StreamCallbacks,
     groupKey: String?,
     modifier: Modifier = Modifier,
+    /** The day, said before the time when a pile of events spans days. */
+    caption: String? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     StreamCardSurface(content.id.value, null, null, env, modifier) { sourceModifier ->
@@ -291,7 +294,7 @@ internal fun EventCard(
                 horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
             ) {
                 Text(
-                    text = eventSpanText(content, env),
+                    text = eventSpanText(content, env).let { span -> if (caption == null) span else "$caption, $span" },
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),

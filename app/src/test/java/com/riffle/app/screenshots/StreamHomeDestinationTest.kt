@@ -6,12 +6,13 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.dockDynamicSectionTileTestTag
+import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
+import com.riffle.app.launcher.stream.STREAM_SPINE_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_SURFACE_TEST_TAG
 import com.riffle.app.launcher.stream.StreamHost
 import org.junit.Assert.assertEquals
@@ -65,7 +66,9 @@ class StreamHomeDestinationTest {
     fun theStreamReplacesHomeAndTheDockStaysUnderIt() {
         show(streamShown = true)
         composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithText("Stream").assertIsDisplayed()
+        // The Stream is a pager of pages with its spine above it.
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(STREAM_SPINE_TEST_TAG).assertIsDisplayed()
         // The Dock is still there, drawn under it.
         composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).assertIsDisplayed()
     }

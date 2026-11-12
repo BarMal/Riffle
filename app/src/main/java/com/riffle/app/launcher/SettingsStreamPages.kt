@@ -37,10 +37,12 @@ import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
 import com.riffle.app.launcher.stream.titleRes
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.app.launcher.stream.todoist.TasksSettingsState
+import com.riffle.core.domain.launcher.split.supportsSplit
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamView
+import com.riffle.core.domain.launcher.stream.StreamWideView
 import com.riffle.core.domain.launcher.stream.TaskConnectionState
 import com.riffle.core.domain.launcher.workspace.SourceIds
 
@@ -56,6 +58,8 @@ internal fun streamShowAsTestTag(
     section: StreamSection,
     view: StreamView,
 ): String = "settings-stream-show-as-${section.storedId}-${view.storedId}"
+
+internal fun streamWideViewTestTag(view: StreamWideView): String = "settings-stream-wide-${view.storedId}"
 
 internal fun streamMoveTestTag(
     section: StreamSection,
@@ -102,6 +106,7 @@ internal fun SettingsStreamPageContent(
         layout = layouts.forPosture(deviceClass),
         onLayoutAction = { action -> repository.update(deviceClass, action) },
         onOpenPage = onPageSelected,
+        showWideView = deviceClass.supportsSplit(),
     )
 }
 
@@ -111,6 +116,8 @@ internal fun SettingsStreamSections(
     layout: StreamLayout,
     onLayoutAction: (StreamLayoutAction) -> Unit,
     onOpenPage: (SettingsPage) -> Unit,
+    /** An expanded posture: the whole Stream can show as Pages or as the Stage view. */
+    showWideView: Boolean = false,
 ) {
     Text(
         modifier = Modifier.padding(horizontal = 8.dp),
@@ -118,6 +125,7 @@ internal fun SettingsStreamSections(
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+    if (showWideView) SettingsStreamWideView(layout, onLayoutAction)
     layout.sections.forEachIndexed { index, entry ->
         val section = entry.section
         val name = stringResource(section.titleRes())
@@ -176,6 +184,28 @@ internal fun SettingsStreamSections(
                 )
             }
         }
+    }
+}
+
+/** Show the Stream as Pages or Stage: the whole Stream's view on an expanded posture. */
+@Composable
+private fun SettingsStreamWideView(
+    layout: StreamLayout,
+    onLayoutAction: (StreamLayoutAction) -> Unit,
+) {
+    SettingsSection(title = stringResource(R.string.stream_title)) {
+        SettingsChoiceRow(
+            title = stringResource(R.string.settings_stream_wide_title),
+            subtitle = stringResource(R.string.settings_stream_wide_subtitle),
+            options = StreamWideView.entries,
+            selected = layout.wideView,
+            onSelect = { view -> onLayoutAction(StreamLayoutAction.SetWideView(view)) },
+            label = { view -> stringResource(view.titleRes()) },
+            optionTag = { view -> streamWideViewTestTag(view) },
+            optionDescription = { view ->
+                stringResource(R.string.settings_stream_wide_option, stringResource(view.titleRes()))
+            },
+        )
     }
 }
 

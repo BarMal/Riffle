@@ -35,7 +35,8 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | | Search | Search results as icons or list |
 | | Apps | Hidden apps (opens the sub-page), refresh installed apps |
 | Hidden apps (under Library) | | The one list of hidden apps |
-| **Stream** | each of Now, Notifications, Recents, Agenda, Tasks, Feeds | On or off, order (move up, move down), Show as (Stack, List); a row opening the section's sub-page where it has one |
+| **Stream** | each of Now, Notifications, Recents, Agenda, Tasks, Feeds | On or off, order (move up, move down), Show as (Stack, List: it applies to every page of the section); a row opening the section's sub-page where it has one |
+| | the whole Stream (unfolded, tablet and desktop postures only) | **Show the Stream as**: Pages (swipe sideways, two side by side on a wide screen) or Stage (a rail of every page beside the one in front). Stored per posture in the Stream layout (`wideView`, default Pages); the same value as "Show as" in the Stream's own menu (long-press the spine) |
 | Notifications (under Stream) | | The notifications source (status, allow access, on or off); Hidden items |
 | Hidden items (under Notifications) | | The rules that hide items, per layout |
 | Agenda (under Stream) | | The device calendar source (status, allow access, on or off); include calendar feeds; Calendar feeds |

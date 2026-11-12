@@ -81,9 +81,11 @@ internal data class StreamEnvironment(
 /**
  * What the Stream asks its host to do. Every user action goes through [onAction] (the one gateway), Hide through
  * [onHide] (the existing exclusions flow; null when the shell offers none), a layout edit through [onLayoutAction].
+ * A data class on purpose: a surface that wraps one callback does it with `copy`, so every other callback reaches
+ * every page.
  */
 @Suppress("LongParameterList")
-internal class StreamCallbacks(
+internal data class StreamCallbacks(
     val onAction: (StreamContent, StreamAction) -> Unit = { _, _ -> },
     val onLayoutAction: (StreamLayoutAction) -> Unit = {},
     /** "Allow access to show this": the existing explicit source access flow for the first of these sources. */

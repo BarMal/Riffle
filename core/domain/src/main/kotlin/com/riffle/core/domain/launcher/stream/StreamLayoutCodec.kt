@@ -46,6 +46,7 @@ object StreamLayoutCodec {
                             "sections" to arr(layout.sections.map(::encodeSection)),
                             "options" to encodeOptions(layout.options),
                             "split" to encodeSplit(layout.split),
+                            "wideView" to str(layout.wideView.storedId),
                         )
                     },
                 ),
@@ -74,7 +75,9 @@ object StreamLayoutCodec {
         val sections = stored + missing.map { StreamSectionLayout(it) }
         val options = (root.fields["options"] as? StoredValue.Obj)?.let(::decodeOptions) ?: StreamSectionOptions()
         val split = (root.fields["split"] as? StoredValue.Obj)?.let(::decodeSplit) ?: StreamSplit()
-        return deviceClass to StreamLayout(sections, options, split)
+        // A layout stored before the Stage view has no such field; an unknown id reads as Pages too.
+        val wideView = StreamWideView.fromStoredId(root.string("wideView")) ?: StreamWideView.PAGES
+        return deviceClass to StreamLayout(sections, options, split, wideView)
     }
 
     /** The fraction is stored in permille so it stays an integer; a layout stored before P6 reads as defaults. */

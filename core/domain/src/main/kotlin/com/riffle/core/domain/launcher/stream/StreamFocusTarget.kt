@@ -15,35 +15,26 @@ sealed interface StreamFocusTarget {
     data class Section(val section: StreamSection) : StreamFocusTarget
 }
 
-/** What a [StreamFocusTarget] resolves to in the Stream as it is now: the section to scroll to and any group. */
-data class StreamFocusResolution(
-    val section: StreamSection,
-    val groupKey: String?,
-)
-
 object StreamFocus {
     /**
-     * Resolves [target] against the sections the layout shows ([enabledSections]) and the Notifications result. A
-     * section the layout hides resolves to null (the Stream just opens at the top); a group that has gone away (its
-     * notifications were cleared between the tap and the open) resolves to the Notifications section alone.
+     * The key of the page [target] lands on in [pages] (ADR 0003, Views), or null when the layout hides what it names
+     * (the Stream just opens where it was).
+     *
+     * - Now lands on the Now page; a Section on that section's first page.
+     * - An app's stack lands on that app's Notifications page; one whose notifications were cleared between the tap
+     *   and the open lands on the Notifications section's first page.
      */
-    fun resolve(
+    fun resolvePage(
         target: StreamFocusTarget,
-        enabledSections: List<StreamSection>,
-        notifications: StreamSectionResult?,
-    ): StreamFocusResolution? =
+        pages: List<StreamPage>,
+    ): String? =
         when (target) {
-            is StreamFocusTarget.Section ->
-                StreamFocusResolution(target.section, null).takeIf { target.section in enabledSections }
-            StreamFocusTarget.Now ->
-                StreamFocusResolution(StreamSection.NOW, null).takeIf { StreamSection.NOW in enabledSections }
+            is StreamFocusTarget.Section -> pages.firstOrNull { it.section == target.section }?.key
+            StreamFocusTarget.Now -> pages.firstOrNull { it.section == StreamSection.NOW }?.key
             is StreamFocusTarget.AppStack ->
-                if (StreamSection.NOTIFICATIONS !in enabledSections) {
-                    null
-                } else {
-                    val groups = (notifications as? StreamSectionResult.Ready)?.groups.orEmpty()
-                    val present = groups.any { it.key == target.groupKey }
-                    StreamFocusResolution(StreamSection.NOTIFICATIONS, target.groupKey.takeIf { present })
-                }
+                (
+                    pages.firstOrNull { it.section == StreamSection.NOTIFICATIONS && it.groupKey == target.groupKey }
+                        ?: pages.firstOrNull { it.section == StreamSection.NOTIFICATIONS }
+                )?.key
         }
 }

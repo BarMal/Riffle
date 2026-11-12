@@ -1,0 +1,332 @@
+package com.riffle.core.domain.launcher.stream
+
+import com.riffle.core.domain.launcher.workspace.ItemTarget
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class StreamPagesTest {
+    private fun note(
+        key: String,
+        at: Long = 1,
+    ) = NotificationContent(
+        id = StreamContentId("n:$key:$at"),
+        app = StreamAppRef(key.substringBefore(':'), key.substringAfter(':')),
+        appLabel = key.substringBefore(':'),
+        title = "t",
+        text = "x",
+        icon = null,
+        image = null,
+        postedAtEpochMillis = at,
+        category = null,
+        priority = null,
+        target = ItemTarget.None,
+        actions = emptySet(),
+        privacy = StreamPrivacy.VISIBLE,
+    )
+
+    private fun article(
+        id: String,
+        read: Boolean = false,
+        feed: String = "feed",
+    ) = ArticleContent(
+        id = StreamContentId("a:$id"),
+        feedId = feed,
+        feedName = feed,
+        title = id,
+        summary = null,
+        author = null,
+        image = null,
+        publishedAtEpochMillis = 5,
+        stale = false,
+        target = ItemTarget.None,
+        actions = emptySet(),
+        privacy = StreamPrivacy.VISIBLE,
+        read = read,
+    )
+
+    private fun task(id: String) = TaskContent(StreamContentId("t:$id"), id)
+
+    private fun notifications(vararg apps: String) =
+        StreamSectionResult.Ready(
+            apps.mapIndexed { i, key -> StreamGroup(key, key.substringBefore(':'), listOf(note(key, 10L - i)), 3) },
+        )
+
+    private fun ready(
+        key: String,
+        vararg items: StreamContent,
+    ) = StreamSectionResult.Ready(listOf(StreamGroup(key, null, items.toList())))
+
+    private val everything: Map<StreamSection, StreamSectionResult> =
+        mapOf(
+            StreamSection.NOW to ready("now", task("media")),
+            StreamSection.NOTIFICATIONS to notifications("chat:p", "mail:p", "maps:p"),
+            StreamSection.RECENTS to ready("recents", task("r")),
+            StreamSection.AGENDA to ready("2026-01-01", task("e")),
+            StreamSection.TASKS to ready("tasks", task("a"), task("b")),
+            StreamSection.FEEDS to
+                StreamSectionResult.Ready(
+                    listOf(
+                        StreamGroup("f1", "One", listOf(article("1", feed = "f1"))),
+                        StreamGroup("f2", "Two", listOf(article("2", feed = "f2"))),
+                    ),
+                ),
+        )
+
+    @Test
+    fun pagesFollowTheSectionOrderWithOnePagePerAppAndFeed() {
+        val keys = StreamPagePlanner.plan(StreamLayout.DEFAULT, everything).map { it.key }
+        assertEquals(
+            listOf(
+                "now",
+                "notifications/chat:p",
+                "notifications/mail:p",
+                "notifications/maps:p",
+                "recents",
+                "agenda",
+                "tasks",
+                "feeds/f1",
+                "feeds/f2",
+            ),
+            keys,
+        )
+    }
+
+    @Test
+    fun aReorderedLayoutReordersThePagesAndAHiddenSectionContributesNone() {
+        val layout =
+            listOf(
+                StreamLayoutAction.SetEnabled(StreamSection.NOW, false),
+                StreamLayoutAction.Move(StreamSection.TASKS, -4),
+            ).fold(StreamLayout.DEFAULT, StreamLayoutReducer::reduce)
+        val keys = StreamPagePlanner.plan(layout, everything).map { it.key }
+        assertEquals("tasks", keys.first())
+        assertFalse("now" in keys)
+    }
+
+    @Test
+    fun anAppPageCarriesItsNameItsCountAndTheViewOfItsSection() {
+        val layout =
+            StreamLayoutReducer.reduce(
+                StreamLayout.DEFAULT,
+                StreamLayoutAction.SetView(StreamSection.NOTIFICATIONS, StreamView.LIST),
+            )
+        val page = StreamPagePlanner.plan(layout, everything).first { it.groupKey == "mail:p" }
+        assertEquals("mail", page.label)
+        assertEquals(3, page.count)
+        assertEquals(StreamView.LIST, page.view)
+        assertEquals(StreamSection.NOTIFICATIONS, page.section)
+        assertTrue(page.lead is NotificationContent)
+    }
+
+    @Test
+    fun everyStateIsOnePageForItsSectionWithItsAction() {
+        val states =
+            listOf(
+                StreamSectionResult.Loading,
+                StreamSectionResult.Empty,
+                StreamSectionResult.Unavailable,
+                StreamSectionResult.Off,
+                StreamSectionResult.NotConnected(),
+                StreamSectionResult.PermissionRequired(emptyList()),
+            )
+        for (state in states) {
+            val withState = everything + (StreamSection.NOTIFICATIONS to state)
+            val pages = StreamPagePlanner.plan(StreamLayout.DEFAULT, withState)
+            val page = pages.single { it.section == StreamSection.NOTIFICATIONS }
+            assertEquals("notifications", page.key)
+            assertEquals(StreamPageBody.State(state), page.body)
+        }
+    }
+
+    @Test
+    fun aSectionNotObservedYetIsALoadingPage() {
+        val pages = StreamPagePlanner.plan(StreamLayout.DEFAULT, emptyMap())
+        assertEquals(StreamSection.entries.size, pages.size)
+        assertTrue(pages.all { it.body == StreamPageBody.State(StreamSectionResult.Loading) })
+    }
+
+    @Test
+    fun feedsWithNothingUnreadHaveNoPageAndNoFeedsIsOneEmptyPage() {
+        val partly =
+            StreamSectionResult.Ready(
+                listOf(
+                    StreamGroup("f1", "One", listOf(article("1", read = true, feed = "f1"))),
+                    StreamGroup("f2", "Two", listOf(article("2", feed = "f2"), article("3", read = true, feed = "f2"))),
+                ),
+            )
+        assertEquals(
+            listOf("feeds/f2"),
+            StreamPagePlanner.plan(StreamLayout.DEFAULT, everything + (StreamSection.FEEDS to partly))
+                .map { it.key }
+                .filter { it.startsWith("feeds") },
+        )
+        val oneRead = StreamGroup("f1", "One", listOf(article("1", read = true, feed = "f1")))
+        val allRead = StreamSectionResult.Ready(listOf(oneRead))
+        val page = StreamPagePlanner.plan(StreamLayout.DEFAULT, everything + (StreamSection.FEEDS to allRead)).last()
+        assertEquals("feeds", page.key)
+        assertEquals(StreamPageBody.State(StreamSectionResult.Empty), page.body)
+    }
+
+    @Test
+    fun aNewNotificationDoesNotChangeAnyOtherPagesKey() {
+        val before = StreamPagePlanner.plan(StreamLayout.DEFAULT, everything).map { it.key }
+        val withNew = everything + (StreamSection.NOTIFICATIONS to notifications("new:p", "chat:p", "mail:p", "maps:p"))
+        val after = StreamPagePlanner.plan(StreamLayout.DEFAULT, withNew).map { it.key }
+        assertEquals(before.toSet() + "notifications/new:p", after.toSet())
+        // The new app is the newest, so its page leads the section; every other key is exactly as before.
+        assertEquals(before.indexOf("notifications/chat:p") + 1, after.indexOf("notifications/chat:p"))
+    }
+
+    @Test
+    fun keysAreUniqueEvenWhenAnAppIsCalledLikeASection() {
+        val odd = everything + (StreamSection.NOTIFICATIONS to notifications("recents:p"))
+        val keys = StreamPagePlanner.plan(StreamLayout.DEFAULT, odd).map { it.key }
+        assertEquals(keys.size, keys.toSet().size)
+    }
+
+    private val keys = listOf("a", "b", "c", "d", "e")
+
+    @Test
+    fun theCurrentPageStaysCurrentWhilePagesAreAddedOrRemovedAroundIt() {
+        assertEquals("c", StreamPageNavigation.currentAfter(keys, "c", listOf("x", "a", "c", "y")))
+        assertEquals("c", StreamPageNavigation.currentAfter(keys, "c", listOf("c")))
+        assertEquals("c", StreamPageNavigation.currentAfter(keys, "c", listOf("e", "d", "c", "b", "a")))
+    }
+
+    @Test
+    fun aVanishedCurrentPageGoesToItsNearestNeighbourPreferringTheNextOne() {
+        assertEquals("d", StreamPageNavigation.currentAfter(keys, "c", listOf("a", "b", "d", "e")))
+        assertEquals("b", StreamPageNavigation.currentAfter(keys, "c", listOf("a", "b", "e")))
+        assertEquals("e", StreamPageNavigation.currentAfter(keys, "d", listOf("a", "e")))
+        assertEquals("b", StreamPageNavigation.currentAfter(keys, "e", listOf("a", "b")))
+        assertEquals("x", StreamPageNavigation.currentAfter(keys, "c", listOf("x", "y")))
+    }
+
+    @Test
+    fun noPagesMeansNoCurrentPageAndAnUnknownCurrentIsTheFirst() {
+        assertNull(StreamPageNavigation.currentAfter(keys, "c", emptyList()))
+        assertEquals("x", StreamPageNavigation.currentAfter(keys, null, listOf("x", "y")))
+        assertEquals("x", StreamPageNavigation.currentAfter(keys, "zz", listOf("x", "y")))
+    }
+
+    @Test
+    fun indexAndStepStayInsideThePages() {
+        assertEquals(2, StreamPageNavigation.indexOf(keys, "c"))
+        assertEquals(0, StreamPageNavigation.indexOf(keys, "zz"))
+        assertEquals(4, StreamPageNavigation.indexOf(keys, "zz", fallback = 9))
+        assertEquals(0, StreamPageNavigation.step(0, -1, 5))
+        assertEquals(4, StreamPageNavigation.step(4, 1, 5))
+        assertEquals(3, StreamPageNavigation.step(2, 1, 5))
+        assertEquals(0, StreamPageNavigation.step(0, 1, 0))
+    }
+
+    private val pages = StreamPagePlanner.plan(StreamLayout.DEFAULT, everything)
+
+    @Test
+    fun focusLandsOnTheNamedPage() {
+        assertEquals("now", StreamFocus.resolvePage(StreamFocusTarget.Now, pages))
+        assertEquals("notifications/mail:p", StreamFocus.resolvePage(StreamFocusTarget.AppStack("mail:p"), pages))
+        assertEquals("agenda", StreamFocus.resolvePage(StreamFocusTarget.Section(StreamSection.AGENDA), pages))
+        val notifications = StreamFocusTarget.Section(StreamSection.NOTIFICATIONS)
+        assertEquals("notifications/chat:p", StreamFocus.resolvePage(notifications, pages))
+        assertEquals("feeds/f1", StreamFocus.resolvePage(StreamFocusTarget.Section(StreamSection.FEEDS), pages))
+    }
+
+    @Test
+    fun aVanishedAppLandsOnTheFirstNotificationsPageAndAHiddenSectionOnNothing() {
+        assertEquals("notifications/chat:p", StreamFocus.resolvePage(StreamFocusTarget.AppStack("gone:p"), pages))
+        val noNow = pages.filter { it.section != StreamSection.NOW }
+        assertNull(StreamFocus.resolvePage(StreamFocusTarget.Now, noNow))
+        val noNotifications = pages.filter { it.section != StreamSection.NOTIFICATIONS }
+        assertNull(StreamFocus.resolvePage(StreamFocusTarget.AppStack("a:b"), noNotifications))
+        assertNull(StreamFocus.resolvePage(StreamFocusTarget.Now, emptyList()))
+    }
+
+    @Test
+    fun theSpineHasOneMarkerPerPageWithTheCurrentOneSelectedAndSectionBreaks() {
+        val markers = StreamSpine.markers(pages, 2)
+        assertEquals(pages.map { it.key }, markers.map { it.pageKey })
+        assertEquals(listOf(2), markers.withIndex().filter { it.value.selected }.map { it.index })
+        assertEquals(pages.size, markers.first().total)
+        assertEquals(3, markers[2].position)
+        // Section breaks: before the first notifications page, recents, agenda, tasks and feeds.
+        assertEquals(
+            listOf("notifications/chat:p", "recents", "agenda", "tasks", "feeds/f1"),
+            markers.filter { it.startsSection }.map { it.pageKey },
+        )
+        assertEquals("chat", markers[1].label)
+        assertNull(markers[0].label)
+    }
+
+    @Test
+    fun theSpineFollowsASwipeInFlightAndStaysInsideThePages() {
+        assertEquals(2.25f, StreamSpine.focusIndex(2, 0.25f, 9))
+        assertEquals(0f, StreamSpine.focusIndex(0, -0.4f, 9))
+        assertEquals(8f, StreamSpine.focusIndex(8, 0.4f, 9))
+        assertEquals(0f, StreamSpine.focusIndex(0, 0.4f, 0))
+    }
+
+    @Test
+    fun theStageShowsTheSelectedStageAndAllTheOthersInTheRail() {
+        val model = StreamStage.model(pages, "notifications/mail:p")
+        assertEquals("notifications/mail:p", model.selected?.key)
+        assertEquals(pages.map { it.key } - "notifications/mail:p", model.rail.map { it.key })
+    }
+
+    @Test
+    fun theStageJustLeftComesFirstInTheRailThenTheRestInPageOrder() {
+        var recent = emptyList<String>()
+        recent = StreamStage.recentAfterSelecting(recent, "now", "tasks")
+        recent = StreamStage.recentAfterSelecting(recent, "tasks", "agenda")
+        assertEquals(listOf("tasks", "now"), recent)
+        val model = StreamStage.model(pages, "agenda", recent)
+        assertEquals(listOf("tasks", "now"), model.rail.take(2).map { it.key })
+        assertEquals(pages.size - 1, model.rail.size)
+        // Coming back to a stage that is in the memory takes it out of it.
+        assertEquals(listOf("agenda", "now"), StreamStage.recentAfterSelecting(recent, "agenda", "tasks"))
+    }
+
+    @Test
+    fun aVanishedStageHandsOverToItsNearestAndNothingIsEmptyWhenThereAreNoPages() {
+        val without = pages.filter { it.key != "recents" }
+        val model = StreamStage.model(without, "recents", previousKeys = pages.map { it.key })
+        assertEquals("agenda", model.selected?.key)
+        assertTrue(model.rail.none { it.key == "agenda" })
+        assertEquals(StreamStageModel(null, emptyList()), StreamStage.model(emptyList(), "x"))
+    }
+
+    @Test
+    fun theRailCollapsesToIconsInANarrowPaneAndTwoPagesShowOnlyOnAWholeWideScreen() {
+        assertEquals(StreamRailMode.ICONS, StreamStage.railMode(StreamStage.RAIL_COLLAPSE_BELOW_DP - 1))
+        assertEquals(StreamRailMode.FULL, StreamStage.railMode(StreamStage.RAIL_COLLAPSE_BELOW_DP))
+        assertEquals(2, StreamPagesPerView.forWidth(900, wideView = true))
+        assertEquals(1, StreamPagesPerView.forWidth(900, wideView = false))
+        assertEquals(1, StreamPagesPerView.forWidth(700, wideView = true))
+    }
+
+    @Test
+    fun aStackNeverComposesMoreCardsThanItsDepthPolicyAllows() {
+        for (count in listOf(1, 2, 7, 50, 500)) {
+            for (active in listOf(0, count / 2, count - 1)) {
+                val composed = StreamCardStackSpec.policy.entries(count, active).size
+                val message = "$count cards at $active composed $composed"
+                assertTrue(composed <= StreamCardStackSpec.MAX_COMPOSED_CARDS, message)
+            }
+        }
+        assertEquals(168f, StreamCardStackSpec.CARD_HEIGHT_DP)
+        assertEquals(56f, StreamCardStackSpec.PITCH_DP)
+    }
+
+    @Test
+    fun aStacksNextCardsLieBelowTheFocusedOneAndThePassedOnesAbove() {
+        val entries = StreamCardStackSpec.policy.entries(5, 2)
+        val byIndex = entries.associateBy { it.cardIndex }
+        assertEquals(0f, byIndex.getValue(2).verticalOffset)
+        assertTrue(byIndex.getValue(3).verticalOffset > 0f)
+        assertTrue(byIndex.getValue(1).verticalOffset < 0f)
+        assertEquals(56f, byIndex.getValue(3).verticalOffset)
+    }
+}
