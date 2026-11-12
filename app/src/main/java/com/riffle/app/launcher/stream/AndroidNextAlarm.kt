@@ -64,21 +64,23 @@ internal class AndroidNextAlarm(
         refreshingAlarmProvider(
             executor = executor,
             changes =
-                SourceChangeSource { onChanged ->
-                    val receiver =
-                        object : BroadcastReceiver() {
-                            override fun onReceive(
-                                context: Context?,
-                                intent: Intent?,
-                            ) = onChanged()
-                        }
-                    ContextCompat.registerReceiver(
-                        context,
-                        receiver,
-                        IntentFilter(AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED),
-                        ContextCompat.RECEIVER_NOT_EXPORTED,
-                    )
-                    return@SourceChangeSource { runCatching { context.unregisterReceiver(receiver) } }
+                object : SourceChangeSource {
+                    override fun observe(onChanged: () -> Unit): () -> Unit {
+                        val receiver =
+                            object : BroadcastReceiver() {
+                                override fun onReceive(
+                                    context: Context?,
+                                    intent: Intent?,
+                                ) = onChanged()
+                            }
+                        ContextCompat.registerReceiver(
+                            context,
+                            receiver,
+                            IntentFilter(AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED),
+                            ContextCompat.RECEIVER_NOT_EXPORTED,
+                        )
+                        return { runCatching { context.unregisterReceiver(receiver) } }
+                    }
                 },
             read = {
                 alarmManager?.nextAlarmClock?.let {
