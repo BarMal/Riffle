@@ -83,14 +83,26 @@ private fun HomeLabelVisibilitySetting(
 private fun HomeLabelBackgroundSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
-) = DiscreteSettingSlider(
-    title = SettingKey.HOME_LABEL_BACKGROUND.label(),
-    modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_BACKGROUND),
-    value = settings.backgroundAlphaPercent,
-    valueRange = MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT..MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
-    valueLabel = { "$it%" },
-    onValueChange = { value -> onAction(LauncherShellAction.SelectHomeLabelBackgroundAlpha(value)) },
-)
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SettingsSwitchRow(
+            modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_BACKGROUND),
+            title = SettingKey.HOME_LABEL_BACKGROUND.label(),
+            subtitle = if (settings.showBackground) "Labels sit on a background" else "Plain labels over the wallpaper",
+            checked = settings.showBackground,
+            onCheckedChange = { value -> onAction(LauncherShellAction.SelectHomeLabelBackgroundVisible(value)) },
+        )
+        if (settings.showBackground) {
+            DiscreteSettingSlider(
+                title = "Label background opacity",
+                value = settings.backgroundAlphaPercent,
+                valueRange = MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT..MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
+                valueLabel = { "$it%" },
+                onValueChange = { value -> onAction(LauncherShellAction.SelectHomeLabelBackgroundAlpha(value)) },
+            )
+        }
+    }
+}
 
 @Composable
 private fun HomeLabelTextSizeSetting(

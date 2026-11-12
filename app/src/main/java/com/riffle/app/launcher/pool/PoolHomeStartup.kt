@@ -4,7 +4,9 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.pool.PoolCutover
+import com.riffle.core.domain.launcher.workspace.pool.PoolDockRepair
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
 import kotlinx.coroutines.CancellationException
 
@@ -202,3 +204,29 @@ private suspend fun <T> readSafely(block: suspend () -> T): Result<T> =
     } catch (failure: Exception) {
         Result.failure(failure)
     }
+
+/** Whether the one-time dock restore has run: [PoolHomePreference] on a device, a fake in tests. */
+internal interface DockOverridesRestoredFlag {
+    fun dockOverridesRestored(): Boolean
+
+    fun markDockOverridesRestored()
+}
+
+/**
+ * The one-time restore of the dock size and edge the workspaces held before the cut-over ([PoolDockRepair]): reads the
+ * stored workspaces, applies what is still recoverable to the pool dock, and remembers it has run so a size the user
+ * sets afterwards is never overwritten. Runs only when the pool home is open and writable; any failure leaves the flag
+ * unset, so it is tried again next start. Nothing here throws.
+ */
+internal suspend fun restoreDockOverridesOnce(
+    pool: CachedPoolRepository,
+    preference: DockOverridesRestoredFlag,
+    readWorkspaces: suspend () -> WorkspaceSet?,
+) {
+    if (preference.dockOverridesRestored()) return
+    val workspaces = readSafely { readWorkspaces() }
+    if (workspaces.isFailure) return
+    val set = workspaces.getOrNull()
+    val done = readSafely { pool.repairState { state -> PoolDockRepair.restoreWorkspaceOverrides(state, set) } }
+    if (done.getOrDefault(false)) preference.markDockOverridesRestored()
+}

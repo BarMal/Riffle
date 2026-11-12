@@ -172,6 +172,10 @@ internal object HomeLayoutRepositories {
         val preference = PoolHomePreference(context)
         val providerOf = appWidgetProviderLookup(context)
         val opening = openHomeLayoutsAtStartup(store, pool, providerOf)
+        if (opening.poolHome) {
+            // P8 dropped a workspace's dock size and edge; the stored workspaces still hold them (once, not guessed).
+            restoreDockOverridesAtStartup(pool, preference) { DataStoreWorkspaceStore(context).read() }
+        }
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val writeBehind =
             WriteBehindHomeLayoutRepository(

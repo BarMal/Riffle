@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,17 +48,31 @@ fun WallpaperReadableLabel(
                 )
                 .height(metrics.homeLabelContainerHeightDp(settings).dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(
-                    colors.background
-                        .let { color -> color.copy(alpha = color.alpha * settings.backgroundAlphaPercent / 100f) },
+                .then(
+                    if (settings.showBackground) {
+                        Modifier.background(
+                            colors.background
+                                .let {
+                                        color ->
+                                    color.copy(alpha = color.alpha * settings.backgroundAlphaPercent / 100f)
+                                },
+                        )
+                    } else {
+                        Modifier
+                    },
                 )
                 .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = settings.textSizeSp.sp),
-            color = colors.text,
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontSize = settings.textSizeSp.sp,
+                    // With no background the wallpaper is the backdrop: a soft shadow keeps white text legible.
+                    shadow = if (settings.showBackground) null else LABEL_TEXT_SHADOW,
+                ),
+            color = if (settings.showBackground) colors.text else Color.White,
             maxLines = settings.maxLines,
             overflow = TextOverflow.Ellipsis,
             softWrap = true,
@@ -64,6 +80,9 @@ fun WallpaperReadableLabel(
         )
     }
 }
+
+private val LABEL_TEXT_SHADOW =
+    Shadow(color = Color.Black.copy(alpha = 0.55f), offset = Offset(0f, 1f), blurRadius = 6f)
 
 internal data class WallpaperReadableLabelColors(
     val text: Color,

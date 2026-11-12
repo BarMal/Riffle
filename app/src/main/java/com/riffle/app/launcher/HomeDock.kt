@@ -492,10 +492,10 @@ internal fun dockContainerMainAxisDp(
  * [maxRunMainAxisDp] is taken as already capped for the same reason [dockContentViewportMainAxisDp]
  * takes its own: how long a run may get depends on which way it runs, and only the caller knows
  * that. What does not fit is reached by scrolling the section rather than by shrinking its tiles,
- * so an entry is always the size of a dock icon whatever the run has room for. It is also where the
- * static side's floor lives, by construction rather than by clamping this function's result: the
- * caller reduces [maxRunMainAxisDp] by one pinned icon's worth of room before calling this, so this
- * section can never be sized to leave the static side nothing at all.
+ * so an entry is always the compact [entryExtentDp] tile whatever the run has room for. It is also where
+ * the static side's floor lives, by construction rather than by clamping this function's result: the
+ * caller reduces [maxRunMainAxisDp] by [dockStaticFloorMainAxisDp] before calling this, so this
+ * section can never be sized to leave the static side less than a few pinned icons.
  */
 internal fun dockDynamicSectionMainAxisDp(
     entryCount: Int,
@@ -512,6 +512,24 @@ internal fun dockDynamicSectionMainAxisDp(
     val room = maxRunMainAxisDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
     return min(wanted, room).coerceAtLeast(0)
 }
+
+/**
+ * The least run the pinned side keeps when the dynamic side is drawn: up to [DOCK_MIN_VISIBLE_PINS] icons (fewer when
+ * the dock has fewer) and the dock's own padding. The dynamic side gets the rest, so a crowded dock scrolls its pinned
+ * run (at full icon size) rather than squeezing it, and never loses its pins altogether.
+ */
+internal fun dockStaticFloorMainAxisDp(
+    slotCount: Int,
+    iconSizeDp: Int,
+    spacingDp: Int,
+): Int {
+    val visible = slotCount.coerceAtMost(DOCK_MIN_VISIBLE_PINS)
+    if (visible <= 0) return 0
+    return (visible * iconSizeDp) + ((visible - 1) * spacingDp.coerceAtLeast(0)) + (DOCK_MAIN_AXIS_PADDING_DP * 2)
+}
+
+/** The pinned icons that stay on show beside the dynamic side before the run scrolls. */
+internal const val DOCK_MIN_VISIBLE_PINS = 3
 
 /**
  * Whether [DockSurfaceStrip] should actually draw a divider and dynamic section, rather than just

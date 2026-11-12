@@ -3,12 +3,16 @@
 package com.riffle.app.launcher
 
 import com.riffle.app.launcher.pool.CachedPoolRepository
+import com.riffle.app.launcher.pool.DockOverridesRestoredFlag
 import com.riffle.app.launcher.pool.HomeLayoutCutoverStore
 import com.riffle.app.launcher.pool.HomeLayoutOpening
 import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.app.launcher.pool.openHomeLayouts
+import com.riffle.app.launcher.pool.restoreDockOverridesOnce
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutFold
+import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -37,6 +41,17 @@ internal fun openHomeLayoutsAtStartup(
     pool: CachedPoolRepository,
     providerOf: (HostedWidgetId) -> WidgetProviderIdentity?,
 ): HomeLayoutOpening = runBlocking(Dispatchers.IO) { openHomeLayouts(store, pool, providerOf = providerOf) }
+
+/** [restoreDockOverridesOnce] before the first frame, so the dock is drawn at the restored size from the start. */
+internal fun restoreDockOverridesAtStartup(
+    pool: CachedPoolRepository,
+    preference: DockOverridesRestoredFlag,
+    readWorkspaces: suspend () -> WorkspaceSet?,
+) {
+    runBlocking(Dispatchers.IO) {
+        restoreDockOverridesOnce(pool, preference) { readWorkspaces()?.let(WorkspaceLayoutFold::fold) }
+    }
+}
 
 /** [flushHomeLayoutBlocking] for the placed-items pool: `onStop` waits for the pool write before the layout set's. */
 internal fun flushPoolHomeBlocking(

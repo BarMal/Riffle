@@ -23,6 +23,10 @@
 
 ### Fixed
 
+- The Dock is back to its reference look and size. Pinned icons are drawn at exactly the Icon size setting again: the pins were being shrunk (down to 32 dp) to make room for the dynamic side, which also made the bar short. When the pins do not fit, the run now scrolls at full size and fades through the glass at its edges; the dynamic side takes only what its entries need (compact 48 dp tiles) and leaves the pinned run at least three icons. The bar is one icon plus its chrome tall again.
+- Home labels have no background pill by default (plain white text over the wallpaper, with a soft shadow for legibility); the pill is now a choice in Settings > Home ("Label background"), and your stored opacity is kept and comes back when you turn it on. The Search pill is a translucent grey pill with a thin outline again.
+- Dock icon size and edge set through a workspace before the one-arrangement cut-over are restored once from the stored workspaces, when the shared dock still holds a default; a size you set since is never overwritten.
+
 - Glass surfaces on Home (the Dock, the Search pill, the page indicator, folders, widget frames) showed as opaque near-black instead of translucent glass: the glass shader ignored that the system wallpaper is not part of the app's content. Glass now keeps the wallpaper visible through it, at the weight's tint alpha (raised where needed to keep text readable over a bright wallpaper), and the Dock's translucency is exactly your "Dock background" setting again (0% clear, 100% opaque).
 
 ### Changed

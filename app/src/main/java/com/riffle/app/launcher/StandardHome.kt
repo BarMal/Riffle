@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -811,11 +812,16 @@ private fun HomeBottomSearchArea(
                 )
             }
         } else {
-            // The search pill: Regular glass.
+            // The search pill: Regular glass, a translucent grey pill with a thin outline.
             GlassSurface(
                 modifier =
                     Modifier
                         .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
+                        .border(
+                            HOME_SEARCH_OUTLINE_WIDTH_DP.dp,
+                            MaterialTheme.colorScheme.outline.copy(alpha = HOME_SEARCH_OUTLINE_ALPHA),
+                            RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp),
+                        )
                         .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
                         .clickable(onClick = { actions.onAction(LauncherShellAction.OpenSearch) }),
                 weight = GlassWeight.Regular,
@@ -1020,6 +1026,8 @@ private const val HOME_SEARCH_AREA_HEIGHT_DP = 48
 private const val HOME_SEARCH_PILL_HEIGHT_DP = 30
 private const val HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
 private const val HOME_SEARCH_HORIZONTAL_PADDING_DP = 14
+private const val HOME_SEARCH_OUTLINE_WIDTH_DP = 1
+private const val HOME_SEARCH_OUTLINE_ALPHA = 0.38f
 private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 250L
 private const val WIDGET_PICKER_EDGE_HOVER_ZONE_DP = 40
 private const val WIDGET_PICKER_EDGE_HOVER_DELAY_MILLIS = 650L

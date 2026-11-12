@@ -210,6 +210,10 @@ class LauncherActionDomainTest {
                     "SelectHomeLabelBackgroundAlpha",
                     LauncherShellAction.SelectHomeLabelBackgroundAlpha(alphaPercent = 48),
                 ),
+                activity(
+                    "SelectHomeLabelBackgroundVisible",
+                    LauncherShellAction.SelectHomeLabelBackgroundVisible(visible = true),
+                ),
                 activity("SelectHomeIconSize", LauncherShellAction.SelectHomeIconSize(sizeDp = 56)),
                 activity("SelectHomeLabelTextSize", LauncherShellAction.SelectHomeLabelTextSize(textSizeSp = 12)),
                 activity("SelectHomeLabelTextVisible", LauncherShellAction.SelectHomeLabelTextVisible(visible = true)),

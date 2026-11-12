@@ -5,10 +5,11 @@ import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockOverflowMode
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HomeDockMetricsTest {
@@ -102,7 +103,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun dockSlotRenderMetricsCompactsIconSizeForFiveSlotsOnFoldedWidth() {
+    fun dockSlotRenderMetricsNeverShrinksTheIconWhenTheRunIsTooLongAndLetsItScroll() {
+        // Five 56 dp icons are 280 dp even with no gap; the run has 252. The icon keeps its size, the gap goes to
+        // nothing, and the run (280 dp) is longer than its viewport, so it scrolls.
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -113,20 +116,20 @@ class HomeDockMetricsTest {
 
         assertEquals(
             DockSlotRenderMetrics(
-                iconSizeDp = 50,
-                itemSpacingDp = 0,
+                iconSizeDp = 56,
+                itemSpacingDp = MIN_DOCK_ITEM_SPACING_DP,
                 overflowMode = DockOverflowMode.FitByCompaction,
             ),
             metrics,
         )
-        assertEquals(250, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+        assertEquals(280, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+        assertTrue(dockPinnedRunScrolls(slotCount = 5, metrics = metrics, viewportMainAxisDp = 252))
     }
 
     @Test
-    fun tooLittleRoomCompactsToTheFloorAndLetsTheRestScroll() {
-        // Previously this case gave up and returned the configured, uncompacted size, so a dock
-        // that grew slightly too narrow to compact into suddenly showed *bigger* icons than one
-        // that just fit. Compacting to the floor and scrolling past it removes that discontinuity.
+    fun tooLittleRoomKeepsTheConfiguredIconAndScrolls() {
+        // Previously the icons were compacted to the floor here (32 dp), which made the dock short and its icons much
+        // smaller than the Home grid's. They keep their size now and the run scrolls.
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -137,13 +140,31 @@ class HomeDockMetricsTest {
 
         assertEquals(
             DockSlotRenderMetrics(
-                iconSizeDp = MIN_DOCK_ICON_SIZE_DP,
+                iconSizeDp = 48,
                 itemSpacingDp = MIN_DOCK_ITEM_SPACING_DP,
                 overflowMode = DockOverflowMode.FitByCompaction,
             ),
             metrics,
         )
-        assertEquals(160, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+        assertEquals(240, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+        assertTrue(dockPinnedRunScrolls(slotCount = 5, metrics = metrics, viewportMainAxisDp = 159))
+    }
+
+    @Test
+    fun aRunThatFitsDoesNotScroll() {
+        val metrics =
+            dockSlotRenderMetrics(slotCount = 5, iconSizeDp = 56, itemSpacingDp = 10, availableContentMainAxisDp = 320)
+
+        assertEquals(DockOverflowMode.Fits, metrics.overflowMode)
+        assertEquals(56, metrics.iconSizeDp)
+        assertFalse(dockPinnedRunScrolls(slotCount = 5, metrics = metrics, viewportMainAxisDp = 320))
+    }
+
+    @Test
+    fun theStaticFloorIsThreePinsAndTheDockPadding() {
+        assertEquals(3 * 56 + 2 * 10 + 28, dockStaticFloorMainAxisDp(slotCount = 8, iconSizeDp = 56, spacingDp = 10))
+        assertEquals(2 * 56 + 10 + 28, dockStaticFloorMainAxisDp(slotCount = 2, iconSizeDp = 56, spacingDp = 10))
+        assertEquals(0, dockStaticFloorMainAxisDp(slotCount = 0, iconSizeDp = 56, spacingDp = 10))
     }
 
     @Test

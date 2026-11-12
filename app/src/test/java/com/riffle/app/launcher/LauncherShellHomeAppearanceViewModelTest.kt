@@ -85,6 +85,24 @@ class LauncherShellHomeAppearanceViewModelTest {
     }
 
     @Test
+    fun updatesHomeLabelBackgroundVisibilityKeepingTheStoredOpacity() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeLabelBackgroundAlpha(alphaPercent = 40))
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeLabelBackgroundVisible(visible = true))
+
+        val labels = viewModel.state.value.homeLayout.settings.labels
+        assertEquals(true, labels.showBackground)
+        assertEquals(40, labels.backgroundAlphaPercent)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
     fun updatesHomeLabelMaxWidthAndSavesLayout() {
         val repository = FakeHomeLayoutRepository()
         val viewModel =

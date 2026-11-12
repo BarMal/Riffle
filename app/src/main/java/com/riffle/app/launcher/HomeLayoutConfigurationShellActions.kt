@@ -94,6 +94,9 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
         is LauncherShellAction.SelectHomeLabelTextSize ->
             layout.withHomeLabelTextSize(action.textSizeSp)
 
+        is LauncherShellAction.SelectHomeLabelBackgroundVisible ->
+            HomePageEditResult.Updated(layout.withHomeLabelBackgroundVisible(action.visible))
+
         is LauncherShellAction.SelectHomeLabelTextVisible ->
             HomePageEditResult.Updated(layout.withHomeLabelTextVisible(action.visible))
 
@@ -163,6 +166,9 @@ private fun HomeLayout.withHomeLabelMaxWidth(maxWidthDp: Int): HomePageEditResul
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
     }
+
+private fun HomeLayout.withHomeLabelBackgroundVisible(visible: Boolean): HomeLayout =
+    copy(settings = settings.copy(labels = settings.labels.copy(showBackground = visible)))
 
 private fun HomeLayout.withHomeLabelTextVisible(visible: Boolean): HomeLayout =
     copy(

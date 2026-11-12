@@ -8,6 +8,7 @@ internal fun encodeLabels(settings: HomeLabelSettings): JSONObject =
     JSONObject()
         .put("iconSizeDp", settings.iconSizeDp)
         .put("backgroundAlphaPercent", settings.backgroundAlphaPercent)
+        .put("showBackground", settings.showBackground)
         .put("textSizeSp", settings.textSizeSp)
         .put("showText", settings.showText)
         .put("maxWidthDp", settings.maxWidthDp)
@@ -17,7 +18,10 @@ internal fun encodeLabels(settings: HomeLabelSettings): JSONObject =
 internal fun JSONObject.toLabelSettings(defaults: HomeLabelSettings): HomeLabelSettings =
     HomeLabelSettings(
         iconSizeDp = optInt("iconSizeDp", defaults.iconSizeDp),
+        // Stored opacity is carried through untouched. A value written before the background became a choice has no
+        // "showBackground" key and reads as the default (no background); the opacity returns when it is turned on.
         backgroundAlphaPercent = optInt("backgroundAlphaPercent", defaults.backgroundAlphaPercent),
+        showBackground = optBoolean("showBackground", defaults.showBackground),
         textSizeSp = optInt("textSizeSp", defaults.textSizeSp),
         showText = optBoolean("showText", defaults.showText),
         maxWidthDp = optInt("maxWidthDp", defaults.maxWidthDp),

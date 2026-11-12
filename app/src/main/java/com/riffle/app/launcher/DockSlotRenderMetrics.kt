@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.DockOverflowMode
-import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.dockOverflowMode
 import kotlin.math.min
@@ -12,6 +11,13 @@ internal data class DockSlotRenderMetrics(
     val overflowMode: DockOverflowMode,
 )
 
+/**
+ * The pinned run's metrics: the icon is always the configured size, whatever room the run has.
+ *
+ * When the slots do not fit, the gap between them gives first (down to [MIN_DOCK_ITEM_SPACING_DP], while the icons
+ * still fit at that gap); beyond that the run keeps its size and scrolls, fading at its edges. Icons are never
+ * shrunk to fit: a pinned icon is the size of a Home icon, and a dynamic entry beside it never makes it smaller.
+ */
 internal fun dockSlotRenderMetrics(
     slotCount: Int,
     iconSizeDp: Int,
@@ -26,26 +32,18 @@ internal fun dockSlotRenderMetrics(
             availableMainAxisDp = availableContentMainAxisDp,
         )
     return when (overflowMode) {
-        DockOverflowMode.FitByCompaction -> {
-            val compactedSpacingDp =
-                compactedDockSlotSpacingDp(
-                    slotCount = slotCount,
-                    iconSizeDp = iconSizeDp,
-                    itemSpacingDp = itemSpacingDp,
-                    availableContentMainAxisDp = availableContentMainAxisDp,
-                )
+        DockOverflowMode.FitByCompaction ->
             DockSlotRenderMetrics(
-                iconSizeDp =
-                    compactedDockSlotIconSizeDp(
+                iconSizeDp = iconSizeDp,
+                itemSpacingDp =
+                    compactedDockSlotSpacingDp(
                         slotCount = slotCount,
                         iconSizeDp = iconSizeDp,
-                        itemSpacingDp = compactedSpacingDp,
+                        itemSpacingDp = itemSpacingDp,
                         availableContentMainAxisDp = availableContentMainAxisDp,
                     ),
-                itemSpacingDp = compactedSpacingDp,
                 overflowMode = overflowMode,
             )
-        }
 
         DockOverflowMode.Fits ->
             DockSlotRenderMetrics(
@@ -55,6 +53,16 @@ internal fun dockSlotRenderMetrics(
             )
     }
 }
+
+/**
+ * Whether the pinned run is longer than its viewport at these metrics, so it scrolls (and fades at the edge that has
+ * more). The rule the strip's overflow affordance follows.
+ */
+internal fun dockPinnedRunScrolls(
+    slotCount: Int,
+    metrics: DockSlotRenderMetrics,
+    viewportMainAxisDp: Int,
+): Boolean = dockSlotContentMainAxisDp(slotCount, metrics) > viewportMainAxisDp
 
 private fun compactedDockSlotSpacingDp(
     slotCount: Int,
@@ -68,20 +76,6 @@ private fun compactedDockSlotSpacingDp(
 
     val availableSpacingDp = availableContentMainAxisDp - (slotCount * iconSizeDp)
     return min(itemSpacingDp, availableSpacingDp / (slotCount - 1)).coerceAtLeast(MIN_DOCK_ITEM_SPACING_DP)
-}
-
-private fun compactedDockSlotIconSizeDp(
-    slotCount: Int,
-    iconSizeDp: Int,
-    itemSpacingDp: Int,
-    availableContentMainAxisDp: Int,
-): Int {
-    if (slotCount <= 0) {
-        return iconSizeDp
-    }
-
-    val availableIconMainAxisDp = availableContentMainAxisDp - ((slotCount - 1).coerceAtLeast(0) * itemSpacingDp)
-    return min(iconSizeDp, availableIconMainAxisDp / slotCount).coerceAtLeast(MIN_DOCK_ICON_SIZE_DP)
 }
 
 internal fun dockSlotContentMainAxisDp(
