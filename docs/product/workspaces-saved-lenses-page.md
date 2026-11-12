@@ -109,4 +109,4 @@ font, unfolded, empty, builder, breaks dialog; no typing, no dialog with a text 
 - [ ] 100 lenses / 40 characters: the messages are clear. TalkBack: rows read as one item with actions; announcements are polite.
 - [ ] Large font, rotation (the lens being built survives), unfolded two panes, reduced motion.
 - [ ] Editor (Edit workspace) with preview on: see "Saved lenses in the editor" in
-      [`workspaces-dogfood.md`](../development/workspaces-dogfood.md) for the device checklist of use, Save as lens, the offer and Detach.
+      [`places-views-device-checklist.md`](../development/places-views-device-checklist.md) (the old preview checklist was replaced by it) for the device checklist of use, Save as lens, the offer and Detach.

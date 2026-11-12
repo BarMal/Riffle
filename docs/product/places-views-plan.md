@@ -1,6 +1,6 @@
 # Places and Views: implementation slices
 
-Status: **plan**, for [ADR 0003](../architecture/adr/0003-places-and-views.md). Each slice is one coherent
+Status: **as built** (P1 to P14 merged; P12 is this close-out). Written as a plan; each slice now opens with its outcome. For [ADR 0003](../architecture/adr/0003-places-and-views.md). Each slice is one coherent
 change that leaves `./gradlew verify` green. Slices run in order; later ones depend on earlier ones.
 
 The order is: build the material, build the new surfaces beside the old ones, cut over, then delete. Nothing
@@ -30,6 +30,8 @@ the user placed may be lost at any step.
 ## Slices
 
 ### P1. One glass material, and the spotlight everywhere
+
+**Outcome:** done (#1446). `GlassSurface` with Thin, Regular and Thick weights, the general sheen and spotlight, reduced transparency as a top-level setting, and the listed surfaces migrated. Left out: nothing in scope; the adaptive stage card surface stayed until P8. A later fix (#1450) found glass could not blur the system wallpaper and gave each weight a wallpaper tint floor.
 
 Goal: every translucent surface is drawn by one primitive at one of three weights, with the dock's sheen on
 all of them and the dock's spotlight wherever a surface holds coloured things (ADR 0003, Material).
@@ -61,6 +63,8 @@ Not in this slice: deleting theme presets (P2); the adaptive stage card surface,
 
 ### P2. Glass is the only look
 
+**Outcome:** done (#1446). Non-glass presets, the Liquid glass switch, the dock effect and the skin override are gone; custom colours reduced to an accent. Left out: custom dock, label and background colours are ignored and were not restored.
+
 - Remove `LauncherThemePreset` values `MATERIAL`, `MINIMAL`, `RETRO`, `TERMINAL`, `CUSTOM` and everything
   that exists only for them in `LauncherTheme.kt`; removed values decode to glass.
 - Remove the Liquid glass on/off switch (`LiquidGlassSettings.enabled`); glass is always on and reduced
@@ -73,6 +77,8 @@ Not in this slice: deleting theme presets (P2); the adaptive stage card surface,
 
 ### P3. Typed content
 
+**Outcome:** done (#1446). `StreamContent`, the six sections, mappers and fixed queries, in the domain. Left out: real media, notification and alarm data (P3b); `Item` and the lens pipeline stayed as the source side.
+
 - In `core/domain/.../launcher/stream/`: a sealed `StreamContent` with `NotificationContent`,
   `MediaContent` (with queue), `EventContent` (calendar, calendar feed, alarm), `ArticleContent`,
   `TaskContent` and `RecentAppContent`, each carrying its own fields, actions and privacy level; and the
@@ -84,6 +90,8 @@ Not in this slice: deleting theme presets (P2); the adaptive stage card surface,
   three per-section options the ADR allows. Unit tests for each.
 
 ### P3b. Real data behind the typed content
+
+**Outcome:** done (#1446). Media sessions with queue and transport, notification history, reply and snooze, next alarm, frequent apps, a Stream-only agenda window, article mark-read. Left out: nothing persisted; sensitive or hidden content exposes no history or reply.
 
 P3 mapped the typed content from `Item`, so it carries no more than `Item` did. This slice gives each type
 the data that makes it worth having (ADR 0003, finding F4).
@@ -104,6 +112,8 @@ the data that makes it worth having (ADR 0003, finding F4).
 
 ### P4. The Stream
 
+**Outcome:** done (#1446), then reshaped by P13. Six sections, Stack and List, Show as with Undo, folded full-surface behaviour, permission states. Left out: Tasks content (P10) and the unfolded split (P6).
+
 - Domain: `StreamLayout` per posture (sections on or off, order, `StreamView { Stack, List }` per section),
   its reducer, defaults and codec, stored in its own DataStore entry and included in backup.
 - UI in `app/.../launcher/stream/`: the Stream surface with the six sections; a card renderer and a row
@@ -121,6 +131,8 @@ state), removal of the old lens pages and adaptive stage surface (P8).
 
 ### P5. The Dock is the handle
 
+**Outcome:** done (#1447). Dynamic side of live apps, now playing and the Stream button; pull by side; Dock accessibility actions; `OPEN_STREAM` and `OPEN_LIBRARY`. Left out: the narrow-target fallback (pull anywhere on the Dock, choose by half) was not built and needs a device. The Dock's size was later restored (#1452).
+
 - Dynamic side: apps with something new (from notifications), one now-playing entry while media is active,
   and the Stream button always last. Replace `showNotificationCards` / `notificationSlotCount` and the
   workspace `dynamicSection` with one "live app slots" setting; decode the old ones.
@@ -135,6 +147,8 @@ state), removal of the old lens pages and adaptive stage surface (P8).
 
 ### P6. Unfolded split
 
+**Outcome:** done (#1447). Movable divider, Home only, split or Stream only, hinge snap, tabletop, split stored per posture. Left out: nothing in scope; not run on a foldable.
+
 - On expanded postures, Home and the Stream can share the screen with a movable divider (platform
   `draggable` / anchored-draggable, ADR 0002); either can take the whole screen. A dynamic-side pull that
   stops partway leaves the split. Pane math accounts for the Dock and the hinge
@@ -143,6 +157,8 @@ state), removal of the old lens pages and adaptive stage surface (P8).
 - Screenshot tests: unfolded split, unfolded Stream only, tabletop.
 
 ### P7. The Library
+
+**Outcome:** done (#1448). Categories, A-Z and Grid, search at the top, one hidden-apps list. Left out: drag from the Library onto Home (Add to Home and Pin to Dock are the equivalents); the Personal and Work split is a filter in the Library, not a stored setting.
 
 - Views: Categories (iOS-style tiles, the default), A–Z list, Grid, from the existing `CATEGORIES`,
   `ALPHA_LIST` and `ICON_GRID` expressions; "Show as" by long-press on the header and in Settings.
@@ -154,7 +170,7 @@ state), removal of the old lens pages and adaptive stage surface (P8).
 
 ### P8. Cut over and delete
 
-Status: **built.** Left in place and listed in the commit message: the stored `LauncherSettings.cards` model and `cards/` stage code that
+Status: **built** (#1449). Left in place and listed in the commit message: the stored `LauncherSettings.cards` model and `cards/` stage code that
 settings and shell state still read, `PageRole.FINDER` (stored only, never drawn), the lens evaluator (it is the vehicle of the
 exclusion and content-level tests), the Search source plumbing (no Place uses it; its Settings page is gone) and the Sources pages
 (P9 removes them).
@@ -176,7 +192,7 @@ exclusion and content-level tests), the Search source plumbing (no Place uses it
 
 ### P9. Settings by Place
 
-Status: **built**; see [`settings.md`](settings.md), "as built", for the tree, the removals and the differences.
+Status: **built** (#1450, with the glass fix); see [`settings.md`](settings.md), "as built", for the tree, the removals and the differences. Left out: the Stack feel page, "Show now playing", "New apps go to Home or Library only" and a per-calendar Agenda list.
 
 Build the page tree, renames, removals and rules in [`settings.md`](settings.md). Slices P1 to P8 have
 already removed the settings of what they removed; this slice does the reorganisation, the dead-setting
@@ -184,6 +200,8 @@ removal, shared rows everywhere, per-setting search, Back targets, reading the c
 of calendar feeds and enabled sections.
 
 ### P10. Tasks from Todoist
+
+**Outcome:** done (#1451). Todoist today and overdue tasks, complete, quick-add, encrypted local token excluded from backup. Left out: tasks without a due date are not fetched; the API details are only partly verified ([`stream-tasks.md`](stream-tasks.md)).
 
 - `TaskContent` source for Todoist: today's and overdue tasks, complete, quick-add. Personal API token
   entered in Stream > Tasks, stored encrypted on the device, excluded from backup, never logged.
@@ -193,11 +211,15 @@ of calendar feeds and enabled sections.
 
 ### P11. Glance widgets
 
+**Outcome:** done (#1452). Now playing, Next event and Top story in the widget picker. Left out: a snackbar on a failed action, glance widgets in the Dock, more widgets ([`glance-widgets.md`](glance-widgets.md)).
+
 - A fixed catalogue of Riffle's own widgets placed from the widget picker like any other: Now playing,
   Next event, Top story. Each renders the same typed card as the Stream, in a `GlassSurface`.
 - They are pool widgets with a Riffle provider id; sizing and placement use the existing grid engines.
 
 ### P12. Documentation and close-out
+
+**Outcome:** done on this branch (after #1452). ADR 0003 Accepted with an "As built" section, this plan, README, AGENTS.md, CHANGELOG, the device checklist (`workspaces-dogfood.md` replaced by [`places-views-device-checklist.md`](../development/places-views-device-checklist.md)) and small corrections to current product documents. Left out: any device run; the checklist is what must still be done by hand.
 
 - Change ADR 0003 to Accepted. Update `README.md`, `AGENTS.md`, `CHANGELOG.md`.
 - Replace `workspaces-dogfood.md` with a Places and Views device checklist: the Dock pull by side and the
@@ -206,7 +228,9 @@ of calendar feeds and enabled sections.
 
 ### P13. The Stream as pages
 
-Status: **built** (owner decision 12 in ADR 0003, after the owner found the first Stream "basically one scrollable page
+**Outcome:** done (#1452). Pages of vertical stacks, one page per app for notifications, the spine, stable page keys, remembered page. Left out: a spine marker animation between sections and a per-page stack-depth setting.
+
+Status: **built** (#1452; owner decision 12 in ADR 0003, after the owner found the first Stream "basically one scrollable page
 with horizontal card stacks"; the model is Calm's chapters, on TimeScape).
 
 **Page model.** `StreamPagePlanner` (`core/domain/.../launcher/stream/StreamPages.kt`) turns the layout and each
@@ -266,7 +290,9 @@ Not in this slice: an animation of the spine's markers between sections, and a p
 
 ### P14. Stage view on unfolded
 
-Status: **built** (owner decision 13 in ADR 0003).
+**Outcome:** done (#1452). Pages (two-up when wide) or Stage with a rail of thumbnails and a shared-element transition. Left out: dragging a stage out of the rail to reorder it, and thumbnails that are scaled copies of the live cards.
+
+Status: **built** (#1452; owner decision 13 in ADR 0003).
 
 On an expanded posture (foldable, tablet, desktop) `StreamLayout.wideView` (`StreamWideView`: Pages, the default, or
 Stage, stored per posture as `wideView`; layouts stored before it decode to Pages) chooses how the whole Stream shows. It

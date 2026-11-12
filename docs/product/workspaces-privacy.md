@@ -1,5 +1,7 @@
 # Privacy controls (S11, as built)
 
+> **Since ADR 0003 (P8, P9).** Content levels still apply, now to the Stream's sources (redaction happens before anything is drawn); the lens projection mentioned below is still the code that applies them. The Privacy page is Settings > Privacy and access, and there is no workspace preview or Sources page any more.
+
 Slice S11 of #1363 (design section 6 of [`workspaces-configuration.md`](workspaces-configuration.md), Settings IA in
 sections 2.1 and 2.6, owner decision Q8). Two controls, both additive and both defaulting to today's behaviour: a
 **content level per source**, applied at the lens projection step, and a **screenshot and recents** switch that marks

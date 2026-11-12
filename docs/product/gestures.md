@@ -14,6 +14,10 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 > longer switches Home and Library. See ["The Dock pull (P5)"](#the-dock-pull-p5). The older sections below are kept as
 > history where they are not restated.
 
+> **P8 (2026-11-12).** The Cards home mode, its stage pager and the workspace menu are deleted. Everything below that
+> names Cards, a stage pager, a side rail of stacks, the workspace menu or the Home/Library mode pair is history; the
+> arbitration that is live is the Std/Lib column (the standard Home surface), the Dock pull, the Library and the Stream.
+
 > **P13 and P14 (2026-11-12).** The Stream is a horizontal pager of pages, each one vertically scrolling stack or list,
 > with a spine as the page indicator; unfolded postures can show it as Pages (two side by side) or as the Stage view. See
 > ["The Stream (P4, entry points restated by P5)"](#the-stream-p4-entry-points-restated-by-p5) and the arbitration table.
@@ -36,7 +40,6 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 | --- | --- | --- |
 | Home gestures (1/2/3-finger swipe, pinch) | `HomeGestureInput.kt`, `HomeSwipeGesture.kt` | Custom pointer loop (ADR 0002: no N-finger Foundation equivalent) + `nestedScroll` hand-off |
 | Card stack scroll/fling | `CardStack.kt` | `Modifier.scrollable` + custom `FlingBehavior` |
-| Stage pager (Cards) | `AdaptiveStageAppStageSurface.kt` | `HorizontalPager` |
 | Home page pager (Std/Lib) | `ImmediateHomePager.kt` | `HorizontalPager` |
 | Dock pull: Library (pinned side), Stream (dynamic side) | `DockPull.kt`, `HomeDockPullBinding.kt` | Custom pointer loop (ADR 0002: direction-selective claim); the one loop the pull needs. Decisions (claim, side, destination, commit, frame) in `core/domain/.../dockpull/` |
 | Dock shelf expand/collapse (switched off, see below) | `DockShelfGesture.kt` | Custom pointer loop (ADR 0002: direction-selective claim) |
@@ -90,8 +93,8 @@ dock it started on**:
   Library", also on the Home surface root so they exist when a layout hides the dock; **Ctrl + the arrow of the pull
   direction** (Ctrl+Up for a bottom dock) opens the Stream or returns Home, **Ctrl + Shift + that arrow** opens the Library;
   the Stream button; any home gesture bound to "Stream" (`OPEN_STREAM`) or "Library" (`OPEN_LIBRARY`), neither bound by
-  default. The "Workspace menu" accessibility action stays on the dock and the root until P8 removes the menu; the pull
-  and the shortcut no longer open it.
+  default. The "Workspace menu" accessibility action was removed with the menu in P8; the pull
+  and the shortcut stopped opening it in P5.
 - **Taps on the dynamic side.** The Stream button toggles Home and the Stream; a live app opens the Stream on that app's
   stack (the Notifications section scrolls to it and the group comes into view); now playing opens it on the Now section.
 

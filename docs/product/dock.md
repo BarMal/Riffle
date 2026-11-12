@@ -7,6 +7,12 @@
 > the workspace menu or switches Home and Library; see [The dock is the handle](#the-dock-is-the-handle). The S9 and
 > Home/Library text below is kept as history where it is not restated.
 
+> **P8 and the dock fix (2026-11-12).** The Cards home mode, the workspace menu and workspace switching are deleted, so
+> every mention of Cards (its stage selector, side rail, interpreter, merged All view) and of the workspace menu below
+> describes code that no longer exists, and the Home/Library mode pair is no longer a user concept. The one dock is the
+> pool's dock (`PoolDock`). Per-workspace dock overrides are no longer applied; the only trace is the one-time restore of
+> size and edge (see "Restored size").
+
 The dock is Riffle's central shortcut and recents surface, and the handle that opens the workspace menu (before S9:
 that moved between Home and Library). There is **one dock per device class: its content is shared by both modes, its edge
 is chosen per mode**. This document is the target it is being built toward and the honest state of
@@ -116,8 +122,8 @@ Each side of the dock opens its own world (ADR 0003): the pinned side the Librar
   while the Stream shows.
 - Home gestures can be bound to "Stream" (`OPEN_STREAM`) and "Library" (`OPEN_LIBRARY`); neither is bound by default.
   "Search" (`OPEN_SEARCH`, bound to swipe down by default) opens the Library with its field focused.
-- The workspace menu is no longer reached by the pull. Its "Workspace menu" accessibility action stays on the dock and
-  the Home root until the menu is removed (P8).
+- The workspace menu is no longer reached by the pull, and since P8 it and its "Workspace menu" accessibility action no
+  longer exist.
 - A workspace may hide its dock only while a gesture opens the Stream or the Library (the stranding rule, restated for the
   new handle).
 - Fallback, to be decided on a device: if the dynamic side is too narrow a target with one or two entries, the pull may
@@ -206,8 +212,8 @@ settings, shared by every mode, and the dock's extent follows from them rather t
   Nothing ever shrinks a pinned icon: not a long run, not the dynamic side beside it.
 - **Bar height.** The bar is one icon plus its chrome (32 dp) across its edge: 76 dp at 44, 88 dp at 56. It follows the
   setting, not the room along the run.
-- **Gap.** When the pins do not quite fit, the gap between them gives first, down to nothing; beyond that the run keeps
-  its size and scrolls.
+- **Gap.** When the pins do not quite fit, the gap between them gives first, down to 8 dp (or your own spacing setting
+  when that is smaller); beyond that the run keeps its size and scrolls, so icons never touch.
 - **Pinned run.** A run longer than its room **scrolls**, at full icon size, fading through the glass at the edge that
   has more (no fade on an edge that has nothing beyond it). Five pins fit on a phone at the template size; eight scroll.
 - **Dynamic side width.** It takes only what its entries need (live apps, now playing, the Stream button, each a 48 dp
@@ -324,8 +330,8 @@ section does that job, so the rail is gone (#1159).
 | Panel exists, standard conventions | Done — a real `LauncherPage` on the same grid machinery as a home page |
 | Cards expanded shelf is panel-only | Done (#1166) — the notification card row is dropped there, the panel stays |
 | Shelf expansion | **Switched off** (plan Decision 11) behind `DockShelfExpansion.enabled`; code kept |
-| Workspace menu from the dock | **Retired (P5)** — the pull and the Ctrl+arrow shortcut no longer open it; its "Workspace menu" accessibility action (dock and home root) stays until P8 removes the menu |
-| Per-workspace dock overrides on the home | **Done** (S9): `withWorkspaceHome` applies `EffectiveDock` to the dock the home draws (render only; Settings > Dock edits the shared dock) |
+| Workspace menu from the dock | **Retired (P5), deleted (P8)** — the pull and the Ctrl+arrow shortcut stopped opening it in P5; the menu and its "Workspace menu" accessibility action went in P8 |
+| Per-workspace dock overrides on the home | **Removed (P8)** — nothing applies a workspace's dock override; a one-time restore carries the stored size and edge into the shared dock |
 | Dock swipe-up gesture action | **Removed** (plan Decision 9) — the dock pull will be the only mode-transition trigger |
 | Panel configurable: size, grid, padding | **Not started** |
 | Panel editing: drag in from the picker | **Not started** — needs a non-fullscreen picker so the dock stays visible |

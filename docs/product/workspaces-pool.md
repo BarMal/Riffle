@@ -1,5 +1,7 @@
 # Workspaces: the shared placed-items pool (WS10 S3, as built)
 
+> **Since ADR 0003 (P8).** The pool is the only Home and Dock model: Home is the pool arrangement of each layout's active stored workspace, the Dock is `PoolDock`, the preview switch, the preview editor, "Refresh home items" and the "Home from placed items" developer switch are gone, and nothing switches workspaces. Statements below about the preview, presets, the workspace menu or the legacy path are history.
+
 Status: **domain, now wired read-only behind the preview switch by S4 (see [`workspaces-pool-cutover.md`](workspaces-pool-cutover.md))**. The text below describes the S3 state, updated for the S4 domain changes (widget rule, dock in the pool, fork on first edit; see [`workspaces-pool-cutover-s4.md`](workspaces-pool-cutover-s4.md)). Slice S3 of `docs/product/workspaces-configuration.md` section 9 (owner decisions N2, N9,
 N12, N13). Nothing in `app/` uses it, no runtime behaviour changes, and `HomeLayoutSet` is still the source of truth for
 the home screen. Code: `core/domain/.../launcher/workspace/pool/`. Tracking: #1363, slice issue #1383.
