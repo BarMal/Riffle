@@ -103,6 +103,13 @@ alpha or blur radius. The numbers live in `core/domain/.../designsystem/GlassMat
 | `Regular` | Cards, widgets' frames, folders, the search pill and results panel | Full frost, hairline, one soft shadow, tint |
 | `Thick` | Library sheet, menus, pickers, the focused card, settings sections, panels | Heavy frost with a contrast scrim behind text, no shadow of its own |
 
+- **Glass over the system wallpaper.** The wallpaper is outside the app's content, so glass cannot
+  blur or refract it; there the surface is the tint at the weight's tint alpha, plus the sheen and
+  the spotlight, with the real wallpaper showing through. Frost and refraction apply to app content
+  behind a surface. Each weight has a floor tint alpha over the wallpaper (`wallpaperTintAlpha`) high
+  enough to keep 4.5:1 text contrast over the worst wallpaper, and the dock uses its own "Dock
+  background" setting exactly (0% clear, 100% opaque). The blend is `GlassBlend` in `core/domain`,
+  which the AGSL shader mirrors.
 - **Sheen everywhere.** The dock's glass sheen (`glassSheen`: top specular, caustic spot, inner
   shadow, rim line, cool border) is part of the primitive for every weight, driven by the surface's
   own shape. The weight scales it (the hairline most on `Thick`, least on `Thin`).

@@ -304,6 +304,7 @@ internal fun Modifier.liquidGlassShaderBackground(
     frostStrength: Float,
     refractionStrength: Float,
     tokens: GlassWeightTokens = GlassMaterialTokens.regular,
+    wallpaperTintAlpha: Float? = null,
 ): Modifier {
     val density = LocalDensity.current
     var positionInRoot by remember { mutableStateOf(Offset.Zero) }
@@ -332,6 +333,7 @@ internal fun Modifier.liquidGlassShaderBackground(
         refractionStrength = refractionStrength,
         tint = tint,
         tokens = tokens,
+        wallpaperTintAlpha = wallpaperTintAlpha,
     )
 }
 
@@ -354,6 +356,7 @@ private fun Modifier.liquidGlassRefraction(
     refractionStrength: Float,
     tint: Color,
     tokens: GlassWeightTokens,
+    wallpaperTintAlpha: Float?,
 ): Modifier =
     drawBehind {
         val size = sizePx()
@@ -376,6 +379,10 @@ private fun Modifier.liquidGlassRefraction(
             tint.green,
             tint.blue,
             tint.alpha * tokens.shaderTintAlpha(frostStrength),
+        )
+        shader.setFloatUniform(
+            "tintAlphaWallpaper",
+            wallpaperTintAlpha ?: (tint.alpha * tokens.shaderTintAlphaOverWallpaper(frostStrength)),
         )
         localLayer.renderEffect =
             RenderEffect
@@ -408,6 +415,9 @@ private const val LIQUID_GLASS_SHADER_SRC = """
     uniform float frost;
     uniform float refraction;
     uniform float4 tint;
+    // The tint alpha where the backdrop is transparent (the system wallpaper, which is outside the
+    // app's content and so never in the sampled layer). Mirrors GlassBlend in core/domain.
+    uniform float tintAlphaWallpaper;
 
     float roundedRectSdf(float2 point, float2 halfSize, float radius) {
         float2 q = abs(point) - halfSize + radius;
@@ -442,20 +452,25 @@ private const val LIQUID_GLASS_SHADER_SRC = """
         float2 normal = roundedRectNormal(local, center, cornerRadiusPx);
 
         float displacement = rim * refraction * 18.0;
-        half3 refracted;
+        // The backdrop is premultiplied RGBA (child shaders return premultiplied colour), and is
+        // transparent over the system wallpaper: every tap is averaged as premultiplied RGBA so
+        // that alpha survives, and the dispersion takes alpha from the middle tap.
+        half4 refracted;
         refracted.r = content.eval(fragCoord - normal * displacement * 0.6).r;
-        refracted.g = content.eval(fragCoord - normal * displacement * 0.85).g;
+        half4 middle = content.eval(fragCoord - normal * displacement * 0.85);
+        refracted.g = middle.g;
+        refracted.a = middle.a;
         refracted.b = content.eval(fragCoord - normal * displacement).b;
 
         float blurAmount = (1.0 - rim) * frost;
-        half3 blurred = refracted;
+        half4 blurred = refracted;
         if (blurAmount > 0.02) {
-            half3 sum = refracted;
+            half4 sum = refracted;
             float sampleCount = 1.0;
             for (int tap = 0; tap < 8; tap++) {
                 float angle = 0.7853982 * float(tap);
                 float2 tapOffset = float2(cos(angle), sin(angle)) * blurAmount * 14.0;
-                sum += content.eval(fragCoord + tapOffset).rgb;
+                sum += content.eval(fragCoord + tapOffset);
                 sampleCount += 1.0;
             }
             blurred = sum / sampleCount;
@@ -464,9 +479,15 @@ private const val LIQUID_GLASS_SHADER_SRC = """
         float facing = clamp(dot(normal, float2(-0.5, -0.8660254)), 0.0, 1.0);
         float specular = rim * facing * facing * 0.35;
 
-        half3 tinted = mix(blurred, tint.rgb, tint.a);
-        half3 outColor = tinted + specular;
-        return half4(outColor, 1.0);
+        // Mirrors GlassBlend.shade: tint alpha t is tint.a over opaque content and
+        // tintAlphaWallpaper over a transparent backdrop; the output is premultiplied and keeps the
+        // backdrop's alpha, so the wallpaper shows through wherever the backdrop was empty.
+        float backdropAlpha = clamp(float(blurred.a), 0.0, 1.0);
+        float t = mix(tintAlphaWallpaper, tint.a, backdropAlpha);
+        float outA = min(1.0, float(blurred.a) * (1.0 - t) + t + specular);
+        half3 outRgb = blurred.rgb * (1.0 - t) + tint.rgb * t + half(specular);
+        outRgb = min(outRgb, half3(outA));
+        return half4(outRgb, half(outA));
     }
 """
 

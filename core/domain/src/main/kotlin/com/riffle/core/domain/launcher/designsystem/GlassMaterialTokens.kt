@@ -36,6 +36,12 @@ data class GlassWeightTokens(
     val shaderTintFrostAlpha: Float,
     /** Extra flat contrast layer over the glass and under the content; 0 for none. */
     val contentScrimAlpha: Float,
+    /**
+     * The least tint alpha the surface shows where nothing of the app is behind it (the system
+     * wallpaper, which the app cannot sample): high enough that the surface's text keeps 4.5:1 over
+     * the worst wallpaper (see `GlassBlend`). Over app content the shader tint alpha is used as is.
+     */
+    val wallpaperTintAlpha: Float,
     /** Scales the sheen's border (the hairline). */
     val hairlineScale: Float,
     /** Scales the sheen's specular, caustic and rim highlights. */
@@ -52,6 +58,9 @@ data class GlassWeightTokens(
     fun shaderTintAlpha(frost: Float): Float =
         (shaderTintBaseAlpha + shaderTintFrostAlpha * frost.coerceIn(0f, 1f)).coerceIn(0f, 1f)
 
+    /** The tint alpha over a transparent backdrop (the wallpaper): the shader tint, but never below the floor. */
+    fun shaderTintAlphaOverWallpaper(frost: Float): Float = maxOf(shaderTintAlpha(frost), wallpaperTintAlpha)
+
     /** The tint alpha of the software tint layer. */
     fun softwareTintAlpha(supportsBlur: Boolean): Float = if (supportsBlur) tintAlpha else noBlurTintAlpha
 }
@@ -66,6 +75,7 @@ object GlassMaterialTokens {
             shaderTintBaseAlpha = 0.25f,
             shaderTintFrostAlpha = 0.35f,
             contentScrimAlpha = 0f,
+            wallpaperTintAlpha = 0.66f,
             hairlineScale = 0.6f,
             highlightScale = 0.8f,
             innerShadowScale = 0.8f,
@@ -81,6 +91,7 @@ object GlassMaterialTokens {
             shaderTintBaseAlpha = 0.35f,
             shaderTintFrostAlpha = 0.45f,
             contentScrimAlpha = 0f,
+            wallpaperTintAlpha = 0.66f,
             hairlineScale = 1f,
             highlightScale = 1f,
             innerShadowScale = 1f,
@@ -96,6 +107,7 @@ object GlassMaterialTokens {
             shaderTintBaseAlpha = 0.50f,
             shaderTintFrostAlpha = 0.45f,
             contentScrimAlpha = 0.14f,
+            wallpaperTintAlpha = 0.72f,
             hairlineScale = 1.3f,
             highlightScale = 1.1f,
             innerShadowScale = 1.2f,
