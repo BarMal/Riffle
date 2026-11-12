@@ -67,15 +67,15 @@ class HomeGestureConflictDetectorTest {
             HomeGestureSettings(
                 actions =
                     mapOf(
-                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
-                        HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
+                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_STREAM,
+                        HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_STREAM,
                     ),
             )
 
         assertEquals(
             listOf(
                 HomeGestureConflict(
-                    action = LauncherGestureAction.OPEN_SEARCH,
+                    action = LauncherGestureAction.OPEN_STREAM,
                     gestures = listOf(HomeGesture.ONE_FINGER_UP, HomeGesture.TWO_FINGER_UP),
                 ),
             ),
@@ -96,11 +96,11 @@ class HomeGestureConflictDetectorTest {
                 HomeGestureSettings(
                     actions =
                         mapOf(
-                            HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                            HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_SEARCH,
                         ),
                 ),
             ).single {
-                it.action == LauncherGestureAction.OPEN_NOTIFICATIONS
+                it.action == LauncherGestureAction.OPEN_SEARCH
             }
 
         assertEquals(

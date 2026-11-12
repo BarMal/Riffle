@@ -9,8 +9,8 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
-import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
@@ -31,7 +31,7 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING),
                 LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
                 LauncherShellAction.SelectHomeNavigationBarHidden(hidden = true),
-                LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.ICONS),
+                LauncherShellAction.SelectLibraryView(LibraryView.Grid),
                 LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
                 LauncherShellAction.UpdateAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.modern()),
                 LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.unfolded()),

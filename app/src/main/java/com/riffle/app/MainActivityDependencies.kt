@@ -100,6 +100,7 @@ import com.riffle.app.launcher.workspace.WorkspaceRuntime
 import com.riffle.app.launcher.workspace.sourceAccessMap
 import com.riffle.app.launcher.workspace.workspaceLensProvider
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -125,6 +126,7 @@ import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 import java.time.ZoneId
 import java.util.concurrent.Executors
 
@@ -321,6 +323,16 @@ internal class MainActivityDependencies(
                     hiddenApps = appVisibilityRepository.hiddenAppIdentities(),
                     hideRules = launcherSettings().notificationHiding.rules,
                 )
+                // One hidden-apps list (the Library's): rules that hide an app from all apps move into it.
+                withContext(Dispatchers.IO) {
+                    val installed =
+                        when (val result = installedAppRepository.refreshResult()) {
+                            is InstalledAppRefreshResult.Authoritative -> result.apps
+                            is InstalledAppRefreshResult.Partial -> result.apps
+                            InstalledAppRefreshResult.Unavailable -> emptyList()
+                        }
+                    exclusionRepository.mergeAppHides(installed, appVisibilityRepository)
+                }
             },
             sourceAccess = {
                 sourceAccessMap(

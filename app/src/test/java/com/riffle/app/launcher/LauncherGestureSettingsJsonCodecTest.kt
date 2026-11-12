@@ -179,7 +179,7 @@ class LauncherGestureSettingsJsonCodecTest {
 
         val decoded = stored.toGestures(GestureSettings()).homeGestures
 
-        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.OPEN_SEARCH, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
         assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, decoded.actionFor(HomeGesture.ONE_FINGER_LEFT))
     }
 

@@ -33,13 +33,13 @@ import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
-import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
@@ -424,8 +424,13 @@ sealed interface LauncherShellAction {
         val enabled: Boolean,
     ) : LauncherShellAction
 
-    data class SelectAppDrawerPresentation(
-        val presentation: AppDrawerPresentation,
+    /**
+     * "Show as" on the Library (and Settings > Library): the view [deviceClass] draws, the active one when null (the
+     * Library's own header always means the one on screen).
+     */
+    data class SelectLibraryView(
+        val view: LibraryView,
+        val deviceClass: HomeLayoutDeviceClass? = null,
     ) : LauncherShellAction
 
     data class SelectAppDrawerIconGridColumns(

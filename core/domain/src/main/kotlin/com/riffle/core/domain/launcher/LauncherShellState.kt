@@ -48,6 +48,8 @@ data class LauncherShellState(
     val homeRoleStatus: HomeRoleStatus = HomeRoleStatus.UNKNOWN,
     val overlayDockPermissionStatus: OverlayDockPermissionStatus = OverlayDockPermissionStatus.UNKNOWN,
     val destination: ShellDestination = ShellDestination.HOME,
+    /** Whether the Library, when it shows, opened over the Stream rather than Home; closing it returns there. */
+    val libraryOverStream: Boolean = false,
     val homeLayout: HomeLayout = HomeLayoutDefaults.standard(),
     val homeLayoutSet: HomeLayoutSet = HomeLayoutSet.fromLayout(homeLayout),
     val settingsLayoutDeviceClass: HomeLayoutDeviceClass = homeLayoutSet.activeKey.deviceClass,

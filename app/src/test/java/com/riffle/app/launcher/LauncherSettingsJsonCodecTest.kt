@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
@@ -27,7 +28,6 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageFanDirection
 import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
 import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
 import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
-import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
@@ -87,19 +87,75 @@ import org.junit.Test
 @Suppress("LargeClass")
 class LauncherSettingsJsonCodecTest {
     @Test
-    fun roundTripsAppDrawerSettingsAndCoercesMalformedGridColumns() {
+    fun roundTripsTheLibraryViewsAndCoercesMalformedGridColumns() {
         val settings =
             LauncherSettings(
-                appDrawer = AppDrawerSettings(AppDrawerPresentation.ICONS, iconGridColumns = 6),
+                appDrawer =
+                    AppDrawerSettings(
+                        libraryViews =
+                            mapOf(
+                                HomeLayoutDeviceClass.PHONE to LibraryView.Grid,
+                                HomeLayoutDeviceClass.TABLET to LibraryView.AlphaList,
+                            ),
+                        iconGridColumns = 6,
+                    ),
             )
 
         assertEquals(settings.appDrawer, decodeLauncherSettings(encodeLauncherSettings(settings)).appDrawer)
         assertEquals(
-            AppDrawerSettings(AppDrawerPresentation.LIST, iconGridColumns = 3),
+            AppDrawerSettings(iconGridColumns = 3),
             decodeLauncherSettings(
-                "{\"appDrawer\": {\"presentation\": \"UNKNOWN\", \"iconGridColumns\": 1}}",
+                "{\"appDrawer\": {\"iconGridColumns\": 1}}",
             ).appDrawer,
         )
+    }
+
+    @Test
+    fun decodesTheOldAppDrawerPresentationIntoTheLibraryViewOfEveryDeviceClass() {
+        fun viewOf(
+            json: String,
+            deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
+        ) = decodeLauncherSettings(json).appDrawer.libraryViewFor(deviceClass)
+
+        assertEquals(LibraryView.AlphaList, viewOf("{\"appDrawer\": {\"presentation\": \"LIST\"}}"))
+        assertEquals(
+            LibraryView.AlphaList,
+            viewOf("{\"appDrawer\": {\"presentation\": \"LIST\"}}", HomeLayoutDeviceClass.TABLET),
+        )
+        assertEquals(LibraryView.Grid, viewOf("{\"appDrawer\": {\"presentation\": \"ICONS\"}}"))
+        assertEquals(
+            LibraryView.Grid,
+            viewOf("{\"appDrawer\": {\"presentation\": \"ICONS\"}}", HomeLayoutDeviceClass.FOLDABLE),
+        )
+    }
+
+    @Test
+    fun anythingElseInTheStoredAppDrawerDecodesToCategories() {
+        listOf(
+            "{}",
+            "{\"appDrawer\": {}}",
+            "{\"appDrawer\": {\"presentation\": \"UNKNOWN\"}}",
+            "{\"appDrawer\": {\"presentation\": 7}}",
+            "{\"appDrawer\": {\"libraryViews\": {\"PHONE\": \"carousel\", \"WATCH\": \"grid\"}}}",
+            "{\"appDrawer\": {\"libraryViews\": \"grid\"}}",
+        ).forEach { json ->
+            assertEquals(
+                json,
+                LibraryView.Categories,
+                decodeLauncherSettings(json).appDrawer.libraryViewFor(HomeLayoutDeviceClass.PHONE),
+            )
+        }
+    }
+
+    @Test
+    fun theNewLibraryViewsWinOverAnOldPresentationStoredBesideThem() {
+        val decoded =
+            decodeLauncherSettings(
+                "{\"appDrawer\": {\"presentation\": \"LIST\", \"libraryViews\": {\"PHONE\": \"grid\"}}}",
+            ).appDrawer
+
+        assertEquals(LibraryView.Grid, decoded.libraryViewFor(HomeLayoutDeviceClass.PHONE))
+        assertEquals(LibraryView.Categories, decoded.libraryViewFor(HomeLayoutDeviceClass.TABLET))
     }
 
     @Test
@@ -910,7 +966,7 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings("{}")
 
         assertEquals(LauncherGestureAction.NONE, decodedSettings.gestures.homeSwipe.up)
-        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decodedSettings.gestures.homeSwipe.down)
+        assertEquals(LauncherGestureAction.OPEN_SEARCH, decodedSettings.gestures.homeSwipe.down)
         assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, decodedSettings.gestures.homeSwipe.left)
         assertEquals(LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE, decodedSettings.gestures.homeSwipe.right)
     }
@@ -1341,7 +1397,7 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(LauncherGestureAction.NONE, decodedSettings.gestures.homeSwipe.left)
-        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decodedSettings.gestures.homeSwipe.down)
+        assertEquals(LauncherGestureAction.OPEN_SEARCH, decodedSettings.gestures.homeSwipe.down)
     }
 
     @Test

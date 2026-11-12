@@ -132,6 +132,32 @@ class LauncherShellAppDrawerViewModelTest {
     }
 
     @Test
+    fun theLibraryClearsItsSearchWhenItClosesButNotWhenItSwitchesToSearchFocus() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps = listOf(app(label = "Camera"), app(label = "Maps")),
+                    ),
+            )
+        runBlocking { viewModel.refreshInstalledApps().join() }
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenAppDrawer)
+        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("cam"))
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSearch)
+
+        assertEquals(ShellDestination.SEARCH, viewModel.state.value.destination)
+        assertEquals("cam", viewModel.state.value.searchQuery)
+        assertEquals(listOf("Camera"), viewModel.state.value.searchResults.map { app -> app.label })
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
+
+        assertEquals("", viewModel.state.value.searchQuery)
+        assertEquals("", viewModel.state.value.appDrawerQuery)
+    }
+
+    @Test
     fun loadsAppShortcutsForVisibleApps() {
         val hidden = app(label = "Hidden", visibility = AppVisibility.HIDDEN)
         val camera = app(label = "Camera")

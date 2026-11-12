@@ -42,10 +42,10 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import com.riffle.app.R
 import com.riffle.app.launcher.GlassSurface
+import com.riffle.app.launcher.ShowAsMenuItems
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -155,24 +155,15 @@ private fun StreamSectionHeader(
             }
         }
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            Text(
-                text = stringResource(R.string.stream_show_as),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.xs),
+            ShowAsMenuItems(
+                options = StreamView.entries,
+                current = view,
+                optionLabel = { option -> stringResource(option.titleRes()) },
+                onSelect = { option ->
+                    menuOpen = false
+                    onShowAs(option)
+                },
             )
-            StreamView.entries.forEach { option ->
-                val current = stringResource(R.string.stream_current_view, stringResource(option.titleRes()))
-                DropdownMenuItem(
-                    text = { Text(stringResource(option.titleRes())) },
-                    modifier = Modifier.semantics { if (option == view) stateDescription = current },
-                    onClick = {
-                        menuOpen = false
-                        onShowAs(option)
-                    },
-                    trailingIcon = { if (option == view) Text("✓") },
-                )
-            }
             HorizontalDivider()
             if (canMoveUp) {
                 MenuAction(R.string.stream_move_up) {

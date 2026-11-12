@@ -102,8 +102,9 @@ class LauncherGestureMappingsTest {
                     ),
             ).toLauncherGestureMappings()
 
+        // Swipe down opens the Library with its search field focused (ADR 0003).
         assertEquals(
-            LauncherGestureAction.OPEN_NOTIFICATIONS,
+            LauncherGestureAction.OPEN_SEARCH,
             mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.ONE_FINGER_DOWN),
         )
         assertEquals(
@@ -119,7 +120,7 @@ class LauncherGestureMappingsTest {
                 LauncherGestureConflict(
                     surface = LauncherGestureSurface.HOME_PAGE,
                     action = LauncherGestureAction.OPEN_NOTIFICATIONS,
-                    gestures = listOf(LauncherGesture.ONE_FINGER_DOWN, LauncherGesture.TWO_FINGER_LEFT),
+                    gestures = listOf(LauncherGesture.TWO_FINGER_UP, LauncherGesture.TWO_FINGER_LEFT),
                 ),
             ),
             LauncherGestureConflictDetector.conflictsIn(mappings),

@@ -412,7 +412,14 @@ private fun LauncherShellBackHandling(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     BackHandler(enabled = state.destination != ShellDestination.HOME) {
-        onAction(LauncherShellAction.OpenHome)
+        // The Library closes back to whatever it opened over: Home or the Stream.
+        onAction(
+            if (state.destination.isLibrary && state.libraryOverStream) {
+                LauncherShellAction.OpenStream
+            } else {
+                LauncherShellAction.OpenHome
+            },
+        )
     }
     // S9: Back never leaves Library for another mode (the mode pair retired with workspaces, #1323).
 }
@@ -618,8 +625,9 @@ private fun LauncherDestination(
 
     when (state.destination) {
         // The Stream replaces Home and keeps the Dock under it, so both are the one HomeDestination; without a Stream
-        // host the destination falls back to Home (Back and the Home button return there either way).
-        ShellDestination.HOME, ShellDestination.STREAM ->
+        // host the destination falls back to Home (Back and the Home button return there either way). The Library is
+        // a sheet over Home or the Stream, so it is drawn by the same HomeDestination, with the Dock still under it.
+        ShellDestination.HOME, ShellDestination.STREAM, ShellDestination.APP_DRAWER, ShellDestination.SEARCH ->
             HomeDestination(
                 // Render only: the workspace's gestures and dock override; Settings keeps the global values.
                 state = remember(state, workspace) { state.withWorkspaceHome(workspace) },
@@ -631,57 +639,12 @@ private fun LauncherDestination(
                 haptics = haptics,
                 workspaceMenu = workspaceMenu,
                 stream = stream,
-                streamShown = state.destination == ShellDestination.STREAM && stream != null,
-                onAction = settingsPageActionRouter.onAction,
-            )
-
-        ShellDestination.APP_DRAWER ->
-            AppDrawer(
-                state =
-                    AppDrawerState(
-                        query = state.appDrawerQuery,
-                        profileFilter = state.appDrawerProfileFilter,
-                        installedApps = state.installedApps,
-                        apps = state.appDrawerApps,
-                        presentation = state.launcherSettings.appDrawer.presentation,
-                        iconGridColumns = state.launcherSettings.appDrawer.iconGridColumns,
-                    ),
-                appListContext =
-                    AppListContext(
-                        homeLayout = state.homeLayout,
-                        overlayDock = state.launcherSettings.overlayDock,
-                        notificationGroupsByApp = state.notificationGroupsByApp,
-                        appShortcutsByApp = state.appShortcutsByApp,
-                        appIconLoader = appIconLoader,
-                        haptics = haptics,
-                        onAction = settingsPageActionRouter.onAction,
-                    ),
-                onAction = settingsPageActionRouter.onAction,
-            )
-
-        ShellDestination.SEARCH ->
-            SearchSurface(
-                state =
-                    SearchSurfaceState(
-                        query = state.searchQuery,
-                        filters = state.searchFilters,
-                        installedApps = state.installedApps,
-                        results = state.searchResults,
-                        shortcutResults = state.searchShortcutResults,
-                        settingsResults = state.searchSettingsResults,
-                        homeLayout = state.homeLayout,
-                        resultPresentation = state.launcherSettings.search.resultPresentation,
-                    ),
-                appListContext =
-                    AppListContext(
-                        homeLayout = state.homeLayout,
-                        overlayDock = state.launcherSettings.overlayDock,
-                        notificationGroupsByApp = state.notificationGroupsByApp,
-                        appShortcutsByApp = state.appShortcutsByApp,
-                        appIconLoader = appIconLoader,
-                        haptics = haptics,
-                        onAction = settingsPageActionRouter.onAction,
-                    ),
+                streamShown =
+                    stream != null &&
+                        (
+                            state.destination == ShellDestination.STREAM ||
+                                (state.destination.isLibrary && state.libraryOverStream)
+                        ),
                 onAction = settingsPageActionRouter.onAction,
             )
 

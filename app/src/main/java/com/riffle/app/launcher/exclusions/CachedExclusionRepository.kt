@@ -1,6 +1,9 @@
 package com.riffle.app.launcher.exclusions
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
+import com.riffle.core.domain.launcher.apps.HiddenAppsMerge
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.workspace.SourceSubscription
@@ -94,6 +97,27 @@ internal class CachedExclusionRepository(
                 (cached != null).also { loaded -> if (loaded) cached = rules }
             }
         if (replaced) changed()
+    }
+
+    /**
+     * Folds the app exclusion rules that hide an app from all apps into the one hidden-apps list ([HiddenAppsMerge]):
+     * the apps go onto [visibility] first, so nothing is ever visible in between, then the rules they came from are
+     * dropped. Returns whether anything moved; false before [initialize]. Idempotent, so it can run at every start (a
+     * hide made from a Finder page since then is picked up the next time).
+     */
+    fun mergeAppHides(
+        installed: List<InstalledApp>,
+        visibility: AppVisibilityRepository,
+    ): Boolean {
+        val current = cached ?: return false
+        val stored = visibility.hiddenAppIdentities()
+        val result = HiddenAppsMerge.merge(stored, current, installed)
+        val changed = result.changed(stored, current)
+        if (changed) {
+            (result.hidden - stored).forEach(visibility::hideApp)
+            update { rules -> HiddenAppsMerge.merge(result.hidden, rules, installed).rules }
+        }
+        return changed
     }
 
     /** The rule set of [deviceClass]; empty before [initialize]. */

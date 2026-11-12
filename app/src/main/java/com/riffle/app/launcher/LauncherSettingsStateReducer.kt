@@ -316,11 +316,15 @@ private fun LauncherShellState.withAppDrawerSettingsAction(
     launcherSettingsRepository: LauncherSettingsRepository,
 ): LauncherShellState? =
     when (action) {
-        is LauncherShellAction.SelectAppDrawerPresentation ->
+        is LauncherShellAction.SelectLibraryView ->
             withLauncherSettings(
                 settings =
                     launcherSettings.copy(
-                        appDrawer = launcherSettings.appDrawer.copy(presentation = action.presentation),
+                        appDrawer =
+                            launcherSettings.appDrawer.withLibraryView(
+                                deviceClass = action.deviceClass ?: homeLayoutSet.activeKey.deviceClass,
+                                view = action.view,
+                            ),
                     ),
                 launcherSettingsRepository = launcherSettingsRepository,
             )

@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.pool.PoolHomeSwitch
+import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.wizard.ContentWizardRequests
 import com.riffle.app.launcher.wizard.WizardStores
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -54,6 +55,8 @@ internal fun WorkspaceLayer(
     val runtime = remember(host) { host.runtime() }
     LaunchedEffect(runtime) {
         runtime.prepareExclusions()
+        // The hidden apps may just have absorbed app exclusion rules (one list); redraw the app lists from it.
+        viewModel.refreshInstalledApps()
         runtime.repository.initialize(WorkspaceBootstrap::seed)
         viewModel.workspaceMenu.refresh()
     }

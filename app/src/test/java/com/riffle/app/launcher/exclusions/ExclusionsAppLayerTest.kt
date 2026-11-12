@@ -4,6 +4,8 @@ import com.riffle.app.launcher.workspace.workspaceLensProvider
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemId
@@ -87,6 +89,72 @@ class ExclusionsAppLayerTest {
             CachedExclusionRepository(failing).initialize(setOf(hidden), emptyList())
             assertTrue(failing.writes.isEmpty())
         }
+
+    private class FakeVisibility(
+        var hiddenSet: Set<AppIdentity> = emptySet(),
+    ) : AppVisibilityRepository {
+        override fun hiddenAppIdentities(): Set<AppIdentity> = hiddenSet
+
+        override fun hideApp(identity: AppIdentity) {
+            hiddenSet = hiddenSet + identity
+        }
+
+        override fun showApp(identity: AppIdentity) {
+            hiddenSet = hiddenSet - identity
+        }
+    }
+
+    @Test
+    fun mergeAppHidesMovesAllAppsRulesIntoTheOneHiddenListAndDropsThem() =
+        runBlocking {
+            val store = FakeStore()
+            val repository = CachedExclusionRepository(store)
+            repository.initialize(emptySet(), emptyList())
+            val rule = SourceExclusionRule(ExclusionRuleId("r"), SourceIds.ALL_APPS, ExclusionMatcher.App("chat"))
+            val recents = SourceExclusionRule(ExclusionRuleId("q"), SourceIds.RECENT_APPS, ExclusionMatcher.App("mail"))
+            repository.update { rules ->
+                rules.update(phone) { set -> set.add(rule).add(recents) }
+            }
+            val visibility = FakeVisibility(setOf(AppIdentity(AppPackageName("old"), AppActivityName("Main"))))
+            val installed =
+                listOf("chat", "mail", "old").map { pkg ->
+                    InstalledApp(AppIdentity(AppPackageName(pkg), AppActivityName("Main")), pkg)
+                }
+
+            assertTrue(repository.mergeAppHides(installed, visibility))
+
+            // Nothing hidden became visible, the rule's app joined the list, a recents-only hide stayed a rule.
+            assertEquals(setOf("old", "chat"), visibility.hiddenSet.map { it.packageName.value }.toSet())
+            assertEquals(listOf(recents), repository.rules(phone).rules)
+            // Idempotent, and the dropped rule is stored (writes are asynchronous) so a restart cannot bring it back.
+            assertTrue(!repository.mergeAppHides(installed, visibility))
+            repeat(WRITE_POLLS) {
+                if (store.stored?.forLayout(phone)?.rules != listOf(recents)) Thread.sleep(WRITE_POLL_MILLIS)
+            }
+            assertEquals(listOf(recents), store.stored?.forLayout(phone)?.rules)
+        }
+
+    @Test
+    fun anAppUnhiddenAfterTheMergeStaysVisible() =
+        runBlocking {
+            val repository = CachedExclusionRepository(FakeStore())
+            repository.initialize(setOf(hidden), emptyList())
+            val installed = listOf(InstalledApp(hidden, "Chat"))
+            val visibility = FakeVisibility(setOf(hidden))
+            repository.mergeAppHides(installed, visibility)
+
+            visibility.showApp(hidden)
+            repository.mergeAppHides(installed, visibility)
+
+            assertTrue(visibility.hiddenSet.isEmpty())
+        }
+
+    @Test
+    fun mergeAppHidesDoesNothingBeforeInitialize() {
+        val repository = CachedExclusionRepository(FakeStore())
+
+        assertTrue(!repository.mergeAppHides(emptyList(), FakeVisibility()))
+    }
 
     @Test
     fun jsonCodecRoundTripsAndRejectsGarbage() {
@@ -204,4 +272,9 @@ class ExclusionsAppLayerTest {
             assertEquals(2, notified)
             assertTrue(repository.rules(phone).isEmpty)
         }
+
+    private companion object {
+        const val WRITE_POLLS = 40
+        const val WRITE_POLL_MILLIS = 50L
+    }
 }

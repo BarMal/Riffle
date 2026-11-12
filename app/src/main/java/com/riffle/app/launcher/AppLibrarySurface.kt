@@ -21,13 +21,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
+import com.riffle.app.launcher.library.titleRes
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.containsHomeApp
 import com.riffle.core.domain.launcher.home.containsHomeAppShortcut
 import com.riffle.core.domain.launcher.home.dockShortcutIdFor
-import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.settings.MAX_APP_DRAWER_ICON_GRID_COLUMNS
 import com.riffle.core.domain.launcher.settings.MIN_APP_DRAWER_ICON_GRID_COLUMNS
 import androidx.compose.foundation.lazy.grid.items as gridItems
@@ -120,7 +123,7 @@ private fun AppDrawerIcon(
 }
 
 internal const val APP_DRAWER_ICON_GRID_TEST_TAG = "app-drawer-icon-grid"
-internal const val APP_DRAWER_PRESENTATION_TEST_TAG_PREFIX = "app-drawer-presentation-"
+internal const val LIBRARY_VIEW_TEST_TAG_PREFIX = "library-view-"
 internal const val APP_DRAWER_GRID_COLUMNS_TEST_TAG_PREFIX = "app-drawer-grid-columns-"
 
 @Composable
@@ -128,23 +131,25 @@ internal fun SettingsAppDrawerSection(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsSection(title = "App drawer") {
+    val deviceClass = state.selectedLayoutDeviceClass
+    val view = state.settings.appDrawer.libraryViewFor(deviceClass)
+    SettingsSection(title = stringResource(R.string.library_title)) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SettingsTextColumn(
-                title = "App presentation",
-                subtitle = "Choose a detailed list or a compact icon grid",
+                title = stringResource(R.string.stream_show_as),
+                subtitle = "Choose how the Library draws your apps. Long-press its header to change it there.",
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AppDrawerPresentation.entries.forEach { presentation ->
+                LibraryView.entries.forEach { option ->
                     FilterChip(
-                        modifier = Modifier.testTag("$APP_DRAWER_PRESENTATION_TEST_TAG_PREFIX${presentation.name}"),
-                        selected = presentation == state.settings.appDrawer.presentation,
-                        onClick = { onAction(LauncherShellAction.SelectAppDrawerPresentation(presentation)) },
-                        label = { Text(if (presentation == AppDrawerPresentation.ICONS) "Icons" else "List") },
+                        modifier = Modifier.testTag("$LIBRARY_VIEW_TEST_TAG_PREFIX${option.name}"),
+                        selected = option == view,
+                        onClick = { onAction(LauncherShellAction.SelectLibraryView(option, deviceClass)) },
+                        label = { Text(stringResource(option.titleRes())) },
                     )
                 }
             }
-            if (state.settings.appDrawer.presentation == AppDrawerPresentation.ICONS) {
+            if (view == LibraryView.Grid) {
                 SettingsTextColumn(
                     title = "Icon grid",
                     subtitle = "Choose how many app icons appear in each row",
@@ -160,7 +165,6 @@ internal fun SettingsAppDrawerSection(
                     }
                 }
             }
-            // "After leaving Library" retired at S9 (design 3.2): Settings > Layout > Returning to Home replaces it.
         }
     }
 }

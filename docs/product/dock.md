@@ -71,7 +71,7 @@ Each side of the dock opens its own world (ADR 0003): the pinned side the Librar
 | Action on the dock | Result |
 | --- | --- |
 | Tap a pinned app | Launches it |
-| Pull away from the edge, starting on the pinned side | Library (the app drawer until P7 reworks it) |
+| Pull away from the edge, starting on the pinned side | Library, tracking the finger |
 | Pull away from the edge, starting on the dynamic side | Stream, tracking the finger |
 | The same pull on the dynamic side while the Stream shows | Home |
 | Tap the Stream button | Switches to the Stream, and back to Home from it |
@@ -104,7 +104,10 @@ Each side of the dock opens its own world (ADR 0003): the pinned side the Librar
   a split from Stream only, or return Home. The **Stream button** toggles Home only and the last-used shown state
   (split or Stream only); the **Home press** returns to Home only. Folded and phone postures keep the full switch above.
   See [The split](#the-split-p6).
-- **The Library pull** moves nothing with the finger; it opens the Library when its release commits by the same rules.
+- **The Library pull (P7)** raises the Library's sheet from the dock's edge, 1:1 with the finger, while Home or the Stream
+  fades out under it; it commits by the same thresholds as the Stream pull and springs back otherwise, can be caught
+  mid-settle, and under reduced motion the sheet fades in. The Dock stays drawn and tappable under the sheet, and the
+  Stream button still switches straight to the Stream. See [The Library](gestures.md#the-library-p7).
 - The dock itself never moves, re-orients or fades with a pull: it is the handle you are holding.
 - **Accessibility.** The dock (and the Home surface root, so they exist when a layout hides the dock) offers the custom
   actions "Open Stream" (or "Back to Home" while the Stream shows) and "Open Library"; **Ctrl + the arrow of the pull
@@ -112,6 +115,7 @@ Each side of the dock opens its own world (ADR 0003): the pinned side the Librar
   a 48 dp target with a spoken label ("Messages, 3 new", "Now playing: <title>", "Stream"); the Stream button is selected
   while the Stream shows.
 - Home gestures can be bound to "Stream" (`OPEN_STREAM`) and "Library" (`OPEN_LIBRARY`); neither is bound by default.
+  "Search" (`OPEN_SEARCH`, bound to swipe down by default) opens the Library with its field focused.
 - The workspace menu is no longer reached by the pull. Its "Workspace menu" accessibility action stays on the dock and
   the Home root until the menu is removed (P8).
 - A workspace may hide its dock only while a gesture opens the Stream or the Library (the stranding rule, restated for the

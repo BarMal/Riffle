@@ -9,9 +9,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.app.launcher.library.LIBRARY_SHEET_TEST_TAG
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
@@ -28,6 +30,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
@@ -107,6 +110,12 @@ class StandardTemplateValidationTest {
                     shellState.copy(
                         launcherSettings =
                             shellState.launcherSettings.copy(
+                                // The A-Z list draws every app as a labelled row, so the rows can be asserted by name.
+                                appDrawer =
+                                    shellState.launcherSettings.appDrawer.withLibraryView(
+                                        shellState.homeLayoutSet.activeKey.deviceClass,
+                                        LibraryView.AlphaList,
+                                    ),
                                 motion =
                                     shellState.launcherSettings.motion.copy(
                                         reducedMotionPreference =
@@ -133,8 +142,9 @@ class StandardTemplateValidationTest {
             }
             composeRule.waitForIdle()
 
-            composeRule.onNodeWithText("Apps").assertIsDisplayed()
-            composeRule.onNodeWithText("2 apps available").assertIsDisplayed()
+            // The Library is a sheet over Home with the Dock still drawn under it (ADR 0003).
+            composeRule.onNodeWithTag(LIBRARY_SHEET_TEST_TAG).assertIsDisplayed()
+            composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).assertExists()
             composeRule.onNodeWithText("Camera").assertIsDisplayed().assertHasClickAction()
             composeRule.onNodeWithText("Calendar").assertIsDisplayed().assertHasClickAction()
             assertEquals(case.reducedMotion, shellState.launcherSettings.motion.reducedMotion)

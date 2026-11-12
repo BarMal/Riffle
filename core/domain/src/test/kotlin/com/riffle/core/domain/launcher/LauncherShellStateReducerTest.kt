@@ -273,4 +273,22 @@ class LauncherShellStateReducerTest {
         assertEquals(ShellDestination.NOTIFICATIONS, notificationsState.destination)
         assertEquals(ShellDestination.HOME, homeState.destination)
     }
+
+    @Test
+    fun theLibraryRemembersWhetherItOpenedOverTheStream() {
+        val stream = LauncherShellState(destination = ShellDestination.STREAM)
+
+        val overStream = reducer.navigationActionSelected(stream, ShellNavigationAction.OpenAppDrawer)
+        val searching = reducer.navigationActionSelected(overStream, ShellNavigationAction.OpenSearch)
+        val closed = reducer.navigationActionSelected(searching, ShellNavigationAction.OpenStream)
+        val overHome =
+            reducer.navigationActionSelected(LauncherShellState(), ShellNavigationAction.OpenAppDrawer)
+
+        assertTrue(overStream.libraryOverStream)
+        assertTrue(searching.libraryOverStream)
+        assertFalse(closed.libraryOverStream)
+        assertFalse(overHome.libraryOverStream)
+        assertTrue(ShellDestination.APP_DRAWER.isLibrary && ShellDestination.SEARCH.isLibrary)
+        assertFalse(ShellDestination.STREAM.isLibrary)
+    }
 }

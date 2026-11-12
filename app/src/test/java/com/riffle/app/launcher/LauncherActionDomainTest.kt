@@ -34,13 +34,13 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
-import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
@@ -385,8 +385,8 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SetScreenContentProtection(enabled = true),
                 ),
                 settings(
-                    "SelectAppDrawerPresentation",
-                    LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.ICONS),
+                    "SelectLibraryView",
+                    LauncherShellAction.SelectLibraryView(LibraryView.Grid),
                 ),
                 settings(
                     "SelectAppDrawerIconGridColumns",

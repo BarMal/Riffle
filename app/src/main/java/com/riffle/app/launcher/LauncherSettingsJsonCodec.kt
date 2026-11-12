@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
@@ -26,7 +27,6 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
 import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
 import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
 import com.riffle.core.domain.launcher.settings.AdaptiveStageTypography
-import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
@@ -127,17 +127,13 @@ private fun JSONObject.decodeReducedTransparency(decoded: LauncherSettings): Boo
 
 private fun encodeAppDrawerSettings(settings: AppDrawerSettings): JSONObject =
     JSONObject()
-        .put("presentation", settings.presentation.name)
+        .put("libraryViews", encodeLibraryViews(settings.libraryViews))
         .put("iconGridColumns", settings.iconGridColumns)
         .put("afterLeavingLibrary", settings.afterLeavingLibrary.name)
 
 private fun JSONObject.toAppDrawerSettings(defaults: AppDrawerSettings): AppDrawerSettings =
     AppDrawerSettings(
-        presentation =
-            optString("presentation")
-                .takeIf(String::isNotEmpty)
-                ?.let { name -> AppDrawerPresentation.entries.firstOrNull { it.name == name } }
-                ?: defaults.presentation,
+        libraryViews = decodeLibraryViews(defaults.libraryViews),
         iconGridColumns = optInt("iconGridColumns", defaults.iconGridColumns),
         // Absent (settings saved before #1243) or unknown: the default, Library (never forces a
         // switch off whatever mode was last showing).
@@ -147,6 +143,35 @@ private fun JSONObject.toAppDrawerSettings(defaults: AppDrawerSettings): AppDraw
                 ?.let { name -> LibraryReturnTarget.entries.firstOrNull { it.name == name } }
                 ?: defaults.afterLeavingLibrary,
     ).coerced()
+
+private fun encodeLibraryViews(views: Map<HomeLayoutDeviceClass, LibraryView>): JSONObject =
+    JSONObject().also { json -> views.forEach { (deviceClass, view) -> json.put(deviceClass.name, view.storedId) } }
+
+/**
+ * The Library's view per device class. Settings saved before the Library carry the app drawer's `presentation`
+ * instead: LIST becomes the A-Z list, ICONS the grid and anything else the default, for every device class. An unknown
+ * device class or view in the new object is skipped (the default applies), so nothing here ever throws.
+ */
+private fun JSONObject.decodeLibraryViews(
+    defaults: Map<HomeLayoutDeviceClass, LibraryView>,
+): Map<HomeLayoutDeviceClass, LibraryView> {
+    val stored = optJSONObject("libraryViews")
+    return when {
+        stored != null ->
+            stored.keys().asSequence().mapNotNull { name ->
+                val deviceClass = HomeLayoutDeviceClass.entries.firstOrNull { it.name == name }
+                val view = LibraryView.fromStoredId(stored.optString(name))
+                if (deviceClass == null || view == null) null else deviceClass to view
+            }.toMap()
+
+        has("presentation") -> {
+            val legacy = LibraryView.decode(optString("presentation"))
+            HomeLayoutDeviceClass.entries.associateWith { legacy }
+        }
+
+        else -> defaults
+    }
+}
 
 /** Decodes the object under [key] with [parse], or returns [default] when it is absent or not an object. */
 private fun <T> JSONObject.section(

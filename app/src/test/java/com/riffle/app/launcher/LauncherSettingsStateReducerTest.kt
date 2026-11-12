@@ -9,12 +9,13 @@ import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
-import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -95,14 +96,19 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
-    fun persistsAppDrawerPresentationAndCoercesGridColumns() {
+    fun persistsTheLibraryViewPerDeviceClassAndCoercesGridColumns() {
         val repository = FakeLauncherSettingsRepository()
         val reducer = reducer(launcherSettingsRepository = repository)
 
         val iconState =
             reducer.reduce(
                 state = LauncherShellState(),
-                action = LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.ICONS),
+                action = LauncherShellAction.SelectLibraryView(LibraryView.Grid),
+            )
+        val tabletState =
+            reducer.reduce(
+                state = iconState,
+                action = LauncherShellAction.SelectLibraryView(LibraryView.AlphaList, HomeLayoutDeviceClass.TABLET),
             )
         val updatedState =
             reducer.reduce(
@@ -110,7 +116,13 @@ class LauncherSettingsStateReducerTest {
                 action = LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 99),
             )
 
-        assertEquals(AppDrawerPresentation.ICONS, updatedState.launcherSettings.appDrawer.presentation)
+        val phone = HomeLayoutDeviceClass.PHONE
+        assertEquals(LibraryView.Grid, updatedState.launcherSettings.appDrawer.libraryViewFor(phone))
+        assertEquals(
+            LibraryView.AlphaList,
+            tabletState.launcherSettings.appDrawer.libraryViewFor(HomeLayoutDeviceClass.TABLET),
+        )
+        assertEquals(LibraryView.Grid, tabletState.launcherSettings.appDrawer.libraryViewFor(phone))
         assertEquals(6, updatedState.launcherSettings.appDrawer.iconGridColumns)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
