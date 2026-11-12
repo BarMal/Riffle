@@ -10,6 +10,11 @@ launcher experience fully usable without contextual pages, cards, or smart behav
 > drawer and search are the standard ones, and everything below holds with every workspace feature left alone. Any
 > other workspace (a preset, a lens page) is an optional enhancement in the sense of this page.
 
+> **Since ADR 0003 (P8).** Presets, lens pages, the Finder and the drawer as a page are gone: Home is the pool arrangement
+> of each layout, the Library is its own surface (the drawer's replacement) and the Stream holds the dynamic content.
+> The parity contract below still applies to Home, the Dock and the Library; "contextual pages, cards" now means the
+> Stream, which is reached only through the Dock and the gestures bound to it.
+
 ## Default behaviour
 
 - Contextual behaviour and expanded dock notification cards are off by default. They can remain

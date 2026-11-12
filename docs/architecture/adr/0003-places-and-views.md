@@ -1,6 +1,6 @@
 # ADR 0003: Places and Views replace sources, lenses and workspaces as the product model
 
-- Status: Proposed
+- Status: Accepted (2026-11-12; built in PRs #1446 to #1452, see [As built](#as-built-differences-from-the-original-decision))
 - Date: 2026-11-12
 - Supersedes: the product model in `docs/product/workspaces-sources-lenses.md` and the documents that build on
   it (see [Superseded documents](#superseded-documents)). ADR 0001 and ADR 0002 are unchanged.
@@ -41,7 +41,7 @@ At the time of writing the repository holds about 220,000 lines of Kotlin, about
 | F4 | One universal `Item` flattens content. Media wants transport controls and a queue, notifications want reply, events want a time span. | `workspace/Item.kt` (`title`, `subtitle`, `body`, `ext`) |
 | F5 | Swapping landed at the wrong level. Workspaces swap the whole launcher; the wish is to swap one component. The presets are the clones the owner does not want. | `workspaces-presets.md` |
 | F6 | Indecision became architecture, in look as well as structure: six theme presets, and `AGENTS.md` still says Material while the goal is glass. | `LauncherThemePreset`, `AGENTS.md` |
-| F7 | The workspace system was never validated on a device before it became the home. | `workspaces-dogfood.md`: "Nothing about this has been run on a device yet" |
+| F7 | The workspace system was never validated on a device before it became the home. | The old `workspaces-dogfood.md` (replaced by [`places-views-device-checklist.md`](../../development/places-views-device-checklist.md); see git history): "Nothing about this has been run on a device yet" |
 | F8 | Glass is not one material. About 55 literal alpha values (about 31 distinct) across 24 files; five or more separate surface treatments; the dock sheen and spotlight are welded to the dock; reduced transparency reaches only adaptive cards and the GLASS preset's overlay alpha. | `GlassSurface.kt`, `DockSpotlight.kt`, `DockGlassSheenStrength.kt`, `LauncherTheme.kt` |
 | F9 | Settings mirror the layers, not the product: about 30 pages and about 140 controls, with duplicates, dead settings and four names for one concept. | [`settings.md`](../../product/settings.md) |
 
@@ -103,8 +103,15 @@ Each side of the Dock opens its own world: the pinned side the static one, the d
 - There is no other trigger. Home's pager holds only Home pages; there is no sideways swipe into the Stream.
   This keeps the lesson of the 2026-09-25 revision: overlapping triggers made switching unpredictable.
 - "Pull up" means the Dock edge's natural pull direction (away from its edge), as `gestures.md` defines it.
-- Fallback, to be decided on a device: if the dynamic side is too narrow a target with one or two entries,
-  the pull may start anywhere on the Dock and choose Library or Stream by the half it started on.
+- Fallback, still undecided because it needs a device: if the dynamic side is too narrow a target with one or
+  two entries, the pull may start anywhere on the Dock and choose Library or Stream by the half it started on.
+  As built the dynamic side is compact (see below), which makes this question sharper, not smaller.
+- **Size.** Pinned icons are drawn at exactly the Icon size setting (default 44 dp, the Home grid's default) and
+  never shrink. The bar is one icon plus its chrome tall. When the pins do not fit, the gap between them gives
+  first, down to 8 dp (or the user's own smaller spacing), and then the pinned run scrolls at full size, fading
+  through the glass at the edge that has more. The dynamic side takes only what its entries need (compact 48 dp
+  tiles, up to the live-app-slot limit, plus now playing and the Stream button) and leaves the pinned run at least
+  three icons; it scrolls on its own when it has more entries than room.
 
 ### Views
 
@@ -128,7 +135,8 @@ page hands over to its nearest neighbour. Each page has a header (the app's icon
 count), and a Thin-glass **spine** above it, a strip of page markers that scrolls with the pager and jumps on a tap, is
 the page indicator. A Stack is a vertical pile of overlapping cards in Calm's proportions (168 dp cards, 56 dp apart,
 the focused one in front) moved by the existing card-stack physics, so a sideways swipe changes page and a vertical
-one moves the stack. "Show as" applies to a page's whole section. Rationale: the first Stream laid every section on one
+one moves the stack. Recents is the exception: its Stack is a wrapping grid of app tiles, and Tasks is one card
+under the quick-add row. "Show as" applies to a page's whole section. Rationale: the first Stream laid every section on one
 scrolling page with horizontal card stacks, which is the opposite of the model Calm proves (pages you swipe, piles you
 scroll) and of the vertical stack physics the project already had.
 
@@ -151,16 +159,16 @@ Source ids are those in `core/domain/.../launcher/workspace/`.
 | --- | --- | --- | --- | --- |
 | Placed app, folder, widget (the pool, `home.grid`, `apps.favourite`) | Home | Icon grid, in pages | Tap launches; long-press enters edit; drag moves or makes a folder | Pins in the Dock |
 | Dock pins (`PoolDock`) | Dock, pinned side | Icon row | Tap launches; drag to reorder or out to Home | None |
-| All apps (`apps.all`) | Library | Categories, A–Z or Grid | Tap launches; long-press for shortcuts, Add to Home, Pin to Dock, Hide; drag out to Home | None |
+| All apps (`apps.all`) | Library | Categories, A–Z or Grid | Tap launches; long-press for shortcuts, Add to Home, Pin to Dock, Hide (no drag out to Home) | None |
 | Recent and frequent apps (`apps.recent`, `apps.frequent`) | Stream, Recents | Icon row, or rows with last-used time | Tap launches | None |
 | App shortcuts (`shortcuts`) | No Place: the long-press menu of any app icon | Menu rows | Tap runs it; drag a row out to place it on Home | A placed shortcut is a Home item |
 | Search (`search`) | Library | The search field; results replace the app list | Type; Enter launches the top hit | Swipe down on Home |
-| Notifications (`notifications`) | Stream, Notifications | One page per app, each a vertical stack or rows | Tap opens; swipe dismisses; expand to reply; long-press for Hide and rules | Dock dynamic side, icon badges |
+| Notifications (`notifications`) | Stream, Notifications | One page per app, each a vertical stack or rows | Tap opens; Dismiss and Snooze buttons; expand to reply; Hide in the card's menu | Dock dynamic side, icon badges |
 | Media (`media`) | Stream, Now | One card | Play, pause, skip, scrub; expand for the queue; tap opens the player | Dock dynamic entry while playing; glance widget |
 | Calendar and calendar feeds (`calendar`, `ics`) | Stream, Now (next event) and Agenda (by day) | Card or rows | Tap opens the event; expand for details | Glance widget |
-| News feeds (`rss`) | Stream, Feeds | One page per feed, each a vertical stack or headlines | Tap opens the article; swipe marks read | Glance widget (top story) |
-| Alarm (`LauncherCardKind.ALARM`, declared, unwired) | Stream, Now | A row beside the next event | Tap opens the clock app | None |
-| To-do (`LauncherCardKind.TASK`, declared, unwired) | Stream, Tasks | Card of today's items, or rows | Tap ticks it off; tap the title to open; quick-add at the top | None |
+| News feeds (`rss`) | Stream, Feeds | One page per feed, each a vertical stack or headlines | Tap opens the article; Mark read action | Glance widget (top story) |
+| Alarm (`AlarmManager.getNextAlarmClock()`, wired in P3b) | Stream, Now | A row beside the next event | Tap opens the clock app | None |
+| To-do (Todoist, P10) | Stream, Tasks | Card of today's items, or rows | Tap ticks it off; tap the title to open; quick-add at the top | None |
 | Widgets as cards (`WIDGET_PROVIDER`, #1219) | Parked: widgets live on Home only | | | |
 
 Favourites are not a Stream section: the owner's favourites are what Home and the Dock's pinned side are.
@@ -208,6 +216,16 @@ Glass is the only look. Every surface in every Place is drawn by one primitive a
   (`DockSpotlight*`) is generalised to take a `Shape` and sources on any axis, and is applied to: the Dock,
   open folders, Library category tiles, the search results panel, and Stream cards and stacks (lit by the
   owning app's colour). A surface with no coloured content gets the sheen only.
+- **Glass over the system wallpaper can tint, not blur.** The wallpaper is outside the app's content, so a
+  surface drawn over it has no backdrop to blur or refract; there it is the tint at the weight's alpha, plus the
+  sheen and the spotlight, with the wallpaper showing through. Each weight has a floor tint alpha over the
+  wallpaper chosen for 4.5:1 text contrast over a bright wallpaper (`wallpaperTintAlpha`: Thin 0.66, Regular
+  0.66, Thick 0.72). The Dock uses its own "Dock background" setting instead, exactly (default 72%, 0% clear,
+  100% opaque). The first build ignored this and drew these surfaces opaque near-black; the shader and its
+  domain mirror (`GlassBlend`) were fixed in #1450. Frost and refraction apply only to app content behind a
+  surface (the Stream, the Library sheet over Home).
+- **Labels.** Home labels are plain text with a soft shadow, no pill, by default; the pill is the "Label
+  background" switch in Settings > Home, and the stored opacity is kept for when it is turned on.
 - **No idle animation.** The spotlight keeps its existing behaviour: it requests frames only while its
   sources change, settles, and then stops. This satisfies "nothing animates without cause" in
   `design-language.md`.
@@ -217,7 +235,7 @@ Glass is the only look. Every surface in every Place is drawn by one primitive a
   appearance setting honoured by every glass surface (opaque tint, no backdrop sampling, sheen kept faint).
   Reduced motion makes the spotlight snap. Below the API levels the shader needs, the existing blurred-tint
   and scrim fallbacks apply.
-- **Removed:** the `MATERIAL`, `MINIMAL`, `RETRO`, `TERMINAL` and `CUSTOM` theme presets; the per-workspace
+- **Removed:** the custom background, dock, label and label-background colours (a custom accent remains); the `MATERIAL`, `MINIMAL`, `RETRO`, `TERMINAL` and `CUSTOM` theme presets; the per-workspace
   skin override; the separate "Liquid glass" on/off switch (glass is always on; reduced transparency is the
   off switch); the dock effect choice (FLAT, ELEVATED, OUTLINED); and the "Material design language" line in
   `AGENTS.md`. Stored values that name a removed preset decode to glass.
@@ -235,24 +253,24 @@ haptics, Privacy and access, Backup, About. The page tree, every correction and 
 
 Packages are under `launcher/` in `core/domain` and `app`.
 
-| Package or concept | Verdict | Becomes |
-| --- | --- | --- |
-| `workspace/sources`, shared source streams | Keep | Internal plumbing; each source emits its own type |
-| `workspace/pool` | Keep | The Home and Dock model |
-| `workspace/dock`, `dockpull` | Keep | The Dock; the pull opens the Library or the Stream by side |
-| `cards` (stack physics, travel, magnet) | Keep | The Stream's Stack view |
-| `expressions` | Keep | The Views, each bound to its Place |
-| `workspace/exclusions`, privacy redaction | Keep | Per-type Hide rules |
-| `designsystem` | Keep and extend | The glass material and tokens |
-| `workspace/lens` | Demote | One fixed default per section, plus two or three options; never shown |
-| `workspace/container` (page-set, widget grid) | Demote | Page-set becomes "one stack per app or feed"; widget grid becomes the glance widgets |
-| `Item` | Replace | The six content types |
-| `workspace/editor`, `workspace/wizard` | Cut | "Show as" in place, and Settings per Place |
-| Saved lenses, lens library, advanced builder, per-lens search queries | Cut | Nothing |
-| `workspace/preset` (iOS, Nova, TimeScape, Niagara, Kvaesitso) | Cut | One default arrangement |
-| `workspace/menu`, multiple workspaces | Cut; stored workspaces stay decodable | One arrangement per posture |
-| Skin override, non-glass theme presets | Cut | Glass |
-| Onboarding walkthrough | Rework | Four steps, one per Place |
+| Package or concept | Verdict | Becomes | As built |
+| --- | --- | --- | --- |
+| `workspace/sources`, shared source streams | Keep | Internal plumbing; each source emits its own type | Kept; the Stream's typed sources and mappers read through them |
+| `workspace/pool` | Keep | The Home and Dock model | Kept; the only Home and Dock model |
+| `workspace/dock` (presentation), `dockpull` | Keep | The Dock; the pull opens the Library or the Stream by side | `dockpull` kept; the workspace dock presentation was deleted, the Dock is `PoolDock` |
+| `cards` (stack physics, travel, magnet) | Keep | The Stream's Stack view | Physics kept and used; the adaptive stage planners, templates and `LauncherSettings.cards` are left in place, read by no surface, not deleted |
+| `expressions` | Keep | The Views, each bound to its Place | Kept (Library views, Stream rendering) |
+| `workspace/exclusions`, privacy redaction | Keep | Per-type Hide rules | Kept |
+| `designsystem` | Keep and extend | The glass material and tokens | Done |
+| `workspace/lens` | Demote | One fixed default per section; never shown | Kept as storage-only and test vehicle: the lens model and codecs decode stored workspaces, and the evaluator carries the exclusion and content-level code and tests |
+| `workspace/container` (page-set, widget grid) | Demote | One stack per app or feed; glance widgets | Mostly deleted; what remains is shared-source plumbing |
+| `Item` | Replace | The six content types | Replaced for drawing; `Item` still exists as the source-side type the typed mappers read |
+| `workspace/editor`, `workspace/wizard` | Cut | "Show as" in place, and Settings per Place | Deleted (P8) |
+| Saved lenses, lens library, advanced builder, per-lens search queries | Cut | Nothing | Deleted from the UI (P8); the stored library still decodes and is exported |
+| `workspace/preset` | Cut | One default arrangement | Deleted (P8) |
+| `workspace/menu`, multiple workspaces | Cut; stored workspaces stay decodable | One arrangement per posture | Deleted (P8); stored workspaces stay in storage and in backups; `PageRole.FINDER` stays decodable and is never drawn |
+| Skin override, non-glass theme presets | Cut | Glass | Deleted (P2); stored values are ignored |
+| Onboarding walkthrough | Rework | Four steps, one per Place | Done (P8) |
 
 ### Decision log (owner, 2026-11-12)
 
@@ -272,6 +290,14 @@ Packages are under `launcher/` in `core/domain` and `app`.
 | 12 | Stream layout | Horizontally scrollable pages of vertically scrolling card stacks, not one scrolling page of horizontal stacks: one page per app for notifications, a spine as the page indicator (look to Calm, on TimeScape) |
 | 13 | Stream on unfolded | Two views of the whole Stream, Pages and Stage (after Stage Manager on macOS), chosen per posture; Stage keeps a rail of live stage thumbnails beside the selected stack |
 
+Later outcomes, driven by what the owner saw on the phone (all 2026-11-12):
+
+| # | Question | Outcome |
+| --- | --- | --- |
+| 14 | Glass looked opaque near-black over the wallpaper | Fixed (#1450): the shader keeps the backdrop's alpha, each weight has a wallpaper tint floor, and the Dock follows its own "Dock background" setting exactly |
+| 15 | The Dock after the Dock rework was short and its icons small | Restored to the reference look (#1452): pinned icons always at the Icon size setting, a scrolling pinned run with edge fades and an 8 dp minimum gap, a compact dynamic side that leaves at least three pins, the bar one icon plus chrome tall. Custom dock colours were not restored |
+| 16 | Label pills on Home | Off by default (plain text with a soft shadow); "Label background" in Settings > Home turns the pill back on |
+
 ## Consequences
 
 - **Less to build and test.** The combination space drops from sources × lenses × expressions × containers ×
@@ -287,13 +313,20 @@ Packages are under `launcher/` in `core/domain` and `app`.
   The Stream's feel on the owner's phone is the first thing to validate.
 - **Large deletions.** The editor, wizard, presets, workspace menu, lens library and saved lenses are
   removed, with their tests and screenshots. Deletion comes last, after the replacements work.
-- **Per-type work replaces generic work.** Ten card and row renderers are hand-built. This is the intended
+- **Per-type work replaces generic work.** Card and row renderers are hand-built per content type. This is the intended
   trade: fewer combinations, each one designed.
 - **One provider dependency.** Tasks need a Todoist personal token. It is entered in Settings, stored
   encrypted on the device, never backed up and never shipped.
 - **Device validation is a gate.** No slice that changes a visual surface is done without rendered evidence
   (JVM screenshots), as Decision 8 of the earlier plan already requires. Motion and the Dock pull need a
-  device pass by the owner.
+  device pass by the owner. As of this acceptance nothing in this refactor has been run on a physical device
+  except what the owner reported (glass, Dock size, labels); the rest is checked only by JVM, screenshot and
+  emulator tests. [`places-views-device-checklist.md`](../../development/places-views-device-checklist.md) is the
+  list of what must be checked by hand.
+- **Limitations that remain.** The dynamic side may be too narrow a pull target (undecided, needs a device). The
+  Todoist API mapping is only partly verified against the reference. The stored workspaces, lenses, `Item` and
+  the card-stage code are carried as storage-only code, so the codebase is smaller than the model but not as
+  small as it could be; deleting it is a later, separate change.
 - **Documents.** The superseded documents below get a banner pointing here; `AGENTS.md` and
   `design-language.md` are updated to say glass, not Material.
 
@@ -313,6 +346,32 @@ Packages are under `launcher/` in `core/domain` and `app`.
    mode may return later the way the desktop's sentry bar does, as a mode on the same tokens.
 7. **Widgets as Stream cards.** Parked: not needed to prove the model.
 
+## As built: differences from the original decision
+
+Places, Views, typed content and the one material are as decided. These are the deviations, each checked against
+the code at acceptance.
+
+- **No Stream feel settings page.** Nothing reads the stored card-stack settings after P8, and the Stream's Stack
+  has fixed physics, so the planned "Stack feel" page does not exist (`settings.md`, "Differences").
+- **The Stream is pages, not one surface of sections** (decisions 12 and 13), with Pages and Stage views on
+  unfolded postures. This replaced the first Stream built in P4.
+- **Media and notification data came in P3b**, not P3: the typed content first carried only what `Item` held.
+- **Tasks without a due date are not fetched**; only today's and overdue tasks are. The Todoist API paths, field
+  names, task links and due-date formats are only partly verified; `TodoistApiMapping.kt` is where a mismatch is
+  fixed.
+- **Custom dock, label and background colours were removed and not restored**; only a custom accent remains.
+- **Per-workspace dock and gesture overrides are no longer applied.** The only trace is the one-time restore of the
+  Dock's icon size and edge from the stored workspaces, never over a size set since.
+- **No drag from the Library onto Home**; Add to Home and Pin to Dock in the long-press menu are the equivalents.
+- **No swipe to dismiss or mark read** on Stream cards; those are buttons and menu actions.
+- **"Show as" is on headers and their option buttons** (and in Settings), not on a Place's empty background.
+- **Settings not built:** "Show now playing" (it always shows while media is active), "New apps go to Home or
+  Library only", a per-calendar list for Agenda, and thread grouping for Notifications (`settings.md`).
+- **Stored code kept, not deleted:** see the "As built" column of Keep, demote, cut.
+- **Not built in P13 and P14:** dragging a stage in the Stage rail to reorder, a thumbnail that is a scaled copy of
+  the live card, an animation of the spine's markers between sections, a per-page stack-depth setting.
+- **Glass over the wallpaper cannot blur it**, which the original Material section did not anticipate.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as
@@ -328,14 +387,16 @@ history, each with a banner pointing here.
 
 Still current: `workspaces-pool*.md` (the Home and Dock model), `workspaces-exclusions.md`,
 `workspaces-privacy.md`, `workspaces-backup.md`, the source documents (`workspaces-external-sources.md`,
-`workspaces-ics-*.md`, `workspaces-sources-rss-search.md`, `rss-*.md`), `dock.md` and `gestures.md` (both
-to be updated by the Dock slice), and `design-language.md` (to be updated by the material slice).
+`workspaces-ics-*.md`, `workspaces-sources-rss-search.md`, `rss-*.md`), `dock.md` and `gestures.md`
+(updated by the Dock slice, with a note where Cards and workspace-menu text remains as history), and
+`design-language.md` (updated by the material slice). The pool, privacy, exclusions and backup documents carry a
+short note that the preview and editor they mention are gone.
 
 ## References
 
 - `docs/product/workspaces-sources-lenses.md`, `docs/product/modes-dock-handle-and-cards-plan.md`
 - `docs/product/design-language.md`, `docs/product/dock.md`, `docs/product/gestures.md`
-- `docs/development/workspaces-dogfood.md`
+- `docs/development/places-views-device-checklist.md` (replaces `workspaces-dogfood.md`)
 - Dock spotlight and sheen: #1442, #1443, #1444, #1445
 - `BarMal/Calm` (`PageSlot`, `CategoryDisplayMode`), `BarMal/dotfiles` (`docs/shell-design-plan.md`)
 - ADR 0002 (platform gesture primitives), which the Dock pull and the split divider must follow

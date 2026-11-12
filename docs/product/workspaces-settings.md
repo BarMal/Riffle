@@ -5,7 +5,7 @@
 Part of #1363 (design: [`workspaces-configuration.md`](workspaces-configuration.md), sections 2.2, 2.3, 2.4 and
 2.7); issue #1384. This is the app UI over the domain operations that already exist, plus the `OFF` source
 status. Nothing here is on by default: **both pages exist only while Settings > Developer > Workspaces
-(preview) is on**, see [`workspaces-dogfood.md`](../development/workspaces-dogfood.md). With the preview off the
+(preview) is on**, see [`places-views-device-checklist.md`](../development/places-views-device-checklist.md) (the old preview checklist was replaced by it). With the preview off the
 standard launcher and every existing Settings page are unchanged and nothing in this slice runs.
 
 ## Where it is

@@ -1,5 +1,7 @@
 # Workspaces: pool cutover, read-only (WS10 S4, as built)
 
+> **Since ADR 0003 (P8).** The pool is the only Home and Dock model: Home is the pool arrangement of each layout's active stored workspace, the Dock is `PoolDock`, the preview switch, the preview editor, "Refresh home items" and the "Home from placed items" developer switch are gone, and nothing switches workspaces. Statements below about the preview, presets, the workspace menu or the legacy path are history.
+
 Status: **superseded for the standard home by the S4 app half** ([`workspaces-pool-cutover-s4.md`](workspaces-pool-cutover-s4.md#app-half-as-built)):
 the standard home now renders and edits from the pool, the pool is loaded at startup (not when the preview opens), and
 "Refresh home items" is retired while the pool home is active. What follows is the read-only first step as it was

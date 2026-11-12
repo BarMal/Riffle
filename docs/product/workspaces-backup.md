@@ -102,6 +102,8 @@ Pure mapping lives in `core/domain/.../workspace/backup/WorkspaceBackup.kt`; the
 
 ## Owner device checklist
 
+Written for the preview (before P8): there is no preview or workspace UI now, so read "turn the preview on" as "restart" and "add a workspace, save a lens" as "change something on Home and hide an app". The current checklist is [`places-views-device-checklist.md`](../development/places-views-device-checklist.md).
+
 1. Settings, Workspaces: turn the preview on, change something visible (add a workspace, save a lens, hide an app
    so a rule exists). Settings, Backup: **Export**, save the file somewhere safe.
 2. Optionally open the file: it should contain `"workspaces"`, `"exclusions"` and `"pool"`, no `"pool"` inside

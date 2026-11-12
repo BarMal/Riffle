@@ -1,5 +1,7 @@
 # Workspaces: source exclusion rules (as built, slice S6)
 
+> **Since ADR 0003 (P8).** Hide rules are still the per-type Hide of the Stream and the Library's one hidden-apps list. The workspace editor, the preview and the dogfood checklist named below are gone; the device checks are in [`places-views-device-checklist.md`](../development/places-views-device-checklist.md).
+
 Design: section 14 of `workspaces-configuration.md`. This file records what is built (issue #1382; the management
 UI is issue #1402, see "Management UI" below), the vocabulary, the differences from the design, and what is not
 done.
@@ -158,7 +160,7 @@ the preview off nothing exists and nothing runs). Details of the page are in
 * Contextual Hide: the snackbar's "Manage" action (it needs a way to open Settings > Hidden items and rules from the preview)
   and the app-label wording of the TalkBack action ("Hide Slack notifications": the domain has no app label, so the actions
   say "Hide notifications from this app"); the Empty-content choice has no menu entry; hiding from the editor's draft
-  previews is not offered on purpose. Not validated on a device (see the dogfood checklist).
+  previews is not offered on purpose. Not validated on a device (see the device checklist).
 * Editing a rule (change mode or value) and the live preview of matching items while typing; naming a rule (`label`).
 * Optional app narrowing for a typed text rule; the "Copy these rules to the other layouts" bulk action and the
   "Also add the hiding rules" option of Copy from other layout.

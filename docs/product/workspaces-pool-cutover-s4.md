@@ -1,5 +1,7 @@
 # Workspaces: pool cutover (WS10 S4, as built)
 
+> **Since ADR 0003 (P8).** The pool is the only Home and Dock model: Home is the pool arrangement of each layout's active stored workspace, the Dock is `PoolDock`, the preview switch, the preview editor, "Refresh home items" and the "Home from placed items" developer switch are gone, and nothing switches workspaces. Statements below about the preview, presets, the workspace menu or the legacy path are history.
+
 Status: **wired, on by default.** The standard home renders and edits FROM the placed-items pool: every Home page item
 and the dock come from `riffle_pool`, and `HomeLayoutSet` is no longer written for placed items or dock pins. A
 developer switch (Settings > Developer > **Home from placed items**) falls back to the legacy path for one release. The

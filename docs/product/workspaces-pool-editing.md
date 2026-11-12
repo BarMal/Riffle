@@ -1,5 +1,7 @@
 # Workspaces: editing the preview home (WS10 S5, as built)
 
+> **Since ADR 0003 (P8).** The pool is the only Home and Dock model: Home is the pool arrangement of each layout's active stored workspace, the Dock is `PoolDock`, the preview switch, the preview editor, "Refresh home items" and the "Home from placed items" developer switch are gone, and nothing switches workspaces. Statements below about the preview, presets, the workspace menu or the legacy path are history.
+
 Status: **behind the Workspaces (preview) switch only**. Builds on [`workspaces-pool.md`](workspaces-pool.md) (pure pool
 operations) and [`workspaces-pool-cutover.md`](workspaces-pool-cutover.md) (read-only home). With the switch off nothing
 here is constructed or run. The standard Home (`HomeLayoutSet`) is **not modified**; it stays the source for
