@@ -73,28 +73,6 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                 ),
         ),
         SettingsPageEntry(
-            label = "Cards appearance",
-            subtitle = "Cards, glass, colour, motion, and accessibility",
-            page = SettingsPage.ADAPTIVE_STAGE_APPEARANCE,
-            group = SettingsPageGroup.APPEARANCE,
-            searchAliases =
-                listOf(
-                    "stage appearance",
-                    "card geometry",
-                    "card stack",
-                    "glass",
-                    "blur",
-                    "card colour",
-                    "card color",
-                    "card typography",
-                    "card motion",
-                    "reduced transparency",
-                    "folded appearance",
-                    "unfolded appearance",
-                    "rail appearance",
-                ),
-        ),
-        SettingsPageEntry(
             label = "Floating dock",
             subtitle = "Overlay handle and floating shortcuts",
             page = SettingsPage.FLOATING_DOCK,

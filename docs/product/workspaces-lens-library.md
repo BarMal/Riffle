@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspaces: saved lenses and the per-layout lens library (S5, as built)
 
 Status: implemented in `core/domain` (slice S5 of the WS10 design, `workspaces-configuration.md` section 4).

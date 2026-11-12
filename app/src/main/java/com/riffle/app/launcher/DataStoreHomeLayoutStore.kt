@@ -15,7 +15,6 @@ import com.riffle.app.launcher.pool.HomeLayoutCutoverStore
 import com.riffle.app.launcher.pool.HomeLayoutOpening
 import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.app.launcher.pool.PoolHomePreference
-import com.riffle.app.launcher.pool.PoolHomeSwitch
 import com.riffle.app.launcher.pool.PrePoolSnapshot
 import com.riffle.app.launcher.pool.ReadOnlyHomeLayoutRepository
 import com.riffle.app.launcher.pool.UndecodableHomeLayoutException
@@ -122,7 +121,6 @@ internal class HomeLayoutRuntime(
     val poolHome: PoolHomeLayoutRepository?,
     val readOnlyHome: ReadOnlyHomeLayoutRepository?,
     val pool: CachedPoolRepository,
-    val poolHomeSwitch: PoolHomeSwitch,
     private val preference: PoolHomePreference,
     /** How the home opened this process (read-only, damaged). */
     private val opening: HomeLayoutOpening,
@@ -173,7 +171,7 @@ internal object HomeLayoutRepositories {
         val pool = pool(context)
         val preference = PoolHomePreference(context)
         val providerOf = appWidgetProviderLookup(context)
-        val opening = openHomeLayoutsAtStartup(store, pool, preference.isEnabled(), providerOf)
+        val opening = openHomeLayoutsAtStartup(store, pool, providerOf)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val writeBehind =
             WriteBehindHomeLayoutRepository(
@@ -221,7 +219,6 @@ internal object HomeLayoutRepositories {
             poolHome = poolHome,
             readOnlyHome = readOnlyHome,
             pool = pool,
-            poolHomeSwitch = PoolHomeSwitch(preference, opening.poolHome),
             preference = preference,
             opening = opening,
         )

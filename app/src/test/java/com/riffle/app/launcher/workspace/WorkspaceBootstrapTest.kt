@@ -3,7 +3,6 @@ package com.riffle.app.launcher.workspace
 import com.riffle.app.launcher.CachedWorkspaceRepository
 import com.riffle.app.launcher.WorkspaceStorePort
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutClasses
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,11 +30,9 @@ class WorkspaceBootstrapTest {
     private val phone = HomeLayoutDeviceClass.PHONE
 
     @Test
-    fun seedingAnEmptyStoreGivesEveryWorkspacesLayoutADefault() {
-        val seeded = WorkspaceBootstrap.seed(null)
-
-        assertEquals(WorkspaceLayoutClasses.entries.toSet(), seeded.layouts.keys)
-        seeded.layouts.values.forEach { assertTrue(it.workspaces.isNotEmpty()) }
+    fun seedingAnEmptyStoreSeedsNothing() {
+        // A layout with nothing stored shows the migrated home; no preset workspace is invented for it.
+        assertEquals(emptyMap<HomeLayoutDeviceClass, Any>(), WorkspaceBootstrap.seed(null).layouts)
     }
 
     @Test
@@ -46,18 +43,15 @@ class WorkspaceBootstrapTest {
 
         assertEquals(stored.layouts.getValue(phone), seeded.layouts.getValue(phone))
         assertEquals("Mine", seeded.workspacesFor(phone).active.name)
-        assertEquals(WorkspaceLayoutClasses.entries.toSet(), seeded.layouts.keys)
+        assertEquals(setOf(phone), seeded.layouts.keys)
     }
 
     @Test
-    fun aSeededDefaultRecordsItsPresetButStoredWorkspacesAreNotStamped() {
-        val stored = WorkspaceSet().update(phone) { it.rename(it.activeId, "Mine") }
+    fun seedingFoldsTheLandscapePhoneLayoutIntoThePhoneAndChangesNothingElse() {
+        val landscape = HomeLayoutDeviceClass.PHONE_LANDSCAPE
+        val stored = WorkspaceSet(mapOf(landscape to WorkspaceSet().workspacesFor(phone)))
 
-        val seeded = WorkspaceBootstrap.seed(stored)
-
-        assertEquals(null, seeded.workspacesFor(phone).active.presetId)
-        assertEquals("nova", seeded.workspacesFor(HomeLayoutDeviceClass.TABLET).active.presetId)
-        assertEquals("nova", WorkspaceBootstrap.seed(null).workspacesFor(phone).active.presetId)
+        assertEquals(setOf(phone), WorkspaceBootstrap.seed(stored).layouts.keys)
     }
 
     @Test
@@ -82,7 +76,7 @@ class WorkspaceBootstrapTest {
 
             repository.initialize(WorkspaceBootstrap::seed)
             val seeded = checkNotNull(repository.load())
-            assertEquals(WorkspaceLayoutClasses.entries.toSet(), seeded.layouts.keys)
+            assertTrue(seeded.layouts.isEmpty())
 
             repository.save(seeded.update(phone) { it.rename(it.activeId, "Edited") })
 
@@ -91,13 +85,13 @@ class WorkspaceBootstrapTest {
         }
 
     @Test
-    fun aStoredBlobThatDecodesToNothingFallsBackToTheDefaults() =
+    fun aStoredBlobThatDecodesToNothingHoldsNothing() =
         runBlocking {
             val repository = CachedWorkspaceRepository(FakeStore(stored = null), scope)
 
             repository.initialize(WorkspaceBootstrap::seed)
 
-            assertEquals(WorkspaceLayoutClasses.entries.toSet(), repository.load()?.layouts?.keys)
+            assertEquals(emptyMap<HomeLayoutDeviceClass, Any>(), repository.load()?.layouts)
         }
 
     @Test

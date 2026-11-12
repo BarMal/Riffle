@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Per-lens search queries (as built)
 
 Slice S10 of the Workspaces configuration plan (section 13 of [workspaces-configuration.md](workspaces-configuration.md)),

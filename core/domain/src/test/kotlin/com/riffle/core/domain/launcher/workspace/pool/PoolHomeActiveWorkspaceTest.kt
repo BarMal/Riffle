@@ -18,12 +18,12 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.workspace.HomeShownWorkspaces
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
+import com.riffle.core.domain.launcher.workspace.TestWorkspaces
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceHome
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
-import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -78,7 +78,7 @@ class PoolHomeActiveWorkspaceTest {
             layouts = mapOf(phone to layout, landscape to layout, standard to standardLayout),
         )
 
-    private val nova: Workspace = WorkspacePresets.defaultFor(HomeLayoutDeviceClass.PHONE)
+    private val nova: Workspace = TestWorkspaces.novaFor(HomeLayoutDeviceClass.PHONE)
 
     /** A workspace whose only page is a lens page (no placed items), like TimeScape or Kvaesitso. */
     private val lensOnly: Workspace =

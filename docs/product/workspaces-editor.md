@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspace editor
 
 Status: WS7 (issue #1356). Companion to `workspaces-sources-lenses.md`, which owns the model. This page

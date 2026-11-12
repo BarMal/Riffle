@@ -12,19 +12,26 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.workspace.ContainerId
+import com.riffle.core.domain.launcher.workspace.ExpressionKind
 import com.riffle.core.domain.launcher.workspace.LayoutWorkspaces
+import com.riffle.core.domain.launcher.workspace.Lens
+import com.riffle.core.domain.launcher.workspace.LensBinding
+import com.riffle.core.domain.launcher.workspace.LensFilter
+import com.riffle.core.domain.launcher.workspace.PageContainer
+import com.riffle.core.domain.launcher.workspace.PageContent
 import com.riffle.core.domain.launcher.workspace.Workspace
 import com.riffle.core.domain.launcher.workspace.WorkspaceId
 import com.riffle.core.domain.launcher.workspace.WorkspaceIdFactory
 import com.riffle.core.domain.launcher.workspace.WorkspaceNewApps
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
+import com.riffle.core.domain.launcher.workspace.WorkspaceSourceIds
 import com.riffle.core.domain.launcher.workspace.pool.AppArrival
 import com.riffle.core.domain.launcher.workspace.pool.NewAppPlacement
 import com.riffle.core.domain.launcher.workspace.pool.PoolArrangements
 import com.riffle.core.domain.launcher.workspace.pool.PoolHomeSync
 import com.riffle.core.domain.launcher.workspace.pool.PoolRemoval
 import com.riffle.core.domain.launcher.workspace.pool.PoolResult
-import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -44,7 +51,7 @@ class PoolHomeLayoutRepositoryTest {
 
     private fun start(): Pair<PoolHomeLayoutRepository, WriteThroughHomeLayouts> {
         val pool = CachedPoolRepository(pools).also { currentPool = it }
-        val opening = runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        val opening = runBlocking { openHomeLayouts(layouts, pool) }
         assertTrue(opening.poolHome)
         val legacy = WriteThroughHomeLayouts(layouts)
         return poolHomeRepository(legacy, pool).also { it.open(opening.stored) } to legacy
@@ -156,7 +163,7 @@ class PoolHomeLayoutRepositoryTest {
     @Test
     fun aPreviewEditOfTheSamePoolIsSeenAndProjectedAgain() {
         val pool = CachedPoolRepository(pools)
-        val opening = runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        val opening = runBlocking { openHomeLayouts(layouts, pool) }
         val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(opening.stored) }
         val phone = pool.pool(HomeLayoutDeviceClass.PHONE)!!
         val ws = PoolHomeSync.workspaceOf(PoolHomeFixture.key)
@@ -216,7 +223,7 @@ class PoolHomeLayoutRepositoryTest {
     fun theFirstEditAfterAFreshInstallIsKeptAcrossARestart() {
         layouts.stored = null
         val pool = CachedPoolRepository(pools).also { currentPool = it }
-        runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        runBlocking { openHomeLayouts(layouts, pool) }
         // Nothing shown yet: the shell starts from its own default set.
         val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(null) }
         assertEquals(null, repository.loadHomeLayoutSet()?.activeLayout?.homeItems()?.takeIf { it.isNotEmpty() })
@@ -240,7 +247,7 @@ class PoolHomeLayoutRepositoryTest {
     @Test
     fun theRecoverySnapshotIsRefreshedAfterAPoolWrite() {
         val pool = CachedPoolRepository(pools)
-        val opening = runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        val opening = runBlocking { openHomeLayouts(layouts, pool) }
         val repository =
             poolHomeRepository(
                 WriteThroughHomeLayouts(layouts),
@@ -260,7 +267,7 @@ class PoolHomeLayoutRepositoryTest {
     @Test
     fun aHomeCommitOnAStaleProjectionNeverRevertsAPreviewRemoval() {
         val pool = CachedPoolRepository(pools)
-        val opening = runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        val opening = runBlocking { openHomeLayouts(layouts, pool) }
         val repository = poolHomeRepository(WriteThroughHomeLayouts(layouts), pool).also { it.open(opening.stored) }
         val stale = repository.shown()
         // The preview's editor removes "maps" from the same arrangement; the shell has not reprojected yet.
@@ -318,7 +325,7 @@ class PoolHomeLayoutRepositoryTest {
     @Test
     fun theSnapshotCatchesUpWithAnotherWritersPoolWrite() {
         val pool = CachedPoolRepository(pools)
-        val opening = runBlocking { openHomeLayouts(layouts, pool, enabled = true) }
+        val opening = runBlocking { openHomeLayouts(layouts, pool) }
         poolHomeRepository(WriteThroughHomeLayouts(layouts), pool, snapshots = layouts).also { it.open(opening.stored) }
         // The preview's editor removes "maps" and flushes; the home never commits.
         val phone = pool.pool(HomeLayoutDeviceClass.PHONE)!!
@@ -336,7 +343,27 @@ class PoolHomeLayoutRepositoryTest {
         )
     }
 
-    private val nova = WorkspacePresets.defaultFor(HomeLayoutDeviceClass.PHONE)
+    /** The seeded Nova default of the build before the cut-over: one home-grid page, no arrangement of its own. */
+    private val nova =
+        Workspace(
+            id = WorkspaceId("preset:nova:compact"),
+            name = "Nova",
+            pages =
+                listOf(
+                    PageContainer(
+                        ContainerId("preset:nova:compact:home"),
+                        PageContent.Bound(
+                            LensBinding(
+                                Lens(
+                                    sources = listOf(WorkspaceSourceIds.HOME_GRID),
+                                    filter = LensFilter.GroupKeyIs("home"),
+                                ),
+                                ExpressionKind.ICON_GRID,
+                            ),
+                        ),
+                    ),
+                ),
+        )
 
     private fun phonePool() = currentPool.current()!!.pools.getValue(HomeLayoutDeviceClass.PHONE)
 

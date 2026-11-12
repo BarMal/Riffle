@@ -4,7 +4,6 @@ package com.riffle.app.launcher
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
 import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.workspace.WorkspaceBootstrap
@@ -26,11 +25,6 @@ import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.apps.withHiddenApps
-import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.dockPinnedStageIds
-import com.riffle.core.domain.launcher.cards.itemIdsForStage
-import com.riffle.core.domain.launcher.cards.representativeInstalledAppForStage
-import com.riffle.core.domain.launcher.home.DockEditResult
 import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -41,7 +35,6 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
@@ -54,18 +47,12 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
-import com.riffle.core.domain.launcher.settings.stagePreferencesFor
-import com.riffle.core.domain.launcher.settings.withStagePreferences
 import com.riffle.core.domain.launcher.workspace.WorkspaceHome
-import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuEffect
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
-import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -146,9 +133,6 @@ class LauncherShellViewModel(
         )
     private val widgetEngine = WidgetEngine()
 
-    /** Keeps navigation aligned with the retained empty stage rendered by the AdaptiveStage surface. */
-    private val appStageStateReconciler = AppStageShellStateReconciler()
-
     private val mutableState =
         MutableStateFlow(
             createInitialState(
@@ -160,23 +144,6 @@ class LauncherShellViewModel(
             ),
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
-
-    private val mutableWorkspaceMenuEffects = MutableSharedFlow<WorkspaceMenuEffect>(extraBufferCapacity = 8)
-
-    /**
-     * Menu choices the shell does not perform itself: jump to a page, open the Finder, edit the
-     * workspace. The pager host and the workspace editor collect them; switching workspace is already
-     * persisted by [workspaceMenu] before it is emitted here.
-     */
-    val workspaceMenuEffects: SharedFlow<WorkspaceMenuEffect> = mutableWorkspaceMenuEffects
-
-    /** The dock's workspace menu (#1351): inert until the workspaces have loaded. */
-    internal val workspaceMenu =
-        WorkspaceMenuController(
-            repository = platformDependencies.workspaceRepository,
-            deviceClass = { mutableState.value.homeLayoutSet.activeKey.deviceClass.workspaceLayoutClass() },
-            onEffect = { effect -> mutableWorkspaceMenuEffects.tryEmit(effect) },
-        )
 
     /**
      * Packages installed and not placed yet (S9, N9): placed by [placePendingInstalls] once the refreshed app list
@@ -201,19 +168,11 @@ class LauncherShellViewModel(
             currentState = { mutableState.value },
             updateState = { state ->
                 val previousState = mutableState.value
-                appStageStateReconciler.reconcile(previousState)
-                val migrated =
-                    if (state.installedApps !== previousState.installedApps) {
-                        state.withLegacyPinnedStagesMigratedIntoDock(dockEngine, homeLayoutRepository)
-                    } else {
-                        state
-                    }
-                mutableState.value = migrated
-                appStageStateReconciler.reconcile(migrated)
-                if (migrated.launcherSettings != previousState.launcherSettings) {
-                    launcherSettingsRepository.saveLauncherSettings(migrated.launcherSettings)
+                mutableState.value = state
+                if (state.launcherSettings != previousState.launcherSettings) {
+                    launcherSettingsRepository.saveLauncherSettings(state.launcherSettings)
                 }
-                if (migrated.installedApps !== previousState.installedApps) placePendingInstalls()
+                if (state.installedApps !== previousState.installedApps) placePendingInstalls()
             },
             refreshCoordinator = refreshCoordinator,
         )
@@ -233,7 +192,6 @@ class LauncherShellViewModel(
             }
             viewModelScope.launch {
                 workspaces.initialize(WorkspaceBootstrap::seed)
-                workspaceMenu.refresh()
             }
             viewModelScope.launch {
                 workspaces.version.collect { if (workspaces.load() != null) followActiveWorkspace() }
@@ -505,21 +463,6 @@ class LauncherShellViewModel(
     }
 
     fun onHomePageEdited(action: LauncherShellAction) {
-        if (action.isAppStageAction()) {
-            val currentState = mutableState.value
-            val snapshot = appStageStateReconciler.reconcile(currentState).snapshot
-            mutableState.value =
-                currentState.withAppStageAction(
-                    action = action,
-                    launcherSettingsRepository = launcherSettingsRepository,
-                    dockEngine = dockEngine,
-                    homeLayoutRepository = homeLayoutRepository,
-                    snapshot = snapshot,
-                )
-            appStageStateReconciler.reconcile(mutableState.value)
-            return
-        }
-
         if (action is LauncherShellAction.SelectHomePage || action == LauncherShellAction.OpenDefaultHome) {
             mutableHomeSelectionRequests.update { it + 1 }
         }
@@ -588,143 +531,6 @@ class LauncherShellViewModel(
     private object NoopAppShortcutRepository : AppShortcutRepository {
         override fun shortcutsFor(apps: List<InstalledApp>): AppShortcutsByApp = emptyMap()
     }
-}
-
-private fun LauncherShellAction.isAppStageAction(): Boolean =
-    when (this) {
-        is LauncherShellAction.SelectAppStage,
-        is LauncherShellAction.ToggleAppStagePinned,
-        LauncherShellAction.SelectPreviousAppStage,
-        LauncherShellAction.SelectNextAppStage,
-        -> true
-
-        else -> false
-    }
-
-private fun LauncherShellState.withAppStageAction(
-    action: LauncherShellAction,
-    launcherSettingsRepository: LauncherSettingsRepository,
-    dockEngine: DockEngine,
-    homeLayoutRepository: HomeLayoutRepository,
-    snapshot: com.riffle.core.domain.launcher.cards.AppStageSnapshot,
-): LauncherShellState =
-    if (action is LauncherShellAction.ToggleAppStagePinned) {
-        withAppStagePinToggled(
-            stageId = action.stageId,
-            dockEngine = dockEngine,
-            homeLayoutRepository = homeLayoutRepository,
-            launcherSettingsRepository = launcherSettingsRepository,
-        )
-    } else {
-        withAppStagePreferencesAction(action, launcherSettingsRepository, snapshot)
-    }
-
-private fun LauncherShellState.withAppStagePreferencesAction(
-    action: LauncherShellAction,
-    launcherSettingsRepository: LauncherSettingsRepository,
-    snapshot: com.riffle.core.domain.launcher.cards.AppStageSnapshot,
-): LauncherShellState {
-    val layoutKey = homeLayoutSet.activeKey
-    val preferences = launcherSettings.cards.stagePreferencesFor(layoutKey)
-    val updatedPreferences =
-        when (action) {
-            is LauncherShellAction.SelectAppStage ->
-                action.stageId.takeIf { it in snapshot.stages.map { stage -> stage.id } }
-                    ?.let(preferences::select)
-                    ?: preferences
-
-            LauncherShellAction.SelectPreviousAppStage,
-            LauncherShellAction.SelectNextAppStage,
-            -> {
-                val selectedIndex =
-                    snapshot.stages.indexOfFirst { stage -> stage.id == snapshot.preferences.selectedStageId }
-                val offset = if (action == LauncherShellAction.SelectPreviousAppStage) -1 else 1
-                snapshot.stages.getOrNull(selectedIndex + offset)?.let { stage -> preferences.select(stage.id) }
-                    ?: preferences
-            }
-
-            else -> preferences
-        }
-    if (updatedPreferences == preferences) return this
-    val updatedState =
-        copy(
-            launcherSettings =
-                launcherSettings.copy(
-                    cards = launcherSettings.cards.withStagePreferences(layoutKey, updatedPreferences),
-                ),
-        )
-    launcherSettingsRepository.saveLauncherSettings(updatedState.launcherSettings)
-    return updatedState
-}
-
-/**
- * Pins or unpins [stageId] by adding or removing its app on the dock -- pinning a stage now means
- * pinning its app to the dock, so this reuses the exact edit AddAppToDock/RemoveDockShortcut already
- * make from the drawer's own long-press menu, rather than a second, parallel mutation.
- */
-private fun LauncherShellState.withAppStagePinToggled(
-    stageId: AppStageId,
-    dockEngine: DockEngine,
-    homeLayoutRepository: HomeLayoutRepository,
-    launcherSettingsRepository: LauncherSettingsRepository,
-): LauncherShellState {
-    val pinnedItemIds = homeLayout.dock.itemIdsForStage(stageId)
-    return if (pinnedItemIds.isEmpty()) {
-        withStagePinned(stageId, dockEngine, homeLayoutRepository)
-    } else {
-        withStageUnpinned(pinnedItemIds, stageId, dockEngine, homeLayoutRepository, launcherSettingsRepository)
-    }
-}
-
-private fun LauncherShellState.withStagePinned(
-    stageId: AppStageId,
-    dockEngine: DockEngine,
-    homeLayoutRepository: HomeLayoutRepository,
-): LauncherShellState {
-    val app = representativeInstalledAppForStage(stageId, installedApps) ?: return this
-    val action = LauncherShellAction.AddAppToDock(app)
-    return when (val result = dockEngine.applyEdit(action = action, layout = homeLayout)) {
-        is DockEditResult.Updated -> withHomeLayout(result.layout, homeLayoutRepository)
-        is DockEditResult.Rejected -> this
-    }
-}
-
-/**
- * Also scrubs [stageId] from the legacy migration seed, so a stage the user just unpinned can never
- * be resurrected by that seed re-migrating a dock item for it on a later launch.
- */
-private fun LauncherShellState.withStageUnpinned(
-    itemIds: List<LauncherItemId>,
-    stageId: AppStageId,
-    dockEngine: DockEngine,
-    homeLayoutRepository: HomeLayoutRepository,
-    launcherSettingsRepository: LauncherSettingsRepository,
-): LauncherShellState {
-    val withDockEdit =
-        itemIds.fold(this) { state, itemId ->
-            val action = LauncherShellAction.RemoveDockShortcut(itemId)
-            when (val result = dockEngine.applyEdit(action = action, layout = state.homeLayout)) {
-                is DockEditResult.Updated -> state.withHomeLayout(result.layout, homeLayoutRepository)
-                is DockEditResult.Rejected -> state
-            }
-        }
-    val layoutKey = withDockEdit.homeLayoutSet.activeKey
-    val preferences = withDockEdit.launcherSettings.cards.stagePreferencesFor(layoutKey)
-    val prunedIds = preferences.pinnedStageIds - stageId
-    if (prunedIds == preferences.pinnedStageIds) return withDockEdit
-    val updatedState =
-        withDockEdit.copy(
-            launcherSettings =
-                withDockEdit.launcherSettings.copy(
-                    cards =
-                        withDockEdit.launcherSettings.cards.withStagePreferences(
-                            layoutKey,
-                            preferences.copy(pinnedStageIds = prunedIds),
-                        ),
-                ),
-        )
-    launcherSettingsRepository.saveLauncherSettings(updatedState.launcherSettings)
-    return updatedState
 }
 
 private fun reduceHomeShortcutEdit(
@@ -1008,32 +814,6 @@ internal fun LauncherShellState.withInstalledApps(
                 searchSettingsResults = state.searchSettingsResults(state.searchQuery),
             )
         }
-
-/**
- * Materializes a dock item for any stage still pinned only in the legacy, pre-unification
- * preference (#XXXX) -- pinning a stage means pinning its app to the dock now, so a legacy pin
- * needs a real dock item to keep reading as pinned once the dock, not that preference, is what
- * a stage's pinned state is read from. Idempotent: an id [dockPinnedStageIds] already reports skips,
- * so running this again once the dock has caught up is a no-op.
- */
-internal fun LauncherShellState.withLegacyPinnedStagesMigratedIntoDock(
-    dockEngine: DockEngine,
-    homeLayoutRepository: HomeLayoutRepository,
-): LauncherShellState {
-    val layoutKey = homeLayoutSet.activeKey
-    val legacyIds = launcherSettings.cards.stagePreferencesFor(layoutKey).pinnedStageIds
-    val alreadyPinned = dockPinnedStageIds(homeLayout.dock).toSet()
-    val toMigrate = legacyIds.filterNot { id -> id in alreadyPinned }
-    if (toMigrate.isEmpty()) return this
-    return toMigrate.fold(this) { state, stageId ->
-        val app = representativeInstalledAppForStage(stageId, state.installedApps) ?: return@fold state
-        val action = LauncherShellAction.AddAppToDock(app)
-        when (val result = dockEngine.applyEdit(action = action, layout = state.homeLayout)) {
-            is DockEditResult.Updated -> state.withHomeLayout(result.layout, homeLayoutRepository)
-            is DockEditResult.Rejected -> state
-        }
-    }
-}
 
 internal fun LauncherShellState.withAppShortcuts(
     appShortcutRepository: AppShortcutRepository,

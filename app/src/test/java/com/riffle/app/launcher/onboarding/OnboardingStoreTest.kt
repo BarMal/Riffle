@@ -1,9 +1,8 @@
 package com.riffle.app.launcher.onboarding
 
-import com.riffle.core.domain.launcher.workspace.wizard.OfferProgress
-import com.riffle.core.domain.launcher.workspace.wizard.OnboardingOrigin
-import com.riffle.core.domain.launcher.workspace.wizard.OnboardingState
-import com.riffle.core.domain.launcher.workspace.wizard.WalkthroughProgress
+import com.riffle.core.domain.launcher.onboarding.OnboardingOrigin
+import com.riffle.core.domain.launcher.onboarding.OnboardingProgress
+import com.riffle.core.domain.launcher.onboarding.OnboardingState
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -17,8 +16,7 @@ class OnboardingStoreTest {
         val state =
             OnboardingState(
                 origin = OnboardingOrigin.EXISTING_USER,
-                walkthrough = WalkthroughProgress.COMPLETED,
-                offer = OfferProgress.ACCEPTED,
+                progress = OnboardingProgress.COMPLETED,
                 completedRuns = 3,
             )
         assertEquals(state, decodeOnboardingState(encodeOnboardingState(state)))
@@ -33,9 +31,19 @@ class OnboardingStoreTest {
     }
 
     @Test
+    fun aStateWrittenByTheWalkthroughBuildStillReads() {
+        val old =
+            """{"version":1,"origin":"EXISTING_USER","walkthrough":"SKIPPED","offer":"DISMISSED","completedRuns":2}"""
+        assertEquals(
+            OnboardingState(OnboardingOrigin.EXISTING_USER, OnboardingProgress.SKIPPED, completedRuns = 2),
+            decodeOnboardingState(old),
+        )
+    }
+
+    @Test
     fun itHoldsNoItemContent() {
         val text = encodeOnboardingState(OnboardingState(origin = OnboardingOrigin.FRESH_INSTALL, completedRuns = 1))
-        assertEquals(setOf("version", "origin", "walkthrough", "offer", "completedRuns"), keysOf(text))
+        assertEquals(setOf("version", "origin", "walkthrough", "completedRuns"), keysOf(text))
     }
 
     @Test

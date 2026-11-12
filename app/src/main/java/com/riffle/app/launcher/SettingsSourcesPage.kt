@@ -37,9 +37,9 @@ import com.riffle.app.launcher.ics.IcsFeedsText
 import com.riffle.app.launcher.ics.IcsFeedsUiState
 import com.riffle.app.launcher.workspace.sourceAccessRouteFor
 import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.settings.SourceRow
 import com.riffle.core.domain.launcher.workspace.settings.SourceStatus
-import com.riffle.core.domain.launcher.workspace.settings.SourceUsage
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -63,11 +63,10 @@ internal fun SettingsSourcesPageContent(
         }
         val statuses by controller.statuses.collectAsState()
         val disabled by controller.disabled.collectAsState()
-        val rows = remember(controller, statuses, disabled) { controller.rows(statuses, disabled) }
-        val version by host.version.collectAsState()
-        val usage =
-            remember(host, version, state.availableLayoutDeviceClasses) {
-                host.workspaces.sourceUsage(state.availableLayoutDeviceClasses)
+        // Search served per-lens queries, which are gone; it has no row.
+        val rows =
+            remember(controller, statuses, disabled) {
+                controller.rows(statuses, disabled).filterNot { it.id == SourceIds.SEARCH }
             }
         val icsFeeds = host.icsFeeds
         if (icsFeeds != null) {
@@ -83,7 +82,6 @@ internal fun SettingsSourcesPageContent(
             onToggle = controller::setEnabled,
             onAllow = host.onRequestSourceAccess,
             onOpenHiddenItems = { onPageSelected(SettingsPage.EXCLUSIONS) },
-            usage = usage,
             onOpenSource = { id -> SourceDetailPages.pageFor(id)?.let(onPageSelected) },
             onAddRssFeed = { onPageSelected(SettingsPage.SOURCE_RSS) },
             onAddCalendarFeed = { onPageSelected(SettingsPage.ICS_FEEDS) },
@@ -95,8 +93,7 @@ internal fun SettingsSourcesPageContent(
 }
 
 /**
- * The page itself, with no controller. At medium and expanded widths the rows run in two columns. [usage] is null
- * until the workspaces have loaded (rows then show no Used by line).
+ * The page itself, with no controller. At medium and expanded widths the rows run in two columns.
  */
 @Suppress("LongParameterList") // Fixed-state page content: rows, callbacks and the optional feed section.
 @Composable
@@ -107,7 +104,6 @@ internal fun SourcesSettingsContent(
     onAllow: (SourceId) -> Unit,
     modifier: Modifier = Modifier,
     onOpenHiddenItems: () -> Unit = {},
-    usage: SourceUsage? = null,
     onOpenSource: (SourceId) -> Unit = {},
     onAddRssFeed: () -> Unit = {},
     onAddCalendarFeed: () -> Unit = {},
@@ -135,7 +131,6 @@ internal fun SourcesSettingsContent(
                                 SourceListItem(
                                     row = row,
                                     calendarAccess = calendarAccess,
-                                    usedByCount = usage?.countOf(row.id),
                                     onToggle = onToggle,
                                     onAllow = onAllow,
                                     onOpen = onOpenSource,
@@ -193,8 +188,6 @@ internal fun sourceRowTestTag(id: SourceId): String = "source-row-${id.value}"
 
 internal fun sourceSwitchTestTag(id: SourceId): String = "source-switch-${id.value}"
 
-internal fun sourceUsedByTestTag(id: SourceId): String = "source-used-by-${id.value}"
-
 private val NoIcsFeeds = MutableStateFlow(IcsFeedsUiState())
 
 /** Splits [this] into [columns] consecutive parts of near-equal size (one part when [columns] is 1). */
@@ -214,7 +207,6 @@ internal fun <T> List<T>.chunkedBy(columns: Int): List<List<T>> {
 private fun SourceListItem(
     row: SourceRow,
     calendarAccess: CalendarAccessStatus,
-    usedByCount: Int?,
     onToggle: (SourceId, Boolean) -> Unit,
     onAllow: (SourceId) -> Unit,
     onOpen: (SourceId) -> Unit,
@@ -234,11 +226,11 @@ private fun SourceListItem(
                         role = Role.Button,
                         onClick = { onOpen(row.id) },
                     )
-                    .semantics { contentDescription = SourceDetailText.rowSpoken(row, usedByCount) },
+                    .semantics { contentDescription = SourceDetailText.rowSpoken(row) },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             headlineContent = { Text(text = row.title, style = MaterialTheme.typography.bodyLarge) },
             supportingContent = {
-                SourceDetails(row = row, calendarAccess = calendarAccess, usedByCount = usedByCount, onAllow = onAllow)
+                SourceDetails(row = row, calendarAccess = calendarAccess, onAllow = onAllow)
             },
         )
         Switch(
@@ -257,7 +249,6 @@ private fun SourceListItem(
 private fun SourceDetails(
     row: SourceRow,
     calendarAccess: CalendarAccessStatus,
-    usedByCount: Int?,
     onAllow: (SourceId) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs)) {
@@ -267,14 +258,6 @@ private fun SourceDetails(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         SourceStatusChip(row.status)
-        if (usedByCount != null) {
-            Text(
-                modifier = Modifier.testTag(sourceUsedByTestTag(row.id)),
-                text = SourceDetailText.usedBy(usedByCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
         SourceAccessAffordance(row = row, calendarAccess = calendarAccess, onAllow = onAllow)
     }
 }

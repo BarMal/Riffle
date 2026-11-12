@@ -48,20 +48,20 @@ class FreshInstallSignalsTest {
     fun anEmptyHomeLayoutStoreIsFreshOnlyOnTheFirstStart() {
         val empty = DiskHomeLayoutStore()
         val pools = DiskPoolStore()
-        val first = runBlocking { openHomeLayouts(empty, CachedPoolRepository(pools), enabled = true) }
+        val first = runBlocking { openHomeLayouts(empty, CachedPoolRepository(pools)) }
         assertTrue(first.nothingStored)
         // The first start cut over and wrote the home: the next start is not fresh.
-        val second = runBlocking { openHomeLayouts(empty, CachedPoolRepository(pools), enabled = true) }
+        val second = runBlocking { openHomeLayouts(empty, CachedPoolRepository(pools)) }
         assertFalse(second.nothingStored)
     }
 
     @Test
     fun anExistingHomeIsNeverFresh() {
         val stored = DiskHomeLayoutStore(stored = PoolHomeFixture.legacySet())
-        val opening = runBlocking { openHomeLayouts(stored, CachedPoolRepository(DiskPoolStore()), enabled = true) }
+        val opening = runBlocking { openHomeLayouts(stored, CachedPoolRepository(DiskPoolStore())) }
         assertFalse(opening.nothingStored)
         val unreadable = DiskHomeLayoutStore(failRead = true)
-        val damaged = runBlocking { openHomeLayouts(unreadable, CachedPoolRepository(DiskPoolStore()), true) }
+        val damaged = runBlocking { openHomeLayouts(unreadable, CachedPoolRepository(DiskPoolStore())) }
         assertFalse(damaged.nothingStored)
     }
 }

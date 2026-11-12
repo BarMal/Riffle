@@ -3,8 +3,7 @@ package com.riffle.app.launcher.rss
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import com.riffle.app.launcher.AdaptiveStageArtworkCache
-import com.riffle.app.launcher.adaptiveStageArtworkSampleSize
+import com.riffle.app.launcher.BoundedCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -41,17 +40,16 @@ object EmptyFeedArtworkLoader : FeedArtworkLoader {
 
 /**
  * Backed by [FeedArticleCacheRepository.cachedImage]. Decoded bitmaps are kept in a small
- * process-only LRU ([AdaptiveStageArtworkCache], shared with `AdaptiveStageCardSurface.kt`) keyed by the
+ * process-only LRU ([FeedArtworkCache]) keyed by the
  * article digest, so repeated composition does not repeatedly decode the same bytes. Decoding
- * reuses the same bounded, downsampled approach as `decodeAdaptiveStageArtwork` -- see
- * [decodeFeedArtworkBytes] -- just starting from raw cached bytes instead of a base64 payload.
+ * is bounded and downsampled, see [decodeFeedArtworkBytes].
  */
 class RepositoryFeedArtworkLoader(
     private val repository: FeedArticleCacheRepository,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : FeedArtworkLoader {
     private val cache =
-        AdaptiveStageArtworkCache<ImageBitmap>(
+        FeedArtworkCache(
             decode = { digest -> digest?.let { key -> decodeFeedArtworkBytes(repository.cachedImage(key)) } },
         )
 
@@ -60,9 +58,8 @@ class RepositoryFeedArtworkLoader(
 }
 
 /**
- * Bounds and downsamples cached artwork bytes into a Compose [ImageBitmap], mirroring
- * `decodeAdaptiveStageArtwork`'s size caps so a malformed or oversized cached image can never block
- * or crash the renderer.
+ * Bounds and downsamples cached artwork bytes into a Compose [ImageBitmap], so a malformed or oversized cached
+ * image can never block or crash the renderer.
  */
 @Suppress("ReturnCount")
 internal fun decodeFeedArtworkBytes(bytes: ByteArray?): ImageBitmap? {
@@ -76,8 +73,43 @@ internal fun decodeFeedArtworkBytes(bytes: ByteArray?): ImageBitmap? {
             0,
             bytes.size,
             BitmapFactory.Options().apply {
-                inSampleSize = adaptiveStageArtworkSampleSize(bounds.outWidth, bounds.outHeight)
+                inSampleSize = feedArtworkSampleSize(bounds.outWidth, bounds.outHeight)
             },
         )?.asImageBitmap()
     }.getOrNull()
 }
+
+/** Small process-only LRU for decoded feed artwork; a known-absent decode is cached too, so it is not retried. */
+internal class FeedArtworkCache(
+    maxEntries: Int = DEFAULT_FEED_ARTWORK_CACHE_ENTRIES,
+    private val decode: (String?) -> ImageBitmap?,
+) {
+    private val values = BoundedCache<String, ArtworkPayload>(maxEntries)
+
+    fun getOrDecode(
+        sourceKey: String,
+        artwork: String?,
+    ): ImageBitmap? {
+        val cached = values[sourceKey]
+        if (cached != null) return cached.value
+        val decoded = decode(artwork)
+        values[sourceKey] = ArtworkPayload(decoded)
+        return decoded
+    }
+}
+
+private data class ArtworkPayload(val value: ImageBitmap?)
+
+internal fun feedArtworkSampleSize(
+    width: Int,
+    height: Int,
+): Int {
+    var sample = 1
+    while (width / sample > MAX_FEED_ARTWORK_DIMENSION_PX || height / sample > MAX_FEED_ARTWORK_DIMENSION_PX) {
+        sample *= 2
+    }
+    return sample
+}
+
+private const val MAX_FEED_ARTWORK_DIMENSION_PX = 768
+private const val DEFAULT_FEED_ARTWORK_CACHE_ENTRIES = 12

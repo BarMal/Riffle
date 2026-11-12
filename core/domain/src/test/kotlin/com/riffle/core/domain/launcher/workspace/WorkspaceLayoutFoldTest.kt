@@ -6,7 +6,6 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.workspace.backup.WorkspaceBackup
-import com.riffle.core.domain.launcher.workspace.preset.PresetInstaller
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,14 +44,12 @@ class WorkspaceLayoutFoldTest {
     fun aRotatedPhoneReadsAndWritesThePhoneWorkspaces() {
         val set = WorkspaceSet(mapOf(phone to layoutOf("a", "b")))
         assertEquals(set.workspacesFor(phone), set.workspacesFor(landscape))
-        assertEquals(set.resolveActive(phone), set.resolveActive(landscape))
+        assertEquals(set.workspacesFor(phone).active, set.workspacesFor(landscape).active)
         assertTrue(set.hasLayout(landscape))
 
         val switched = set.update(landscape) { it.activate(WorkspaceId("b")) }
         assertEquals(setOf(phone), switched.layouts.keys)
         assertEquals(WorkspaceId("b"), switched.workspacesFor(phone).activeId)
-        assertSame(set, set.copyFromOtherLayout(phone, landscape))
-        assertSame(set, set.copyFromOtherLayout(landscape, phone))
     }
 
     @Test
@@ -162,14 +159,6 @@ class WorkspaceLayoutFoldTest {
             HomeLayoutWorkspaceMapper.workspaceId(phone, LauncherViewMode.CARD_INTERFACE),
             migrated.workspacesFor(phone).activeId,
         )
-    }
-
-    @Test
-    fun seedingDefaultsNeverOverwritesThePhoneLayoutThroughTheLandscapeClass() {
-        val stored = WorkspaceSet(mapOf(phone to layoutOf("p")))
-        val seeded = PresetInstaller.withDefaultsFor(stored, HomeLayoutDeviceClass.entries)
-        assertEquals(layoutOf("p"), seeded.workspacesFor(phone))
-        assertFalse(landscape in seeded.layouts)
     }
 
     @Test

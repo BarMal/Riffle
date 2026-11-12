@@ -22,7 +22,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import com.riffle.app.launcher.designsystem.RiffleSpacing
-import com.riffle.app.launcher.editor.EditorChoiceRow
 import com.riffle.app.launcher.exclusions.ExclusionsAnnouncements
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsText
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatchMode
@@ -172,10 +171,9 @@ private fun <T> ChoiceGroup(
     Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs)) {
         Text(text = label, style = MaterialTheme.typography.labelLarge)
         options.forEach { option ->
-            EditorChoiceRow(
+            SettingsRadioOptionRow(
                 title = title(option),
                 selected = option == selected,
-                enabled = true,
                 onClick = { onSelect(option) },
             )
         }

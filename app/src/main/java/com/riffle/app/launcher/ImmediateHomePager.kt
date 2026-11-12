@@ -3,12 +3,18 @@ package com.riffle.app.launcher
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -17,12 +23,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import com.riffle.app.launcher.designsystem.RiffleMotion
-import com.riffle.app.launcher.workspace.WorkspaceHomePage
-import com.riffle.app.launcher.workspace.WorkspaceHomePages
+import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -38,11 +45,9 @@ internal fun rememberImmediateHomePagerState(
     layout: HomeLayout,
     reducedMotion: Boolean = false,
     actions: HomeWorkspaceActions,
-    /** The active workspace's lens pages drawn after the layout's pages (S9); they are never a selected page. */
-    extraPageCount: Int = 0,
 ): ImmediateHomePagerState {
     val selectedPageIndex = layout.selectedPageIndex.coerceIn(0, layout.lastPageIndex)
-    val pageCount = layout.pages.size + extraPageCount.coerceAtLeast(0)
+    val pageCount = layout.pages.size
     val selectionRequest by LocalHomeSelectionRequests.current.collectAsState()
     val foundationPagerState =
         rememberPagerState(initialPage = selectedPageIndex) { pageCount.coerceAtLeast(1) }
@@ -150,14 +155,7 @@ internal fun ImmediateWorkspacePager(
     activeDragSession: HomeDragSession? = null,
     onDragPageTargetChanged: (com.riffle.core.domain.launcher.home.LauncherPageId) -> Unit = {},
     modifier: Modifier = Modifier,
-    /**
-     * The active workspace's lens and container pages (S9), drawn after the layout's pages by the container hosts.
-     * Swiping onto one selects no layout page (the settle report finds no page there), so the stored selection stays.
-     */
-    extraPages: WorkspaceHomePages? = null,
 ) {
-    val extraCount = extraPages?.pages?.size ?: 0
-    extraPages?.let { pages -> ExtraPageJumpEffect(pages, pagerState, layout.pages.size, presentation.reducedMotion) }
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -189,37 +187,20 @@ internal fun ImmediateWorkspacePager(
         HorizontalPager(
             state = pagerState.foundationPagerState,
             modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = layout.pages.size + extraCount > 1 && activeDragSession == null,
+            userScrollEnabled = layout.pages.size > 1 && activeDragSession == null,
             flingBehavior =
                 PagerDefaults.flingBehavior(
                     state = pagerState.foundationPagerState,
                     snapAnimationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(presentation.reducedMotion)),
                     snapPositionalThreshold = PAGE_CHANGE_DISTANCE_THRESHOLD,
                 ),
-            key = { index ->
-                layout.pages.getOrNull(index)?.id?.value
-                    ?: extraPages?.pages?.getOrNull(index - layout.pages.size)?.id?.value?.let { "workspace:$it" }
-                    ?: index
-            },
+            key = { index -> layout.pages.getOrNull(index)?.id?.value ?: index },
         ) { index ->
             val pageModifier = Modifier.fillMaxSize().clipToBounds()
-            val page = layout.pages.getOrNull(index)
-            if (page == null) {
-                extraPages?.let { pages -> WorkspaceHomePage(pages, index - layout.pages.size, pageModifier) }
-                return@HorizontalPager
-            }
+            val page = layout.pages.getOrNull(index) ?: return@HorizontalPager
             if (page.isNotificationCardsPage) {
-                GeneratedNotificationCardsPage(
-                    groups = presentation.generatedPage.notificationGroupsByApp,
-                    notificationAccessStatus = presentation.generatedPage.notificationAccessStatus,
-                    apps = presentation.generatedPage.installedApps,
-                    onAction = presentation.generatedPage.onAction,
-                    reducedMotion = presentation.reducedMotion,
-                    adaptiveStageAppearance = presentation.generatedPage.adaptiveStageAppearance,
-                    haptics = actions.haptics,
-                    appIconLoader = appIconLoader,
-                    modifier = pageModifier,
-                )
+                // The Stream replaced the notification cards page; the stored page stays, and says where they went.
+                StreamRedirectPage(onAction = presentation.generatedPage.onAction, modifier = pageModifier)
             } else {
                 WorkspaceGrid(
                     page = page,
@@ -230,28 +211,6 @@ internal fun ImmediateWorkspacePager(
                     modifier = pageModifier,
                 )
             }
-        }
-    }
-}
-
-/** Scrolls to the extra page the workspace menu asked for ([WorkspaceHomePages.jumpRequest]), once. */
-@Composable
-private fun ExtraPageJumpEffect(
-    extraPages: WorkspaceHomePages,
-    pagerState: ImmediateHomePagerState,
-    layoutPageCount: Int,
-    reducedMotion: Boolean,
-) {
-    val jump by extraPages.jumpRequest.collectAsState()
-    LaunchedEffect(jump) {
-        jump?.let { index ->
-            if (index in extraPages.pages.indices) {
-                pagerState.foundationPagerState.animateScrollToPage(
-                    page = layoutPageCount + index,
-                    animationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
-                )
-            }
-            extraPages.consume(index)
         }
     }
 }
@@ -300,3 +259,23 @@ internal const val REDUCED_MOTION_PAGE_SETTLE_DURATION_MILLIS = 80
 private const val PAGE_CHANGE_DISTANCE_THRESHOLD = 0.22f
 private const val DRAG_PAGE_EDGE_FRACTION = 0.42f
 private const val DRAG_PAGE_EDGE_HOVER_MILLIS = 180L
+
+/** What an old notification-cards page shows now that the Stream has the notifications. */
+@Composable
+private fun StreamRedirectPage(
+    onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(RiffleSpacing.xl),
+        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "Notifications are in the Stream",
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+        )
+        TextButton(onClick = { onAction(LauncherShellAction.OpenStream) }) { Text("Open Stream") }
+    }
+}

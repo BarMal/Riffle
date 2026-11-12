@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspaces: sources, lenses, expressions and containers
 
 Status: proposed plan (supersedes parts of `modes-dock-handle-and-cards-plan.md`; see

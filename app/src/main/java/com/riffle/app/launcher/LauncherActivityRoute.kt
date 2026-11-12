@@ -16,33 +16,17 @@ internal sealed interface LauncherActivityRoute {
     data object HomeShortcutEdit : LauncherActivityRoute
 
     data object DockEdit : LauncherActivityRoute
-
-    /** The workspace menu's controller decides whether it opens (only while the feature is on). */
-    data object WorkspaceMenu : LauncherActivityRoute
 }
 
 internal fun LauncherShellAction.launcherActivityRoute(): LauncherActivityRoute? =
     when {
         this == LauncherShellAction.RequestDefaultHome -> LauncherActivityRoute.RequestDefaultHome
         this == LauncherShellAction.OpenDefaultHome -> LauncherActivityRoute.OpenDefaultHome
-        this == LauncherShellAction.OpenWorkspaceMenu -> LauncherActivityRoute.WorkspaceMenu
         navigationAction() != null -> LauncherActivityRoute.Navigation(checkNotNull(navigationAction()))
         isHomePageEditAction() -> LauncherActivityRoute.HomePageEdit
-        isAppStageAction() -> LauncherActivityRoute.HomePageEdit
         isHomeShortcutEditAction() -> LauncherActivityRoute.HomeShortcutEdit
         isDockEditAction() -> LauncherActivityRoute.DockEdit
         else -> null
-    }
-
-private fun LauncherShellAction.isAppStageAction(): Boolean =
-    when (this) {
-        is LauncherShellAction.SelectAppStage,
-        is LauncherShellAction.ToggleAppStagePinned,
-        LauncherShellAction.SelectPreviousAppStage,
-        LauncherShellAction.SelectNextAppStage,
-        -> true
-
-        else -> false
     }
 
 private fun LauncherShellAction.navigationAction(): ShellNavigationAction? =

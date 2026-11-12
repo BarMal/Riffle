@@ -1,0 +1,928 @@
+{
+  "exclusions": {
+    "layouts": [
+      {
+        "deviceClass": "PHONE",
+        "rules": [
+          {
+            "createdAt": 0,
+            "enabled": true,
+            "id": "r1",
+            "matcher": {
+              "kind": "app",
+              "package": "com.chat"
+            },
+            "origin": "USER",
+            "source": "notifications"
+          }
+        ]
+      }
+    ],
+    "legacyMigrated": true,
+    "version": 1
+  },
+  "exportedAtEpochMillis": 1700000000000,
+  "hiddenApps": [
+    {
+      "activityName": "com.hidden.Main",
+      "packageName": "com.hidden",
+      "profileId": "personal",
+      "profileType": "PERSONAL"
+    }
+  ],
+  "homeFromPool": true,
+  "homeLayouts": {
+    "active": {
+      "deviceClass": "PHONE",
+      "viewMode": "HOME_SCREEN_LIBRARY"
+    },
+    "docks": [
+      {
+        "deviceClass": "PHONE",
+        "dock": {
+          "alignment": "CENTER",
+          "backgroundAlphaPercent": 72,
+          "backgroundSizing": "DYNAMIC",
+          "capacity": 5,
+          "cornerRadiusDp": 32,
+          "expandAffordance": "GESTURE",
+          "homeControlsSpacingDp": 8,
+          "iconSizeDp": 48,
+          "isEnabled": true,
+          "isExpandable": true,
+          "itemSpacingDp": 10,
+          "items": [
+            {
+              "activityName": "phone.Main",
+              "id": "phone",
+              "label": "phone",
+              "packageName": "phone",
+              "type": "shortcut"
+            }
+          ],
+          "liveAppSlots": 3,
+          "notificationSlotCount": 2,
+          "showNotificationCards": true,
+          "visualEffect": "OUTLINED"
+        }
+      }
+    ],
+    "layouts": [
+      {
+        "key": {
+          "deviceClass": "PHONE",
+          "viewMode": "HOME_SCREEN_LIBRARY"
+        },
+        "layout": {
+          "dock": {
+            "alignment": "CENTER",
+            "backgroundAlphaPercent": 72,
+            "backgroundSizing": "DYNAMIC",
+            "capacity": 5,
+            "cornerRadiusDp": 32,
+            "expandAffordance": "GESTURE",
+            "homeControlsSpacingDp": 8,
+            "iconSizeDp": 48,
+            "isEnabled": true,
+            "isExpandable": true,
+            "itemSpacingDp": 10,
+            "items": [
+              {
+                "activityName": "phone.Main",
+                "id": "phone",
+                "label": "phone",
+                "packageName": "phone",
+                "type": "shortcut"
+              }
+            ],
+            "liveAppSlots": 3
+          },
+          "pages": [
+            {
+              "columns": 4,
+              "generatedContentOverflowCount": 0,
+              "id": "home",
+              "isPinned": false,
+              "items": [
+                {
+                  "activityName": "mail.Main",
+                  "column": 0,
+                  "columns": 1,
+                  "id": "mail",
+                  "label": "mail",
+                  "packageName": "mail",
+                  "row": 0,
+                  "rows": 1,
+                  "type": "shortcut"
+                },
+                {
+                  "activityName": "maps.Main",
+                  "column": 1,
+                  "columns": 1,
+                  "id": "maps",
+                  "label": "maps",
+                  "packageName": "maps",
+                  "row": 0,
+                  "rows": 1,
+                  "type": "shortcut"
+                },
+                {
+                  "appWidgetId": 42,
+                  "column": 0,
+                  "columns": 2,
+                  "id": "clock",
+                  "label": "Clock",
+                  "minColumns": 1,
+                  "minRows": 1,
+                  "row": 1,
+                  "rows": 2,
+                  "supportsHorizontalResize": true,
+                  "supportsVerticalResize": true,
+                  "type": "widget"
+                }
+              ],
+              "rows": 5,
+              "type": "Home"
+            },
+            {
+              "columns": 4,
+              "generatedContentOverflowCount": 0,
+              "id": "library:1",
+              "isPinned": false,
+              "items": [
+                {
+                  "activityName": "library-app:x.Main",
+                  "column": 0,
+                  "columns": 1,
+                  "id": "library-app:x",
+                  "label": "library-app:x",
+                  "packageName": "library-app:x",
+                  "row": 0,
+                  "rows": 1,
+                  "type": "shortcut"
+                }
+              ],
+              "rows": 5,
+              "type": "AllApps"
+            }
+          ],
+          "selectedPageId": "home",
+          "settings": {
+            "grid": {
+              "cellSpacing": {
+                "horizontal": 0,
+                "vertical": 0
+              },
+              "columns": 4,
+              "compactLibraryPages": false,
+              "margin": {
+                "bottom": 16,
+                "end": 12,
+                "start": 12,
+                "top": 16
+              },
+              "padding": {
+                "bottom": 0,
+                "end": 0,
+                "start": 0,
+                "top": 0
+              },
+              "rows": 5
+            },
+            "labels": {
+              "backgroundAlphaPercent": 54,
+              "iconSizeDp": 44,
+              "maxLines": 1,
+              "maxWidthDp": 76,
+              "showText": true,
+              "sizing": "FIXED",
+              "textSizeSp": 11
+            },
+            "wallpaper": {
+              "scrollMode": "STATIC",
+              "source": "SYSTEM"
+            }
+          },
+          "viewMode": "HOME_SCREEN_LIBRARY"
+        }
+      }
+    ],
+    "libraryDockEdges": [],
+    "modePairs": [],
+    "preferredModes": [
+      {
+        "deviceClass": "PHONE",
+        "viewMode": "HOME_SCREEN_LIBRARY"
+      }
+    ],
+    "type": "homeLayoutSet"
+  },
+  "pool": {
+    "dockImported": true,
+    "layouts": [
+      {
+        "deviceClass": "PHONE",
+        "pool": {
+          "arrangements": [
+            {
+              "newApps": "FINDER_ONLY",
+              "pages": [
+                {
+                  "columns": 4,
+                  "id": "home",
+                  "overflow": 0,
+                  "pinned": false,
+                  "placements": [
+                    {
+                      "column": 0,
+                      "columns": 1,
+                      "item": "pi:phone:home_screen_library:mail",
+                      "row": 0,
+                      "rows": 1
+                    },
+                    {
+                      "column": 1,
+                      "columns": 1,
+                      "item": "pi:phone:home_screen_library:maps",
+                      "row": 0,
+                      "rows": 1
+                    },
+                    {
+                      "column": 0,
+                      "columns": 2,
+                      "item": "pi:phone:home_screen_library:clock",
+                      "row": 1,
+                      "rows": 2
+                    }
+                  ],
+                  "rows": 5
+                }
+              ],
+              "workspace": "ws:phone:home_screen_library"
+            }
+          ],
+          "dock": {
+            "pins": [
+              "pi:phone:dock:phone"
+            ],
+            "settings": {
+              "alignment": "CENTER",
+              "backgroundAlpha": 72,
+              "backgroundSizing": "DYNAMIC",
+              "capacity": 5,
+              "cornerRadius": 32,
+              "enabled": true,
+              "expandAffordance": "GESTURE",
+              "expandable": true,
+              "homeControlsSpacing": 8,
+              "iconSize": 48,
+              "itemSpacing": 10,
+              "liveSlots": 3
+            }
+          },
+          "items": [
+            {
+              "app": {
+                "activity": "mail.Main",
+                "package": "mail",
+                "profile": "personal",
+                "profileType": "PERSONAL"
+              },
+              "id": "pi:phone:home_screen_library:mail",
+              "kind": "app",
+              "label": "mail"
+            },
+            {
+              "app": {
+                "activity": "maps.Main",
+                "package": "maps",
+                "profile": "personal",
+                "profileType": "PERSONAL"
+              },
+              "id": "pi:phone:home_screen_library:maps",
+              "kind": "app",
+              "label": "maps"
+            },
+            {
+              "constraints": {
+                "horizontal": true,
+                "minColumns": 1,
+                "minRows": 1,
+                "vertical": true
+              },
+              "id": "pi:phone:home_screen_library:clock",
+              "kind": "widget",
+              "label": "Clock"
+            },
+            {
+              "app": {
+                "activity": "phone.Main",
+                "package": "phone",
+                "profile": "personal",
+                "profileType": "PERSONAL"
+              },
+              "id": "pi:phone:dock:phone",
+              "kind": "app",
+              "label": "phone"
+            }
+          ]
+        }
+      }
+    ],
+    "migrated": true,
+    "version": 2
+  },
+  "settings": {
+    "appDrawer": {
+      "afterLeavingLibrary": "LIBRARY",
+      "iconGridColumns": 4,
+      "libraryViews": {}
+    },
+    "appearance": {
+      "fullscreenHome": false,
+      "hideNavigationBarOnHome": false,
+      "hideStatusBarOnHome": false,
+      "reducedTransparency": false,
+      "themeAccent": "DEFAULT",
+      "themeColors": {
+        "accent": 4294901760,
+        "background": 4278190080,
+        "dock": 4278190335
+      },
+      "themeCornerStyle": "PRESET",
+      "themeMode": "SYSTEM",
+      "themePreset": "TERMINAL",
+      "themeTypography": "PRESET",
+      "wallpaper": {
+        "scrollMode": "STATIC",
+        "source": "SYSTEM"
+      }
+    },
+    "cards": {
+      "adaptiveStageUnfoldedAppearance": {
+        "geometry": {
+          "aboveFocusDepth": 0,
+          "arcWidthPercent": 100,
+          "cardAspectRatioPercent": 100,
+          "cardSizePercent": 75,
+          "contentPaddingDp": 4,
+          "cornerRadiusDp": 16,
+          "curvePercent": 0,
+          "fanDirection": "NONE",
+          "focusedGapDp": 8,
+          "focusedScalePercent": 100,
+          "horizontalOffsetPercent": 0,
+          "overlapPercent": 0,
+          "rotationDegrees": 0,
+          "stackPeakPercent": 50,
+          "verticalFanDirection": "END",
+          "verticalSpacingPercent": 60,
+          "visibleDepth": 2
+        },
+        "motion": {
+          "easing": "GENTLE_SPRING",
+          "enterDurationMillis": 240,
+          "exitDurationMillis": 180,
+          "expandDurationMillis": 280,
+          "hapticStrength": "MEDIUM",
+          "magnetStrengthPercent": 70,
+          "parallaxIntensityPercent": 0,
+          "reducedMotion": false,
+          "reducedTransparency": false,
+          "reflowDurationMillis": 260,
+          "rotationIntensityPercent": 0,
+          "settleDurationMillis": 220,
+          "springBouncinessPercent": 20,
+          "travelIntensityPercent": 100
+        },
+        "surface": {
+          "backgroundSource": "APP_DERIVED_GRADIENT",
+          "blurStrengthPercent": 28,
+          "cardEffect": "GLASS",
+          "contrastPercent": 100,
+          "customBackgroundArgb": 4279966495,
+          "glassTintArgb": 3439329279,
+          "glassTransparencyPercent": 38,
+          "highlightPercent": 36,
+          "outlineWidthDp": 1,
+          "saturationPercent": 100,
+          "shadowElevationDp": 12,
+          "textureIntensityPercent": 0
+        },
+        "typography": {
+          "accentSource": "APP_DERIVED",
+          "automaticForegroundContrast": true,
+          "contentDensity": "COMFORTABLE",
+          "customAccentArgb": 4284960932,
+          "textScalePercent": 100
+        },
+        "version": 2
+      },
+      "foldedShowAllNotifications": false,
+      "pageVerticalOffsetDp": 0,
+      "showStageSpine": false,
+      "stagePreferencesByLayout": [],
+      "threadCardGrouping": "PER_THREAD",
+      "threadMessageOrder": "CHRONOLOGICAL",
+      "timeScapeAppearance": {
+        "geometry": {
+          "aboveFocusDepth": 0,
+          "arcWidthPercent": 100,
+          "cardAspectRatioPercent": 72,
+          "cardSizePercent": 75,
+          "contentPaddingDp": 20,
+          "cornerRadiusDp": 28,
+          "curvePercent": 2,
+          "fanDirection": "END",
+          "focusedGapDp": 12,
+          "focusedScalePercent": 100,
+          "horizontalOffsetPercent": 8,
+          "overlapPercent": 22,
+          "rotationDegrees": 4,
+          "stackPeakPercent": 50,
+          "verticalFanDirection": "END",
+          "verticalSpacingPercent": 1,
+          "visibleDepth": 4
+        },
+        "motion": {
+          "easing": "GENTLE_SPRING",
+          "enterDurationMillis": 240,
+          "exitDurationMillis": 180,
+          "expandDurationMillis": 280,
+          "hapticStrength": "MEDIUM",
+          "magnetStrengthPercent": 70,
+          "parallaxIntensityPercent": 18,
+          "reducedMotion": false,
+          "reducedTransparency": false,
+          "reflowDurationMillis": 260,
+          "rotationIntensityPercent": 100,
+          "settleDurationMillis": 220,
+          "springBouncinessPercent": 20,
+          "travelIntensityPercent": 100
+        },
+        "surface": {
+          "backgroundSource": "APP_DERIVED_GRADIENT",
+          "blurStrengthPercent": 28,
+          "cardEffect": "GLASS",
+          "contrastPercent": 100,
+          "customBackgroundArgb": 4279966495,
+          "glassTintArgb": 3439329279,
+          "glassTransparencyPercent": 38,
+          "highlightPercent": 36,
+          "outlineWidthDp": 1,
+          "saturationPercent": 100,
+          "shadowElevationDp": 12,
+          "textureIntensityPercent": 0
+        },
+        "typography": {
+          "accentSource": "APP_DERIVED",
+          "automaticForegroundContrast": true,
+          "contentDensity": "COMFORTABLE",
+          "customAccentArgb": 4284960932,
+          "textScalePercent": 100
+        },
+        "version": 2
+      },
+      "timeScapePaneArrangement": "STACK",
+      "timeScapeTemplateId": "timescape-shared-canvas",
+      "unfoldedShowAllNotifications": false
+    },
+    "contextual": {
+      "enabled": false
+    },
+    "developer": {
+      "homeFromPlacedItems": false
+    },
+    "gestures": {
+      "homeGestures": {
+        "ONE_FINGER_DOWN": "OPEN_SEARCH",
+        "ONE_FINGER_LEFT": "SELECT_NEXT_HOME_PAGE",
+        "ONE_FINGER_RIGHT": "SELECT_PREVIOUS_HOME_PAGE",
+        "ONE_FINGER_UP": "OPEN_WORKSPACE_MENU",
+        "PINCH_IN": "ENTER_HOME_EDIT_MODE",
+        "PINCH_OUT": "NONE",
+        "THREE_FINGER_DOWN": "NONE",
+        "THREE_FINGER_LEFT": "SELECT_PREVIOUS_APP_STAGE",
+        "THREE_FINGER_RIGHT": "NONE",
+        "THREE_FINGER_UP": "NONE",
+        "TWO_FINGER_DOWN": "OPEN_SETTINGS",
+        "TWO_FINGER_LEFT": "SELECT_NEXT_APP_STAGE",
+        "TWO_FINGER_RIGHT": "NONE",
+        "TWO_FINGER_UP": "OPEN_NOTIFICATIONS"
+      },
+      "homeSwipe": {
+        "down": "OPEN_SEARCH",
+        "left": "SELECT_NEXT_HOME_PAGE",
+        "right": "SELECT_PREVIOUS_HOME_PAGE",
+        "up": "OPEN_WORKSPACE_MENU"
+      }
+    },
+    "haptics": {
+      "feedbackStrength": "MEDIUM"
+    },
+    "home": {
+      "returnBehavior": "RESTORE"
+    },
+    "liquidGlass": {
+      "enabled": false,
+      "frostStrengthPercent": 45,
+      "refractionStrengthPercent": 20,
+      "spotlightFlowMillis": 350
+    },
+    "motion": {
+      "performanceTargetFps": "FPS_120",
+      "reducedMotion": false,
+      "reducedMotionPreference": "SYSTEM"
+    },
+    "notificationHiding": {
+      "rules": []
+    },
+    "overlayDock": {
+      "edge": "END",
+      "enabled": false,
+      "expandedIconSizeDp": 52,
+      "expandedOrientation": "WIDE",
+      "handleAlphaPercent": 80,
+      "handleHeightDp": 72,
+      "handleThicknessDp": 18,
+      "items": [],
+      "showLabels": false,
+      "verticalOffsetDp": 0
+    },
+    "privacy": {
+      "protectScreenContent": false
+    },
+    "rss": {
+      "backgroundChargingOnly": false,
+      "backgroundWifiOnly": true,
+      "feeds": [],
+      "refreshInterval": "OFF"
+    },
+    "search": {
+      "resultPresentation": "ICONS"
+    },
+    "version": 10,
+    "workspaceMenuEnabled": true
+  },
+  "stream": {
+    "postures": [
+      {
+        "deviceClass": "PHONE",
+        "options": {
+          "agenda": {
+            "daysAhead": 7,
+            "includeCalendarFeeds": true,
+            "maxEvents": 20
+          },
+          "feeds": {
+            "maxFeeds": 5,
+            "perFeed": 5
+          },
+          "notifications": {
+            "maxApps": 8,
+            "maxPerApp": 5
+          },
+          "now": {
+            "maxMedia": 1,
+            "showAlarm": true,
+            "showNextEvent": true
+          },
+          "recents": {
+            "frequentLimit": 4,
+            "limit": 10
+          },
+          "tasks": {
+            "limit": 10,
+            "showCompleted": false
+          }
+        },
+        "sections": [
+          {
+            "enabled": true,
+            "id": "now",
+            "view": "list"
+          },
+          {
+            "enabled": true,
+            "id": "notifications",
+            "view": "stack"
+          },
+          {
+            "enabled": true,
+            "id": "recents",
+            "view": "stack"
+          },
+          {
+            "enabled": true,
+            "id": "agenda",
+            "view": "list"
+          },
+          {
+            "enabled": true,
+            "id": "tasks",
+            "view": "list"
+          },
+          {
+            "enabled": true,
+            "id": "feeds",
+            "view": "stack"
+          }
+        ],
+        "split": {
+          "fractionPermille": 400,
+          "lastShown": "split"
+        }
+      }
+    ],
+    "version": 1
+  },
+  "type": "riffleLauncherBackup",
+  "version": 1,
+  "workspaces": {
+    "layouts": [
+      {
+        "active": "ws-timescape",
+        "default": "preset:nova:compact",
+        "deviceClass": "PHONE",
+        "library": {
+          "lenses": [
+            {
+              "id": "lens-1",
+              "lens": {
+                "filter": {
+                  "type": "all"
+                },
+                "group": {
+                  "type": "none"
+                },
+                "project": [
+                  "TITLE",
+                  "SUBTITLE",
+                  "BODY",
+                  "ICON",
+                  "IMAGE",
+                  "TIME",
+                  "GROUP",
+                  "ACTIONS",
+                  "EXT"
+                ],
+                "sort": {
+                  "direction": "ASCENDING",
+                  "field": "SOURCE_ORDER",
+                  "pinnedFirst": false
+                },
+                "sources": [
+                  "notifications"
+                ]
+              },
+              "name": "Chats"
+            }
+          ]
+        },
+        "workspaces": [
+          {
+            "dock": {},
+            "gestures": {},
+            "id": "preset:nova:compact",
+            "name": "Nova",
+            "pages": [
+              {
+                "content": {
+                  "binding": {
+                    "expression": "ICON_GRID",
+                    "lens": {
+                      "filter": {
+                        "key": "home",
+                        "type": "group_key_is"
+                      },
+                      "group": {
+                        "type": "none"
+                      },
+                      "project": [
+                        "TITLE",
+                        "SUBTITLE",
+                        "BODY",
+                        "ICON",
+                        "IMAGE",
+                        "TIME",
+                        "GROUP",
+                        "ACTIONS",
+                        "EXT"
+                      ],
+                      "sort": {
+                        "direction": "ASCENDING",
+                        "field": "SOURCE_ORDER",
+                        "pinnedFirst": false
+                      },
+                      "sources": [
+                        "home.grid"
+                      ]
+                    }
+                  },
+                  "type": "bound"
+                },
+                "id": "preset:nova:compact:home",
+                "role": "STANDARD",
+                "type": "page"
+              },
+              {
+                "content": {
+                  "binding": {
+                    "expression": "ALPHA_LIST",
+                    "lens": {
+                      "filter": {
+                        "type": "all"
+                      },
+                      "group": {
+                        "type": "none"
+                      },
+                      "project": [
+                        "TITLE",
+                        "SUBTITLE",
+                        "BODY",
+                        "ICON",
+                        "IMAGE",
+                        "TIME",
+                        "GROUP",
+                        "ACTIONS",
+                        "EXT"
+                      ],
+                      "sort": {
+                        "direction": "ASCENDING",
+                        "field": "TITLE",
+                        "pinnedFirst": false
+                      },
+                      "sources": [
+                        "apps.all"
+                      ]
+                    }
+                  },
+                  "type": "bound"
+                },
+                "id": "preset:nova:compact:finder",
+                "role": "FINDER",
+                "type": "page"
+              }
+            ],
+            "preset": "nova",
+            "version": 1
+          },
+          {
+            "dock": {
+              "dynamic": {
+                "expression": "ICON_ROW",
+                "lens": {
+                  "filter": {
+                    "type": "all"
+                  },
+                  "group": {
+                    "type": "none"
+                  },
+                  "project": [
+                    "TITLE",
+                    "SUBTITLE",
+                    "BODY",
+                    "ICON",
+                    "IMAGE",
+                    "TIME",
+                    "GROUP",
+                    "ACTIONS",
+                    "EXT"
+                  ],
+                  "sort": {
+                    "direction": "ASCENDING",
+                    "field": "SOURCE_ORDER",
+                    "pinnedFirst": false
+                  },
+                  "sources": [
+                    "notifications"
+                  ]
+                }
+              }
+            },
+            "gestures": {},
+            "id": "ws-timescape",
+            "name": "TimeScape",
+            "pages": [
+              {
+                "content": {
+                  "binding": {
+                    "expression": "ICON_GRID",
+                    "lens": {
+                      "filter": {
+                        "key": "home",
+                        "type": "group_key_is"
+                      },
+                      "group": {
+                        "type": "none"
+                      },
+                      "project": [
+                        "TITLE",
+                        "SUBTITLE",
+                        "BODY",
+                        "ICON",
+                        "IMAGE",
+                        "TIME",
+                        "GROUP",
+                        "ACTIONS",
+                        "EXT"
+                      ],
+                      "sort": {
+                        "direction": "ASCENDING",
+                        "field": "SOURCE_ORDER",
+                        "pinnedFirst": false
+                      },
+                      "sources": [
+                        "home.grid"
+                      ]
+                    }
+                  },
+                  "type": "bound"
+                },
+                "id": "ws-timescape:home",
+                "role": "STANDARD",
+                "type": "page"
+              },
+              {
+                "binding": {
+                  "expression": "CARD_STACK",
+                  "lens": {
+                    "filter": {
+                      "type": "all"
+                    },
+                    "group": {
+                      "type": "group_key"
+                    },
+                    "project": [
+                      "TITLE",
+                      "SUBTITLE",
+                      "BODY",
+                      "ICON",
+                      "IMAGE",
+                      "TIME",
+                      "GROUP",
+                      "ACTIONS",
+                      "EXT"
+                    ],
+                    "sort": {
+                      "direction": "ASCENDING",
+                      "field": "SOURCE_ORDER",
+                      "pinnedFirst": false
+                    },
+                    "sources": [
+                      "notifications"
+                    ]
+                  }
+                },
+                "id": "ws-timescape:inbox",
+                "type": "page_set"
+              },
+              {
+                "content": {
+                  "binding": {
+                    "expression": "LIST",
+                    "lens": {
+                      "filter": {
+                        "type": "all"
+                      },
+                      "group": {
+                        "type": "none"
+                      },
+                      "project": [
+                        "TITLE",
+                        "SUBTITLE",
+                        "BODY",
+                        "ICON",
+                        "IMAGE",
+                        "TIME",
+                        "GROUP",
+                        "ACTIONS",
+                        "EXT"
+                      ],
+                      "sort": {
+                        "direction": "ASCENDING",
+                        "field": "SOURCE_ORDER",
+                        "pinnedFirst": false
+                      },
+                      "sources": [
+                        "notifications"
+                      ]
+                    },
+                    "ref": "lens-1"
+                  },
+                  "type": "bound"
+                },
+                "id": "ws-timescape:saved",
+                "role": "STANDARD",
+                "type": "page"
+              }
+            ],
+            "preset": "timescape",
+            "version": 1
+          }
+        ]
+      }
+    ],
+    "version": 2
+  }
+}

@@ -1,8 +1,6 @@
 package com.riffle.core.domain.launcher.workspace
 
-import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.DockModel
-import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -11,21 +9,13 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.settings.HomeGesture
-import com.riffle.core.domain.launcher.settings.HomeGestureSettings
-import com.riffle.core.domain.launcher.settings.LauncherGestureAction
-import com.riffle.core.domain.launcher.workspace.preset.WorkspacePresets
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertSame
-import kotlin.test.assertTrue
 
 class WorkspaceHomeTest {
     private val phone = HomeLayoutDeviceClass.PHONE
-    private val nova = WorkspacePresets.defaultFor(phone)
-    private val ios = checkNotNull(WorkspacePresets.byId("ios")).compact
+    private val nova = TestWorkspaces.novaFor(phone)
     private val library = HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY, phone)
 
     private fun set(active: Workspace): WorkspaceSet = WorkspaceSet(mapOf(phone to LayoutWorkspaces.single(active)))
@@ -77,23 +67,8 @@ class WorkspaceHomeTest {
             WorkspaceHome.shown(set(nova), standardKey, library.viewMode).workspaceId,
         )
         // A workspace with no placed page borrows nothing.
-        val lensOnly = nova.copy(pages = nova.pages.filterNot(PageHost::readsPlacedItems))
+        val lensOnly = TestWorkspaces.lensOnly(nova.id)
         assertEquals(HomeShownWorkspace(nova.id), WorkspaceHome.shown(set(lensOnly), library, library.viewMode))
-    }
-
-    @Test
-    fun extraPagesAreTheNonPlacedPagerPagesOfAPresetOnly() {
-        assertTrue(WorkspaceHome.extraPages(nova, phone).isEmpty(), "Nova: home grid plus Finder, nothing extra")
-        val extras = WorkspaceHome.extraPages(ios, phone)
-        assertEquals(1, extras.size, "iOS: the Today page")
-        assertTrue(extras.none { it.readsPlacedItems() })
-        assertTrue(extras.none { it.isFinderPage() })
-        val migrated = ios.copy(id = WorkspaceHome.migratedId(library))
-        assertTrue(
-            WorkspaceHome.extraPages(migrated, phone).isEmpty(),
-            "a migrated workspace's lens pages are its layout's",
-        )
-        assertTrue(WorkspaceHome.extraPages(null, phone).isEmpty())
     }
 
     @Test
@@ -122,53 +97,5 @@ class WorkspaceHomeTest {
         // A start page on a lens page has no layout page.
         assertNull(WorkspaceHome.startPageOf(nova.copy(startPageId = finder.id), layout))
         assertNull(WorkspaceHome.startPageOf(null, layout))
-    }
-
-    @Test
-    fun workspaceGestureBindingsLayerOverTheGlobalOnes() {
-        val global = HomeGestureSettings()
-        assertSame(global, WorkspaceHome.gestures(global, null))
-        assertSame(global, WorkspaceHome.gestures(global, nova))
-        val niagara = checkNotNull(WorkspacePresets.byId("niagara")).compact
-        val applied = WorkspaceHome.gestures(global, niagara)
-        assertEquals(LauncherGestureAction.OPEN_LIBRARY, applied.actionFor(HomeGesture.ONE_FINGER_UP))
-        val hostile =
-            nova.copy(
-                gestureBindings =
-                    mapOf(
-                        "NOT_A_GESTURE" to "OPEN_SEARCH",
-                        HomeGesture.PINCH_IN.name to "NOT_AN_ACTION",
-                        HomeGesture.PINCH_OUT.name to LauncherGestureAction.LAUNCH_APP.name,
-                        HomeGesture.TWO_FINGER_UP.name to LauncherGestureAction.OPEN_SEARCH.name,
-                    ),
-            )
-        val result = WorkspaceHome.gestures(global, hostile)
-        assertEquals(global.actionFor(HomeGesture.PINCH_IN), result.actionFor(HomeGesture.PINCH_IN))
-        assertEquals(global.actionFor(HomeGesture.PINCH_OUT), result.actionFor(HomeGesture.PINCH_OUT))
-        assertEquals(LauncherGestureAction.OPEN_SEARCH, result.actionFor(HomeGesture.TWO_FINGER_UP))
-    }
-
-    @Test
-    fun theHomeStateLayersTheWorkspaceGesturesAndDockOverride() {
-        val state = LauncherShellState()
-        assertSame(state, state.withWorkspaceHome(null))
-        assertSame(state, state.withWorkspaceHome(nova))
-
-        // Niagara hides its dock and binds a swipe up to the menu: both apply, the stored settings stay global.
-        val niagara = checkNotNull(WorkspacePresets.byId("niagara")).compact
-        val home = state.withWorkspaceHome(niagara)
-        assertFalse(home.homeLayout.dock.isEnabled)
-        assertEquals(state.homeLayout.dock.items, home.homeLayout.dock.items)
-        assertEquals(
-            LauncherGestureAction.OPEN_LIBRARY,
-            home.launcherSettings.gestures.homeGestures.actionFor(HomeGesture.ONE_FINGER_UP),
-        )
-
-        // A hidden dock without any gesture to the menu is drawn anyway (the stranding rule).
-        val stranded = nova.copy(dock = nova.dock.copy(presentation = DockPresentation(hidden = true)))
-        assertTrue(state.withWorkspaceHome(stranded).homeLayout.dock.isEnabled)
-
-        val left = nova.copy(dock = nova.dock.copy(presentation = DockPresentation(edge = DockPosition.LEFT)))
-        assertEquals(DockPosition.LEFT, state.withWorkspaceHome(left).homeLayout.dock.position)
     }
 }

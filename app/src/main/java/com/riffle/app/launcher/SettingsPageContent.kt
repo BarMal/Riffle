@@ -9,7 +9,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -27,7 +26,6 @@ internal fun SettingsPageContent(
     page: SettingsPage,
     onPageSelected: (SettingsPage) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
-    onRequestAdaptiveStageAppearanceTuning: () -> Unit = {},
 ) {
     Column(
         modifier = modifier,
@@ -44,13 +42,6 @@ internal fun SettingsPageContent(
             SettingsPage.LAYOUT -> SettingsLayoutPageContent(state = state, onAction = onAction)
             SettingsPage.DOCK -> SettingsDockPageContent(state = state, onAction = onAction)
             SettingsPage.APPEARANCE -> SettingsAppearancePageContent(state = state, onAction = onAction)
-            // The live tuning overlay -- the real Cards surface, with these same controls in a
-            // sheet over it -- is the only Cards appearance editor now (#1177). This settings row
-            // is a launch point for that surface rather than a page of its own: reaching it jumps
-            // straight to Home with the sheet open, instead of showing a second, static-preview
-            // copy of the same editor first.
-            SettingsPage.ADAPTIVE_STAGE_APPEARANCE ->
-                LaunchedEffect(Unit) { onRequestAdaptiveStageAppearanceTuning() }
             SettingsPage.FLOATING_DOCK -> SettingsFloatingDockPageContent(state = state, onAction = onAction)
             SettingsPage.GESTURES -> SettingsGesturesPageContent(state = state, onAction = onAction)
             SettingsPage.CONTEXTUAL -> SettingsContextualPageContent(state = state, onAction = onAction)
@@ -94,11 +85,9 @@ internal fun SettingsPageContent(
             SettingsPage.BACKUP -> SettingsBackupPageContent(onAction = onAction)
             SettingsPage.HIDDEN_APPS -> SettingsHiddenAppsPageContent(state = state, onAction = onAction)
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state)
-            SettingsPage.WORKSPACES -> SettingsWorkspacesPageContent(state = state, onAction = onAction)
             SettingsPage.SOURCES -> SettingsSourcesPageContent(state = state, onPageSelected = onPageSelected)
             SettingsPage.EXCLUSIONS -> SettingsExclusionsPageContent(state = state, onAction = onAction)
             SettingsPage.ICS_FEEDS -> SettingsIcsFeedsPageContent()
-            SettingsPage.LENSES -> SettingsLensesPageContent(state = state, onAction = onAction)
             SettingsPage.SOURCE_APPS,
             SettingsPage.SOURCE_RECENTS,
             SettingsPage.SOURCE_SHORTCUTS,
@@ -106,7 +95,6 @@ internal fun SettingsPageContent(
             SettingsPage.SOURCE_MEDIA,
             SettingsPage.SOURCE_CALENDAR,
             SettingsPage.SOURCE_RSS,
-            SettingsPage.SOURCE_SEARCH,
             SettingsPage.SOURCE_ICS,
             ->
                 SettingsSourceDetailPageContent(
@@ -132,7 +120,7 @@ private fun SettingsMainPageContent(
         firstRunStatus = state.firstRunStatus,
         onAction = onAction,
     )
-    SettingsWorkspacesSection(onPageSelected = onPageSelected)
+    SettingsSetupSection(onPageSelected = onPageSelected)
     AppSearchField(
         modifier = Modifier.fillMaxWidth(),
         query = settingsQuery.value,

@@ -1,10 +1,8 @@
 package com.riffle.core.domain.launcher.workspace
 
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -191,30 +189,6 @@ class LensLibraryOpsTest {
         assertEquals(2, duplicated.workspaces.size)
         assertEquals(6, duplicated.allBindings().count { it.ref == id })
         assertEquals(layout.library, duplicated.library)
-    }
-
-    @Test
-    fun `copy from another layout copies the library with fresh ids and rewrites refs`() {
-        val (layout, id) = fixture()
-        val extra = (layout.library.tryAdd("Unused", llLens(limit = 6), llCounter("u")) as LibraryAdd.Added).library
-        val phone = HomeLayoutDeviceClass.PHONE
-        val tablet = HomeLayoutDeviceClass.TABLET
-        val set = WorkspaceSet(mapOf(phone to layout.copy(library = extra)))
-        val copied = set.copyFromOtherLayout(phone, tablet, llCounter("c")).workspacesFor(tablet)
-
-        assertEquals(listOf("Shared", "Unused"), copied.library.lenses.map { it.name })
-        val sourceIds = extra.lenses.map { it.id }.toSet()
-        assertTrue(copied.library.lenses.none { it.id in sourceIds })
-        assertEquals(extra.lenses.map { it.lens }, copied.library.lenses.map { it.lens })
-        val newId = copied.library.lenses.first { it.name == "Shared" }.id
-        assertNotEquals(id, newId)
-        assertEquals(3, copied.allBindings().count { it.ref == newId })
-        assertTrue(copied.allBindings().none { it.ref == id })
-        assertTrue(LensLibraryOps.danglingRefs(copied).isEmpty())
-        // Editing the copy never touches the source layout.
-        val edited = LensLibraryOps.applyEdit(copied, newId, llLens(limit = 2)) as LensLibraryResult.Applied
-        assertEquals(llLens(), set.workspacesFor(phone).library.find(id)?.lens)
-        assertEquals(llLens(limit = 2), edited.layout.library.find(newId)?.lens)
     }
 
     @Test

@@ -55,7 +55,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
-import com.riffle.app.launcher.workspace.LocalWorkspaceHomePages
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
@@ -539,15 +538,11 @@ private fun StandardHomeColumn(
     actions: HomeWorkspaceActions,
     modifier: Modifier = Modifier,
 ) {
-    // The active workspace's lens pages follow the placed pages while browsing; editing shows only placed pages.
-    val extraPages =
-        LocalWorkspaceHomePages.current?.takeIf { state.visibleLayout.editMode == HomeEditMode.Browsing }
     val pagerState =
         rememberImmediateHomePagerState(
             layout = state.visibleLayout,
             reducedMotion = state.presentation.reducedMotion,
             actions = actions,
-            extraPageCount = extraPages?.pages?.size ?: 0,
         )
     // Keyed on a request id rather than the target page itself, so a new page crossed mid-drag
     // explicitly supersedes and cancels whatever snap the previous one was still mid-flight on --
@@ -634,7 +629,6 @@ private fun StandardHomeColumn(
                         end = margins.end.coerceAtLeast(0).dp,
                         bottom = margins.bottom.coerceAtLeast(0).dp,
                     ),
-            extraPages = extraPages,
         )
         Spacer(modifier = Modifier.height(state.visibleLayout.dock.homeControlsSpacingDp.dp))
         HomeBottomControls(
@@ -650,7 +644,6 @@ private fun StandardHomeColumn(
             actions = actions,
             modifier =
                 Modifier.onSizeChanged { size -> actions.onBottomControlsHeightChanged(size.height) },
-            extraPageCount = extraPages?.pages?.size ?: 0,
         )
         if (!dockEdge.isSideEdge && dockEdge != DockPosition.TOP) dockArea()
     }
@@ -717,8 +710,6 @@ private fun HomeBottomControls(
     widgetViewFactory: HomeWidgetViewFactory,
     actions: HomeWorkspaceActions,
     modifier: Modifier = Modifier,
-    /** The workspace's lens pages after the layout's (S9): the indicator counts them; they select no layout page. */
-    extraPageCount: Int = 0,
 ) {
     AnimatedContent(
         targetState = layout.editMode,
@@ -734,7 +725,7 @@ private fun HomeBottomControls(
         when (editMode) {
             HomeEditMode.Browsing ->
                 HomeBottomSearchArea(
-                    pageCount = layout.pages.size + extraPageCount,
+                    pageCount = layout.pages.size,
                     selectedPageIndex = selectedPageIndex,
                     showPageIndicator = showPageIndicator,
                     reducedMotion = reducedMotion,

@@ -1,7 +1,7 @@
 package com.riffle.app.launcher.onboarding
 
 import android.content.Context
-import com.riffle.core.domain.launcher.workspace.wizard.OnboardingState
+import com.riffle.core.domain.launcher.onboarding.OnboardingState
 
 /**
  * The onboarding state in its own tiny preferences file (`riffle_onboarding`), like the first-run markers: device

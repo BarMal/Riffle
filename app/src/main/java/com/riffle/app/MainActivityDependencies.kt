@@ -36,7 +36,6 @@ import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.calendar.AndroidCalendarAccessGateway
 import com.riffle.app.launcher.calendar.CalendarAccessChanges
 import com.riffle.app.launcher.calendar.SharedPreferencesCalendarDenialHistory
-import com.riffle.app.launcher.calendar.sourceAccess
 import com.riffle.app.launcher.defaultLauncherViewModeAvailability
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.exclusions.DataStoreExclusionStore
@@ -55,8 +54,6 @@ import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnectio
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
-import com.riffle.app.launcher.pool.PoolItemActions
-import com.riffle.app.launcher.pool.PoolRuntime
 import com.riffle.app.launcher.rss.AndroidFeedParser
 import com.riffle.app.launcher.rss.AndroidFeedTransport
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
@@ -90,19 +87,14 @@ import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
 import com.riffle.app.launcher.widgets.HostedWidgetIdReferenceState
 import com.riffle.app.launcher.widgets.PersistentWidgetAddTransactionStore
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
-import com.riffle.app.launcher.workspace.AndroidExpressionImageLoader
 import com.riffle.app.launcher.workspace.AndroidItemLaunchPort
 import com.riffle.app.launcher.workspace.SharedPreferencesContentLevelStore
 import com.riffle.app.launcher.workspace.SharedPreferencesDisabledSourcesStore
 import com.riffle.app.launcher.workspace.SourceControls
-import com.riffle.app.launcher.workspace.WorkspaceItemActions
-import com.riffle.app.launcher.workspace.WorkspaceRuntime
-import com.riffle.app.launcher.workspace.sourceAccessMap
-import com.riffle.app.launcher.workspace.workspaceLensProvider
+import com.riffle.app.launcher.workspace.SourcesRuntime
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.home.GridDimensions
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -122,7 +114,6 @@ import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
 import com.riffle.core.domain.launcher.workspace.settings.mergedContextChanges
 import com.riffle.core.domain.launcher.workspace.sources.EnablementSourceRegistry
 import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
-import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -280,44 +271,22 @@ internal class MainActivityDependencies(
     }
 
     /**
-     * The workspace preview's runtime (debug-only experience). Call it only once the preview is switched on:
-     * nothing in it subscribes to a source until a container observes a lens, and creating it reads no
-     * platform data. [launcherSettings] supplies the notification hide rules and RSS feeds.
+     * The sources' runtime: what the Sources, Privacy, Hidden items and Calendar feeds pages and the Stream read
+     * through. Nothing in it subscribes to a source until a Stream section or a page observes one, and creating it
+     * reads no platform data. [launcherSettings] supplies the notification hide rules and RSS feeds.
      */
-    fun workspaceRuntime(launcherSettings: () -> LauncherSettings): WorkspaceRuntime {
+    fun sourcesRuntime(launcherSettings: () -> LauncherSettings): SourcesRuntime {
         val searchQuery = SearchQueryHolder()
         val registry = workspaceItemSources(activity.contentResolver, launcherSettings, searchQuery)
-        val lensExecutor =
-            Executors.newSingleThreadExecutor { task ->
-                Thread(task, "riffle-lens-evaluation").apply { isDaemon = true }
-            }
         // A source the user turned off emits Off without reading its repository; the shared registry on top
-        // gives containers and the Sources page one connection per source.
+        // gives the Stream and the Sources page one connection per source.
         val enablement = StoredSourceEnablement(SharedPreferencesDisabledSourcesStore(activity))
-        // Per-source content levels (Settings > Privacy), applied at lens projection; device-local like enablement.
+        // Per-source content levels (Settings > Privacy), applied before anything is drawn; device-local.
         val contentPrivacy = StoredSourceContentPrivacy(SharedPreferencesContentLevelStore(activity))
         val shared = SharedSourceRegistry(EnablementSourceRegistry(registry, enablement))
-        return WorkspaceRuntime(
+        return SourcesRuntime(
             repository = workspaceRepository,
             registry = registry,
-            provider =
-                workspaceLensProvider(
-                    shared,
-                    lensExecutor,
-                    exclusionChanges = exclusionRepository,
-                    contentPrivacy = contentPrivacy,
-                    exclusions = {
-                        exclusionRepository.rules(
-                            homeLayoutDeviceClassFromConfiguration(
-                                screenWidthDp = activity.resources.configuration.screenWidthDp,
-                                screenHeightDp = activity.resources.configuration.screenHeightDp,
-                            ) ?: HomeLayoutDeviceClass.PHONE,
-                        )
-                    },
-                ),
-            imageLoader = AndroidExpressionImageLoader(activity.packageManager),
-            appIconLoader = appIconLoader,
-            itemActions = WorkspaceItemActions(AndroidItemLaunchPort(activity, appLauncher)),
             exclusionLoader = {
                 exclusionRepository.initialize(
                     hiddenApps = appVisibilityRepository.hiddenAppIdentities(),
@@ -333,14 +302,6 @@ internal class MainActivityDependencies(
                         }
                     exclusionRepository.mergeAppHides(installed, appVisibilityRepository)
                 }
-            },
-            sourceAccess = {
-                sourceAccessMap(
-                    notificationAccess = notificationAccessGateway.getNotificationAccessStatus(),
-                    calendarAccess = calendarAccessGateway.sourceAccess(),
-                    recentAppsAccess =
-                        if (recentAppRepository.canReadRecentApps()) SourceAccess.GRANTED else SourceAccess.REQUIRED,
-                )
             },
             sourceControls =
                 SourceControls(statusRegistry = shared, enablement = enablement, contentPrivacy = contentPrivacy),
@@ -467,23 +428,6 @@ internal class MainActivityDependencies(
             posture = posture,
         )
     }
-
-    /**
-     * The Workspaces (preview) placed-items pool runtime. Call it only once the preview opens: building it
-     * reads no storage; the store is read when the preview calls `initialize`. Item taps go through the same
-     * app launcher the standard home uses.
-     */
-    fun poolRuntime(): PoolRuntime =
-        PoolRuntime(
-            repository = poolRepository,
-            iconLoader = appIconLoader,
-            widgetViews = widgetHostGateway,
-            actions = PoolItemActions(launchApp = appLauncher::launch, launchShortcut = appLauncher::launchShortcut),
-            providerOf = widgetHostGateway::hostedWidgetProvider,
-            releaseHostIds = { ids ->
-                activity.runOnUiThread { ids.forEach(hostIdDeletion::unlessReferenced) }
-            },
-        )
 
     fun packageChangeObserver(onCatalogChanged: (AppCatalogChange) -> Unit): AndroidPackageChangeObserver =
         AndroidPackageChangeObserver(activity) { change ->

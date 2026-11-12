@@ -197,17 +197,11 @@ private fun AppDrawerRowActions(
     onMenuExpandedChange: (Boolean) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    if (state.homeSurfaceKind == HomeSurfaceKind.CARDS) {
-        TextButton(onClick = { onAction(LauncherShellAction.ToggleAppStagePinned(state.app.stageId)) }) {
-            Text(text = "Pin")
-        }
-    } else {
-        TextButton(
-            enabled = !state.isOnHome,
-            onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
-        ) {
-            Text(text = if (state.isOnHome) "Added" else "Add")
-        }
+    TextButton(
+        enabled = !state.isOnHome,
+        onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
+    ) {
+        Text(text = if (state.isOnHome) "Added" else "Add")
     }
     TextButton(
         onClick = {
@@ -292,20 +286,12 @@ private fun AppDrawerMainMenuItems(
     onOpenShortcuts: () -> Unit,
     onExpandedChange: (Boolean) -> Unit,
 ) {
-    if (state.homeSurfaceKind == HomeSurfaceKind.CARDS) {
-        AppDrawerRowMenuItem(
-            text = "Pin as a card",
-            onClick = { onAction(LauncherShellAction.ToggleAppStagePinned(state.app.stageId)) },
-            onExpandedChange = onExpandedChange,
-        )
-    } else {
-        AppDrawerRowMenuItem(
-            text = if (state.isOnHome) "Added to home" else "Add to home",
-            enabled = !state.isOnHome,
-            onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
-            onExpandedChange = onExpandedChange,
-        )
-    }
+    AppDrawerRowMenuItem(
+        text = if (state.isOnHome) "Added to home" else "Add to home",
+        enabled = !state.isOnHome,
+        onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
+        onExpandedChange = onExpandedChange,
+    )
     AppDrawerRowMenuItem(
         text = if (state.dockItemId == null) "Pin to Dock" else "Unpin from Dock",
         onClick = {
@@ -449,5 +435,4 @@ internal data class AppDrawerRowState(
     val shortcutItems: List<AppDrawerShortcutMenuItem>,
     val showInlineActions: Boolean,
     val haptics: LauncherHaptics,
-    val homeSurfaceKind: HomeSurfaceKind,
 )

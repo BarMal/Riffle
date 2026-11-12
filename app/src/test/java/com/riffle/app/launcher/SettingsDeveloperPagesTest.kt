@@ -5,17 +5,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The Workspaces and Sources pages are Developer pages: they never join the main page's groups, its search or
- * the launcher search, so with the preview off nothing about Settings differs.
+ * The Sources pages are reached from the Set up section, not the main page's groups: they never join its entries, its
+ * search or the launcher search.
  */
 class SettingsDeveloperPagesTest {
     private val developerPages =
         setOf(
-            SettingsPage.WORKSPACES,
             SettingsPage.SOURCES,
             SettingsPage.EXCLUSIONS,
             SettingsPage.ICS_FEEDS,
-            SettingsPage.LENSES,
         ) + SourceDetailPages.pages
 
     @Test
@@ -29,7 +27,7 @@ class SettingsDeveloperPagesTest {
             listOf(
                 "workspaces", "sources", "preset", "source", "lens",
                 "hidden items", "exclusion", "rules", "calendar feeds", "ics", "saved lenses",
-                "notifications source", "rss feeds source", "search source", "apps source", "used by",
+                "notifications source", "rss feeds source", "apps source", "used by",
             )
         queries.forEach { query ->
             assertTrue(query, settingsMainPageEntriesMatching(query).none { it.page in developerPages })
@@ -44,10 +42,8 @@ class SettingsDeveloperPagesTest {
 
     @Test
     fun theyAreNamedForTheirTitles() {
-        assertEquals("Workspaces", SettingsPage.WORKSPACES.title)
         assertEquals("Sources", SettingsPage.SOURCES.title)
         assertEquals("Hidden items and rules", SettingsPage.EXCLUSIONS.title)
         assertEquals("Calendar feeds (ICS)", SettingsPage.ICS_FEEDS.title)
-        assertEquals("Saved lenses", SettingsPage.LENSES.title)
     }
 }

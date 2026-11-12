@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspaces S7: skin override, workspace-menu gesture, dock overrides and new apps (as built)
 
 > **Removed in places-views P2.** Glass is the only look, so the per-workspace skin override, `WorkspaceSkin`,

@@ -92,7 +92,7 @@ internal fun Modifier.clickWithHide(
     } else {
         combinedClickable(
             role = Role.Button,
-            onLongClickLabel = ExpressionText.HIDE_LONG_PRESS_LABEL,
+            onLongClickLabel = HIDE_LONG_PRESS_LABEL,
             onLongClick = onShowMenu,
             onClick = onClick,
         ).hideCustomActions(menu)
@@ -134,7 +134,10 @@ internal fun ItemHideButton(
     if (menu == null) return
     var expanded by remember { mutableStateOf(false) }
     IconButton(onClick = { expanded = true }, modifier = modifier.testTag(ITEM_HIDE_BUTTON_TEST_TAG)) {
-        Icon(imageVector = Icons.Filled.MoreVert, contentDescription = ExpressionText.MORE_OPTIONS)
+        Icon(imageVector = Icons.Filled.MoreVert, contentDescription = MORE_OPTIONS)
         ItemHideDropdown(menu, expanded) { expanded = false }
     }
 }
+
+private const val MORE_OPTIONS = "More options"
+private const val HIDE_LONG_PRESS_LABEL = "Show hide options"

@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspaces screenshot matrix
 
 Audit for WS9 (issue #1357). The plan (workspaces-sources-lenses.md, WS9) requires "screenshot tests for

@@ -1,14 +1,12 @@
 package com.riffle.app.launcher.onboarding
 
-import com.riffle.core.domain.launcher.workspace.wizard.OfferProgress
-import com.riffle.core.domain.launcher.workspace.wizard.OnboardingOrigin
-import com.riffle.core.domain.launcher.workspace.wizard.OnboardingPrompt
-import com.riffle.core.domain.launcher.workspace.wizard.WalkthroughProgress
+import com.riffle.core.domain.launcher.onboarding.OnboardingOrigin
+import com.riffle.core.domain.launcher.onboarding.OnboardingProgress
+import com.riffle.core.domain.launcher.onboarding.OnboardingPrompt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The launch decision over the device-local store: one controller is one process. */
@@ -20,22 +18,30 @@ class OnboardingControllerTest {
     private fun OnboardingController.launch(fresh: Boolean): OnboardingPrompt = runBlocking { decideAtLaunch { fresh } }
 
     @Test
-    fun aFreshInstallRunsTheWalkthroughFullScreen() {
+    fun aFreshInstallRunsTheSetUpFullScreen() {
         val controller = process()
-        assertEquals(OnboardingPrompt.RUN_WALKTHROUGH, controller.launch(fresh = true))
-        assertEquals(
-            OnboardingSurface.Walkthrough(OnboardingOrigin.FRESH_INSTALL, firstRun = true),
-            controller.surface.value,
-        )
+        assertEquals(OnboardingPrompt.RUN, controller.launch(fresh = true))
+        assertEquals(OnboardingSurface.SetUp, controller.surface.value)
         assertEquals(OnboardingOrigin.FRESH_INSTALL, store.stored?.origin)
-        assertEquals(WalkthroughProgress.STARTED, store.stored?.walkthrough)
+        assertEquals(OnboardingProgress.STARTED, store.stored?.progress)
+    }
+
+    @Test
+    fun anExistingUserGetsNothingForced() {
+        val controller = process()
+        assertEquals(OnboardingPrompt.NONE, controller.launch(fresh = false))
+        assertEquals(OnboardingSurface.None, controller.surface.value)
+        assertEquals(OnboardingOrigin.EXISTING_USER, store.stored?.origin)
+        assertEquals(OnboardingProgress.NOT_STARTED, store.stored?.progress)
+        // Not at a later launch either.
+        assertEquals(OnboardingPrompt.NONE, process().launch(fresh = true))
     }
 
     @Test
     fun theDecisionIsMadeOncePerProcess() {
         val controller = process()
         controller.launch(fresh = true)
-        controller.walkthroughCancelled()
+        controller.cancelled()
         assertEquals(OnboardingPrompt.NONE, controller.launch(fresh = true))
         assertEquals(OnboardingSurface.None, controller.surface.value)
     }
@@ -45,20 +51,20 @@ class OnboardingControllerTest {
         process().launch(fresh = true)
         // The app was closed mid-way: the next process runs it again.
         val next = process()
-        assertEquals(OnboardingPrompt.RUN_WALKTHROUGH, next.launch(fresh = false))
-        assertEquals(OnboardingOrigin.FRESH_INSTALL, (next.surface.value as OnboardingSurface.Walkthrough).origin)
+        assertEquals(OnboardingPrompt.RUN, next.launch(fresh = false))
+        assertEquals(OnboardingSurface.SetUp, next.surface.value)
     }
 
     @Test
     fun aCompletedOrSkippedRunIsNotAskedAgain() {
-        process().apply { launch(fresh = true) }.walkthroughCompleted()
+        process().apply { launch(fresh = true) }.completed()
         assertEquals(OnboardingPrompt.NONE, process().launch(fresh = true))
         assertEquals(1, store.stored?.completedRuns)
 
         val skipped = InMemoryOnboardingStore()
         OnboardingController(skipped, Dispatchers.Unconfined).apply { runBlocking { decideAtLaunch { true } } }
-            .walkthroughCancelled()
-        assertEquals(WalkthroughProgress.SKIPPED, skipped.stored?.walkthrough)
+            .cancelled()
+        assertEquals(OnboardingProgress.SKIPPED, skipped.stored?.progress)
         assertEquals(
             OnboardingPrompt.NONE,
             runBlocking { OnboardingController(skipped, Dispatchers.Unconfined).decideAtLaunch { true } },
@@ -66,66 +72,26 @@ class OnboardingControllerTest {
     }
 
     @Test
-    fun anExistingUserGetsTheOfferOnce() {
-        val first = process()
-        assertEquals(OnboardingPrompt.SHOW_OFFER, first.launch(fresh = false))
-        assertEquals(OnboardingSurface.Offer, first.surface.value)
-        assertEquals(OfferProgress.SHOWN, store.stored?.offer)
-        // Whatever the user did with it (here: nothing), it never comes back.
-        assertEquals(OnboardingPrompt.NONE, process().launch(fresh = false))
-        assertEquals(OnboardingPrompt.NONE, process().launch(fresh = true))
-    }
-
-    @Test
-    fun notNowDismissesTheOfferForGood() {
+    fun theSetUpCanBeRunAgainFromSettingsAtAnyTime() {
         val controller = process()
         controller.launch(fresh = false)
-        controller.dismissOffer()
+        controller.rerun()
+        assertEquals(OnboardingSurface.SetUp, controller.surface.value)
+        controller.completed()
         assertEquals(OnboardingSurface.None, controller.surface.value)
-        assertEquals(OfferProgress.DISMISSED, store.stored?.offer)
-        assertEquals(OnboardingPrompt.NONE, process().launch(fresh = false))
-    }
-
-    @Test
-    fun setUpOpensTheWalkthroughThatOnlyAdds() {
-        val controller = process()
-        controller.launch(fresh = false)
-        controller.acceptOffer()
-        assertEquals(
-            OnboardingSurface.Walkthrough(OnboardingOrigin.EXISTING_USER, firstRun = true),
-            controller.surface.value,
-        )
-        assertEquals(OfferProgress.ACCEPTED, store.stored?.offer)
-        controller.walkthroughCompleted()
-        assertEquals(WalkthroughProgress.COMPLETED, store.stored?.walkthrough)
-        assertEquals(OnboardingPrompt.NONE, process().launch(fresh = false))
-    }
-
-    @Test
-    fun settingsCanRunItAgainAnyTimeAndARerunNeverReplaces() {
-        val controller = process()
-        controller.launch(fresh = true)
-        controller.walkthroughCompleted()
         controller.rerun()
-        assertEquals(
-            OnboardingSurface.Walkthrough(OnboardingOrigin.FRESH_INSTALL, firstRun = false),
-            controller.surface.value,
-        )
-        // Cancelling a re-run keeps the earlier completion.
-        controller.walkthroughCancelled()
-        assertEquals(WalkthroughProgress.COMPLETED, store.stored?.walkthrough)
-        controller.rerun()
-        controller.walkthroughCompleted()
-        assertEquals(2, store.stored?.completedRuns)
+        assertEquals(OnboardingSurface.SetUp, controller.surface.value)
+        // A cancelled re-run keeps the earlier completion.
+        controller.cancelled()
+        assertEquals(OnboardingProgress.COMPLETED, store.stored?.progress)
     }
 
     @Test
     fun aRerunBeforeTheLaunchDecisionWins() {
         val controller = process()
         controller.rerun()
-        controller.launch(fresh = false)
-        // The walkthrough from Settings stays up; the offer is not drawn over it.
-        assertTrue(controller.surface.value is OnboardingSurface.Walkthrough)
+        controller.launch(fresh = true)
+        assertEquals(OnboardingSurface.SetUp, controller.surface.value)
     }
 
     @Test

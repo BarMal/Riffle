@@ -1,3 +1,5 @@
+> **Superseded by [ADR 0003](../architecture/adr/0003-places-and-views.md).** Kept as history.
+
 # Workspaces: user configuration (WS10)
 
 Status: proposed design, **second revision 2026-10-01** (owner answers N1 to N9, then rescoped for a solo

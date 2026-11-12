@@ -104,7 +104,7 @@ class DockDynamicSectionTest {
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).performClick()
 
         composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.SelectAppStage(chatStageId)), actions)
+            assertEquals(listOf(LauncherShellAction.OpenStream), actions)
         }
     }
 
@@ -170,8 +170,7 @@ class DockDynamicSectionTest {
     @Test
     fun itemsTheModeAddsLeadAPinnedAppsLongPressMenu() {
         val actions = mutableListOf<LauncherShellAction>()
-        val mailStageId = AppStageId(mail.appIdentity.packageName, mail.appIdentity.profile.id)
-        val showStage = LauncherShellAction.SelectAppStage(mailStageId)
+        val showStage = LauncherShellAction.OpenStream
         setContent(
             DockPosition.BOTTOM,
             actions = actions,
@@ -276,7 +275,7 @@ class DockDynamicSectionTest {
                 badgeCount = 1,
                 isSelected = false,
                 contentDescription = "Chat, 1 card, Open stage",
-                intent = DockDynamicEntryIntent.Dispatch(LauncherShellAction.SelectAppStage(chatStageId)),
+                intent = DockDynamicEntryIntent.Dispatch(LauncherShellAction.OpenStream),
             )
     }
 }
