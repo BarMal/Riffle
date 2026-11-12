@@ -14,9 +14,10 @@ internal data class DockSlotRenderMetrics(
 /**
  * The pinned run's metrics: the icon is always the configured size, whatever room the run has.
  *
- * When the slots do not fit, the gap between them gives first (down to [MIN_DOCK_ITEM_SPACING_DP], while the icons
- * still fit at that gap); beyond that the run keeps its size and scrolls, fading at its edges. Icons are never
- * shrunk to fit: a pinned icon is the size of a Home icon, and a dynamic entry beside it never makes it smaller.
+ * When the slots do not fit, the gap between them gives first (down to [DOCK_COMPACTED_SPACING_FLOOR_DP], while
+ * the icons still fit at that gap); beyond that the run keeps its size and scrolls, fading at its edges. Icons
+ * are never shrunk to fit: a pinned icon is the size of a Home icon, and a dynamic entry beside it never makes
+ * it smaller.
  */
 internal fun dockSlotRenderMetrics(
     slotCount: Int,
@@ -75,8 +76,14 @@ private fun compactedDockSlotSpacingDp(
     }
 
     val availableSpacingDp = availableContentMainAxisDp - (slotCount * iconSizeDp)
-    return min(itemSpacingDp, availableSpacingDp / (slotCount - 1)).coerceAtLeast(MIN_DOCK_ITEM_SPACING_DP)
+    // Icons never touch: the gap stops at a small floor (or the user's own smaller setting) and the run
+    // scrolls instead.
+    val floorDp = min(itemSpacingDp, DOCK_COMPACTED_SPACING_FLOOR_DP).coerceAtLeast(MIN_DOCK_ITEM_SPACING_DP)
+    return min(itemSpacingDp, availableSpacingDp / (slotCount - 1)).coerceAtLeast(floorDp)
 }
+
+/** The smallest gap compaction leaves between pinned icons before the run scrolls. */
+internal const val DOCK_COMPACTED_SPACING_FLOOR_DP = 8
 
 internal fun dockSlotContentMainAxisDp(
     slotCount: Int,

@@ -5,7 +5,6 @@ import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockOverflowMode
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -82,7 +81,30 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun dockSlotRenderMetricsCompactsSpacingForFiveSlotsOnNarrowWidth() {
+    fun dockSlotRenderMetricsCompactsSpacingWhileTheIconsStillFit() {
+        // 276 dp leaves 36 dp for four gaps: 9 dp each, above the floor, so the run fits exactly.
+        val metrics =
+            dockSlotRenderMetrics(
+                slotCount = 5,
+                iconSizeDp = 48,
+                itemSpacingDp = 10,
+                availableContentMainAxisDp = 276,
+            )
+
+        assertEquals(
+            DockSlotRenderMetrics(
+                iconSizeDp = 48,
+                itemSpacingDp = 9,
+                overflowMode = DockOverflowMode.FitByCompaction,
+            ),
+            metrics,
+        )
+        assertEquals(276, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+    }
+
+    @Test
+    fun dockSlotRenderMetricsStopsCompactingAtTheFloorSoIconsNeverTouch() {
+        // 252 dp would need 3 dp gaps. The gap stops at its 8 dp floor and the run (272 dp) scrolls instead.
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -91,21 +113,28 @@ class HomeDockMetricsTest {
                 availableContentMainAxisDp = 252,
             )
 
-        assertEquals(
-            DockSlotRenderMetrics(
+        assertEquals(DOCK_COMPACTED_SPACING_FLOOR_DP, metrics.itemSpacingDp)
+        assertEquals(272, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+        assertTrue(dockPinnedRunScrolls(slotCount = 5, metrics = metrics, viewportMainAxisDp = 252))
+    }
+
+    @Test
+    fun aGapTheUserSetBelowTheFloorIsKept() {
+        val metrics =
+            dockSlotRenderMetrics(
+                slotCount = 5,
                 iconSizeDp = 48,
-                itemSpacingDp = 3,
-                overflowMode = DockOverflowMode.FitByCompaction,
-            ),
-            metrics,
-        )
-        assertEquals(252, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+                itemSpacingDp = 4,
+                availableContentMainAxisDp = 200,
+            )
+
+        assertEquals(4, metrics.itemSpacingDp)
     }
 
     @Test
     fun dockSlotRenderMetricsNeverShrinksTheIconWhenTheRunIsTooLongAndLetsItScroll() {
-        // Five 56 dp icons are 280 dp even with no gap; the run has 252. The icon keeps its size, the gap goes to
-        // nothing, and the run (280 dp) is longer than its viewport, so it scrolls.
+        // Five 56 dp icons are 280 dp even with no gap; the run has 252. The icon keeps its size, the gap stops at
+        // its 8 dp floor so icons never touch, and the run (312 dp) is longer than its viewport, so it scrolls.
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -117,12 +146,12 @@ class HomeDockMetricsTest {
         assertEquals(
             DockSlotRenderMetrics(
                 iconSizeDp = 56,
-                itemSpacingDp = MIN_DOCK_ITEM_SPACING_DP,
+                itemSpacingDp = DOCK_COMPACTED_SPACING_FLOOR_DP,
                 overflowMode = DockOverflowMode.FitByCompaction,
             ),
             metrics,
         )
-        assertEquals(280, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+        assertEquals(312, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
         assertTrue(dockPinnedRunScrolls(slotCount = 5, metrics = metrics, viewportMainAxisDp = 252))
     }
 
@@ -141,12 +170,12 @@ class HomeDockMetricsTest {
         assertEquals(
             DockSlotRenderMetrics(
                 iconSizeDp = 48,
-                itemSpacingDp = MIN_DOCK_ITEM_SPACING_DP,
+                itemSpacingDp = DOCK_COMPACTED_SPACING_FLOOR_DP,
                 overflowMode = DockOverflowMode.FitByCompaction,
             ),
             metrics,
         )
-        assertEquals(240, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+        assertEquals(272, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
         assertTrue(dockPinnedRunScrolls(slotCount = 5, metrics = metrics, viewportMainAxisDp = 159))
     }
 
