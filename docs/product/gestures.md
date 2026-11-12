@@ -239,6 +239,10 @@ means no default binding, so nothing happens unless the user binds the gesture.
    away from (or toward, when expanded) the dock edge -- ahead of the 30.5dp home threshold -- and
    never consumes a wrong-direction drag, which then falls through to home. It only applies while
    shelf expansion is switched on.
+   With it on, the shelf and the dock pull (both claim a drag away from the dock edge) are arbitrated by
+   pass order: the shelf handler sits inside the dock body and sees a drag first (Main pass, descendants
+   first), consumes it at 9dp, and the dock pull, which only claims drags no descendant consumed, yields.
+   So a shelf that can open wins the drag; with expansion off (the default) the pull owns it.
 6. **Platform edges win.** The dock never requests system-gesture exclusion. The dock pull starts on
    the dock body, which is already inset from the screen edge; exclusion over the dock is added
    only if device testing shows side-dock conflicts with Back (Decision 13).

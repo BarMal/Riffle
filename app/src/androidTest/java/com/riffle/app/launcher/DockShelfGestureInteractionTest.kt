@@ -15,7 +15,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
@@ -29,6 +31,12 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -132,29 +140,11 @@ class DockShelfGestureInteractionTest {
     }
 
     @Test
-    fun upwardSwipeOnCollapsedProductionDockExpandsTheOverflowShelf() {
+    fun upwardSwipeOnCollapsedProductionDockExpandsTheShelf() {
         val primary = shortcut("primary")
         val overflow = shortcut("overflow")
-        val layout =
-            HomeLayoutDefaults.standard().let { standardLayout ->
-                standardLayout.copy(
-                    dock = standardLayout.dock.copy(capacity = 1, items = listOf(primary, overflow)),
-                )
-            }
-        composeRule.setContent {
-            MaterialTheme {
-                Box(modifier = Modifier.size(400.dp)) {
-                    StandardHome(
-                        layout = layout,
-                        installedApps = listOf(primary.installedApp(), overflow.installedApp()),
-                        interactions = StandardHomeInteractions(),
-                        presentation = StandardHomePresentation(appShortcutsByApp = emptyMap()),
-                        appIconLoader = EmptyAppIconLoader,
-                        onAction = {},
-                    )
-                }
-            }
-        }
+        setProductionDock(primary, overflow)
+        assertCollapsed()
 
         composeRule.onNodeWithTag(dockItemTestTag(primary.id)).performTouchInput {
             down(center)
@@ -164,36 +154,15 @@ class DockShelfGestureInteractionTest {
         }
 
         composeRule.waitForIdle()
-        val primaryBounds = composeRule.onNodeWithTag(dockItemTestTag(primary.id)).fetchSemanticsNode().boundsInRoot
-        val overflowBounds = composeRule.onNodeWithTag(dockItemTestTag(overflow.id)).fetchSemanticsNode().boundsInRoot
-
-        assertTrue(overflowBounds.center.y < primaryBounds.center.y)
+        assertExpanded()
     }
 
     @Test
     fun productionDockDoesNotReuseTheOpeningPointerAfterExpanding() {
         val primary = shortcut("primary")
         val overflow = shortcut("overflow")
-        val layout =
-            HomeLayoutDefaults.standard().let { standardLayout ->
-                standardLayout.copy(
-                    dock = standardLayout.dock.copy(capacity = 1, items = listOf(primary, overflow)),
-                )
-            }
-        composeRule.setContent {
-            MaterialTheme {
-                Box(modifier = Modifier.size(400.dp)) {
-                    StandardHome(
-                        layout = layout,
-                        installedApps = listOf(primary.installedApp(), overflow.installedApp()),
-                        interactions = StandardHomeInteractions(),
-                        presentation = StandardHomePresentation(appShortcutsByApp = emptyMap()),
-                        appIconLoader = EmptyAppIconLoader,
-                        onAction = {},
-                    )
-                }
-            }
-        }
+        setProductionDock(primary, overflow)
+        assertCollapsed()
 
         composeRule.onNodeWithTag(dockItemTestTag(primary.id)).performTouchInput {
             down(center)
@@ -213,10 +182,7 @@ class DockShelfGestureInteractionTest {
         }
 
         composeRule.waitForIdle()
-        val primaryBounds = composeRule.onNodeWithTag(dockItemTestTag(primary.id)).fetchSemanticsNode().boundsInRoot
-        val overflowBounds = composeRule.onNodeWithTag(dockItemTestTag(overflow.id)).fetchSemanticsNode().boundsInRoot
-
-        assertTrue(overflowBounds.center.y < primaryBounds.center.y)
+        assertExpanded()
     }
 
     @Test
@@ -279,6 +245,77 @@ class DockShelfGestureInteractionTest {
 
         composeRule.runOnIdle { assertTrue(isShelfExpanded) }
     }
+
+    /**
+     * A production dock holding [primary] and [overflow] with room for one. The shelf's content is the notification
+     * section (the dock's live app slots default to on), so a group from [chat] is what there is to expand into: its
+     * card showing is what "expanded" looks like, and it is absent while the dock is collapsed.
+     */
+    private fun setProductionDock(
+        primary: AppShortcutItem,
+        overflow: AppShortcutItem,
+    ) {
+        val layout =
+            HomeLayoutDefaults.standard().let { standardLayout ->
+                standardLayout.copy(
+                    dock = standardLayout.dock.copy(capacity = 1, items = listOf(primary, overflow)),
+                )
+            }
+        val apps = listOf(primary.installedApp(), overflow.installedApp(), chat)
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(400.dp)) {
+                    StandardHome(
+                        layout = layout,
+                        installedApps = apps,
+                        interactions = StandardHomeInteractions(),
+                        presentation =
+                            StandardHomePresentation(
+                                notificationGroupsByApp = listOf(chatNotificationGroup()),
+                                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                                installedApps = apps,
+                                appShortcutsByApp = emptyMap(),
+                            ),
+                        appIconLoader = EmptyAppIconLoader,
+                        onAction = {},
+                    )
+                }
+            }
+        }
+    }
+
+    private fun assertExpanded() = composeRule.onAllNodesWithText(chat.label).assertCountEquals(1)
+
+    private fun assertCollapsed() = composeRule.onAllNodesWithText(chat.label).assertCountEquals(0)
+
+    private val chat =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.chat"),
+                    activityName = AppActivityName(".MainActivity"),
+                ),
+            label = "Chat",
+        )
+
+    private fun chatNotificationGroup(): AppNotificationGroup =
+        AppNotificationGroup(
+            packageName = chat.identity.packageName,
+            profileId = chat.identity.profile.id,
+            latestCategory = NotificationCategory.MESSAGE,
+            latestAgeBucket = NotificationAgeBucket.RECENT,
+            notifications =
+                listOf(
+                    LauncherNotification(
+                        key = LauncherNotificationKey("chat:1"),
+                        packageName = chat.identity.packageName,
+                        profileId = chat.identity.profile.id,
+                        category = NotificationCategory.MESSAGE,
+                        canDismiss = true,
+                        postedAtEpochMillis = 1L,
+                    ),
+                ),
+        )
 
     private fun shortcut(name: String): AppShortcutItem =
         AppShortcutItem(

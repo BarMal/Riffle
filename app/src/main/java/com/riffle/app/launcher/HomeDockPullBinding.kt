@@ -130,19 +130,17 @@ internal fun rememberHomeDockPullBinding(
             hostState = hostState,
             dockCoordinates = dockCoordinates,
         )
-    val actions = dockPullActions(dockPull, canPull, stream, direction, reducedMotion)
+    val actions = dockPullActions(dockPull, canPull, stream, direction, reducedMotion, onOpenWorkspaceMenu)
     val dockModifier =
         Modifier
             .testTag(HOME_DOCK_PULL_TEST_TAG)
             .then(actions.modifier)
-            .then(workspaceMenuActionModifier(onOpenWorkspaceMenu))
             .onGloballyPositioned { coordinates -> dockCoordinates.coordinates = coordinates }
             .dockPullInput(direction, host)
     val rootModifier =
         Modifier
             // The surface root carries the actions too, so they exist when a workspace hides the Dock.
             .then(actions.modifier)
-            .then(workspaceMenuActionModifier(onOpenWorkspaceMenu))
             .onSizeChanged { size -> rootSize.value = size }
             .onPreviewKeyEvent { event ->
                 val isShortcut =
@@ -183,6 +181,7 @@ private fun dockPullActions(
     stream: StreamPullInputs,
     direction: DockPullDirection,
     reducedMotion: Boolean,
+    onOpenWorkspaceMenu: (() -> Unit)?,
 ): DockPullActions {
     val libraryLabel = stringResource(R.string.dock_open_library_action)
     val streamLabel =
@@ -196,15 +195,22 @@ private fun dockPullActions(
     val open: (DockPullDestination) -> Boolean = { destination ->
         dockPull.open(destination, direction, reducedMotion, stream.split?.invoke())
     }
+    // One customActions list: two semantics modifiers on a node do not merge their lists, the later one is dropped.
     val modifier =
-        if (canPull) {
+        if (canPull || onOpenWorkspaceMenu != null) {
             Modifier.semantics {
                 customActions =
                     listOfNotNull(
-                        CustomAccessibilityAction(libraryLabel) { open(DockPullDestination.LIBRARY) },
-                        streamDestination?.let {
-                                destination ->
+                        CustomAccessibilityAction(libraryLabel) { open(DockPullDestination.LIBRARY) }
+                            .takeIf { canPull },
+                        streamDestination?.takeIf { canPull }?.let { destination ->
                             CustomAccessibilityAction(streamLabel) { open(destination) }
+                        },
+                        onOpenWorkspaceMenu?.let { onOpen ->
+                            CustomAccessibilityAction(WORKSPACE_MENU_ACTION_LABEL) {
+                                onOpen()
+                                true
+                            }
                         },
                     )
             }

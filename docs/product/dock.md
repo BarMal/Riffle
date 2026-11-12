@@ -253,7 +253,9 @@ a drag away from the dock edge.
 defaults to false, so no dock opens its shelf -- by swipe or by button -- and the expansion settings
 (expandable, "Open the shelf with", dock panel) are hidden. A swipe away from the dock edge does
 nothing until the dock pull claims it as the mode switch. The shelf and panel code stays in place to
-be revisited.
+be revisited. Were it switched on, a shelf that can open claims the drag before the pull (the pull yields to
+a consumed drag; see `gestures.md`). The shelf's content includes the notification section whenever the dock
+has live app slots (the default) -- a permission prompt until notification access is granted.
 
 It is deliberately not where items past the visible-before-overflow count go; those scroll in the
 dock's own strip. The panel is for things you consult or act on without leaving where you are.
