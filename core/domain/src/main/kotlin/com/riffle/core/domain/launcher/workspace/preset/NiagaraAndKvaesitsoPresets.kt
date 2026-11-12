@@ -39,7 +39,7 @@ internal object NiagaraPreset {
             ),
             WorkspaceDock(presentation = DockPresentation(hidden = true)),
         ).copy(
-            gestureBindings = mapOf(HomeGesture.ONE_FINGER_UP.name to DockMenuReachability.WORKSPACE_MENU_ACTION.name),
+            gestureBindings = mapOf(HomeGesture.ONE_FINGER_UP.name to DockMenuReachability.NIAGARA_ACTION.name),
         )
     }
 }

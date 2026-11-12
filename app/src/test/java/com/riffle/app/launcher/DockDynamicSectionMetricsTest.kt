@@ -24,8 +24,8 @@ private fun testDockShortcut(id: String): AppShortcutItem =
  * How the dock's run is divided between its two sections.
  *
  * The dynamic section is sized from its own
- * [com.riffle.core.domain.launcher.home.DockModel.notificationSlotCount] cap, drawn in full
- * whenever the run has room, never padded out beyond how many entries actually exist. The static
+ * [com.riffle.core.domain.launcher.home.DockModel.liveAppSlots] cap (plus now playing and the Stream button), drawn
+ * in full whenever the run has room, never padded out beyond how many entries actually exist. The static
  * side is sized from its own [com.riffle.core.domain.launcher.home.DockModel.capacity] cap
  * afterwards, from whatever room the dynamic section has left -- notifications go first, and the
  * static side scrolls the rest away rather than the other way around. These pin that arithmetic.
@@ -38,7 +38,7 @@ class DockDynamicSectionMetricsTest {
             212,
             dockDynamicSectionMainAxisDp(
                 entryCount = 4,
-                notificationSlotCount = 5,
+                slotLimit = 5,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
                 maxRunMainAxisDp = 560,
@@ -53,7 +53,7 @@ class DockDynamicSectionMetricsTest {
             100,
             dockDynamicSectionMainAxisDp(
                 entryCount = 2,
-                notificationSlotCount = 5,
+                slotLimit = 5,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
                 maxRunMainAxisDp = 560,
@@ -68,7 +68,7 @@ class DockDynamicSectionMetricsTest {
             100,
             dockDynamicSectionMainAxisDp(
                 entryCount = 5,
-                notificationSlotCount = 2,
+                slotLimit = 2,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
                 maxRunMainAxisDp = 560,
@@ -84,7 +84,7 @@ class DockDynamicSectionMetricsTest {
             183,
             dockDynamicSectionMainAxisDp(
                 entryCount = 12,
-                notificationSlotCount = 12,
+                slotLimit = 12,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
                 maxRunMainAxisDp = 200,
@@ -98,7 +98,7 @@ class DockDynamicSectionMetricsTest {
             0,
             dockDynamicSectionMainAxisDp(
                 entryCount = 0,
-                notificationSlotCount = 3,
+                slotLimit = 3,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
                 maxRunMainAxisDp = 560,
@@ -112,7 +112,7 @@ class DockDynamicSectionMetricsTest {
             0,
             dockDynamicSectionMainAxisDp(
                 entryCount = 3,
-                notificationSlotCount = 0,
+                slotLimit = 0,
                 entryExtentDp = 44,
                 entrySpacingDp = 12,
                 maxRunMainAxisDp = 560,
@@ -122,9 +122,9 @@ class DockDynamicSectionMetricsTest {
 
     @Test
     fun theStaticSideIsCappedToWhatTheDynamicSectionLeaves() {
-        // A 560dp run, a dynamic section that draws in full at 212dp (4 entries, 44dp/12dp) plus the
-        // 17dp rule leaves 331dp for the static side -- less than capacity alone would draw for 10
-        // icons at this icon size (10*44 + 9*12 = 548dp), so the static side is capped, not the
+        // A 560dp run, a dynamic section that draws in full at 228dp (4 entries, 48dp/12dp) plus the
+        // 17dp rule leaves 315dp for the static side -- less than capacity alone would draw for 10
+        // icons at this icon size (10*48 + 9*12 = 588dp), so the static side is capped, not the
         // dynamic one.
         val surfaceMetrics =
             dockSurfaceMetrics(
@@ -132,8 +132,8 @@ class DockDynamicSectionMetricsTest {
                     DockModel(
                         capacity = 10,
                         items = List(10) { index -> testDockShortcut("app-$index") },
-                        notificationSlotCount = 4,
-                        iconSizeDp = 44,
+                        liveAppSlots = 2,
+                        iconSizeDp = 48,
                         itemSpacingDp = 12,
                     ),
                 isEditing = false,
@@ -142,17 +142,17 @@ class DockDynamicSectionMetricsTest {
                 dynamicEntryCount = 4,
             )
 
-        assertEquals(212, surfaceMetrics?.dynamicSectionMainAxisDp)
-        assertEquals(331, surfaceMetrics?.containerMainAxisDp)
+        assertEquals(228, surfaceMetrics?.dynamicSectionMainAxisDp)
+        assertEquals(315, surfaceMetrics?.containerMainAxisDp)
     }
 
     @Test
     fun theDynamicSectionNeverDisplacesTheStaticSideEntirely() {
         // A 200dp run, one pinned icon, and a notification section demanding far more than fits
-        // (12 entries at 44dp/12dp wants 660dp). Without a floor the dynamic section would claim
+        // (12 entries at 48dp/12dp wants 708dp). Without a floor the dynamic section would claim
         // everything past its own 17dp rule (183dp), leaving the static side 0dp -- not scrolled,
-        // gone. The floor reserves one icon's worth (44 + 2*14 = 72dp) for the static side first, so
-        // the dynamic section is capped to 111dp (200 - 72 - 17) instead, and the pinned icon still
+        // gone. The floor reserves one icon's worth (48 + 2*14 = 76dp) for the static side first, so
+        // the dynamic section is capped to 107dp (200 - 76 - 17) instead, and the pinned icon still
         // draws.
         val surfaceMetrics =
             dockSurfaceMetrics(
@@ -160,8 +160,8 @@ class DockDynamicSectionMetricsTest {
                     DockModel(
                         capacity = 1,
                         items = listOf(testDockShortcut("app-0")),
-                        notificationSlotCount = 12,
-                        iconSizeDp = 44,
+                        liveAppSlots = 10,
+                        iconSizeDp = 48,
                         itemSpacingDp = 12,
                     ),
                 isEditing = false,
@@ -170,8 +170,8 @@ class DockDynamicSectionMetricsTest {
                 dynamicEntryCount = 12,
             )
 
-        assertEquals(111, surfaceMetrics?.dynamicSectionMainAxisDp)
-        assertEquals(72, surfaceMetrics?.containerMainAxisDp)
+        assertEquals(107, surfaceMetrics?.dynamicSectionMainAxisDp)
+        assertEquals(76, surfaceMetrics?.containerMainAxisDp)
         assertEquals(true, (surfaceMetrics?.contentViewportMainAxisDp ?: 0) > 0)
     }
 
@@ -183,8 +183,8 @@ class DockDynamicSectionMetricsTest {
                     DockModel(
                         capacity = 10,
                         items = List(10) { index -> testDockShortcut("app-$index") },
-                        notificationSlotCount = 4,
-                        iconSizeDp = 44,
+                        liveAppSlots = 2,
+                        iconSizeDp = 48,
                         itemSpacingDp = 12,
                     ),
                 isEditing = false,
@@ -198,8 +198,8 @@ class DockDynamicSectionMetricsTest {
                     DockModel(
                         capacity = 10,
                         items = List(10) { index -> testDockShortcut("app-$index") },
-                        notificationSlotCount = 0,
-                        iconSizeDp = 44,
+                        liveAppSlots = 0,
+                        iconSizeDp = 48,
                         itemSpacingDp = 12,
                     ),
                 isEditing = false,
@@ -223,7 +223,7 @@ class DockDynamicSectionMetricsTest {
                 slotMetrics =
                     dockSlotRenderMetrics(
                         slotCount = 4,
-                        iconSizeDp = 44,
+                        iconSizeDp = 48,
                         itemSpacingDp = 12,
                         availableContentMainAxisDp = 212,
                     ),
@@ -242,7 +242,7 @@ class DockDynamicSectionMetricsTest {
                 slotMetrics =
                     dockSlotRenderMetrics(
                         slotCount = 4,
-                        iconSizeDp = 44,
+                        iconSizeDp = 48,
                         itemSpacingDp = 12,
                         availableContentMainAxisDp = 212,
                     ),
@@ -263,7 +263,7 @@ class DockDynamicSectionMetricsTest {
                 slotMetrics =
                     dockSlotRenderMetrics(
                         slotCount = 4,
-                        iconSizeDp = 44,
+                        iconSizeDp = 48,
                         itemSpacingDp = 12,
                         availableContentMainAxisDp = 212,
                     ),
@@ -299,7 +299,7 @@ class DockDynamicSectionMetricsTest {
                 slotMetrics =
                     dockSlotRenderMetrics(
                         slotCount = 4,
-                        iconSizeDp = 44,
+                        iconSizeDp = 48,
                         itemSpacingDp = 12,
                         availableContentMainAxisDp = 212,
                     ),

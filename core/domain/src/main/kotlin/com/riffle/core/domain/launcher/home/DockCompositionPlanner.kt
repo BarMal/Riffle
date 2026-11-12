@@ -28,10 +28,10 @@ class DockCompositionPlanner(
         maxNotificationEntries: Int = DEFAULT_MAX_DOCK_NOTIFICATION_CARDS,
     ): DockComposition {
         if (!dock.isEnabled) return DockComposition.EMPTY
-        // The section is opt-in, and asking for no dock notifications is a decision -- not a reason
-        // to fall back to a permission prompt for access the surface would never use.
+        // Zero live app slots is a decision -- not a reason to fall back to a permission prompt for access the
+        // surface would never use.
         val notifications =
-            if (dock.showNotificationCards) {
+            if (dock.liveAppSlots > 0) {
                 notificationCardPlanner.plan(
                     groups = groups.filterNot { group -> group.isPinnedTo(dock) },
                     notificationAccessStatus = notificationAccessStatus,

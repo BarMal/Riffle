@@ -6,15 +6,15 @@ import org.junit.Test
 
 class HomeLayoutDockJsonCodecTest {
     @Test
-    fun roundTripsDockNotificationCardsVisibility() {
+    fun roundTripsNoLiveApps() {
         val layout =
             HomeLayoutDefaults.standard().copy(
-                dock = HomeLayoutDefaults.standard().dock.copy(showNotificationCards = false),
+                dock = HomeLayoutDefaults.standard().dock.copy(liveAppSlots = 0),
             )
 
         val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
 
-        assertEquals(false, decodedLayout.dock.showNotificationCards)
+        assertEquals(0, decodedLayout.dock.liveAppSlots)
     }
 
     @Test

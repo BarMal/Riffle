@@ -7,23 +7,13 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
-import com.riffle.app.launcher.expressions.FakeExpressionImageLoader
-import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
+import com.riffle.app.launcher.dockDynamicSectionTileTestTag
 import com.riffle.app.launcher.stream.STREAM_SURFACE_TEST_TAG
 import com.riffle.app.launcher.stream.StreamHost
-import com.riffle.app.launcher.stream.StreamLayoutStorePort
-import com.riffle.core.domain.launcher.stream.StreamContentProvider
-import com.riffle.core.domain.launcher.stream.StreamContext
-import com.riffle.core.domain.launcher.workspace.ItemSource
-import com.riffle.core.domain.launcher.workspace.SourceDescriptor
-import com.riffle.core.domain.launcher.workspace.SourceId
-import com.riffle.core.domain.launcher.workspace.SourceRegistry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -46,33 +36,7 @@ class StreamHomeDestinationTest {
 
     private val actions = mutableListOf<LauncherShellAction>()
 
-    private val emptyRegistry =
-        object : SourceRegistry {
-            override fun descriptors(): List<SourceDescriptor> = emptyList()
-
-            override fun source(id: SourceId): ItemSource? = null
-        }
-
-    private fun host() =
-        StreamHost(
-            provider =
-                StreamContentProvider(
-                    emptyRegistry,
-                    context = { StreamContext(nowEpochMillis = STREAM_TEST_NOW) },
-                ),
-            layouts =
-                CachedStreamLayoutRepository(
-                    object : StreamLayoutStorePort {
-                        override suspend fun read() = null
-
-                        override suspend fun write(layouts: com.riffle.core.domain.launcher.stream.StreamLayouts) = Unit
-                    },
-                    CoroutineScope(Dispatchers.Unconfined + Job()),
-                ),
-            actions = { _, _ -> com.riffle.core.domain.launcher.stream.StreamActionResult.NotOffered },
-            imageLoader = FakeExpressionImageLoader(),
-            formats = FixedStreamFormats(),
-        )
+    private fun host() = emptyStreamHost()
 
     private fun show(
         streamShown: Boolean,
@@ -113,18 +77,44 @@ class StreamHomeDestinationTest {
     }
 
     @Test
-    fun theDockOffersOpenStreamAndItOpensIt() {
+    fun theDockOffersOpenStreamAndOpenLibraryAndTheyOpenThem() {
         show(streamShown = false)
         assertTrue("Open Stream" in dockActionLabels())
+        assertTrue("Open Library" in dockActionLabels())
+        invokeAction("Open Library")
+        composeRule.waitForIdle()
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenAppDrawer), actions)
+        actions.clear()
         invokeAction("Open Stream")
+        composeRule.waitForIdle()
         assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
     }
 
     @Test
-    fun whileTheStreamIsOpenTheDockOffersBackToHome() {
+    fun whileTheStreamIsOpenTheDockOffersBackToHomeAndStillOffersTheLibrary() {
         show(streamShown = true)
         assertTrue("Back to Home" in dockActionLabels())
+        assertTrue("Open Stream" !in dockActionLabels())
+        assertTrue("Open Library" in dockActionLabels())
         invokeAction("Back to Home")
+        composeRule.waitForIdle()
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenHome), actions)
+    }
+
+    @Test
+    fun theStreamButtonIsTheDocksLastDynamicEntryAndTogglesTheStream() {
+        show(streamShown = false)
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).assertIsDisplayed()
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).performClick()
+        composeRule.waitForIdle()
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
+    }
+
+    @Test
+    fun theStreamButtonReturnsHomeWhileTheStreamIsOpen() {
+        show(streamShown = true)
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).performClick()
+        composeRule.waitForIdle()
         assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenHome), actions)
     }
 
@@ -132,6 +122,7 @@ class StreamHomeDestinationTest {
     fun withoutAStreamThereIsNoOpenStreamAction() {
         show(streamShown = false, stream = null)
         assertTrue("Open Stream" !in dockActionLabels())
+        assertTrue("Open Library" in dockActionLabels())
         composeRule.onAllNodes(
             SemanticsMatcher.expectValue(
                 androidx.compose.ui.semantics.SemanticsProperties.TestTag,
@@ -152,5 +143,3 @@ class StreamHomeDestinationTest {
         }
     }
 }
-
-private const val STREAM_TEST_NOW = 1_767_225_600_000L

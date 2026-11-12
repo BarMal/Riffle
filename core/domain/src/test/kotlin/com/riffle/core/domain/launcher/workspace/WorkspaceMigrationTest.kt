@@ -14,7 +14,6 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -104,15 +103,13 @@ class WorkspaceMigrationTest {
     }
 
     @Test
-    fun dockNotificationStripBecomesTheDynamicSection() {
+    fun theDocksLiveAppSlotsAreNotAWorkspaceDynamicSection() {
+        // The dynamic side is one dock setting (P5), not a lens binding of the workspace.
         val base = layout(cards, page("home"))
-        val withStrip = base.copy(dock = base.dock.copy(showNotificationCards = true, notificationSlotCount = 4))
-        val ws = WorkspaceMigration.migrate(homeSet(key(cards), key(cards) to withStrip)).workspacesFor(phone).active
+        val withSlots = base.copy(dock = base.dock.copy(liveAppSlots = 4))
+        val ws = WorkspaceMigration.migrate(homeSet(key(cards), key(cards) to withSlots)).workspacesFor(phone).active
 
-        val binding = assertNotNull(ws.dock.dynamicSection)
-        assertEquals(ExpressionKind.ICON_ROW, binding.expression)
-        assertEquals(4, binding.lens.limit)
-        assertEquals(listOf(SourceIds.NOTIFICATIONS), binding.lens.sources)
+        assertNull(ws.dock.dynamicSection)
     }
 
     @Test

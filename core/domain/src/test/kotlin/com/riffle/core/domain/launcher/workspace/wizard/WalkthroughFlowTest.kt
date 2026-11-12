@@ -230,7 +230,7 @@ class WalkthroughFlowTest {
         assertEquals(WalkthroughStep.DOCK, dock.step)
         assertFalse(WalkthroughFlow.canHideDock(ctx))
         assertFalse(ctx.run(WalkthroughAction.SetDockHidden(true), from = dock).dockHidden)
-        val withMenu = walkthroughContext(gestures = listOf(LauncherGestureAction.OPEN_WORKSPACE_MENU))
+        val withMenu = walkthroughContext(gestures = listOf(LauncherGestureAction.OPEN_LIBRARY))
         assertTrue(withMenu.run(WalkthroughAction.SetDockHidden(true), from = dock).dockHidden)
         // Pins: toggle, and never past the dock's capacity.
         val pins =

@@ -139,8 +139,8 @@ import kotlin.math.abs
  * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
  * through: stage navigation, and reaching search and Settings so Cards mode stays a normal,
  * discoverable surface rather than an isolated one. Settings is let through since #1212: a gesture
- * bound to it must not silently die just because Cards is showing. No gesture switches mode or
- * opens the app drawer -- the dock pull is the only mode-transition trigger.
+ * bound to it must not silently die just because Cards is showing; the same goes for the Stream
+ * and the Library (the app drawer), which the Dock's pulls also reach (P5). No gesture switches mode.
  */
 internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boolean =
     when (action) {
@@ -148,7 +148,8 @@ internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boo
         LauncherShellAction.SelectPreviousAppStage,
         LauncherShellAction.OpenSearch,
         LauncherShellAction.OpenSettings,
-        LauncherShellAction.OpenWorkspaceMenu,
+        LauncherShellAction.OpenStream,
+        LauncherShellAction.OpenAppDrawer,
         -> true
 
         else -> false

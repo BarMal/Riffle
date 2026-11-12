@@ -145,7 +145,7 @@ class CardsDockShelfContentTest {
                 dock =
                     standardLayout.dock.copy(
                         items = listOf(docked),
-                        showNotificationCards = true,
+                        liveAppSlots = 3,
                         isExpandable = true,
                         panel = panelWith(panelled),
                     ),

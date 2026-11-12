@@ -19,22 +19,22 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherSettings
-import com.riffle.core.domain.launcher.settings.MotionSettings
-import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
+import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The dock pull (#1206, #1207) through the real [HomeDestination]: a bottom dock pulled up far or
- * fast enough switches Standard (Home) to Library through the shell's SelectLauncherViewMode; a
- * short slow pull springs back; a pull into the edge or along the dock's run does nothing but what
- * it did before; and the dock's accessibility action performs the same switch.
+ * The dock pull (ADR 0003, The Dock is the handle) through the real [HomeDestination], with no Stream (so the
+ * dock has no dynamic side and every pull starts on the pinned side): a bottom dock pulled up far or fast enough
+ * opens the Library through the shell's OpenAppDrawer; a short slow pull springs back; a pull into the edge or along
+ * the dock's run does nothing but what it did before; the pull no longer opens the workspace menu; and the dock's
+ * accessibility action performs the same open. Pulls from the dynamic side (the Stream) are covered by
+ * DockPullScreenshotTest, which runs on the JVM.
  *
- * The shell is a recording lambda, so a switch shows up as the one action it was asked for.
+ * The shell is a recording lambda, so an open shows up as the one action it was asked for.
  */
 @RunWith(AndroidJUnit4::class)
 class DockPullInteractionTest {
@@ -44,24 +44,24 @@ class DockPullInteractionTest {
     private val docked = (0 until DOCKED_COUNT).map { index -> shortcut("docked$index") }
 
     @Test
-    fun aLongPullUpSwitchesToLibrary() {
+    fun aLongPullUpOpensTheLibrary() {
         val actions = setContent()
 
         pull(dyFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
 
         composeRule.runOnIdle {
-            assertEquals(listOf(SWITCH_TO_LIBRARY), actions)
+            assertEquals(listOf(OPEN_LIBRARY), actions)
         }
     }
 
     @Test
-    fun aShortSlowPullSpringsBackWithoutSwitching() {
+    fun aShortSlowPullSpringsBackWithoutOpening() {
         val actions = setContent()
         val restingBounds = dockBounds()
 
         pull(dyFraction = -0.1f, stepDelayMillis = SLOW_STEP_MILLIS)
 
-        composeRule.runOnIdle { assertTrue("a short pull switched mode: $actions", actions.isEmpty()) }
+        composeRule.runOnIdle { assertTrue("a short pull opened something: $actions", actions.isEmpty()) }
         assertEquals("the dock did not spring back", restingBounds, dockBounds())
     }
 
@@ -71,32 +71,32 @@ class DockPullInteractionTest {
 
         pull(dyFraction = 0.2f, stepDelayMillis = FAST_STEP_MILLIS)
 
-        composeRule.runOnIdle { assertTrue("a pull into the edge switched mode: $actions", actions.isEmpty()) }
+        composeRule.runOnIdle { assertTrue("a pull into the edge opened something: $actions", actions.isEmpty()) }
     }
 
     // A side dock's pull is perpendicular to it: a right-edge dock is pulled left, and a vertical
     // swipe along it (the old dock swipe-up) must not switch mode.
     @Test
-    fun aRightDockPulledLeftSwitchesToLibrary() {
+    fun aRightDockPulledLeftOpensTheLibrary() {
         val actions = setContent(DockPosition.RIGHT)
 
         pull(dyFraction = 0f, dxFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
 
         composeRule.runOnIdle {
-            assertEquals(listOf(SWITCH_TO_LIBRARY), actions)
+            assertEquals(listOf(OPEN_LIBRARY), actions)
         }
     }
 
     @Test
-    fun aVerticalSwipeAlongARightDockDoesNotSwitch() {
+    fun aVerticalSwipeAlongARightDockDoesNotOpen() {
         val actions = setContent(DockPosition.RIGHT)
 
         pull(dyFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
 
         composeRule.runOnIdle {
             assertTrue(
-                "a swipe along a side dock switched mode: $actions",
-                actions.none { action -> action is LauncherShellAction.SelectLauncherViewMode },
+                "a swipe along a side dock opened the Library: $actions",
+                actions.none { action -> action == LauncherShellAction.OpenAppDrawer },
             )
         }
     }
@@ -114,65 +114,46 @@ class DockPullInteractionTest {
         }
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
 
-        composeRule.runOnIdle { assertTrue("a run drag switched mode: $actions", actions.isEmpty()) }
+        composeRule.runOnIdle { assertTrue("a run drag opened something: $actions", actions.isEmpty()) }
         val after = firstItem.fetchSemanticsNode().boundsInRoot.left
         assertTrue("the dock run did not scroll ($before -> $after)", after < before)
     }
 
-    /**
-     * The dock's own re-orientation (dock-reorient decisions, follow-up to #1278): a right dock
-     * pulled left onto Library's default bottom edge ends up materially repositioned, not left
-     * where it started or crashed mid-frost/tilt/reveal-hold.
-     */
     @Test
-    fun aCommitAcrossDifferentEdgesLeavesTheDockOnTheDestinationEdge() {
-        setContent(DockPosition.RIGHT)
-        val restingBounds = dockBounds()
-
-        pull(dyFraction = 0f, dxFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
-
-        assertNotEquals(
-            "the dock did not move onto Library's own (bottom) edge",
-            restingBounds,
-            dockBounds(),
-        )
-    }
-
-    /**
-     * Reduced motion (dock-reorient decisions): the same edge-changing commit settles to its final
-     * bounds within reduced motion's short crossfade window, without the longer default settle or
-     * its reveal hold ever coming into play.
-     */
-    @Test
-    fun underReducedMotionTheDockAcrossDifferentEdgesStillReachesItsFinalBounds() {
-        val reduced = LauncherSettings(motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON))
-        setContent(DockPosition.RIGHT, launcherSettings = reduced)
-        val restingBounds = dockBounds()
-
-        pull(dyFraction = 0f, dxFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
-        val afterSettle = dockBounds()
-        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
-        composeRule.waitForIdle()
-
-        assertNotEquals("the dock did not move under reduced motion", restingBounds, afterSettle)
-        assertEquals("reduced motion kept moving the dock after its crossfade", afterSettle, dockBounds())
-    }
-
-    @Test
-    fun theDockOffersTheSwitchAsAnAccessibilityAction() {
+    fun theDockOffersTheLibraryAsAnAccessibilityAction() {
         val actions = setContent()
-        val switch =
+        val open =
             composeRule
                 .onNodeWithTag(HOME_DOCK_PULL_TEST_TAG)
                 .fetchSemanticsNode()
                 .config[SemanticsActions.CustomActions]
-                .single { action -> action.label == DOCK_PULL_TO_LIBRARY_LABEL }
+                .single { action -> action.label == "Open Library" }
 
-        composeRule.runOnUiThread { switch.action() }
+        composeRule.runOnUiThread { open.action() }
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
 
         composeRule.runOnIdle {
-            assertEquals(listOf(SWITCH_TO_LIBRARY), actions)
+            assertEquals(listOf(OPEN_LIBRARY), actions)
+        }
+    }
+
+    @Test
+    fun thePullNoLongerOpensTheWorkspaceMenuButItsActionStaysReachable() {
+        val menuActions = mutableListOf<WorkspaceMenuAction>()
+        val actions = setContent(workspaceMenu = WorkspaceMenuHost(WorkspaceMenuUiState(), { menuActions += it }))
+
+        val labels =
+            composeRule
+                .onNodeWithTag(HOME_DOCK_PULL_TEST_TAG)
+                .fetchSemanticsNode()
+                .config[SemanticsActions.CustomActions]
+                .map { action -> action.label }
+        pull(dyFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
+
+        assertTrue(WORKSPACE_MENU_ACTION_LABEL in labels)
+        composeRule.runOnIdle {
+            assertTrue(menuActions.isEmpty())
+            assertEquals(listOf(OPEN_LIBRARY), actions)
         }
     }
 
@@ -201,6 +182,7 @@ class DockPullInteractionTest {
     private fun setContent(
         position: DockPosition = DockPosition.BOTTOM,
         launcherSettings: LauncherSettings = LauncherSettings(),
+        workspaceMenu: WorkspaceMenuHost? = null,
     ): MutableList<LauncherShellAction> {
         val actions = mutableListOf<LauncherShellAction>()
         val layout =
@@ -221,6 +203,7 @@ class DockPullInteractionTest {
                 HomeDestination(
                     state = state,
                     appIconLoader = EmptyAppIconLoader,
+                    workspaceMenu = workspaceMenu,
                     onAction = { action -> actions += action },
                 )
             }
@@ -241,7 +224,7 @@ class DockPullInteractionTest {
         )
 
     private companion object {
-        val SWITCH_TO_LIBRARY = LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY)
+        val OPEN_LIBRARY = LauncherShellAction.OpenAppDrawer
         const val DOCKED_COUNT = 8
         const val DOCK_CAPACITY = 3
         const val STEPS = 10

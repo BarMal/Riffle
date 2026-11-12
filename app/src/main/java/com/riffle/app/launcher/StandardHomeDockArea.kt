@@ -46,7 +46,7 @@ internal fun StandardHomeDockArea(
     actions: HomeWorkspaceActions,
     position: DockPosition = DockPosition.BOTTOM,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
-    dynamicEntries: List<DockDynamicEntry> = notificationShelfState.dynamicEntries(),
+    dynamicEntries: List<DockDynamicEntry> = emptyList(),
     onDynamicEntryDelegated: (String) -> Unit = {},
     staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     staticItemTapOverride: (AppIdentity) -> LauncherShellAction? = { null },

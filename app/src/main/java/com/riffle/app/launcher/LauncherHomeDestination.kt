@@ -1,4 +1,4 @@
-@file:Suppress("LongParameterList")
+@file:Suppress("LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -10,14 +10,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -27,14 +22,16 @@ import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
-import com.riffle.core.domain.launcher.dockpull.DockPullTransitionState
-import com.riffle.core.domain.launcher.dockpull.dockPullCounterpartMode
+import com.riffle.core.domain.launcher.dockpull.DockPullDestination
+import com.riffle.core.domain.launcher.dockpull.DockPullDirection
+import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.ModeDockEdges
 import com.riffle.core.domain.launcher.home.ModeSurface
 import com.riffle.core.domain.launcher.home.dockEdgeFor
 import com.riffle.core.domain.launcher.home.modeSurface
+import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import kotlinx.coroutines.delay
 
@@ -57,117 +54,91 @@ fun HomeDestination(
     val dockHost = rememberHomeDockHostState()
     val dockPull = rememberDockPullState()
     val presentation = standardHomePresentation(state, widgetRenderers)
-    // Which surfaces are composed, each with the state it sees and the edge its dock takes: the
-    // one on screen, plus the other one while the dock is pulled between them (#1206, #1207).
-    val plan = rememberHomeSurfacePlan(state, dockPull)
-    // Cards' stages feed both its surface and its reading of the dock, so they are reconciled here,
-    // once -- the reconciler carries the previous snapshot, so a second one would keep its own
-    // history. The same call serves a Cards surface pulled in from Library and then shown.
+    val plan = rememberHomeSurfacePlan(state)
+    // A committed pull stands in for the shell's answer until the shell shows it, so the surfaces do not flicker back.
+    val shownStream = rememberStreamShown(dockPull, streamShown)
+    // Cards' stages feed both its surface and its reading of the dock, so they are reconciled here, once.
     val cardsShellState = plan.cardsState?.let { cardsState -> rememberAppStageShellState(cardsState) }
-    // The one interpreter contract (Decision 2): grid modes take the default reading, Cards supplies
-    // its own from CardsDockInterpreter.kt. The dock itself only ever sees neutral entries and intents.
-    val dockInterpreter =
-        if (!streamShown && cardsShellState != null && plan.shownMode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
+    // The one interpreter contract (Decision 2): grid modes take the default reading, Cards supplies its own from
+    // CardsDockInterpreter.kt. The dock itself only ever sees neutral entries and intents.
+    val modeInterpreter =
+        if (!shownStream && cardsShellState != null && plan.shownMode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
             rememberCardsDockInterpreter(
                 state = plan.stateFor(plan.shownMode),
                 shellState = cardsShellState,
                 adaptiveStageContext = adaptiveStageContext,
                 onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 appIconLoader = appIconLoader,
-                // Mirrors [HomeDockPullBinding.dockEdge]'s own no-pull-running fallback: this
-                // interpreter is built before that binding below, so it reads the shown mode's edge
-                // straight off the plan rather than waiting on the binding for the same answer.
                 dockPosition = plan.edges.edgeFor(plan.shownMode.modeSurface),
                 onAction = onAction,
             )
         } else {
             HomeDockInterpreter()
         }
+    // The dynamic side is the Stream's: live apps, now playing and the Stream button, whichever mode is showing.
+    val dockInterpreter =
+        rememberDockDynamicSide(
+            stream = stream,
+            shown = shownStream,
+            liveAppSlots = state.homeLayout.dock.liveAppSlots,
+            installedApps = state.installedApps,
+            deviceClass = state.homeLayoutSet.activeKey.deviceClass,
+            onOpenStream = { target ->
+                openStream(stream, dockPull, target, shownStream, plan.dockEdge.pullDirection, state.reducedMotion())
+            },
+            onCloseStream = {
+                dockPull.open(DockPullDestination.HOME, plan.dockEdge.pullDirection, state.reducedMotion())
+            },
+            modeInterpreter = modeInterpreter,
+        )
     val pull =
         rememberHomeDockPullBinding(
             state = state,
-            plan = HomeDockPullPlan(plan.currentMode, plan.counterpartMode, plan.shownMode, plan.edges),
+            dockEdge = plan.dockEdge,
+            stream = StreamPullInputs(available = stream != null, shown = shownStream),
             dockPull = dockPull,
+            hostState = dockHost,
             onAction = onAction,
-            // The Stream is its own surface: the pull neither opens the workspace menu nor switches modes under it.
             onOpenWorkspaceMenu =
-                workspaceMenu?.takeIf { !streamShown }?.let { menu -> { menu.onAction(WorkspaceMenuAction.Open) } },
-            pullEnabled = !streamShown,
+                workspaceMenu?.takeIf { !shownStream }?.let { menu -> { menu.onAction(WorkspaceMenuAction.Open) } },
         )
-    val streamEntry = streamEntryModifier(stream, streamShown, onAction)
 
-    // The same state [dockEdge] and [dockInterpreter] are already drawn for: [plan.shownMode], not
-    // necessarily [plan.currentMode]. Once a commit lands, [plan.shownMode] stands in for the
-    // destination mode (through [dockPull]'s pending switch) a beat before the shell itself catches
-    // up and [state] reflects it (#1206). Reading the dock's own content and installed-app list from
-    // [state] directly -- as opposed to this -- would draw the settled-in-place dock against
-    // still-outgoing data for that beat, then pop to the incoming data the instant the shell answers:
-    // the position jump and item-order flicker this fixes (see AGENTS.md dock-transition-consistency
-    // follow-up to #1206/#1278). [dockHostState] is [state] itself once the shell has caught up, so
-    // this changes nothing outside that beat.
+    // The dock draws from the same state the surfaces do; there is no longer a switch in flight between two of them.
     val dockHostState = plan.stateFor(plan.shownMode)
-    // The dock's own dynamic (notification) entries are read from [presentation], which was built
-    // from the raw [state] above -- the same stale-beat gap [dockHostState] exists to close, just
-    // for notification badges/icons rather than layout/installed apps. Rebuilt from [dockHostState]
-    // for the dock specifically, so its whole rendering -- static and dynamic sections alike --
-    // draws from one consistent snapshot during that beat; the mode surfaces below keep the plain
-    // [presentation], since they already read their own state per mode via [plan.stateFor].
     val dockPresentation = standardHomePresentation(dockHostState, widgetRenderers)
+    val showStream = stream != null && (shownStream || pull.isTransitioning)
+    val showHome = !shownStream || pull.isTransitioning
 
-    // The shared backdrop every liquid-glass surface on Home samples from (see
-    // `LiquidGlassBackdrop.kt`): installed here, around this content specifically, since this is
-    // exactly the wallpaper-plus-surface subtree every glass surface on Home floats above.
+    // The shared backdrop every liquid-glass surface on Home samples from (see `LiquidGlassBackdrop.kt`): installed
+    // here, around this content specifically, since this is exactly the wallpaper-plus-surface subtree every glass
+    // surface on Home floats above.
     ProvideLiquidGlassBackdrop { backdropCapture ->
-        Box(modifier = Modifier.fillMaxSize().then(pull.rootModifier).then(streamEntry).then(backdropCapture)) {
-            // The one dock, outside the mode surface: composed at the same place whichever surface runs
-            // below, so a mode switch keeps this instance (#1205, Decision 2). What differs by mode
-            // reaches it only through [dockInterpreter]; the dock pull moves it between the surfaces'
-            // edges. Composed first so the mode's overlays cover it; the grid's own frame sits beneath
-            // it (see HOME_CONTENT_Z_INDEX). While a pull runs it is lifted over both surfaces.
+        Box(modifier = Modifier.fillMaxSize().then(pull.rootModifier).then(backdropCapture)) {
+            // The one dock, outside the mode surface: composed at the same place whichever surface runs below
+            // (#1205, Decision 2). Composed first so the mode's overlays cover it; the grid's own frame sits
+            // beneath it (see HOME_CONTENT_Z_INDEX). The dock never moves with a pull: it is the handle.
             HomeDockHost(
                 layout = dockHostState.homeLayout,
                 installedApps = dockHostState.installedApps,
                 presentation = dockPresentation,
-                position = pull.dockEdge,
+                position = plan.dockEdge,
                 hostState = dockHost,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
-                modifier = Modifier.zIndex(if (pull.isTransitioning) DOCK_PULL_DOCK_Z_INDEX else 0f),
                 interpreter = dockInterpreter,
                 haptics = haptics,
-                dockModifier = pull.dockModifier.then(streamEntry),
-                dockBackgroundAlpha = pull.dockBackgroundAlpha,
-                dockContentRevealAlpha = pull.dockContentRevealAlpha,
+                dockModifier = pull.dockModifier,
             )
-            // The screen-wide reorient frost -- see [HomeDockPullBinding.screenFrostModifier] -- is
-            // composed onto each surface's own modifier chain below, not a wrapping Box around them:
-            // an intervening Box here would put every mode surface one layout level deeper than
-            // [HomeDockHost], so StandardHome's `Modifier.zIndex(HOME_CONTENT_Z_INDEX)` -- which yields
-            // hit-test priority to the dock by ranking below it among *its own* siblings -- would no
-            // longer be comparing against the dock at all: it would rank inside the wrapping Box, which
-            // would itself tie the dock's zIndex and win hit-testing on placement order, swallowing the
-            // dock-pull gesture (see DockPullInteractionTest regressions). Composed per-surface instead,
-            // every mode surface stays a direct sibling of [HomeDockHost] exactly as before this frost
-            // was added, so that precedence still holds.
-            if (streamShown && stream != null) {
-                StreamHomeSurface(
-                    stream = stream,
-                    state = dockHostState,
-                    dockHost = dockHost,
-                    dockPosition = pull.dockEdge,
-                    appIconLoader = appIconLoader,
-                )
-            }
-            plan.composedModes.filter { !streamShown }.forEach { mode ->
-                // Keyed by mode, so the surface a pull brings in is the very composition shown once
-                // the switch lands, and a cancelled pull leaves the outgoing one untouched.
-                key(mode) {
+            // Home first, then the Stream over it: while a pull runs both are composed and the Stream slides over
+            // Home. Both stay direct siblings of the dock, so their zIndex ranks them against it (see
+            // HOME_CONTENT_Z_INDEX) and the dock keeps the touches where they overlap.
+            if (showHome) {
+                key(plan.currentMode) {
                     ModeSurfaceContent(
-                        mode = mode,
-                        state = plan.stateFor(mode),
-                        dockEdge = plan.edges.edgeFor(mode.modeSurface),
-                        surfaceModifier =
-                            pull.surfaceModifier(isOutgoing = mode == plan.currentMode).then(pull.screenFrostModifier),
+                        mode = plan.currentMode,
+                        state = plan.stateFor(plan.currentMode),
+                        dockEdge = plan.edges.edgeFor(plan.currentMode.modeSurface),
+                        surfaceModifier = pull.homeModifier(),
                         cardsShellState = cardsShellState,
                         dockHost = dockHost,
                         presentation = presentation,
@@ -184,12 +155,63 @@ fun HomeDestination(
                     )
                 }
             }
+            if (showStream && stream != null) {
+                StreamHomeSurface(
+                    stream = stream,
+                    state = dockHostState,
+                    dockHost = dockHost,
+                    dockPosition = plan.dockEdge,
+                    appIconLoader = appIconLoader,
+                    modifier = pull.streamModifier(),
+                )
+            }
             // Nothing is composed while the feature is off or no workspaces are loaded (#1351).
-            if (!streamShown) {
-                HomeWorkspaceMenu(workspaceMenu, dockHost, pull.dockEdge, state.launcherSettings.motion.reducedMotion)
+            if (!shownStream) {
+                HomeWorkspaceMenu(workspaceMenu, dockHost, plan.dockEdge, state.launcherSettings.motion.reducedMotion)
             }
         }
     }
+}
+
+private fun LauncherShellState.reducedMotion(): Boolean = launcherSettings.motion.reducedMotion
+
+/**
+ * Opens the Stream from a Dock entry: records where it should land, then, when it is not showing, runs the same
+ * settle a pull's commit would. When it already shows, only the landing moves.
+ */
+private fun openStream(
+    stream: StreamHost?,
+    dockPull: DockPullState,
+    target: StreamFocusTarget?,
+    shown: Boolean,
+    direction: DockPullDirection,
+    reducedMotion: Boolean,
+) {
+    if (stream == null) return
+    target?.let(stream.focus::request)
+    if (!shown) dockPull.open(DockPullDestination.STREAM, direction, reducedMotion)
+}
+
+/**
+ * Whether the Stream shows, counting a committed pull that the shell has not shown yet. The stand-in clears the moment
+ * the shell agrees (or answers with anything else) and after a timeout, so a refused switch cannot stick.
+ */
+@Composable
+private fun rememberStreamShown(
+    dockPull: DockPullState,
+    shellShown: Boolean,
+): Boolean {
+    val pending = dockPull.pendingStreamShown
+    if (pending != null && pending == shellShown) {
+        SideEffect { dockPull.pendingStreamShown = null }
+    }
+    LaunchedEffect(pending) {
+        if (pending != null) {
+            delay(DOCK_PULL_PENDING_TIMEOUT_MILLIS)
+            dockPull.pendingStreamShown = null
+        }
+    }
+    return pending ?: shellShown
 }
 
 /**
@@ -204,12 +226,18 @@ private fun StreamHomeSurface(
     dockHost: HomeDockHostState,
     dockPosition: DockPosition,
     appIconLoader: AppIconLoader,
+    modifier: Modifier = Modifier,
 ) {
     val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
     val dockExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
     val insets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets().asPaddingValues()
     Box(
-        modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX).dockInteractionPadding(dockPosition, dockExtent),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .zIndex(HOME_CONTENT_Z_INDEX)
+                .then(modifier)
+                .dockInteractionPadding(dockPosition, dockExtent),
     ) {
         StreamDestination(
             host = stream,
@@ -221,36 +249,6 @@ private fun StreamHomeSurface(
         )
     }
 }
-
-/**
- * "Open Stream" (and, while it is open, "Back to Home"): the accessibility equivalent of reaching the Stream, on
- * the Dock
- * and on the surface root, so it exists when a layout hides the Dock. P5 adds the Dock's real handle. Identity when the
- * shell has no Stream.
- */
-private fun streamEntryModifier(
-    stream: StreamHost?,
-    streamShown: Boolean,
-    onAction: (LauncherShellAction) -> Unit,
-): Modifier =
-    if (stream == null) {
-        Modifier
-    } else {
-        Modifier.semantics {
-            customActions =
-                listOf(
-                    CustomAccessibilityAction(
-                        if (streamShown) STREAM_CLOSE_ACTION_LABEL else STREAM_OPEN_ACTION_LABEL,
-                    ) {
-                        onAction(if (streamShown) LauncherShellAction.OpenHome else LauncherShellAction.OpenStream)
-                        true
-                    },
-                )
-        }
-    }
-
-internal const val STREAM_OPEN_ACTION_LABEL = "Open Stream"
-internal const val STREAM_CLOSE_ACTION_LABEL = "Back to Home"
 
 /** What a Cards surface takes from [HomeDestination] beyond the shell state. */
 private class CardsSurfaceInputs(
@@ -306,45 +304,34 @@ private fun ModeSurfaceContent(
     }
 }
 
-/**
- * What [HomeDestination] composes for one shell state: [currentMode] (the shell's), and while the
- * dock is pulled or a committed switch is on its way through the shell, the [counterpartMode] too.
- */
+/** What [HomeDestination] composes for one shell state: the shell's mode, and the edge its dock stands on. */
 private class HomeSurfacePlan(
     val currentMode: LauncherViewMode,
-    val counterpartMode: LauncherViewMode,
-    /** The mode on screen when no pull runs: the shell's, or a committed switch it has not shown yet. */
-    val shownMode: LauncherViewMode,
-    /** The modes composed, in drawing order: the outgoing surface first while a pull runs. */
-    val composedModes: List<LauncherViewMode>,
     /** Each surface's dock edge: Home's is the shared dock's, Library's its own (ModeDockEdges.kt). */
     val edges: ModeDockEdges,
     private val state: LauncherShellState,
-    private val preview: LauncherShellState?,
 ) {
-    /** The shell state [mode]'s surface draws from. */
-    fun stateFor(mode: LauncherViewMode): LauncherShellState = if (mode == currentMode) state else preview ?: state
+    val shownMode: LauncherViewMode get() = currentMode
 
-    /** The state a composed Cards surface draws from, if one is composed. */
+    /** The edge the dock stands on: the shown surface's. */
+    val dockEdge: DockPosition get() = edges.edgeFor(currentMode.modeSurface)
+
+    /** The shell state [mode]'s surface draws from. */
+    @Suppress("UnusedParameter")
+    fun stateFor(mode: LauncherViewMode): LauncherShellState = state
+
+    /** The state a composed Cards surface draws from, if the shown mode is Cards. */
     val cardsState: LauncherShellState?
-        get() =
-            composedModes
-                .firstOrNull { mode -> mode.homeSurfaceKind() == HomeSurfaceKind.CARDS }
-                ?.let(::stateFor)
+        get() = state.takeIf { currentMode.homeSurfaceKind() == HomeSurfaceKind.CARDS }
 }
 
 @Composable
-private fun rememberHomeSurfacePlan(
-    state: LauncherShellState,
-    dockPull: DockPullState,
-): HomeSurfacePlan {
-    val currentMode = state.homeLayout.viewMode
+private fun rememberHomeSurfacePlan(state: LauncherShellState): HomeSurfacePlan {
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
-    val counterpartMode = state.homeLayoutSet.dockPullCounterpartMode(deviceClass, currentMode)
     val edges =
         ModeDockEdges(
-            // Home's edge is the shared dock's: the user's configured edge if any, else the device
-            // class's template default, exactly as every mode read it before the edge was per mode.
+            // Home's edge is the shared dock's: the user's configured edge if any, else the device class's template
+            // default, exactly as every mode read it before the edge was per mode.
             home =
                 resolveDockPosition(
                     state.homeLayout.dock.position,
@@ -352,46 +339,7 @@ private fun rememberHomeSurfacePlan(
                 ),
             library = state.homeLayoutSet.dockEdgeFor(deviceClass, ModeSurface.LIBRARY),
         )
-    val pending = dockPull.pending
-    // A committed switch stands in until the shell shows it -- or answers with anything else.
-    val pendingMode =
-        pending
-            ?.takeIf { switch -> switch.mode != currentMode && switch.fromSet === state.homeLayoutSet }
-            ?.mode
-    if (pending != null && pendingMode == null) {
-        SideEffect { dockPull.pending = null }
-    }
-    LaunchedEffect(pending) {
-        if (pending != null) {
-            delay(DOCK_PULL_PENDING_TIMEOUT_MILLIS)
-            dockPull.pending = null
-        }
-    }
-    val isTransitioning by remember(dockPull) {
-        derivedStateOf { dockPull.transition !is DockPullTransitionState.Idle }
-    }
-    val previewMode = pendingMode ?: counterpartMode.takeIf { isTransitioning }
-    val preview =
-        previewMode?.let { mode ->
-            remember(mode, state.homeLayoutSet, state.homeLayout, state.installedApps) {
-                state.dockPullPreviewFor(mode)
-            }
-        }
-    val composedModes =
-        when {
-            pendingMode != null -> listOf(pendingMode)
-            isTransitioning -> listOf(currentMode, counterpartMode)
-            else -> listOf(currentMode)
-        }
-    return HomeSurfacePlan(
-        currentMode = currentMode,
-        counterpartMode = counterpartMode,
-        shownMode = pendingMode ?: currentMode,
-        composedModes = composedModes,
-        edges = edges,
-        state = state,
-        preview = preview,
-    )
+    return HomeSurfacePlan(currentMode = state.homeLayout.viewMode, edges = edges, state = state)
 }
 
 /**
@@ -431,9 +379,8 @@ private fun CardsHomeSurface(
         interpretCardsAction(action, adaptiveStageContext, onAdaptiveStageContextChanged, onAction)
     }
     val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
-    // When the dock is off or hidden it cannot host the selector, so the surface falls back to the
-    // spine rather than stranding a stage.
-    val dockHostsStageSelector = visibleLayout.shouldShowDock()
+    // The dock's dynamic side is the Stream's (live apps, now playing, the Stream button) in every mode, so it never
+    // hosts the stage selector: the spine is how a stage is reached by touch.
     val dockInteractionExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
 
     // Same precedence StandardHome gives its own content (see HOME_CONTENT_Z_INDEX): without it,
@@ -454,7 +401,7 @@ private fun CardsHomeSurface(
             onContextChanged = onAdaptiveStageContextChanged,
             onAction = cardsOnAction,
             appIconLoader = appIconLoader,
-            dockHostsStageSelector = dockHostsStageSelector,
+            dockHostsStageSelector = false,
         )
     }
 }
@@ -491,6 +438,3 @@ internal fun cardsPanelInsetPolicy(state: LauncherShellState): HomeInsetPolicy {
 
 /** How long a committed switch stands in for the shell's answer before giving up on it. */
 private const val DOCK_PULL_PENDING_TIMEOUT_MILLIS = 2_000L
-
-/** Over both surfaces while a pull runs, so neither slides across the dock being pulled. */
-private const val DOCK_PULL_DOCK_Z_INDEX = 1f

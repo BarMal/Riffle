@@ -136,7 +136,7 @@ class DockShelfEdgeLayoutTest {
                     dock =
                         standard.dock.copy(
                             items = listOf(docked),
-                            showNotificationCards = false,
+                            liveAppSlots = 0,
                             panel =
                                 LauncherPage(
                                     id = LauncherPageId("dock-panel"),

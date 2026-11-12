@@ -25,14 +25,14 @@ class DockConfigurationEngineTest {
     }
 
     @Test
-    fun updatesDockNotificationCardVisibilityWithoutChangingItems() {
+    fun updatesDockLiveAppSlotsWithoutChangingItems() {
         val phone = appShortcut(id = "phone")
         val layout = layoutWithDockItems(phone)
 
-        val result = engine.setDockNotificationCardsEnabled(layout = layout, enabled = false)
+        val result = engine.setDockLiveAppSlots(layout = layout, slots = 0)
 
         val updated = assertIs<DockEditResult.Updated>(result)
-        assertEquals(false, updated.layout.dock.showNotificationCards)
+        assertEquals(0, updated.layout.dock.liveAppSlots)
         assertEquals(listOf(phone.id), updated.layout.dock.items.map { item -> item.id })
     }
 
@@ -391,36 +391,36 @@ class DockConfigurationEngineTest {
     }
 
     @Test
-    fun updatesDockNotificationSlotCount() {
+    fun updatesDockLiveAppSlots() {
         val result =
-            engine.setDockNotificationSlotCount(layout = HomeLayoutDefaults.standard(), slotCount = 2)
+            engine.setDockLiveAppSlots(layout = HomeLayoutDefaults.standard(), slots = 2)
 
         val updated = assertIs<DockEditResult.Updated>(result)
-        assertEquals(2, updated.layout.dock.notificationSlotCount)
+        assertEquals(2, updated.layout.dock.liveAppSlots)
     }
 
     @Test
-    fun rejectsDockNotificationSlotCountBelowMinimum() {
+    fun rejectsDockLiveAppSlotsBelowMinimum() {
         val result =
-            engine.setDockNotificationSlotCount(
+            engine.setDockLiveAppSlots(
                 layout = HomeLayoutDefaults.standard(),
-                slotCount = MIN_DOCK_NOTIFICATION_SLOT_COUNT - 1,
+                slots = MIN_DOCK_LIVE_APP_SLOTS - 1,
             )
 
         val rejected = assertIs<DockEditResult.Rejected>(result)
-        assertEquals(DockEditRejectionReason.INVALID_NOTIFICATION_SLOT_COUNT, rejected.reason)
+        assertEquals(DockEditRejectionReason.INVALID_LIVE_APP_SLOTS, rejected.reason)
     }
 
     @Test
-    fun rejectsDockNotificationSlotCountAboveMaximum() {
+    fun rejectsDockLiveAppSlotsAboveMaximum() {
         val result =
-            engine.setDockNotificationSlotCount(
+            engine.setDockLiveAppSlots(
                 layout = HomeLayoutDefaults.standard(),
-                slotCount = MAX_DOCK_NOTIFICATION_SLOT_COUNT + 1,
+                slots = MAX_DOCK_LIVE_APP_SLOTS + 1,
             )
 
         val rejected = assertIs<DockEditResult.Rejected>(result)
-        assertEquals(DockEditRejectionReason.INVALID_NOTIFICATION_SLOT_COUNT, rejected.reason)
+        assertEquals(DockEditRejectionReason.INVALID_LIVE_APP_SLOTS, rejected.reason)
     }
 
     @Test

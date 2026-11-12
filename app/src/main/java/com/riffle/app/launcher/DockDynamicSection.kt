@@ -13,15 +13,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -30,8 +40,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 /**
- * The dock's dynamic side: whatever the active mode lists there -- in grid mode the apps the dock is
- * not already showing that have something waiting, in Cards the stage selector.
+ * The dock's dynamic side: live apps (apps with something new), now playing while media is active, and the Stream
+ * button, always last (ADR 0003, The Dock is the handle). It is also where a pull on the dock opens the Stream, so it
+ * reports its bounds through [LocalDockDynamicBoundsSink].
  *
  * Icons at dock size rather than the shelf's wide cards, because this runs *inside* the dock beside
  * the pinned items and has to read as the same strip. The shelf's card row is the same section with
@@ -60,8 +71,9 @@ internal fun DockDynamicSection(
     if (entries.isEmpty() || mainAxisDp <= 0) {
         return
     }
-    // The same numbers the static side is drawn from, so an entry is the size of a pinned icon.
-    val iconSizeDp = slotMetrics.iconSizeDp
+    // The numbers the static side is drawn from, so an entry is the size of a pinned icon -- but never under the 48 dp
+    // a touch target needs, which is also what the dock measured this section for (dockDynamicEntryExtentDp).
+    val iconSizeDp = dockDynamicEntryExtentDp(slotMetrics.iconSizeDp)
     val spacingDp = slotMetrics.itemSpacingDp
     val scrollState = rememberScrollState()
     ScrollSelectedEntryIntoView(
@@ -105,13 +117,17 @@ internal fun DockDynamicSection(
     // (#1175).
     val overflowAffordance =
         DockOverflowAffordance(scrollOffsetPx = scrollState.value, maxScrollOffsetPx = scrollState.maxValue)
+    val boundsSink = LocalDockDynamicBoundsSink.current
+    DisposableEffect(boundsSink) { onDispose { boundsSink(null) } }
     Box(
         modifier =
-            Modifier.dockOverflowMask(
-                runsHorizontally = runsHorizontally,
-                fadeStart = overflowAffordance.showStart && !suppressStartFade,
-                fadeEnd = overflowAffordance.showEnd,
-            ),
+            Modifier
+                .onGloballyPositioned { coordinates -> boundsSink(coordinates.boundsInRoot()) }
+                .dockOverflowMask(
+                    runsHorizontally = runsHorizontally,
+                    fadeStart = overflowAffordance.showStart && !suppressStartFade,
+                    fadeEnd = overflowAffordance.showEnd,
+                ),
     ) {
         if (runsHorizontally) {
             Row(
@@ -208,54 +224,88 @@ private fun DockDynamicSectionTile(
                 ),
         contentAlignment = Alignment.TopEnd,
     ) {
-        if (identity != null) {
-            LauncherAppIcon(
-                identity = identity,
-                label = label,
-                iconLoader = appIconLoader,
-                modifier = Modifier.requiredSize(iconSizeDp.dp),
-                shape = tileShape,
-            )
-        } else {
-            Box(
-                modifier =
-                    Modifier
-                        .requiredSize(iconSizeDp.dp)
-                        .clip(tileShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = label.firstOrNull()?.uppercase().orEmpty(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-        }
+        DockDynamicTileIcon(entry, iconSizeDp, tileShape, appIconLoader)
+        if (entry.symbol == DockDynamicSymbol.NowPlaying) NowPlayingMark(Modifier.align(Alignment.BottomEnd))
         NotificationCountBadge(count = entry.badgeCount)
     }
 }
 
-/** The ring marking the entry whose stage is currently showing. */
+/** What fills a tile: the Stream button's glyph, the app's icon, or its initial when the launcher cannot resolve it. */
+@Composable
+private fun DockDynamicTileIcon(
+    entry: DockDynamicEntry,
+    iconSizeDp: Int,
+    tileShape: Shape,
+    appIconLoader: AppIconLoader,
+) {
+    val identity = entry.identity
+    if (identity != null && entry.symbol != DockDynamicSymbol.Stream) {
+        LauncherAppIcon(
+            identity = identity,
+            label = entry.label,
+            iconLoader = appIconLoader,
+            modifier = Modifier.requiredSize(iconSizeDp.dp),
+            shape = tileShape,
+        )
+        return
+    }
+    Box(
+        modifier =
+            Modifier
+                .requiredSize(iconSizeDp.dp)
+                .clip(tileShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (entry.symbol == DockDynamicSymbol.Stream) {
+            Icon(
+                imageVector = DockIcons.Stream,
+                contentDescription = null,
+                modifier = Modifier.requiredSize((iconSizeDp * STREAM_GLYPH_FRACTION).dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        } else {
+            Text(
+                text = entry.label.firstOrNull()?.uppercase().orEmpty(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
+}
+
+/** The small play mark in the corner of the playing app's icon. */
+@Composable
+private fun NowPlayingMark(modifier: Modifier) {
+    Icon(
+        imageVector = Icons.Filled.PlayArrow,
+        contentDescription = null,
+        modifier =
+            modifier
+                .requiredSize(NOW_PLAYING_MARK_DP.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+        tint = MaterialTheme.colorScheme.onPrimary,
+    )
+}
+
+private const val STREAM_GLYPH_FRACTION = 0.58f
+private const val NOW_PLAYING_MARK_DP = 18
+
+/**
+ * Where the dynamic section is, in root coordinates (null once it leaves composition), so the dock pull can tell which
+ * side a touch started on. The dock host provides the sink; outside it nothing listens.
+ */
+internal val LocalDockDynamicBoundsSink = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
+
+/** An entry is a pinned icon's size, but never under a 48 dp touch target. */
+internal fun dockDynamicEntryExtentDp(iconSizeDp: Int): Int = maxOf(iconSizeDp, DOCK_DYNAMIC_ENTRY_MIN_EXTENT_DP)
+
+private const val DOCK_DYNAMIC_ENTRY_MIN_EXTENT_DP = 48
+
+/** The ring marking the entry whose destination is currently showing (the Stream button while the Stream is up). */
 private const val SELECTED_ENTRY_RING_DP = 2
 
 internal fun dockDynamicSectionTileTestTag(label: String): String = "dock-dynamic-entry:$label"
 
 internal const val DOCK_DYNAMIC_SECTION_TEST_TAG = "dock-dynamic-section"
-
-/**
- * The notification entries this section will draw, empty for every shelf state that has none.
- *
- * A permission prompt is deliberately not one of them: it is a paragraph asking for access, which
- * has nowhere to go in a strip one icon deep. The shelf still shows it.
- */
-internal fun DockNotificationShelfState.dynamicEntries(): List<DockDynamicEntry> {
-    return dockNotificationCards().launchableDockDynamicEntries()
-}
-
-/**
- * The de-duplicated notification cards behind the dynamic section -- what an app pinned to the
- * static side is already excluded from.
- */
-internal fun DockNotificationShelfState.dockNotificationCards(): List<DockNotificationCardState> =
-    (this as? DockNotificationShelfState.Content)?.cards.orEmpty()

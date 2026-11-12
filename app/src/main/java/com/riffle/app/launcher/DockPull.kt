@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerId
@@ -22,189 +23,158 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import com.riffle.app.launcher.designsystem.RiffleMotion
-import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.designsystem.RiffleMotionTokens
-import com.riffle.core.domain.launcher.dockpull.DOCK_PULL_REORIENT_REVEAL_HOLD_MILLIS
 import com.riffle.core.domain.launcher.dockpull.DockPullClaim
+import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
-import com.riffle.core.domain.launcher.dockpull.DockPullTransitionController
-import com.riffle.core.domain.launcher.dockpull.DockPullTransitionState
+import com.riffle.core.domain.launcher.dockpull.DockPullDrag
 import com.riffle.core.domain.launcher.dockpull.SettleOutcome
 import com.riffle.core.domain.launcher.dockpull.dockPullClaimFor
-import com.riffle.core.domain.launcher.dockpull.switchNow
-import com.riffle.core.domain.launcher.home.HomeLayoutSet
-import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.home.ModeSurface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * A switch the dock pull committed and asked the shell for, which the shell has not shown yet.
- * [fromSet] is the layout set the switch was asked from: once the shell hands back another set, or
- * shows [mode], the switch has landed (or been refused) and the pull stops standing in for it.
- */
-internal data class DockPullPendingSwitch(
-    val mode: LauncherViewMode,
-    val fromSet: HomeLayoutSet,
-)
-
-/**
- * The UI side of the dock pull (#1206): holds the pure [DockPullTransitionController]'s state,
- * animates its settles and reports a committed switch through [onCommitted].
+ * The UI side of the Dock pull (ADR 0003, The Dock is the handle): holds a [DockPullDrag] while the finger is down,
+ * animates the settle after it and reports a committed destination through [onCommitted].
  *
- * Nothing here decides anything: whether a release commits, where the dock goes and how the
- * surfaces are drawn are all the domain's (DockPullTransitionController.kt, DockPullFrame.kt).
+ * Nothing here decides anything: which side a pull started on, what it opens, whether a release commits and how the
+ * Stream and Home are drawn along the way are the domain's (`dockpull/`). A pull that opens the Library does not
+ * move anything with the finger ([running] stays false); one that opens or closes the Stream tracks the finger 1:1
+ * ([progress]), can be caught again mid-settle, and commits by travel or velocity.
  */
 @Stable
 internal class DockPullState(
     private val scope: CoroutineScope,
 ) {
-    private val controller = DockPullTransitionController()
     private var settleJob: Job? = null
-    private var revealJob: Job? = null
+    private var drag: DockPullDrag? = null
+    private var destination: DockPullDestination = DockPullDestination.LIBRARY
+    private var reducedMotion: Boolean = false
+    private var settledTravelDp: Float = 1f
 
-    /** Where the transition is. Read it in draw or layout blocks, not in composition, while it tracks. */
-    var transition: DockPullTransitionState by mutableStateOf(DockPullTransitionState.Idle(ModeSurface.HOME))
+    /** Whether the Stream is being pulled in or out, or is settling after it. Changes at a pull's start and end. */
+    var running: Boolean by mutableStateOf(false)
         private set
 
-    /** A committed switch still on its way through the shell. */
-    var pending: DockPullPendingSwitch? by mutableStateOf(null)
+    /** How far the Stream and Home have moved from one to the other, 0..1. Read it in draw blocks, not composition. */
+    var progress: Float by mutableFloatStateOf(0f)
+        private set
 
-    /** Called when a settle commits, with the surface it switched to; the host dispatches the switch. */
-    var onCommitted: (ModeSurface) -> Unit = {}
+    /** Whether the running pull opens the Stream (true) or returns to Home from it (false). */
+    var opening: Boolean by mutableStateOf(true)
+        private set
 
-    /**
-     * The freshly-committed dock's reveal hold (dock-reorient decisions, follow-up to #1278): 1 at
-     * rest and whenever no commit is holding it back; snapped to 0 the instant a COMMIT settle
-     * starts and held there for [DOCK_PULL_REORIENT_REVEAL_HOLD_MILLIS] before easing back to 1, so
-     * the incoming dock content doesn't pop in under the frost the moment it swaps. A finger that
-     * catches the dock mid-reveal (or a fresh pull) cancels the hold and snaps straight back to 1.
-     */
-    var revealAlpha: Float by mutableFloatStateOf(1f)
+    /** The direction the running pull moves in: away from the Dock's edge. */
+    var direction: DockPullDirection by mutableStateOf(DockPullDirection.UP)
         private set
 
     /**
-     * A finger landed on the dock while it was settling: catch it where it is and track from there.
-     * Returns whether there was a settle to catch.
+     * A committed switch the shell has not shown yet: the Stream (true) or Home (false). While it is set it stands in
+     * for the shell's own answer, so the surfaces do not flicker back for the frame or two in between.
      */
-    fun catchSettle(reducedMotion: Boolean): Boolean {
-        val settling = transition as? DockPullTransitionState.Settling ?: return false
-        settleJob?.cancel()
-        cancelRevealHold()
-        transition =
-            controller.start(
-                state = settling,
-                direction = settling.direction,
-                travelDp = settling.travelDp,
-                reducedMotion = reducedMotion,
-            )
+    var pendingStreamShown: Boolean? by mutableStateOf(null)
+
+    /** Called when a pull commits, with where it leads; the host dispatches the shell action. */
+    var onCommitted: (DockPullDestination) -> Unit = {}
+
+    /**
+     * A finger landed on a settling pull: catch it where it is and track from there. Returns whether there was a
+     * settle to catch.
+     */
+    fun catchSettle(): Boolean {
+        val job = settleJob?.takeIf { it.isActive && running } ?: return false
+        job.cancel()
+        drag = DockPullDrag(direction, settledTravelDp, startProgress = progress)
         return true
     }
 
-    /** A fresh pull out of [surface], [travelDp] long, in [direction]. */
+    /** A fresh pull toward [destination], [travelDp] long, in [direction]. */
     fun start(
-        surface: ModeSurface,
+        destination: DockPullDestination,
         direction: DockPullDirection,
         travelDp: Float,
         reducedMotion: Boolean,
     ) {
         settleJob?.cancel()
-        cancelRevealHold()
-        transition =
-            controller.start(
-                state = DockPullTransitionState.Idle(surface = surface, reducedMotion = reducedMotion),
-                direction = direction,
-                travelDp = travelDp,
-                reducedMotion = reducedMotion,
-            )
+        this.destination = destination
+        this.reducedMotion = reducedMotion
+        this.direction = direction
+        settledTravelDp = travelDp
+        drag = DockPullDrag(direction, travelDp)
+        if (destination != DockPullDestination.LIBRARY) {
+            opening = destination == DockPullDestination.STREAM
+            progress = 0f
+            running = true
+        }
     }
 
     fun drag(
         dxDp: Float,
         dyDp: Float,
     ) {
-        transition = controller.drag(transition, dxDp, dyDp)
+        val current = drag ?: return
+        val next = current.dragged(dxDp, dyDp)
+        drag = next
+        if (running) progress = next.progress
     }
 
     fun release(
         velocityXDpPerSecond: Float,
         velocityYDpPerSecond: Float,
     ) {
-        transition = controller.release(transition, velocityXDpPerSecond, velocityYDpPerSecond)
-        settle()
+        val current = drag ?: return
+        drag = null
+        settle(current.release(velocityXDpPerSecond, velocityYDpPerSecond))
     }
 
     /** The gesture was taken away: spring back. */
     fun cancel() {
-        transition = controller.cancel(transition)
-        settle()
+        if (drag == null) return
+        drag = null
+        settle(SettleOutcome.CANCEL)
     }
 
     /**
-     * The pull's accessibility and keyboard equivalents (Decision 12): the same commit, run as a
-     * settle from rest. Ignored while a transition or a switch is already under way.
+     * The pull's accessibility, keyboard and button equivalents: the same commit, run as a settle from rest. Ignored
+     * while a pull or a committed switch is already under way.
      */
-    fun switchNow(
-        surface: ModeSurface,
+    fun open(
+        destination: DockPullDestination,
         direction: DockPullDirection,
         reducedMotion: Boolean,
     ): Boolean {
-        if (transition !is DockPullTransitionState.Idle || pending != null) return false
-        transition =
-            controller.switchNow(
-                state = DockPullTransitionState.Idle(surface = surface, reducedMotion = reducedMotion),
-                direction = direction,
-                reducedMotion = reducedMotion,
-            )
-        settle()
-        return true
+        val free = !running && drag == null && pendingStreamShown == null
+        if (free && destination == DockPullDestination.LIBRARY) {
+            onCommitted(destination)
+        } else if (free) {
+            start(destination, direction, travelDp = 1f, reducedMotion = reducedMotion)
+            drag = null
+            settle(SettleOutcome.COMMIT)
+        }
+        return free
     }
 
-    private fun settle() {
-        val settling = transition as? DockPullTransitionState.Settling ?: return
-        settleJob?.cancel()
-        if (settling.outcome == SettleOutcome.COMMIT) startRevealHold(settling.reducedMotion)
-        settleJob =
-            scope.launch {
-                Animatable(settling.progress).animateTo(
-                    targetValue = settling.targetProgress,
-                    animationSpec = dockPullSettleSpec(settling.reducedMotion),
-                ) {
-                    transition = controller.settleProgress(transition, value)
-                }
-                val finished = transition
-                if (finished is DockPullTransitionState.Settling && finished.outcome == SettleOutcome.COMMIT) {
-                    onCommitted(finished.to)
-                }
-                transition = controller.finish(finished)
-            }
-    }
-
-    /** Snaps [revealAlpha] to 0, holds it for the reveal hold, then eases it back to 1. */
-    private fun startRevealHold(reducedMotion: Boolean) {
-        revealJob?.cancel()
-        if (reducedMotion) {
-            // Reduced motion (Decision: reduced motion) skips the hold entirely: the crossfade
-            // reaches its end state without a low-alpha beat first.
-            revealAlpha = 1f
+    private fun settle(outcome: SettleOutcome) {
+        if (!running) {
+            // The Library: nothing moved, so there is nothing to animate; the outcome is the whole answer.
+            if (outcome == SettleOutcome.COMMIT) onCommitted(destination)
             return
         }
-        revealAlpha = 0f
-        revealJob =
+        val target = if (outcome == SettleOutcome.COMMIT) 1f else 0f
+        settleJob?.cancel()
+        settleJob =
             scope.launch {
-                delay(DOCK_PULL_REORIENT_REVEAL_HOLD_MILLIS.toLong())
-                Animatable(0f).animateTo(1f, animationSpec = RiffleMotion.standard(reducedMotion = false)) {
-                    revealAlpha = value
+                Animatable(progress).animateTo(target, animationSpec = dockPullSettleSpec(reducedMotion)) {
+                    progress = value
                 }
+                if (outcome == SettleOutcome.COMMIT) {
+                    pendingStreamShown = destination == DockPullDestination.STREAM
+                }
+                running = false
+                progress = 0f
+                if (outcome == SettleOutcome.COMMIT) onCommitted(destination)
             }
-    }
-
-    /** Cancels any in-flight reveal hold and snaps content back to fully visible. */
-    private fun cancelRevealHold() {
-        revealJob?.cancel()
-        revealAlpha = 1f
     }
 }
 
@@ -222,33 +192,34 @@ private fun dockPullSettleSpec(reducedMotion: Boolean): AnimationSpec<Float> =
         RiffleMotion.smooth(visibilityThreshold = DOCK_PULL_PROGRESS_THRESHOLD)
     }
 
-/** What the dock pull gesture needs from its host, read fresh at each gesture. */
+/** What the Dock pull gesture needs from its host, read fresh at each gesture. */
 internal interface DockPullGestureHost {
     val state: DockPullState
 
     /** Whether a pull may start now (browsing, nothing pending, the window measured). */
     val canPull: Boolean
 
-    val surface: ModeSurface
-
     val reducedMotion: Boolean
 
     /** The pull's full travel in dp: the window's extent along [direction]'s axis. */
     fun travelDp(direction: DockPullDirection): Float
+
+    /** Where a pull that landed at [position] (in the gesture's own coordinates) leads. */
+    fun destinationAt(position: Offset): DockPullDestination
 }
 
 /**
- * The dock pull gesture on the dock body (Decision 3), in the dock edge's natural [direction].
+ * The Dock pull gesture on the dock body, in the dock edge's natural [direction].
  *
- * On the Main pass, after the dock's own children, like the shelf gesture it replaces in that
- * direction: a section scroll along the run or an item's long-press drag consumes its touches first
- * and the pull yields. A drag only becomes a pull once it leaves touch slop mostly along
- * [direction] ([dockPullClaimFor]) and before the long-press timeout, so a held press stays a
- * long-press. A finger landing on a settling dock catches it at once. Deltas are handed to the
- * controller in dp; only their component along the pull moves it.
+ * On the Main pass, after the dock's own children: a section scroll along the run or an item's long-press drag
+ * consumes its touches first and the pull yields. A drag only becomes a pull once it leaves touch slop mostly along
+ * [direction] ([dockPullClaimFor]) and before the long-press timeout, so a held press stays a long-press. Where it
+ * leads is decided by which side the finger landed on ([DockPullGestureHost.destinationAt]). A finger landing on a
+ * settling pull catches it at once. Deltas are handed over in dp; only their component along the pull moves it.
  *
- * Place it before any translation of the dock, so the finger is measured in the dock's resting
- * coordinates rather than ones that move with the finger.
+ * Place it before any translation of the dock, so the finger is measured in the dock's resting coordinates rather than
+ * ones that move with the finger. This is the one pointer loop the Dock pull needs: it claims by direction, which the
+ * platform's drag detectors cannot express (ADR 0002).
  */
 internal fun Modifier.dockPullInput(
     direction: DockPullDirection,
@@ -259,7 +230,7 @@ internal fun Modifier.dockPullInput(
             val down = awaitFirstDown(requireUnconsumed = false)
             val tracker = VelocityTracker()
             tracker.addPosition(down.uptimeMillis, down.position)
-            val caught = host.state.catchSettle(host.reducedMotion)
+            val caught = host.state.catchSettle()
             if (!caught) {
                 if (!host.canPull) return@awaitEachGesture
                 val claimed = awaitPullClaim(down, direction, tracker, host)
@@ -293,12 +264,12 @@ private suspend fun AwaitPointerEventScope.awaitPullClaim(
                         DockPullClaim.CLAIM -> {
                             change.consume()
                             host.state.start(
-                                surface = host.surface,
+                                destination = host.destinationAt(down.position),
                                 direction = direction,
                                 travelDp = host.travelDp(direction),
                                 reducedMotion = host.reducedMotion,
                             )
-                            // From where the finger landed, so the dock tracks it 1:1 from the start.
+                            // From where the finger landed, so the Stream tracks it 1:1 from the start.
                             host.state.drag(drag.x / density, drag.y / density)
                             decision = true
                         }
@@ -323,8 +294,8 @@ private suspend fun AwaitPointerEventScope.trackPull(
             finished = trackPullStep(change, tracker, state)
         }
     } finally {
-        // The gesture was torn down mid-pull (the dock left composition, its edge changed): never
-        // leave the transition stranded in Tracking.
+        // The gesture was torn down mid-pull (the dock left composition, its edge changed): never leave the pull
+        // stranded while tracking.
         if (!finished) state.cancel()
     }
 }
@@ -350,7 +321,7 @@ private fun AwaitPointerEventScope.trackPullStep(
     return !change.pressed
 }
 
-/** The arrow key that, with Ctrl, performs the pull in [this] direction (Decision 12). */
+/** The arrow key that, with Ctrl, performs the pull in [this] direction. */
 internal val DockPullDirection.shortcutKey: Key
     get() =
         when (this) {
@@ -360,29 +331,6 @@ internal val DockPullDirection.shortcutKey: Key
             DockPullDirection.RIGHT -> Key.DirectionRight
         }
 
-/** The dock's accessibility action for a pull out of [surface]. */
-internal fun dockPullActionLabel(surface: ModeSurface): String =
-    when (surface) {
-        ModeSurface.HOME -> DOCK_PULL_TO_LIBRARY_LABEL
-        ModeSurface.LIBRARY -> DOCK_PULL_TO_HOME_LABEL
-    }
-
-/**
- * The shell state as [mode]'s surface would see it, for drawing that surface before the shell has
- * switched to it: during a pull (the incoming surface) and in the frame or two between a commit and
- * the shell's new state. Never written back; the switch itself is the shell's
- * [LauncherShellAction.SelectLauncherViewMode].
- */
-internal fun LauncherShellState.dockPullPreviewFor(mode: LauncherViewMode): LauncherShellState {
-    val previewSet = homeLayoutSet.withActiveLayout(homeLayout).selectMode(mode)
-    return copy(
-        homeLayout = previewSet.activeLayout.withHomeScreenLibraryApps(installedApps),
-        homeLayoutSet = previewSet,
-    )
-}
-
-internal const val DOCK_PULL_TO_LIBRARY_LABEL = "Switch to Library"
-internal const val DOCK_PULL_TO_HOME_LABEL = "Switch to Home"
 internal const val HOME_DOCK_PULL_TEST_TAG = "home-dock-pull"
 
 private const val DOCK_PULL_PROGRESS_THRESHOLD = 0.001f

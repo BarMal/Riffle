@@ -180,12 +180,12 @@ class LauncherShellSettingsDockViewModelTest {
         val router = routerFor(viewModel)
 
         assertTrue(router.handle(LauncherShellAction.OpenSettings))
-        assertTrue(router.handle(LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = true)))
+        assertTrue(router.handle(LauncherShellAction.SelectDockLiveAppSlots(slots = 2)))
 
         assertEquals(standardKey, viewModel.state.value.homeLayoutSet.activeKey)
-        assertEquals(configuredDock.copy(showNotificationCards = true), viewModel.state.value.homeLayout.dock)
+        assertEquals(configuredDock.copy(liveAppSlots = 2), viewModel.state.value.homeLayout.dock)
 
-        assertTrue(router.handle(LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = false)))
+        assertTrue(router.handle(LauncherShellAction.SelectDockLiveAppSlots(slots = configuredDock.liveAppSlots)))
 
         assertEquals(standardKey, viewModel.state.value.homeLayoutSet.activeKey)
         assertEquals(configuredDock, viewModel.state.value.homeLayout.dock)

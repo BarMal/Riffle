@@ -1,5 +1,8 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -12,6 +15,9 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.MAX_DOCK_LIVE_APP_SLOTS
+import com.riffle.core.domain.launcher.home.MIN_DOCK_LIVE_APP_SLOTS
+import com.riffle.core.domain.launcher.home.dockLiveAppSlotsFromLegacy
 import com.riffle.core.domain.launcher.home.dockPositionFromStoredName
 import com.riffle.core.domain.launcher.home.reflowedToWorkspaceGrid
 import com.riffle.core.domain.launcher.home.workspaceGridFor
@@ -79,8 +85,7 @@ private fun JSONObject.optViewMode(default: LauncherViewMode): LauncherViewMode 
 internal fun encodeDock(dock: DockModel): JSONObject =
     JSONObject()
         .put("isEnabled", dock.isEnabled)
-        .put("showNotificationCards", dock.showNotificationCards)
-        .put("notificationSlotCount", dock.notificationSlotCount)
+        .put("liveAppSlots", dock.liveAppSlots)
         .put("isExpandable", dock.isExpandable)
         .put("expandAffordance", dock.expandAffordance.name)
         .put("position", dock.position?.name)
@@ -95,14 +100,27 @@ internal fun encodeDock(dock: DockModel): JSONObject =
         .put("capacity", dock.capacity)
         .put("items", JSONArray(dock.items.map(::encodeLauncherItem)))
 
+/**
+ * The live app slots: the stored `liveAppSlots`, or, for a dock stored before the Stream, what its two earlier settings
+ * (`showNotificationCards`, `notificationSlotCount`) mean ([dockLiveAppSlotsFromLegacy]). Always within the range.
+ */
+private fun JSONObject.liveAppSlots(): Int =
+    if (has("liveAppSlots")) {
+        optInt("liveAppSlots", DEFAULT_DOCK_LIVE_APP_SLOTS)
+    } else {
+        dockLiveAppSlotsFromLegacy(
+            showNotificationCards = if (has("showNotificationCards")) optBoolean("showNotificationCards") else null,
+            notificationSlotCount = if (has("notificationSlotCount")) optInt("notificationSlotCount") else null,
+        )
+    }.coerceIn(MIN_DOCK_LIVE_APP_SLOTS, MAX_DOCK_LIVE_APP_SLOTS)
+
 internal fun JSONObject.toDock(
     defaults: DockModel,
     defaultGrid: GridDimensions,
 ): DockModel =
     DockModel(
         isEnabled = optBoolean("isEnabled", defaults.isEnabled),
-        showNotificationCards = optBoolean("showNotificationCards", defaults.showNotificationCards),
-        notificationSlotCount = optInt("notificationSlotCount", defaults.notificationSlotCount),
+        liveAppSlots = liveAppSlots(),
         isExpandable = optBoolean("isExpandable", defaults.isExpandable),
         expandAffordance =
             optString("expandAffordance", "")

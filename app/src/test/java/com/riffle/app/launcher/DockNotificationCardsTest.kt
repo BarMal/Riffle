@@ -75,7 +75,7 @@ class DockNotificationCardsTest {
             assertEquals(
                 DockNotificationShelfState.Hidden,
                 dockNotificationShelfState(
-                    dock = dock(showNotificationCards = false),
+                    dock = dock(liveAppSlots = 0),
                     groups = listOf(notificationGroup(packageName = "com.example.chat")),
                     notificationAccessStatus = notificationAccessStatus,
                     apps = emptyList(),
@@ -495,7 +495,7 @@ class DockNotificationCardsTest {
 
     private fun dock(
         pinned: List<String> = emptyList(),
-        showNotificationCards: Boolean = true,
+        liveAppSlots: Int = 3,
     ): DockModel =
         DockModel(
             capacity = 5,
@@ -511,7 +511,7 @@ class DockNotificationCardsTest {
                         label = packageName,
                     )
                 },
-            showNotificationCards = showNotificationCards,
+            liveAppSlots = liveAppSlots,
         )
 
     private fun notificationGroup(

@@ -16,9 +16,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -29,13 +31,13 @@ import com.riffle.core.domain.launcher.home.MAX_DOCK_CAPACITY
 import com.riffle.core.domain.launcher.home.MAX_DOCK_CORNER_RADIUS_DP
 import com.riffle.core.domain.launcher.home.MAX_DOCK_HOME_CONTROLS_SPACING_DP
 import com.riffle.core.domain.launcher.home.MAX_DOCK_ICON_SIZE_DP
-import com.riffle.core.domain.launcher.home.MAX_DOCK_NOTIFICATION_SLOT_COUNT
+import com.riffle.core.domain.launcher.home.MAX_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_CAPACITY
 import com.riffle.core.domain.launcher.home.MIN_DOCK_CORNER_RADIUS_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_HOME_CONTROLS_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
-import com.riffle.core.domain.launcher.home.MIN_DOCK_NOTIFICATION_SLOT_COUNT
+import com.riffle.core.domain.launcher.home.MIN_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.sharedDockPositions
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
@@ -48,8 +50,7 @@ internal fun DockSetting(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         DockSizeSummary(
             capacity = dock.capacity,
-            notificationSlotCount = dock.notificationSlotCount,
-            showNotificationCards = dock.showNotificationCards,
+            liveAppSlots = dock.liveAppSlots,
         )
         DockVisibilitySetting(
             enabled = dock.isEnabled,
@@ -59,17 +60,11 @@ internal fun DockSetting(
             capacity = dock.capacity,
             onAction = onAction,
         )
-        DockNotificationCardsSetting(
-            enabled = dock.showNotificationCards,
+        DockLiveAppSlotsSetting(
+            slots = dock.liveAppSlots,
             notificationAccessStatus = notificationAccessStatus,
             onAction = onAction,
         )
-        if (dock.showNotificationCards) {
-            DockNotificationSlotCountSetting(
-                slotCount = dock.notificationSlotCount,
-                onAction = onAction,
-            )
-        }
         DockPositionSetting(
             position = dock.position,
             // One dock shared by every mode (#1205), so only the edges every mode can draw it on.
@@ -121,18 +116,16 @@ internal fun DockSetting(
 }
 
 /**
- * A one-line readout of the dock's total visible size and, once notifications are on, how that
- * total splits between the two sections -- so the two sliders below read as one budget rather than
- * two numbers with no visible relationship.
+ * A one-line readout of the dock's pinned icons and its dynamic side, so the two settings read as one budget rather
+ * than two numbers with no visible relationship.
  */
 @Composable
 private fun DockSizeSummary(
     capacity: Int,
-    notificationSlotCount: Int,
-    showNotificationCards: Boolean,
+    liveAppSlots: Int,
 ) {
     Text(
-        text = dockSizeSummaryText(capacity, notificationSlotCount, showNotificationCards),
+        text = dockSizeSummaryText(capacity, liveAppSlots),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -140,14 +133,12 @@ private fun DockSizeSummary(
 
 internal fun dockSizeSummaryText(
     capacity: Int,
-    notificationSlotCount: Int,
-    showNotificationCards: Boolean,
+    liveAppSlots: Int,
 ): String =
-    if (showNotificationCards) {
-        val total = capacity + notificationSlotCount
-        "Shows up to $total icons: $capacity pinned, $notificationSlotCount for notifications"
-    } else {
-        "Shows up to $capacity pinned icons"
+    when (liveAppSlots) {
+        0 -> "Shows up to $capacity pinned icons, then now playing and the Stream button"
+        1 -> "Shows up to $capacity pinned icons, then 1 live app, now playing and the Stream button"
+        else -> "Shows up to $capacity pinned icons, then $liveAppSlots live apps, now playing and the Stream button"
     }
 
 /**
@@ -168,20 +159,43 @@ private fun DockCapacitySetting(
 )
 
 /**
- * How many notification icons show at once before that section scrolls, independent of how many
- * pinned icons the dock has. Fewer notifications than this shrinks the section; more scrolls.
+ * How many live apps (apps with something new) the dynamic side shows, ahead of now playing and the Stream button. More
+ * than this are reached in the Stream. Zero leaves the side with only now playing and the Stream button.
  */
 @Composable
-private fun DockNotificationSlotCountSetting(
-    slotCount: Int,
+private fun DockLiveAppSlotsSetting(
+    slots: Int,
+    notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
-) = DiscreteSettingSlider(
-    title = "Notification space",
-    value = slotCount,
-    valueRange = MIN_DOCK_NOTIFICATION_SLOT_COUNT..MAX_DOCK_NOTIFICATION_SLOT_COUNT,
-    valueLabel = { count -> if (count == 1) "1 icon" else "$count icons" },
-    onValueChange = { value -> onAction(LauncherShellAction.SelectDockNotificationSlotCount(value)) },
-)
+) {
+    Column {
+        DiscreteSettingSlider(
+            title = stringResource(R.string.dock_live_app_slots_title),
+            value = slots,
+            valueRange = MIN_DOCK_LIVE_APP_SLOTS..MAX_DOCK_LIVE_APP_SLOTS,
+            valueLabel = { count -> dockLiveAppSlotsLabel(count) },
+            onValueChange = { value ->
+                dockLiveAppSlotsActions(
+                    slots = value,
+                    wasSlots = slots,
+                    notificationAccessStatus = notificationAccessStatus,
+                ).forEach(onAction)
+            },
+        )
+        Text(
+            text = dockLiveAppSlotsSubtitle(slots, notificationAccessStatus),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+internal fun dockLiveAppSlotsLabel(count: Int): String =
+    when (count) {
+        0 -> "None"
+        1 -> "1 app"
+        else -> "$count apps"
+    }
 
 @Composable
 private fun DockIconSizeSetting(
@@ -458,50 +472,34 @@ private fun DockPanelSetting(
     )
 }
 
-@Composable
-private fun DockNotificationCardsSetting(
-    enabled: Boolean,
-    notificationAccessStatus: NotificationAccessStatus,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsSwitchRow(
-        title = "Dock notifications",
-        subtitle = dockNotificationCardsSettingSubtitle(enabled, notificationAccessStatus),
-        checked = enabled,
-        onCheckedChange = { value ->
-            dockNotificationCardsEnabledActions(
-                enabled = value,
-                wasEnabled = enabled,
-                notificationAccessStatus = notificationAccessStatus,
-            ).forEach(onAction)
-        },
-    )
-}
-
-internal fun dockNotificationCardsEnabledActions(
-    enabled: Boolean,
-    wasEnabled: Boolean,
+/**
+ * The actions for moving the live app slots to [slots]: the edit, and the notification access request when live apps
+ * are turned on (from none) without the access they are read from.
+ */
+internal fun dockLiveAppSlotsActions(
+    slots: Int,
+    wasSlots: Int,
     notificationAccessStatus: NotificationAccessStatus,
 ): List<LauncherShellAction> =
     buildList {
-        add(LauncherShellAction.SelectDockNotificationCardsEnabled(enabled))
-        if (enabled && !wasEnabled && notificationAccessStatus != NotificationAccessStatus.GRANTED) {
+        add(LauncherShellAction.SelectDockLiveAppSlots(slots))
+        if (slots > 0 && wasSlots == 0 && notificationAccessStatus != NotificationAccessStatus.GRANTED) {
             add(LauncherShellAction.RequestNotificationAccess)
         }
     }
 
-internal fun dockNotificationCardsSettingSubtitle(
-    enabled: Boolean,
+internal fun dockLiveAppSlotsSubtitle(
+    slots: Int,
     notificationAccessStatus: NotificationAccessStatus,
 ): String {
-    if (!enabled) {
-        return "Dock only shows what you pinned to it"
+    if (slots == 0) {
+        return "The dock's second side shows only now playing and the Stream button"
     }
 
     return when (notificationAccessStatus) {
-        NotificationAccessStatus.GRANTED -> "Dock shows apps with notifications beside your pinned ones"
-        NotificationAccessStatus.NOT_GRANTED -> "Notification cards are on, but access is not allowed"
-        NotificationAccessStatus.REVOKED -> "Notification cards are on, but access was revoked"
-        NotificationAccessStatus.UNKNOWN -> "Notification cards are on, but access has not been checked"
+        NotificationAccessStatus.GRANTED -> "Apps with something new sit beside your pinned ones and open the Stream"
+        NotificationAccessStatus.NOT_GRANTED -> "Live apps are on, but notification access is not allowed"
+        NotificationAccessStatus.REVOKED -> "Live apps are on, but notification access was revoked"
+        NotificationAccessStatus.UNKNOWN -> "Live apps are on, but notification access has not been checked"
     }
 }

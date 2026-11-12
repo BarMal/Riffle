@@ -1,13 +1,11 @@
 # The dock
 
-> **S9 (2026-10-24, [`workspaces-default.md`](workspaces-default.md)).** Workspaces are the launcher's home and the
-> Home/Library pair is retired as a user concept. **The dock pull opens the workspace menu** (Q9,
-> `workspaces-configuration.md` 11.5): same claim and direction, no re-orientation, no mode switch. The dock is the
-> layout's shared dock (pins and panel in the pool, `PoolDock`) with the shown workspace's override on top: device
-> class dock, then `WorkspaceDock.presentation` (hidden, edge, icon size), after the stranding rule (a workspace may
-> hide it only when a gesture opens the menu). The home surface reads the effective dock, so a hidden dock reserves
-> nothing and a moved one reserves its edge. The Home/Library text below is kept as history; it still describes the
-> code path used where no workspace menu exists.
+> **P5 (2026-11-12, [ADR 0003](../architecture/adr/0003-places-and-views.md)).** The Dock is the handle of the
+> Stream and the Library. Its two sides open their own worlds: the pinned side the static one (the Library), the dynamic
+> side the live one (the Stream). The dynamic side is no longer a notification strip or a Cards stage selector: it holds
+> live apps, now playing and the Stream button (see [The dynamic side](#the-dynamic-side-p5)). The pull no longer opens
+> the workspace menu or switches Home and Library; see [The dock is the handle](#the-dock-is-the-handle). The S9 and
+> Home/Library text below is kept as history where it is not restated.
 
 The dock is Riffle's central shortcut and recents surface, and the handle that opens the workspace menu (before S9:
 that moved between Home and Library). There is **one dock per device class: its content is shared by both modes, its edge
@@ -21,7 +19,7 @@ A single strip, anchored to one edge of the screen, holding two sections:
 - a **static** section of items the user pinned, which always show; and
 - a **dynamic** section of items that appear because something arrived.
 
-Pulling it away from its edge opens the workspace menu (S9; before, it switched between Home and Library, see
+Pulling it away from its edge opens the Library or the Stream, by the side the pull started on (see
 [The dock is the handle](#the-dock-is-the-handle)).
 
 Swiping it open reveals a **panel**: a small home screen using standard conventions, for widgets
@@ -68,22 +66,70 @@ draw, so the top edge returns for a Cards Home.
 
 ### The dock is the handle
 
-The dock pull is the only way to move between Home and Library (Decisions 3, 4, 9 in
-`modes-dock-handle-and-cards-plan.md`; #1207):
+Each side of the dock opens its own world (ADR 0003): the pinned side the Library, the dynamic side the Stream.
 
-- **Natural pull direction**: away from the dock's edge, toward the screen interior — a bottom
-  dock pulls up, a top dock down, a left dock right, a right dock left.
-- The pull starts on the dock body, never in the system-gesture inset; it tracks 1:1 and commits
-  past a dp distance or velocity threshold, otherwise springs back. It is interruptible.
-- During the pull the dock background fades with progress; on commit the dock's re-orientation
-  itself animates (dock-reorient decisions, follow-up to #1278) -- a darken-and-blur frost (real
-  blur on API 31+, darken alone below it) and a subtle perspective tilt while it swaps edge, its
-  own cross-axis extent easing rather than snapping, and its freshly-shown content held at low
-  alpha for a short reveal beat before resolving -- rather than the earlier hard cut to the
-  destination edge under a flat alpha fade. Reduced motion: a short crossfade, no tilt or hold.
-- Drags along the run still scroll the sections; long-press + drag still reorders or drags out.
-- Accessibility: a dock custom action ("Switch to Library" / "Switch to Home") and a keyboard
-  shortcut (Ctrl + the arrow of the pull direction) perform the same switch.
+| Action on the dock | Result |
+| --- | --- |
+| Tap a pinned app | Launches it |
+| Pull away from the edge, starting on the pinned side | Library (the app drawer until P7 reworks it) |
+| Pull away from the edge, starting on the dynamic side | Stream, tracking the finger |
+| The same pull on the dynamic side while the Stream shows | Home |
+| Tap the Stream button | Switches to the Stream, and back to Home from it |
+| Tap a live app | Stream, landed on that app's stack in the Notifications section |
+| Tap now playing | Stream, landed on the Now section |
+
+- **Natural pull direction**: away from the dock's edge, toward the screen interior -- a bottom dock pulls up, a top dock
+  down, a left dock right, a right dock left. It works the same on every edge, and a dock with a moved edge (a workspace
+  override) pulls away from that edge.
+- **Which side.** The side is where the finger landed, against where the dynamic section is drawn (it reports its
+  bounds); the divider counts as pinned, the padding at the dock's end as dynamic (`dockPullSideAt`). Without a Stream
+  there is no dynamic side and every pull opens the Library.
+- The pull starts on the dock body, never in the system-gesture inset, and is claimed past touch slop when it leads along
+  the pull direction before the long-press timeout; drags along the run still scroll the sections and long-press + drag
+  still reorders or drags out.
+- **The Stream pull** tracks the finger 1:1 over the window's extent along the pull: the Stream slides in from the dock's
+  edge while Home fades out under it. It commits on release by travel (30% of the travel) or velocity (600 dp/s toward the
+  interior, once it has moved 8 dp), otherwise springs back; both live in `GestureThresholds`
+  (`DOCK_PULL_*`) and `DockPullThresholds`. A finger that lands on a settling pull catches it and tracks from where it is.
+  From the Stream the same pull slides it away toward the interior and returns Home. Under reduced motion nothing slides:
+  Home and the Stream crossfade.
+- **The Library pull** moves nothing with the finger; it opens the Library when its release commits by the same rules.
+- The dock itself never moves, re-orients or fades with a pull: it is the handle you are holding.
+- **Accessibility.** The dock (and the Home surface root, so they exist when a layout hides the dock) offers the custom
+  actions "Open Stream" (or "Back to Home" while the Stream shows) and "Open Library"; **Ctrl + the arrow of the pull
+  direction** opens the Stream (or returns Home), **Ctrl + Shift + that arrow** opens the Library. Every dynamic entry is
+  a 48 dp target with a spoken label ("Messages, 3 new", "Now playing: <title>", "Stream"); the Stream button is selected
+  while the Stream shows.
+- Home gestures can be bound to "Stream" (`OPEN_STREAM`) and "Library" (`OPEN_LIBRARY`); neither is bound by default.
+- The workspace menu is no longer reached by the pull. Its "Workspace menu" accessibility action stays on the dock and
+  the Home root until the menu is removed (P8).
+- A workspace may hide its dock only while a gesture opens the Stream or the Library (the stranding rule, restated for the
+  new handle).
+- Fallback, to be decided on a device: if the dynamic side is too narrow a target with one or two entries, the pull may
+  start anywhere on the dock and choose the Library or the Stream by the half it started on.
+
+### The dynamic side (P5)
+
+The dock's second side fills itself, from what the Stream already shows -- so Hide rules, content levels and source
+on/off apply and there is no second notification pipeline (`DockDynamicSide` in `core/domain`):
+
+1. **Live apps**: the apps with something new, which are the groups of the Stream's Notifications section, newest first
+   (ties by group key), at most **live app slots** of them (zero to five, default three). A pinned app can appear here
+   too: tapping the pinned icon launches it, tapping the live entry opens the Stream on its stack. The entry carries the
+   count as a badge.
+2. **Now playing**: one entry while a media session is active (the Now section's media). It is not counted in the slots.
+3. **The Stream button**: always last, so the handle exists when nothing is live.
+
+Events, to-dos and feeds get no entry, because they are always present in the Stream. Each entry is a pinned icon's
+size (never under a 48 dp target) and a spotlight source like the pinned icons; the side scrolls on its own when it has
+more entries than room.
+
+**Live app slots** (Settings > Dock) replaces "Dock notifications" and "Notification space", and the workspace dock
+dynamic section. A dock stored before it decodes: notification cards on keeps the old slot count (clamped), off becomes
+none, nothing stored takes the default.
+
+**Cards.** The dock no longer lists Cards' stages; its stage chips (the spine) are always drawn, so every stage stays
+reachable by touch.
 
 #### Migrating per-mode docks
 
@@ -114,45 +160,25 @@ the dock's extent follows from them rather than being fixed.
 
 ### Static and dynamic sections
 
-The **static** section is what the user pinned. It always shows. **A tap opens the app, in every
-mode** -- muscle memory does not change with the mode (#1212). A long-press opens the item's menu;
-the active mode may add items to it. In Cards those are **Show stage** (when the app has a stage)
-and **Pin stage** (when its stage is not pinned yet), ahead of the app's own shortcuts.
+The **static** section is what the user pinned. It always shows. **A tap opens the app, in every mode** -- muscle memory
+does not change with the mode (#1212). A long-press opens the item's menu; the active mode may add items to it. In Cards
+those are **Show stage** (when the app has a stage) and **Pin stage** (when its stage is not pinned yet), ahead of the
+app's own shortcuts.
 
-The **dynamic** section's meaning depends on the mode:
+The **dynamic** section is the same in every mode: live apps, now playing and the Stream button, see
+[The dynamic side](#the-dynamic-side-p5).
 
-- in grid modes it shows an entry when **a notification has arrived** for an app the dock is not
-  already showing, and a tap opens that app -- there is nowhere on the launcher for its content. It
-  is opt-in, per device class;
-- in Cards it is **the stage selector** (Decision 5): "All" is always the first entry, then every
-  stage in the planner's order -- pinned stages in pin order, then the rest newest first, including
-  a pinned stage with nothing in it. A tap brings that stage (or the merged view) forward. The entry
-  showing carries a selection ring and `selected` semantics, and is scrolled into view whenever the
-  selection changes. It shows whether or not the grid-mode notification switch is on, because in
-  Cards it is navigation rather than a notification list. A "Now" entry (#1216) will go ahead of
-  "All"; `CardsStageSelector.leadingEntries` is where it plugs in.
+The two sections are sized from two independent, per-layout settings (both per device class, shared by every mode):
+**capacity** caps how many pinned icons show before the static side scrolls, and **live app slots** (plus now playing and
+the Stream button) caps how many dynamic entries show before that section scrolls. The run itself is one shared strip,
+and the dynamic side goes first when it is tight: it always draws in full up to its slot count, and the static side is
+sized from whatever room that leaves, scrolling the rest rather than the other way around -- except that the static side
+always keeps room for at least one pinned icon, so a busy dynamic side can scroll the rest of the pinned icons away but
+never make every pinned icon disappear. A settings-screen summary states the result in one line ("Shows up to 7 pinned
+icons, then 3 live apps, now playing and the Stream button").
 
-Selecting a stage from anywhere -- the selector, **Show stage**, a spine chip -- leaves the merged
-view. Opening an app stays on the stage's header overflow as well as on the icon itself.
-
-The two sections are sized from two independent, per-layout settings (both per device class, shared
-by every mode): **capacity** caps how many pinned icons show before the static side scrolls, and
-**notification slot count** caps how many notification icons show before the dynamic section
-scrolls. The two settings are independent ceilings, but the run itself is one shared strip, and
-notifications go first when it is tight: the dynamic section always draws in full up to its slot
-count, and the static side is sized from whatever room that leaves, scrolling the rest rather than
-the other way around -- except that the static side always keeps room for at least one pinned icon,
-so a busy notification section can scroll the rest of the pinned icons away but never make every
-pinned icon disappear. A dock with nothing waiting sizes the static side exactly as if the dynamic
-section did not exist. A settings-screen summary states the resulting total and its split in one
-line (for example, "Shows up to 10 icons: 7 pinned, 3 for notifications") so the two sliders read as
-one budget.
-
-Each section scrolls on its own: the static side scrolls independently when pinned items exceed
-whatever capacity the dynamic section has left it, and the dynamic section scrolls independently
-when notifications exceed the slot count. Fewer notifications than the slot count shrinks the
-section instead of padding it out to a fixed width -- an entry is always exactly a pinned icon's
-size, never bigger or smaller to fit the space.
+Each section scrolls on its own. Fewer entries than the slot count shrinks the section instead of padding it out to a
+fixed width -- an entry is always exactly a pinned icon's size, never bigger or smaller to fit the space.
 
 ### The merged All-notifications view
 
@@ -213,8 +239,8 @@ section does that job, so the rail is gone (#1159).
 | --- | --- |
 | One dock per device class, shared by every mode | Done (#1205): one `DockModel` per device class, per-mode docks migrated, and one `HomeDockHost` drawn outside the mode surface in `HomeDestination`, so a mode switch keeps the same dock instance in the same place. Each mode reads the dock through a `HomeDockInterpreter` (Cards: the stage selector and "Show stage"/"Pin stage" menu extras, #1212); the grid and Cards lay out in the room the host reserves. The dock's thickness and edge hold across a switch; its run follows what the mode puts on the dynamic side |
 | Per-mode dock edge, content still shared | **In progress** (#1242) — model, persistence and migration done (#1246); `HomeDestination` draws the dock on Library's own edge in Library and reserves room on that edge (#1207). There is still one edge setting: choosing an edge sets it for both surfaces until the setting is split |
-| Dock pull switches Home ↔ Library, dock re-orients to the target edge | Done (#1206, #1207) — `dockPullInput` on the dock body drives `DockPullTransitionController`; the dock and outgoing surface track the finger, the incoming surface follows, the background fades and returns, and a commit moves the dock to the destination's edge and orientation before the shell switches mode. Reduced motion crossfades. Accessibility action and Ctrl+arrow shortcut are equivalents. The target is `ModePair.counterpart`. See gestures.md |
-| Re-orientation frost (dock itself, and the whole screen) | Done — the dock darkens and blurs proportional to pull/settle progress (`dockReorientFrost`), tilts slightly with `cameraDistance` as it moves, and holds briefly before its content resolves after a commit. The same progress also drives `screenReorientFrost` on the Box wrapping both mode surfaces: two edge bands, dark at the very edge fading to transparent, grow in from the screen edges perpendicular to the pull (top/bottom for a vertical pull, left/right for a horizontal one) and recede on settle, never meeting in the middle. Reduced motion skips all of it. |
+| Dock pull by side: Library from the pinned side, the Stream from the dynamic side | **Done (P5)** — `dockPullInput` on the dock body drives `DockPullState` (`DockPull.kt`), which holds a pure `DockPullDrag`; `dockPullSideAt` and `dockPullDestinationFor` (`core/domain/.../dockpull/`) decide the side and where it leads, `streamPullFrame` how the Stream and Home are drawn, `HomeDockPullBinding.kt` wires it. The Home ↔ Library re-orient pull (`DockPullTransitionController`, `ModePair.counterpart`) is deleted. See gestures.md |
+| Re-orientation frost (dock itself, and the whole screen) | **Removed (P5)** — the dock no longer re-orients or moves with a pull, so there is nothing to frost |
 | Alternative triggers deleted (drawer swipe, three-finger mode gestures, dock swipe-up) | Done (#1241) |
 | Mode ring collapsed to a fixed Home ↔ Library pair per device class | Done (#1241) — `ModePair` (Home is Cards or Standard, Library the other side; `ModePair.counterpart` is where a pull leads), Settings > Layout > Modes > "Home screen: Cards / Standard"; stored `modeRings` and older `preferredModes`/`lastNonCardsModes` migrate on decode |
 | Panel expansion disabled behind a flag | Done (#1241) — `DockShelfExpansion.enabled` |
@@ -222,11 +248,11 @@ section does that job, so the rail is gone (#1159).
 | Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards follows the same resolution now |
 | Sized by settings | Done |
 | Static section | Done |
-| Dynamic section exists, opt-in per layout | Done (#1154), gated on the existing per-layout switch |
-| Dynamic section means "a notification arrived" | Done (#1162) — de-duplicated against the static side in every mode |
+| Dynamic side exists in every layout | **Done (P5)** — live apps, now playing and the Stream button; a dock with no Stream host has none |
+| Dynamic side means "something new, now playing, and the way to the Stream" | **Done (P5)** — derived from the Stream's Notifications and Now sections (`DockDynamicSide`), so Hide rules and privacy already apply; not de-duplicated against pinned apps, because a live entry opens the Stream and a pinned icon launches the app |
 | Static tap opens the app in every mode; Cards stage on long-press | Done (#1212) |
-| Cards dynamic section is the stage selector ("All" first, every stage, selection ring, auto-scroll) | Done (#1212) behind the neutral `Delegate` intent; "Now" entry pending #1216 |
-| Static and dynamic sections are sized independently | Done — separate per-layout settings (capacity, notification slot count); notifications draw in full first, the static side is sized from what is left |
+| Cards dynamic section is the stage selector | **Removed (P5)** — the dynamic side is the same in every mode; Cards' stage chips are always drawn |
+| Static and dynamic sections are sized independently | Done — separate per-layout settings (capacity, live app slots); the dynamic side draws in full first, the static side is sized from what is left |
 | Settings summarise the total and its split | Done — one line at the top of the dock settings section |
 | Merged All-notifications view reachable | Done (#1212) — always the selector's first entry; optional in the compact swipe order |
 | Visible-before-overflow, scroll for the rest | Done — each section scrolls independently within its own setting |
@@ -234,7 +260,7 @@ section does that job, so the rail is gone (#1159).
 | Panel exists, standard conventions | Done — a real `LauncherPage` on the same grid machinery as a home page |
 | Cards expanded shelf is panel-only | Done (#1166) — the notification card row is dropped there, the panel stays |
 | Shelf expansion | **Switched off** (plan Decision 11) behind `DockShelfExpansion.enabled`; code kept |
-| Workspace menu from the dock | **Done** (S9): the dock pull, the dock affordance, the "Workspace menu" accessibility action (dock and home root) and Ctrl+arrow open it; `WorkspaceMenuFeature` is deleted. See gestures.md "Workspace menu (S9)" |
+| Workspace menu from the dock | **Retired (P5)** — the pull and the Ctrl+arrow shortcut no longer open it; its "Workspace menu" accessibility action (dock and home root) stays until P8 removes the menu |
 | Per-workspace dock overrides on the home | **Done** (S9): `withWorkspaceHome` applies `EffectiveDock` to the dock the home draws (render only; Settings > Dock edits the shared dock) |
 | Dock swipe-up gesture action | **Removed** (plan Decision 9) — the dock pull will be the only mode-transition trigger |
 | Panel configurable: size, grid, padding | **Not started** |
@@ -248,13 +274,15 @@ section does that job, so the rail is gone (#1159).
   app; its stage is on the long-press menu and in the selector.
 - **The rail's per-stage snippet.** The rail showed a line of the most recent card per stage. A dock
   entry is one icon wide and has nowhere to put it, so that is lost with no replacement.
-- **The selector's width budget.** In Cards the dynamic section lists every stage but is still sized
-  by the notification slot count, so most stages are reached by scrolling it. Whether Cards should
-  get its own, larger budget wants hands-on time.
+- **A narrow dynamic side (P5).** With one or two entries the dynamic side is a small target for a pull. If it proves
+  too narrow on a device, the pull may start anywhere on the dock and choose its destination by the half it started on.
+- **No de-duplication.** A live app that is also pinned shows on both sides; the two taps differ (launch vs. the Stream
+  on its stack). Revisit if it reads as the same app twice.
 
 ## Change checklist
 
 When changing the dock, check that: the two sections still read as one strip; the dynamic section
 still draws in full before the static side is sized; nothing shrinks below a pinned icon's size to
 fit; the behaviour still holds on every edge and in RTL; the pull still works in its natural
-direction on every edge; and a layout that has the dynamic section switched off is unaffected.
+direction on every edge; the Stream button is still last; and a layout with no live app slots still has its Stream button
+and now playing.

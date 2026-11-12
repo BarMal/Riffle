@@ -12,16 +12,6 @@ class DockConfigurationEngine {
             ),
         )
 
-    fun setDockNotificationCardsEnabled(
-        layout: HomeLayout,
-        enabled: Boolean,
-    ): DockEditResult =
-        DockEditResult.Updated(
-            layout.copy(
-                dock = layout.dock.copy(showNotificationCards = enabled),
-            ),
-        )
-
     fun setDockExpandable(
         layout: HomeLayout,
         expandable: Boolean,
@@ -212,17 +202,17 @@ class DockConfigurationEngine {
             else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_ITEM_SPACING)
         }
 
-    fun setDockNotificationSlotCount(
+    fun setDockLiveAppSlots(
         layout: HomeLayout,
-        slotCount: Int,
+        slots: Int,
     ): DockEditResult =
-        when (slotCount) {
-            in MIN_DOCK_NOTIFICATION_SLOT_COUNT..MAX_DOCK_NOTIFICATION_SLOT_COUNT ->
+        when (slots) {
+            in MIN_DOCK_LIVE_APP_SLOTS..MAX_DOCK_LIVE_APP_SLOTS ->
                 DockEditResult.Updated(
-                    layout.copy(dock = layout.dock.copy(notificationSlotCount = slotCount)),
+                    layout.copy(dock = layout.dock.copy(liveAppSlots = slots)),
                 )
 
-            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_NOTIFICATION_SLOT_COUNT)
+            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_LIVE_APP_SLOTS)
         }
 
     fun setDockHomeControlsSpacing(

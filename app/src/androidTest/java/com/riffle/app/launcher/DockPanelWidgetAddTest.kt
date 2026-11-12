@@ -99,7 +99,7 @@ class DockPanelWidgetAddTest {
                 dock =
                     standardLayout.dock.copy(
                         items = listOf(docked),
-                        showNotificationCards = false,
+                        liveAppSlots = 0,
                         panel =
                             LauncherPage(
                                 id = LauncherPageId("dock-panel"),

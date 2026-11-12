@@ -5,16 +5,13 @@ data class DockModel(
     val capacity: Int,
     val items: List<LauncherItem> = emptyList(),
     val isEnabled: Boolean = true,
-    val showNotificationCards: Boolean = false,
     /**
-     * How many notification icons show at once before that section scrolls.
-     *
-     * Notifications are drawn in full whenever the dock's run has room for it, ahead of the pinned
-     * icons: a busy notification section scrolls [capacity]'s icons out of the way rather than
-     * getting squeezed down itself. Fewer notifications than this shrinks the section rather than
-     * padding it out to the full count; more scrolls.
+     * How many live apps (apps with something new) the dynamic side shows, between [MIN_DOCK_LIVE_APP_SLOTS] (none:
+     * the side holds only now playing and the Stream button) and [MAX_DOCK_LIVE_APP_SLOTS]. It replaces the earlier
+     * "show notification cards" switch and "notification slot count" (ADR 0003, The Dock is the handle); the dynamic
+     * side is drawn in full ahead of the pinned icons, and more live apps than this are reached in the Stream.
      */
-    val notificationSlotCount: Int = DEFAULT_DOCK_NOTIFICATION_SLOT_COUNT,
+    val liveAppSlots: Int = DEFAULT_DOCK_LIVE_APP_SLOTS,
     val iconSizeDp: Int = DEFAULT_DOCK_ICON_SIZE_DP,
     val backgroundAlphaPercent: Int = DEFAULT_DOCK_BACKGROUND_ALPHA_PERCENT,
     val backgroundSizing: DockBackgroundSizing = DockBackgroundSizing.DYNAMIC,
@@ -85,9 +82,9 @@ enum class DockAlignment {
     END,
 }
 
-const val DEFAULT_DOCK_NOTIFICATION_SLOT_COUNT = 3
-const val MIN_DOCK_NOTIFICATION_SLOT_COUNT = 1
-const val MAX_DOCK_NOTIFICATION_SLOT_COUNT = 5
+const val DEFAULT_DOCK_LIVE_APP_SLOTS = 3
+const val MIN_DOCK_LIVE_APP_SLOTS = 0
+const val MAX_DOCK_LIVE_APP_SLOTS = 5
 const val MIN_DOCK_CAPACITY = 1
 const val MAX_DOCK_CAPACITY = 12
 const val DEFAULT_DOCK_ICON_SIZE_DP = 48
@@ -105,3 +102,22 @@ const val MAX_DOCK_CORNER_RADIUS_DP = 48
 const val DEFAULT_DOCK_HOME_CONTROLS_SPACING_DP = 8
 const val MIN_DOCK_HOME_CONTROLS_SPACING_DP = 0
 const val MAX_DOCK_HOME_CONTROLS_SPACING_DP = 48
+
+/**
+ * The live app slots a dock stored before the Stream means, from the two settings they replaced: "show notification
+ * cards" and "notification slot count". Showing the cards keeps the slot count (clamped); not showing them keeps the
+ * user's choice of no live apps; a dock that never stored either takes the default.
+ */
+fun dockLiveAppSlotsFromLegacy(
+    showNotificationCards: Boolean?,
+    notificationSlotCount: Int?,
+): Int =
+    when (showNotificationCards) {
+        true ->
+            (notificationSlotCount ?: DEFAULT_DOCK_LIVE_APP_SLOTS).coerceIn(
+                MIN_DOCK_LIVE_APP_SLOTS,
+                MAX_DOCK_LIVE_APP_SLOTS,
+            )
+        false -> MIN_DOCK_LIVE_APP_SLOTS
+        null -> DEFAULT_DOCK_LIVE_APP_SLOTS
+    }

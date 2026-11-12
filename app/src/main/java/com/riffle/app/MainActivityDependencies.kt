@@ -62,6 +62,7 @@ import com.riffle.app.launcher.rss.AndroidFeedTransport
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
 import com.riffle.app.launcher.rss.FeedBackgroundRefreshScheduler
 import com.riffle.app.launcher.rss.FeedRefreshCoordinator
+import com.riffle.app.launcher.rss.RepositoryFeedArtworkLoader
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.sources.ContentSourceDependencies
 import com.riffle.app.launcher.sources.FeedSourceDependencies
@@ -82,6 +83,7 @@ import com.riffle.app.launcher.stream.ManualChangeSource
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.stream.StreamPlatform
 import com.riffle.app.launcher.stream.StreamPostureHolder
+import com.riffle.app.launcher.stream.largeIconBytesFor
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
@@ -439,7 +441,15 @@ internal class MainActivityDependencies(
             provider = provider,
             layouts = streamLayoutRepository,
             actions = platform.actions,
-            imageLoader = AndroidStreamImageLoader(activity.packageManager),
+            imageLoader =
+                AndroidStreamImageLoader(
+                    activity.packageManager,
+                    notificationArtwork = {
+                            handle ->
+                        activeNotificationRepository.activeNotifications().largeIconBytesFor(handle)
+                    },
+                    feedArtwork = RepositoryFeedArtworkLoader(feedArticleCacheRepository)::artworkFor,
+                ),
             requestAccess = requestAccess,
             enableSources = { ids -> ids.forEach { id -> enablement.setEnabled(id, true) } },
             posture = posture,

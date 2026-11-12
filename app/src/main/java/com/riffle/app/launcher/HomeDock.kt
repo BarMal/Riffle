@@ -481,8 +481,9 @@ internal fun dockContainerMainAxisDp(
 /**
  * How much of the dock's run the dynamic section gets.
  *
- * Notifications go first: what actually shows is capped to [notificationSlotCount] tiles' worth
- * (fewer entries than that shrinks the section instead of padding it out; more scrolls, see
+ * The dynamic side goes first: what actually shows is capped to [slotLimit] tiles' worth (the live app
+ * slots, plus now playing and the Stream button; fewer entries than that shrinks the section instead of
+ * padding it out; more scrolls, see
  * [DockDynamicSection]), drawn in full whenever the run has room for it -- the static side is what
  * gives way, sized afterwards from whatever this leaves (see [dockContainerMainAxisDp]'s
  * `runMainAxisCapDp`), not the other way around. [maxRunMainAxisDp] only clamps this section's own
@@ -498,12 +499,12 @@ internal fun dockContainerMainAxisDp(
  */
 internal fun dockDynamicSectionMainAxisDp(
     entryCount: Int,
-    notificationSlotCount: Int,
+    slotLimit: Int,
     entryExtentDp: Int,
     entrySpacingDp: Int,
     maxRunMainAxisDp: Int,
 ): Int {
-    val visibleCount = entryCount.coerceAtMost(notificationSlotCount.coerceAtLeast(0))
+    val visibleCount = entryCount.coerceAtMost(slotLimit.coerceAtLeast(0))
     if (visibleCount <= 0 || entryExtentDp <= 0) {
         return 0
     }

@@ -187,7 +187,7 @@ class HomeLayoutDockMigrationEdgeCaseTest {
                 DockModel(capacity = 5, iconSizeDp = 40, items = listOf(app("shared"), app("library-only")))
 
             LauncherViewMode.CARD_INTERFACE ->
-                DockModel(capacity = 6, showNotificationCards = true, items = listOf(app("shared"), app("cards-only")))
+                DockModel(capacity = 6, liveAppSlots = 4, items = listOf(app("shared"), app("cards-only")))
         }
 
     private fun panelOf(vararg items: LauncherItem): LauncherPage =

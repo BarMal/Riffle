@@ -28,6 +28,15 @@ object GestureThresholds {
      */
     const val DOCK_SHELF_CLAIM_DP: Float = 9f
 
+    /** How much of its travel a Dock pull has to come to commit on release (the Stream, or the Library). */
+    const val DOCK_PULL_COMMIT_FRACTION: Float = 0.3f
+
+    /** Speed along the pull, toward the screen interior, at which a release commits whatever the distance. */
+    const val DOCK_PULL_COMMIT_VELOCITY_DP_PER_SECOND: Float = 600f
+
+    /** How far a pull must have moved before its speed counts, so a tap or a twitch on the Dock never commits. */
+    const val DOCK_PULL_MINIMUM_FLING_DISTANCE_DP: Float = 8f
+
     /**
      * Pointer count at which the home gesture layer claims the touch outright, ahead of any child
      * (card stack, pager): a three-finger swipe is a home-page gesture wherever it starts.

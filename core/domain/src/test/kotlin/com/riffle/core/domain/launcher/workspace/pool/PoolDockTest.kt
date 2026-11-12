@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.workspace.pool
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -152,6 +153,28 @@ class PoolDockTest {
             assertEquals(pool.dock, decoded.pool.dock)
             assertEquals(emptyList(), decoded.issues)
         }
+    }
+
+    @Test
+    fun aDockStoredWithTheEarlierCardSettingsDecodesToLiveAppSlots() {
+        val encoded = PoolCodec.encode(pool)
+        val dock = encoded.fields.getValue("dock") as StoredValue.Obj
+        val settings = dock.fields.getValue("settings") as StoredValue.Obj
+
+        fun slotsFor(fields: Map<String, StoredValue>): Int {
+            val replaced =
+                StoredValue.Obj(
+                    encoded.fields + ("dock" to StoredValue.Obj(dock.fields + ("settings" to StoredValue.Obj(fields)))),
+                )
+            return PoolCodec.decode(replaced).pool.dock!!.settings.liveAppSlots
+        }
+
+        val legacy = settings.fields - "liveSlots"
+        assertEquals(4, slotsFor(legacy + ("cards" to StoredValue.Bool(true)) + ("cardSlots" to StoredValue.Num(4))))
+        assertEquals(0, slotsFor(legacy + ("cards" to StoredValue.Bool(false)) + ("cardSlots" to StoredValue.Num(4))))
+        assertEquals(5, slotsFor(legacy + ("cards" to StoredValue.Bool(true)) + ("cardSlots" to StoredValue.Num(99))))
+        assertEquals(DEFAULT_DOCK_LIVE_APP_SLOTS, slotsFor(legacy))
+        assertEquals(2, slotsFor(legacy + ("cards" to StoredValue.Bool(false)) + ("liveSlots" to StoredValue.Num(2))))
     }
 
     @Test

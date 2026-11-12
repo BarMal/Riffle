@@ -81,7 +81,7 @@ class DockCompositionPlannerTest {
                             listOf(
                                 FolderItem(id = LauncherItemId("folder"), label = "Social", items = listOf(chat)),
                             ),
-                        showNotificationCards = true,
+                        liveAppSlots = 3,
                     ),
                 groups = listOf(group("com.example.chat")),
                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
@@ -96,7 +96,7 @@ class DockCompositionPlannerTest {
         // access this dock would never use.
         val composition =
             planner.plan(
-                dock = dock(pinned = emptyList(), showNotificationCards = false),
+                dock = dock(pinned = emptyList(), liveAppSlots = 0),
                 groups = listOf(group("com.example.chat")),
                 notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
             )
@@ -171,12 +171,12 @@ class DockCompositionPlannerTest {
 
     private fun dock(
         pinned: List<String>,
-        showNotificationCards: Boolean = true,
+        liveAppSlots: Int = 3,
     ): DockModel =
         DockModel(
             capacity = 5,
             items = pinned.map(::shortcut),
-            showNotificationCards = showNotificationCards,
+            liveAppSlots = liveAppSlots,
         )
 
     private fun shortcut(packageName: String): AppShortcutItem =

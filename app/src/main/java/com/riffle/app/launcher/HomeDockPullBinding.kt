@@ -7,215 +7,210 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
-import com.riffle.core.domain.launcher.dockpull.DockPullFrame
-import com.riffle.core.domain.launcher.dockpull.DockPullTransitionState
-import com.riffle.core.domain.launcher.dockpull.dockPullReorientEdgeBandFraction
-import com.riffle.core.domain.launcher.dockpull.dockPullReorientFrostStrength
-import com.riffle.core.domain.launcher.dockpull.dockPullReorientTiltDegrees
-import com.riffle.core.domain.launcher.dockpull.frame
+import com.riffle.core.domain.launcher.dockpull.StreamPullFrame
+import com.riffle.core.domain.launcher.dockpull.dockPullDestinationFor
+import com.riffle.core.domain.launcher.dockpull.dockPullSideAt
 import com.riffle.core.domain.launcher.dockpull.pullDirection
+import com.riffle.core.domain.launcher.dockpull.streamPullFrame
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeEditMode
-import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.home.ModeDockEdges
-import com.riffle.core.domain.launcher.home.ModeSurface
-import com.riffle.core.domain.launcher.home.modeSurface
 
-/** The modes and edges a dock pull runs between, as [HomeDestination] resolved them. */
-internal class HomeDockPullPlan(
-    val currentMode: LauncherViewMode,
-    val counterpartMode: LauncherViewMode,
-    val shownMode: LauncherViewMode,
-    val edges: ModeDockEdges,
+/** What [rememberHomeDockPullBinding] needs to know about the Stream. */
+internal class StreamPullInputs(
+    /** Whether the shell has a Stream; without one the Dock has no dynamic side and every pull opens the Library. */
+    val available: Boolean,
+    /** Whether the Stream is showing now, counting a committed switch the shell has not shown yet. */
+    val shown: Boolean,
 )
 
 /**
- * How [HomeDestination] wires the dock pull (#1206, #1207) into the dock and the two surfaces.
+ * How [HomeDestination] wires the Dock pull into the Dock and the two surfaces (ADR 0003, The Dock is the handle).
  *
- * Every per-frame value (the dock's translation and background alpha, each surface's slide or
- * crossfade) is read inside a graphics layer or draw block from [frame], so a pull redraws without
- * recomposing; composition only reads what changes at a pull's start, release and end ([dockEdge],
- * [isTransitioning]).
+ * Every per-frame value (the Stream's slide, Home's fade) is read inside a graphics layer from [frame], so a pull
+ * redraws without recomposing; composition only reads what changes at a pull's start and end ([isTransitioning]).
  */
-@Suppress("LongParameterList")
 internal class HomeDockPullBinding(
-    /** The edge the dock is drawn on now: the shown surface's at rest, the frame's during a pull. */
-    val dockEdge: DockPosition,
-    /** For the destination's root: measures the window, carries the keyboard shortcut and the menu action. */
+    /** For the destination's root: measures the window, carries the keyboard shortcuts and accessibility actions. */
     val rootModifier: Modifier,
-    /** For the dock body: the pull gesture, the accessibility action and the dock's translation. */
+    /** For the Dock body: the pull gesture and the accessibility actions. */
     val dockModifier: Modifier,
-    /**
-     * For the Box wrapping both mode surfaces (never the dock itself): the screen-wide reorient
-     * frost (extension to the "iPhone Duo" reference, follow-up to #1279) -- edge bands that grow in
-     * from the two screen edges perpendicular to the pull, proportional to the same progress the
-     * dock's own frost uses. See [screenReorientFrost].
-     */
-    val screenFrostModifier: Modifier,
-    val dockBackgroundAlpha: () -> Float,
-    /**
-     * The freshly-committed dock's reveal hold (dock-reorient decisions, follow-up to #1278): 1 at
-     * rest, snapped low then eased back to 1 once a COMMIT swaps the shown mode, read at draw time
-     * like [dockBackgroundAlpha] so it animates without recomposing the dock's content.
-     */
-    val dockContentRevealAlpha: () -> Float,
-    private val frame: State<DockPullFrame>,
-    private val transitioning: State<Boolean>,
-    private val pullDirection: DockPullDirection,
+    private val dockPull: DockPullState,
+    private val frame: State<StreamPullFrame>,
 ) {
-    /** Whether a pull or its settle is running; changes only at a pull's start and end. */
+    /** Whether the Stream is being pulled in or out (or is settling after it): both surfaces are composed then. */
     val isTransitioning: Boolean
-        get() = transitioning.value
+        get() = dockPull.running
 
-    /**
-     * For a mode surface: the outgoing one moves with the dock, the incoming one follows in from the
-     * side the dock came from; under reduced motion they crossfade in place. Identity at rest.
-     */
-    fun surfaceModifier(isOutgoing: Boolean): Modifier =
+    /** For the Home surface: it fades as the Stream comes in, and back in as it leaves. Identity at rest. */
+    fun homeModifier(): Modifier =
         Modifier.graphicsLayer {
-            if (transitioning.value) {
+            if (dockPull.running) alpha = frame.value.homeAlpha
+        }
+
+    /** For the Stream: it slides in from the Dock's edge (or out toward the interior); reduced motion fades it. */
+    fun streamModifier(): Modifier =
+        Modifier.graphicsLayer {
+            if (dockPull.running) {
                 val current = frame.value
-                val surfaceFrame = if (isOutgoing) current.outgoing else current.incoming
-                translationX = pullDirection.unitX * surfaceFrame.offsetFraction * size.width
-                translationY = pullDirection.unitY * surfaceFrame.offsetFraction * size.height
-                alpha = surfaceFrame.alpha
+                val direction = dockPull.direction
+                translationX = direction.unitX * current.streamOffsetFraction * size.width
+                translationY = direction.unitY * current.streamOffsetFraction * size.height
+                alpha = current.streamAlpha
             }
         }
 }
 
 @Composable
+@Suppress("LongParameterList")
 internal fun rememberHomeDockPullBinding(
     state: LauncherShellState,
-    plan: HomeDockPullPlan,
+    dockEdge: DockPosition,
+    stream: StreamPullInputs,
     dockPull: DockPullState,
+    hostState: HomeDockHostState,
     onAction: (LauncherShellAction) -> Unit,
-    /**
-     * The workspace menu (S9, Q9). When present the dock pull, its keyboard shortcut and the dock's accessibility
-     * action open the menu instead of switching between Home and Library; null (no workspaces, tests of the mode pull)
-     * keeps the mode pull.
-     */
+    /** The workspace menu stays reachable by its accessibility action until P8 removes it; null when there is none. */
     onOpenWorkspaceMenu: (() -> Unit)? = null,
-    /** False while a surface that is not Home or Library (the Stream) is up: the pull is inert there. */
-    pullEnabled: Boolean = true,
 ): HomeDockPullBinding {
     val rootSize = remember { mutableStateOf(IntSize.Zero) }
     val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val currentSurface = plan.currentMode.modeSurface
-    val pullDirection = plan.edges.edgeFor(currentSurface).pullDirection
-    // No pull while the layout is being edited (long-press + drag moves dock items then) or a
-    // widget is being placed.
-    val browsing = state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen
-    val menu = rememberDockMenuPull(browsing, pullDirection, onOpenWorkspaceMenu)
-    // With the workspace menu the pull no longer moves between modes, so the reorient transition never starts; while
-    // the workspaces are still loading (no menu yet) it is inert rather than the old mode switch.
-    val canPull = pullEnabled && browsing && !menu.isPresent && LocalDockModePullEnabled.current
-    val edges = plan.edges
-    val frameState = remember(dockPull, edges) { derivedStateOf { dockPull.transition.frame(edges) } }
-    val transitioning = remember(dockPull) { derivedStateOf { dockPull.transition !is DockPullTransitionState.Idle } }
-    val runningEdge =
-        remember(frameState, transitioning) {
-            derivedStateOf { frameState.value.dockEdge.takeIf { transitioning.value } }
-        }
-    val committedFrom = state.homeLayoutSet
-    val counterpartMode = plan.counterpartMode
+    val direction = dockEdge.pullDirection
+    // No pull while the layout is being edited (long-press + drag moves dock items then) or a widget is being placed.
+    val canPull = state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen
+    val latestOnAction = rememberUpdatedState(onAction)
     SideEffect {
-        dockPull.onCommitted = {
-            dockPull.pending = DockPullPendingSwitch(mode = counterpartMode, fromSet = committedFrom)
-            onAction(LauncherShellAction.SelectLauncherViewMode(counterpartMode))
+        dockPull.onCommitted = { destination ->
+            latestOnAction.value(
+                when (destination) {
+                    DockPullDestination.LIBRARY -> LauncherShellAction.OpenAppDrawer
+                    DockPullDestination.STREAM -> LauncherShellAction.OpenStream
+                    DockPullDestination.HOME -> LauncherShellAction.OpenHome
+                },
+            )
         }
     }
-    val host = rememberDockPullGestureHost(dockPull, canPull, currentSurface, reducedMotion, rootSize)
-    val switchNow = { dockPull.switchNow(currentSurface, pullDirection, reducedMotion) }
+    val frameState =
+        remember(dockPull, reducedMotion) {
+            derivedStateOf { streamPullFrame(dockPull.progress, dockPull.opening, reducedMotion) }
+        }
+    val dockCoordinates = remember { DockCoordinates() }
+    val host =
+        rememberDockPullGestureHost(
+            dockPull = dockPull,
+            canPull = canPull,
+            reducedMotion = reducedMotion,
+            rootSize = rootSize,
+            direction = direction,
+            stream = stream,
+            hostState = hostState,
+            dockCoordinates = dockCoordinates,
+        )
+    val actions = dockPullActions(dockPull, canPull, stream, direction, reducedMotion)
     val dockModifier =
         Modifier
             .testTag(HOME_DOCK_PULL_TEST_TAG)
-            .then(dockPullActionModifier(canPull, dockPullActionLabel(currentSurface), switchNow))
+            .then(actions.modifier)
             .then(workspaceMenuActionModifier(onOpenWorkspaceMenu))
-            .then(menu.modifier)
-            // Before the translation, so the finger is measured against the dock's resting place.
-            .dockPullInput(pullDirection, host)
-            .graphicsLayer {
-                val current = frameState.value
-                val direction = current.dockEdge.pullDirection
-                val window = rootSize.value
-                translationX = direction.unitX * current.dockOffsetFraction * window.width
-                translationY = direction.unitY * current.dockOffsetFraction * window.height
-                // Perspective tilt (dock-reorient decisions): a fold-around-a-corner read rather than
-                // a flat translate, proportional to the same frost strength and easing back to flat as
-                // it clears. Skipped entirely under reduced motion.
-                if (!reducedMotion) {
-                    val tiltDegrees = dockPullReorientTiltDegrees(current.dockBackgroundAlpha)
-                    cameraDistance = DOCK_REORIENT_CAMERA_DISTANCE * density
-                    rotationX = direction.unitY * tiltDegrees
-                    rotationY = -direction.unitX * tiltDegrees
-                }
-            }
-            .dockReorientFrost(
-                isActive = transitioning.value && !reducedMotion,
-                strengthProvider = { dockPullReorientFrostStrength(frameState.value.dockBackgroundAlpha) },
-            )
-    val screenFrostModifier = screenFrostModifier(transitioning.value && !reducedMotion, pullDirection, frameState)
+            .onGloballyPositioned { coordinates -> dockCoordinates.coordinates = coordinates }
+            .dockPullInput(direction, host)
     val rootModifier =
         Modifier
-            // The surface root carries the "Workspace menu" action too, so it exists when a workspace hides its dock.
+            // The surface root carries the actions too, so they exist when a workspace hides the Dock.
+            .then(actions.modifier)
             .then(workspaceMenuActionModifier(onOpenWorkspaceMenu))
             .onSizeChanged { size -> rootSize.value = size }
             .onPreviewKeyEvent { event ->
                 val isShortcut =
-                    event.type == KeyEventType.KeyDown &&
-                        event.isCtrlPressed &&
-                        event.key == pullDirection.shortcutKey
-                isShortcut && (menu.openFromShortcut() || (canPull && switchNow()))
+                    event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == direction.shortcutKey
+                isShortcut && canPull && actions.openFromShortcut(libraryInstead = event.isShiftPressed)
             }
-    val dockBackgroundAlpha = remember(frameState) { { frameState.value.dockBackgroundAlpha } }
-    val dockContentRevealAlpha = remember(dockPull) { { dockPull.revealAlpha } }
     return HomeDockPullBinding(
-        dockEdge = runningEdge.value ?: edges.edgeFor(plan.shownMode.modeSurface),
         rootModifier = rootModifier,
         dockModifier = dockModifier,
-        screenFrostModifier = screenFrostModifier,
-        dockBackgroundAlpha = dockBackgroundAlpha,
-        dockContentRevealAlpha = dockContentRevealAlpha,
+        dockPull = dockPull,
         frame = frameState,
-        transitioning = transitioning,
-        pullDirection = pullDirection,
     )
 }
 
-/** The dock's "Switch to Library/Home" accessibility action; identity while a pull is not allowed. */
-private fun dockPullActionModifier(
-    canPull: Boolean,
-    label: String,
-    switchNow: () -> Boolean,
-): Modifier =
-    if (canPull) {
-        Modifier.semantics { customActions = listOf(CustomAccessibilityAction(label) { switchNow() }) }
-    } else {
-        Modifier
-    }
+/** Where the Dock body is laid out, so a touch in its own coordinates can be placed against the dynamic section. */
+private class DockCoordinates {
+    var coordinates: LayoutCoordinates? = null
+}
 
-/**
- * The "Workspace menu" accessibility action, the equivalent of the dock pull (S9) and of the dock's explicit
- * affordance; also on the home surface root, so it exists when a workspace hides its dock (11.4). Identity when there
- * is no menu. Custom actions of stacked semantics modifiers are concatenated.
- */
+/** The Dock's pull equivalents: "Open Library", and "Open Stream" or "Back to Home"; and the same on the keyboard. */
+private class DockPullActions(
+    val modifier: Modifier,
+    private val open: (DockPullDestination) -> Boolean,
+    private val streamDestination: DockPullDestination?,
+) {
+    /** Ctrl + the pull arrow opens the Stream (or returns Home from it); with Shift, the Library. */
+    fun openFromShortcut(libraryInstead: Boolean): Boolean =
+        when {
+            libraryInstead || streamDestination == null -> open(DockPullDestination.LIBRARY)
+            else -> open(streamDestination)
+        }
+}
+
+@Composable
+private fun dockPullActions(
+    dockPull: DockPullState,
+    canPull: Boolean,
+    stream: StreamPullInputs,
+    direction: DockPullDirection,
+    reducedMotion: Boolean,
+): DockPullActions {
+    val libraryLabel = stringResource(R.string.dock_open_library_action)
+    val streamLabel =
+        stringResource(if (stream.shown) R.string.stream_dock_close_action else R.string.stream_dock_open_action)
+    val streamDestination =
+        if (stream.available) {
+            if (stream.shown) DockPullDestination.HOME else DockPullDestination.STREAM
+        } else {
+            null
+        }
+    val open: (DockPullDestination) -> Boolean = { destination -> dockPull.open(destination, direction, reducedMotion) }
+    val modifier =
+        if (canPull) {
+            Modifier.semantics {
+                customActions =
+                    listOfNotNull(
+                        CustomAccessibilityAction(libraryLabel) { open(DockPullDestination.LIBRARY) },
+                        streamDestination?.let {
+                                destination ->
+                            CustomAccessibilityAction(streamLabel) { open(destination) }
+                        },
+                    )
+            }
+        } else {
+            Modifier
+        }
+    return DockPullActions(modifier, open, streamDestination)
+}
+
+/** The "Workspace menu" accessibility action, kept reachable until P8 removes the menu; identity when there is none. */
 internal fun workspaceMenuActionModifier(onOpen: (() -> Unit)?): Modifier =
     if (onOpen == null) {
         Modifier
@@ -233,59 +228,29 @@ internal fun workspaceMenuActionModifier(onOpen: (() -> Unit)?): Modifier =
 
 internal const val WORKSPACE_MENU_ACTION_LABEL = "Workspace menu"
 
-/**
- * Whether the dock pull may still switch Home and Library when there is no workspace menu: true where no shell says
- * otherwise (tests of the mode pull); false from the shell while its workspaces are loading (S9), so the pull is
- * inert until the menu exists.
- */
-internal val LocalDockModePullEnabled = staticCompositionLocalOf { true }
-
-/**
- * How far the dock's own [androidx.compose.ui.graphics.GraphicsLayerScope.cameraDistance] is pushed
- * out while it tilts (dock-reorient decisions): large enough that the small rotation reads as
- * perspective rather than a pure shear, scaled by density like the platform default.
- */
-private const val DOCK_REORIENT_CAMERA_DISTANCE = 12f
-
-/**
- * [Modifier.screenReorientFrost] for the two mode surfaces, given the same progress and direction
- * [dockModifier]'s own [Modifier.dockReorientFrost] already reads -- kept a separate small function
- * rather than inlined into [rememberHomeDockPullBinding] to keep that composable under the repo's
- * length limit; not itself `@Composable`, exactly like [Modifier.screenReorientFrost].
- */
-private fun screenFrostModifier(
-    isActive: Boolean,
-    pullDirection: DockPullDirection,
-    frame: State<DockPullFrame>,
-): Modifier =
-    Modifier.screenReorientFrost(
-        isActive = isActive,
-        isVerticalPull = pullDirection.unitY != 0f,
-        strengthProvider = { dockPullReorientFrostStrength(frame.value.dockBackgroundAlpha) },
-        edgeBandFractionProvider = { dockPullReorientEdgeBandFraction(frame.value.dockBackgroundAlpha) },
-    )
-
 @Composable
+@Suppress("LongParameterList")
 private fun rememberDockPullGestureHost(
     dockPull: DockPullState,
     canPull: Boolean,
-    surface: ModeSurface,
     reducedMotion: Boolean,
     rootSize: State<IntSize>,
+    direction: DockPullDirection,
+    stream: StreamPullInputs,
+    hostState: HomeDockHostState,
+    dockCoordinates: DockCoordinates,
 ): DockPullGestureHost {
     val latestCanPull = rememberUpdatedState(canPull)
-    val latestSurface = rememberUpdatedState(surface)
     val latestReducedMotion = rememberUpdatedState(reducedMotion)
     val latestDensity = rememberUpdatedState(LocalDensity.current.density)
-    return remember(dockPull, rootSize) {
+    val latestStream = rememberUpdatedState(stream)
+    val latestDirection = rememberUpdatedState(direction)
+    return remember(dockPull, rootSize, hostState, dockCoordinates) {
         object : DockPullGestureHost {
             override val state: DockPullState = dockPull
 
             override val canPull: Boolean
-                get() = latestCanPull.value && dockPull.pending == null && rootSize.value != IntSize.Zero
-
-            override val surface: ModeSurface
-                get() = latestSurface.value
+                get() = latestCanPull.value && dockPull.pendingStreamShown == null && rootSize.value != IntSize.Zero
 
             override val reducedMotion: Boolean
                 get() = latestReducedMotion.value
@@ -294,6 +259,23 @@ private fun rememberDockPullGestureHost(
                 val window = rootSize.value
                 val extentPx = if (direction.unitY != 0f) window.height else window.width
                 return extentPx / latestDensity.value
+            }
+
+            override fun destinationAt(position: Offset): DockPullDestination {
+                val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position
+                // A vertical pull belongs to a dock that runs along the window's width, and the other way round.
+                val alongRun = latestDirection.value.unitY != 0f
+                val dock = hostState.bounds.value
+                val dynamic = hostState.dynamicBounds.value
+                val side =
+                    dockPullSideAt(
+                        position = if (alongRun) inRoot.x else inRoot.y,
+                        dockStart = if (alongRun) dock?.left ?: 0f else dock?.top ?: 0f,
+                        dockEnd = if (alongRun) dock?.right ?: 0f else dock?.bottom ?: 0f,
+                        dynamicStart = dynamic?.let { if (alongRun) it.left else it.top },
+                        dynamicEnd = dynamic?.let { if (alongRun) it.right else it.bottom },
+                    )
+                return dockPullDestinationFor(side, latestStream.value.shown, latestStream.value.available)
             }
         }
     }

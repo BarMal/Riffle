@@ -8,11 +8,15 @@ dock as a sibling of the Adaptive Stage surface rather than inside it.
 This page describes the behaviour after #1210, revised by the dock-pull decisions (see
 "Mode transitions" below). The code it describes:
 
+> **P5 (2026-11-12, [ADR 0003](../architecture/adr/0003-places-and-views.md)).** The Dock is the handle of the Stream and
+> the Library. The dock pull is claimed by the same rules as before, but it now opens the Library when it starts on the
+> dock's pinned side and the Stream when it starts on its dynamic side; it no longer opens the workspace menu and no
+> longer switches Home and Library. See ["The Dock pull (P5)"](#the-dock-pull-p5). The older sections below are kept as
+> history where they are not restated.
+
 > **Plan revision 2026-10-01 (WS10, as built at S9, 2026-10-24).** Workspaces are the launcher's home and the
 > Home/Library mode pair is no longer a user concept (`workspaces-configuration.md` 3.1, 11.5;
-> [`workspaces-default.md`](workspaces-default.md)). **The dock pull opens the workspace menu** (owner decision Q9):
-> same claim rules, same direction logic, no mode switch. "Mode transitions" below is kept as the history of the pull
-> and describes what still runs where no workspace menu exists (tests, a shell without workspaces).
+> [`workspaces-default.md`](workspaces-default.md)). The dock pull opened the workspace menu (owner decision Q9) until P5.
 
 > **Plan revision 2026-09-25.** The dock pull becomes the only mode-transition trigger (Decisions
 > 3, 9, 11 in `modes-dock-handle-and-cards-plan.md`). The alternative triggers are deleted and
@@ -26,48 +30,65 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 | Card stack scroll/fling | `CardStack.kt` | `Modifier.scrollable` + custom `FlingBehavior` |
 | Stage pager (Cards) | `AdaptiveStageAppStageSurface.kt` | `HorizontalPager` |
 | Home page pager (Std/Lib) | `ImmediateHomePager.kt` | `HorizontalPager` |
-| Dock pull: workspace menu (S9) | `DockMenuPull.kt`, `HomeDockPullBinding.kt` | Custom pointer loop with the same claim as below (`dockPullClaimFor`) |
-| Dock pull (Home ↔ Library, only without a workspace menu) | `DockPull.kt`, `HomeDockPullBinding.kt` | Custom pointer loop (ADR 0002: direction-selective claim), decisions in `core/domain/.../dockpull/` |
+| Dock pull: Library (pinned side), Stream (dynamic side) | `DockPull.kt`, `HomeDockPullBinding.kt` | Custom pointer loop (ADR 0002: direction-selective claim); the one loop the pull needs. Decisions (claim, side, destination, commit, frame) in `core/domain/.../dockpull/` |
 | Dock shelf expand/collapse (switched off, see below) | `DockShelfGesture.kt` | Custom pointer loop (ADR 0002: direction-selective claim) |
 | Dock run / dock sections | `HomeDock.kt`, `DockDynamicSection.kt`, `DockNotificationCards.kt` | `horizontalScroll`/`verticalScroll` |
 | Page indicator scrub | `HomePageControls.kt` | `detectHorizontalDragGestures` |
 | Arbitration decisions | `core/domain/.../gestures/`, `.../cards/CardStackOverscroll.kt` | Pure Kotlin, unit tested |
 
-## Workspace menu (S9)
+## The Dock pull (P5)
 
-With workspaces on (always, in the app) the dock pull **opens the workspace menu**:
+The dock edge's natural pull direction is **away from the edge** (a bottom dock pulls up, a top dock down, a left dock
+right, a right dock left). A one-finger pull along it, on the dock body, opens one of two places by **the side of the
+dock it started on**:
 
-- **Claim.** Exactly the mode pull's (below): one finger on the dock body, past touch slop, leading along the edge's
-  natural pull direction, before the long-press timeout; off while the layout is edited or the widget picker is open.
-  A drag along the run still scrolls the sections, a held press is still a long-press, a drag into the edge does
-  nothing. With a moved dock edge (a workspace's dock override) the pull direction follows the effective edge.
-- **Effect.** On the claim the menu opens (its own open animation is the feedback; under reduced motion it appears
-  at once). The dock and the pages do not move with the finger; the rest of the gesture is consumed.
-- **Equivalents.** The accessibility action **"Workspace menu"** on the dock and on the home surface root (so it
-  exists when a workspace hides its dock), the dock's menu handle, **Ctrl + the arrow of the pull direction**, and any
-  home gesture bound to "Workspace menu" (global, or a workspace's own `gestureBindings`, which the shell now applies:
-  Niagara binds a swipe up). The "Switch to Library" / "Switch to Home" action is gone.
-- **No dock, no pull** (the menu stays reachable through the surface action and the bound gesture, design 11.4): a
-  workspace may hide its dock only when a gesture opens the menu.
+| Starts on | Result |
+| --- | --- |
+| The pinned side (pinned apps, the divider, any padding before the dynamic section) | The Library (`OpenAppDrawer`, the app drawer until P7 reworks it) -- from Home and from the Stream |
+| The dynamic side (live apps, now playing, the Stream button, and the dock padding beyond them) | The Stream, tracking the finger; from the Stream, Home |
 
-## The Stream (P4)
+- **Claim.** One finger on the dock body, past touch slop, leading along the natural pull direction (its component along
+  it positive and larger than the one across it), before the long-press timeout (`dockPullClaimFor`); off while the layout
+  is edited or the widget picker is open. A drag along the run still scrolls the sections, a held press is still a
+  long-press, a drag into the edge does nothing. With a moved dock edge (a workspace's dock override) the direction
+  follows the effective edge.
+- **Side.** Where the finger landed, in root coordinates, against the dynamic section's bounds, which the section reports
+  (`dockPullSideAt`, tested for a section at either end so a mirrored dock needs no special case). No Stream, no dynamic
+  side: every pull opens the Library.
+- **Tracking (Stream).** The pull's travel is the window's extent along the pull axis. The Stream slides in from the
+  dock's edge as the finger moves, 1:1, while Home fades out under it; the dock itself does not move. From the Stream the
+  same pull slides it away toward the interior and Home fades back in. Both surfaces are composed only while a pull or
+  its settle runs. Reduced motion: nothing slides, the two crossfade.
+- **Release.** `DockPullThresholds` (values in `GestureThresholds`): 30% of the travel or 600 dp/s toward the interior
+  commits (a fling back toward the edge cancels; under 8 dp of movement a fling does not count). A commit settles to the
+  end and asks the shell (`OpenStream` / `OpenHome`; a committed switch stands in for the shell's answer until it lands);
+  a cancel springs back. A finger landing on a settling pull catches it and tracks from there (interruptible).
+- **Library pull.** It moves nothing with the finger; the release commits by the same rules and asks for the Library.
+- **Equivalents.** The dock's accessibility actions "Open Stream" (or "Back to Home" while the Stream shows) and "Open
+  Library", also on the Home surface root so they exist when a layout hides the dock; **Ctrl + the arrow of the pull
+  direction** (Ctrl+Up for a bottom dock) opens the Stream or returns Home, **Ctrl + Shift + that arrow** opens the Library;
+  the Stream button; any home gesture bound to "Stream" (`OPEN_STREAM`) or "Library" (`OPEN_LIBRARY`), neither bound by
+  default. The "Workspace menu" accessibility action stays on the dock and the root until P8 removes the menu; the pull
+  and the shortcut no longer open it.
+- **Taps on the dynamic side.** The Stream button toggles Home and the Stream; a live app opens the Stream on that app's
+  stack (the Notifications section scrolls to it and the group comes into view); now playing opens it on the Now section.
 
-The Stream (ADR 0003) is a full surface that replaces Home with the Dock still drawn under it. P4 adds only its entry
-points; the Dock's real handle (pull by side, the Stream button) is P5.
+## The Stream (P4, entry points restated by P5)
 
-- **Open.** The home gesture action **Stream** (`OPEN_STREAM`; no gesture is bound to it by default) and the Dock's
-  accessibility action **Open Stream**, which is also on the Home surface root so it exists when a layout hides the Dock.
-- **Close.** Back and the Home button (`OpenDefaultHome`) return to Home. While the Stream is open the Dock offers
-  **Back to Home**. A focused card that is expanded (a notification's thread, now playing's queue) collapses on Back
-  first.
-- **The dock pull is inert while the Stream is open** (it neither opens the workspace menu nor switches modes under it),
-  so no pull competes with the Stream's own scrolling. Outside the Stream the pull is unchanged.
+The Stream (ADR 0003) is a full surface that replaces Home with the Dock still drawn under it. It is reached by the
+Dock's dynamic side (above), the home gesture action **Stream** (`OPEN_STREAM`; no gesture is bound to it by default) and
+the Dock's accessibility actions.
+
+- **Close.** Back and the Home button (`OpenDefaultHome`) return to Home, as do the Stream button, the same dynamic-side
+  pull and "Back to Home". A focused card that is expanded (a notification's thread, now playing's queue) collapses on
+  Back first.
 - **Inside the Stream.** The page scrolls vertically (`LazyColumn`). A Stack runs along the horizontal axis through the
   existing card-stack physics (`CardStack` with platform `scrollable` and fling, ADR 0002), so it never contests the
   page's vertical scroll. Long-press on a section header opens its menu (Show as, Move, Hide); every such gesture has
-  the section's options button and previous/next card buttons and custom actions as equivalents.
+  the section's options button and previous/next card buttons and custom actions as equivalents. The Dock pull is claimed
+  on the dock body only, so it never competes with the Stream's own scrolling.
 
-## Mode transitions (history; only without a workspace menu)
+## Mode transitions (history; the Home/Library pull was retired by P5)
 
 **The dock pull is the only mode-transition trigger** (plan Decision 9). It moves between a device
 class's fixed Home ↔ Library pair (`ModePair`, #1241): Home is Cards or Standard, chosen in
@@ -131,9 +152,10 @@ defaults to false. Off, no dock opens its shelf -- by swipe or by button -- and 
 settings are hidden; the swipe away from the dock edge that the shelf used to claim does nothing.
 The shelf code and its tests stay (the tests switch the flag on around themselves).
 
-**Workspace menu.** Since S9 the dock pull opens it (above); `WorkspaceMenuFeature` is deleted. Any home gesture
-can be bound to **"Workspace menu"** (`OPEN_WORKSPACE_MENU`, `workspaces-s7.md`), listed in the gesture settings
-always. Cards lets it through its home-action filter. No default binding uses it.
+**Workspace menu.** Since S9 the dock pull opened it; since P5 it does not, and the home gesture action
+"Workspace menu" (`OPEN_WORKSPACE_MENU`) is removed along with "Next stage" and "Previous stage"
+(`SELECT_NEXT_APP_STAGE`, `SELECT_PREVIOUS_APP_STAGE`): a stored settings or workspace binding that names one decodes as
+no action.
 
 ## Thresholds
 
@@ -145,6 +167,7 @@ constants at the 2.625x reference density (420dpi) they were tuned on.
 | --- | --- | --- | --- |
 | Home swipe commit | 30.5 | 80px | Dominant axis must lead the other by 1.2x; pinch at 18% scale change |
 | Dock shelf toggle | 30.5 | 80px | Measured away from / toward the dock edge |
+| Dock pull commit | 30% of the travel (the window's extent along the pull); fling 600 dp/s once moved 8 dp | 40% / 600 dp/s, then 30% | `GestureThresholds.DOCK_PULL_*`; the Stream and the Library pull share it |
 | Dock shelf claim | 9 (never below touch slop) | 24px (9dp = 23.6px at 2.625×) | Must stay below the home swipe commit |
 | Card stack travel per card / fling | see `CardStackTravel` | 64px / 500px/s | Already dp since #1211 |
 | Multi-finger claim | 3 pointers | – | See rule 2 |
@@ -153,13 +176,15 @@ constants at the 2.625x reference density (420dpi) they were tuned on.
 
 Default bindings come from `defaultHomeGestureActions` (`LauncherSettings.kt`); every home binding
 is user configurable. Cards filters home actions to stage navigation, search,
-Settings and the workspace menu (`adaptiveStageAppStageActionFilter`; Settings since #1212, so a
-gesture bound to it is never a dead end in Cards; the workspace menu since WS10 S7). "Home" means the home gesture layer with the user's binding; "unbound"
+Settings, the Stream and the Library (`adaptiveStageAppStageActionFilter`; Settings since #1212, so a
+gesture bound to it is never a dead end in Cards; the Stream and the Library since P5). "Home" means the home gesture layer with the user's binding; "unbound"
 means no default binding, so nothing happens unless the user binds the gesture.
 
 | Region | Input | Std / Lib | Cards |
 | --- | --- | --- | --- |
-| Dock body | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the workspace menu (S9; claims past touch slop when the drag leads along the pull) | same |
+| Dock body, pinned side | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the Library (claims past touch slop when the drag leads along the pull); no tracking | same |
+| Dock body, dynamic side | 1-finger in the natural pull direction | **Dock pull**: opens the Stream, tracking the finger (from the Stream: returns Home) | same |
+| Dock, Stream button / live app / now playing | tap | Stream button toggles Home and the Stream; a live app or now playing opens the Stream on its stack or on Now | same |
 | Dock sections (dynamic, notification row) | 1-finger along the dock run | Section scrolls (owns) | Section scrolls (owns) |
 | Dock sections | 1-finger away from edge | Nothing while shelf expansion is off (reserved for the dock pull) | same |
 | Dock background / icons | 1-finger away from edge | Nothing while shelf expansion is off; falls through to Home in Std/Lib (unbound by default) (reserved for the dock pull) | Nothing (reserved for the dock pull) |
@@ -232,9 +257,11 @@ no longer be available for the hand-off.
   widgets.
 - **The dock pull's hit area is the dock's resting place.** A finger catching a settling dock has to
   land where the dock rests (on the edge it is settling onto), not where it is drawn mid-flight.
-- **No dock, no pull** (the menu stays reachable through the surface action and the bound gesture, 11.4). With
-  the dock switched off or hidden by a workspace, the "Workspace menu" accessibility action on the home surface,
-  Ctrl+arrow and a bound gesture open the menu.
+- **No dock, no pull.** With the dock switched off or hidden by a workspace, the "Open Stream" and "Open Library"
+  accessibility actions on the home surface root, the keyboard shortcuts and a bound gesture reach the two places; a
+  workspace may hide its dock only while a gesture does (the stranding rule).
+- **Narrow dynamic side.** With one or two entries the dynamic side is a small pull target; if it proves too narrow on a
+  device, the pull may start anywhere on the dock and choose by the half it started on (ADR 0003).
 - **Side docks:** along-run vertical drags scroll the dock run when it has overflow. The dock pull
   (#1207) does not compete with that: a side dock's pull is horizontal, perpendicular to its run.
 - **Primitive migration (ADR 0002):** `HomeGestureInput` and `DockShelfGesture` stay custom pointer

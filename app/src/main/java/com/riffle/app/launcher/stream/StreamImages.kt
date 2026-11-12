@@ -3,6 +3,7 @@
 package com.riffle.app.launcher.stream
 
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -32,22 +33,30 @@ import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
 import com.riffle.app.launcher.workspace.ItemImageKeyParser
 import com.riffle.app.launcher.workspace.ParsedImageKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
+import com.riffle.core.domain.launcher.workspace.sources.ItemImageKeys
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Resolves the image handles Stream content carries: launcher and package icons, and the artwork of the active media
- * sessions (`media-art:<package>`, from [MediaArtworkStore], in memory only). Every load runs on [ioDispatcher], never
- * on the main thread. Feed and notification artwork have no resolver yet; they read as null and the card draws without
+ * Resolves the image handles Stream content carries: launcher and package icons, the artwork of the active media
+ * sessions (`media-art:<package>`, from [MediaArtworkStore], in memory only), a notification's large icon or picture
+ * (`notification-art:`, from [notificationArtwork], the bytes of the active notification) and an article's lead image
+ * (`feed-art:`, from [feedArtwork], the offline cache only: nothing here ever uses the network). Every load runs on
+ * [ioDispatcher], never on the main thread; a handle that cannot be resolved reads as null and the card draws without
  * an image.
  */
 internal class AndroidStreamImageLoader(
     private val packageManager: PackageManager,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val mediaArtwork: (String) -> android.graphics.Bitmap? = MediaArtworkStore::artworkFor,
+    /** The PNG bytes of the large icon of the active notification this handle names, or null when it has gone. */
+    private val notificationArtwork: (ItemImageHandle) -> ByteArray? = { null },
+    /** The cached image of the article this digest names, decoded; null when it is not in the offline cache. */
+    private val feedArtwork: suspend (String) -> ImageBitmap? = { null },
 ) : ExpressionImageLoader {
     private val cache = BoundedCache<String, ImageBitmap>(MAX_CACHED_IMAGES)
 
@@ -56,13 +65,39 @@ internal class AndroidStreamImageLoader(
         sizePx: Int,
     ): ImageBitmap? {
         val size = sizePx.coerceIn(MIN_SIZE_PX, MAX_SIZE_PX)
-        // Artwork changes under one handle (the next track), so it is never cached here.
-        if (handle.key.startsWith(MediaArtworkStore.HANDLE_PREFIX)) {
-            return withContext(ioDispatcher) { artwork(handle, size) }
+        val key = handle.key
+        return when {
+            // Artwork changes under one handle (the next track), and a notification's picture is only valid while
+            // that notification is active, so neither is cached here.
+            key.startsWith(MediaArtworkStore.HANDLE_PREFIX) -> withContext(ioDispatcher) { artwork(handle, size) }
+            key.startsWith(NOTIFICATION_ART_PREFIX) -> withContext(ioDispatcher) { notificationImage(handle) }
+            else -> cachedImage(handle, size)
         }
-        val cacheKey = "${handle.key}@$size"
-        return cache[cacheKey] ?: withContext(ioDispatcher) { icon(handle, size) }?.also { cache[cacheKey] = it }
     }
+
+    private suspend fun cachedImage(
+        handle: ItemImageHandle,
+        size: Int,
+    ): ImageBitmap? {
+        val cacheKey = "${handle.key}@$size"
+        return cache[cacheKey]
+            ?: withContext(ioDispatcher) {
+                if (handle.key.startsWith(FEED_ART_PREFIX)) {
+                    feedImage(handle.key.removePrefix(FEED_ART_PREFIX))
+                } else {
+                    icon(handle, size)
+                }
+            }?.also { cache[cacheKey] = it }
+    }
+
+    private suspend fun feedImage(digest: String): ImageBitmap? =
+        runCatching { feedArtwork(digest) }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+
+    private fun notificationImage(handle: ItemImageHandle): ImageBitmap? =
+        runCatching {
+            notificationArtwork(handle)?.let { bytes -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
+                ?.asImageBitmap()
+        }.onFailure { if (it is CancellationException) throw it }.getOrNull()
 
     private fun artwork(
         handle: ItemImageHandle,
@@ -103,6 +138,8 @@ internal class AndroidStreamImageLoader(
         }
 
     private companion object {
+        const val NOTIFICATION_ART_PREFIX = "notification-art:"
+        const val FEED_ART_PREFIX = "feed-art:"
         const val MAX_CACHED_IMAGES = 96
         const val MIN_SIZE_PX = 24
         const val MAX_SIZE_PX = 1024
@@ -184,3 +221,13 @@ internal fun StreamLeadImage(
         contentScale = ContentScale.Crop,
     )
 }
+
+/**
+ * The PNG bytes of the large icon of the active notification [handle] (`notification-art:<profile>:<key>`) names, or
+ * null when it has gone or had none. Matches by building each notification's own handle, so no key is ever parsed.
+ */
+internal fun List<LauncherNotification>.largeIconBytesFor(handle: ItemImageHandle): ByteArray? =
+    firstOrNull { notification ->
+        ItemImageKeys
+            .notificationArtwork(notification.profileId, notification.key.value) == handle
+    }?.largeIconPngBase64?.let { encoded -> runCatching { java.util.Base64.getDecoder().decode(encoded) }.getOrNull() }

@@ -42,7 +42,7 @@ class StreamGestureTest {
 
     @Test
     fun theGestureIsOfferedWhereGesturesAreChosen() {
-        assertEquals(true, LauncherGestureAction.OPEN_STREAM in gestureActionOptions(false, LauncherGestureAction.NONE))
+        assertEquals(true, LauncherGestureAction.OPEN_STREAM in gestureActionOptions())
         assertEquals("Stream", LauncherGestureAction.OPEN_STREAM.label)
     }
 

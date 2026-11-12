@@ -91,6 +91,9 @@ class LauncherSettingsTest {
             "ENTER_ADAPTIVE_STAGE",
             "EXIT_ADAPTIVE_STAGE",
             "OPEN_APP_DRAWER",
+            "OPEN_WORKSPACE_MENU",
+            "SELECT_NEXT_APP_STAGE",
+            "SELECT_PREVIOUS_APP_STAGE",
         ).forEach { removed ->
             assertEquals(null, LauncherGestureAction.fromStoredName(removed), removed)
         }

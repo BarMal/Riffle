@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 
 class WorkspaceDockAndNewAppsSettingsTest {
     private val phone = HomeLayoutDeviceClass.PHONE
-    private val menu = listOf(LauncherGestureAction.OPEN_WORKSPACE_MENU)
+    private val menu = listOf(LauncherGestureAction.OPEN_LIBRARY)
     private val page =
         PageContainer(
             ContainerId("p"),

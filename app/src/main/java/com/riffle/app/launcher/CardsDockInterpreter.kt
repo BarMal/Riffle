@@ -11,7 +11,6 @@ import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardsDockItemStageAction
 import com.riffle.core.domain.launcher.cards.CardsStageSelection
 import com.riffle.core.domain.launcher.cards.CardsStageSelector
-import com.riffle.core.domain.launcher.cards.CardsStageSelectorEntry
 import com.riffle.core.domain.launcher.cards.toAppStageId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
@@ -22,9 +21,9 @@ import com.riffle.core.domain.launcher.home.DockPosition
  * Decision 5's "static dock icons launch their app" is overridden here for a pinned stage -- #XXXX).
  *
  * The dock is mode-agnostic: it renders neutral entries and reports neutral intents -- a pinned app
- * tapped, a dynamic entry activated (by key), a long-press menu item chosen. Every piece of Cards
+ * tapped, a long-press menu item chosen (the dynamic side is the Stream's, not any mode's). Every piece of Cards
  * meaning -- that a pinned app which is also a stage navigates to it instead of launching, that the
- * dynamic section is the unpinned stages with something new -- is decided here, in Cards code, and
+ * pinned stage is reached from the dock -- is decided here, in Cards code, and
  * never in the dock.
  *
  * It all reaches the dock through one value, the [HomeDockInterpreter] [rememberCardsDockInterpreter]
@@ -32,8 +31,7 @@ import com.riffle.core.domain.launcher.home.DockPosition
  */
 
 /**
- * Cards' [HomeDockInterpreter]: the dynamic section is the unpinned stages with something new, each
- * entry delegating back to [interpretCardsDockEntry] by key; a pinned icon that is also a stage
+ * Cards' [HomeDockInterpreter]: a pinned icon that is also a stage
  * navigates to it on a tap instead of launching the app (a pinned icon with no stage still launches,
  * same as any other mode), with "Show stage" / "Pin stage" still on its long-press menu; and the
  * expanded shelf drops its notification row, because the stages already are the notifications.
@@ -49,24 +47,12 @@ internal fun rememberCardsDockInterpreter(
     onAction: (LauncherShellAction) -> Unit,
 ): HomeDockInterpreter {
     val stages = shellState.snapshot.stages
-    val selection = cardsStageSelection(adaptiveStageContext, shellState.snapshot.selectedStage?.id)
-    val selectorEntries = remember(stages, selection) { CardsStageSelector.entries(stages, selection) }
     val dockItemMenuExtras =
         remember(state.homeLayout.dock, stages) { cardsDockItemMenuExtras(state.homeLayout.dock, stages) }
     val interpretedOnAction: (LauncherShellAction) -> Unit = { action ->
         interpretCardsAction(action, adaptiveStageContext, onAdaptiveStageContextChanged, onAction)
     }
     return HomeDockInterpreter(
-        dynamicEntries = cardsStageSelectorDockEntries(selectorEntries, state),
-        onDynamicEntryDelegated = { key ->
-            interpretCardsDockEntry(
-                key = key,
-                stages = stages,
-                context = adaptiveStageContext,
-                onContextChanged = onAdaptiveStageContextChanged,
-                onAction = onAction,
-            )
-        },
         staticItemMenuExtras = dockItemMenuExtras,
         staticItemTapOverride = { identity -> cardsStaticItemTapOverride(identity, stages) },
         // "Show stage" from a pinned icon's menu selects a stage, so it leaves "All" like the selector.
@@ -116,68 +102,6 @@ internal fun cardsStageSelection(
     }
 
 /**
- * The stage selector's dynamic entries, on the same rule the dock already applies in grid mode:
- * pinned wins the static side (a pinned stage renders there as a real dock item, see
- * `CardsDockPinning.kt`) and is excluded from the dynamic one, which is only for a stage with
- * something new not already pinned. "All" has no pinned/unpinned state of its own -- pending a
- * dedicated entry point (a multi-finger pinch), it is left off the dock entirely rather than
- * inflating this section with an entry that is always there whether or not anything is.
- */
-internal fun cardsStageSelectorDockEntries(
-    entries: List<CardsStageSelectorEntry>,
-    state: LauncherShellState,
-): List<DockDynamicEntry> =
-    entries
-        .filterIsInstance<CardsStageSelectorEntry.Stage>()
-        .filter { entry -> !entry.isPinned && entry.cardCount > 0 }
-        .map { entry ->
-            val label = stageLabel(entry.stageId, state)
-            DockDynamicEntry(
-                key = entry.key,
-                label = label,
-                identity = stageAppIdentity(entry.stageId, state),
-                badgeCount = entry.cardCount,
-                isSelected = entry.isSelected,
-                contentDescription =
-                    cardsStageSelectorEntryContentDescription(
-                        label = label,
-                        cardCount = entry.cardCount,
-                        isPinned = false,
-                        isSelected = entry.isSelected,
-                    ),
-                intent = DockDynamicEntryIntent.Delegate,
-            )
-        }
-
-/**
- * What activating a selector entry does: "All" switches the surface to the merged view (a choice
- * the interaction context holds, not a stage selection), a stage leaves "All" and selects itself.
- * A key that no longer resolves -- the stage went away between frames -- does nothing.
- */
-internal fun interpretCardsDockEntry(
-    key: String,
-    stages: List<AppStage>,
-    context: AdaptiveStageInteractionContext,
-    onContextChanged: (AdaptiveStageInteractionContext) -> Unit,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    when (val selection = CardsStageSelector.resolve(key, stages)) {
-        CardsStageSelection.All ->
-            if (!context.allNotificationsSelected) onContextChanged(context.copy(allNotificationsSelected = true))
-
-        is CardsStageSelection.Stage ->
-            interpretCardsAction(
-                action = LauncherShellAction.SelectAppStage(selection.stageId),
-                context = context,
-                onContextChanged = onContextChanged,
-                onAction = onAction,
-            )
-
-        CardsStageSelection.None, null -> Unit
-    }
-}
-
-/**
  * Forwards [action], first leaving the merged "All" view when the action selects a real stage --
  * whichever control sent it (a dock entry, a dock icon's "Show stage", a spine chip), selecting a
  * stage means showing that stage.
@@ -223,22 +147,6 @@ internal fun cardsDockItemMenuExtras(
                         }
                 },
     )
-
-internal fun cardsStageSelectorEntryContentDescription(
-    label: String,
-    cardCount: Int,
-    isPinned: Boolean,
-    isSelected: Boolean,
-): String =
-    buildList {
-        add(label)
-        if (cardCount > 0) {
-            add("$cardCount ${if (cardCount == 1) "card" else "cards"}")
-        } else if (isPinned) {
-            add("pinned, nothing new")
-        }
-        add(if (isSelected) "Showing. Open stage" else "Open stage")
-    }.joinToString(separator = ", ")
 
 /** The merged view's entry label; its accessible name reads the same. */
 internal const val CARDS_ALL_ENTRY_LABEL = "All notifications"

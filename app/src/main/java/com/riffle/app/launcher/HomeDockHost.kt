@@ -58,6 +58,12 @@ internal class HomeDockHostState {
     /** The dock's bounds in root coordinates -- the coordinate space the home grid's drop targets use. */
     val bounds: MutableState<Rect?> = mutableStateOf(null)
 
+    /**
+     * The dynamic section's bounds in root coordinates, null while there is none. The dock pull reads it to tell
+     * which side a touch started on (pinned: Library; dynamic: Stream).
+     */
+    val dynamicBounds: MutableState<Rect?> = mutableStateOf(null)
+
     /** Whether an item being dragged in the mode's content would land on the dock if released now. */
     val isDropTargetHighlighted: MutableState<Boolean> = mutableStateOf(false)
 
@@ -98,7 +104,7 @@ internal fun rememberHomeDockHostState(): HomeDockHostState = remember { HomeDoc
  * stays in that mode's own code and never in the dock. The default is the grid modes' reading.
  */
 internal data class HomeDockInterpreter(
-    /** What the dynamic side shows; null leaves it to notifications, which is what grid modes want. */
+    /** What the dynamic side shows; null leaves it empty (the shell supplies live apps, now playing and the Stream). */
     val dynamicEntries: List<DockDynamicEntry>? = null,
     /** Receives the key of a dynamic entry whose intent is [DockDynamicEntryIntent.Delegate]. */
     val onDynamicEntryDelegated: (String) -> Unit = {},
@@ -201,6 +207,8 @@ internal fun HomeDockHost(
             onExtentChanged = onExtentChanged,
         )
 
+    val dynamicBoundsSink: (Rect?) -> Unit =
+        remember(hostState) { { bounds -> hostState.dynamicBounds.value = bounds } }
     var hostBoxOriginInRoot by remember { mutableStateOf<Offset?>(null) }
     Box(
         modifier =
@@ -211,7 +219,10 @@ internal fun HomeDockHost(
         contentAlignment = position.dockHostAlignment(LocalLayoutDirection.current),
     ) {
         Box(modifier = dockModifier.graphicsLayer { alpha = dockContentRevealAlpha() }) {
-            CompositionLocalProvider(LocalDockBackgroundAlpha provides dockBackgroundAlpha) {
+            CompositionLocalProvider(
+                LocalDockBackgroundAlpha provides dockBackgroundAlpha,
+                LocalDockDynamicBoundsSink provides dynamicBoundsSink,
+            ) {
                 StandardHomeDockArea(
                     layout = visibleLayout,
                     presentation = presentation,
@@ -222,7 +233,7 @@ internal fun HomeDockHost(
                     actions = actions,
                     position = position,
                     widgetPickerDockPreview = hostState.widgetDropPreview.value,
-                    dynamicEntries = interpreter.dynamicEntries ?: notificationShelfState.dynamicEntries(),
+                    dynamicEntries = interpreter.dynamicEntries.orEmpty(),
                     onDynamicEntryDelegated = interpreter.onDynamicEntryDelegated,
                     staticItemMenuExtras = interpreter.staticItemMenuExtras,
                     staticItemTapOverride = interpreter.staticItemTapOverride,

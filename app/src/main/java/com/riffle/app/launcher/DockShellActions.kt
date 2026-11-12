@@ -26,9 +26,6 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.SelectDockEnabled ->
             DockConfigurationEngine().setDockEnabled(layout = layout, enabled = action.enabled)
 
-        is LauncherShellAction.SelectDockNotificationCardsEnabled ->
-            DockConfigurationEngine().setDockNotificationCardsEnabled(layout = layout, enabled = action.enabled)
-
         is LauncherShellAction.SelectDockExpandable ->
             DockConfigurationEngine().setDockExpandable(layout = layout, expandable = action.expandable)
 
@@ -68,8 +65,8 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.SelectDockHomeControlsSpacing ->
             DockConfigurationEngine().setDockHomeControlsSpacing(layout = layout, spacingDp = action.spacingDp)
 
-        is LauncherShellAction.SelectDockNotificationSlotCount ->
-            DockConfigurationEngine().setDockNotificationSlotCount(layout = layout, slotCount = action.slotCount)
+        is LauncherShellAction.SelectDockLiveAppSlots ->
+            DockConfigurationEngine().setDockLiveAppSlots(layout = layout, slots = action.slots)
 
         is LauncherShellAction.RemoveDockShortcut ->
             removeDockItem(layout = layout, itemId = action.itemId)
@@ -110,7 +107,6 @@ fun DockEngine.applyEdit(
 internal fun LauncherShellAction.isDockConfigurationAction(): Boolean =
     when (this) {
         is LauncherShellAction.SelectDockEnabled,
-        is LauncherShellAction.SelectDockNotificationCardsEnabled,
         is LauncherShellAction.SelectDockExpandable,
         is LauncherShellAction.SelectDockExpandAffordance,
         is LauncherShellAction.SelectDockPanelEnabled,
@@ -124,7 +120,7 @@ internal fun LauncherShellAction.isDockConfigurationAction(): Boolean =
         is LauncherShellAction.SelectDockItemSpacing,
         is LauncherShellAction.SelectDockCornerRadius,
         is LauncherShellAction.SelectDockHomeControlsSpacing,
-        is LauncherShellAction.SelectDockNotificationSlotCount,
+        is LauncherShellAction.SelectDockLiveAppSlots,
         -> true
 
         else -> false

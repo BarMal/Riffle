@@ -36,31 +36,37 @@ data class DockPresentation(
 }
 
 /**
- * N6 / design 11.4, the stranding rule: today the dock is the handle of the workspace menu (and of the app list), so a
- * workspace may hide its dock only while some other way to reach the menu remains. That way is a home gesture bound to
- * the workspace-menu action, either in the global home gestures or in the workspace's own `gestureBindings`.
+ * N6 / design 11.4, the stranding rule, as P5 restates it: the dock is the handle of the Stream and the Library (ADR
+ * 0003), so a workspace may hide its dock only while some other way to reach them remains. That way is a home gesture
+ * bound to the Stream or Library action, either in the global home gestures or in the workspace's own
+ * `gestureBindings`.
  *
- * The TalkBack "Workspace menu" action and the keyboard shortcut are always present on the home surface, but they do
- * not count: a touch user must not be stranded.
+ * The TalkBack "Open Stream" and "Open Library" actions and the keyboard shortcuts are always present on the home
+ * surface, but they do not count: a touch user must not be stranded. (The workspace menu has no gesture any more; it
+ * stays reachable through its accessibility action and Settings until P8 removes it.)
  */
 object DockMenuReachability {
-    /** The gesture action that opens the workspace menu (11.4). */
-    val WORKSPACE_MENU_ACTION: LauncherGestureAction = LauncherGestureAction.OPEN_WORKSPACE_MENU
+    /** The gesture actions that reach what the dock is the handle of: the Stream and the Library. */
+    val HANDLE_ACTIONS: Set<LauncherGestureAction> =
+        setOf(LauncherGestureAction.OPEN_STREAM, LauncherGestureAction.OPEN_LIBRARY)
+
+    /** The action the Niagara preset binds to its swipe up in place of its hidden dock. */
+    val NIAGARA_ACTION: LauncherGestureAction = LauncherGestureAction.OPEN_LIBRARY
 
     /** What every global home gesture does (defaults included), for the checks below. */
     fun globalActions(settings: HomeGestureSettings): List<LauncherGestureAction> =
         HomeGesture.entries.map { gesture -> settings.actionFor(gesture) }
 
     /**
-     * Whether a gesture opens the workspace menu on [workspace]: one of the global home gestures'
+     * Whether a gesture opens the Stream or the Library on [workspace]: one of the global home gestures'
      * [globalGestureActions], or one of its own `gestureBindings` (action ids stored by enum name).
      */
     fun hasMenuGesture(
         workspace: Workspace,
         globalGestureActions: Collection<LauncherGestureAction>,
     ): Boolean =
-        WORKSPACE_MENU_ACTION in globalGestureActions ||
-            workspace.gestureBindings.values.any { LauncherGestureAction.fromStoredName(it) == WORKSPACE_MENU_ACTION }
+        globalGestureActions.any { it in HANDLE_ACTIONS } ||
+            workspace.gestureBindings.values.any { LauncherGestureAction.fromStoredName(it) in HANDLE_ACTIONS }
 
     /** Whether [workspace] may hide its dock (it may always show it). */
     fun canHideDock(
