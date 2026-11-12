@@ -24,6 +24,7 @@ class LauncherBackupExportCoordinator(
                 workspaceSet = workspaceBackup?.let { runCatching(it::currentWorkspaceSet).getOrNull() },
                 exclusions = workspaceBackup?.let { runCatching(it::currentExclusions).getOrNull() },
                 pool = workspaceBackup?.let { runCatching(it::currentPool).getOrNull() },
+                stream = workspaceBackup?.let { runCatching(it::currentStreamLayouts).getOrNull() },
                 homeFromPool = homeLayoutRepository is PoolHomeLayoutRepository,
             )
         }

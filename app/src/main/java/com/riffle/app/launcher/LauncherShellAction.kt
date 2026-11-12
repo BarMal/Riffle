@@ -78,6 +78,9 @@ sealed interface LauncherShellAction {
 
     data object OpenSettings : LauncherShellAction
 
+    /** Opens the Stream over Home (a gesture bound to `OPEN_STREAM`, the Dock's "Open Stream" action). */
+    data object OpenStream : LauncherShellAction
+
     data class OpenSettingsPage(val page: SettingsPage) : LauncherShellAction
 
     /**

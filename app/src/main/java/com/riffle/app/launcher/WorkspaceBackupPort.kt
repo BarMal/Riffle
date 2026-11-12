@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
@@ -20,9 +21,14 @@ interface WorkspaceBackupPort {
     /** The placed-items pool store (apps, folders, widget providers; never item content). */
     fun currentPool(): PoolStoreState?
 
+    /** How the Stream is arranged (P4); null when nothing was ever stored, so the section is omitted. */
+    fun currentStreamLayouts(): StreamLayouts? = null
+
     fun restoreWorkspaceSet(set: WorkspaceSet)
 
     fun restoreExclusions(rules: LayoutExclusionRules)
 
     fun restorePool(state: PoolStoreState)
+
+    fun restoreStreamLayouts(layouts: StreamLayouts) = Unit
 }

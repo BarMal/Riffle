@@ -169,8 +169,18 @@ internal object StreamSectionQueries {
     /** An event whose end was withheld (a private one) is kept: the source already dropped ended events. */
     private fun EventContent.hasNotEnded(now: Long): Boolean = endEpochMillis?.let { it > now } ?: true
 
-    const val NOW_GROUP = "now"
-    const val RECENTS_GROUP = "recents"
-    const val FREQUENT_GROUP = "frequent"
-    const val TASKS_GROUP = "tasks"
+    const val NOW_GROUP = StreamGroupKeys.NOW
+    const val RECENTS_GROUP = StreamGroupKeys.RECENTS
+    const val FREQUENT_GROUP = StreamGroupKeys.FREQUENT
+    const val TASKS_GROUP = StreamGroupKeys.TASKS
+}
+
+/** The keys of the groups that are not an app, a feed or a day, for a UI that labels them. */
+object StreamGroupKeys {
+    const val NOW = "now"
+    const val RECENTS = "recents"
+
+    /** The apps used most, after the recent ones. */
+    const val FREQUENT = "frequent"
+    const val TASKS = "tasks"
 }

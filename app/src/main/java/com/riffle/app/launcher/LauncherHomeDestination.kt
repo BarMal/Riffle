@@ -4,6 +4,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absolutePadding
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
@@ -14,10 +15,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.notifications.AppStageShellState
+import com.riffle.app.launcher.stream.StreamDestination
+import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
@@ -32,6 +38,7 @@ import com.riffle.core.domain.launcher.home.modeSurface
 import com.riffle.core.domain.launcher.workspace.menu.WorkspaceMenuAction
 import kotlinx.coroutines.delay
 
+@Suppress("LongMethod")
 @Composable
 fun HomeDestination(
     state: LauncherShellState,
@@ -42,6 +49,9 @@ fun HomeDestination(
     adaptiveStageContext: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
     workspaceMenu: WorkspaceMenuHost? = null,
+    /** The Stream (ADR 0003); with [streamShown] it replaces the Home surface and the Dock stays under it. */
+    stream: StreamHost? = null,
+    streamShown: Boolean = false,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val dockHost = rememberHomeDockHostState()
@@ -57,7 +67,7 @@ fun HomeDestination(
     // The one interpreter contract (Decision 2): grid modes take the default reading, Cards supplies
     // its own from CardsDockInterpreter.kt. The dock itself only ever sees neutral entries and intents.
     val dockInterpreter =
-        if (cardsShellState != null && plan.shownMode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
+        if (!streamShown && cardsShellState != null && plan.shownMode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
             rememberCardsDockInterpreter(
                 state = plan.stateFor(plan.shownMode),
                 shellState = cardsShellState,
@@ -79,8 +89,12 @@ fun HomeDestination(
             plan = HomeDockPullPlan(plan.currentMode, plan.counterpartMode, plan.shownMode, plan.edges),
             dockPull = dockPull,
             onAction = onAction,
-            onOpenWorkspaceMenu = workspaceMenu?.let { menu -> { menu.onAction(WorkspaceMenuAction.Open) } },
+            // The Stream is its own surface: the pull neither opens the workspace menu nor switches modes under it.
+            onOpenWorkspaceMenu =
+                workspaceMenu?.takeIf { !streamShown }?.let { menu -> { menu.onAction(WorkspaceMenuAction.Open) } },
+            pullEnabled = !streamShown,
         )
+    val streamEntry = streamEntryModifier(stream, streamShown, onAction)
 
     // The same state [dockEdge] and [dockInterpreter] are already drawn for: [plan.shownMode], not
     // necessarily [plan.currentMode]. Once a commit lands, [plan.shownMode] stands in for the
@@ -104,7 +118,7 @@ fun HomeDestination(
     // `LiquidGlassBackdrop.kt`): installed here, around this content specifically, since this is
     // exactly the wallpaper-plus-surface subtree every glass surface on Home floats above.
     ProvideLiquidGlassBackdrop { backdropCapture ->
-        Box(modifier = Modifier.fillMaxSize().then(pull.rootModifier).then(backdropCapture)) {
+        Box(modifier = Modifier.fillMaxSize().then(pull.rootModifier).then(streamEntry).then(backdropCapture)) {
             // The one dock, outside the mode surface: composed at the same place whichever surface runs
             // below, so a mode switch keeps this instance (#1205, Decision 2). What differs by mode
             // reaches it only through [dockInterpreter]; the dock pull moves it between the surfaces'
@@ -121,7 +135,7 @@ fun HomeDestination(
                 modifier = Modifier.zIndex(if (pull.isTransitioning) DOCK_PULL_DOCK_Z_INDEX else 0f),
                 interpreter = dockInterpreter,
                 haptics = haptics,
-                dockModifier = pull.dockModifier,
+                dockModifier = pull.dockModifier.then(streamEntry),
                 dockBackgroundAlpha = pull.dockBackgroundAlpha,
                 dockContentRevealAlpha = pull.dockContentRevealAlpha,
             )
@@ -135,7 +149,16 @@ fun HomeDestination(
             // dock-pull gesture (see DockPullInteractionTest regressions). Composed per-surface instead,
             // every mode surface stays a direct sibling of [HomeDockHost] exactly as before this frost
             // was added, so that precedence still holds.
-            plan.composedModes.forEach { mode ->
+            if (streamShown && stream != null) {
+                StreamHomeSurface(
+                    stream = stream,
+                    state = dockHostState,
+                    dockHost = dockHost,
+                    dockPosition = pull.dockEdge,
+                    appIconLoader = appIconLoader,
+                )
+            }
+            plan.composedModes.filter { !streamShown }.forEach { mode ->
                 // Keyed by mode, so the surface a pull brings in is the very composition shown once
                 // the switch lands, and a cancelled pull leaves the outgoing one untouched.
                 key(mode) {
@@ -162,10 +185,72 @@ fun HomeDestination(
                 }
             }
             // Nothing is composed while the feature is off or no workspaces are loaded (#1351).
-            HomeWorkspaceMenu(workspaceMenu, dockHost, pull.dockEdge, state.launcherSettings.motion.reducedMotion)
+            if (!streamShown) {
+                HomeWorkspaceMenu(workspaceMenu, dockHost, pull.dockEdge, state.launcherSettings.motion.reducedMotion)
+            }
         }
     }
 }
+
+/**
+ * The Stream over the Dock's room: laid out inside what the Dock reserves on its edge (as the Cards stage is),
+ * under the
+ * Dock in the draw order so the Dock stays tappable. Content scrolls inside the system bar insets.
+ */
+@Composable
+private fun StreamHomeSurface(
+    stream: StreamHost,
+    state: LauncherShellState,
+    dockHost: HomeDockHostState,
+    dockPosition: DockPosition,
+    appIconLoader: AppIconLoader,
+) {
+    val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
+    val dockExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
+    val insets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets().asPaddingValues()
+    Box(
+        modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX).dockInteractionPadding(dockPosition, dockExtent),
+    ) {
+        StreamDestination(
+            host = stream,
+            deviceClass = state.homeLayoutSet.activeKey.deviceClass,
+            installedApps = state.installedApps,
+            appIconLoader = appIconLoader,
+            reducedMotion = state.launcherSettings.motion.reducedMotion,
+            contentPadding = insets,
+        )
+    }
+}
+
+/**
+ * "Open Stream" (and, while it is open, "Back to Home"): the accessibility equivalent of reaching the Stream, on
+ * the Dock
+ * and on the surface root, so it exists when a layout hides the Dock. P5 adds the Dock's real handle. Identity when the
+ * shell has no Stream.
+ */
+private fun streamEntryModifier(
+    stream: StreamHost?,
+    streamShown: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+): Modifier =
+    if (stream == null) {
+        Modifier
+    } else {
+        Modifier.semantics {
+            customActions =
+                listOf(
+                    CustomAccessibilityAction(
+                        if (streamShown) STREAM_CLOSE_ACTION_LABEL else STREAM_OPEN_ACTION_LABEL,
+                    ) {
+                        onAction(if (streamShown) LauncherShellAction.OpenHome else LauncherShellAction.OpenStream)
+                        true
+                    },
+                )
+        }
+    }
+
+internal const val STREAM_OPEN_ACTION_LABEL = "Open Stream"
+internal const val STREAM_CLOSE_ACTION_LABEL = "Back to Home"
 
 /** What a Cards surface takes from [HomeDestination] beyond the shell state. */
 private class CardsSurfaceInputs(

@@ -169,6 +169,7 @@ class LauncherActionDomainTest {
                 activity("OpenSearch", LauncherShellAction.OpenSearch),
                 activity("OpenNotifications", LauncherShellAction.OpenNotifications),
                 activity("OpenSettings", LauncherShellAction.OpenSettings),
+                activity("OpenStream", LauncherShellAction.OpenStream),
                 activity("OpenSettingsPage", LauncherShellAction.OpenSettingsPage(SettingsPage.APPEARANCE)),
                 activity("OpenWorkspaceMenu", LauncherShellAction.OpenWorkspaceMenu),
                 settings("RequestNotificationAccess", LauncherShellAction.RequestNotificationAccess),

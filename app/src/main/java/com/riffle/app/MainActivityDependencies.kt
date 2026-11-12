@@ -75,8 +75,13 @@ import com.riffle.app.launcher.sources.androidStreamSources
 import com.riffle.app.launcher.stream.AndroidMediaSessions
 import com.riffle.app.launcher.stream.AndroidNextAlarm
 import com.riffle.app.launcher.stream.AndroidStreamActionGateway
+import com.riffle.app.launcher.stream.AndroidStreamImageLoader
+import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
+import com.riffle.app.launcher.stream.DataStoreStreamLayoutStore
 import com.riffle.app.launcher.stream.ManualChangeSource
+import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.stream.StreamPlatform
+import com.riffle.app.launcher.stream.StreamPostureHolder
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
@@ -98,22 +103,30 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.stream.StreamContentProvider
+import com.riffle.core.domain.launcher.stream.StreamContext
 import com.riffle.core.domain.launcher.stream.StreamSourceIds
+import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
+import com.riffle.core.domain.launcher.workspace.lens.ZoneDayBucketer
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
 import com.riffle.core.domain.launcher.workspace.settings.AliasedSourceEnablement
+import com.riffle.core.domain.launcher.workspace.settings.SourceContentPrivacy
 import com.riffle.core.domain.launcher.workspace.settings.SourceEnablement
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceContentPrivacy
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
+import com.riffle.core.domain.launcher.workspace.settings.mergedContextChanges
 import com.riffle.core.domain.launcher.workspace.sources.EnablementSourceRegistry
 import com.riffle.core.domain.launcher.workspace.sources.SearchQueryHolder
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import java.time.ZoneId
 import java.util.concurrent.Executors
 
+@Suppress("TooManyFunctions")
 internal class MainActivityDependencies(
     private val activity: Activity,
 ) {
@@ -129,6 +142,9 @@ internal class MainActivityDependencies(
         )
     }
     val exclusionRepository by lazy { CachedExclusionRepository(DataStoreExclusionStore(activity)) }
+
+    /** How the Stream is arranged per posture; the backup and the Stream both go through this one repository. */
+    val streamLayoutRepository by lazy { CachedStreamLayoutRepository(DataStoreStreamLayoutStore(activity)) }
 
     /**
      * The process's one pool repository, shared by the standard home (once cut over it is loaded at startup), the
@@ -391,6 +407,46 @@ internal class MainActivityDependencies(
     }
 
     /**
+     * What the shell shows the Stream with: the typed-content provider over [streamPlatform], reading the same Hide
+     * rules, content levels and source on/off choices the lens pages do, with the per-section options of the layout of
+     * the posture on screen. Nothing is read until a section is observed. Pass the same [enablement] and
+     * [contentPrivacy] the Settings pages write to, and [requestAccess] for the existing explicit access flows.
+     */
+    fun streamHost(
+        launcherSettings: () -> LauncherSettings,
+        enablement: SourceEnablement,
+        contentPrivacy: SourceContentPrivacy,
+        requestAccess: (SourceId) -> Unit,
+    ): StreamHost {
+        val platform = streamPlatform(launcherSettings, enablement)
+        val posture = StreamPostureHolder()
+        val provider =
+            StreamContentProvider(
+                registry = platform.registry,
+                alarms = platform.alarms,
+                contextChanges = mergedContextChanges(exclusionRepository, contentPrivacy, streamLayoutRepository),
+                context = {
+                    StreamContext(
+                        nowEpochMillis = System.currentTimeMillis(),
+                        options = streamLayoutRepository.layoutFor(posture.deviceClass).options,
+                        exclusions = exclusionRepository.rules(posture.deviceClass),
+                        contentLevels = contentPrivacy.levels(),
+                        dayBucketer = ZoneDayBucketer(ZoneId.systemDefault()),
+                    )
+                },
+            )
+        return StreamHost(
+            provider = provider,
+            layouts = streamLayoutRepository,
+            actions = platform.actions,
+            imageLoader = AndroidStreamImageLoader(activity.packageManager),
+            requestAccess = requestAccess,
+            enableSources = { ids -> ids.forEach { id -> enablement.setEnabled(id, true) } },
+            posture = posture,
+        )
+    }
+
+    /**
      * The Workspaces (preview) placed-items pool runtime. Call it only once the preview opens: building it
      * reads no storage; the store is read when the preview calls `initialize`. Item taps go through the same
      * app launcher the standard home uses.
@@ -450,6 +506,7 @@ internal class MainActivityDependencies(
             exclusions = exclusionRepository,
             pool = poolRepository,
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            stream = streamLayoutRepository,
             poolOwnsHome = { homeLayoutRuntime.poolHome != null },
         )
     }

@@ -199,6 +199,7 @@ internal val LauncherGestureAction.label: String
             LauncherGestureAction.LAUNCH_APP -> "Launch app"
             LauncherGestureAction.LAUNCH_APP_SHORTCUT -> "Launch shortcut"
             LauncherGestureAction.OPEN_WORKSPACE_MENU -> "Workspace menu"
+            LauncherGestureAction.OPEN_STREAM -> "Stream"
         }
 
 private val LauncherGestureAction.requiresLaunchTarget: Boolean

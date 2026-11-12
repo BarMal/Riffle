@@ -526,6 +526,12 @@ enum class LauncherGestureAction {
      * this is how a workspace without a dock (Niagara) or a person who prefers a gesture reaches it.
      */
     OPEN_WORKSPACE_MENU,
+
+    /**
+     * Opens the Stream (ADR 0003): the actions centre that replaces Home until Back or the Home button. Added by P4;
+     * stored settings written before it never name it, and a stored name this build does not know decodes to no action.
+     */
+    OPEN_STREAM,
     ;
 
     /** Actions that need the workspace menu (always present since S9; kept for callers that filter on it). */

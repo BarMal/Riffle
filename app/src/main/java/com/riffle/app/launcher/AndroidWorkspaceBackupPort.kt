@@ -2,6 +2,8 @@ package com.riffle.app.launcher
 
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.pool.CachedPoolRepository
+import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
+import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
@@ -22,6 +24,7 @@ internal class AndroidWorkspaceBackupPort(
     private val exclusions: CachedExclusionRepository,
     private val pool: CachedPoolRepository,
     private val scope: CoroutineScope,
+    private val stream: CachedStreamLayoutRepository? = null,
     /**
      * True once the standard home renders from the pool (S4): the pool section is then restored together with the
      * backup's home layouts by the home's own restore (`withImportedBackup`), never on its own here.
@@ -37,10 +40,14 @@ internal class AndroidWorkspaceBackupPort(
     @Volatile
     private var storedPool: PoolStoreState? = null
 
+    @Volatile
+    private var storedStream: StreamLayouts? = null
+
     override fun prepareExport() {
         storedSet = null
         storedRules = null
         storedPool = null
+        storedStream = null
         scope.launch {
             runCatching { workspaces.currentOrStored() }
                 .onFailure { if (it is CancellationException) throw it }
@@ -51,6 +58,9 @@ internal class AndroidWorkspaceBackupPort(
             runCatching { pool.currentOrStored() }
                 .onFailure { if (it is CancellationException) throw it }
                 .onSuccess { storedPool = it }
+            runCatching { stream?.currentOrStored() }
+                .onFailure { if (it is CancellationException) throw it }
+                .onSuccess { storedStream = it }
         }
     }
 
@@ -59,6 +69,19 @@ internal class AndroidWorkspaceBackupPort(
     override fun currentExclusions(): LayoutExclusionRules? = storedRules
 
     override fun currentPool(): PoolStoreState? = pool.current() ?: storedPool
+
+    override fun currentStreamLayouts(): StreamLayouts? =
+        stream?.layouts?.value?.takeIf {
+            it.byPosture.isNotEmpty()
+        } ?: storedStream
+
+    override fun restoreStreamLayouts(layouts: StreamLayouts) {
+        val repository = stream ?: return
+        scope.launch {
+            runCatching { repository.replaceFromBackup(layouts) }
+                .onFailure { if (it is CancellationException) throw it }
+        }
+    }
 
     override fun restoreWorkspaceSet(set: WorkspaceSet) = workspaces.replaceFromBackup(set)
 

@@ -50,6 +50,23 @@ With workspaces on (always, in the app) the dock pull **opens the workspace menu
 - **No dock, no pull** (the menu stays reachable through the surface action and the bound gesture, design 11.4): a
   workspace may hide its dock only when a gesture opens the menu.
 
+## The Stream (P4)
+
+The Stream (ADR 0003) is a full surface that replaces Home with the Dock still drawn under it. P4 adds only its entry
+points; the Dock's real handle (pull by side, the Stream button) is P5.
+
+- **Open.** The home gesture action **Stream** (`OPEN_STREAM`; no gesture is bound to it by default) and the Dock's
+  accessibility action **Open Stream**, which is also on the Home surface root so it exists when a layout hides the Dock.
+- **Close.** Back and the Home button (`OpenDefaultHome`) return to Home. While the Stream is open the Dock offers
+  **Back to Home**. A focused card that is expanded (a notification's thread, now playing's queue) collapses on Back
+  first.
+- **The dock pull is inert while the Stream is open** (it neither opens the workspace menu nor switches modes under it),
+  so no pull competes with the Stream's own scrolling. Outside the Stream the pull is unchanged.
+- **Inside the Stream.** The page scrolls vertically (`LazyColumn`). A Stack runs along the horizontal axis through the
+  existing card-stack physics (`CardStack` with platform `scrollable` and fling, ADR 0002), so it never contests the
+  page's vertical scroll. Long-press on a section header opens its menu (Show as, Move, Hide); every such gesture has
+  the section's options button and previous/next card buttons and custom actions as equivalents.
+
 ## Mode transitions (history; only without a workspace menu)
 
 **The dock pull is the only mode-transition trigger** (plan Decision 9). It moves between a device

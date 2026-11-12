@@ -1,3 +1,118 @@
 <resources>
     <string name="app_name">Riffle</string>
+
+    <!-- The Stream (ADR 0003): sections -->
+    <string name="stream_title">Stream</string>
+    <string name="stream_section_now">Now</string>
+    <string name="stream_section_notifications">Notifications</string>
+    <string name="stream_section_recents">Recents</string>
+    <string name="stream_section_agenda">Agenda</string>
+    <string name="stream_section_tasks">Tasks</string>
+    <string name="stream_section_feeds">Feeds</string>
+
+    <!-- Section header, Show as and layout edits -->
+    <string name="stream_section_options">%1$s options</string>
+    <string name="stream_header_long_press_label">Show options for this section</string>
+    <string name="stream_show_as">Show as</string>
+    <string name="stream_show_as_stack">Stack</string>
+    <string name="stream_show_as_list">List</string>
+    <string name="stream_shown_as">%1$s shown as %2$s</string>
+    <string name="stream_undo">Undo</string>
+    <string name="stream_move_up">Move up</string>
+    <string name="stream_move_down">Move down</string>
+    <string name="stream_hide_section">Hide section</string>
+    <string name="stream_section_hidden">%1$s hidden</string>
+    <string name="stream_show_hidden_section">Show %1$s</string>
+    <string name="stream_current_view">Currently %1$s</string>
+
+    <!-- Section states -->
+    <string name="stream_loading">Loading</string>
+    <string name="stream_empty_now">Nothing is playing and nothing is coming up.</string>
+    <string name="stream_empty_notifications">No notifications.</string>
+    <string name="stream_empty_recents">No recent apps yet.</string>
+    <string name="stream_empty_agenda">Nothing on your calendar for the next few days.</string>
+    <string name="stream_empty_tasks">No tasks due.</string>
+    <string name="stream_empty_feeds">No articles yet. Add a feed in Settings.</string>
+    <string name="stream_permission_message">Allow access to show this</string>
+    <string name="stream_permission_action">Allow access</string>
+    <string name="stream_not_connected_tasks">No to-do account is connected, so there are no tasks to show yet.</string>
+    <string name="stream_unavailable">This can\'t be shown right now.</string>
+    <string name="stream_off_message">This section is turned off.</string>
+    <string name="stream_off_action">Turn on</string>
+
+    <!-- Shared -->
+    <string name="stream_hidden_content">Hidden content</string>
+    <string name="stream_more_count">+%1$d more</string>
+    <string name="stream_open">Open</string>
+    <string name="stream_hide">Hide</string>
+    <string name="stream_more_options">More options</string>
+    <string name="stream_card_position">Card %1$d of %2$d</string>
+    <string name="stream_previous_card">Previous card</string>
+    <string name="stream_next_card">Next card</string>
+    <string name="stream_open_card">Open card</string>
+    <string name="stream_action_failed">That did not work.</string>
+
+    <!-- Media -->
+    <string name="stream_media_play">Play</string>
+    <string name="stream_media_pause">Pause</string>
+    <string name="stream_media_previous">Previous track</string>
+    <string name="stream_media_next">Next track</string>
+    <string name="stream_media_open_player">Open player</string>
+    <string name="stream_media_position">Playback position</string>
+    <string name="stream_media_position_value">%1$s of %2$s</string>
+    <string name="stream_media_unknown_title">Unknown title</string>
+    <string name="stream_media_show_queue">Show queue</string>
+    <string name="stream_media_hide_queue">Hide queue</string>
+    <string name="stream_media_up_next">Up next</string>
+    <string name="stream_media_playing">Playing</string>
+    <string name="stream_media_paused">Paused</string>
+
+    <!-- Notifications -->
+    <string name="stream_notification_dismiss">Dismiss</string>
+    <string name="stream_notification_snooze">Snooze</string>
+    <string name="stream_notification_reply">Reply</string>
+    <string name="stream_notification_send">Send reply</string>
+    <string name="stream_notification_reply_hint">Write a reply</string>
+    <string name="stream_notification_show_thread">Show conversation</string>
+    <string name="stream_notification_hide_thread">Collapse conversation</string>
+    <string name="stream_notification_you">You</string>
+
+    <!-- Events -->
+    <string name="stream_event_now">Now</string>
+    <string name="stream_event_ended">Ended</string>
+    <string name="stream_event_all_day">All day</string>
+    <string name="stream_event_alarm">Alarm</string>
+    <string name="stream_event_untitled">Event</string>
+    <plurals name="stream_event_starts_in_minutes">
+        <item quantity="one">Starts in %1$d minute</item>
+        <item quantity="other">Starts in %1$d minutes</item>
+    </plurals>
+    <plurals name="stream_event_starts_in_hours">
+        <item quantity="one">Starts in %1$d hour</item>
+        <item quantity="other">Starts in %1$d hours</item>
+    </plurals>
+    <plurals name="stream_event_minutes_left">
+        <item quantity="one">%1$d minute left</item>
+        <item quantity="other">%1$d minutes left</item>
+    </plurals>
+    <string name="stream_event_time_span">%1$s to %2$s</string>
+    <string name="stream_day_today">Today</string>
+    <string name="stream_day_tomorrow">Tomorrow</string>
+
+    <!-- Articles -->
+    <string name="stream_article_mark_read">Mark as read</string>
+    <string name="stream_article_read">Read</string>
+    <string name="stream_article_stale">Not updated recently</string>
+
+    <!-- Tasks -->
+    <string name="stream_task_checkbox_unavailable">Completing tasks is not available yet</string>
+    <string name="stream_task_due">Due %1$s</string>
+
+    <!-- Recents -->
+    <string name="stream_recent_last_used">Last used %1$s</string>
+    <string name="stream_recents_frequent">Often used</string>
+
+    <!-- Dock accessibility actions that reach the Stream -->
+    <string name="stream_dock_open_action">Open Stream</string>
+    <string name="stream_dock_close_action">Back to Home</string>
 </resources>
