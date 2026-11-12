@@ -82,6 +82,7 @@ internal data class StreamEnvironment(
  * What the Stream asks its host to do. Every user action goes through [onAction] (the one gateway), Hide through
  * [onHide] (the existing exclusions flow; null when the shell offers none), a layout edit through [onLayoutAction].
  */
+@Suppress("LongParameterList")
 internal class StreamCallbacks(
     val onAction: (StreamContent, StreamAction) -> Unit = { _, _ -> },
     val onLayoutAction: (StreamLayoutAction) -> Unit = {},
@@ -90,6 +91,12 @@ internal class StreamCallbacks(
     /** "Turn on": an explicit user action that turns the section's sources back on. */
     val onEnableSection: (StreamSection) -> Unit = {},
     val onHide: ((StreamContent, String?, HideKind) -> Unit)? = null,
+    /** Quick-add: a new task with this text, due today. */
+    val onAddTask: (String) -> Unit = {},
+    /** An explicit refresh of the tasks (the Retry and Refresh buttons). */
+    val onRefreshTasks: () -> Unit = {},
+    /** "Connect Todoist": opens Settings > Stream > Tasks. */
+    val onConnectTasks: () -> Unit = {},
 )
 
 internal fun StreamContent.appRef(): StreamAppRef? =

@@ -38,6 +38,9 @@ sealed interface StreamAction {
 
     data object MarkRead : StreamAction
 
+    /** Tick a task off. */
+    data object Complete : StreamAction
+
     companion object {
         const val DEFAULT_SNOOZE_MILLIS = 60L * 60L * 1000L
     }
@@ -59,7 +62,8 @@ sealed interface StreamActionResult {
  * The one entry point for acting on Stream content. The app implementation routes to the platform (notification
  * PendingIntents, media controllers, the RSS cache, launching); it must call [StreamActionPolicy.check] first so
  * the rule about what is offered lives in one tested place. Not for Hide (an exclusion rule needs the user's choice
- * of what to hide) or for Tasks (no source yet). Called off the main thread for anything that blocks.
+ * of what to hide) or for adding a task (that is [TaskActions.add]). Called off the main thread for anything
+ * that blocks.
  */
 fun interface StreamActionGateway {
     fun perform(
@@ -87,7 +91,7 @@ object StreamActionPolicy {
                 is EventContent -> action == StreamAction.Open && EventAction.OPEN in content.actions
                 is ArticleContent -> article(content, action)
                 is RecentAppContent -> action == StreamAction.Open && RecentAppAction.LAUNCH in content.actions
-                is TaskContent -> false
+                is TaskContent -> task(content, action)
             }
 
     /** A redacted value shows "Hidden content": it can be opened (and a media card still has its transport). */
@@ -98,6 +102,16 @@ object StreamActionPolicy {
         content.privacy != StreamPrivacy.REDACTED ||
             action == StreamAction.Open ||
             (content is MediaContent && isTransport(action))
+
+    private fun task(
+        content: TaskContent,
+        action: StreamAction,
+    ): Boolean =
+        when (action) {
+            StreamAction.Open -> TaskAction.OPEN in content.actions
+            StreamAction.Complete -> TaskAction.COMPLETE in content.actions && !content.completed
+            else -> false
+        }
 
     private fun article(
         content: ArticleContent,

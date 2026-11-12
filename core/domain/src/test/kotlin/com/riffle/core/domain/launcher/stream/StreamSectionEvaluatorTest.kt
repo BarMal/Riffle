@@ -318,8 +318,8 @@ class StreamSectionEvaluatorTest {
     @Test
     fun `tasks are not connected until a provider says otherwise`() {
         assertEquals(
-            StreamSectionResult.NotConnected,
-            eval(StreamSection.TASKS, StreamSectionInputs(tasks = TypedSourceState.NotConnected)),
+            StreamSectionResult.NotConnected(),
+            eval(StreamSection.TASKS, StreamSectionInputs(tasks = TypedSourceState.NotConnected())),
         )
         assertEquals(StreamSectionResult.Loading, eval(StreamSection.TASKS, StreamSectionInputs()))
         assertEquals(

@@ -37,8 +37,8 @@ sealed interface StreamSectionResult {
     /** The user has not granted what these sources need; offer the existing access flow, never prompt. */
     data class PermissionRequired(val sources: List<SourceId>) : StreamSectionResult
 
-    /** Tasks only: no task account is connected. */
-    data object NotConnected : StreamSectionResult
+    /** Tasks only: no task account is connected, or its token was rejected ([reason]). */
+    data class NotConnected(val reason: NotConnectedReason = NotConnectedReason.NO_ACCOUNT) : StreamSectionResult
 
     data object Unavailable : StreamSectionResult
 

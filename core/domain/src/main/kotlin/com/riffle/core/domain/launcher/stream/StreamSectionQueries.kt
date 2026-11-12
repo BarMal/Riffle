@@ -135,7 +135,9 @@ internal object StreamSectionQueries {
                 .filter { options.showCompleted || !it.completed }
                 .sortedWith(
                     compareBy<TaskContent> { it.completed }
+                        .thenBy { !it.overdue }
                         .thenBy { it.dueEpochMillis ?: Long.MAX_VALUE }
+                        .thenByDescending { it.priority }
                         .thenBy { it.id.value },
                 )
         return listOf(StreamGroup(TASKS_GROUP, null, tasks.take(options.limit), tasks.size))

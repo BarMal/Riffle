@@ -55,6 +55,7 @@ import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
 import com.riffle.app.launcher.rss.AndroidFeedParser
+import com.riffle.app.launcher.rss.AndroidFeedRefreshPolicy
 import com.riffle.app.launcher.rss.AndroidFeedTransport
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
 import com.riffle.app.launcher.rss.FeedBackgroundRefreshScheduler
@@ -81,6 +82,10 @@ import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.stream.StreamPlatform
 import com.riffle.app.launcher.stream.StreamPostureHolder
 import com.riffle.app.launcher.stream.largeIconBytesFor
+import com.riffle.app.launcher.stream.todoist.HttpUrlConnectionTransport
+import com.riffle.app.launcher.stream.todoist.TasksSettingsController
+import com.riffle.app.launcher.stream.todoist.TodoistTaskApi
+import com.riffle.app.launcher.stream.todoist.androidTodoistTokenStore
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
@@ -101,6 +106,10 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
 import com.riffle.core.domain.launcher.stream.StreamContext
 import com.riffle.core.domain.launcher.stream.StreamSourceIds
+import com.riffle.core.domain.launcher.stream.TaskConnectionState
+import com.riffle.core.domain.launcher.stream.TaskConnectionStatus
+import com.riffle.core.domain.launcher.stream.TaskTimer
+import com.riffle.core.domain.launcher.stream.TodoistTaskProvider
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
@@ -120,6 +129,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.withContext
 import java.time.ZoneId
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @Suppress("TooManyFunctions")
 internal class MainActivityDependencies(
@@ -360,7 +370,11 @@ internal class MainActivityDependencies(
                     ),
             )
         val alarm = AndroidNextAlarm(activity, executor)
+        val tasks = todoistTasks()
         return StreamPlatform(
+            tasks = tasks.provider,
+            taskActions = tasks.provider,
+            taskSettings = tasks.settings,
             registry =
                 EnablementSourceRegistry(
                     registry,
@@ -377,9 +391,50 @@ internal class MainActivityDependencies(
                     feedChanged = feedReadChanges::changed,
                     launch = AndroidItemLaunchPort(activity, appLauncher),
                     openClock = alarm::openClock,
+                    tasks = tasks.provider,
                 ),
         )
     }
+
+    /**
+     * The Todoist tasks source (P10): the token in the Keystore-backed store, one HTTP stack, one provider that
+     * refreshes on its own single thread, and the settings controller that saves and removes the token. Nothing
+     * touches the network until a Stream section observes the provider or the user saves a token.
+     */
+    private fun todoistTasks(): TodoistTasksRuntime {
+        val executor =
+            Executors.newSingleThreadExecutor { task -> Thread(task, "riffle-tasks").apply { isDaemon = true } }
+        val store = androidTodoistTokenStore(activity)
+        val status = TaskConnectionStatus()
+        val api = TodoistTaskApi(HttpUrlConnectionTransport(), token = store::read)
+        val scheduler =
+            Executors.newSingleThreadScheduledExecutor { task ->
+                Thread(task, "riffle-tasks-timer").apply { isDaemon = true }
+            }
+        val provider =
+            TodoistTaskProvider(
+                api = api,
+                hasToken = { store.read() != null },
+                status = status,
+                executor = executor,
+                timer =
+                    TaskTimer { period, task ->
+                        val handle = scheduler.scheduleWithFixedDelay(task, period, period, TimeUnit.MILLISECONDS)
+                        val cancel: () -> Unit = { handle.cancel(false) }
+                        cancel
+                    },
+                policy = AndroidFeedRefreshPolicy(activity),
+            )
+        // The saved token is read once, off the main thread, to say Connected or not before anyone opens Settings.
+        executor.execute { if (store.read() != null) status.set(TaskConnectionState.CONNECTED) }
+        val settings = TasksSettingsController(store, status, executor, onTokenChanged = provider::tokenChanged)
+        return TodoistTasksRuntime(provider, settings)
+    }
+
+    private class TodoistTasksRuntime(
+        val provider: TodoistTaskProvider,
+        val settings: TasksSettingsController,
+    )
 
     /**
      * What the shell shows the Stream with: the typed-content provider over [streamPlatform], reading the same Hide
@@ -398,6 +453,7 @@ internal class MainActivityDependencies(
         val provider =
             StreamContentProvider(
                 registry = platform.registry,
+                tasks = platform.tasks,
                 alarms = platform.alarms,
                 contextChanges = mergedContextChanges(exclusionRepository, contentPrivacy, streamLayoutRepository),
                 context = {
@@ -414,6 +470,8 @@ internal class MainActivityDependencies(
             provider = provider,
             layouts = streamLayoutRepository,
             actions = platform.actions,
+            tasks = platform.taskActions,
+            taskSettings = platform.taskSettings,
             imageLoader =
                 AndroidStreamImageLoader(
                     activity.packageManager,

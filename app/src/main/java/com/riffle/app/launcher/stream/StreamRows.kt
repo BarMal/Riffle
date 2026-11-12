@@ -269,9 +269,10 @@ internal fun ArticleRow(
 internal fun TaskRow(
     task: TaskContent,
     env: StreamEnvironment,
+    callbacks: StreamCallbacks,
     modifier: Modifier = Modifier,
 ) {
-    TaskLine(task, env, modifier.padding(horizontal = RiffleSpacing.s))
+    TaskLine(task, env, callbacks, modifier.padding(horizontal = RiffleSpacing.s))
 }
 
 /** Icon and label, with when the app was last used. */
@@ -312,7 +313,7 @@ internal fun StreamRow(
         is MediaContent -> MediaRow(content, env, callbacks, groupKey)
         is EventContent -> EventRow(content, env, callbacks, groupKey, showCountdown = showCountdown)
         is ArticleContent -> ArticleRow(content, env, callbacks, groupKey)
-        is TaskContent -> TaskRow(content, env)
+        is TaskContent -> TaskRow(content, env, callbacks)
         is RecentAppContent -> RecentAppRow(content, env, callbacks, groupKey)
     }
 }

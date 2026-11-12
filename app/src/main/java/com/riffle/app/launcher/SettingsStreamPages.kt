@@ -2,30 +2,46 @@
 
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
+import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsText
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
 import com.riffle.app.launcher.stream.titleRes
+import com.riffle.app.launcher.stream.todoist.TasksSettingsController
+import com.riffle.app.launcher.stream.todoist.TasksSettingsState
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamView
+import com.riffle.core.domain.launcher.stream.TaskConnectionState
 import com.riffle.core.domain.launcher.workspace.SourceIds
 
 /**
@@ -252,17 +268,116 @@ private fun AgendaIncludeFeedsSetting(state: SettingsSurfaceState) {
     )
 }
 
-/** Stream > Tasks: no provider yet; the next release connects one. Nothing to enter and nothing is stored. */
+/** The Tasks settings (the Todoist token), provided by the shell; null where there is none (previews). */
+internal val LocalTasksSettings = staticCompositionLocalOf<TasksSettingsController?> { null }
+
+internal const val TASKS_TOKEN_FIELD_TEST_TAG = "settings-tasks-token"
+internal const val TASKS_SAVE_TEST_TAG = "settings-tasks-save"
+internal const val TASKS_REMOVE_TEST_TAG = "settings-tasks-remove"
+internal const val TASKS_STATUS_TEST_TAG = "settings-tasks-status"
+
+/** Stream > Tasks: connect Todoist with a personal API token, or remove it. */
 @Composable
 internal fun SettingsStreamTasksPageContent() {
-    SettingsSection(title = stringResource(R.string.settings_page_stream_tasks)) {
-        SettingsListRow(
-            modifier = Modifier.settingAnchor(SettingKey.TASKS_PROVIDER),
-            title = SettingKey.TASKS_PROVIDER.label(),
-            subtitle = stringResource(R.string.settings_tasks_not_connected),
+    val controller = LocalTasksSettings.current
+    if (controller == null) {
+        SettingsPreviewOffNote()
+    } else {
+        val state by controller.state.collectAsState()
+        SettingsTasksContent(state = state, onSave = controller::save, onRemove = controller::remove)
+    }
+}
+
+/**
+ * The token form over a fixed [state]. The token field is cleared on Save and never filled from storage: once saved
+ * the page only says Connected. It is kept out of saved instance state on purpose.
+ */
+@Composable
+internal fun SettingsTasksContent(
+    state: TasksSettingsState,
+    onSave: (String) -> Unit,
+    onRemove: () -> Unit,
+) {
+    val uriHandler = LocalUriHandler.current
+    var token by remember { mutableStateOf("") }
+    val connected = state.connection == TaskConnectionState.CONNECTED
+    val rejected = state.connection == TaskConnectionState.TOKEN_REJECTED
+    Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.l)) {
+        Text(
+            modifier = Modifier.padding(horizontal = RiffleSpacing.s),
+            text = stringResource(R.string.settings_tasks_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SettingsSection(title = stringResource(R.string.settings_page_stream_tasks)) {
+            SettingsListRow(
+                modifier = Modifier.settingAnchor(SettingKey.TASKS_PROVIDER).testTag(TASKS_STATUS_TEST_TAG),
+                title = stringResource(R.string.settings_tasks_status_title),
+                subtitle =
+                    stringResource(
+                        when (state.connection) {
+                            TaskConnectionState.CONNECTED -> R.string.settings_tasks_status_connected
+                            TaskConnectionState.TOKEN_REJECTED -> R.string.settings_tasks_status_rejected
+                            TaskConnectionState.NOT_CONNECTED -> R.string.settings_tasks_status_not_connected
+                        },
+                    ),
+            )
+            if (!connected) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = RiffleSpacing.s),
+                    verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+                ) {
+                    OutlinedTextField(
+                        value = token,
+                        onValueChange = { token = it },
+                        modifier = Modifier.fillMaxWidth().testTag(TASKS_TOKEN_FIELD_TEST_TAG),
+                        singleLine = true,
+                        label = { Text(stringResource(R.string.settings_tasks_token_label)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                autoCorrectEnabled = false,
+                                imeAction = ImeAction.Done,
+                            ),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {
+                        TextButton(
+                            modifier = Modifier.testTag(TASKS_SAVE_TEST_TAG),
+                            enabled = token.isNotBlank(),
+                            onClick = {
+                                onSave(token)
+                                token = ""
+                            },
+                        ) { SettingsButtonText(stringResource(R.string.settings_tasks_save)) }
+                        TextButton(
+                            onClick = { uriHandler.openUri(TODOIST_DEVELOPER_SETTINGS_URL) },
+                        ) { SettingsButtonText(stringResource(R.string.settings_tasks_find_token)) }
+                    }
+                }
+            }
+            if (connected || rejected) {
+                SettingsListRow(
+                    title = stringResource(R.string.settings_tasks_remove_title),
+                    subtitle = stringResource(R.string.settings_tasks_remove_summary),
+                    trailingContent = {
+                        TextButton(modifier = Modifier.testTag(TASKS_REMOVE_TEST_TAG), onClick = onRemove) {
+                            SettingsButtonText(stringResource(R.string.settings_tasks_remove))
+                        }
+                    },
+                )
+            }
+        }
+        Text(
+            modifier = Modifier.padding(horizontal = RiffleSpacing.s),
+            text = stringResource(R.string.settings_tasks_privacy),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
+
+private const val TODOIST_DEVELOPER_SETTINGS_URL = "https://app.todoist.com/app/settings/integrations/developer"
 
 /** Stream > Feeds: the source, the feed list, adding a feed and the opt-in background refresh. */
 @Composable

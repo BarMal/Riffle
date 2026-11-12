@@ -60,6 +60,9 @@ class StreamBehaviorTest {
     private val actions = mutableListOf<Pair<StreamContent, StreamAction>>()
     private val accessRequests = mutableListOf<List<com.riffle.core.domain.launcher.workspace.SourceId>>()
     private val enabled = mutableListOf<StreamSection>()
+    private val added = mutableListOf<String>()
+    private var refreshes = 0
+    private var connects = 0
 
     private val handledFocus = mutableListOf<Long>()
 
@@ -79,6 +82,9 @@ class StreamBehaviorTest {
                             onLayoutAction = { action -> layout = StreamLayoutReducer.reduce(layout, action) },
                             onRequestAccess = { sources -> accessRequests += sources },
                             onEnableSection = { section -> enabled += section },
+                            onAddTask = { text -> added += text },
+                            onRefreshTasks = { refreshes++ },
+                            onConnectTasks = { connects++ },
                         ),
                     contentPadding = PaddingValues(),
                     focusRequest = focus,
@@ -210,11 +216,109 @@ class StreamBehaviorTest {
     }
 
     @Test
-    fun tasksSaySoWhenNoAccountIsConnected() {
-        show(defaultResults() + (StreamSection.TASKS to StreamSectionResult.NotConnected))
-        scrollTo(hasText("No to-do account is connected, so there are no tasks to show yet."))
-        composeRule.onNodeWithText("No to-do account is connected, so there are no tasks to show yet.")
+    fun tasksOfferToConnectWhenNoAccountIsConnected() {
+        show(defaultResults() + (StreamSection.TASKS to StreamSectionResult.NotConnected()))
+        scrollTo(hasText("Connect Todoist"))
+        composeRule.onNodeWithText("Todoist is not connected, so there are no tasks to show.").assertIsDisplayed()
+        composeRule.onNodeWithText("Connect Todoist").performClick()
+        assertEquals(1, connects)
+    }
+
+    @Test
+    fun aRejectedTokenSaysSoAndOffersToReplaceIt() {
+        show(
+            defaultResults() +
+                (
+                    StreamSection.TASKS to
+                        StreamSectionResult.NotConnected(
+                            com.riffle.core.domain.launcher.stream.NotConnectedReason.TOKEN_REJECTED,
+                        )
+                ),
+        )
+        scrollTo(hasText("Replace token"))
+        composeRule.onNodeWithText("Todoist did not accept the saved token. Paste a new one in Settings.")
             .assertIsDisplayed()
+        composeRule.onNodeWithText("Replace token").performClick()
+        assertEquals(1, connects)
+    }
+
+    @Test
+    fun tickingATaskCompletesItAndTheTitleOpensIt() {
+        show()
+        scrollTo(hasContentDescription("Mark Send the invoice done"))
+        composeRule.onNodeWithContentDescription("Mark Send the invoice done").performClick()
+        composeRule.onNodeWithText("Send the invoice").performClick()
+        assertEquals(listOf(StreamAction.Complete, StreamAction.Open), actions.map { it.second })
+        assertTrue(actions.all { it.first.id.value == "todoist:2" })
+    }
+
+    @Test
+    fun aHiddenTaskCannotBeTicked() {
+        val hidden =
+            StreamFixtures.tasks.map {
+                it.copy(
+                    title = null,
+                    listName = null,
+                    privacy = com.riffle.core.domain.launcher.stream.StreamPrivacy.REDACTED,
+                    actions = emptySet(),
+                )
+            }
+        show(
+            defaultResults() +
+                (
+                    StreamSection.TASKS to
+                        StreamSectionResult.Ready(
+                            listOf(
+                                com.riffle.core.domain.launcher.stream.StreamGroup(
+                                    com.riffle.core.domain.launcher.stream.StreamGroupKeys.TASKS,
+                                    null,
+                                    hidden,
+                                ),
+                            ),
+                        )
+                ),
+        )
+        scrollTo(hasText("Hidden content"))
+        composeRule.onAllNodesWithText("Hidden content").onFirst().assertIsDisplayed()
+        composeRule.onNodeWithText("Renew passport").assertDoesNotExist()
+    }
+
+    @Test
+    fun quickAddSendsTheTextAndClearsTheField() {
+        show()
+        scrollTo(hasText("Add a task for today"))
+        composeRule.onNodeWithTag("stream-tasks-quick-add").performTextInput("Buy milk")
+        composeRule.onNodeWithTag("stream-tasks-add").performClick()
+        assertEquals(listOf("Buy milk"), added)
+        composeRule.onNodeWithText("Buy milk").assertDoesNotExist()
+    }
+
+    @Test
+    fun aStaleListSaysSoAndRetryRefreshes() {
+        val stale =
+            StreamSectionResult.Ready(
+                listOf(
+                    com.riffle.core.domain.launcher.stream.StreamGroup(
+                        com.riffle.core.domain.launcher.stream.StreamGroupKeys.TASKS,
+                        null,
+                        StreamFixtures.staleTasks,
+                    ),
+                ),
+            )
+        show(defaultResults() + (StreamSection.TASKS to stale))
+        scrollTo(hasText("Retry"))
+        composeRule.onNodeWithText("Can't reach Todoist. Showing the tasks from the last refresh.").assertIsDisplayed()
+        composeRule.onNodeWithText("Retry").performClick()
+        assertEquals(1, refreshes)
+    }
+
+    @Test
+    fun withNoDataAndNoConnectionTasksSayTheyCannotReachTodoist() {
+        show(defaultResults() + (StreamSection.TASKS to StreamSectionResult.Unavailable))
+        scrollTo(hasText("Retry"))
+        composeRule.onNodeWithText("Can't reach Todoist, and there are no saved tasks to show.").assertIsDisplayed()
+        composeRule.onNodeWithText("Retry").performClick()
+        assertEquals(1, refreshes)
     }
 
     @Test

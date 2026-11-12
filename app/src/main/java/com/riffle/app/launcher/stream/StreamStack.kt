@@ -131,7 +131,7 @@ internal fun StreamCard(
         is MediaContent -> MediaCard(content, env, callbacks, groupKey, expanded, onExpandedChange, modifier)
         is EventContent -> EventCard(content, env, callbacks, groupKey, modifier)
         is ArticleContent -> ArticleCard(content, env, callbacks, groupKey, modifier)
-        is TaskContent -> TasksCard(listOf(content), env, modifier)
+        is TaskContent -> TasksCard(listOf(content), env, callbacks, modifier)
         is RecentAppContent -> RecentAppTile(content, env, callbacks, groupKey, modifier)
     }
 }

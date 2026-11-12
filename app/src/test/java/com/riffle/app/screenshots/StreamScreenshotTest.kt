@@ -81,7 +81,46 @@ class StreamScreenshotTest {
     fun feedsList() = section(StreamSection.FEEDS, StreamView.LIST)
 
     @Test
-    fun tasksNotConnected() = section(StreamSection.TASKS, StreamView.LIST, StreamSectionResult.NotConnected)
+    fun tasksNotConnected() = section(StreamSection.TASKS, StreamView.LIST, StreamSectionResult.NotConnected())
+
+    @Test
+    fun tasksEmpty() = section(StreamSection.TASKS, StreamView.STACK, StreamSectionResult.Empty)
+
+    @Test
+    fun tasksEmptyList() = section(StreamSection.TASKS, StreamView.LIST, StreamSectionResult.Empty)
+
+    @Test
+    fun tasksNotConnectedStack() = section(StreamSection.TASKS, StreamView.STACK, StreamSectionResult.NotConnected())
+
+    @Test
+    fun tasksTokenRejected() =
+        section(
+            StreamSection.TASKS,
+            StreamView.LIST,
+            StreamSectionResult.NotConnected(com.riffle.core.domain.launcher.stream.NotConnectedReason.TOKEN_REJECTED),
+        )
+
+    @Test
+    fun tasksErrorStack() = section(StreamSection.TASKS, StreamView.STACK, StreamSectionResult.Unavailable)
+
+    @Test
+    fun tasksErrorList() = section(StreamSection.TASKS, StreamView.LIST, StreamSectionResult.Unavailable)
+
+    @Test
+    fun tasksStaleList() =
+        section(
+            StreamSection.TASKS,
+            StreamView.LIST,
+            StreamSectionResult.Ready(
+                listOf(
+                    com.riffle.core.domain.launcher.stream.StreamGroup(
+                        com.riffle.core.domain.launcher.stream.StreamGroupKeys.TASKS,
+                        null,
+                        StreamFixtures.staleTasks,
+                    ),
+                ),
+            ),
+        )
 
     @Test
     fun notificationsPermissionRequired() =

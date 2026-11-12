@@ -1,8 +1,12 @@
 package com.riffle.app.launcher.stream
 
 import com.riffle.app.launcher.sources.SourceChangeSource
+import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.core.domain.launcher.stream.NextAlarmProvider
+import com.riffle.core.domain.launcher.stream.NotConnectedTaskProvider
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
+import com.riffle.core.domain.launcher.stream.TaskActions
+import com.riffle.core.domain.launcher.stream.TaskProvider
 import com.riffle.core.domain.launcher.workspace.SourceRegistry
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -19,6 +23,10 @@ internal class StreamPlatform(
     val registry: SourceRegistry,
     val alarms: NextAlarmProvider,
     val actions: StreamActionGateway,
+    /** The Tasks section's source; [NotConnectedTaskProvider] where there is none. */
+    val tasks: TaskProvider = NotConnectedTaskProvider,
+    val taskActions: TaskActions? = null,
+    val taskSettings: TasksSettingsController? = null,
 )
 
 /** A change signal the app raises itself (RSS read state has no platform callback). */
