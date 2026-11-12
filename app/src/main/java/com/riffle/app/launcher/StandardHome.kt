@@ -4,7 +4,6 @@ package com.riffle.app.launcher
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -63,6 +61,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -793,31 +792,40 @@ private fun HomeBottomSearchArea(
             onClick = actions.onBackgroundClick,
         )
         if (showPageIndicator) {
-            PageIndicator(
-                pageCount = pageCount,
-                selectedPageIndex = selectedPageIndex,
-                reducedMotion = reducedMotion,
-                haptics = actions.haptics,
-                onPageSelected = onPageSelected,
-                onLiveDragPageChanged = onIndicatorScrub,
-                onDragActiveChanged = onIndicatorDragActiveChanged,
-                modifier =
-                    Modifier
-                        .height(HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP.dp)
-                        .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
-                        .padding(horizontal = HOME_SEARCH_HORIZONTAL_PADDING_DP.dp),
-            )
+            // The page indicator sits on Thin glass: chrome that stays out of the way of the wallpaper.
+            GlassSurface(
+                weight = GlassWeight.Thin,
+                shape = RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp),
+                tint = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ) {
+                PageIndicator(
+                    pageCount = pageCount,
+                    selectedPageIndex = selectedPageIndex,
+                    reducedMotion = reducedMotion,
+                    haptics = actions.haptics,
+                    onPageSelected = onPageSelected,
+                    onLiveDragPageChanged = onIndicatorScrub,
+                    onDragActiveChanged = onIndicatorDragActiveChanged,
+                    modifier =
+                        Modifier
+                            .height(HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP.dp)
+                            .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
+                            .padding(horizontal = HOME_SEARCH_HORIZONTAL_PADDING_DP.dp),
+                )
+            }
         } else {
-            Surface(
+            // The search pill: Regular glass.
+            GlassSurface(
                 modifier =
                     Modifier
                         .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
                         .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
                         .clickable(onClick = { actions.onAction(LauncherShellAction.OpenSearch) }),
+                weight = GlassWeight.Regular,
                 shape = RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = HOME_SEARCH_SURFACE_ALPHA),
+                tint = MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = HOME_SEARCH_BORDER_ALPHA)),
             ) {
                 Box(
                     modifier =
@@ -1019,8 +1027,6 @@ private const val HOME_SEARCH_AREA_HEIGHT_DP = 48
 private const val HOME_SEARCH_PILL_HEIGHT_DP = 30
 private const val HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
 private const val HOME_SEARCH_HORIZONTAL_PADDING_DP = 14
-private const val HOME_SEARCH_SURFACE_ALPHA = 0.82f
-private const val HOME_SEARCH_BORDER_ALPHA = 0.38f
 private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 250L
 private const val WIDGET_PICKER_EDGE_HOVER_ZONE_DP = 40
 private const val WIDGET_PICKER_EDGE_HOVER_DELAY_MILLIS = 650L

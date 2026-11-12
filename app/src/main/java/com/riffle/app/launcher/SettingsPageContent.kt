@@ -288,6 +288,7 @@ private fun SettingsAppearancePageContent(
     SettingsSection(title = "Liquid glass") {
         LiquidGlassSetting(
             settings = state.settings.liquidGlass,
+            reducedTransparency = appearance.reducedTransparency,
             onAction = onAction,
         )
     }

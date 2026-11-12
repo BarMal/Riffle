@@ -23,7 +23,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,6 +34,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
@@ -183,15 +183,18 @@ fun FolderSurface(
             profileFilter = addAppProfileFilter.value,
         )
 
-    Surface(
+    // An open folder is lit by the colours of the icons inside it.
+    GlassSurface(
         modifier =
             Modifier
                 .fillMaxSize()
                 .testTag(FOLDER_SURFACE_ROOT_TEST_TAG)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
+        weight = GlassWeight.Regular,
         shape = LocalLauncherPanelShape.current,
-        color = launcherPanelSurfaceColor(),
+        tint = launcherPanelSurfaceColor(),
         contentColor = launcherPanelContentColor(),
+        spotlight = true,
     ) {
         Column(
             modifier =
@@ -330,7 +333,13 @@ private fun FolderAppRow(
             identity = shortcut.appIdentity,
             label = shortcut.label,
             iconLoader = appIconLoader,
-            modifier = Modifier.size(36.dp),
+            modifier =
+                Modifier
+                    .size(36.dp)
+                    .glassSpotlightSource(
+                        key = shortcut.id.value,
+                        color = rememberGlassSpotlightColor(shortcut.appIdentity, appIconLoader),
+                    ),
         )
         Text(
             modifier = Modifier.weight(1f),

@@ -45,11 +45,13 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.containsHomeApp
 import com.riffle.core.domain.launcher.home.containsHomeAppShortcut
@@ -143,16 +145,16 @@ private fun SearchTopControls(
     onProfileFilterToggled: (AppProfileType) -> Unit,
     onResetFilters: (LauncherShellAction) -> Unit,
 ) {
-    Surface(
+    GlassSurface(
         modifier =
             Modifier
                 .widthIn(max = SEARCH_CONTROLS_MAX_WIDTH_DP.dp)
                 .fillMaxWidth()
                 .testTag(SEARCH_CONTROLS_TEST_TAG),
+        weight = GlassWeight.Regular,
         shape = LocalLauncherPanelShape.current,
         contentColor = launcherPanelContentColor(),
-        color = launcherPanelSurfaceColor(),
-        tonalElevation = 4.dp,
+        tint = launcherPanelSurfaceColor(),
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -216,21 +218,31 @@ private fun SearchResultList(
                 )
             }
         } else {
-            when (presentation) {
-                SearchResultPresentation.ICONS ->
-                    SearchResultIconGrid(
-                        results = results,
-                        appListContext = appListContext,
-                        gridColumns = gridColumns,
-                        modifier = Modifier.weight(1f),
-                    )
+            // The results panel: one glass surface lit by the colours of the apps it lists.
+            GlassSurface(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                weight = GlassWeight.Regular,
+                shape = LocalLauncherCardShape.current,
+                tint = launcherPanelSurfaceColor(),
+                contentColor = launcherPanelContentColor(),
+                spotlight = true,
+            ) {
+                when (presentation) {
+                    SearchResultPresentation.ICONS ->
+                        SearchResultIconGrid(
+                            results = results,
+                            appListContext = appListContext,
+                            gridColumns = gridColumns,
+                            modifier = Modifier.fillMaxSize(),
+                        )
 
-                SearchResultPresentation.LIST ->
-                    SearchResultListItems(
-                        results = results,
-                        appListContext = appListContext,
-                        modifier = Modifier.weight(1f),
-                    )
+                    SearchResultPresentation.LIST ->
+                        SearchResultListItems(
+                            results = results,
+                            appListContext = appListContext,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                }
             }
         }
         webPreview?.let { preview ->
@@ -277,6 +289,36 @@ private fun SearchResultIconGrid(
         gridItems(items = results, key = { result -> result.key }) { result ->
             SearchResultIconTile(result = result, appListContext = appListContext)
         }
+    }
+}
+
+/** An app result's icon with its notification badge; its colour lights the results panel's glass. */
+@Composable
+private fun SearchResultAppIcon(
+    result: SearchGridResult,
+    appIdentity: AppIdentity,
+    appListContext: AppListContext,
+    sizeDp: Int,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(sizeDp.dp)
+                .glassSpotlightSource(
+                    key = result.key,
+                    color = rememberGlassSpotlightColor(appIdentity, appListContext.appIconLoader),
+                ),
+    ) {
+        LauncherAppIcon(
+            identity = appIdentity,
+            label = result.label,
+            iconLoader = appListContext.appIconLoader,
+            modifier = Modifier.size(sizeDp.dp),
+        )
+        NotificationCountBadge(
+            count = appListContext.notificationCountFor(appIdentity),
+            modifier = Modifier.align(Alignment.TopEnd),
+        )
     }
 }
 
@@ -330,18 +372,12 @@ private fun SearchResultListItem(
                     }
                 }
             } else {
-                Box(modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp)) {
-                    LauncherAppIcon(
-                        identity = appIdentity,
-                        label = result.label,
-                        iconLoader = appListContext.appIconLoader,
-                        modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp),
-                    )
-                    NotificationCountBadge(
-                        count = appListContext.notificationCountFor(appIdentity),
-                        modifier = Modifier.align(Alignment.TopEnd),
-                    )
-                }
+                SearchResultAppIcon(
+                    result = result,
+                    appIdentity = appIdentity,
+                    appListContext = appListContext,
+                    sizeDp = SEARCH_RESULT_ICON_SIZE_DP,
+                )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -391,18 +427,12 @@ private fun SearchResultIconTile(
             if (appIdentity == null) {
                 SearchSettingIcon()
             } else {
-                Box(modifier = Modifier.size(SEARCH_ICON_TILE_SIZE_DP.dp)) {
-                    LauncherAppIcon(
-                        identity = appIdentity,
-                        label = result.label,
-                        iconLoader = appListContext.appIconLoader,
-                        modifier = Modifier.size(SEARCH_ICON_TILE_SIZE_DP.dp),
-                    )
-                    NotificationCountBadge(
-                        count = appListContext.notificationCountFor(appIdentity),
-                        modifier = Modifier.align(Alignment.TopEnd),
-                    )
-                }
+                SearchResultAppIcon(
+                    result = result,
+                    appIdentity = appIdentity,
+                    appListContext = appListContext,
+                    sizeDp = SEARCH_ICON_TILE_SIZE_DP,
+                )
             }
             Text(
                 text = result.label,

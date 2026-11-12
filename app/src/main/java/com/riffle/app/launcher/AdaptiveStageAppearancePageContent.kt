@@ -1030,16 +1030,6 @@ private fun AdaptiveStageAccessibilityTabContent(
                 }
             },
         )
-        SettingsSwitchRow(
-            "Reduced transparency",
-            "Remove translucent glass and blur",
-            appearance.motion.reducedTransparency,
-            { value ->
-                update {
-                    it.copy(motion = it.motion.copy(reducedTransparency = value))
-                }
-            },
-        )
     }
 }
 
@@ -1119,7 +1109,8 @@ private fun adaptiveStageFallbackMessage(
 ): String? {
     val effective = appearance.effectiveFor(rendererCapabilities)
     return when {
-        appearance.motion.reducedTransparency -> "Reduced transparency is on: glass and blur are disabled."
+        appearance.motion.reducedTransparency ->
+            "Reduced transparency is on (Appearance): glass is opaque and blur is off."
         appearance.surface.blurStrengthPercent != effective.surface.blurStrengthPercent ->
             "Blur is unavailable on this device; the preview shows the opaque fallback."
         appearance.surface.textureIntensityPercent != effective.surface.textureIntensityPercent ->

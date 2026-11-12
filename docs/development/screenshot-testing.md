@@ -15,6 +15,7 @@ The tests live in `app/src/test/java/com/riffle/app/screenshots/`.
 | `HomeScreenshotTest` | Standard grid Home through `HomeDestination` with a filled dock on the bottom edge, a side edge, and the device template's default edge | compact phone (plus dark and large font), unfolded foldable, tablet landscape |
 | `DockScreenshotTest` | The `Dock` composable with pinned apps and a dynamic section (stage entries and the All-notifications entry) | bottom and side edge, dark, large font, unfolded |
 | `DockPullScreenshotTest` | The dock pull from Cards to Library through `HomeDestination`: at rest, mid-pull, settled on Library, and mid-pull under reduced motion (crossfade) | compact phone |
+| `GlassMaterialScreenshotTest` | The glass material at its three weights with the spotlight lit by the things on the surface, in dark, with reduced transparency, and with liquid glass off | compact phone |
 | `AppearanceTuningScreenshotTest` | The Cards appearance tuning overlay with its sheet expanded over the preview surface | compact phone (plus dark and large font), unfolded foldable |
 
 The postures come from Robolectric device qualifiers in `ScreenshotDevices`:

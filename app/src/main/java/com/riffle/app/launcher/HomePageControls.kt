@@ -9,8 +9,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
@@ -35,7 +35,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,6 +68,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -255,7 +255,8 @@ private fun PageOverviewCard(
 ) {
     val isMenuExpanded = remember(state.page.id) { mutableStateOf(false) }
 
-    Surface(
+    val cardShape = LocalLauncherCardShape.current
+    GlassSurface(
         modifier =
             Modifier
                 .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
@@ -264,11 +265,20 @@ private fun PageOverviewCard(
                     state = state,
                     dragActions = dragActions,
                 )
-                .clip(LocalLauncherCardShape.current)
+                .clip(cardShape)
                 .testTag(pageOverviewCardTestTag(state.page.id.value))
-                .clickable(onClick = onClick),
-        shape = LocalLauncherCardShape.current,
-        color =
+                .clickable(onClick = onClick)
+                // The glass hairline marks every card; the selected one adds the accent ring.
+                .then(
+                    if (state.isSelected) {
+                        Modifier.border(1.dp, MaterialTheme.colorScheme.primary, cardShape)
+                    } else {
+                        Modifier
+                    },
+                ),
+        weight = GlassWeight.Regular,
+        shape = cardShape,
+        tint =
             if (state.isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
@@ -279,13 +289,6 @@ private fun PageOverviewCard(
                 MaterialTheme.colorScheme.onPrimaryContainer
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
-            },
-        tonalElevation = if (state.isSelected) 4.dp else 1.dp,
-        border =
-            if (state.isSelected) {
-                BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-            } else {
-                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             },
     ) {
         Column(

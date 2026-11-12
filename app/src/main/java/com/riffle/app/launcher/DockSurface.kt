@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -362,7 +363,11 @@ internal fun DockSurfaceStrip(
 
     // The spotlight belongs to the dock's own background, so a strip drawn without one (the
     // expanded shelf's, which sits on the shelf's background instead) carries no glow either.
-    val spotlight = rememberDockSpotlightState(position, enabled = renderBackground)
+    val spotlight =
+        rememberGlassSpotlightState(
+            axis = if (runsHorizontally) GlassSpotlightAxis.Horizontal else GlassSpotlightAxis.Vertical,
+            enabled = renderBackground,
+        )
     val backgroundAlpha = LocalDockBackgroundAlpha.current
 
     Box(
@@ -377,7 +382,14 @@ internal fun DockSurfaceStrip(
                         Modifier
                     },
                 )
-                .dockSpotlight(spotlight, position, dock.cornerRadiusDp, backgroundAlpha)
+                .glassSpotlight(
+                    spotlight = spotlight,
+                    shape = RoundedCornerShape(dock.cornerRadiusDp.dp),
+                    // The edge facing into the screen is the inner one: the top of a bottom dock,
+                    // the right of a left dock, and so on.
+                    innerAtStart = position == DockPosition.BOTTOM || position == DockPosition.RIGHT,
+                    alphaProvider = backgroundAlpha,
+                )
                 .dockDropHighlight(
                     dock,
                     presentation.interactions.isDropHighlighted,
@@ -389,7 +401,7 @@ internal fun DockSurfaceStrip(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        CompositionLocalProvider(LocalDockSpotlight provides spotlight) {
+        CompositionLocalProvider(LocalGlassSpotlight provides spotlight) {
             // Nothing dynamic to show is the common case and stays exactly as it was: one strip,
             // centred, with no arrangement wrapped around it to shift it by a fraction of a pixel.
             if (!showDynamicSection) {

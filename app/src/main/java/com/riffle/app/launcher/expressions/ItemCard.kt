@@ -7,17 +7,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
-import com.riffle.app.launcher.designsystem.RiffleElevation
+import com.riffle.app.launcher.GlassSurface
+import com.riffle.app.launcher.LocalLauncherCardShape
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.glassSpotlightSource
+import com.riffle.app.launcher.rememberGlassSpotlightColor
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemAction
 
@@ -52,42 +56,64 @@ internal fun ItemCard(
     hideEnabled: Boolean = true,
 ) {
     val hideMenu = rememberItemHideMenu(item).takeIf { hideEnabled }
-    Surface(
+    // Regular glass in the launcher's card shape, lit by the colour of the app the item belongs to.
+    GlassSurface(
         modifier = modifier,
-        shape = RiffleShapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = RiffleElevation.level2,
-        shadowElevation = RiffleElevation.level2,
+        weight = GlassWeight.Regular,
+        shape = LocalLauncherCardShape.current,
+        tint = MaterialTheme.colorScheme.surfaceContainerHigh,
+        spotlight = true,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(role = Role.Button) { onItemClick(item) }
-                    .hideCustomActions(hideMenu)
-                    .padding(RiffleSpacing.l),
-            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-        ) {
-            item.image?.let { image ->
-                ItemImage(
-                    handle = image,
-                    loader = environment.imageLoader,
-                    size = CardArtworkHeight,
-                    shape = RiffleShapes.medium,
-                    fillWidth = true,
-                )
-            }
-            CardHeader(item = item, environment = environment, hideMenu = hideMenu)
-            item.body?.takeIf { it.isNotBlank() }?.let { body ->
-                Text(
-                    text = body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = BODY_MAX_LINES,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            CardActions(item = item, onAction = onAction)
+        ItemCardFace(
+            item = item,
+            environment = environment,
+            hideMenu = hideMenu,
+            onItemClick = onItemClick,
+            onAction = onAction,
+        )
+    }
+}
+
+/** The card's content. Its own composable because the spotlight source must sit inside the glass. */
+@Composable
+private fun ItemCardFace(
+    item: Item,
+    environment: ExpressionEnvironment,
+    hideMenu: ItemHideMenu?,
+    onItemClick: (Item) -> Unit,
+    onAction: (Item, ItemAction) -> Unit,
+) {
+    val appIdentity = remember(item, environment.appIdentityFor) { environment.appIdentityFor(item) }
+    val appColor = rememberGlassSpotlightColor(identity = appIdentity, appIconLoader = environment.appIconLoader)
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .glassSpotlightSource(key = item.lazyKey(), color = appColor)
+                .clickable(role = Role.Button) { onItemClick(item) }
+                .hideCustomActions(hideMenu)
+                .padding(RiffleSpacing.l),
+        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+    ) {
+        item.image?.let { image ->
+            ItemImage(
+                handle = image,
+                loader = environment.imageLoader,
+                size = CardArtworkHeight,
+                shape = RiffleShapes.medium,
+                fillWidth = true,
+            )
         }
+        CardHeader(item = item, environment = environment, hideMenu = hideMenu)
+        item.body?.takeIf { it.isNotBlank() }?.let { body ->
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = BODY_MAX_LINES,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        CardActions(item = item, onAction = onAction)
     }
 }
 

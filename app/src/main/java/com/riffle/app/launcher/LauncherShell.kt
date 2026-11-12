@@ -309,7 +309,7 @@ fun LauncherShellContent(
         themeColors = state.launcherSettings.appearance.themeColors,
         themeCornerStyle = state.launcherSettings.appearance.themeCornerStyle,
         themeTypography = state.launcherSettings.appearance.themeTypography,
-        reducedTransparency = state.launcherSettings.cards.adaptiveStageAppearance.motion.reducedTransparency,
+        reducedTransparency = state.launcherSettings.appearance.reducedTransparency,
         liquidGlass = state.launcherSettings.resolveLiquidGlass(),
     ) {
         val usesSystemWallpaper =

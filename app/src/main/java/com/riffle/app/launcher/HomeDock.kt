@@ -212,7 +212,7 @@ internal fun DockSlotStrip(
                         )
                     } else {
                         val spotlightColor =
-                            rememberDockSpotlightColor(
+                            rememberGlassSpotlightColor(
                                 identity = (previewItem as? AppShortcutItem)?.appIdentity,
                                 appIconLoader = appIconLoader,
                             )
@@ -220,7 +220,7 @@ internal fun DockSlotStrip(
                             modifier =
                                 Modifier
                                     .requiredSize(slotMetrics.iconSizeDp.dp)
-                                    .dockSpotlightSource(key = slotKey, color = spotlightColor),
+                                    .glassSpotlightSource(key = slotKey, color = spotlightColor),
                             state =
                                 DockSlotState(
                                     item = dockSlotItemState(previewItem),

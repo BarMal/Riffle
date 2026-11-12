@@ -283,6 +283,7 @@ internal class MainActivityDependencies(
                     },
                 ),
             imageLoader = AndroidExpressionImageLoader(activity.packageManager),
+            appIconLoader = appIconLoader,
             itemActions = WorkspaceItemActions(AndroidItemLaunchPort(activity, appLauncher)),
             exclusionLoader = {
                 exclusionRepository.initialize(

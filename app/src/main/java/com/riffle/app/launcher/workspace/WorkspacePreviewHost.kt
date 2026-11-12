@@ -84,7 +84,7 @@ internal fun WorkspacePreviewTheme(
         themeColors = appearance.themeColors,
         themeCornerStyle = appearance.themeCornerStyle,
         themeTypography = appearance.themeTypography,
-        reducedTransparency = state.launcherSettings.cards.adaptiveStageAppearance.motion.reducedTransparency,
+        reducedTransparency = state.launcherSettings.appearance.reducedTransparency,
         liquidGlass = state.launcherSettings.resolveLiquidGlass(),
         content = content,
     )

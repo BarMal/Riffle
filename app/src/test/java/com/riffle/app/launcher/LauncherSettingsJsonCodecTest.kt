@@ -74,8 +74,10 @@ import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.homeSystemBars
+import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
+import com.riffle.core.domain.launcher.settings.withReducedTransparency
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -416,7 +418,7 @@ class LauncherSettingsJsonCodecTest {
                                     ),
                             ),
                     ),
-            )
+            ).withReducedTransparency(true)
 
         assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
 
@@ -440,6 +442,58 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(0, imported.surface.blurStrengthPercent)
         assertEquals(600, imported.motion.settleDurationMillis)
         assertEquals(100, imported.motion.magnetStrengthPercent)
+    }
+
+    @Test
+    fun roundTripsReducedTransparencyAsATopLevelAppearanceSetting() {
+        val settings = LauncherSettings().withReducedTransparency(true)
+
+        val json = JSONObject(encodeLauncherSettings(settings))
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertTrue(json.getJSONObject("appearance").getBoolean("reducedTransparency"))
+        assertTrue(decoded.appearance.reducedTransparency)
+        assertFalse(decodeLauncherSettings(encodeLauncherSettings(LauncherSettings())).appearance.reducedTransparency)
+    }
+
+    @Test
+    fun settingsSavedWithReducedTransparencyInTheAdaptiveMotionBlockDecodeItIntoAppearance() {
+        val legacy =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": { "timeScapeAppearance": { "motion": { "reducedTransparency": true } } }
+                }
+                """.trimIndent(),
+            )
+        val legacyUnfolded =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": { "adaptiveStageUnfoldedAppearance": { "motion": { "reducedTransparency": true } } }
+                }
+                """.trimIndent(),
+            )
+
+        assertTrue(legacy.appearance.reducedTransparency)
+        assertTrue(legacy.resolveLiquidGlass().reducedTransparency)
+        assertTrue(legacyUnfolded.appearance.reducedTransparency)
+    }
+
+    @Test
+    fun anExplicitTopLevelReducedTransparencyValueWinsOverTheLegacyOne() {
+        val decoded =
+            decodeLauncherSettings(
+                """
+                {
+                  "appearance": { "reducedTransparency": false },
+                  "cards": { "timeScapeAppearance": { "motion": { "reducedTransparency": true } } }
+                }
+                """.trimIndent(),
+            )
+
+        assertFalse(decoded.appearance.reducedTransparency)
+        assertFalse(decoded.cards.adaptiveStageAppearance.motion.reducedTransparency)
     }
 
     @Test

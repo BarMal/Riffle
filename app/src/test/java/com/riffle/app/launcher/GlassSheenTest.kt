@@ -6,25 +6,25 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class DockGlassSheenTest {
+class GlassSheenTest {
     @Test
     fun scalesEachLayerByThePullAndItsStrength() {
-        assertEquals(0.12f, dockGlassSheenAlpha(layerAlpha = 0.12f, scale = 1f), 1e-6f)
-        assertEquals(0.06f, dockGlassSheenAlpha(layerAlpha = 0.12f, scale = 0.5f), 1e-6f)
-        assertEquals(0.24f, dockGlassSheenAlpha(layerAlpha = 0.12f, scale = 2f), 1e-6f)
+        assertEquals(0.12f, glassSheenAlpha(layerAlpha = 0.12f, scale = 1f), 1e-6f)
+        assertEquals(0.06f, glassSheenAlpha(layerAlpha = 0.12f, scale = 0.5f), 1e-6f)
+        assertEquals(0.24f, glassSheenAlpha(layerAlpha = 0.12f, scale = 2f), 1e-6f)
     }
 
     @Test
     fun neverDrawsPastTheEndsOfTheAlphaRange() {
-        assertEquals(0f, dockGlassSheenAlpha(layerAlpha = 0.12f, scale = -0.2f), 1e-6f)
-        assertEquals(1f, dockGlassSheenAlpha(layerAlpha = 0.6f, scale = 3f), 1e-6f)
+        assertEquals(0f, glassSheenAlpha(layerAlpha = 0.12f, scale = -0.2f), 1e-6f)
+        assertEquals(1f, glassSheenAlpha(layerAlpha = 0.6f, scale = 3f), 1e-6f)
     }
 
     @Test
     fun aDarkDockGetsTheDesktopValues() {
         val strength = dockGlassSheenStrength(DockVisualEffect.FLAT, Color(0xFF202124))
 
-        assertEquals(DockGlassSheenStrength(highlight = 1f, shadow = 1f, border = 1f), strength)
+        assertEquals(GlassSheenStrength(highlight = 1f, shadow = 1f, border = 1f), strength)
     }
 
     @Test
@@ -41,7 +41,23 @@ class DockGlassSheenTest {
     fun aClearDockIsTreatedAsDarkGlassWhateverItsColour() {
         val clearLight = dockGlassSheenStrength(DockVisualEffect.FLAT, Color(0xFFE8EAED).copy(alpha = 0f))
 
-        assertEquals(DockGlassSheenStrength(highlight = 1f, shadow = 1f, border = 1f), clearLight)
+        assertEquals(GlassSheenStrength(highlight = 1f, shadow = 1f, border = 1f), clearLight)
+    }
+
+    @Test
+    fun theGeneralStrengthMatchesTheFlatDockAtEveryLightness() {
+        listOf(Color(0xFF202124), Color(0xFFE8EAED), Color(0xFFE8EAED).copy(alpha = 0.3f)).forEach { surface ->
+            assertEquals(glassSheenStrength(surface), dockGlassSheenStrength(DockVisualEffect.FLAT, surface))
+        }
+    }
+
+    @Test
+    fun scalingByAFactorScalesEveryGroupAndZeroSilencesTheSheen() {
+        val strength = GlassSheenStrength(highlight = 2f, shadow = 1f, border = 1.5f)
+
+        assertEquals(GlassSheenStrength(1f, 0.5f, 0.75f), strength.scaled(0.5f))
+        assertEquals(GlassSheenStrength(0f, 0f, 0f), strength.scaled(0f))
+        assertEquals(GlassSheenStrength(4f, 3f, 1.5f), strength.scaled(highlight = 2f, shadow = 3f, border = 1f))
     }
 
     @Test

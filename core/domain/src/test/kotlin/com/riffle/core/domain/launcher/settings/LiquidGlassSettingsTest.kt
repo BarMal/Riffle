@@ -58,6 +58,26 @@ class LiquidGlassSettingsTest {
     }
 
     @Test
+    fun reducedTransparencyIsOffByDefaultAndResolvesFromTheTopLevelAppearanceSetting() {
+        assertFalse(LauncherSettings().resolveLiquidGlass().reducedTransparency)
+
+        val reduced = LauncherSettings().withReducedTransparency(true)
+
+        assertTrue(reduced.appearance.reducedTransparency)
+        assertTrue(reduced.resolveLiquidGlass().reducedTransparency)
+    }
+
+    @Test
+    fun withReducedTransparencyKeepsTheAdaptiveStageCopiesInStep() {
+        val reduced = LauncherSettings().withReducedTransparency(true)
+
+        assertTrue(reduced.cards.adaptiveStageAppearance.motion.reducedTransparency)
+        assertTrue(reduced.cards.unfoldedAppearance.motion.reducedTransparency)
+        assertFalse(reduced.withReducedTransparency(false).cards.adaptiveStageAppearance.motion.reducedTransparency)
+        assertFalse(reduced.withReducedTransparency(false).appearance.reducedTransparency)
+    }
+
+    @Test
     fun spotlightFlowDefaultsToAGentleFollowAndClampsToItsRange() {
         assertEquals(DEFAULT_SPOTLIGHT_FLOW_MILLIS, LiquidGlassSettings().spotlightFlowMillis)
         val tooFast = LiquidGlassSettings(spotlightFlowMillis = -100).coerced()

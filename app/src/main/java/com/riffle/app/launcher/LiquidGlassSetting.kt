@@ -23,6 +23,7 @@ import com.riffle.core.domain.launcher.settings.SPOTLIGHT_FLOW_STEP_MILLIS
 @Composable
 internal fun LiquidGlassSetting(
     settings: LiquidGlassSettings,
+    reducedTransparency: Boolean,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -36,6 +37,17 @@ internal fun LiquidGlassSetting(
                 },
             checked = settings.enabled,
             onCheckedChange = { enabled -> onAction(LauncherShellAction.SelectLiquidGlassEnabled(enabled)) },
+        )
+        SettingsSwitchRow(
+            title = "Reduced transparency",
+            subtitle =
+                if (reducedTransparency) {
+                    "Glass surfaces are opaque; backdrop blur is off"
+                } else {
+                    "Make every glass surface opaque and turn off backdrop blur"
+                },
+            checked = reducedTransparency,
+            onCheckedChange = { reduced -> onAction(LauncherShellAction.SelectReducedTransparency(reduced)) },
         )
         if (settings.enabled) {
             DiscreteSettingSlider(

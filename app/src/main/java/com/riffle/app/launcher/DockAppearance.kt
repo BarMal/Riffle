@@ -71,6 +71,30 @@ internal val OpaqueDockBackground: () -> Float = { 1f }
  */
 internal val LocalDockBackgroundAlpha = staticCompositionLocalOf { OpaqueDockBackground }
 
+/**
+ * The sheen strength of a dock filled with [surface] in the [effect] visual style: the general
+ * [glassSheenStrength], shaped by the dock's own effect.
+ *
+ * - FLAT: the baseline.
+ * - ELEVATED: brighter highlights and a deeper shadow -- a pane raised toward the light.
+ * - OUTLINED: no glass border, since that style already draws its own outline.
+ */
+internal fun dockGlassSheenStrength(
+    effect: DockVisualEffect,
+    surface: Color,
+): GlassSheenStrength {
+    val base = glassSheenStrength(surface)
+    return when (effect) {
+        DockVisualEffect.FLAT -> base
+        DockVisualEffect.ELEVATED ->
+            base.scaled(highlight = ELEVATED_HIGHLIGHT_BOOST, shadow = ELEVATED_SHADOW_BOOST, border = 1f)
+        DockVisualEffect.OUTLINED -> base.copy(border = 0f)
+    }
+}
+
+private const val ELEVATED_HIGHLIGHT_BOOST = 1.3f
+private const val ELEVATED_SHADOW_BOOST = 1.5f
+
 @Composable
 internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
     val spec = dockAppearanceSpec(dock.visualEffect, dock.cornerRadiusDp)
@@ -84,7 +108,7 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
             result
                 .clip(shape)
                 .dockAtRestBackground(shape, dock)
-                .dockGlassSheen(shape, sheenStrength, backgroundAlpha)
+                .glassSheen(shape, sheenStrength, backgroundAlpha)
         if (spec.outlineWidthDp > 0) {
             result = result.border(spec.outlineWidthDp.dp, MaterialTheme.colorScheme.outlineVariant, shape)
         }
@@ -95,7 +119,7 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val elevationDp = spec.elevationDp
     val outlineWidthDp = spec.outlineWidthDp
-    val sheen = Modifier.dockGlassSheen(shape, sheenStrength, backgroundAlpha)
+    val sheen = Modifier.glassSheen(shape, sheenStrength, backgroundAlpha)
     return graphicsLayer {
         shadowElevation = elevationDp.dp.toPx() * backgroundAlpha()
         this.shape = shape
@@ -144,7 +168,7 @@ private fun Modifier.dockAtRestBackground(
     // `Build.VERSION.SDK_INT >= ...` check here, not one folded into a single condition with the
     // Robolectric guard (which would also push this over detekt's ComplexCondition threshold).
     if (Build.FINGERPRINT != "robolectric") {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.enabled && backdrop != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && liquidGlass.samplesBackdrop && backdrop != null) {
             return liquidGlassShaderBackground(
                 shape = shape,
                 tint = color,

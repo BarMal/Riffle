@@ -48,6 +48,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -134,7 +135,7 @@ internal fun AdaptiveStageAppearanceTuningOverlay(
                 // Fills exactly the size the header + editor below resolve to (matchParentSize
                 // sizes against the other, regular children of this Box), so every pixel of the
                 // sheet is glass -- nothing behind can show through undimmed or unclipped.
-                GlassSurface(modifier = Modifier.matchParentSize(), shape = sheetShape)
+                GlassSurface(modifier = Modifier.matchParentSize(), weight = GlassWeight.Thick, shape = sheetShape)
                 Column(modifier = Modifier.fillMaxWidth()) {
                     AppearanceTuningSheetHeader(
                         sheetState = scaffoldState.bottomSheetState,

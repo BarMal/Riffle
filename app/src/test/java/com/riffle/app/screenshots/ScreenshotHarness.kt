@@ -27,15 +27,24 @@ import com.riffle.core.domain.launcher.settings.ResolvedLiquidGlass
  *
  * [liquidGlassEnabled] defaults to true (today's every-other-screenshot-test behavior, unchanged);
  * pass false to lock in the flat, glass-off fallback a surface like [SettingsSection] renders
- * instead.
+ * instead. [reducedTransparency] is the one top-level off switch for glass (opaque tint, faint sheen).
  */
 @Composable
 internal fun ScreenshotBackdrop(
     liquidGlassEnabled: Boolean = true,
+    reducedTransparency: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     RiffleLauncherTheme(
-        liquidGlass = ResolvedLiquidGlass(liquidGlassEnabled, 0.45f, 0.2f, reducedMotion = false),
+        reducedTransparency = reducedTransparency,
+        liquidGlass =
+            ResolvedLiquidGlass(
+                liquidGlassEnabled,
+                0.45f,
+                0.2f,
+                reducedMotion = false,
+                reducedTransparency = reducedTransparency,
+            ),
     ) {
         Box(modifier = Modifier.fillMaxSize().background(ScreenshotWallpaper)) {
             content()

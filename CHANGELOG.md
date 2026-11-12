@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- One glass material: `GlassSurface` now takes a weight (Thin, Regular, Thick) that owns frost, tint, contrast scrim, hairline and shadow, and draws the dock's glass sheen on every surface.
+- The dock's icon-colour spotlight is generalised to any glass surface and now also lights open folders, the search results panel and Stream-style item cards from the colours of what they hold.
+- The search pill and results panel, the launcher panel, folders, the widget picker, widget frames, the context menu, dock notification cards, the page indicator, page overview cards and Settings sections all use `GlassSurface`.
+- Reduced transparency is now one top-level Appearance setting honoured by every glass surface, the sheen and the spotlight. Settings saved with it under the card stack's motion options are migrated.
+
 ## Alpha 192
 
 Release notes for the next alpha after Alpha 191.

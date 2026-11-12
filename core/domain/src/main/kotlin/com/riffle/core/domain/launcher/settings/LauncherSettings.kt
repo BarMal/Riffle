@@ -241,6 +241,11 @@ data class AppearanceSettings(
     val fullscreenHome: Boolean = false,
     val hideStatusBarOnHome: Boolean = false,
     val hideNavigationBarOnHome: Boolean = false,
+    /**
+     * The one off switch for glass: every glass surface draws an opaque tint, samples no backdrop and
+     * keeps its sheen faint. Replaces the copy that lived in the adaptive stage's motion settings.
+     */
+    val reducedTransparency: Boolean = false,
 )
 
 /**

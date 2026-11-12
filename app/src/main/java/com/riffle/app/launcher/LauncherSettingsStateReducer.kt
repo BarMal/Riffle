@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.coerced
+import com.riffle.core.domain.launcher.settings.withReducedTransparency
 
 internal class LauncherSettingsStateReducer(
     private val homeLayoutRepository: HomeLayoutRepository,
@@ -77,6 +78,12 @@ internal class LauncherSettingsStateReducer(
                             state.launcherSettings.copy(
                                 liquidGlass = state.launcherSettings.liquidGlass.copy(enabled = action.enabled),
                             ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectReducedTransparency ->
+                    state.withLauncherSettings(
+                        settings = state.launcherSettings.withReducedTransparency(action.reduced),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 

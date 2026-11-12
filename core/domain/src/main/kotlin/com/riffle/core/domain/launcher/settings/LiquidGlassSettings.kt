@@ -58,6 +58,7 @@ fun LauncherSettings.resolveLiquidGlass(): ResolvedLiquidGlass =
             frostStrengthFraction = settings.frostStrengthPercent / 100f,
             refractionStrengthFraction = settings.refractionStrengthPercent / 100f,
             reducedMotion = motion.reducedMotion,
+            reducedTransparency = appearance.reducedTransparency,
             spotlightFlowSeconds = settings.spotlightFlowMillis / MILLIS_PER_SECOND,
         )
     }
@@ -67,8 +68,34 @@ data class ResolvedLiquidGlass(
     val frostStrengthFraction: Float,
     val refractionStrengthFraction: Float,
     val reducedMotion: Boolean,
+    /** Every glass surface draws opaque, with a faint sheen; see [AppearanceSettings.reducedTransparency]. */
+    val reducedTransparency: Boolean = false,
     /** The spotlight's flow time constant in seconds; 0 follows instantly. */
     val spotlightFlowSeconds: Float = DEFAULT_SPOTLIGHT_FLOW_MILLIS / MILLIS_PER_SECOND,
-)
+) {
+    /** Whether a glass surface may sample the backdrop: glass is on and transparency is not reduced. */
+    val samplesBackdrop: Boolean get() = enabled && !reducedTransparency
+}
 
 private const val MILLIS_PER_SECOND = 1000f
+
+/**
+ * Sets the one top-level reduced-transparency switch ([AppearanceSettings.reducedTransparency]).
+ * Until the adaptive stage's own surface is replaced it still reads its own copy in
+ * [AdaptiveStageMotion], so both are kept in step here; nothing else writes either.
+ */
+fun LauncherSettings.withReducedTransparency(reduced: Boolean): LauncherSettings =
+    copy(
+        appearance = appearance.copy(reducedTransparency = reduced),
+        cards =
+            cards.copy(
+                adaptiveStageAppearance =
+                    cards.adaptiveStageAppearance.copy(
+                        motion = cards.adaptiveStageAppearance.motion.copy(reducedTransparency = reduced),
+                    ),
+                unfoldedAppearance =
+                    cards.unfoldedAppearance.copy(
+                        motion = cards.unfoldedAppearance.motion.copy(reducedTransparency = reduced),
+                    ),
+            ),
+    )
