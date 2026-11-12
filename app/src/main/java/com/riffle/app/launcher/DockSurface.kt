@@ -101,12 +101,14 @@ internal fun dockSurfaceMetrics(
         minOf(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally, dock.backgroundSizing))
             .coerceAtLeast(0)
 
-    // Notifications going first still leaves the static side a floor: room for one pinned icon,
-    // whenever the dock actually has one to show. Without it, a busy enough notification section
-    // could claim the whole run and make every pinned icon disappear rather than merely scroll --
-    // the dynamic section is free to fill anything past that, but never that last icon's worth.
+    // The dynamic side takes only what its entries need, but never so much that the pinned run is left with less than a
+    // few icons' worth: the pins keep their size and scroll in what remains (they are never shrunk to make room).
     val minStaticMainAxisDp =
-        if (visibleSlotCount > 0) dock.iconSizeDp + (DOCK_MAIN_AXIS_PADDING_DP * 2) else 0
+        dockStaticFloorMainAxisDp(
+            slotCount = visibleSlotCount,
+            iconSizeDp = dock.iconSizeDp,
+            spacingDp = dock.itemSpacingDp,
+        )
 
     // Notifications claim their room first; the static side is sized from whatever is left (see
     // dockDynamicSectionMainAxisDp), not the other way around -- a busy notification section
@@ -115,7 +117,7 @@ internal fun dockSurfaceMetrics(
         dockDynamicSectionMainAxisDp(
             entryCount = dynamicEntryCount,
             slotLimit = dock.liveAppSlots + DockDynamicSide.FIXED_ENTRY_COUNT,
-            entryExtentDp = dockDynamicEntryExtentDp(dock.iconSizeDp),
+            entryExtentDp = dockDynamicEntryExtentDp(),
             entrySpacingDp = dock.itemSpacingDp,
             maxRunMainAxisDp = (maxRunMainAxisDp - minStaticMainAxisDp).coerceAtLeast(0),
         )
@@ -344,6 +346,7 @@ internal fun DockSurfaceStrip(
     val runsHorizontally = position.isHorizontalEdge
     val showDynamicSection = dockSurfaceStripShowsDynamicSection(surfaceMetrics, dynamicEntries)
     val mainAxisDp = dockSurfaceStripMainAxisDp(surfaceMetrics, showDynamicSection).dp
+    // The bar is as tall as the pinned icon is big: the configured size, which a short run never shrinks.
     val crossAxisDp = dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp
     val staticSide: @Composable (suppressEndFade: Boolean) -> Unit = { suppressEndFade ->
         if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {

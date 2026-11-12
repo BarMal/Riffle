@@ -18,6 +18,21 @@ enum class StreamView(val storedId: String) {
     }
 }
 
+/**
+ * How the whole Stream is drawn when a posture has room for more than one pager (ADR 0003, Views): [PAGES], the pager
+ * of pages (two side by side when the width allows), or [STAGE], a rail of live stage thumbnails beside the selected
+ * stage's stack, after Stage Manager on macOS. Phone postures always draw [PAGES]. [storedId] is a stored contract.
+ */
+enum class StreamWideView(val storedId: String) {
+    PAGES("pages"),
+    STAGE("stage"),
+    ;
+
+    companion object {
+        fun fromStoredId(id: String?): StreamWideView? = entries.firstOrNull { it.storedId == id }
+    }
+}
+
 /** One section's place in a [StreamLayout]: whether it is shown and how it is drawn. */
 data class StreamSectionLayout(
     val section: StreamSection,
@@ -71,6 +86,8 @@ data class StreamLayout(
     val options: StreamSectionOptions = StreamSectionOptions(),
     /** How an expanded posture splits the screen with Home; the defaults elsewhere. */
     val split: StreamSplit = StreamSplit(),
+    /** Pages or Stage; read only by an expanded posture (see [StreamWideView]). Older layouts read as Pages. */
+    val wideView: StreamWideView = StreamWideView.PAGES,
 ) {
     init {
         require(

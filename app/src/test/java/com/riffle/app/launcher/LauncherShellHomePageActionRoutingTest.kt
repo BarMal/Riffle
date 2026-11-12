@@ -38,6 +38,7 @@ class LauncherShellHomePageActionRoutingTest {
                 LauncherShellAction.SelectHomeGridDimensions(GridDimensions(columns = 5, rows = 6)),
                 LauncherShellAction.SelectLibraryPageCompaction(enabled = true),
                 LauncherShellAction.SelectHomeLabelBackgroundAlpha(alphaPercent = 75),
+                LauncherShellAction.SelectHomeLabelBackgroundVisible(visible = true),
                 LauncherShellAction.SelectHomeLabelTextSize(textSizeSp = 14),
                 LauncherShellAction.SelectHomeLabelTextVisible(visible = false),
                 LauncherShellAction.SelectHomeLabelMaxWidth(maxWidthDp = 112),

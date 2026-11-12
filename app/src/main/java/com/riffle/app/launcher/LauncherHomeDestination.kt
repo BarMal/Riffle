@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -30,6 +31,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.zIndex
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.glance.GlanceHost
+import com.riffle.app.launcher.glance.LocalGlanceHost
 import com.riffle.app.launcher.library.LibrarySheet
 import com.riffle.app.launcher.library.libraryState
 import com.riffle.app.launcher.split.SplitPaneState
@@ -84,6 +87,30 @@ fun HomeDestination(
     val splitting = stream != null && deviceClass.supportsSplit()
     val splitPane = rememberSplitPaneState()
     val splitSetup: () -> SplitPullSetup? = { if (splitting) splitPane.pullSetup() else null }
+    // Glance widgets on Home read the Stream's provider and gateway, and open the Stream the way the Dock does.
+    val openStreamFromGlance by rememberUpdatedState<(StreamFocusTarget) -> Unit> { target ->
+        openStream(
+            stream,
+            dockPull,
+            target,
+            shownStream,
+            plan.dockEdge.pullDirection,
+            state.reducedMotion(),
+            splitSetup(),
+        )
+    }
+    val glanceHost =
+        remember(stream, state.installedApps, appIconLoader, state.reducedMotion()) {
+            stream?.let { host ->
+                GlanceHost(
+                    stream = host,
+                    installedApps = state.installedApps,
+                    appIconLoader = appIconLoader,
+                    reducedMotion = state.reducedMotion(),
+                    openStream = { target -> openStreamFromGlance(target) },
+                )
+            }
+        }
     // The dynamic side is the Stream's: live apps, now playing and the Stream button, whichever mode is showing.
     val dockInterpreter =
         rememberDockDynamicSide(
@@ -169,97 +196,99 @@ fun HomeDestination(
     // The shared backdrop every liquid-glass surface on Home samples from (see `LiquidGlassBackdrop.kt`): installed
     // here, around this content specifically, since this is exactly the wallpaper-plus-surface subtree every glass
     // surface on Home floats above.
-    ProvideLiquidGlassBackdrop { backdropCapture ->
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .then(pull.rootModifier)
-                    .onSizeChanged { size -> rootSize = size }
-                    .then(backdropCapture),
-        ) {
-            // The one dock, outside the mode surface: composed at the same place whichever surface runs below
-            // (#1205, Decision 2). Composed first so the mode's overlays cover it; the grid's own frame sits
-            // beneath it (see HOME_CONTENT_Z_INDEX). The dock never moves with a pull: it is the handle.
-            HomeDockHost(
-                layout = dockHostState.homeLayout,
-                installedApps = dockHostState.installedApps,
-                presentation = dockPresentation,
-                position = plan.dockEdge,
-                hostState = dockHost,
-                appIconLoader = appIconLoader,
-                onAction = onAction,
-                interpreter = dockInterpreter,
-                haptics = haptics,
-                dockModifier = pull.dockModifier,
-            )
-            // Home first, then the Stream over it: while a pull runs both are composed and the Stream slides over
-            // Home. Both stay direct siblings of the dock, so their zIndex ranks them against it (see
-            // HOME_CONTENT_Z_INDEX) and the dock keeps the touches where they overlap.
-            val homeContent: @Composable () -> Unit = {
-                key(plan.currentMode) {
-                    ModeSurfaceContent(
-                        state = plan.stateFor(plan.currentMode),
-                        dockEdge = plan.edges.edgeFor(plan.currentMode.modeSurface),
-                        surfaceModifier = pull.homeModifier(libraryShown = shownLibrary).then(coveredSemantics),
-                        dockHost = dockHost,
-                        presentation = presentation,
-                        appIconLoader = appIconLoader,
-                        widgetRenderers = widgetRenderers,
-                        haptics = haptics,
-                        onAction = onAction,
-                    )
-                }
-            }
-            if (splitting && stream != null) {
-                // Home and the Stream side by side (or one over the other), with the divider between them.
-                SplitPanes(
-                    pane = splitPane,
-                    dockPull = dockPull,
-                    homeContent = homeContent,
-                    streamContent = {
-                        StreamDestination(
-                            host = stream,
-                            deviceClass = deviceClass,
-                            installedApps = dockHostState.installedApps,
-                            appIconLoader = appIconLoader,
-                            reducedMotion = state.reducedMotion(),
-                            onConnectTasks = openTasksSettings,
-                            contentPadding =
-                                streamPaneInsets(
-                                    insets =
-                                        cardsPanelInsetPolicy(dockHostState).safeDrawingPanelInsets()
-                                            .asPaddingValues(),
-                                    window = splitPane.window,
-                                    split = splitPane.restMode == SplitMode.SPLIT,
-                                ),
-                        )
-                    },
+    CompositionLocalProvider(LocalGlanceHost provides glanceHost) {
+        ProvideLiquidGlassBackdrop { backdropCapture ->
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .then(pull.rootModifier)
+                        .onSizeChanged { size -> rootSize = size }
+                        .then(backdropCapture),
+            ) {
+                // The one dock, outside the mode surface: composed at the same place whichever surface runs below
+                // (#1205, Decision 2). Composed first so the mode's overlays cover it; the grid's own frame sits
+                // beneath it (see HOME_CONTENT_Z_INDEX). The dock never moves with a pull: it is the handle.
+                HomeDockHost(
+                    layout = dockHostState.homeLayout,
+                    installedApps = dockHostState.installedApps,
+                    presentation = dockPresentation,
+                    position = plan.dockEdge,
+                    hostState = dockHost,
+                    appIconLoader = appIconLoader,
+                    onAction = onAction,
+                    interpreter = dockInterpreter,
+                    haptics = haptics,
+                    dockModifier = pull.dockModifier,
                 )
-            } else {
-                if (showHome) homeContent()
-                if (showStream && stream != null) {
-                    StreamHomeSurface(
-                        stream = stream,
+                // Home first, then the Stream over it: while a pull runs both are composed and the Stream slides over
+                // Home. Both stay direct siblings of the dock, so their zIndex ranks them against it (see
+                // HOME_CONTENT_Z_INDEX) and the dock keeps the touches where they overlap.
+                val homeContent: @Composable () -> Unit = {
+                    key(plan.currentMode) {
+                        ModeSurfaceContent(
+                            state = plan.stateFor(plan.currentMode),
+                            dockEdge = plan.edges.edgeFor(plan.currentMode.modeSurface),
+                            surfaceModifier = pull.homeModifier(libraryShown = shownLibrary).then(coveredSemantics),
+                            dockHost = dockHost,
+                            presentation = presentation,
+                            appIconLoader = appIconLoader,
+                            widgetRenderers = widgetRenderers,
+                            haptics = haptics,
+                            onAction = onAction,
+                        )
+                    }
+                }
+                if (splitting && stream != null) {
+                    // Home and the Stream side by side (or one over the other), with the divider between them.
+                    SplitPanes(
+                        pane = splitPane,
+                        dockPull = dockPull,
+                        homeContent = homeContent,
+                        streamContent = {
+                            StreamDestination(
+                                host = stream,
+                                deviceClass = deviceClass,
+                                installedApps = dockHostState.installedApps,
+                                appIconLoader = appIconLoader,
+                                reducedMotion = state.reducedMotion(),
+                                onConnectTasks = openTasksSettings,
+                                contentPadding =
+                                    streamPaneInsets(
+                                        insets =
+                                            cardsPanelInsetPolicy(dockHostState).safeDrawingPanelInsets()
+                                                .asPaddingValues(),
+                                        window = splitPane.window,
+                                        split = splitPane.restMode == SplitMode.SPLIT,
+                                    ),
+                            )
+                        },
+                    )
+                } else {
+                    if (showHome) homeContent()
+                    if (showStream && stream != null) {
+                        StreamHomeSurface(
+                            stream = stream,
+                            state = dockHostState,
+                            dockHost = dockHost,
+                            dockPosition = plan.dockEdge,
+                            appIconLoader = appIconLoader,
+                            onConnectTasks = openTasksSettings,
+                            modifier = pull.streamModifier(libraryShown = shownLibrary).then(coveredSemantics),
+                        )
+                    }
+                }
+                if (showLibrary) {
+                    LibraryHomeSurface(
                         state = dockHostState,
                         dockHost = dockHost,
                         dockPosition = plan.dockEdge,
                         appIconLoader = appIconLoader,
-                        onConnectTasks = openTasksSettings,
-                        modifier = pull.streamModifier(libraryShown = shownLibrary).then(coveredSemantics),
+                        haptics = haptics,
+                        pull = pull,
+                        onAction = onAction,
                     )
                 }
-            }
-            if (showLibrary) {
-                LibraryHomeSurface(
-                    state = dockHostState,
-                    dockHost = dockHost,
-                    dockPosition = plan.dockEdge,
-                    appIconLoader = appIconLoader,
-                    haptics = haptics,
-                    pull = pull,
-                    onAction = onAction,
-                )
             }
         }
     }

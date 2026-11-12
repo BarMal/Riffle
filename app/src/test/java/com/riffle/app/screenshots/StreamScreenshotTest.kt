@@ -3,22 +3,21 @@ package com.riffle.app.screenshots
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.stream.StreamCallbacks
-import com.riffle.app.launcher.stream.StreamSectionBlock
 import com.riffle.app.launcher.stream.StreamSurface
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.stream.StreamLayoutReducer
+import com.riffle.core.domain.launcher.stream.StreamPagePlanner
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
 import com.riffle.core.domain.launcher.stream.StreamView
@@ -31,11 +30,11 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The Stream (ADR 0003, P4): every section in both views, drawn by the real section block from typed content, on
- * compact
- * phones, plus the section states, an expanded notification thread and now-playing queue, and the whole surface in the
- * dark, with large text, and unfolded (where text caps its width at 640 dp). The clock, the images and the locale are
- * fixed (`StreamFixtures`), so a render is the same every run.
+ * The Stream (ADR 0003, Views; P13 and P14): the pager of pages on compact phones, every section's page in both views
+ * with its spine, the section states as pages, an expanded notification thread and now-playing queue, the whole
+ * surface in the dark, with large text and with reduced transparency, the Show as menu, and unfolded: two pages side by
+ * side and the Stage view with its rail, full and collapsed. The clock, the images and the locale are fixed
+ * (`StreamFixtures`), so a render is the same every run.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -45,72 +44,70 @@ class StreamScreenshotTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun nowStack() = section(StreamSection.NOW, StreamView.STACK)
+    fun pagerOpensOnTheFirstPageWithItsSpine() = surface()
 
     @Test
-    fun nowList() = section(StreamSection.NOW, StreamView.LIST)
+    fun nowStack() = page(StreamPageKeys.NOW, StreamView.STACK)
 
     @Test
-    fun notificationsStack() = section(StreamSection.NOTIFICATIONS, StreamView.STACK)
+    fun nowList() = page(StreamPageKeys.NOW, StreamView.LIST)
 
     @Test
-    fun notificationsList() = section(StreamSection.NOTIFICATIONS, StreamView.LIST)
+    fun notificationsOneAppStack() = page(StreamPageKeys.CHAT, StreamView.STACK)
 
     @Test
-    fun recentsStack() = section(StreamSection.RECENTS, StreamView.STACK)
+    fun notificationsOneAppList() = page(StreamPageKeys.CHAT, StreamView.LIST)
 
     @Test
-    fun recentsList() = section(StreamSection.RECENTS, StreamView.LIST)
+    fun notificationsAnotherAppStack() = page(StreamPageKeys.MAIL, StreamView.STACK)
 
     @Test
-    fun agendaStack() = section(StreamSection.AGENDA, StreamView.STACK)
+    fun recentsStack() = page(StreamPageKeys.RECENTS, StreamView.STACK)
 
     @Test
-    fun agendaList() = section(StreamSection.AGENDA, StreamView.LIST)
+    fun recentsList() = page(StreamPageKeys.RECENTS, StreamView.LIST)
 
     @Test
-    fun tasksStack() = section(StreamSection.TASKS, StreamView.STACK, StreamFixtures.ready(StreamSection.TASKS))
+    fun agendaStack() = page(StreamPageKeys.AGENDA, StreamView.STACK)
 
     @Test
-    fun tasksList() = section(StreamSection.TASKS, StreamView.LIST, StreamFixtures.ready(StreamSection.TASKS))
+    fun agendaList() = page(StreamPageKeys.AGENDA, StreamView.LIST)
 
     @Test
-    fun feedsStack() = section(StreamSection.FEEDS, StreamView.STACK)
+    fun tasksStack() = page(StreamPageKeys.TASKS, StreamView.STACK)
 
     @Test
-    fun feedsList() = section(StreamSection.FEEDS, StreamView.LIST)
+    fun tasksList() = page(StreamPageKeys.TASKS, StreamView.LIST)
 
     @Test
-    fun tasksNotConnected() = section(StreamSection.TASKS, StreamView.LIST, StreamSectionResult.NotConnected())
+    fun feedsOneFeedStack() = page(StreamPageKeys.FEED_A, StreamView.STACK)
 
     @Test
-    fun tasksEmpty() = section(StreamSection.TASKS, StreamView.STACK, StreamSectionResult.Empty)
+    fun feedsOneFeedList() = page(StreamPageKeys.FEED_A, StreamView.LIST)
 
     @Test
-    fun tasksEmptyList() = section(StreamSection.TASKS, StreamView.LIST, StreamSectionResult.Empty)
+    fun feedsAnotherFeedStack() = page(StreamPageKeys.FEED_B, StreamView.STACK)
 
     @Test
-    fun tasksNotConnectedStack() = section(StreamSection.TASKS, StreamView.STACK, StreamSectionResult.NotConnected())
+    fun tasksNotConnected() = state(StreamSection.TASKS, StreamSectionResult.NotConnected())
+
+    @Test
+    fun tasksEmpty() = state(StreamSection.TASKS, StreamSectionResult.Empty)
 
     @Test
     fun tasksTokenRejected() =
-        section(
+        state(
             StreamSection.TASKS,
-            StreamView.LIST,
             StreamSectionResult.NotConnected(com.riffle.core.domain.launcher.stream.NotConnectedReason.TOKEN_REJECTED),
         )
 
     @Test
-    fun tasksErrorStack() = section(StreamSection.TASKS, StreamView.STACK, StreamSectionResult.Unavailable)
+    fun tasksError() = state(StreamSection.TASKS, StreamSectionResult.Unavailable)
 
     @Test
-    fun tasksErrorList() = section(StreamSection.TASKS, StreamView.LIST, StreamSectionResult.Unavailable)
-
-    @Test
-    fun tasksStaleList() =
-        section(
+    fun tasksStale() =
+        state(
             StreamSection.TASKS,
-            StreamView.LIST,
             StreamSectionResult.Ready(
                 listOf(
                     com.riffle.core.domain.launcher.stream.StreamGroup(
@@ -124,87 +121,70 @@ class StreamScreenshotTest {
 
     @Test
     fun notificationsPermissionRequired() =
-        section(
-            StreamSection.NOTIFICATIONS,
-            StreamView.STACK,
-            StreamSectionResult.PermissionRequired(listOf(SourceIds.NOTIFICATIONS)),
-        )
+        state(StreamSection.NOTIFICATIONS, StreamSectionResult.PermissionRequired(listOf(SourceIds.NOTIFICATIONS)))
 
     @Test
-    fun agendaEmpty() = section(StreamSection.AGENDA, StreamView.LIST, StreamSectionResult.Empty)
+    fun notificationsEmpty() = state(StreamSection.NOTIFICATIONS, StreamSectionResult.Empty)
 
     @Test
-    fun feedsOff() = section(StreamSection.FEEDS, StreamView.STACK, StreamSectionResult.Off)
+    fun agendaEmpty() = state(StreamSection.AGENDA, StreamSectionResult.Empty)
 
     @Test
-    fun recentsLoading() = section(StreamSection.RECENTS, StreamView.STACK, StreamSectionResult.Loading)
+    fun feedsOff() = state(StreamSection.FEEDS, StreamSectionResult.Off)
 
     @Test
-    fun nowUnavailable() = section(StreamSection.NOW, StreamView.STACK, StreamSectionResult.Unavailable)
+    fun recentsLoading() = state(StreamSection.RECENTS, StreamSectionResult.Loading)
+
+    @Test
+    fun nowUnavailable() = state(StreamSection.NOW, StreamSectionResult.Unavailable)
 
     @Test
     fun notificationExpandedToItsThreadWithReply() {
-        composeRule.setContent {
-            StreamBackdrop {
-                StreamSectionBlock(
-                    section = StreamSection.NOTIFICATIONS,
-                    view = StreamView.STACK,
-                    result = StreamFixtures.ready(StreamSection.NOTIFICATIONS),
-                    env = StreamFixtures.environment(),
-                    callbacks = StreamFixtures.callbacks(),
-                    canMoveUp = true,
-                    canMoveDown = true,
-                    onShowAs = {},
-                )
-            }
-        }
-        // The stack composes the focused card and its neighbours; the focused one is the leftmost.
-        val replyButtons = composeRule.onAllNodesWithText("Reply")
-        val focused = replyButtons.fetchSemanticsNodes().withIndex().minBy { it.value.boundsInRoot.left }.index
-        replyButtons[focused].performClick()
+        surface(initialPageKey = StreamPageKeys.CHAT)
+        composeRule.onAllNodesWithText("Reply").onFirst().performClick()
         composeRule.captureScreen()
     }
 
     @Test
     fun nowPlayingExpandedToItsQueue() {
-        composeRule.setContent {
-            StreamBackdrop {
-                StreamSectionBlock(
-                    section = StreamSection.NOW,
-                    view = StreamView.STACK,
-                    result = StreamSectionResult.Ready(StreamFixtures.ready(StreamSection.NOW).groups.take(1)),
-                    env = StreamFixtures.environment(),
-                    callbacks = StreamFixtures.callbacks(),
-                    canMoveUp = false,
-                    canMoveDown = true,
-                    onShowAs = {},
-                )
-            }
-        }
+        surface(initialPageKey = StreamPageKeys.NOW)
         composeRule.onNodeWithContentDescription("Show queue").performClick()
         composeRule.captureScreen()
     }
 
     @Test
-    fun surfaceWithEverySection() = surface()
+    fun spineLaterInTheRowWithTheCurrentPageEmphasised() = surface(initialPageKey = StreamPageKeys.TASKS)
+
+    @Test
+    fun showAsMenuOnAPageHeader() {
+        surface(initialPageKey = StreamPageKeys.MAIL)
+        composeRule.onNodeWithContentDescription("Notifications options").performClick()
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun everySectionHiddenOffersThemBack() {
+        val layout =
+            StreamSection.entries.fold(StreamLayout.DEFAULT) { acc, section ->
+                StreamLayoutReducer.reduce(acc, StreamLayoutAction.SetEnabled(section, false))
+            }
+        surface(layout = layout)
+    }
 
     @Test
     @Config(qualifiers = ScreenshotDevices.NIGHT)
-    fun surfaceWithEverySectionDark() = surface()
+    fun pagerInTheDark() = surface(initialPageKey = StreamPageKeys.CHAT)
 
     @Test
     @Config(fontScale = ScreenshotDevices.LARGE_FONT_SCALE)
-    fun surfaceWithEverySectionLargeFont() = surface()
+    fun pagerWithLargeFont() = surface(initialPageKey = StreamPageKeys.CHAT)
 
     @Test
-    @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
-    fun surfaceWithEverySectionUnfolded() = surface()
+    fun pagerWithReducedTransparencyAndReducedMotion() =
+        surface(initialPageKey = StreamPageKeys.CHAT, reducedTransparency = true, reducedMotion = true)
 
     @Test
-    fun surfaceWithReducedTransparencyAndReducedMotion() = surface(reducedTransparency = true, reducedMotion = true)
-
-    @Test
-    fun surfaceWithASectionHiddenAndAnotherReordered() {
+    fun aSectionHiddenAndAnotherReordered() {
         val layout =
             listOf(
                 StreamLayoutAction.SetEnabled(StreamSection.FEEDS, false),
@@ -214,52 +194,72 @@ class StreamScreenshotTest {
         surface(layout = layout)
     }
 
-    private fun section(
-        section: StreamSection,
+    private fun page(
+        key: String,
         view: StreamView,
-        result: StreamSectionResult = StreamFixtures.ready(section),
     ) {
-        composeRule.setContent {
-            StreamBackdrop {
-                StreamSectionBlock(
-                    section = section,
-                    view = view,
-                    result = result,
-                    env = StreamFixtures.environment(),
-                    callbacks = StreamFixtures.callbacks(),
-                    canMoveUp = true,
-                    canMoveDown = true,
-                    onShowAs = {},
-                )
+        val layout =
+            StreamSection.entries.fold(StreamLayout.DEFAULT) { acc, section ->
+                StreamLayoutReducer.reduce(acc, StreamLayoutAction.SetView(section, view))
             }
-        }
-        composeRule.captureScreen()
+        surface(layout = layout, initialPageKey = key)
     }
+
+    private fun state(
+        section: StreamSection,
+        result: StreamSectionResult,
+    ) {
+        val key = StreamPagePlanner.keyOf(section)
+        surface(results = defaultResults() + (section to result), initialPageKey = key)
+    }
+
+    private fun defaultResults() = StreamSection.entries.associateWith { StreamFixtures.ready(it) }
 
     private fun surface(
         layout: StreamLayout = StreamLayout.DEFAULT,
+        results: Map<StreamSection, StreamSectionResult> = defaultResults(),
+        initialPageKey: String? = null,
         reducedTransparency: Boolean = false,
         reducedMotion: Boolean = false,
+        wide: Boolean = false,
+        paneWidth: Dp? = null,
     ) {
         composeRule.setContent {
             ScreenshotBackdrop(reducedTransparency = reducedTransparency) {
-                StreamSurface(
-                    layout = layout,
-                    results = StreamSection.entries.associateWith { StreamFixtures.ready(it) },
-                    env = StreamFixtures.environment(reducedMotion),
-                    callbacks = StreamCallbacks(),
-                    contentPadding = PaddingValues(top = 48.dp, bottom = 96.dp),
-                )
+                Box(
+                    modifier =
+                        if (paneWidth != null) {
+                            Modifier.width(
+                                paneWidth,
+                            ).fillMaxSize()
+                        } else {
+                            Modifier.fillMaxSize()
+                        },
+                ) {
+                    StreamSurface(
+                        layout = layout,
+                        results = results,
+                        env = StreamFixtures.environment(reducedMotion),
+                        callbacks = StreamCallbacks(),
+                        contentPadding = PaddingValues(top = 48.dp, bottom = 96.dp),
+                        initialPageKey = initialPageKey,
+                        wideLayout = wide,
+                    )
+                }
             }
         }
         composeRule.captureScreen()
     }
 }
 
-/** One section on the screenshot wallpaper, scrolled so a tall one is not cut off by the window. */
-@Composable
-private fun StreamBackdrop(content: @Composable () -> Unit) {
-    ScreenshotBackdrop {
-        Box(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) { content() }
-    }
+/** The keys of the fixture pages (see [StreamPagePlanner.keyOf]). */
+internal object StreamPageKeys {
+    val NOW = StreamPagePlanner.keyOf(StreamSection.NOW)
+    val CHAT = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "chat:personal")
+    val MAIL = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "mail:personal")
+    val RECENTS = StreamPagePlanner.keyOf(StreamSection.RECENTS)
+    val AGENDA = StreamPagePlanner.keyOf(StreamSection.AGENDA)
+    val TASKS = StreamPagePlanner.keyOf(StreamSection.TASKS)
+    val FEED_A = StreamPagePlanner.keyOf(StreamSection.FEEDS, "feed-a")
+    val FEED_B = StreamPagePlanner.keyOf(StreamSection.FEEDS, "feed-b")
 }

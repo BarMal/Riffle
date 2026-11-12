@@ -54,7 +54,14 @@ data class HomeLayoutSettings(
 
 data class HomeLabelSettings(
     val iconSizeDp: Int = DEFAULT_HOME_ICON_SIZE_DP,
+    /** How opaque the label background is when [showBackground] is on. Stored whether or not the background shows. */
     val backgroundAlphaPercent: Int = DEFAULT_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
+    /**
+     * Whether a label sits on a background pill at all. Off by default: a label is plain text over the wallpaper. A
+     * value stored before this setting existed has no such key and reads as off; its [backgroundAlphaPercent] is kept
+     * as it was, so turning the background on gives back the user's own opacity.
+     */
+    val showBackground: Boolean = DEFAULT_HOME_LABEL_SHOW_BACKGROUND,
     val textSizeSp: Int = DEFAULT_HOME_LABEL_TEXT_SIZE_SP,
     val showText: Boolean = true,
     val maxWidthDp: Int = DEFAULT_HOME_LABEL_MAX_WIDTH_DP,
@@ -150,6 +157,7 @@ data class GridSpacing(
 )
 
 const val DEFAULT_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 54
+const val DEFAULT_HOME_LABEL_SHOW_BACKGROUND = false
 const val MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 0
 const val MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 100
 const val DEFAULT_HOME_LABEL_TEXT_SIZE_SP = 11

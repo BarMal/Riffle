@@ -164,9 +164,9 @@ on/off apply and there is no second notification pipeline (`DockDynamicSide` in 
 2. **Now playing**: one entry while a media session is active (the Now section's media). It is not counted in the slots.
 3. **The Stream button**: always last, so the handle exists when nothing is live.
 
-Events, to-dos and feeds get no entry, because they are always present in the Stream. Each entry is a pinned icon's
-size (never under a 48 dp target) and a spotlight source like the pinned icons; the side scrolls on its own when it has
-more entries than room.
+Events, to-dos and feeds get no entry, because they are always present in the Stream. Each entry is a compact 48 dp tile
+(the touch target, whatever size the pinned icons are) and a spotlight source like the pinned icons; the side takes only
+the width its entries need, up to the slot limit, and scrolls on its own when it has more entries than room.
 
 **Live app slots** (Settings > Dock) replaces "Dock notifications" and "Notification space", and the workspace dock
 dynamic section. A dock stored before it decodes: notification cards on keeps the old slot count (clamped), off becomes
@@ -199,8 +199,25 @@ stays where they put it rather than mirroring in a right-to-left locale.
 ### Sized by settings
 
 Icon size, item spacing, corner radius, background alpha and sizing are per-device-class dock
-settings, shared by every mode, and
-the dock's extent follows from them rather than being fixed.
+settings, shared by every mode, and the dock's extent follows from them rather than being fixed.
+
+- **Pinned icon size.** A pinned icon is drawn at exactly the **Icon size** setting (32 to 56 dp), and the phone
+  template's default (44 dp) is the Home grid's default icon size, so pins and Home icons match until you change either.
+  Nothing ever shrinks a pinned icon: not a long run, not the dynamic side beside it.
+- **Bar height.** The bar is one icon plus its chrome (32 dp) across its edge: 76 dp at 44, 88 dp at 56. It follows the
+  setting, not the room along the run.
+- **Gap.** When the pins do not quite fit, the gap between them gives first, down to nothing; beyond that the run keeps
+  its size and scrolls.
+- **Pinned run.** A run longer than its room **scrolls**, at full icon size, fading through the glass at the edge that
+  has more (no fade on an edge that has nothing beyond it). Five pins fit on a phone at the template size; eight scroll.
+- **Dynamic side width.** It takes only what its entries need (live apps, now playing, the Stream button, each a 48 dp
+  tile with the pinned run's gap) up to the live-app-slot limit, plus the 17 dp rule. When room is short it never takes
+  the pinned run's last three icons (fewer if the dock pins fewer) and the dock's padding; the pins scroll in the rest
+  and the dynamic side scrolls in what it has.
+- **Restored size.** Until the Dock rework the icon size of a workspace's dock override applied over the shared dock;
+  the cut-over to one arrangement dropped it. At start the stored workspaces are read once and, where the shared dock
+  still holds a default size (and no edge), the override's size (and edge) is carried into the shared dock; a size set
+  since is never overwritten. A hidden override is not carried over.
 
 ### Static and dynamic sections
 
@@ -217,12 +234,13 @@ The two sections are sized from two independent, per-layout settings (both per d
 the Stream button) caps how many dynamic entries show before that section scrolls. The run itself is one shared strip,
 and the dynamic side goes first when it is tight: it always draws in full up to its slot count, and the static side is
 sized from whatever room that leaves, scrolling the rest rather than the other way around -- except that the static side
-always keeps room for at least one pinned icon, so a busy dynamic side can scroll the rest of the pinned icons away but
-never make every pinned icon disappear. A settings-screen summary states the result in one line ("Shows up to 7 pinned
+always keeps room for at least three pinned icons (fewer when fewer are pinned), so a busy dynamic side can scroll the
+rest of the pinned icons but never squeeze them or make them disappear. A settings-screen summary states the result in one line ("Shows up to 7 pinned
 icons, then 3 live apps, now playing and the Stream button").
 
 Each section scrolls on its own. Fewer entries than the slot count shrinks the section instead of padding it out to a
-fixed width -- an entry is always exactly a pinned icon's size, never bigger or smaller to fit the space.
+fixed width -- a pinned icon is always exactly the icon-size setting, and a dynamic entry always a 48 dp tile, never bigger
+or smaller to fit the space.
 
 ### The merged All-notifications view
 

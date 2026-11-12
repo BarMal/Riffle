@@ -14,6 +14,10 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 > longer switches Home and Library. See ["The Dock pull (P5)"](#the-dock-pull-p5). The older sections below are kept as
 > history where they are not restated.
 
+> **P13 and P14 (2026-11-12).** The Stream is a horizontal pager of pages, each one vertically scrolling stack or list,
+> with a spine as the page indicator; unfolded postures can show it as Pages (two side by side) or as the Stage view. See
+> ["The Stream (P4, entry points restated by P5)"](#the-stream-p4-entry-points-restated-by-p5) and the arbitration table.
+
 > **P7 (2026-11-12).** The Library is its own surface: a Thick glass sheet that rises over Home or the Stream with the
 > Dock still drawn under it, no longer a workspace Finder page or the full-screen app drawer. Its pull now tracks the
 > finger. See ["The Library (P7)"](#the-library-p7).
@@ -130,11 +134,29 @@ the Dock's accessibility actions.
 - **Close.** Back and the Home button (`OpenDefaultHome`) return to Home, as do the Stream button, the same dynamic-side
   pull and "Back to Home". A focused card that is expanded (a notification's thread, now playing's queue) collapses on
   Back first.
-- **Inside the Stream.** The page scrolls vertically (`LazyColumn`). A Stack runs along the horizontal axis through the
-  existing card-stack physics (`CardStack` with platform `scrollable` and fling, ADR 0002), so it never contests the
-  page's vertical scroll. Long-press on a section header opens its menu (Show as, Move, Hide); every such gesture has
-  the section's options button and previous/next card buttons and custom actions as equivalents. The Dock pull is claimed
-  on the dock body only, so it never competes with the Stream's own scrolling.
+- **Inside the Stream (P13, P14).** The Stream is a horizontal pager of pages and each page is one vertically scrolling
+  stack or list ([places-views-plan.md](places-views-plan.md), P13). The pager is the platform `HorizontalPager`
+  (`Orientation.Horizontal`, ADR 0002); a page's stack is the existing `CardStack`, whose platform `scrollable` is
+  `Orientation.Vertical` with the spline fling and magnet settle, and a List or Tasks page is `verticalScroll`. The two
+  never fight because they take different axes: a drag that leads sideways is the pager's, one that leads up or down is the
+  page's, and the stack hands a drag that runs past its first or last card on (it owns a drag only while it has cards to
+  move: `cardStackOwnsDrag`). The Dock pull is claimed on the dock body only, so it never competes with either.
+  Every gesture has a non-gesture equivalent:
+
+  | Gesture | Equivalent |
+  | --- | --- |
+  | Swipe to the next or previous page | Tap a spine marker (a tab, spoken "Chat, page 2 of 8"); the pager's custom actions "Previous page" and "Next page" |
+  | Scroll a stack to another card | The "Previous card" and "Next card" buttons under it with "Card 2 of 3"; the focused card's custom actions "Previous card", "Next card" and "Open card"; the arrow keys |
+  | Long-press a page header for Show as, Move and Hide | The header's options button (one menu) |
+  | Long-press the spine (or the Stage's bar) for the Stream's own menu: Show as Pages or Stage, and Show for each hidden section | The options button at its end |
+  | Tap a Stage rail thumbnail | It is a tab (a button named "Bring Chat to the front") |
+
+  Each page is a labelled pane, the pager carries one custom-actions list, and no node carries two (the page actions are
+  on the pager, the card actions on the focused card, Hide on each card).
+- **The Stage (P14).** On an unfolded posture the Stage view has no swipes: the rail is a column of tabs that scrolls
+  vertically (`verticalScroll`) and a tap brings a stage to the centre; the selected stage's stack is the same vertical
+  `CardStack`. Two pages side by side (Pages on a wide screen) are one pager showing two, so a swipe still moves one
+  page.
 
 ## Mode transitions (history; the Home/Library pull was retired by P5)
 
@@ -242,6 +264,10 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Card stack | 1-finger along stack axis | – | Stack scrolls; **past first/last card → handed to Home** (unbound by default) |
 | Card stack with ≤1 card | 1-finger along stack axis | – | Home (stack does not claim) |
 | Card stack | 1-finger across stack axis | – | Stage pager (horizontal) |
+| Stream page (stack, list, tiles) | 1-finger vertical | Page scrolls: the stack moves a card (magnet settle) or the list scrolls; past the first or last card it hands on | same |
+| Stream page | 1-finger horizontal | Stream pager (owns): next or previous page, the spine follows | same |
+| Stream spine | tap a marker / long-press | Jumps to the page / opens the Stream's menu (Show as Pages or Stage, hidden sections) | same |
+| Stream Stage rail (unfolded) | tap a thumbnail / vertical drag | Brings that stage to the centre (shared-element transition) / scrolls the rail | same |
 | Card stack | 2-finger | – | Stack (first finger's drag wins; see limitations) |
 | Card stack | 3-finger | – | **Home claims** (unbound by default) |
 | Grid / workspace | 1-finger horizontal | Page pager (owns) | – |

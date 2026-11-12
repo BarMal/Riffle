@@ -17,16 +17,21 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.riffle.app.launcher.glance.rememberRiffleGlanceProviders
 import com.riffle.app.launcher.widgets.loadWidgetPreviewWithFallback
 import com.riffle.app.launcher.widgets.renderWidgetPreviewRemoteViews
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
@@ -75,6 +80,27 @@ class WidgetPickerSurfaceTest {
         composeRule.onNodeWithText("Widgets couldn’t be loaded").assertIsDisplayed()
         composeRule.onNodeWithText("Try again").performClick()
         composeRule.runOnIdle { assertEquals(1, retryCount) }
+    }
+
+    @Test
+    fun theRiffleGroupLeadsThePickerWithItsThreeGlanceWidgets() {
+        composeRule.setContent {
+            MaterialTheme {
+                WidgetPickerSurface(
+                    providers = rememberRiffleGlanceProviders() + listOf(widgetProvider()),
+                    onAction = {},
+                )
+            }
+        }
+
+        // The header's text carries its expand state ("Riffle (3), collapse"), so match the title within it.
+        composeRule.onNodeWithText("Riffle (3)", substring = true).assertIsDisplayed()
+        val tiles = composeRule.onAllNodesWithTag(WIDGET_PROVIDER_TILE_TEST_TAG)
+        val first = tiles[0].fetchSemanticsNode().config[SemanticsActions.CustomActions].map { it.label }
+        assertTrue(first.any { label -> label == "Add Next event to Home" || label == "Add Now playing to Home" })
+        // The grid is lazy: on a short screen the third tile is not composed until the grid is scrolled to it.
+        composeRule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Top story"))
+        composeRule.onNodeWithText("Top story").assertIsDisplayed()
     }
 
     @Test

@@ -68,6 +68,9 @@ internal object ScreenshotFixtures {
     val gridApps = listOf(calendar, photos, maps, music, clock, notes, weather, files)
     val installedApps = dockApps + gridApps
 
+    /** [count] distinct installed apps to pin (at most the twelve fixture apps). */
+    fun pins(count: Int): List<InstalledApp> = installedApps.take(count)
+
     val notificationGroups: List<AppNotificationGroup> =
         listOf(
             group(
@@ -126,11 +129,22 @@ internal object ScreenshotFixtures {
     fun homeState(
         deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
         dockPosition: DockPosition? = null,
+        sizing: HomeSizing = HomeSizing(),
     ): LauncherShellState =
         shellState(
-            layout = homeLayout(deviceClass, dockPosition, LauncherViewMode.STANDARD_APP_DRAWER),
+            layout = homeLayout(deviceClass, dockPosition, LauncherViewMode.STANDARD_APP_DRAWER, sizing),
             deviceClass = deviceClass,
         )
+
+    /**
+     * Pinned apps and icon sizes for a Home under test: the dock's pins (null keeps the four-app fixture dock) and
+     * the dock and Home grid icon sizes (null keeps the device class's own).
+     */
+    data class HomeSizing(
+        val pins: List<InstalledApp>? = null,
+        val dockIconSizeDp: Int? = null,
+        val homeIconSizeDp: Int? = null,
+    )
 
     /**
      * Library mode on the device class's template dock -- the same dock [cardsState] shows, so the two
@@ -192,12 +206,26 @@ internal object ScreenshotFixtures {
         deviceClass: HomeLayoutDeviceClass,
         dockPosition: DockPosition?,
         viewMode: LauncherViewMode,
+        sizing: HomeSizing = HomeSizing(),
     ): HomeLayout {
         val seeded =
             HomeLayoutDefaults.standard(deviceClass).let { standard ->
+                val pins = sizing.pins ?: dockApps
                 standard.copy(
                     viewMode = viewMode,
-                    dock = standard.dock.copy(items = dockApps.map { app -> shortcut(app) }),
+                    dock =
+                        standard.dock.copy(
+                            items = pins.map { app -> shortcut(app) },
+                            capacity = maxOf(standard.dock.capacity, pins.size),
+                            iconSizeDp = sizing.dockIconSizeDp ?: standard.dock.iconSizeDp,
+                        ),
+                    settings =
+                        standard.settings.copy(
+                            labels =
+                                standard.settings.labels.copy(
+                                    iconSizeDp = sizing.homeIconSizeDp ?: standard.settings.labels.iconSizeDp,
+                                ),
+                        ),
                 )
             }
         // Through the engine, so a side dock leaves the grid the column a real position change would.

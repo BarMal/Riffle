@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import android.view.View
@@ -29,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import com.riffle.app.launcher.glance.GlanceHomeWidget
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -52,6 +55,41 @@ internal fun HomeWidgetPlaceholder(
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     dragState: HomeItemDragState? = null,
     workspaceActions: HomeWorkspaceActions? = null,
+) {
+    val glance = widget.glance
+    if (glance != null) {
+        GlanceHomeWidget(
+            widget = widget,
+            kind = glance,
+            isEditing = isEditing,
+            contextSurface = contextSurface,
+            dragState = dragState,
+            workspaceActions = workspaceActions,
+            onAction = onAction,
+        )
+    } else {
+        HostedHomeWidget(
+            widget = widget,
+            isEditing = isEditing,
+            onAction = onAction,
+            contextSurface = contextSurface,
+            widgetViewFactory = widgetViewFactory,
+            dragState = dragState,
+            workspaceActions = workspaceActions,
+        )
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun HostedHomeWidget(
+    widget: WidgetItem,
+    isEditing: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+    contextSurface: ShortcutContextSurface,
+    widgetViewFactory: HomeWidgetViewFactory,
+    dragState: HomeItemDragState?,
+    workspaceActions: HomeWorkspaceActions?,
 ) {
     val context = LocalContext.current
     val hostedWidgetView =
@@ -131,7 +169,7 @@ internal fun HomeWidgetPlaceholder(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun BoxScope.WidgetGestureLayer(
+internal fun BoxScope.WidgetGestureLayer(
     widget: WidgetItem,
     dragState: HomeItemDragState?,
     workspaceActions: HomeWorkspaceActions?,
@@ -166,7 +204,7 @@ private fun BoxScope.WidgetGestureLayer(
 }
 
 @Composable
-private fun BoxScope.WidgetEditHandles(
+internal fun BoxScope.WidgetEditHandles(
     widget: WidgetItem,
     grid: GridDimensions?,
     pageItems: List<LauncherItem>,

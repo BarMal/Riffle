@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
+import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -105,6 +106,7 @@ object ArrangementIngest {
                     id = id,
                     label = item.label,
                     resizeConstraints = item.resizeConstraints,
+                    provider = item.glance?.let(GlanceWidgets::identity),
                     hostedId = ArrangementAdapter.hostedIdOrNull(item.appWidgetId),
                 )
         }

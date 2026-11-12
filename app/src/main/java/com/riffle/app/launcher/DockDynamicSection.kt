@@ -44,13 +44,12 @@ import androidx.compose.ui.unit.dp
  * button, always last (ADR 0003, The Dock is the handle). It is also where a pull on the dock opens the Stream, so it
  * reports its bounds through [LocalDockDynamicBoundsSink].
  *
- * Icons at dock size rather than the shelf's wide cards, because this runs *inside* the dock beside
- * the pinned items and has to read as the same strip. The shelf's card row is the same section with
- * room to say more; this is what it looks like with only a dock's thickness to work in.
+ * Compact 48 dp tiles (see [dockDynamicEntryExtentDp]), because this runs *inside* the dock beside the pinned items:
+ * the side takes only the room its entries need (up to the dock's slot limit) and never the pinned icons'. The shelf's
+ * card row is the same section with room to say more; this is what it looks like with only a dock's thickness.
  *
- * Whatever does not fit scrolls. The alternative -- shrinking the tiles to fit -- would make a
- * dynamic entry a different size from the pinned icon next to it, which is exactly the seam this
- * section exists to remove.
+ * Whatever does not fit scrolls, fading at the edge that has more. The pinned run beside it scrolls the same way, at
+ * full icon size: neither side is shrunk to make the other fit.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -71,9 +70,8 @@ internal fun DockDynamicSection(
     if (entries.isEmpty() || mainAxisDp <= 0) {
         return
     }
-    // The numbers the static side is drawn from, so an entry is the size of a pinned icon -- but never under the 48 dp
-    // a touch target needs, which is also what the dock measured this section for (dockDynamicEntryExtentDp).
-    val iconSizeDp = dockDynamicEntryExtentDp(slotMetrics.iconSizeDp)
+    // The compact 48 dp tile the dock measured this section for (dockDynamicEntryExtentDp).
+    val iconSizeDp = dockDynamicEntryExtentDp()
     val spacingDp = slotMetrics.itemSpacingDp
     val scrollState = rememberScrollState()
     ScrollSelectedEntryIntoView(
@@ -298,10 +296,14 @@ private const val NOW_PLAYING_MARK_DP = 18
  */
 internal val LocalDockDynamicBoundsSink = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
 
-/** An entry is a pinned icon's size, but never under a 48 dp touch target. */
-internal fun dockDynamicEntryExtentDp(iconSizeDp: Int): Int = maxOf(iconSizeDp, DOCK_DYNAMIC_ENTRY_MIN_EXTENT_DP)
+/**
+ * A dynamic entry is a compact tile: exactly the 48 dp touch target, whatever size the pinned icons are. The pins keep
+ * their own (Home-sized) icons and the dynamic side takes only this much room per entry, so a large pinned icon never
+ * makes the side beside it grow, and an entry is never under a touch target.
+ */
+internal fun dockDynamicEntryExtentDp(): Int = DOCK_DYNAMIC_ENTRY_EXTENT_DP
 
-private const val DOCK_DYNAMIC_ENTRY_MIN_EXTENT_DP = 48
+private const val DOCK_DYNAMIC_ENTRY_EXTENT_DP = 48
 
 /** The ring marking the entry whose destination is currently showing (the Stream button while the Stream is up). */
 private const val SELECTED_ENTRY_RING_DP = 2

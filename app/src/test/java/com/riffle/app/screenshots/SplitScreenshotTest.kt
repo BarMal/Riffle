@@ -21,12 +21,15 @@ import com.riffle.app.launcher.dockDynamicSectionTileTestTag
 import com.riffle.app.launcher.split.SPLIT_DIVIDER_TEST_TAG
 import com.riffle.app.launcher.split.SPLIT_HOME_PANE_TEST_TAG
 import com.riffle.app.launcher.split.SPLIT_STREAM_PANE_TEST_TAG
+import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
+import com.riffle.app.launcher.stream.STREAM_STAGE_RAIL_TEST_TAG
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.split.SplitMode
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
+import com.riffle.core.domain.launcher.stream.StreamWideView
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -59,11 +62,13 @@ class SplitScreenshotTest {
         streamShown: Boolean = true,
         lastShown: SplitMode? = null,
         dockPosition: DockPosition = DockPosition.BOTTOM,
+        wideView: StreamWideView = StreamWideView.PAGES,
     ) {
         host = emptyStreamHost()
         if (lastShown != null) {
             host.layouts.update(deviceClass, StreamLayoutAction.SetSplit(0.4f, lastShown))
         }
+        host.layouts.update(deviceClass, StreamLayoutAction.SetWideView(wideView))
         composeRule.setContent {
             ScreenshotBackdrop {
                 HomeDestination(
@@ -122,6 +127,30 @@ class SplitScreenshotTest {
         composeRule.onNodeWithTag(SPLIT_STREAM_PANE_TEST_TAG).assertIsDisplayed()
         assertTrue(!paneExists(SPLIT_HOME_PANE_TEST_TAG))
         assertTrue(!paneExists(SPLIT_DIVIDER_TEST_TAG))
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun unfoldedStreamOnlyAsTwoPages() {
+        render(lastShown = SplitMode.STREAM_ONLY)
+        composeRule.onNodeWithTag(SPLIT_STREAM_PANE_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).assertIsDisplayed()
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun unfoldedSplitWithTheStageViewCollapsesItsRailToIcons() {
+        // The Stream's pane is 40 percent of 840 dp, under the width where the rail keeps its names.
+        render(wideView = StreamWideView.STAGE)
+        composeRule.onNodeWithTag(SPLIT_STREAM_PANE_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun unfoldedStreamOnlyWithTheStageViewKeepsTheFullRail() {
+        render(lastShown = SplitMode.STREAM_ONLY, wideView = StreamWideView.STAGE)
+        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
         composeRule.captureScreen()
     }
 

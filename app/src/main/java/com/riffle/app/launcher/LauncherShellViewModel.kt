@@ -533,6 +533,27 @@ class LauncherShellViewModel(
     }
 }
 
+private fun LauncherShellState.withGlanceWidgetAdded(
+    action: LauncherShellAction.AddGlanceWidgetToHome,
+    widgetEngine: WidgetEngine,
+    homeLayoutRepository: HomeLayoutRepository,
+): LauncherShellState =
+    when (
+        val result =
+            widgetEngine.addGlanceWidgetToPage(
+                layout = homeLayout,
+                kind = action.kind,
+                label = action.label,
+                preferredSpan = action.preferredSpan,
+                targetCell = action.targetCell,
+                targetPageId = action.targetPageId,
+            )
+    ) {
+        is WidgetEditResult.Updated -> withHomeLayout(result.layout, homeLayoutRepository)
+        is WidgetEditResult.Rejected -> this
+    }
+
+@Suppress("CyclomaticComplexMethod")
 private fun reduceHomeShortcutEdit(
     previousState: LauncherShellState,
     action: LauncherShellAction,
@@ -571,6 +592,9 @@ private fun reduceHomeShortcutEdit(
 
                 is WidgetEditResult.Rejected -> previousState
             }
+
+        is LauncherShellAction.AddGlanceWidgetToHome ->
+            previousState.withGlanceWidgetAdded(action, widgetEngine, homeLayoutRepository)
 
         is LauncherShellAction.AddHostedWidgetToDockPanel ->
             when (

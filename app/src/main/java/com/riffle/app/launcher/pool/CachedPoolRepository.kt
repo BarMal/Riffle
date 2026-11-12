@@ -179,6 +179,20 @@ internal class CachedPoolRepository(
         return read.getOrNull()
     }
 
+    /**
+     * Applies [repair] to the loaded state and writes it when it changed (a one-time repair, e.g. [PoolDockRepair]).
+     * Does nothing, and returns false, before [initialize] or once a read failure disabled persistence.
+     */
+    suspend fun repairState(repair: (PoolStoreState) -> PoolStoreState): Boolean =
+        lock.withLock {
+            val current = cached
+            if (current == null || !persistenceEnabled) return@withLock false
+            val repaired = repair(current)
+            if (repaired == current) return@withLock true
+            publish(repaired)
+            persist(repaired)
+        }
+
     /** Replaces the pools by a fresh import of [layoutSet]. Does nothing before [initialize]. */
     suspend fun reimport(
         layoutSet: HomeLayoutSet,

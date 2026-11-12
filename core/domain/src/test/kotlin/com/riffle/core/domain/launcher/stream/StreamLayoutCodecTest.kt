@@ -185,4 +185,51 @@ class StreamLayoutCodecTest {
         assertNull(StreamLayoutBackup.restore(StreamLayouts()))
         assertEquals(custom, StreamLayoutBackup.restore(custom))
     }
+
+    @Test
+    fun theWideViewRoundTripsPerPostureAndEveryStoredIdIsKept() {
+        val layouts =
+            StreamLayouts()
+                .with(HomeLayoutDeviceClass.FOLDABLE, StreamLayout(wideView = StreamWideView.STAGE))
+                .with(HomeLayoutDeviceClass.TABLET, StreamLayout(wideView = StreamWideView.PAGES))
+        assertEquals(layouts, StreamLayoutCodec.decode(StreamLayoutCodec.encode(layouts)))
+        assertEquals("pages", StreamWideView.PAGES.storedId)
+        assertEquals("stage", StreamWideView.STAGE.storedId)
+    }
+
+    @Test
+    fun aLayoutStoredBeforeTheStageViewDecodesToPages() {
+        val decoded =
+            StreamLayoutCodec.decode(
+                root(posture("FOLDABLE", listOf(section("now", view = "list")))),
+            )
+        assertEquals(StreamWideView.PAGES, decoded?.forPosture(HomeLayoutDeviceClass.FOLDABLE)?.wideView)
+        assertEquals(StreamView.LIST, decoded?.forPosture(HomeLayoutDeviceClass.FOLDABLE)?.viewOf(StreamSection.NOW))
+    }
+
+    @Test
+    fun anUnknownWideViewReadsAsPagesAndTheNewFieldIsNotWrittenOverOldKeys() {
+        val withUnknown =
+            obj(
+                "version" to StoredValue.Num(1),
+                "postures" to
+                    StoredValue.Arr(
+                        listOf(
+                            obj(
+                                "deviceClass" to StoredValue.Str("TABLET"),
+                                "sections" to StoredValue.Arr(emptyList()),
+                                "wideView" to StoredValue.Str("carousel"),
+                            ),
+                        ),
+                    ),
+            )
+        val decoded = StreamLayoutCodec.decode(withUnknown)
+        assertEquals(StreamWideView.PAGES, decoded?.forPosture(HomeLayoutDeviceClass.TABLET)?.wideView)
+        // An older build reads what this one writes: every key it knows is still there, and it ignores the new one.
+        val staged = StreamLayouts().with(HomeLayoutDeviceClass.TABLET, StreamLayout(wideView = StreamWideView.STAGE))
+        val written = StreamLayoutCodec.encode(staged)
+        val posture = ((written.fields["postures"] as StoredValue.Arr).items.single() as StoredValue.Obj).fields
+        assertTrue(posture.keys.containsAll(listOf("deviceClass", "sections", "options", "split")))
+        assertEquals(StoredValue.Str("stage"), posture["wideView"])
+    }
 }

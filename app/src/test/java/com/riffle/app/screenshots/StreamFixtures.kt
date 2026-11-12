@@ -23,6 +23,7 @@ import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.StreamContentId
 import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamGroupKeys
+import com.riffle.core.domain.launcher.stream.StreamPrivacy
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
 import com.riffle.core.domain.launcher.stream.TaskContent
@@ -295,6 +296,26 @@ internal object StreamFixtures {
                     )
             },
         )
+
+    /** The content a glance widget of [kind] shows. */
+    fun contentFor(kind: com.riffle.core.domain.launcher.glance.GlanceWidgetKind): StreamContent =
+        when (kind) {
+            com.riffle.core.domain.launcher.glance.GlanceWidgetKind.NOW_PLAYING -> media
+            com.riffle.core.domain.launcher.glance.GlanceWidgetKind.NEXT_EVENT -> nextEvent
+            com.riffle.core.domain.launcher.glance.GlanceWidgetKind.TOP_STORY -> articles.first()
+        }
+
+    /** The same content as a source would deliver it under a Hide or content-level rule: text withheld. */
+    fun redactedFor(kind: com.riffle.core.domain.launcher.glance.GlanceWidgetKind): StreamContent =
+        when (val content = contentFor(kind)) {
+            is MediaContent ->
+                content.copy(title = null, artist = null, artwork = null, privacy = StreamPrivacy.REDACTED)
+            is EventContent ->
+                content.copy(title = null, location = null, endEpochMillis = null, privacy = StreamPrivacy.REDACTED)
+            is ArticleContent ->
+                content.copy(title = null, image = null, digest = null, privacy = StreamPrivacy.REDACTED)
+            else -> content
+        }
 
     fun environment(reducedMotion: Boolean = false) =
         StreamEnvironment(

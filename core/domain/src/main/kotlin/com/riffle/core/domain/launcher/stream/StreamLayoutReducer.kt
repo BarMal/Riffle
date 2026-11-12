@@ -17,6 +17,9 @@ sealed interface StreamLayoutAction {
     /** The split's remembered state: the Stream's share of the room and the last-used shown state (P6). */
     data class SetSplit(val fraction: Float, val lastShown: SplitMode) : StreamLayoutAction
 
+    /** "Show as" for the whole Stream on an expanded posture: Pages or Stage. */
+    data class SetWideView(val wideView: StreamWideView) : StreamLayoutAction
+
     /** Puts a previously held layout back (Undo). */
     data class Restore(val layout: StreamLayout) : StreamLayoutAction
 
@@ -38,6 +41,7 @@ object StreamLayoutReducer {
             is StreamLayoutAction.Move -> layout.move(action.section, action.delta)
             is StreamLayoutAction.SetOptions -> layout.copy(options = action.options)
             is StreamLayoutAction.SetSplit -> layout.copy(split = StreamSplit.of(action.fraction, action.lastShown))
+            is StreamLayoutAction.SetWideView -> layout.copy(wideView = action.wideView)
             is StreamLayoutAction.Restore -> action.layout
             StreamLayoutAction.Reset -> StreamLayout.DEFAULT
         }

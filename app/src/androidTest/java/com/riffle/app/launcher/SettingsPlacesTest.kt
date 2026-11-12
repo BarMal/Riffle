@@ -113,7 +113,11 @@ class SettingsPlacesTest {
         composeRule.onNodeWithTag(SETTINGS_SEARCH_FIELD_TEST_TAG).performTextInput("wifi")
         composeRule.onNodeWithTag("settings-result-stream_feeds#FEEDS_WIFI_ONLY").performScrollTo().performClick()
 
-        // Well down the Feeds page, and on screen because search scrolled to it.
+        // Well down the Feeds page, and on screen because search scrolled to it. The scroll starts a couple of
+        // frames after the page opens and is animated, so wait for it to land rather than asserting at once.
+        composeRule.waitUntil(timeoutMillis = SCROLL_TO_SETTING_TIMEOUT_MILLIS) {
+            runCatching { composeRule.onNodeWithText("Only on Wi-Fi").assertIsDisplayed() }.isSuccess
+        }
         composeRule.onNodeWithText("Only on Wi-Fi").assertIsDisplayed()
     }
 
@@ -188,3 +192,5 @@ class SettingsPlacesTest {
         assertEquals(null, saved)
     }
 }
+
+private const val SCROLL_TO_SETTING_TIMEOUT_MILLIS = 5_000L

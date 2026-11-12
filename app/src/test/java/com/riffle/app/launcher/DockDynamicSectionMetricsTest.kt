@@ -308,4 +308,81 @@ class DockDynamicSectionMetricsTest {
 
         assertEquals(240 + 17 + 100, metrics.surfaceMainAxisDp)
     }
+
+    private fun phoneDock(
+        pins: Int,
+        liveAppSlots: Int = 3,
+    ) = DockModel(
+        capacity = pins,
+        items = List(pins) { index -> testDockShortcut("app-$index") },
+        liveAppSlots = liveAppSlots,
+        iconSizeDp = 56,
+        itemSpacingDp = 10,
+    )
+
+    @Test
+    fun fivePinsAtTheHomeIconSizeFitOnAPhoneAndDoNotScroll() {
+        val metrics = dockSurfaceMetrics(phoneDock(pins = 5), isEditing = false, availableMainAxisDp = 404)!!
+
+        assertEquals(56, metrics.slotMetrics.iconSizeDp)
+        assertEquals(88, dockCrossAxisDp(metrics.slotMetrics.iconSizeDp))
+        assertEquals(
+            false,
+            dockPinnedRunScrolls(5, metrics.slotMetrics, metrics.contentViewportMainAxisDp),
+        )
+    }
+
+    @Test
+    fun eightPinsKeepTheirSizeAndScroll() {
+        val metrics = dockSurfaceMetrics(phoneDock(pins = 8), isEditing = false, availableMainAxisDp = 404)!!
+
+        assertEquals(56, metrics.slotMetrics.iconSizeDp)
+        assertEquals(88, dockCrossAxisDp(metrics.slotMetrics.iconSizeDp))
+        assertEquals(true, dockPinnedRunScrolls(8, metrics.slotMetrics, metrics.contentViewportMainAxisDp))
+    }
+
+    @Test
+    fun sixPinsBesideTwoDynamicEntriesAreNotSqueezedAndTheRunScrolls() {
+        // The owner's phone: six pins, one live app and the Stream button on 404 dp. The dynamic side takes exactly
+        // its two compact 48 dp entries (2 x 48 + 10), the pins keep 56 dp and scroll in what is left.
+        val metrics =
+            dockSurfaceMetrics(
+                phoneDock(pins = 6),
+                isEditing = false,
+                availableMainAxisDp = 404,
+                dynamicEntryCount = 2,
+            )!!
+
+        assertEquals(2 * 48 + 10, metrics.dynamicSectionMainAxisDp)
+        assertEquals(404 - 106 - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP, metrics.containerMainAxisDp)
+        assertEquals(56, metrics.slotMetrics.iconSizeDp)
+        assertEquals(88, dockCrossAxisDp(metrics.slotMetrics.iconSizeDp))
+        assertEquals(true, dockPinnedRunScrolls(6, metrics.slotMetrics, metrics.contentViewportMainAxisDp))
+    }
+
+    @Test
+    fun theDynamicSideTakesOnlyWhatItsEntriesNeedUpToItsSlotLimit() {
+        val one = dockSurfaceMetrics(phoneDock(pins = 3), false, 404, dynamicEntryCount = 1)!!
+        val limited = dockSurfaceMetrics(phoneDock(pins = 3, liveAppSlots = 0), false, 404, dynamicEntryCount = 9)!!
+
+        // One entry: one compact tile. Zero live app slots still leave now playing and the Stream button.
+        assertEquals(48, one.dynamicSectionMainAxisDp)
+        assertEquals(2 * 48 + 10, limited.dynamicSectionMainAxisDp)
+    }
+
+    @Test
+    fun aCrowdedDynamicSideLeavesThreePinsVisibleAtFullSize() {
+        val metrics =
+            dockSurfaceMetrics(
+                phoneDock(pins = 8, liveAppSlots = 5),
+                isEditing = false,
+                availableMainAxisDp = 404,
+                dynamicEntryCount = 7,
+            )!!
+
+        // Three pins and the dock padding are reserved for the pinned side; the dynamic side gets the rest and scrolls.
+        val staticFloor = dockStaticFloorMainAxisDp(slotCount = 8, iconSizeDp = 56, spacingDp = 10)
+        assertEquals(404 - staticFloor - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP, metrics.dynamicSectionMainAxisDp)
+        assertEquals(56, metrics.slotMetrics.iconSizeDp)
+    }
 }

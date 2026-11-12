@@ -22,6 +22,7 @@ import com.riffle.app.launcher.LauncherBackupDocumentGateway
 import com.riffle.app.launcher.LauncherBackupDocumentHandler
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
 import com.riffle.app.launcher.LauncherBackupImportCoordinator
+import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellPlatformDependencies
 import com.riffle.app.launcher.LauncherWidgetAddRequestHandler
 import com.riffle.app.launcher.SharedPreferencesAppVisibilityRepository
@@ -539,6 +540,7 @@ internal class MainActivityDependencies(
     fun widgetAddRequestHandler(
         selectedGrid: () -> GridDimensions,
         completeWidgetAdd: (HostedWidgetAddAction) -> HostedWidgetAddCompletionResult,
+        completeGlanceAdd: (LauncherShellAction.AddGlanceWidgetToHome) -> HostedWidgetAddCompletionResult,
     ): LauncherWidgetAddRequestHandler =
         LauncherWidgetAddRequestHandler(
             widgetBindingCoordinator = widgetBindingCoordinator,
@@ -546,6 +548,7 @@ internal class MainActivityDependencies(
             windowSize = widgetAddWindowSizeProvider::windowSize,
             completeWidgetAdd = completeWidgetAdd,
             deleteHostedWidgetId = hostIdDeletion::ifAllowed,
+            completeGlanceAdd = completeGlanceAdd,
         )
 }
 

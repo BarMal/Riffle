@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.backup
 
+import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.workspace.LensLibraryOps
 import com.riffle.core.domain.launcher.workspace.WorkspaceLayoutFold
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
@@ -84,7 +85,8 @@ object WorkspaceBackup {
         exportPool(state)?.let { restored ->
             PoolRestore(
                 state = restored,
-                widgetPlaceholderCount = restored.pools.values.sumOf { pool -> pool.items.values.count(::isWidget) },
+                widgetPlaceholderCount =
+                    restored.pools.values.sumOf { pool -> pool.items.values.count(::isHostedWidget) },
             )
         }
 
@@ -99,7 +101,8 @@ object WorkspaceBackup {
     fun restoreExclusions(rules: LayoutExclusionRules?): LayoutExclusionRules? = exportExclusions(rules)?.folded()
 }
 
-private fun isWidget(item: PoolItem): Boolean = item is PoolWidget
+/** A glance widget is Riffle's own and restores as itself; only a platform widget comes back unbound. */
+private fun isHostedWidget(item: PoolItem): Boolean = item is PoolWidget && GlanceWidgets.kindOf(item.provider) == null
 
 private fun PlacedItemPool.withoutHostIds(): PlacedItemPool {
     if (items.values.none { it is PoolWidget && it.hostedId != null }) return this

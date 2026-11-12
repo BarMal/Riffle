@@ -6,6 +6,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.glance.GlanceWidgets
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 internal data class WidgetPickerSection(
@@ -29,7 +30,12 @@ internal fun widgetPickerSectionsFor(
         .map { (key, sectionProviders) ->
             WidgetPickerSection(
                 key = key,
-                title = sectionProviders.first().widgetPickerSectionTitle(),
+                title =
+                    if (sectionProviders.first().isRiffleGlance) {
+                        RIFFLE_SECTION_TITLE
+                    } else {
+                        sectionProviders.first().widgetPickerSectionTitle()
+                    },
                 providers =
                     sectionProviders.sortedWith(
                         compareBy<InstalledWidgetProvider> { provider -> provider.label.lowercase() }
@@ -41,9 +47,17 @@ internal fun widgetPickerSectionsFor(
             )
         }
         .sortedWith(
-            compareBy<WidgetPickerSection> { section -> section.title.widgetPickerProfileSortRank() }
+            // Riffle's own widgets lead; then Personal, Work and Private, each by app.
+            compareBy<WidgetPickerSection> { section -> if (section.title == RIFFLE_SECTION_TITLE) 0 else 1 }
+                .thenBy { section -> section.title.widgetPickerProfileSortRank() }
                 .thenBy { section -> section.title.widgetPickerAppSortLabel() },
         )
+
+/** The picker's group of Riffle's own glance widgets (a platform app could never use the reserved package). */
+internal const val RIFFLE_SECTION_TITLE = "Riffle"
+
+private val InstalledWidgetProvider.isRiffleGlance: Boolean
+    get() = GlanceWidgets.kindOf(identity) != null
 
 internal fun InstalledWidgetProvider.widgetPickerSectionTitle(): String {
     val profilePrefix = identity.profile.drawerProfilePrefix() ?: "Personal"

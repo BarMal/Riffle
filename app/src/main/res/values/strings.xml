@@ -25,6 +25,21 @@
     <string name="stream_show_hidden_section">Show %1$s</string>
     <string name="stream_current_view">Currently %1$s</string>
 
+    <!-- Pages, the spine and the Stage view -->
+    <plurals name="stream_page_items">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="stream_spine_marker">%1$s, page %2$d of %3$d</string>
+    <string name="stream_previous_page">Previous page</string>
+    <string name="stream_next_page">Next page</string>
+    <string name="stream_wide_pages">Pages</string>
+    <string name="stream_wide_stage">Stage</string>
+    <string name="stream_shown_as_stream">Stream shown as %1$s</string>
+    <string name="stream_stage_thumb">%1$s, %2$s</string>
+    <string name="stream_stage_bring_forward">Bring %1$s to the front</string>
+    <string name="stream_all_hidden">Every section is hidden. Show one to fill the Stream again.</string>
+
     <!-- Section states -->
     <string name="stream_loading">Loading</string>
     <string name="stream_empty_now">Nothing is playing and nothing is coming up.</string>
@@ -473,6 +488,9 @@
     <string name="settings_stream_move_up_named">Move %1$s up</string>
     <string name="settings_stream_move_down_named">Move %1$s down</string>
     <string name="settings_stream_show_as_subtitle">Stack of cards or a List of rows</string>
+    <string name="settings_stream_wide_title">Show the Stream as</string>
+    <string name="settings_stream_wide_subtitle">Pages swipe sideways, two side by side on a wide screen. Stage keeps a rail of every page beside the one in front.</string>
+    <string name="settings_stream_wide_option">Stream shown as %1$s</string>
     <string name="settings_stream_show_as_option">%1$s shown as %2$s</string>
     <string name="settings_agenda_include_feeds_subtitle">Events from your calendar feeds join the device calendar in the Agenda</string>
     <string name="settings_tasks_intro">Riffle can show the tasks you have due today, and the ones that are overdue, from Todoist. In Todoist open Settings, Integrations, Developer, copy your API token and paste it here. The token is kept encrypted on this phone only.</string>
@@ -515,4 +533,27 @@
     <string name="settings_backup_import_action">Import</string>
     <string name="settings_backup_never_title">What a backup never holds</string>
     <string name="settings_backup_never_subtitle">Notifications, events, articles and other content, and any account token. Calendar feed links can contain a private key, so keep the file private.</string>
+    <!-- Glance widgets (Riffle's own Home widgets) -->
+    <string name="glance_section_riffle">Riffle</string>
+    <string name="glance_now_playing_label">Now playing</string>
+    <string name="glance_next_event_label">Next event</string>
+    <string name="glance_top_story_label">Top story</string>
+    <string name="glance_now_playing_description">The track that is playing, with play, pause and skip.</string>
+    <string name="glance_next_event_description">Your next event, with its time, place and a countdown.</string>
+    <string name="glance_top_story_description">The newest unread article from your feeds.</string>
+    <string name="glance_now_playing_empty">Nothing playing</string>
+    <string name="glance_next_event_empty">No upcoming events</string>
+    <string name="glance_top_story_empty">No unread stories</string>
+    <string name="glance_open_stream">Open Stream</string>
+    <string name="glance_open_event">Open event</string>
+    <string name="glance_open_article">Open article</string>
+    <string name="glance_more_actions">More actions</string>
+    <string name="glance_group_description">%1$s: %2$s</string>
+    <string name="glance_by_artist">%1$s by %2$s</string>
+    <string name="glance_preview_track">Midnight City</string>
+    <string name="glance_preview_artist">M83</string>
+    <string name="glance_preview_event">Design standup</string>
+    <string name="glance_preview_event_time">09:00 to 09:30</string>
+    <string name="glance_preview_story">A new look for the launcher</string>
+    <string name="glance_preview_feed">Riffle blog</string>
 </resources>
