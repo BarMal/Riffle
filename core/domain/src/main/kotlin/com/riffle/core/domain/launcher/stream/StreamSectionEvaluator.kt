@@ -37,7 +37,11 @@ object StreamSectionEvaluator {
             groups.isNotEmpty() -> StreamSectionResult.Ready(groups)
             states.any { it is Slot.Loading } -> StreamSectionResult.Loading
             states.any { it is Slot.Permission } ->
-                StreamSectionResult.PermissionRequired(states.filterIsInstance<Slot.Permission>().map { it.source })
+                StreamSectionResult.PermissionRequired(
+                    states.filterIsInstance<Slot.Permission>().map {
+                        StreamSourceIds.userSourceOf(it.source)
+                    }.distinct(),
+                )
             states.any { it is Slot.NotConnected } -> StreamSectionResult.NotConnected
             states.any { it is Slot.Ready } -> StreamSectionResult.Empty
             states.any { it is Slot.Unavailable } -> StreamSectionResult.Unavailable

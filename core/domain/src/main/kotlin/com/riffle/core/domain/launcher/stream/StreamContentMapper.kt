@@ -13,6 +13,9 @@ import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.lens.LensProjection
 import com.riffle.core.domain.launcher.workspace.lens.SourceContentLevel
 import com.riffle.core.domain.launcher.workspace.lens.SourceContentLevels
+import com.riffle.core.domain.launcher.workspace.sources.MediaControl
+import com.riffle.core.domain.launcher.workspace.sources.MediaItemExt
+import com.riffle.core.domain.launcher.workspace.sources.NotificationItemMapper
 
 /**
  * Maps the `Item`s the sources already produce to [StreamContent]. Redaction is the lens pipeline's own
@@ -31,6 +34,13 @@ object StreamContentMapper {
     private val PRIORITY = ItemExtKey("notification.priority")
     private val AUTHOR = ItemExtKey("rss.author")
     private val STALE = ItemExtKey("rss.stale")
+    private val NOTIFICATION_KEY = NotificationItemMapper.KEY_KEY
+    private val NOTIFICATION_REPLY = NotificationItemMapper.REPLY_KEY
+    private val NOTIFICATION_SNOOZE = NotificationItemMapper.SNOOZE_KEY
+
+    /** Set by the platform RSS source: the opaque digest the cache keys read state by, and whether it was read. */
+    val ARTICLE_DIGEST = ItemExtKey("rss.digest")
+    val ARTICLE_READ = ItemExtKey("rss.read")
 
     fun map(
         item: Item,
@@ -40,9 +50,12 @@ object StreamContentMapper {
         val hidden = levels.levelOf(item.sourceId) == SourceContentLevel.HIDE_TEXT
         val privacy =
             if (item.privacy == ItemPrivacy.SENSITIVE || hidden) StreamPrivacy.REDACTED else StreamPrivacy.VISIBLE
+        // Message history and the queue are body text: they follow the BODY field, so "hide body" and sensitive
+        // items drop them even though the ext map itself survives the hide-body level.
+        val showBody = ItemField.BODY in LensProjection.visibleFields(item, ItemField.ALL, levels)
         return when (item.sourceId) {
-            SourceIds.NOTIFICATIONS -> notification(redacted, privacy)
-            SourceIds.MEDIA -> media(redacted, privacy)
+            SourceIds.NOTIFICATIONS -> notification(redacted, privacy, showBody)
+            SourceIds.MEDIA -> media(redacted, privacy, showBody)
             SourceIds.CALENDAR -> event(redacted, privacy, EventKind.CALENDAR)
             SourceIds.ICS -> event(redacted, privacy, EventKind.CALENDAR_FEED)
             SourceIds.RSS -> article(redacted, privacy)
@@ -91,6 +104,7 @@ object StreamContentMapper {
     private fun notification(
         item: Item,
         privacy: StreamPrivacy,
+        showBody: Boolean,
     ): NotificationContent? {
         val app = item.appRef() ?: return null
         val category = (item.ext[CATEGORY] as? ItemExtValue.Text)?.value
@@ -119,17 +133,25 @@ object StreamContentMapper {
                             is ItemAction.Custom -> Unit
                         }
                     }
+                    if (item.ext[NOTIFICATION_REPLY] == ItemExtValue.Flag(true)) add(NotificationAction.REPLY)
+                    if (item.ext[NOTIFICATION_SNOOZE] == ItemExtValue.Flag(true)) add(NotificationAction.SNOOZE)
                     add(NotificationAction.HIDE)
                 },
             privacy = privacy,
+            notificationKey = (item.ext[NOTIFICATION_KEY] as? ItemExtValue.Text)?.value,
+            thread = if (showBody) StreamContentDetails.thread(item) else emptyList(),
         )
     }
 
     private fun media(
         item: Item,
         privacy: StreamPrivacy,
+        showBody: Boolean,
     ): MediaContent? {
         val app = item.appRef() ?: return null
+        val controls =
+            (item.ext[MediaItemExt.CONTROLS] as? ItemExtValue.Text)?.value.orEmpty()
+                .split(',').mapNotNull(MediaControl::fromToken)
         return MediaContent(
             id = StreamContentId(item.id.value),
             app = app,
@@ -139,7 +161,25 @@ object StreamContentMapper {
             artwork = item.image,
             icon = item.icon,
             target = item.target,
-            actions = if (item.actions.any { it is ItemAction.Open }) setOf(MediaAction.OPEN) else emptySet(),
+            actions =
+                buildSet {
+                    if (item.actions.any { it is ItemAction.Open }) add(MediaAction.OPEN)
+                    controls.forEach { control ->
+                        add(
+                            when (control) {
+                                MediaControl.PLAY -> MediaAction.PLAY
+                                MediaControl.PAUSE -> MediaAction.PAUSE
+                                MediaControl.PREVIOUS -> MediaAction.PREVIOUS
+                                MediaControl.NEXT -> MediaAction.NEXT
+                                MediaControl.SEEK -> MediaAction.SEEK
+                            },
+                        )
+                    }
+                },
+            isPlaying = (item.ext[MediaItemExt.PLAYING] as? ItemExtValue.Flag)?.value,
+            positionMillis = (item.ext[MediaItemExt.POSITION] as? ItemExtValue.Number)?.value,
+            durationMillis = (item.ext[MediaItemExt.DURATION] as? ItemExtValue.Number)?.value,
+            queue = if (showBody) StreamContentDetails.queue(item) else emptyList(),
             postedAtEpochMillis = item.timeEpochMillis,
             privacy = privacy,
         )
@@ -177,8 +217,10 @@ object StreamContentMapper {
     private fun article(
         item: Item,
         privacy: StreamPrivacy,
-    ): ArticleContent =
-        ArticleContent(
+    ): ArticleContent {
+        val digest = (item.ext[ARTICLE_DIGEST] as? ItemExtValue.Text)?.value
+        val read = (item.ext[ARTICLE_READ] as? ItemExtValue.Flag)?.value ?: false
+        return ArticleContent(
             id = StreamContentId(item.id.value),
             feedId = item.groupKey ?: item.groupLabel.orEmpty(),
             feedName = item.groupLabel,
@@ -189,9 +231,16 @@ object StreamContentMapper {
             publishedAtEpochMillis = item.timeEpochMillis,
             stale = (item.ext[STALE] as? ItemExtValue.Flag)?.value ?: false,
             target = item.target,
-            actions = if (item.actions.any { it is ItemAction.Open }) setOf(ArticleAction.OPEN) else emptySet(),
+            actions =
+                buildSet {
+                    if (item.actions.any { it is ItemAction.Open }) add(ArticleAction.OPEN)
+                    if (digest != null && !read) add(ArticleAction.MARK_READ)
+                },
             privacy = privacy,
+            digest = digest,
+            read = read,
         )
+    }
 
     private fun recentApp(item: Item): RecentAppContent? {
         val app = item.appRef() ?: return null
@@ -203,6 +252,7 @@ object StreamContentMapper {
             lastUsedEpochMillis = item.timeEpochMillis,
             target = item.target,
             actions = RecentAppAction.entries.toSet(),
+            foregroundMillis = (item.ext[ItemExtKey("apps.foreground")] as? ItemExtValue.Number)?.value ?: 0L,
         )
     }
 

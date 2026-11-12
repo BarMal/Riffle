@@ -49,6 +49,7 @@ import com.riffle.app.launcher.ics.IcsRefreshCoordinator
 import com.riffle.app.launcher.ics.defaultIcsEngine
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
+import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnection
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
@@ -65,9 +66,17 @@ import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.app.launcher.sources.ContentSourceDependencies
 import com.riffle.app.launcher.sources.FeedSourceDependencies
 import com.riffle.app.launcher.sources.IcsSourceDependencies
+import com.riffle.app.launcher.sources.MediaSourceDependencies
 import com.riffle.app.launcher.sources.SearchSourceDependencies
+import com.riffle.app.launcher.sources.SourceChangeSource
 import com.riffle.app.launcher.sources.androidCalendarSourceDependencies
 import com.riffle.app.launcher.sources.androidItemSources
+import com.riffle.app.launcher.sources.androidStreamSources
+import com.riffle.app.launcher.stream.AndroidMediaSessions
+import com.riffle.app.launcher.stream.AndroidNextAlarm
+import com.riffle.app.launcher.stream.AndroidStreamActionGateway
+import com.riffle.app.launcher.stream.ManualChangeSource
+import com.riffle.app.launcher.stream.StreamPlatform
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
@@ -89,8 +98,12 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.stream.StreamSourceIds
+import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
+import com.riffle.core.domain.launcher.workspace.settings.AliasedSourceEnablement
+import com.riffle.core.domain.launcher.workspace.settings.SourceEnablement
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceContentPrivacy
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
 import com.riffle.core.domain.launcher.workspace.sources.EnablementSourceRegistry
@@ -304,6 +317,76 @@ internal class MainActivityDependencies(
             exclusions = exclusionRepository,
             icsFeeds = IcsFeedsController(icsFeedRepository, icsRefreshCoordinator),
             searchQuery = searchQuery,
+        )
+    }
+
+    /**
+     * The platform behind the Stream (P3b): item sources with live media sessions and the agenda's own calendar
+     * view, the next alarm, and the one action gateway. Pass the SAME [enablement] the Sources settings page writes
+     * to. Nothing subscribes or reads until a Stream section is observed.
+     */
+    fun streamPlatform(
+        launcherSettings: () -> LauncherSettings,
+        enablement: SourceEnablement,
+    ): StreamPlatform {
+        val executor =
+            Executors.newSingleThreadExecutor { task -> Thread(task, "riffle-stream").apply { isDaemon = true } }
+        val mediaSessions = AndroidMediaSessions(activity)
+        val feedReadChanges = ManualChangeSource()
+        val registry =
+            androidStreamSources(
+                installedApps = installedAppRepository,
+                appVisibility = appVisibilityRepository,
+                recentApps = recentAppRepository,
+                notificationRepository = activeNotificationRepository,
+                notificationAccess = notificationAccessGateway,
+                hideRules = { launcherSettings().notificationHiding.rules },
+                calendar =
+                    androidCalendarSourceDependencies(
+                        contentResolver = activity.contentResolver,
+                        access = calendarAccessGateway,
+                        accessChanges = calendarAccessChanges,
+                    ),
+                media = MediaSourceDependencies(sessions = mediaSessions, changes = mediaSessions),
+                content =
+                    ContentSourceDependencies(
+                        feeds =
+                            FeedSourceDependencies(
+                                configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings),
+                                cache = feedArticleCacheRepository,
+                                changes =
+                                    SourceChangeSource.merge(
+                                        listOf(feedRefreshCoordinator.cacheChanges, feedReadChanges),
+                                    ),
+                            ),
+                        ics =
+                            IcsSourceDependencies(
+                                feeds = { icsFeedRepository.takeIf { it.isLoaded }?.settings()?.feeds },
+                                cachedEvents = { id -> icsFeedRepository.cached(id)?.events },
+                                engine = icsEngine,
+                                changes = icsFeedRepository,
+                            ),
+                    ),
+            )
+        val alarm = AndroidNextAlarm(activity, executor)
+        return StreamPlatform(
+            registry =
+                EnablementSourceRegistry(
+                    registry,
+                    AliasedSourceEnablement(enablement, mapOf(StreamSourceIds.AGENDA to SourceIds.CALENDAR)),
+                ),
+            alarms = alarm.provider,
+            actions =
+                AndroidStreamActionGateway(
+                    notifications = AndroidNotificationStageActionGateway,
+                    replyActionId = AndroidNotificationStageActionGateway::replyActionId,
+                    snooze = RiffleNotificationListenerConnection::snoozeNotification,
+                    media = mediaSessions,
+                    feedCache = feedArticleCacheRepository,
+                    feedChanged = feedReadChanges::changed,
+                    launch = AndroidItemLaunchPort(activity, appLauncher),
+                    openClock = alarm::openClock,
+                ),
         )
     }
 

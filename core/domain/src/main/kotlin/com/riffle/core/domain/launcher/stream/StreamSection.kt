@@ -10,6 +10,16 @@ import com.riffle.core.domain.launcher.workspace.SourceIds
 object StreamSourceIds {
     val TASKS = SourceId("tasks")
     val ALARM = SourceId("alarm")
+
+    /**
+     * The Agenda's own view of the device calendar: its window is today and the next seven days, not the few
+     * events a lens page reads. It is not one of the user-facing sources: it follows [SourceIds.CALENDAR]
+     * (on/off, Hide rules, content level, permission), and its items are `calendar` items.
+     */
+    val AGENDA = SourceId("calendar.agenda")
+
+    /** The user-facing source whose access, enablement and privacy [id] follows. */
+    fun userSourceOf(id: SourceId): SourceId = if (id == AGENDA) SourceIds.CALENDAR else id
 }
 
 /**
@@ -33,7 +43,7 @@ enum class StreamSection(
     RECENTS("recents", listOf(SourceIds.RECENT_APPS)),
 
     /** Upcoming events from the device calendar and calendar feeds, by day. */
-    AGENDA("agenda", listOf(SourceIds.CALENDAR, SourceIds.ICS)),
+    AGENDA("agenda", listOf(StreamSourceIds.AGENDA, SourceIds.ICS)),
 
     TASKS("tasks", emptyList(), readsTasks = true),
 

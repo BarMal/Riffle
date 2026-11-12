@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleFilter
 import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
@@ -29,6 +30,10 @@ data class NotificationItemInput(
     val appLabel: (AppPackageName) -> String? = { null },
     /** Profile types by id when known; the well-known ids (`personal`, `work`, `private`) resolve without it. */
     val profileTypes: Map<AppProfileId, AppProfileType> = emptyMap(),
+    /** Whether the live notification takes an inline reply right now. Asked per notification; never stored. */
+    val canReply: (LauncherNotificationKey) -> Boolean = { false },
+    /** Whether the live notification can be snoozed right now (needs the listener connection). */
+    val canSnooze: (LauncherNotificationKey) -> Boolean = { false },
 )
 
 /**
@@ -88,12 +93,13 @@ class NotificationItemMapper(
                 privacy = if (redacted) ItemPrivacy.SENSITIVE else ItemPrivacy.VISIBLE,
                 ext = appProfileExt(profileId, input.profileTypes),
             )
-        return if (redacted) base else base.withContent(this, appName)
+        return if (redacted) base else base.withContent(this, appName, input)
     }
 
     private fun Item.withContent(
         notification: LauncherNotification,
         appName: String,
+        input: NotificationItemInput,
     ): Item =
         copy(
             title = notification.title.takeIf(String::isNotBlank),
@@ -113,12 +119,48 @@ class NotificationItemMapper(
                         CATEGORY_KEY to ItemExtValue.Text(notification.category.name.lowercase()),
                         PRIORITY_KEY to ItemExtValue.Number(notification.priority.rank.toLong()),
                         APP_KEY to ItemExtValue.Text(appName),
-                    ),
+                    ) + detailExt(notification, input),
         )
 
-    private companion object {
-        val CATEGORY_KEY = ItemExtKey("notification.category")
-        val PRIORITY_KEY = ItemExtKey("notification.priority")
-        val APP_KEY = ItemExtKey("notification.app")
+    /**
+     * What the Stream needs beyond the card: the notification key (to perform actions), whether reply and snooze are
+     * possible, and the message history of a messaging notification (at most [MAX_THREAD], oldest first, only when
+     * there is more than one). Media sessions carry none of it. Only ever set on a non-redacted item, so the
+     * sensitive-field rule strips it with the rest of the content.
+     */
+    private fun detailExt(
+        notification: LauncherNotification,
+        input: NotificationItemInput,
+    ): Map<ItemExtKey, ItemExtValue> {
+        if (notification.isMediaSession) return emptyMap()
+        val ext = LinkedHashMap<ItemExtKey, ItemExtValue>()
+        ext[KEY_KEY] = ItemExtValue.Text(notification.key.value)
+        if (input.canReply(notification.key)) ext[REPLY_KEY] = ItemExtValue.Flag(true)
+        if (notification.canDismiss && input.canSnooze(notification.key)) ext[SNOOZE_KEY] = ItemExtValue.Flag(true)
+        val thread =
+            notification.messages.filter { it.text.isNotBlank() }.sortedBy { it.timestampEpochMillis }.takeLast(
+                MAX_THREAD,
+            )
+        if (thread.size > 1) {
+            ext[THREAD_SIZE_KEY] = ItemExtValue.Number(thread.size.toLong())
+            thread.forEachIndexed { index, message ->
+                ext[ItemExtKey("notification.m${index}_sender")] = ItemExtValue.Text(message.sender)
+                ext[ItemExtKey("notification.m${index}_text")] = ItemExtValue.Text(message.text)
+                ext[ItemExtKey("notification.m${index}_time")] = ItemExtValue.Number(message.timestampEpochMillis)
+            }
+        }
+        return ext
+    }
+
+    companion object {
+        /** The most messages a thread carries; the newest ones. */
+        const val MAX_THREAD = 10
+        val KEY_KEY = ItemExtKey("notification.key")
+        val REPLY_KEY = ItemExtKey("notification.reply")
+        val SNOOZE_KEY = ItemExtKey("notification.snooze")
+        val THREAD_SIZE_KEY = ItemExtKey("notification.thread_size")
+        private val CATEGORY_KEY = ItemExtKey("notification.category")
+        private val PRIORITY_KEY = ItemExtKey("notification.priority")
+        private val APP_KEY = ItemExtKey("notification.app")
     }
 }

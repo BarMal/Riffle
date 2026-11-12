@@ -37,6 +37,17 @@ has **never been compiled, run or screenshotted**.
 - **Applies at once.** `StoredSourceContentPrivacy` is also a `ContextChanges`; the lens provider watches it (merged with
   the exclusion repository through `mergedContextChanges`), so changing a level re-evaluates every observed page.
 
+### Stream data (P3b)
+
+The Stream's typed content carries more than an `Item` did, and the same rules gate it before any consumer sees it.
+Message history (a thread) and a media queue are body text: they follow the source's Hide-body level, and a sensitive
+item or Hide-text level removes them with everything else, together with the notification key, reply and snooze.
+Media position, queue and artwork, message history, reply text and the next alarm exist only in memory; they are
+never written to a store, logged or put in diagnostics. (The older active-notification snapshot already stores
+message history for the adaptive stage; the Stream adds nothing to it.) A media session only enriches a media
+notification that survived the hide rules and profile visibility. The Stream's agenda follows the calendar's on/off
+switch, Hide rules, content level and permission.
+
 ### Screenshots and recents
 
 `PrivacySettings.protectScreenContent` in `LauncherSettings` (JSON key `privacy.protectScreenContent`, absent means off).

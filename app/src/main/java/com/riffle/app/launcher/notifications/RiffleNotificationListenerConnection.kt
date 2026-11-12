@@ -30,6 +30,12 @@ object RiffleNotificationListenerConnection {
             ?.dismissNotifications(keys)
             ?: false
 
+    /** Snoozes the notification for [durationMillis]; false when the listener is not connected or refused. */
+    fun snoozeNotification(
+        key: LauncherNotificationKey,
+        durationMillis: Long,
+    ): Boolean = listener?.snooze(key, durationMillis) ?: false
+
     private fun notifyObservers() {
         observers.toList().forEach { observer -> observer() }
     }

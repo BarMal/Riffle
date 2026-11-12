@@ -41,6 +41,7 @@ class AndroidRecentAppRepository(
                         PlatformRecentAppUsage(
                             packageName = usage.packageName,
                             lastUsedAtMillis = usage.lastTimeUsed,
+                            foregroundMillis = usage.totalTimeInForeground,
                         )
                     }
             },
@@ -61,6 +62,7 @@ private fun Context.hasUsageStatsAccess(): Boolean =
 internal data class PlatformRecentAppUsage(
     val packageName: String,
     val lastUsedAtMillis: Long,
+    val foregroundMillis: Long = 0L,
 )
 
 internal typealias PlatformRecentAppUsages = List<PlatformRecentAppUsage>
@@ -73,6 +75,7 @@ internal fun PlatformRecentAppUsages.toRecentAppUsages(): List<RecentAppUsage> =
             RecentAppUsage(
                 packageName = AppPackageName(packageName),
                 lastUsedAtMillis = usages.maxOf(PlatformRecentAppUsage::lastUsedAtMillis),
+                foregroundMillis = usages.sumOf { usage -> usage.foregroundMillis.coerceAtLeast(0L) },
             )
         }.sortedWith(
             compareByDescending<RecentAppUsage> { usage -> usage.lastUsedAtMillis }

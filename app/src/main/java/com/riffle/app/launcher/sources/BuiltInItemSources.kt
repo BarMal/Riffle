@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.apps.RecentAppRepository
 import com.riffle.core.domain.launcher.apps.withHiddenApps
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
@@ -24,6 +25,8 @@ import com.riffle.core.domain.launcher.workspace.SourceState
 import com.riffle.core.domain.launcher.workspace.sources.AppItemMapper
 import com.riffle.core.domain.launcher.workspace.sources.CalendarEventRepository
 import com.riffle.core.domain.launcher.workspace.sources.CalendarItemMapper
+import com.riffle.core.domain.launcher.workspace.sources.MediaSessionItems
+import com.riffle.core.domain.launcher.workspace.sources.MediaSessionReader
 import com.riffle.core.domain.launcher.workspace.sources.NotificationItemInput
 import com.riffle.core.domain.launcher.workspace.sources.NotificationItemMapper
 import com.riffle.core.domain.launcher.workspace.sources.SharedSourceStream
@@ -72,12 +75,26 @@ internal class AppSourceDependencies(
     val changes: SourceChangeSource = SourceChangeSource.NONE,
 )
 
+/** What the media source reads beyond the media notifications: the active media sessions. */
+internal class MediaSourceDependencies(
+    val sessions: MediaSessionReader,
+    /** Session changes (a player starts, stops, pauses or changes track); [SourceChangeSource.NONE] when unobserved. */
+    val changes: SourceChangeSource = SourceChangeSource.NONE,
+) {
+    companion object {
+        val NONE = MediaSourceDependencies(sessions = { emptyList() })
+    }
+}
+
 internal class NotificationSourceDependencies(
     val repository: LauncherNotificationRepository,
     /** Never prompts; only reports what the user already enabled. */
     val access: () -> NotificationAccessStatus,
     val changes: SourceChangeSource,
     val hideRules: () -> List<NotificationHideRule>,
+    /** Whether a live notification takes an inline reply / can be snoozed. Both are asked per notification. */
+    val canReply: (LauncherNotificationKey) -> Boolean = { false },
+    val canSnooze: (LauncherNotificationKey) -> Boolean = { false },
 )
 
 internal class CalendarSourceDependencies(
@@ -86,6 +103,8 @@ internal class CalendarSourceDependencies(
     val access: () -> SourceAccess,
     /** Calendar changes and permission flips. [SourceChangeSource.NONE] means the source is not `LIVE`. */
     val changes: SourceChangeSource = SourceChangeSource.NONE,
+    /** What the Stream's agenda reads: the same calendar over a longer window. Defaults to [repository]. */
+    val agendaRepository: CalendarEventRepository = repository,
 ) {
     companion object {
         /** For builds or tests without a platform calendar adapter: the source reports itself unavailable. */
@@ -104,6 +123,7 @@ internal class BuiltInSourceDependencies(
     val apps: AppSourceDependencies,
     val notifications: NotificationSourceDependencies,
     val calendar: CalendarSourceDependencies = CalendarSourceDependencies.UNAVAILABLE,
+    val media: MediaSourceDependencies = MediaSourceDependencies.NONE,
     val feeds: FeedSourceDependencies = FeedSourceDependencies.NONE,
     val search: SearchSourceDependencies = SearchSourceDependencies(),
     val ics: IcsSourceDependencies = IcsSourceDependencies.NONE,
@@ -123,7 +143,10 @@ internal class BuiltInSourceRegistry(sources: List<ItemSource>) : SourceRegistry
  * first observer, nothing prompts for a permission, and each source keeps exactly one upstream however many
  * widgets observe it. Items carry only lazy image keys and are never persisted.
  */
-internal fun builtInSourceRegistry(deps: BuiltInSourceDependencies): SourceRegistry =
+internal fun builtInSourceRegistry(
+    deps: BuiltInSourceDependencies,
+    extra: List<ItemSource> = emptyList(),
+): SourceRegistry =
     BuiltInSourceRegistry(
         listOf(
             allAppsSource(deps),
@@ -135,7 +158,7 @@ internal fun builtInSourceRegistry(deps: BuiltInSourceDependencies): SourceRegis
             feedSource(deps),
             searchSource(deps),
             icsSource(deps),
-        ),
+        ) + extra,
     )
 
 internal fun stream(
@@ -188,17 +211,25 @@ private fun notificationsSource(deps: BuiltInSourceDependencies): SharedSourceSt
         NotificationItemMapper().notificationItems(it)
     }
 
+/**
+ * Media notifications, enriched with the live session behind them (play state, position, transport controls,
+ * queue, artwork). A session without a visible media notification adds nothing, so the hide rules and profile
+ * visibility that decide the notifications still decide what shows.
+ */
 private fun mediaSource(deps: BuiltInSourceDependencies): SharedSourceStream =
-    notificationStream(deps, SourceIds.MEDIA, emptySet()) { NotificationItemMapper().mediaItems(it) }
+    notificationStream(deps, SourceIds.MEDIA, emptySet(), deps.media.changes) { input ->
+        MediaSessionItems.enrich(NotificationItemMapper().mediaItems(input), deps.media.sessions.activeSessions())
+    }
 
 private fun notificationStream(
     deps: BuiltInSourceDependencies,
     id: SourceId,
     capabilities: Set<SourceCapability>,
+    extraChanges: SourceChangeSource = SourceChangeSource.NONE,
     map: (NotificationItemInput) -> List<Item>,
 ): SharedSourceStream {
     val notifications = deps.notifications
-    val changes = SourceChangeSource.merge(listOf(notifications.changes, deps.apps.changes))
+    val changes = SourceChangeSource.merge(listOf(notifications.changes, deps.apps.changes, extraChanges))
     return stream(deps, id, capabilities + SourceCapability.PRIVACY_SENSITIVE, changes) {
         sourceStateFor(notifications.access().toSourceAccess()) {
             val snapshot = deps.apps.installedApps.snapshot()
@@ -213,6 +244,8 @@ private fun notificationStream(
                     profileContentVisibility = snapshot?.profileContentVisibility.orEmpty(),
                     appLabel = labels::get,
                     profileTypes = profileTypes,
+                    canReply = notifications.canReply,
+                    canSnooze = notifications.canSnooze,
                 ),
             )
         }

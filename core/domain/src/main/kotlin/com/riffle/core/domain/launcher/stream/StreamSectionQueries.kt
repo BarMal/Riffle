@@ -8,7 +8,8 @@ package com.riffle.core.domain.launcher.stream
  * - Now: media newest first (up to `maxMedia`), then the next event and the next alarm by start; one group.
  * - Notifications: not older than `maxAgeMillis`; grouped by app, newest app first; within an app by priority
  *   then newest; limited to `maxApps` apps and `maxPerApp` each.
- * - Recents: not older than `maxAgeMillis`; one per app, most recently used first, `limit`; no groups.
+ * - Recents: not older than `maxAgeMillis`; one per app, most recently used first, `limit`; then up to
+ *   `frequentLimit` other apps with the most foreground time, as a second group.
  * - Agenda: events not ended and starting within `daysAhead`; by start, `maxEvents`; grouped by day.
  * - Tasks: open ones (completed too if asked); open first, due soonest, no date last; `limit`.
  * - Feeds: grouped by feed, the feed with the newest article first; newest article first; `maxFeeds`, `perFeed`.
@@ -92,7 +93,16 @@ internal object StreamSectionQueries {
                     compareByDescending<RecentAppContent> { it.lastUsedEpochMillis ?: 0L }.thenBy { it.id.value },
                 )
                 .distinctBy { it.app }
-        return listOf(StreamGroup(RECENTS_GROUP, null, apps.take(options.limit), apps.size))
+        val recent = apps.take(options.limit)
+        val frequent =
+            apps.drop(options.limit)
+                .filter { it.foregroundMillis > 0L }
+                .sortedWith(compareByDescending<RecentAppContent> { it.foregroundMillis }.thenBy { it.id.value })
+                .take(options.frequentLimit)
+        return listOf(
+            StreamGroup(RECENTS_GROUP, null, recent, apps.size),
+            StreamGroup(FREQUENT_GROUP, null, frequent),
+        )
     }
 
     fun agenda(
@@ -161,5 +171,6 @@ internal object StreamSectionQueries {
 
     const val NOW_GROUP = "now"
     const val RECENTS_GROUP = "recents"
+    const val FREQUENT_GROUP = "frequent"
     const val TASKS_GROUP = "tasks"
 }

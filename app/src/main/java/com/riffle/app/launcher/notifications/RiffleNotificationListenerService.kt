@@ -58,6 +58,11 @@ class RiffleNotificationListenerService : NotificationListenerService() {
             saveActiveNotifications()
         }.isSuccess
 
+    fun snooze(
+        key: LauncherNotificationKey,
+        durationMillis: Long,
+    ): Boolean = runCatching { snoozeNotification(key.value, durationMillis) }.isSuccess
+
     /**
      * Maps each notification independently so one notification that fails to map (a platform quirk
      * in a single StatusBarNotification, say) can't discard the snapshot write for every other

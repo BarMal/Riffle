@@ -72,7 +72,9 @@ class StreamContentProviderTest {
     fun `two sections reading one source share one upstream`() {
         collect(StreamSection.NOW)
         collect(StreamSection.AGENDA)
+        collect(StreamSection.AGENDA)
         assertEquals(1, registry.connects[SourceIds.CALENDAR])
+        assertEquals(1, registry.connects[StreamSourceIds.AGENDA])
         assertEquals(1, registry.connects[SourceIds.ICS])
     }
 

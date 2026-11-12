@@ -5,6 +5,7 @@
 ### Added
 
 - Typed Stream content in the domain: `StreamContent` (notification, media with an optional queue, event including calendar feeds and the next alarm, article, task, recent app), the six `StreamSection`s and `StreamContentProvider`, which observes a section as loading, ready, empty, permission required, not connected, unavailable or off, with Hide rules and content levels applied and each section's fixed grouping, sorting and limits. Nothing draws it yet.
+- Real data behind the typed content: live media sessions (play state, position, duration, queue, artwork and transport controls) on media cards, message history, reply and snooze on notification cards, the next alarm from `AlarmManager`, frequent apps after the recent ones, a Stream-only agenda window of today and the next seven days, and mark-read for articles backed by the RSS cache. `StreamActionGateway` is the one entry point for acting on Stream content. None of it is persisted, and sensitive or hidden content exposes no history and no reply.
 
 ### Changed
 

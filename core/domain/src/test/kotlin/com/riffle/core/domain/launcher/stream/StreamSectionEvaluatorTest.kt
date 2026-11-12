@@ -287,7 +287,7 @@ class StreamSectionEvaluatorTest {
         val inputs =
             StreamSectionInputs(
                 mapOf(
-                    SourceIds.CALENDAR to
+                    StreamSourceIds.AGENDA to
                         ready(
                             eventItem("ongoing", NOW - HOUR, end = NOW + HOUR),
                             eventItem("tomorrow", NOW + day),

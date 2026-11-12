@@ -51,6 +51,13 @@ enum class NotificationAction {
     HIDE,
 }
 
+/** One message of a notification thread. Transient and only present on content that is not redacted. */
+data class NotificationMessage(
+    val sender: String?,
+    val text: String,
+    val timestampEpochMillis: Long,
+)
+
 data class NotificationContent(
     override val id: StreamContentId,
     val app: StreamAppRef,
@@ -65,6 +72,10 @@ data class NotificationContent(
     val target: ItemTarget,
     val actions: Set<NotificationAction>,
     override val privacy: StreamPrivacy,
+    /** The platform key the action gateway acts on; null when redacted (no action but hide is possible then). */
+    val notificationKey: String? = null,
+    /** Message history of a messaging notification, oldest first; empty for anything else and when redacted. */
+    val thread: List<NotificationMessage> = emptyList(),
 ) : StreamContent {
     override val timeEpochMillis: Long get() = postedAtEpochMillis
 }
@@ -78,7 +89,7 @@ enum class MediaAction {
     SEEK,
 }
 
-/** One upcoming track. Optional: the platform media source does not provide a queue today, so it is empty. */
+/** One upcoming track; empty queue when the session exposes none. */
 data class MediaQueueEntry(
     val title: String?,
     val artist: String? = null,
@@ -86,9 +97,9 @@ data class MediaQueueEntry(
 )
 
 /**
- * Now playing. [actions] holds what the source can really do: today the media source reads the media
- * notification, so only [MediaAction.OPEN] is offered, [isPlaying] and the positions are null and [queue] is
- * empty. A richer platform source fills them without any change to the UI contract.
+ * Now playing. [actions] holds what the session can really do right now (transport actions only while the session
+ * allows them); [isPlaying], the positions and [queue] are null or empty when the session reports none. Never
+ * persisted. A redacted card has no queue and no actions beyond what the privacy level lets through.
  */
 data class MediaContent(
     override val id: StreamContentId,
@@ -145,7 +156,7 @@ data class EventContent(
 enum class ArticleAction {
     OPEN,
 
-    /** Declared for the Stream UI; there is no read state yet, so no source offers it today. */
+    /** Offered while the article is unread; backed by the RSS cache's read state. */
     MARK_READ,
 }
 
@@ -162,6 +173,9 @@ data class ArticleContent(
     val target: ItemTarget,
     val actions: Set<ArticleAction>,
     override val privacy: StreamPrivacy,
+    /** Opaque article digest the read state is keyed by; null when redacted. */
+    val digest: String? = null,
+    val read: Boolean = false,
 ) : StreamContent {
     override val timeEpochMillis: Long? get() = publishedAtEpochMillis
 }
@@ -204,6 +218,8 @@ data class RecentAppContent(
     val target: ItemTarget,
     val actions: Set<RecentAppAction>,
     override val privacy: StreamPrivacy = StreamPrivacy.VISIBLE,
+    /** Foreground time within the usage window; zero when unknown. Ranks frequent apps. */
+    val foregroundMillis: Long = 0L,
 ) : StreamContent {
     override val timeEpochMillis: Long? get() = lastUsedEpochMillis
 }

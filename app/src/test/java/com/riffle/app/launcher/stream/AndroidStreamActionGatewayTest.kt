@@ -1,0 +1,184 @@
+package com.riffle.app.launcher.stream
+
+import com.riffle.app.launcher.notifications.NotificationStageAction
+import com.riffle.app.launcher.notifications.NotificationStageActionGateway
+import com.riffle.app.launcher.notifications.NotificationStageActionResult
+import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
+import com.riffle.app.launcher.workspace.ItemLaunchPort
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.stream.ArticleAction
+import com.riffle.core.domain.launcher.stream.ArticleContent
+import com.riffle.core.domain.launcher.stream.MediaAction
+import com.riffle.core.domain.launcher.stream.MediaContent
+import com.riffle.core.domain.launcher.stream.NotificationAction
+import com.riffle.core.domain.launcher.stream.NotificationContent
+import com.riffle.core.domain.launcher.stream.StreamAction
+import com.riffle.core.domain.launcher.stream.StreamActionResult
+import com.riffle.core.domain.launcher.stream.StreamAppRef
+import com.riffle.core.domain.launcher.stream.StreamContentId
+import com.riffle.core.domain.launcher.stream.StreamPrivacy
+import com.riffle.core.domain.launcher.workspace.ItemTarget
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class AndroidStreamActionGatewayTest {
+    private val calls = mutableListOf<String>()
+    private var feedChanged = 0
+    private var replyTarget: String? = "provider:0"
+
+    private val gateway =
+        AndroidStreamActionGateway(
+            notifications =
+                NotificationStageActionGateway { key, action ->
+                    calls += "n:${key.value}:${action.describe()}"
+                    NotificationStageActionResult.Performed
+                },
+            replyActionId = { replyTarget },
+            snooze = { key, ms ->
+                calls += "snooze:${key.value}:$ms"
+                true
+            },
+            media =
+                object : MediaTransport {
+                    override fun perform(
+                        packageName: String,
+                        action: StreamAction,
+                    ): StreamActionResult {
+                        calls += "m:$packageName:$action"
+                        return StreamActionResult.Performed
+                    }
+                },
+            feedCache =
+                object : com.riffle.app.launcher.rss.FeedArticleCacheRepository by NoopFeedArticleCacheRepository {
+                    override fun markRead(digest: String) {
+                        calls += "read:$digest"
+                    }
+                },
+            feedChanged = { feedChanged++ },
+            launch =
+                object : ItemLaunchPort {
+                    override fun launchActivity(identity: AppIdentity) = true.also { calls += "activity" }
+
+                    override fun launchPackage(packageName: String) = true.also { calls += "package:$packageName" }
+
+                    override fun launchShortcut(shortcut: AppShortcut) = true
+
+                    override fun openDeepLink(uri: String) = true.also { calls += "link:$uri" }
+
+                    override fun dismissNotification(key: String) = true
+                },
+            openClock = { true.also { calls += "clock" } },
+        )
+
+    private fun NotificationStageAction.describe() =
+        when (this) {
+            is NotificationStageAction.ProviderAction -> "provider:$id:$replyText"
+            else -> toString()
+        }
+
+    private fun notification(
+        redacted: Boolean = false,
+        actions: Set<NotificationAction> =
+            setOf(
+                NotificationAction.OPEN,
+                NotificationAction.DISMISS,
+                NotificationAction.REPLY,
+                NotificationAction.SNOOZE,
+            ),
+    ) = NotificationContent(
+        id = StreamContentId("notifications:personal:k1"),
+        app = StreamAppRef("chat", "personal"),
+        appLabel = "Chat",
+        title = if (redacted) null else "Ann",
+        text = if (redacted) null else "hi",
+        icon = null,
+        image = null,
+        postedAtEpochMillis = 1,
+        category = null,
+        priority = null,
+        target = ItemTarget.App("chat", "personal"),
+        actions = if (redacted) setOf(NotificationAction.HIDE) else actions,
+        privacy = if (redacted) StreamPrivacy.REDACTED else StreamPrivacy.VISIBLE,
+        notificationKey = if (redacted) null else "k1",
+    )
+
+    @Test
+    fun replySendsTheTextToTheLiveReplyTarget_andNothingElse() {
+        assertEquals(StreamActionResult.Performed, gateway.perform(notification(), StreamAction.Reply("on my way")))
+        assertEquals(listOf("n:k1:provider:provider:0:on my way"), calls)
+    }
+
+    @Test
+    fun aRedactedNotificationCanOnlyBeOpened_neverRepliedToDismissedOrSnoozed() {
+        val hidden = notification(redacted = true)
+        assertEquals(StreamActionResult.NotOffered, gateway.perform(hidden, StreamAction.Reply("x")))
+        assertEquals(StreamActionResult.NotOffered, gateway.perform(hidden, StreamAction.Dismiss))
+        assertEquals(StreamActionResult.NotOffered, gateway.perform(hidden, StreamAction.Snooze()))
+        assertTrue(calls.isEmpty())
+        assertEquals(StreamActionResult.Performed, gateway.perform(hidden, StreamAction.Open))
+        assertEquals(listOf("package:chat"), calls)
+    }
+
+    @Test
+    fun replyWithoutALiveTargetIsUnavailable_andDismissAndSnoozeRoute() {
+        replyTarget = null
+        assertEquals(StreamActionResult.Unavailable, gateway.perform(notification(), StreamAction.Reply("x")))
+        assertEquals(StreamActionResult.Performed, gateway.perform(notification(), StreamAction.Dismiss))
+        assertEquals(StreamActionResult.Performed, gateway.perform(notification(), StreamAction.Snooze(5_000)))
+        assertEquals(listOf("n:k1:Dismiss", "snooze:k1:5000"), calls)
+    }
+
+    @Test
+    fun mediaTransportOnlyRunsWhatTheSessionOffers() {
+        val media =
+            MediaContent(
+                id = StreamContentId("media:personal:k"),
+                app = StreamAppRef("player", "personal"),
+                appLabel = "Player",
+                title = "Song",
+                artist = null,
+                artwork = null,
+                icon = null,
+                durationMillis = 1_000,
+                target = ItemTarget.App("player", "personal"),
+                actions = setOf(MediaAction.OPEN, MediaAction.PAUSE, MediaAction.SEEK),
+                privacy = StreamPrivacy.VISIBLE,
+            )
+        assertEquals(StreamActionResult.Performed, gateway.perform(media, StreamAction.Pause))
+        assertEquals(StreamActionResult.Performed, gateway.perform(media, StreamAction.SeekTo(500)))
+        assertEquals(StreamActionResult.NotOffered, gateway.perform(media, StreamAction.Next))
+        assertEquals(StreamActionResult.NotOffered, gateway.perform(media, StreamAction.SeekTo(5_000)))
+        assertEquals(listOf("m:player:Pause", "m:player:SeekTo(positionMillis=500)"), calls)
+    }
+
+    @Test
+    fun markReadWritesTheReadStateAndTellsTheFeedsToReload() {
+        val article =
+            ArticleContent(
+                id = StreamContentId("rss:f:d1"),
+                feedId = "f",
+                feedName = "F",
+                title = "T",
+                summary = null,
+                author = null,
+                image = null,
+                publishedAtEpochMillis = 1,
+                stale = false,
+                target = ItemTarget.DeepLink("https://example.org/a"),
+                actions = setOf(ArticleAction.OPEN, ArticleAction.MARK_READ),
+                privacy = StreamPrivacy.VISIBLE,
+                digest = "d1",
+            )
+        assertEquals(StreamActionResult.Performed, gateway.perform(article, StreamAction.MarkRead))
+        assertEquals(listOf("read:d1"), calls)
+        assertEquals(1, feedChanged)
+        assertEquals(StreamActionResult.Performed, gateway.perform(article, StreamAction.Open))
+        assertEquals("link:https://example.org/a", calls.last())
+        assertEquals(
+            StreamActionResult.NotOffered,
+            gateway.perform(article.copy(actions = setOf(ArticleAction.OPEN)), StreamAction.MarkRead),
+        )
+    }
+}

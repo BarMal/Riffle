@@ -43,9 +43,12 @@ data class RecentsOptions(
     val limit: Int = 10,
     /** Only apps used within this many milliseconds; null keeps every recent one. */
     val maxAgeMillis: Long? = null,
+    /** How many frequent apps (most foreground time) follow the recent ones; zero turns them off. */
+    val frequentLimit: Int = 4,
 ) {
     init {
         require(limit >= 0) { "limit cannot be negative." }
+        require(frequentLimit >= 0) { "frequentLimit cannot be negative." }
         require(maxAgeMillis == null || maxAgeMillis > 0L) { "maxAgeMillis must be positive." }
     }
 }
