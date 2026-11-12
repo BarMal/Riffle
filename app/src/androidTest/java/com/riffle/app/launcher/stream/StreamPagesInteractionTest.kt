@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -137,18 +138,27 @@ class StreamPagesInteractionTest {
     fun aVerticalSwipeMovesTheStackAndNeverThePager() {
         show()
         composeRule.onNodeWithText("First chat").assertIsDisplayed()
+        composeRule.onNodeWithText("Card 1 of 3").assertIsDisplayed()
 
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput { swipeUp() }
+        // Inside the stack, below the page's header row: the default swipe runs the pager's whole height, so a swipe down
+        // starts over the header (not the stack) and a fast one flings the stack to its last card.
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
+            swipeUp(startY = height * STACK_LOW, endY = height * STACK_HIGH)
+        }
         composeRule.waitForIdle()
 
-        // The page stayed; the stack came to its next card.
+        // The page stayed; the stack moved on from its first card (a fling may carry it more than one).
         marker(chat).assertIsSelected()
-        composeRule.onNodeWithText("Card 2 of 3").assertIsDisplayed()
+        composeRule.onNodeWithText("Card 1 of 3").assertDoesNotExist()
+        composeRule.onNode(hasText("Card ", substring = true)).assertIsDisplayed()
 
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput { swipeDown() }
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
+            swipeDown(startY = height * STACK_HIGH, endY = height * STACK_LOW)
+        }
         composeRule.waitForIdle()
         marker(chat).assertIsSelected()
         composeRule.onNodeWithText("Card 1 of 3").assertIsDisplayed()
+        composeRule.onNodeWithText("First chat").assertIsDisplayed()
     }
 
     @Test
@@ -190,6 +200,8 @@ class StreamPagesInteractionTest {
     }
 
     private companion object {
+        const val STACK_LOW = 0.8f
+        const val STACK_HIGH = 0.4f
         const val MINUTE = 60_000L
         const val NOW = 1_800_000_000_000L
     }

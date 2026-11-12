@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -53,12 +54,21 @@ class DockPinnedRunScrollTest {
         setContent(entries = listOf(streamEntry))
         val surface = boundsOf(HOME_DOCK_SURFACE_TEST_TAG)
 
-        // The run is longer than its viewport: the last pin starts past the dock's own edge until scrolled to.
-        assertTrue(boundsOf(dockItemTestTag(pins.last().id)).left >= surface.right - TOLERANCE_PX)
-        composeRule.onNodeWithTag(dockItemTestTag(pins.last().id)).performScrollTo()
-        // Scrolling does not resize anything.
-        val last = boundsOf(dockItemTestTag(pins.last().id))
+        // The run is longer than its viewport: the last pin is laid out past the dock's own edge until scrolled to.
+        // `boundsInRoot` is clipped to the viewport and collapses to an empty rect for a pin that is fully clipped, so the
+        // pin's laid-out position is what says where it is.
+        val lastTag = dockItemTestTag(pins.last().id)
+        assertTrue(
+            "The last pin should start past the dock's edge before scrolling",
+            composeRule.onNodeWithTag(lastTag).fetchSemanticsNode().positionInRoot.x >= surface.right - TOLERANCE_PX,
+        )
+        composeRule.onNodeWithTag(lastTag).performScrollTo()
+        composeRule.waitForIdle()
+        // Scrolling brings it fully inside the dock and does not resize anything.
+        val last = boundsOf(lastTag)
+        assertTrue("The last pin should be inside the dock after scrolling", last.right <= surface.right + TOLERANCE_PX)
         assertEquals(ICON_DP * density, last.width, TOLERANCE_PX)
+        assertEquals(ICON_DP * density, last.height, TOLERANCE_PX)
     }
 
     private fun boundsOf(tag: String) = composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
