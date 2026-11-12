@@ -137,6 +137,9 @@ internal fun StreamSurface(
             onRequestAccess = callbacks.onRequestAccess,
             onEnableSection = callbacks.onEnableSection,
             onHide = callbacks.onHide,
+            onAddTask = callbacks.onAddTask,
+            onRefreshTasks = callbacks.onRefreshTasks,
+            onConnectTasks = callbacks.onConnectTasks,
         )
     val enabled = layout.enabledSections
     val listState = rememberLazyListState()
