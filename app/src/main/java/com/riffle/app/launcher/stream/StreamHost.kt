@@ -22,6 +22,7 @@ import com.riffle.app.launcher.expressions.LocalItemHider
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.split.supportsSplit
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
@@ -34,6 +35,7 @@ import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.stream.TaskActionOutcome
 import com.riffle.core.domain.launcher.stream.TaskActions
 import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -63,7 +65,26 @@ class StreamHost internal constructor(
     internal val tasks: TaskActions? = null,
     /** Settings > Stream > Tasks (the token); null where there is none. */
     internal val taskSettings: TasksSettingsController? = null,
+    /** The page the Stream was last left on, per posture, for this session. */
+    internal val pages: StreamPageMemory = StreamPageMemory(),
 )
+
+/**
+ * The last page of the Stream per posture, kept for the session (ADR 0003, Views): opening the Stream with no target
+ * returns to it. Never stored: it is a convenience, not a setting.
+ */
+internal class StreamPageMemory {
+    private val keys = HashMap<HomeLayoutDeviceClass, String>()
+
+    fun last(deviceClass: HomeLayoutDeviceClass): String? = keys[deviceClass.workspaceLayoutClass()]
+
+    fun remember(
+        deviceClass: HomeLayoutDeviceClass,
+        key: String,
+    ) {
+        keys[deviceClass.workspaceLayoutClass()] = key
+    }
+}
 
 /** A request to land the Stream on [target]; [id] tells a repeated request for the same target apart. */
 internal class StreamFocusRequest(val id: Long, val target: StreamFocusTarget)
@@ -92,7 +113,7 @@ internal class StreamPostureHolder {
  * The stateful Stream: reads the layout of [deviceClass], observes each enabled section (results come off the main
  * thread and are posted back to it), runs actions off the main thread and shows a snackbar when one fails.
  */
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 @Composable
 internal fun StreamDestination(
     host: StreamHost,
@@ -180,6 +201,9 @@ internal fun StreamDestination(
         failures = failures,
         focusRequest = host.focus.pending,
         onFocusHandled = host.focus::handled,
+        initialPageKey = remember(host, deviceClass) { host.pages.last(deviceClass) },
+        onPageChanged = { key -> host.pages.remember(deviceClass, key) },
+        wideLayout = deviceClass.supportsSplit(),
     )
 }
 

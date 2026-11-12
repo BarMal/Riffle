@@ -113,10 +113,32 @@ Each side of the Dock opens its own world: the pinned side the static one, the d
 | Home | Grid (only) | Grid size, icons and labels, return behaviour |
 | Dock | Icon row (only) | Edge, size |
 | Library | Categories (iOS-style, the default), A–Z list, Grid | Personal and work split |
-| Stream | Stack or List, chosen per section | Which sections are on, and their order |
+| Stream | Stack or List, chosen per section; on an unfolded posture, Pages or Stage for the whole Stream | Which sections are on, and their order |
 
 The Stream's sections are fixed: **Now** (media and its queue, next event, alarm), **Notifications**,
 **Recents**, **Agenda**, **Tasks**, **Feeds**. Each draws as a Stack of cards or a List of rows.
+
+**The Stream is pages of vertical stacks** (decision 12). The Stream is a horizontal pager of pages, and each page is
+one vertically scrolling stack of cards or list of rows, the way Calm lays out its chapters. A page is one section's
+content, except that Notifications is **one page per app** that has notifications (newest app first) and Feeds is one
+page per feed with unread items; Now, Recents, Agenda and Tasks are one page each, and a section that has nothing to show
+or cannot show it (empty, no access, not connected, unavailable, off) is one page holding that state and its action.
+Pages follow the user's section order and carry stable keys, so a new notification never jumps the pager and a vanished
+page hands over to its nearest neighbour. Each page has a header (the app's icon or the section's glyph, its name and
+count), and a Thin-glass **spine** above it, a strip of page markers that scrolls with the pager and jumps on a tap, is
+the page indicator. A Stack is a vertical pile of overlapping cards in Calm's proportions (168 dp cards, 56 dp apart,
+the focused one in front) moved by the existing card-stack physics, so a sideways swipe changes page and a vertical
+one moves the stack. "Show as" applies to a page's whole section. Rationale: the first Stream laid every section on one
+scrolling page with horizontal card stacks, which is the opposite of the model Calm proves (pages you swipe, piles you
+scroll) and of the vertical stack physics the project already had.
+
+**Unfolded: Pages or Stage** (decision 13). On an unfolded foldable, tablet or desktop the whole Stream has two views,
+chosen with "Show as" on the Stream and in Settings > Stream, stored per posture (default Pages). **Pages** is the pager
+above, two pages side by side when the Stream has the whole wide screen. **Stage**, after Stage Manager on macOS, keeps a
+rail of live thumbnails along the leading edge, one per page except the selected one, with the selected page's stack
+large beside it; a tap on a rail stage brings it to the centre and sends the previous one back to the rail with a
+shared-element transition, and the rail collapses to icons in a narrow pane such as a split's Stream pane. Both work in
+the split and with the Stream alone.
 
 Deliberately absent: a Home list view, user-defined sections, and filters beyond per-type options (which
 apps, how far back). Each is a possible later View or option, added one at a time against rule 2.
@@ -133,10 +155,10 @@ Source ids are those in `core/domain/.../launcher/workspace/`.
 | Recent and frequent apps (`apps.recent`, `apps.frequent`) | Stream, Recents | Icon row, or rows with last-used time | Tap launches | None |
 | App shortcuts (`shortcuts`) | No Place: the long-press menu of any app icon | Menu rows | Tap runs it; drag a row out to place it on Home | A placed shortcut is a Home item |
 | Search (`search`) | Library | The search field; results replace the app list | Type; Enter launches the top hit | Swipe down on Home |
-| Notifications (`notifications`) | Stream, Notifications | One stack per app, or grouped rows | Tap opens; swipe dismisses; expand to reply; long-press for Hide and rules | Dock dynamic side, icon badges |
+| Notifications (`notifications`) | Stream, Notifications | One page per app, each a vertical stack or rows | Tap opens; swipe dismisses; expand to reply; long-press for Hide and rules | Dock dynamic side, icon badges |
 | Media (`media`) | Stream, Now | One card | Play, pause, skip, scrub; expand for the queue; tap opens the player | Dock dynamic entry while playing; glance widget |
 | Calendar and calendar feeds (`calendar`, `ics`) | Stream, Now (next event) and Agenda (by day) | Card or rows | Tap opens the event; expand for details | Glance widget |
-| News feeds (`rss`) | Stream, Feeds | One stack per feed, or headlines | Tap opens the article; swipe marks read | Glance widget (top story) |
+| News feeds (`rss`) | Stream, Feeds | One page per feed, each a vertical stack or headlines | Tap opens the article; swipe marks read | Glance widget (top story) |
 | Alarm (`LauncherCardKind.ALARM`, declared, unwired) | Stream, Now | A row beside the next event | Tap opens the clock app | None |
 | To-do (`LauncherCardKind.TASK`, declared, unwired) | Stream, Tasks | Card of today's items, or rows | Tap ticks it off; tap the title to open; quick-add at the top | None |
 | Widgets as cards (`WIDGET_PROVIDER`, #1219) | Parked: widgets live on Home only | | | |
@@ -247,6 +269,8 @@ Packages are under `launcher/` in `core/domain` and `app`.
 | 9 | Favourites in the Stream | No: favourites are Home and the Dock's pinned side |
 | 10 | Spotlight | Apply the dock's spotlight wherever possible; at minimum unify transparency for all surfaces |
 | 11 | Settings | Reorganise, correct and improve, per `settings.md` |
+| 12 | Stream layout | Horizontally scrollable pages of vertically scrolling card stacks, not one scrolling page of horizontal stacks: one page per app for notifications, a spine as the page indicator (look to Calm, on TimeScape) |
+| 13 | Stream on unfolded | Two views of the whole Stream, Pages and Stage (after Stage Manager on macOS), chosen per posture; Stage keeps a rail of live stage thumbnails beside the selected stack |
 
 ## Consequences
 

@@ -203,3 +203,89 @@ of calendar feeds and enabled sections.
 - Replace `workspaces-dogfood.md` with a Places and Views device checklist: the Dock pull by side and the
   narrow-target question, each "Show as", the unfolded split, the spotlight on every surface, reduced
   motion and reduced transparency, data carried over from the previous build.
+
+### P13. The Stream as pages
+
+Status: **built** (owner decision 12 in ADR 0003, after the owner found the first Stream "basically one scrollable page
+with horizontal card stacks"; the model is Calm's chapters, on TimeScape).
+
+**Page model.** `StreamPagePlanner` (`core/domain/.../launcher/stream/StreamPages.kt`) turns the layout and each
+section's result into the ordered pages. A page is one vertically scrolling stack or list of one section's content:
+
+| Section | Pages | Key |
+| --- | --- | --- |
+| Now | one (media with its queue, next event, alarm) | `now` |
+| Notifications | one per app with notifications, newest app first; one empty-state page when none | `notifications/<package:profile>`, `notifications` |
+| Recents | one (recent apps, then "Often used") | `recents` |
+| Agenda | one (by day) | `agenda` |
+| Tasks | one (quick-add, then today's and overdue) | `tasks` |
+| Feeds | one per feed with unread items, newest feed first; one empty-state page when none | `feeds/<feed id>`, `feeds` |
+
+Pages follow the layout's section order and a hidden section contributes none. Loading, no access, not connected,
+unavailable and off are one page for the section holding the existing honest state and its action; when every section is
+hidden the surface says so and offers each back. Keys depend only on the section and the app or feed, so
+`StreamPageNavigation.currentAfter` keeps the current page by key while pages come and go (a new notification never jumps
+the pager) and, when the current page vanishes, takes the nearest survivor (the next on a tie). A request to land
+(`StreamFocus.resolvePage`) resolves to a page key: Now to the Now page, a Section to its first page, an app's stack to
+that app's page or, if its notifications were cleared, the first Notifications page; it waits while that page is still
+loading. The last page is remembered per posture for the session (`StreamPageMemory`) and returned to when the Stream
+opens with no target, found again once its section has delivered.
+
+**UI** (`app/.../launcher/stream/`): `StreamSurface` hosts a platform `HorizontalPager` (`StreamPagesMode`) whose pages are
+`StreamPageView`s, with `beyondViewportPageCount = 0` so only the pages on screen are composed. Each page has a header
+(app icon or section glyph, name, item count, options button or long-press for Show as, Move and Hide) over its content.
+Only the sections' observation is shared: `StreamContentProvider` still has one upstream per source, not per page.
+
+**Stack geometry** (`StreamCardStackSpec`, from Calm's `CalmCardSpec` and default `CardStackTuning`): 168 dp cards, 56 dp
+apart, the focused card in front with the next ones peeking out below it as strips (each shows its icon and one line),
+two cards ahead and two behind visible, one more composed as a margin (at most seven cards composed whatever the page
+holds), each step 4 percent smaller and 14 percent fainter. Calm puts the focused card at 20 percent of the viewport; the
+Stream puts it at 12 percent of the free height because its header sits above. A pile is as tall as its tallest card so
+the strips line up; media, an article with a lead image and the tasks card are taller than 168 dp because they hold
+transport, an image or a checklist. The physics are the existing vertical `CardStack` (platform `scrollable`, spline
+fling, magnet settle), run vertically again; a card that can expand (a notification's thread and reply, the queue)
+expands in place and Back collapses it. Recents are app tiles, so its Stack is a wrapping grid of tiles that scrolls with
+the page, and Tasks is one card under the quick-add row. A List is rows on one Thin glass panel per group. "Show as"
+applies to the page's whole section and offers Undo; it is the same stored value as Settings > Stream.
+
+**The spine** sits at the top of the Stream, above the page header, as Calm's does by default (the Dock owns the bottom
+and may be on any edge): a Thin-glass strip with one 48 dp marker per page (the app's icon, or the section's glyph), a
+hairline between sections, the current marker emphasised and the strip following the pager's swipe in flight. A tap jumps
+to the page. It is a tab row (each marker is a selected or unselected tab, spoken as "Chat, page 2 of 8").
+
+**Accessibility.** Each page is a labelled pane; the pager carries one custom-actions list ("Previous page", "Next page");
+the focused card keeps its own list; all targets are 48 dp; page content stops at 640 dp; reduced motion snaps every page
+change, reduced transparency is the material's. `StreamCallbacks` is now a data class and the surface wraps only the
+layout callback with `copy`, so every other callback reaches every page; `StreamBehaviorTest` taps a control on each
+section's page to prove it.
+
+Removed: the single scrolling `LazyColumn`, the horizontal stack orientation, `StreamSectionBlock` and the group-focus
+scroll plumbing.
+
+Not in this slice: an animation of the spine's markers between sections, and a per-page stack-depth setting.
+
+### P14. Stage view on unfolded
+
+Status: **built** (owner decision 13 in ADR 0003).
+
+On an expanded posture (foldable, tablet, desktop) `StreamLayout.wideView` (`StreamWideView`: Pages, the default, or
+Stage, stored per posture as `wideView`; layouts stored before it decode to Pages) chooses how the whole Stream shows. It
+is set with "Show as" in the Stream's own menu (long-press the spine, or the options button at its end, or on the Stage's
+header; with Undo) and in Settings > Stream. A phone always shows Pages.
+
+- **Pages**: the P13 pager, and when the Stream has the whole wide screen (at least 840 dp, `StreamPagesPerView`) two
+  pages side by side, the spine following the first.
+- **Stage** (`StreamStage`, `StreamStageView`): a rail along the leading edge with one live stage thumbnail per page
+  except the selected one (a miniature of the top of the page's stack: the app icon or glyph, the name, a line of what is
+  on top and up to two cards peeking out behind, lit by the app's colour), and the selected stage's stack large in the
+  rest. The rail scrolls. Rail order: the stages the user brought to the centre most recently first (the one just left on
+  top, as Stage Manager does), then the rest in page order (sections as laid out; within Notifications and Feeds, newest
+  activity first). A tap on a thumbnail makes it the selection with a shared-element transition (Compose
+  `SharedTransitionLayout`; the thumbnail's bounds become the page's and the old page's become a thumbnail; snap under
+  reduced motion). Below 560 dp of pane width (`StreamStage.RAIL_COLLAPSE_BELOW_DP`; a split's Stream pane on a foldable is
+  about 340 dp) the rail collapses to icon-only stages. It works in the split and with the Stream alone; the selection is
+  kept by key like the pager's current page and shares the page memory.
+- Rail thumbnails are miniatures built from the page's content, not scaled copies of the live cards, so they stay cheap
+  and non-interactive; their tab semantics name the page and its item count.
+
+Not built: dragging a stage out of the rail to reorder it, and a thumbnail that shows the actual card scaled down.

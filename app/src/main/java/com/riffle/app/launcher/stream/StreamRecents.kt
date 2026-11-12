@@ -2,16 +2,13 @@ package com.riffle.app.launcher.stream
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +34,6 @@ import com.riffle.app.launcher.rememberGlassSpotlightColor
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.stream.RecentAppContent
 import com.riffle.core.domain.launcher.stream.StreamAction
-import com.riffle.core.domain.launcher.stream.StreamContent
 
 private val TileWidth = 88.dp
 private val TileIconSize = RiffleSpacing.xxxl
@@ -107,25 +103,6 @@ internal fun RecentAppTile(
                     )
                 }
             }
-        }
-    }
-}
-
-/** Recents' Stack view: one scrolling row of app tiles. */
-@Composable
-internal fun RecentAppsRow(
-    items: List<StreamContent>,
-    env: StreamEnvironment,
-    callbacks: StreamCallbacks,
-    groupKey: String?,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = RiffleSpacing.xs),
-        horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-    ) {
-        items.filterIsInstance<RecentAppContent>().forEach { app ->
-            RecentAppTile(app, env, callbacks, groupKey)
         }
     }
 }
