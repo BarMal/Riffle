@@ -1,5 +1,14 @@
 # The dock
 
+> **Dock modes, slice 1 (2026-11-13, [ADR 0003 Amendment 3](../architecture/adr/0003-places-and-views.md); plan:
+> [dock-modes-plan.md](dock-modes-plan.md)).** The Dock has two modes and one order of icons: the **Home mode** (pinned
+> apps, a divider, live apps, now playing) and the **contextual mode** while the Stream shows (the same icons, then a
+> divider and a tile for each Stream page that is not an app, in one row that scrolls). **Pressing the Dock down and
+> releasing** toggles between them; there is **no Stream button** and the Stream has no spine or page header, so the Dock
+> is the only page indicator. See [The two modes](#the-two-modes-dock-modes-slice-1). The pull away from the edge now
+> opens the Library from anywhere on the Dock. Where the text below still describes the Stream button, the Stream pull,
+> a swipe up on a live app or the two sides, it is superseded by that section and kept as history.
+
 > **P5 (2026-11-12, [ADR 0003](../architecture/adr/0003-places-and-views.md)).** The Dock is the handle of the
 > Stream and the Library. Its two sides open their own worlds: the pinned side the static one (the Library), the dynamic
 > side the live one (the Stream). The dynamic side is no longer a notification strip or a Cards stage selector: it holds
@@ -70,70 +79,95 @@ Today the edge is shared, so the dock is offered only the edges every mode can d
 right and bottom. Once the edge is per mode (#1242), each mode offers the edges its own surface can
 draw, so the top edge returns for a Cards Home.
 
-### The dock is the handle
+### The two modes (dock modes, slice 1)
 
-Each side of the dock opens its own world (ADR 0003): the pinned side the Library, the dynamic side the Stream.
+One Dock, two modes (ADR 0003, Amendment 3). Nothing swaps: icons shared by both modes keep their order, and the contextual
+mode only adds tiles after them and scrolls the row along.
+
+| Mode | The Dock holds | Scrolls |
+| --- | --- | --- |
+| Home (Home, or the Library over it) | Pinned apps, a divider, live apps (apps with notifications) and now playing | As before: the pinned run and the dynamic side scroll on their own when they do not fit |
+| Contextual (the Stream shows) | The same icons in the same order, then a divider and one tile for each Stream page that is not an app | Yes: one row, sideways (along the run on a side Dock), with the platform's fling |
+
+- **Tiles.** One per built-in page: Now (unless now playing is shown, which stands for it), Recents, Agenda, Tasks and
+  Feeds, in the Stream layout's order (Settings > Stream, or Move earlier / later on a tile). Notifications has a tile
+  only while it holds just a state ("No notifications", "Allow access"), so that page and its action stay reachable.
+  Agenda and Tasks are still two tiles. A page with several pages (one per feed) has one tile, which opens its first.
+  Pinned apps with nothing live have no page yet and are neither ringed nor selectable as pages; a tap on them opens the
+  app.
+- **The open page's icon is ringed**, and the row scrolls to keep it in view (`DockRunScroll.toReveal`, with a margin so
+  its neighbour peeks), again whenever the page changes by a tap or a swipe of the Stream.
+- **Stream pages follow Dock order.** The Stream's pager order is the Dock's: the live apps newest first (the first
+  "live app slots" of them), the pages of apps beyond the slots, now playing's Now page, then the built-in pages in layout
+  order (`DockPageOrder`). Swiping the pager moves the ring when the swipe passes halfway and the Dock scrolls to keep it
+  in view. The Stream opens on the page it was last left on, else on the first page it shows when it opens (Now, in the default layout: its data arrives after it opens, and the page in front stays in front while it does).
+- **Tap.** Home mode: a pinned app, live app or now playing launches its app, as before. Contextual mode: a live app,
+  now playing or a tile switches the Stream to that page (it never launches).
+- **Long-press.** Home mode keeps the live app menu (Open in Stream, the app's shortcuts, App info, Hide app) and the pinned
+  menu. Contextual mode: the page options that used to live on the page header, on the page's icon or tile: **Show as**
+  the other view (Stack or List), **Move earlier / later** (tiles only; it steps over sections that draw no tile), **Hide
+  section**, and a **Show <section>** for each hidden one; a live app's menu then continues with its shortcuts, App info
+  and Hide app. The options are applied by the Stream, so each keeps its Undo.
+- **Press the Dock down and release** (a drag toward the Dock's own edge, past `DOCK_PRESS_COMMIT_DP` = 28 dp, then lift;
+  `DockPress`) toggles the modes, running the existing Home and Stream transition from rest. From Home it opens the
+  Stream on the page of the icon the press started on when that is a live app or now playing, else the page it was last
+  left on; from the contextual mode it returns to Home. A press that does not pass the threshold, or is drawn back before
+  the lift, does nothing. Only with a Stream; not while the layout is being edited or the Library shows. The press
+  exposes its progress (`DockPressState.progress`, 0 to 1) and its release (`onReleased`) for a later slice to draw the dip
+  and the bounce; this slice draws nothing for it.
+- **Accessibility.** The Dock (and the surface root) offers the custom actions **"Show live pages"** (or **"Back to
+  Home"** while the Stream shows) and "Open Library"; **Ctrl + the arrow of the pull direction** does the first, with Shift
+  the second. In the Home mode a live app or now playing keeps "Show <app> in Stream" (the press that starts on the icon)
+  and Shift + Enter. Every icon and tile is a focusable 48 dp target with a spoken label and a click action ("Show Agenda");
+  the ringed one is selected.
+
+### The Dock's gestures
 
 | Action on the dock | Result |
 | --- | --- |
 | Tap a pinned app | Launches it |
-| Pull away from the edge, starting on the pinned side | Library, tracking the finger |
-| Pull away from the edge, starting on the dynamic side | Stream, tracking the finger |
-| The same pull on the dynamic side while the Stream shows | Home |
-| Tap the Stream button | Switches to the Stream, and back to Home from it |
-| Tap a live app | Launches the app (the same launch as a pinned icon, in its own profile) |
-| Swipe up on a live app (away from the edge, on any edge) | Stream, landed on that app's stack in the Notifications section, tracking the finger |
-| Long-press a live app | Its menu: Open in Stream, the app's shortcuts, App info, Hide app |
-| Tap now playing | Launches the player app |
-| Swipe up on now playing | Stream, landed on the Now section |
-| Swipe up on the dynamic side's background or on the Stream button | Stream, where it opens today (the page it was last left on, else Now) |
+| Pull away from the edge, anywhere on the Dock | Library, tracking the finger |
+| Press the Dock down and release (Home mode) | Stream, on the last page (on that icon's page when the press started on a live app) |
+| Press the Dock down and release (contextual mode) | Home |
+| Tap a live app (Home mode) | Launches the app (the same launch as a pinned icon, in its own profile) |
+| Tap a live app or a tile (contextual mode) | Switches the Stream to its page |
+| Drag along the run (contextual mode) | Scrolls the row, with fling |
+| Long-press a live app | Home: Open in Stream, the app's shortcuts, App info, Hide app. Contextual: the page options, then the app's |
+| Tap now playing | Launches the player app (Home mode) |
 
 - **Natural pull direction**: away from the dock's edge, toward the screen interior -- a bottom dock pulls up, a top dock
   down, a left dock right, a right dock left. It works the same on every edge, and a dock with a moved edge (a workspace
   override) pulls away from that edge.
-- **Which side.** The side is where the finger landed, against where the dynamic section is drawn (it reports its
-  bounds); the divider counts as pinned, the padding at the dock's end as dynamic (`dockPullSideAt`). Without a Stream
-  there is no dynamic side and every pull opens the Library.
-- The pull starts on the dock body, never in the system-gesture inset, and is claimed past touch slop when it leads along
-  the pull direction before the long-press timeout; drags along the run still scroll the sections and long-press + drag
-  still reorders or drags out.
-- **The Stream pull** tracks the finger 1:1 over the window's extent along the pull: the Stream slides in from the dock's
-  edge while Home fades out under it. It commits on release by travel (30% of the travel) or velocity (600 dp/s toward the
-  interior, once it has moved 8 dp), otherwise springs back; both live in `GestureThresholds`
-  (`DOCK_PULL_*`) and `DockPullThresholds`. A finger that lands on a settling pull catches it and tracks from where it is.
-  From the Stream the same pull slides it away toward the interior and returns Home. Under reduced motion nothing slides:
-  Home and the Stream crossfade.
+- **Where it starts.** The pull and the press start on the dock body, never in the system-gesture inset. A drag is claimed
+  past touch slop and before the long-press timeout (so a held press stays a long-press): mostly along the pull direction
+  it is a pull (`dockPullClaimFor`), mostly the opposite way a press (`DockPress.claimFor`); drags along the run still
+  scroll the Dock and long-press + drag still reorders or drags out. A press also consumes its touches on the Initial
+  pass so a tile it started on cannot take the release for a tap. Both live in the one pointer loop of `DockPull.kt`, which
+  ADR 0002 allows because no platform drag detector claims by direction in both directions; the row's scroll and fling are
+  the platform's.
+- **The pull** (always the Library now) tracks the finger 1:1 over the window's extent along the pull and commits on
+  release by travel (30% of the travel) or velocity (600 dp/s toward the interior, once it has moved 8 dp), otherwise
+  springs back; both live in `GestureThresholds` (`DOCK_PULL_*`) and `DockPullThresholds`. A finger that lands on a settling
+  pull catches it. Without a Stream the press is off, and the pull is the only gesture.
+- **The Stream transition** (press, accessibility action, shortcut) is the existing one run from rest: Home fades as the
+  Stream slides in from the dock's edge, or crossfades under reduced motion. The slice that follows replaces it with the
+  dip, bounce and card fan.
 - **Expanded postures (P6).** On an unfolded foldable, a tablet or a desktop window Home and the Stream can share the
-  screen, so the same pull has three resting places instead of two: Home only, a split, and the Stream only
-  (`SplitMode`). The pull still tracks the finger over the window's extent along the pull axis; the Stream slides in
-  from the dock's edge over the first half of the travel, widening to its split share as it comes, and goes on to fill
-  the screen over the second half. A release settles to the **nearest of the three by where it stopped and how fast it
-  was going** (`SplitSettle`: the release is projected 0.15 s along its velocity and takes the nearest of Home only,
-  split, Stream only), so stopping partway leaves the split, a short pull springs back to Home, a long or fast one goes
-  to the Stream only. A pull on the dynamic side while the Stream shows runs the same scale downward, so it can stop at
-  a split from Stream only, or return Home. The **Stream button** toggles Home only and the last-used shown state
-  (split or Stream only); the **Home press** returns to Home only. Folded and phone postures keep the full switch above.
-  See [The split](#the-split-p6).
+  screen (Home only, a split, the Stream only: `SplitMode`). The press (and the accessibility action) opens the last-used
+  shown state and returns to Home only; the divider's own actions choose among the three. The pull no longer settles among
+  the three states, because it only opens the Library (the split's pull settle is no longer started by a gesture). See
+  [The split](#the-split-p6).
 - **The Library pull (P7)** raises the Library's sheet from the dock's edge, 1:1 with the finger, while Home or the Stream
-  fades out under it; it commits by the same thresholds as the Stream pull and springs back otherwise, can be caught
-  mid-settle, and under reduced motion the sheet fades in. The Dock stays drawn and tappable under the sheet, and the
-  Stream button still switches straight to the Stream. See [The Library](gestures.md#the-library-p7).
-- The dock itself never moves, re-orients or fades with a pull: it is the handle you are holding.
-- **Accessibility.** The dock (and the Home surface root, so they exist when a layout hides the dock) offers the custom
-  actions "Open Stream" (or "Back to Home" while the Stream shows) and "Open Library"; **Ctrl + the arrow of the pull
-  direction** opens the Stream (or returns Home), **Ctrl + Shift + that arrow** opens the Library. Every dynamic entry is
-  a 48 dp target with a spoken label ("Messages, 3 new", "Now playing: <title>", "Stream"); the Stream button is selected
-  while the Stream shows. A live app or now playing entry has the click action "Open <app>" and, in the same single
-  `customActions` list, "Show <app> in Stream"; **Shift + Enter** on a focused entry does the same (Enter and Space open
-  the app).
+  fades out under it; it commits by the same thresholds, can be caught mid-settle, and under reduced motion the sheet
+  fades in. The Dock stays drawn and tappable under the sheet. See [The Library](gestures.md#the-library-p7).
+- The dock itself never moves, re-orients or fades with a pull.
 - Home gestures can be bound to "Stream" (`OPEN_STREAM`) and "Library" (`OPEN_LIBRARY`); neither is bound by default.
   "Search" (`OPEN_SEARCH`, bound to swipe down by default) opens the Library with its field focused.
 - The workspace menu is no longer reached by the pull, and since P8 it and its "Workspace menu" accessibility action no
   longer exist.
 - A workspace may hide its dock only while a gesture opens the Stream or the Library (the stranding rule, restated for the
   new handle).
-- Fallback, to be decided on a device: if the dynamic side is too narrow a target with one or two entries, the pull may
-  start anywhere on the dock and choose the Library or the Stream by the half it started on.
+- A Dock with no pinned apps and nothing live still has a body to press: it keeps one icon's length.
 
 ### The split (P6)
 
@@ -144,13 +178,12 @@ posture (`StreamSplit.lastShown`), stored with the split's fraction in `StreamLa
 Stream's layout and its backup; layouts stored before P6 read as a 40% split). The pure logic lives in
 `core/domain/.../launcher/split/`; the UI is `launcher/split/SplitSurface.kt`.
 
-- **Which side the Stream takes.** For a bottom or top dock, the side nearer the dock's dynamic side (where the Stream
-  button is), so the pull and the pane are one gesture. For a side dock the Stream takes the side **away from** the dock,
+- **Which side the Stream takes.** For a bottom or top dock, the side nearer the dock's dynamic side. For a side dock the Stream takes the side **away from** the dock,
   so Home keeps the dock's edge. In a stacked (tabletop) split the Stream takes the pane nearer a bottom or top dock, and
   the lower pane for a side dock.
 - **Room.** The divider moves in the window minus the system insets and the dock's room on the split axis. Each pane keeps
   at least 280 dp and the Stream between 25% and 75% of the room; narrower than two panes and a gap, there is no split and
-  the Stream button and pull go between Home only and Stream only. The Stream's surface stops at the dock's room (Home
+  the press goes between Home only and Stream only. The Stream's surface stops at the dock's room (Home
   pads for it itself), so what it draws is the same from a split to the Stream only.
 - **The hinge.** A vertical hinge splits side by side, a horizontal one (tabletop) stacks the panes. The divider snaps to
   the hinge when within 32 dp of it, and a pane that would cover the hinge is cut back to its larger side, so content
@@ -161,8 +194,8 @@ Stream's layout and its backup; layouts stored before P6 read as a 40% split). T
   Stream" and a value ("Split, Stream 40 percent"); the arrow keys along the axis move it 5% (and past the end step to
   the next state); the accessibility actions "Home only", "Split" (the default fraction, or the hinge) and "Stream only"
   do the same without a gesture; it also exposes a progress value. Reduced motion snaps instead of animating.
-- **Equivalents.** The dock's "Open Stream" / "Back to Home" actions, the Stream button and Ctrl + the pull arrow open the
-  last-used shown state or return to Home only.
+- **Equivalents.** The dock's "Show live pages" / "Back to Home" actions and Ctrl + the pull arrow open the last-used
+  shown state or return to Home only.
 
 ### The dynamic side (P5)
 
@@ -171,14 +204,19 @@ on/off apply and there is no second notification pipeline (`DockDynamicSide` in 
 
 1. **Live apps**: the apps with something new, which are the groups of the Stream's Notifications section, newest first
    (ties by group key), at most **live app slots** of them (zero to five, default three). A pinned app can appear here
-   too: either icon launches it when tapped; a swipe up from the live entry opens the Stream on its stack. The entry carries
-   the count as a badge.
-2. **Now playing**: one entry while a media session is active (the Now section's media). It is not counted in the slots.
-3. **The Stream button**: always last, so the handle exists when nothing is live.
+   too: either icon launches it when tapped (Home mode); a press that starts on the live entry opens the Stream on its
+   stack. The entry carries the count as a badge.
+2. **Now playing**: one entry while a media session is active (the Now section's media). It is not counted in the slots,
+   and it stands for the Now page.
+3. **Contextual tiles** (the contextual mode only): see [The two modes](#the-two-modes-dock-modes-slice-1). There is no
+   Stream button any more.
 
-Events, to-dos and feeds get no entry, because they are always present in the Stream. Each entry is a compact 48 dp tile
-(the touch target, whatever size the pinned icons are) and a spotlight source like the pinned icons; the side takes only
-the width its entries need, up to the slot limit, and scrolls on its own when it has more entries than room.
+Events, to-dos and feeds get no entry in the Home mode, because they are always present in the Stream. Each entry is a
+compact 48 dp tile (the touch target, whatever size the pinned icons are) and a spotlight source like the pinned icons; the
+side takes only the width its entries need, up to the slot limit, and scrolls on its own when it has more entries than room.
+In the contextual mode the whole Dock is one row (`DockContextualRow`): the pinned icons at full size and spacing, a
+divider, the live entries, a divider, the tiles; it is as long as that, up to the run the Dock may have, and scrolls the
+rest (`DockRunGeometry` says where each item lies).
 
 **Live app slots** (Settings > Dock) replaces "Dock notifications" and "Notification space", and the workspace dock
 dynamic section. A dock stored before it decodes: notification cards on keeps the old slot count (clamped), off becomes
@@ -222,7 +260,7 @@ settings, shared by every mode, and the dock's extent follows from them rather t
   when that is smaller); beyond that the run keeps its size and scrolls, so icons never touch.
 - **Pinned run.** A run longer than its room **scrolls**, at full icon size, fading through the glass at the edge that
   has more (no fade on an edge that has nothing beyond it). Five pins fit on a phone at the template size; eight scroll.
-- **Dynamic side width.** It takes only what its entries need (live apps, now playing, the Stream button, each a 48 dp
+- **Dynamic side width.** It takes only what its entries need (live apps and now playing, each a 48 dp
   tile with the pinned run's gap) up to the live-app-slot limit, plus the 17 dp rule. When room is short it never takes
   the pinned run's last three icons (fewer if the dock pins fewer) and the dock's padding; the pins scroll in the rest
   and the dynamic side scrolls in what it has.
@@ -238,17 +276,17 @@ does not change with the mode (#1212). A long-press opens the item's menu; the a
 those are **Show stage** (when the app has a stage) and **Pin stage** (when its stage is not pinned yet), ahead of the
 app's own shortcuts.
 
-The **dynamic** section is the same in every mode: live apps, now playing and the Stream button, see
+The **dynamic** section is the same in every mode: live apps and now playing (and the contextual mode's tiles), see
 [The dynamic side](#the-dynamic-side-p5).
 
 The two sections are sized from two independent, per-layout settings (both per device class, shared by every mode):
-**capacity** caps how many pinned icons show before the static side scrolls, and **live app slots** (plus now playing and
-the Stream button) caps how many dynamic entries show before that section scrolls. The run itself is one shared strip,
+**capacity** caps how many pinned icons show before the static side scrolls, and **live app slots** (plus now playing)
+caps how many dynamic entries show before that section scrolls (the contextual mode's row is longer and scrolls as one). The run itself is one shared strip,
 and the dynamic side goes first when it is tight: it always draws in full up to its slot count, and the static side is
 sized from whatever room that leaves, scrolling the rest rather than the other way around -- except that the static side
 always keeps room for at least three pinned icons (fewer when fewer are pinned), so a busy dynamic side can scroll the
 rest of the pinned icons but never squeeze them or make them disappear. A settings-screen summary states the result in one line ("Shows up to 7 pinned
-icons, then 3 live apps, now playing and the Stream button").
+icons, then 3 live apps and now playing").
 
 Each section scrolls on its own. Fewer entries than the slot count shrinks the section instead of padding it out to a
 fixed width -- a pinned icon is always exactly the icon-size setting, and a dynamic entry always a 48 dp tile, never bigger
@@ -324,8 +362,9 @@ section does that job, so the rail is gone (#1159).
 | Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards follows the same resolution now |
 | Sized by settings | Done |
 | Static section | Done |
-| Dynamic side exists in every layout | **Done (P5)** — live apps, now playing and the Stream button; a dock with no Stream host has none |
-| Dynamic side means "something new, now playing, and the way to the Stream" | **Done (P5)** — derived from the Stream's Notifications and Now sections (`DockDynamicSide`), so Hide rules and privacy already apply; not de-duplicated against pinned apps, because a live entry opens the Stream and a pinned icon launches the app |
+| Dynamic side exists in every layout | **Done (P5)** — live apps and now playing (the Stream button went in dock modes slice 1); a dock with no Stream host has none |
+| Dynamic side means "something new and now playing" | **Done (P5)** — derived from the Stream's Notifications and Now sections (`DockDynamicSide`), so Hide rules and privacy already apply; not de-duplicated against pinned apps, because a live entry has a page and a pinned icon has none yet |
+| Two modes, one order of icons; contextual tiles; press to toggle | **Done (dock modes slice 1)** — `DockMode`, `DockPageOrder`, `DockRing`, `DockPress`, `DockContextualRow`; no spine, page header or Stream button |
 | Static tap opens the app in every mode; Cards stage on long-press | Done (#1212) |
 | Cards dynamic section is the stage selector | **Removed (P5)** — the dynamic side is the same in every mode; Cards' stage chips are always drawn |
 | Static and dynamic sections are sized independently | Done — separate per-layout settings (capacity, live app slots); the dynamic side draws in full first, the static side is sized from what is left |
@@ -360,22 +399,22 @@ section does that job, so the rail is gone (#1159).
 When changing the dock, check that: the two sections still read as one strip; the dynamic section
 still draws in full before the static side is sized; nothing shrinks below a pinned icon's size to
 fit; the behaviour still holds on every edge and in RTL; the pull still works in its natural
-direction on every edge; the Stream button is still last; and a layout with no live app slots still has its Stream button
-and now playing.
+direction on every edge; the press still toggles the modes on every edge; the contextual mode's icons are still the Home
+mode's in the same order; and a layout with no live app slots still has now playing.
 
-### Live app entries: tap opens the app, swipe up opens its stack
+### Live app entries: tap opens the app, a press that starts on them opens their stack
 
-Owner decision, 2026-11-13: a live app entry on the dynamic side behaves like the app, with the Stream a swipe away.
+Owner decisions, 2026-11-13: a live app entry behaves like the app, with the Stream a press away (replacing "swipe up",
+which the dock-modes amendment dropped: opposite directions for "all cards" and "one app" felt wrong).
 
-- **Tap** launches the app, by the same action a pinned icon uses (`LaunchApp` with the entry's own profile). An app the
-  launcher cannot resolve has nothing to launch, so its tap still opens its page in the Stream.
-- **Swipe up** (the natural pull direction, on any edge) from the icon opens the Stream landed on that app's stack, tracking
-  the finger with the same claim and commit thresholds as the dynamic-side pull. It is the same pull: the side is read
-  from where the finger landed, and so is the entry (`dockPullEntryAt`, `dockPullLandingEntry`; each entry reports its
-  bounds). The landing is asked for when the pull starts, so the first frame is already on that page, and dropped if the
-  pull springs back. Starting on the dynamic side's background or on the Stream button lands where it does today. While
-  the Stream shows, the pull still returns Home.
-- **Now playing**: tap opens the player app, swipe up opens the Stream on Now.
+- **Tap** (Home mode) launches the app, by the same action a pinned icon uses (`LaunchApp` with the entry's own profile). An
+  app the launcher cannot resolve has nothing to launch, so its tap still opens its page in the Stream. In the contextual
+  mode a tap switches to the app's page.
+- **Press the Dock down and release, starting on the icon,** opens the Stream landed on that app's stack. The entry under
+  the finger is read from where it landed (`dockPullEntryAt`; each entry reports its bounds). The landing is asked for when
+  the press commits and consumed once the Stream has scrolled there.
+- **Now playing**: tap opens the player app; a press that starts on it opens the Stream on Now.
 - **Long-press** on a live app or now playing: "Open in Stream", then the app's shortcuts, App info and Hide app (no
-  Uninstall or dock edits: the entry is not pinned).
-- **Stream button**: unchanged; a tap toggles Home and the Stream.
+  Uninstall or dock edits: the entry is not pinned). In the contextual mode the page options come first.
+- **Non-gesture routes**: the click action "Open <app>", the custom action "Show <app> in Stream", the menu's "Open in
+  Stream" and Shift + Enter.

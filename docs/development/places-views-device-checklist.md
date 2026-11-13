@@ -38,28 +38,37 @@ Use a busy, bright wallpaper and then a dark one.
 - [ ] **Size.** Pinned icons are the same size as Home icons (default 44 dp) and the bar is one icon plus a little
       chrome tall, not a thin strip. Change Icon size (32 to 56): the pins follow exactly. Failure: pins smaller than
       Home icons or a short bar (the regression fixed in #1452).
-- [ ] **Six pins plus the Stream button.** Pin six or more apps. Expected: the run scrolls at full icon size with a fade
+- [ ] **Six pins plus the dynamic side.** Pin six or more apps. Expected: the run scrolls at full icon size with a fade
       at the edge that has more (none at an edge with nothing beyond it); at least three pins stay visible beside the
       dynamic side. Failure: pins shrink, or the dynamic side crowds the pins out.
 - [ ] **Minimum gap.** On the narrowest width you have, icons never touch: the gap stops at 8 dp and the run scrolls.
-- [ ] **Dynamic side is compact.** With no live apps it shows only the Stream button; with a few notifications and
-      media playing it shows live apps, now playing and the Stream button, each a 48 dp tile, and scrolls if it has more
-      than the live-app limit (Settings > Dock > Live apps).
+- [ ] **Dynamic side is compact.** With no live apps and nothing playing there is no dynamic side (the pinned icons
+      only; with no pins either, the Dock keeps a body one icon long); with a few notifications and media playing it
+      shows live apps and now playing, each a 48 dp tile, and scrolls if it has more than the live-app limit (Settings >
+      Dock > Live apps).
 - [ ] **Edge.** Move the Dock to each of the four edges (Settings > Dock). Layout, fades and the pull below work
       on each; on a side edge the run scrolls vertically.
-- [ ] **Pull by side, on all four edges.** Pull away from the edge starting on the pinned side: the Library follows the
-      finger. Starting on the dynamic side: the Stream follows the finger. Release early: it springs back. Pull again
-      while it settles: it catches. Pulling the same way from the Stream returns Home.
-- [ ] **Narrow target question (open).** Is the dynamic side, with only the Stream button, too narrow to start a pull
-      reliably with a thumb? If you miss it, note the edge and width. If it fails, the fallback in ADR 0003 (pull
-      anywhere on the Dock, choose by half) has to be built.
-- [ ] **Taps.** Pinned app launches. Stream button toggles Home and the Stream. A live app launches the app. Now
-      playing launches the player.
-- [ ] **Swipe up on a live app.** Swipe up from a live app's icon: the Stream follows the finger and opens on that
-      app's page. From now playing: on Now. From the dynamic side's background or the Stream button: where it opens
-      today. Release early: it springs back and the next plain open is unaffected. Check a side dock too.
-- [ ] **Live app long-press.** The menu has Open in Stream, the app's shortcuts, App info and Hide app. With TalkBack:
-      "Open <app>" and "Show <app> in Stream".
+- [ ] **Pull opens the Library, on all four edges.** Pull away from the edge starting anywhere on the Dock (pinned side,
+      live apps, the gap): the Library follows the finger. Release early: it springs back. Pull again while it settles:
+      it catches. Pulling the same way with the Stream showing opens the Library over it.
+- [ ] **Press toggles Home and the Stream, on all four edges.** Press the Dock down (toward its edge) about a thumb's
+      width and lift: the Stream opens (a bottom Dock pressed down, a top Dock up, a left Dock left, a right Dock right),
+      on the page it was last left on. Press again: Home returns. A press that stops short (under about 28 dp), or that is
+      drawn back before the lift, does nothing. Failure: it opens while still pressed, it needs a long drag, or it launches
+      a pinned app or live app it started on.
+- [ ] **Taps (Home mode).** Pinned app launches. A live app launches the app. Now playing launches the player.
+- [ ] **Press that starts on a live app.** Press down from a live app's icon and lift: the Stream opens on that app's
+      page. From now playing: on Now. From anywhere else: where it opens today. A press that stops short leaves nothing
+      behind (the next plain open is unaffected). Check a side Dock too.
+- [ ] **Contextual mode.** With the Stream open the Dock shows the same icons in the same order, then a divider and a tile
+      for each page that is not an app (Now unless it is playing, Recents, Agenda, Tasks, Feeds). The open page's icon is
+      ringed. With many pins and apps the row scrolls sideways with a fling (vertically on a side Dock), and the ringed icon is
+      always in view, also after a swipe of the Stream. A tap on a tile or a live app switches the page and never launches.
+      Failure: tiles that do not scroll into view, a ring that lags a swipe by a page, a tile under 48 dp.
+- [ ] **Page options on a tile.** Long-press a tile (or a live app) in the contextual mode: Show as the other view, Move
+      earlier and later, Hide section, Show for each hidden section. Each applies at once; Hide and Show as offer Undo.
+- [ ] **Live app long-press.** In the Home mode the menu has Open in Stream, the app's shortcuts, App info and Hide app.
+      With TalkBack: "Open <app>" and "Show <app> in Stream", and the Dock's actions "Show live pages" and "Back to Home".
 - [ ] **Long-press and drag.** Long-press a pin for its menu; drag to reorder; drag out to Home.
 
 ## Home
@@ -86,22 +95,23 @@ Use a busy, bright wallpaper and then a dark one.
 
 ## Stream
 
-- [ ] **Sideways page swipe versus vertical stack scroll.** On a page, a sideways swipe changes page and the spine
+- [ ] **Sideways page swipe versus vertical stack scroll.** On a page, a sideways swipe changes page and the Dock's ring
       follows; a vertical swipe moves the stack. Failure: either one fighting the other, or a swipe that moves both.
 - [ ] **Fling distance through a stack.** A hard fling moves a believable number of cards and settles on one (magnet).
       Failure: it overshoots wildly or stops dead.
-- [ ] **Spine with many apps.** With ten or more apps with notifications the spine scrolls with the pager, marker
-      targets are 48 dp, a tap jumps to the page, and the current marker stays in view.
+- [ ] **Pages in the Dock's order, with many apps.** With ten or more apps with notifications the pager walks the Dock
+      left to right (live apps newest first, then now playing, then the built-in pages); the pages of apps past the Dock's
+      slots follow the live ones and have no icon. There is no spine or page header on any page.
 - [ ] **A notification arriving while on a page** never moves the page you are on; a page that vanishes hands over to its
       neighbour. Reopening the Stream returns to the page you left.
-- [ ] **Dock swipe lands on the app's page.** Swipe up from a live app in the Dock: the Stream opens on that app's page.
-      If its notifications were cleared meanwhile it opens on the first Notifications page.
+- [ ] **A press on a live app lands on the app's page.** Press down from a live app in the Dock and lift: the Stream opens
+      on that app's page. If its notifications were cleared meanwhile it opens on the first Notifications page.
 - [ ] **Every page leaves Loading.** Open the Stream: each of the six pages shows its content, or its honest state (no
       access, nothing to show, not connected) within a few seconds; none stays on "Loading", and one that could not
       be read says so with Retry.
-- [ ] **No flash on opening.** Open the Stream by pull, by the Stream button and with reduced motion on: Home fades as the
+- [ ] **No flash on opening.** Open the Stream by the Dock press, by a tile or live app and with reduced motion on: Home fades as the
       Stream comes in, it never reappears at full strength over the Stream, and under reduced motion it is a cut.
-- [ ] **Show as and Undo.** Long-press a page header (or its options button): Stack or List applies to every page of
+- [ ] **Show as and Undo.** Long-press the page's tile in the Dock: Stack or List applies to every page of
       that section; Undo restores. Move and Hide section work. Settings > Stream shows the same values and edits live.
 - [ ] **Media.** With a player running: artwork, title and artist, play or pause, next, previous, scrub, the queue
       (when the app exposes one), tapping opens the player. Pause from the card and check the app pauses. Failure:
@@ -137,11 +147,11 @@ verified against the reference. A mismatch is fixed in `TodoistApiMapping.kt`.
       The Stream takes the side nearer the Dock's dynamic side for a bottom or top Dock.
 - [ ] **Hinge snap.** Over a vertical hinge the divider snaps to it and no pane crosses it. **Tabletop** stacks the
       panes above and below it.
-- [ ] **A dynamic-side pull that stops partway** leaves the split; the Stream button toggles Home only and the last
-      Stream state; Home returns to Home only.
+- [ ] **The Dock press** opens the last-used Stream state (the split or the Stream only) and returns to Home only; the
+      divider's actions ("Home only", "Split", "Stream only") reach all three.
 - [ ] **Pages two-up.** With the Stream on the whole wide screen (840 dp or more), two pages show side by side and the
-      spine follows the first.
-- [ ] **Stage rail and transition.** Show as Stage (long-press the spine, or Settings > Stream): the rail lists the
+      Dock's ring follows the first.
+- [ ] **Stage rail and transition.** Show as Stage (Settings > Stream; the Stage's own bar has the menu back to Pages): the rail lists the
       other pages as live thumbnails, a tap brings one to the centre with the transition and sends the previous one back to
       the rail. In a narrow pane (the Stream beside Home) the rail shows icons only. Under reduced motion it switches
       without the transition.
@@ -187,10 +197,11 @@ verified against the reference. A mismatch is fixed in `TodoistApiMapping.kt`.
 
 ## Accessibility
 
-- [ ] **TalkBack on the Dock**: the actions "Open Stream" (or "Back to Home") and "Open Library" exist and work; entries
-      are spoken ("Messages, 3 new", "Now playing: title", "Stream").
-- [ ] **Spine tabs**: each marker is a tab spoken as "Chat, page 2 of 8"; "Previous page" and "Next page" actions work;
-      the focused card exposes its own actions.
+- [ ] **TalkBack on the Dock**: the actions "Show live pages" (or "Back to Home") and "Open Library" exist and work;
+      entries are spoken ("Messages, 3 new", "Now playing: title"); in the contextual mode each tile is spoken by its
+      name ("Agenda"), says "Show Agenda" on a double tap, offers its page options on a long double tap, and the open
+      page's tile is announced as selected.
+- [ ] **Pager actions**: "Previous page" and "Next page" actions work; the focused card exposes its own actions.
 - [ ] **Divider actions**: "Home only", "Split" and "Stream only" work from the divider's action list; the arrow keys
       move it with a keyboard.
 - [ ] **Library header** offers "Close Library" and each Show as view as actions.

@@ -8,6 +8,14 @@ dock as a sibling of the Adaptive Stage surface rather than inside it.
 This page describes the behaviour after #1210, revised by the dock-pull decisions (see
 "Mode transitions" below). The code it describes:
 
+> **Dock modes, slice 1 (2026-11-13, [ADR 0003 Amendment 3](../architecture/adr/0003-places-and-views.md)).** The Dock has
+> two modes. **Pressing the Dock down (toward its edge) past a short threshold and releasing** toggles Home and the
+> contextual mode (the Stream showing); a press that starts on a live app's icon opens that app's page. The pull away from
+> the edge now opens the Library from anywhere on the Dock. The Stream button, the swipe up on a live app and the Stream
+> spine and page header are gone: in the contextual mode the Dock's row (scrolled sideways with fling) is the page
+> indicator, a tap on a tile switches page, and the page options are on a long-press of the tile. See ["The Dock press
+> (dock modes slice 1)"](#the-dock-press-dock-modes-slice-1). The older text below that describes them is history.
+
 > **P5 (2026-11-12, [ADR 0003](../architecture/adr/0003-places-and-views.md)).** The Dock is the handle of the Stream and
 > the Library. The dock pull is claimed by the same rules as before, but it now opens the Library when it starts on the
 > dock's pinned side and the Stream when it starts on its dynamic side; it no longer opens the workspace menu and no
@@ -41,105 +49,68 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 | Home gestures (1/2/3-finger swipe, pinch) | `HomeGestureInput.kt`, `HomeSwipeGesture.kt` | Custom pointer loop (ADR 0002: no N-finger Foundation equivalent) + `nestedScroll` hand-off |
 | Card stack scroll/fling | `CardStack.kt` | `Modifier.scrollable` + custom `FlingBehavior` |
 | Home page pager (Std/Lib) | `ImmediateHomePager.kt` | `HorizontalPager` |
-| Dock pull: Library (pinned side), Stream (dynamic side) | `DockPull.kt`, `HomeDockPullBinding.kt` | Custom pointer loop (ADR 0002: direction-selective claim); the one loop the pull needs. Decisions (claim, side, destination, commit, frame) in `core/domain/.../dockpull/` |
+| Dock pull (Library) and Dock press (Home and contextual mode) | `DockPull.kt`, `DockPress.kt`, `HomeDockPullBinding.kt` | Custom pointer loop (ADR 0002: direction-selective claim in both directions); the one loop the Dock needs. Decisions (claim, commit, frame, press threshold) in `core/domain/.../dockpull/` and `.../dock/DockPress.kt` |
+| Contextual Dock row scroll | `DockContextualRow.kt` | `horizontalScroll`/`verticalScroll` with the platform fling (ADR 0002); the reveal of the ringed icon is `DockRunScroll` |
 | Dock shelf expand/collapse (switched off, see below) | `DockShelfGesture.kt` | Custom pointer loop (ADR 0002: direction-selective claim) |
 | Dock run / dock sections | `HomeDock.kt`, `DockDynamicSection.kt`, `DockNotificationCards.kt` | `horizontalScroll`/`verticalScroll` |
 | Page indicator scrub | `HomePageControls.kt` | `detectHorizontalDragGestures` |
 | Arbitration decisions | `core/domain/.../gestures/`, `.../cards/CardStackOverscroll.kt` | Pure Kotlin, unit tested |
 
-## The Dock pull (P5)
+## The Dock press (dock modes slice 1)
 
-The dock edge's natural pull direction is **away from the edge** (a bottom dock pulls up, a top dock down, a left dock
-right, a right dock left). A one-finger pull along it, on the dock body, opens one of two places by **the side of the
-dock it started on**:
+The Dock has two gestures along the axis across its run, in opposite directions (ADR 0003, Amendment 3):
 
-| Starts on | Result |
-| --- | --- |
-| The pinned side (pinned apps, the divider, any padding before the dynamic section) | The Library (`OpenAppDrawer`), tracking the finger -- from Home and from the Stream |
-| The dynamic side (live apps, now playing, the Stream button, and the dock padding beyond them) | The Stream, tracking the finger; from the Stream, Home |
-| A live app or now playing icon on the dynamic side | The Stream, tracking the finger, landed on that app's page (on Now for now playing); the pull's own thresholds |
+| Gesture | Direction | Result |
+| --- | --- | --- |
+| **Pull** | Away from the edge (a bottom dock pulls up, a top dock down, a left dock right, a right dock left) | The Library, tracking the finger, from anywhere on the Dock and from Home or the Stream |
+| **Press** | Toward the edge (a bottom dock is pressed down), then release | Toggles Home and the contextual mode (the Stream): opens the Stream on the last page, or on the page of the live app / now playing icon the press started on; from the Stream returns Home |
 
-- **Claim.** One finger on the dock body, past touch slop, leading along the natural pull direction (its component along
-  it positive and larger than the one across it), before the long-press timeout (`dockPullClaimFor`); off while the layout
-  is edited or the widget picker is open. A drag along the run still scrolls the sections, a held press is still a
-  long-press, a drag into the edge does nothing. With a moved dock edge (a workspace's dock override) the direction
-  follows the effective edge.
-- **Side.** Where the finger landed, in root coordinates, against the dynamic section's bounds, which the section reports
-  (`dockPullSideAt`, tested for a section at either end so a mirrored dock needs no special case). No Stream, no dynamic
-  side: every pull opens the Library.
-- **Tracking (Stream).** The pull's travel is the window's extent along the pull axis. The Stream slides in from the
-  dock's edge as the finger moves, 1:1, while Home fades out under it; the dock itself does not move. From the Stream the
-  same pull slides it away toward the interior and Home fades back in. Both surfaces are composed only while a pull or
-  its settle runs. Reduced motion: nothing slides, the two crossfade.
-- **Release.** `DockPullThresholds` (values in `GestureThresholds`): 30% of the travel or 600 dp/s toward the interior
-  commits (a fling back toward the edge cancels; under 8 dp of movement a fling does not count). A commit settles to the
-  end and asks the shell (`OpenStream` / `OpenHome`; a committed switch stands in for the shell's answer until it lands);
-  a cancel springs back. A finger landing on a settling pull catches it and tracks from there (interruptible).
-- **Expanded postures (P6).** On an unfolded foldable, tablet or desktop the same pull settles to the nearest of three
-  states, Home only, a split (Home and the Stream side by side, or stacked over a tabletop's hinge) and the Stream only,
-  by where it stopped and its velocity (`SplitSettle`; the release is projected 0.15 s ahead along its velocity). The
-  Stream slides in over the first half of the travel while widening to its split share, then fills the screen over the
-  second half; stopping partway leaves the split. A pull on the dynamic side while the Stream shows runs the scale
-  downward: it can stop at a split from the Stream only, or return Home. The pull still never moves the dock, and the
-  commit thresholds above apply only to the phone's full switch. The divider between the panes is a `draggable` (no new
-  pointer loop), focusable, moved by the arrow keys along its axis and by the accessibility actions "Home only", "Split"
-  and "Stream only"; see [The split](dock.md#the-split-p6). Folded and phone postures are unchanged.
-- **Library pull (P7).** The Library's sheet rises from the Dock's edge as the finger moves, 1:1, while what is under it
-  (Home or the Stream) fades out; the Dock does not move. The release commits by the same rules as the Stream pull
-  (`DockPullThresholds`: 30% of the travel or 600 dp/s toward the interior), settles to open (a committed pull stands in
-  for the shell's answer until it lands) or springs back, and a finger landing on a settling pull catches it
-  (interruptible). Reduced motion: the sheet fades in instead of sliding. It never splits, whatever the posture. While
-  the Library shows the Dock pull is not claimed.
-- **Equivalents.** The dock's accessibility actions "Open Stream" (or "Back to Home" while the Stream shows) and "Open
-  Library", also on the Home surface root so they exist when a layout hides the dock; **Ctrl + the arrow of the pull
-  direction** (Ctrl+Up for a bottom dock) opens the Stream or returns Home, **Ctrl + Shift + that arrow** opens the Library;
-  the Stream button; any home gesture bound to "Stream" (`OPEN_STREAM`) or "Library" (`OPEN_LIBRARY`), neither bound by
-  default. The "Workspace menu" accessibility action was removed with the menu in P8; the pull
-  and the shortcut stopped opening it in P5.
-- **Taps on the dynamic side.** The Stream button toggles Home and the Stream; a live app launches the app and now
-  playing launches the player (owner decision 2026-11-13). A **swipe up on a live app's icon** opens the Stream on that
-  app's stack (the Notifications section scrolls to it and the group comes into view); on now playing, on the Now section.
-  A long-press shows the app's menu with "Open in Stream"; TalkBack has "Open <app>" and "Show <app> in Stream", and
-  Shift + Enter on a focused entry shows it in the Stream.
+- **Claim.** One finger on the dock body, past touch slop, before the long-press timeout. The drag is a pull when it leads
+  along the pull direction (`dockPullClaimFor`) and a press when it leads the opposite way and more along that than across
+  it (`DockPress.claimFor`); a drag along the run is the Dock's scroll (the contextual row scrolls, with fling), a held
+  press is a long-press. The press is only claimed with a Stream, while the layout is browsed and the Library is not
+  showing. Once claimed, the press consumes its touches on the Initial pass, so a tile it started on never takes the
+  release for a tap.
+- **Commit.** The release commits when the Dock is pressed down `DockPress.COMMIT_DP` = 28 dp (`GestureThresholds
+  .DOCK_PRESS_COMMIT_DP`) at the moment of the lift, so a press drawn back before the lift does nothing. There is no
+  velocity rule. A commit runs the existing Home and Stream transition from rest (`DockPullState.open`): the Stream slides
+  in from the Dock's edge while Home fades, or they crossfade under reduced motion. An expanded posture opens the last-used
+  shown state (split or Stream only) and returns to Home only.
+- **What the press exposes** for the next slice's dip, bounce and fan: `DockPressState.progress` (0 to 1, read it in a draw
+  block) while it runs, and `DockPressState.onReleased` (committed or not, and the entry it started on) when it ends.
+- **Starting on an icon.** The entry under the finger is read from where it landed (`dockPullEntryAt` against the bounds
+  each dynamic entry reports); only a live app or now playing has a page in this slice, so a press that starts on a pinned
+  app, a tile or the background opens the last page. The landing is asked for at the commit and dropped if nothing opens.
+- **Taps.** Home mode: a live app launches the app, now playing the player. Contextual mode: a live app, now playing or a
+  tile switches the Stream to that page; pinned apps still launch. The ringed icon is the open page's; swiping the Stream's
+  pager moves the ring (when the swipe passes halfway) and the Dock scrolls to keep it in view.
+- **Long-press.** Home mode: the app's menu with "Open in Stream". Contextual mode: the page options (Show as the other
+  view, Move earlier / later on a tile, Hide section, Show <hidden section>), then the app's own items for a live app.
+- **Equivalents (a non-gesture route for each).** Press: the Dock's (and the surface root's) accessibility action **"Show
+  live pages"** (or **"Back to Home"** while the Stream shows) and Ctrl + the arrow of the pull direction; press on an icon:
+  the click action and the custom action "Show <app> in Stream", the menu's "Open in Stream", Shift + Enter. Pull: "Open
+  Library" and Ctrl + Shift + the arrow. Switching page: the tiles are focusable 48 dp targets with a spoken name and a
+  click action ("Show Agenda"), and the pager's custom actions "Previous page" and "Next page". Page options: the tile's
+  long-press menu (its own long-click action for assistive technology).
+- **Expanded postures (P6).** The split's divider and its actions are unchanged; the pull no longer settles among Home only,
+  split and Stream only (it only opens the Library), the press and the divider reach them.
+- **Library pull (P7).** Unchanged: the sheet rises from the Dock's edge as the finger moves, 1:1, while what is under it
+  fades; it commits by `DockPullThresholds` (30% of the travel or 600 dp/s toward the interior), can be caught mid-settle,
+  and under reduced motion fades in. While the Library shows neither the pull nor the press is claimed.
 
-## The Library (P7)
+### History: the Dock pull by side (P5, superseded)
 
-The Library (ADR 0003) is a Thick glass sheet over Home or the Stream, sized to what the Dock leaves free and inside the
-system bar insets, with the Dock still drawn and tappable under it. It is `ShellDestination.APP_DRAWER` (the name kept for
-the stored routing), or `SEARCH` when it opens with the search field focused and the keyboard up; the shell remembers
-whether it opened over the Stream (`libraryOverStream`) so closing returns there.
-
-- **Open.** The pinned-side Dock pull (above), the home gesture **Library** (`OPEN_LIBRARY`), the Dock's "Open Library"
-  action, Ctrl + Shift + the pull arrow, and **Search** (`OPEN_SEARCH`), which opens the Library with its field focused
-  and the keyboard up. **Swipe down** (`ONE_FINGER_DOWN`) is bound to Search by default now (it was Notifications); the
-  two-finger swipe up took Notifications' place, so nothing else changes and every binding stays user-configurable. A
-  stored value is kept as it was: only an unset binding takes the new default. The search pill on Home asks for the same
-  thing.
-- **Close.** Back (the open category or the typed query first), the Home button, a pull toward the Dock's edge on the
-  sheet's header (the same commit thresholds as the pull; it tracks the finger), a tap on the margin around the sheet, the
-  header's "Close Library" accessibility action, or launching an app, a shortcut or a web search from it. Back, the
-  header close and the Home button return to what the Library opened over (Home or the Stream).
-- **Header.** Long-press it, or use its options button, for **Show as** Categories, A-Z list or Grid (the same menu and
-  wording as the Stream's section headers): it redraws at once and offers Undo. The view is stored per device class.
-  The header node carries one custom-actions list ("Close Library" and each "Show as" view) for assistive technology.
-- **Search.** The field at the top; typing replaces the view with results (apps first, then app shortcuts, then settings,
-  each in the search source's own order, plus the web panel); Enter launches the top hit; clearing the field restores the
-  view. Results are drawn inside a Regular glass panel with the spotlight.
-- **Icons.** Tap launches; long-press opens the app menu (Add to Home, Pin to Dock, shortcuts, App info, Hide,
-  Uninstall). There is no drag-out of the Library onto Home (the drawer never had one, and a new drag system is out of
-  scope); Add to Home is its equivalent. The Personal and Work chips filter the view when more than one profile exists.
-- **Recents and frequent apps** are not in the Library; they are the Stream's Recents section.
-- **Arbitration.** The header's drag is a platform `draggable` (no new pointer loop); the lists and grids scroll vertically
-  inside the sheet, so they never compete with it. The Dock pull is not claimed while the Library shows.
+Until dock modes slice 1 a pull toward the interior opened the Library from the pinned side and the Stream from the dynamic
+side (tracking the finger, with the Stream button and a swipe up on a live app as its relatives). That text is gone from
+this page; `docs/product/dock.md` keeps the history of the sides.
 
 ## The Stream (P4, entry points restated by P5)
 
 The Stream (ADR 0003) is a full surface that replaces Home with the Dock still drawn under it. It is reached by the
-Dock's dynamic side (above), the home gesture action **Stream** (`OPEN_STREAM`; no gesture is bound to it by default) and
+Dock's press (above), the home gesture action **Stream** (`OPEN_STREAM`; no gesture is bound to it by default) and
 the Dock's accessibility actions.
 
-- **Close.** Back and the Home button (`OpenDefaultHome`) return to Home, as do the Stream button, the same dynamic-side
-  pull and "Back to Home". A focused card that is expanded (a notification's thread, now playing's queue) collapses on
+- **Close.** Back and the Home button (`OpenDefaultHome`) return to Home, as do the Dock press and "Back to Home". A focused card that is expanded (a notification's thread, now playing's queue) collapses on
   Back first.
 - **Inside the Stream (P13, P14).** The Stream is a horizontal pager of pages and each page is one vertically scrolling
   stack or list ([places-views-plan.md](places-views-plan.md), P13). The pager is the platform `HorizontalPager`
@@ -152,14 +123,15 @@ the Dock's accessibility actions.
 
   | Gesture | Equivalent |
   | --- | --- |
-  | Swipe to the next or previous page | Tap a spine marker (a tab, spoken "Chat, page 2 of 8"); the pager's custom actions "Previous page" and "Next page" |
+  | Swipe to the next or previous page | Tap the page's tile or live app in the Dock (contextual mode); the pager's custom actions "Previous page" and "Next page" |
   | Scroll a stack to another card | The "Previous card" and "Next card" buttons under it with "Card 2 of 3"; the focused card's custom actions "Previous card", "Next card" and "Open card"; the arrow keys |
-  | Long-press a page header for Show as, Move and Hide | The header's options button (one menu) |
-  | Long-press the spine (or the Stage's bar) for the Stream's own menu: Show as Pages or Stage, and Show for each hidden section | The options button at its end |
+  | Long-press a page's tile or icon in the Dock for Show as, Move and Hide, and Show for each hidden section | The long-click custom action of the tile (assistive technology), the same menu |
+  | Long-press the Stage's bar for the Stream's own menu: Show as Pages or Stage | The options button at its end (Settings > Stream chooses Pages or Stage too) |
   | Tap a Stage rail thumbnail | It is a tab (a button named "Bring Chat to the front") |
 
   Each page is a labelled pane, the pager carries one custom-actions list, and no node carries two (the page actions are
-  on the pager, the card actions on the focused card, Hide on each card).
+  on the pager, the card actions on the focused card, Hide on each card). The pages are in the Dock's order, and there is
+  no spine or page header: the Dock is the page indicator.
 - **The Stage (P14).** On an unfolded posture the Stage view has no swipes: the rail is a column of tabs that scrolls
   vertically (`verticalScroll`) and a tap brings a stage to the centre; the selected stage's stack is the same vertical
   `CardStack`. Two pages side by side (Pages on a wide screen) are one pager showing two, so a swipe still moves one
@@ -244,7 +216,8 @@ constants at the 2.625x reference density (420dpi) they were tuned on.
 | --- | --- | --- | --- |
 | Home swipe commit | 30.5 | 80px | Dominant axis must lead the other by 1.2x; pinch at 18% scale change |
 | Dock shelf toggle | 30.5 | 80px | Measured away from / toward the dock edge |
-| Dock pull commit | 30% of the travel (the window's extent along the pull); fling 600 dp/s once moved 8 dp | 40% / 600 dp/s, then 30% | `GestureThresholds.DOCK_PULL_*`; the Stream and the Library pull share it |
+| Dock pull commit | 30% of the travel (the window's extent along the pull); fling 600 dp/s once moved 8 dp | 40% / 600 dp/s, then 30% | `GestureThresholds.DOCK_PULL_*`; the Library pull |
+| Dock press commit | 28 | – | `GestureThresholds.DOCK_PRESS_COMMIT_DP`; measured toward the edge at the lift, no velocity rule |
 | Dock shelf claim | 9 (never below touch slop) | 24px (9dp = 23.6px at 2.625×) | Must stay below the home swipe commit |
 | Card stack travel per card / fling | see `CardStackTravel` | 64px / 500px/s | Already dp since #1211 |
 | Multi-finger claim | 3 pointers | – | See rule 2 |
@@ -259,12 +232,13 @@ means no default binding, so nothing happens unless the user binds the gesture.
 
 | Region | Input | Std / Lib | Cards |
 | --- | --- | --- | --- |
-| Dock body, pinned side | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the Library, tracking the finger (claims past touch slop when the drag leads along the pull) | same |
-| Dock body, dynamic side | 1-finger in the natural pull direction | **Dock pull**: opens the Stream, tracking the finger (from the Stream: returns Home) | same |
-| Dock, Stream button | tap | Toggles Home and the Stream | same |
-| Dock, live app / now playing | tap | Launches the app (the player for now playing) | same |
-| Dock, live app / now playing | 1-finger in the natural pull direction, starting on the icon | **Dock pull**: opens the Stream on that app's stack (on Now for now playing), tracking the finger; a pull that starts on the side's background or the Stream button lands where the Stream opens today | same |
-| Dock, live app / now playing | long-press | Menu: Open in Stream, shortcuts, App info, Hide app | same |
+| Dock body | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the Library, tracking the finger (claims past touch slop when the drag leads along the pull) | same |
+| Dock body | 1-finger toward the edge, then release past 28 dp | **Dock press**: toggles Home and the Stream (needs a Stream); a press that starts on a live app / now playing icon opens that page | same |
+| Dock, live app / now playing | tap | Home mode: launches the app (the player for now playing). Contextual mode: switches to its page | same |
+| Dock, contextual tile | tap | Switches the Stream to that page | same |
+| Dock, contextual row | 1-finger along the run | The row scrolls with fling (owns) | same |
+| Dock, live app / now playing | long-press | Home mode: Open in Stream, shortcuts, App info, Hide app. Contextual mode: page options first | same |
+| Dock, contextual tile | long-press | Page options: Show as, Move earlier / later, Hide section, Show <hidden section> | same |
 | Dock sections (dynamic, notification row) | 1-finger along the dock run | Section scrolls (owns) | Section scrolls (owns) |
 | Dock sections | 1-finger away from edge | Nothing while shelf expansion is off (reserved for the dock pull) | same |
 | Dock background / icons | 1-finger away from edge | Nothing while shelf expansion is off; falls through to Home in Std/Lib (unbound by default) (reserved for the dock pull) | Nothing (reserved for the dock pull) |
@@ -275,8 +249,7 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Card stack with ≤1 card | 1-finger along stack axis | – | Home (stack does not claim) |
 | Card stack | 1-finger across stack axis | – | Stage pager (horizontal) |
 | Stream page (stack, list, tiles) | 1-finger vertical | Page scrolls: the stack moves a card (magnet settle) or the list scrolls; past the first or last card it hands on | same |
-| Stream page | 1-finger horizontal | Stream pager (owns): next or previous page, the spine follows | same |
-| Stream spine | tap a marker / long-press | Jumps to the page / opens the Stream's menu (Show as Pages or Stage, hidden sections) | same |
+| Stream page | 1-finger horizontal | Stream pager (owns): next or previous page, the Dock's ring follows | same |
 | Stream Stage rail (unfolded) | tap a thumbnail / vertical drag | Brings that stage to the centre (shared-element transition) / scrolls the rail | same |
 | Card stack | 2-finger | – | Stack (first finger's drag wins; see limitations) |
 | Card stack | 3-finger | – | **Home claims** (unbound by default) |
