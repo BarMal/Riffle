@@ -198,38 +198,32 @@ Sources keep their contracts: one shared subscription each, work off the main th
 before anything is drawn. Item content is still never written to layout, settings, backup or diagnostics.
 A further type joins the Stream the same way: add the type, its card, its row and its section.
 
-### Material: one flat glass, lit at the edge
+### Material: one glass, with the spotlight everywhere
 
 Glass is the only look. Every surface in every Place is drawn by one primitive at one of three weights.
-The material is modelled on the owner's desktop bar ("Serein"): a flat translucent fill, a 1 px border that is a
-light rather than a box, a specular hairline along the top that fades out at both ends, and the tint as thin
-strips of light along the edges. The first build (a refraction shader plus a five-layer sheen) was replaced by
-this after the owner saw a hard-edged bevel, a seam and dark wedge corners on every tall surface.
 
 | Weight | Used for | Treatment |
 | --- | --- | --- |
-| Thin | Dock, chips, row backgrounds, page indicator | Flat fill at 0.66 (the Dock: its setting), edge lights 0.85x |
-| Regular | Cards, widgets' frames, folders, the search pill | Flat fill at 0.72, edge lights |
-| Thick | Library sheet, menus, pickers, the focused card, settings sections | Flat fill at 0.80, edge lights 1.15x |
+| Thin | Dock, chips, row backgrounds, page indicator | Light frost, hairline top highlight, no shadow |
+| Regular | Cards, widgets' frames, folders, the search pill | Full frost, hairline, one soft shadow, tint |
+| Thick | Library sheet, menus, pickers, the focused card, settings sections | Heavy frost with a contrast scrim behind text |
 
 - **One primitive.** `GlassSurface(weight, shape, tint)` is the only way a surface gets a translucent
-  background. Feature code contains no literal surface alpha or dp; the weights and `GlassEdgeTokens` own them.
-- **Flat fill, edge lights.** The fill is one even tint at the weight's alpha: no gradient, bevel, inner shadow,
-  caustic, refraction or dispersion. The edge lights (`GlassEdgeLights.kt`) are a 1 dp border brightest along the
-  top and fading down the sides, and a 1 dp specular hairline inside the top edge, both along the surface's own
-  `Outline`. Every thickness is a fixed dp: nothing scales with the surface's height. See `design-language.md`
-  section 3 for the values and the Serein reference.
-- **Tint as light.** The dock's icon-colour spotlight (`GlassSpotlight*`, takes a `Shape` and sources on any axis)
-  is applied to the Dock, open folders, Library category tiles, the search results panel, and Stream cards and
-  stacks (lit by the owning app's colour). A surface with one fixed colour passes `edgeTint` and gets Serein's
-  top and bottom strips. The body is never tinted by an app's colour.
-- **Glass over the system wallpaper can tint, not blur.** The wallpaper is outside the app's content, so no
-  surface has a backdrop to blur or refract; the fill is the tint at the weight's alpha, with the wallpaper
-  showing through. Each weight has a legibility floor chosen for 4.5:1 text contrast over a bright wallpaper
-  (`legibilityFloorAlpha`: Thin 0.66, Regular 0.66, Thick 0.72) and its fill alpha is never below it. The Dock
-  uses its own "Dock background" setting instead, exactly (default 72%, 0% clear, 100% opaque). There is no
-  backdrop capture, and no blur of app content behind a surface: the one candidate (the Library sheet over Home
-  icons) did not justify the capture, and the sheet's 0.80 fill covers them.
+  background. Feature code contains no literal surface alpha or blur radius; the three weights own them.
+- **Sheen everywhere.** The dock's glass sheen (`dockGlassSheen`: top specular, caustic spot, inner shadow,
+  rim line, cool border) becomes part of the primitive for every weight, driven by the surface's own shape.
+- **Spotlight wherever a surface holds coloured things.** The dock's icon-colour spotlight
+  (`DockSpotlight*`) is generalised to take a `Shape` and sources on any axis, and is applied to: the Dock,
+  open folders, Library category tiles, the search results panel, and Stream cards and stacks (lit by the
+  owning app's colour). A surface with no coloured content gets the sheen only.
+- **Glass over the system wallpaper can tint, not blur.** The wallpaper is outside the app's content, so a
+  surface drawn over it has no backdrop to blur or refract; there it is the tint at the weight's alpha, plus the
+  sheen and the spotlight, with the wallpaper showing through. Each weight has a floor tint alpha over the
+  wallpaper chosen for 4.5:1 text contrast over a bright wallpaper (`wallpaperTintAlpha`: Thin 0.66, Regular
+  0.66, Thick 0.72). The Dock uses its own "Dock background" setting instead, exactly (default 72%, 0% clear,
+  100% opaque). The first build ignored this and drew these surfaces opaque near-black; the shader and its
+  domain mirror (`GlassBlend`) were fixed in #1450. Frost and refraction apply only to app content behind a
+  surface (the Stream, the Library sheet over Home).
 - **Labels.** Home labels are plain text with a soft shadow, no pill, by default; the pill is the "Label
   background" switch in Settings > Home, and the stored opacity is kept for when it is turned on.
 - **No idle animation.** The spotlight keeps its existing behaviour: it requests frames only while its
@@ -238,8 +232,9 @@ this after the owner saw a hard-edged bevel, a seam and dark wedge corners on ev
 - **Tint** comes from two places only: the wallpaper for chrome, and an app's own colour for that app's
   cards, stacks and spotlight.
 - **Fallbacks are part of the material, not separate looks.** Reduced transparency is one top-level
-  appearance setting honoured by every glass surface (opaque fill, edge lights kept at half strength, the
-  spotlight at half). Reduced motion makes the spotlight snap. There is one drawing path for every API level.
+  appearance setting honoured by every glass surface (opaque tint, no backdrop sampling, sheen kept faint).
+  Reduced motion makes the spotlight snap. Below the API levels the shader needs, the existing blurred-tint
+  and scrim fallbacks apply.
 - **Removed:** the custom background, dock, label and label-background colours (a custom accent remains); the `MATERIAL`, `MINIMAL`, `RETRO`, `TERMINAL` and `CUSTOM` theme presets; the per-workspace
   skin override; the separate "Liquid glass" on/off switch (glass is always on; reduced transparency is the
   off switch); the dock effect choice (FLAT, ELEVATED, OUTLINED); and the "Material design language" line in
@@ -299,8 +294,7 @@ Later outcomes, driven by what the owner saw on the phone (all 2026-11-12):
 
 | # | Question | Outcome |
 | --- | --- | --- |
-| 14 | Glass looked opaque near-black over the wallpaper | Fixed (#1450): each weight has a wallpaper tint floor, and the Dock follows its own "Dock background" setting exactly |
-| 17 | The glass showed a hard bevel, a seam and dark corners on every surface | Replaced the refraction shader and five-layer sheen with one flat fill and edge lights after the owner's desktop bar (see Material, "As built") |
+| 14 | Glass looked opaque near-black over the wallpaper | Fixed (#1450): the shader keeps the backdrop's alpha, each weight has a wallpaper tint floor, and the Dock follows its own "Dock background" setting exactly |
 | 15 | The Dock after the Dock rework was short and its icons small | Restored to the reference look (#1452): pinned icons always at the Icon size setting, a scrolling pinned run with edge fades and an 8 dp minimum gap, a compact dynamic side that leaves at least three pins, the bar one icon plus chrome tall. Custom dock colours were not restored |
 | 16 | Label pills on Home | Off by default (plain text with a soft shadow); "Label background" in Settings > Home turns the pill back on |
 
@@ -377,12 +371,6 @@ the code at acceptance.
 - **Not built in P13 and P14:** dragging a stage in the Stage rail to reorder, a thumbnail that is a scaled copy of
   the live card, an animation of the spine's markers between sections, a per-page stack-depth setting.
 - **Glass over the wallpaper cannot blur it**, which the original Material section did not anticipate.
-- **The refraction shader and the sheen are gone.** The AGSL backdrop shader, the shared backdrop capture
-  (`ProvideLiquidGlassBackdrop` / `LocalLiquidGlassBackdrop`), the five-layer sheen (`glassSheen`: top specular,
-  caustic spot, inner shadow, rim line, cool border) and the "Frost strength" and "Edge refraction" settings
-  were removed; edge lights replace the sheen (`GlassEdgeLights.kt`). Stored `frostStrengthPercent` and
-  `refractionStrengthPercent` still decode and are dropped (a codec test pins it). `ProvideLiquidGlassBackdrop`
-  survives only as a no-op wrapper for source compatibility with `LauncherHomeDestination`, which can drop it.
 
 ## Superseded documents
 

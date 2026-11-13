@@ -451,6 +451,14 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectReducedTransparency(reduced = true),
                 ),
                 settings(
+                    "SelectLiquidGlassFrostStrength",
+                    LauncherShellAction.SelectLiquidGlassFrostStrength(percent = 60),
+                ),
+                settings(
+                    "SelectLiquidGlassRefractionStrength",
+                    LauncherShellAction.SelectLiquidGlassRefractionStrength(percent = 30),
+                ),
+                settings(
                     "SelectLiquidGlassSpotlightFlow",
                     LauncherShellAction.SelectLiquidGlassSpotlightFlow(millis = 600),
                 ),

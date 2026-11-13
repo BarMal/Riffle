@@ -5,23 +5,90 @@ import kotlin.math.min
 import kotlin.math.pow
 
 /**
- * The glass fill and its legibility, as plain maths. The material is one flat translucent tint, so
- * what the screen shows is a plain source-over of the tint at its alpha over whatever is behind;
- * this is the formula the unit tests and the device tests derive their expectations from.
+ * The glass shader's blend, as plain maths. The AGSL shader in `GlassSurface.kt` cannot run on the
+ * JVM, so this is the formula it mirrors line for line, and it is what the unit tests pin down.
+ *
+ * The backdrop the shader samples is *premultiplied* RGBA, and it is transparent wherever the
+ * system wallpaper shows (the wallpaper is outside the app's content). The glass therefore mixes
+ * the backdrop towards the tint by an effective alpha, and keeps the backdrop's own alpha:
+ * over opaque app content the result is opaque, exactly as a plain mix; over the transparent
+ * wallpaper area it is the tint at the tint alpha, with the wallpaper showing through.
  */
 object GlassBlend {
-    /** The straight-alpha tint (r, g, b) at [alpha] over an opaque background: what the screen shows. */
-    fun flatOver(
-        tint: Triple<Float, Float, Float>,
-        alpha: Float,
-        background: Triple<Float, Float, Float>,
-    ): Triple<Float, Float, Float> {
-        val a = alpha.coerceIn(0f, 1f)
-        return Triple(
-            tint.first * a + background.first * (1 - a),
-            tint.second * a + background.second * (1 - a),
-            tint.third * a + background.third * (1 - a),
+    /** A premultiplied colour: each of [r], [g], [b] is already multiplied by [a]. */
+    data class Premultiplied(
+        val r: Float,
+        val g: Float,
+        val b: Float,
+        val a: Float,
+    ) {
+        /** Source-over of this colour on an opaque straight-alpha background colour (what the screen shows). */
+        fun overOpaque(
+            backR: Float,
+            backG: Float,
+            backB: Float,
+        ): Triple<Float, Float, Float> = Triple(r + backR * (1 - a), g + backG * (1 - a), b + backB * (1 - a))
+    }
+
+    /**
+     * The tint alpha in force where the backdrop has [backdropAlpha]: [overContent] over fully
+     * opaque app content, [overWallpaper] over a transparent backdrop, linear in between.
+     */
+    fun effectiveTintAlpha(
+        backdropAlpha: Float,
+        overContent: Float,
+        overWallpaper: Float,
+    ): Float {
+        val opacity = backdropAlpha.coerceIn(0f, 1f)
+        return (overWallpaper + (overContent - overWallpaper) * opacity).coerceIn(0f, 1f)
+    }
+
+    /**
+     * Mixes the premultiplied [backdrop] towards the straight-alpha tint colour by [tintAlpha]:
+     * `rgb = backdrop.rgb * (1 - t) + tint.rgb * t`, `a = backdrop.a * (1 - t) + t`.
+     */
+    fun tint(
+        backdrop: Premultiplied,
+        tintR: Float,
+        tintG: Float,
+        tintB: Float,
+        tintAlpha: Float,
+    ): Premultiplied {
+        val t = tintAlpha.coerceIn(0f, 1f)
+        return Premultiplied(
+            r = backdrop.r * (1 - t) + tintR * t,
+            g = backdrop.g * (1 - t) + tintG * t,
+            b = backdrop.b * (1 - t) + tintB * t,
+            a = backdrop.a * (1 - t) + t,
         )
+    }
+
+    /**
+     * Adds white light of strength [light] (the specular and rim terms). The light also raises the
+     * alpha, so it stays visible over a transparent backdrop; over opaque content (a = 1) the
+     * alpha is unchanged and the colour is the same additive light as before. The result is a
+     * valid premultiplied colour (rgb never above alpha).
+     */
+    fun addLight(
+        colour: Premultiplied,
+        light: Float,
+    ): Premultiplied {
+        val a = min(1f, colour.a + light)
+        return Premultiplied(min(colour.r + light, a), min(colour.g + light, a), min(colour.b + light, a), a)
+    }
+
+    /** The whole shader step after sampling: [effectiveTintAlpha], [tint] and [addLight]. */
+    fun shade(
+        backdrop: Premultiplied,
+        tintR: Float,
+        tintG: Float,
+        tintB: Float,
+        tintAlphaOverContent: Float,
+        tintAlphaOverWallpaper: Float,
+        light: Float,
+    ): Premultiplied {
+        val t = effectiveTintAlpha(backdrop.a, tintAlphaOverContent, tintAlphaOverWallpaper)
+        return addLight(tint(backdrop, tintR, tintG, tintB, t), light)
     }
 
     /** WCAG relative luminance of an sRGB colour, channels 0..1. */

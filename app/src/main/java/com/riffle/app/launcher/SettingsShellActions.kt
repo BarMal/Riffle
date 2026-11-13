@@ -90,6 +90,8 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectHomeStatusBarHidden,
         is LauncherShellAction.SelectHomeNavigationBarHidden,
         is LauncherShellAction.SelectReducedTransparency,
+        is LauncherShellAction.SelectLiquidGlassFrostStrength,
+        is LauncherShellAction.SelectLiquidGlassRefractionStrength,
         is LauncherShellAction.SelectLiquidGlassSpotlightFlow,
         is LauncherShellAction.SelectHomeSwipeGestureAction,
         is LauncherShellAction.SelectHomeGestureAction,

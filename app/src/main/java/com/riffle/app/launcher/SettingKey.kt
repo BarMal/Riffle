@@ -248,6 +248,16 @@ enum class SettingKey(
         R.string.setting_appearance_custom_accent,
         R.string.setting_appearance_custom_accent_keywords,
     ),
+    APPEARANCE_FROST(
+        SettingsPage.APPEARANCE,
+        R.string.setting_appearance_frost,
+        R.string.setting_appearance_frost_keywords,
+    ),
+    APPEARANCE_REFRACTION(
+        SettingsPage.APPEARANCE,
+        R.string.setting_appearance_refraction,
+        R.string.setting_appearance_refraction_keywords,
+    ),
     APPEARANCE_SPOTLIGHT(
         SettingsPage.APPEARANCE,
         R.string.setting_appearance_spotlight,

@@ -260,10 +260,10 @@ class SettingsPagesTest {
     fun launcherSearchFindsASettingByItsKeyword() {
         val hits =
             LauncherSearchProvider()
-                .search(query = "spotlight", apps = emptyList(), settingsEntries = settingsLauncherSearchEntries(text))
+                .search(query = "refraction", apps = emptyList(), settingsEntries = settingsLauncherSearchEntries(text))
                 .filterIsInstance<LauncherSearchResult.Setting>()
 
-        assertTrue(hits.any { it.entry.id.value == "appearance#APPEARANCE_SPOTLIGHT" })
+        assertTrue(hits.any { it.entry.id.value == "appearance#APPEARANCE_REFRACTION" })
     }
 
     @Test

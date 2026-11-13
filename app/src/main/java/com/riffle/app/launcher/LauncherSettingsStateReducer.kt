@@ -78,6 +78,30 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectLiquidGlassFrostStrength ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                liquidGlass =
+                                    state.launcherSettings.liquidGlass
+                                        .copy(frostStrengthPercent = action.percent)
+                                        .coerced(),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectLiquidGlassRefractionStrength ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                liquidGlass =
+                                    state.launcherSettings.liquidGlass
+                                        .copy(refractionStrengthPercent = action.percent)
+                                        .coerced(),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectLiquidGlassSpotlightFlow ->
                     state.withLauncherSettings(
                         settings =

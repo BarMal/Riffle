@@ -193,7 +193,14 @@ internal fun SettingsSection(
 /**
  * The per-section rounded container behind every [SettingsSection]'s rows: Thick [GlassSurface],
  * tinted with [ColorScheme.surfaceContainerLow] so a glassy section still reads as a Settings
- * surface rather than a colour change.
+ * surface rather than a colour change. Settings is reached as its own top-level [ShellDestination],
+ * composed as a sibling of [HomeDestination] rather than inside it (see `LauncherShell.kt`'s
+ * `when (state.destination)`), so [LocalLiquidGlassBackdrop] is never installed here and the glass
+ * always takes its no-backdrop fallback: a blurred flat tint layer, not true backdrop refraction.
+ * That is a deliberate, scoped limitation -- there is nothing interesting behind a settings section
+ * worth refracting (just the flat screen background from [SettingsSurface]'s own root `Surface`)
+ * -- rather than installing a second, pointless backdrop capture just to say the "real" shader
+ * path runs here. With liquid glass switched off [GlassSurface] draws today's flat fill.
  */
 @Composable
 private fun SettingsSectionContainer(content: @Composable ColumnScope.() -> Unit) {

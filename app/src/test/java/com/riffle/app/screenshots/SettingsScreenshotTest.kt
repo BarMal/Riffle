@@ -11,8 +11,15 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The Settings screen's own section containers ([com.riffle.app.launcher.SettingsSection]) as the
- * flat Thick glass material, with transparency reduced and not.
+ * The Settings screen's own section containers ([com.riffle.app.launcher.SettingsSection]), with
+ * liquid glass switched on and off.
+ *
+ * Settings is composed as its own top-level destination rather than inside [HomeDestination]'s
+ * subtree (see `LauncherShell.kt`), so no [com.riffle.app.launcher.LocalLiquidGlassBackdrop] is
+ * ever installed above it -- under Robolectric's native graphics mode the shader path is unavailable
+ * anyway (see `GlassSurface.kt`), so the "enabled" screenshot below always exercises the same
+ * legacy blurred-tint fallback a real API 31/32 device would render too, while "disabled" locks in
+ * today's flat, opaque section fill with zero visual change.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

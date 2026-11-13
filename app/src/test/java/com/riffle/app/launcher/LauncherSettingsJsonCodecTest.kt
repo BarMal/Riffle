@@ -386,9 +386,9 @@ class LauncherSettingsJsonCodecTest {
 
     @Test
     fun theRemovedLiquidGlassEnabledFlagIsIgnored() {
-        val off = decodeLauncherSettings("""{"liquidGlass": {"enabled": false, "spotlightFlowMillis": 700}}""")
+        val off = decodeLauncherSettings("""{"liquidGlass": {"enabled": false, "frostStrengthPercent": 70}}""")
 
-        assertEquals(LiquidGlassSettings(spotlightFlowMillis = 700), off.liquidGlass)
+        assertEquals(LiquidGlassSettings(frostStrengthPercent = 70), off.liquidGlass)
         assertFalse(JSONObject(encodeLauncherSettings(off)).getJSONObject("liquidGlass").has("enabled"))
     }
 
@@ -528,7 +528,11 @@ class LauncherSettingsJsonCodecTest {
         val settings =
             LauncherSettings(
                 liquidGlass =
-                    LiquidGlassSettings(spotlightFlowMillis = 650),
+                    LiquidGlassSettings(
+                        frostStrengthPercent = 70,
+                        refractionStrengthPercent = 35,
+                        spotlightFlowMillis = 650,
+                    ),
             )
 
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
@@ -546,36 +550,22 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun coercesTheOutOfRangeSpotlightFlowOnDecode() {
-        val json = """{"liquidGlass": {"enabled": true, "spotlightFlowMillis": 5000}}"""
-
-        assertEquals(1000, decodeLauncherSettings(json).liquidGlass.spotlightFlowMillis)
-    }
-
-    @Test
-    fun theRemovedFrostAndRefractionStrengthsStillDecodeAndAreDropped() {
-        // Blobs written while glass blurred and refracted a backdrop carry both strengths.
+    fun coercesOutOfRangeLiquidGlassStrengthsOnDecode() {
         val json =
             """
             {
                 "liquidGlass": {
                     "enabled": true,
-                    "frostStrengthPercent": 70,
-                    "refractionStrengthPercent": 35,
-                    "spotlightFlowMillis": 650
-                },
-                "appearance": {"reducedTransparency": true}
+                    "frostStrengthPercent": -30,
+                    "refractionStrengthPercent": 500
+                }
             }
             """.trimIndent()
 
-        val decoded = decodeLauncherSettings(json)
+        val decodedSettings = decodeLauncherSettings(json)
 
-        assertEquals(LiquidGlassSettings(spotlightFlowMillis = 650), decoded.liquidGlass)
-        assertTrue(decoded.appearance.reducedTransparency)
-        val reEncoded = JSONObject(encodeLauncherSettings(decoded)).getJSONObject("liquidGlass")
-        assertFalse(reEncoded.has("frostStrengthPercent"))
-        assertFalse(reEncoded.has("refractionStrengthPercent"))
-        assertEquals(650, reEncoded.getInt("spotlightFlowMillis"))
+        assertEquals(0, decodedSettings.liquidGlass.frostStrengthPercent)
+        assertEquals(100, decodedSettings.liquidGlass.refractionStrengthPercent)
     }
 
     @Test

@@ -301,12 +301,14 @@ private fun JSONObject.toHaptics(defaults: HapticSettings): HapticSettings =
 
 private fun encodeLiquidGlass(settings: LiquidGlassSettings): JSONObject =
     JSONObject()
+        .put("frostStrengthPercent", settings.frostStrengthPercent)
+        .put("refractionStrengthPercent", settings.refractionStrengthPercent)
         .put("spotlightFlowMillis", settings.spotlightFlowMillis)
 
-// Blobs written while glass blurred and refracted carry frostStrengthPercent and
-// refractionStrengthPercent; those keys are simply not read any more.
 private fun JSONObject.toLiquidGlass(defaults: LiquidGlassSettings): LiquidGlassSettings =
     LiquidGlassSettings(
+        frostStrengthPercent = optInt("frostStrengthPercent", defaults.frostStrengthPercent),
+        refractionStrengthPercent = optInt("refractionStrengthPercent", defaults.refractionStrengthPercent),
         spotlightFlowMillis = optInt("spotlightFlowMillis", defaults.spotlightFlowMillis),
     ).coerced()
 

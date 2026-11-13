@@ -6,6 +6,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -146,19 +147,22 @@ internal fun RiffleContextMenu(
         offset = offset,
         shape = LocalLauncherPanelShape.current,
         // The popup draws nothing of its own: the glass below is the menu's whole surface, so it
-        // is the same material as every other panel.
+        // is the same material as every other panel. A menu lives in its own window, so it cannot
+        // sample Home's backdrop and takes the material's tint-layer fallback instead.
         containerColor = Color.Transparent,
         tonalElevation = RiffleElevation.level0,
         shadowElevation = RiffleElevation.level3,
         border = null,
         content = {
-            GlassSurface(
-                weight = GlassWeight.Thick,
-                shape = LocalLauncherPanelShape.current,
-                tint = launcherMenuSurfaceColor(),
-                contentColor = launcherMenuContentColor(),
-            ) {
-                Column { content() }
+            CompositionLocalProvider(LocalLiquidGlassBackdrop provides null) {
+                GlassSurface(
+                    weight = GlassWeight.Thick,
+                    shape = LocalLauncherPanelShape.current,
+                    tint = launcherMenuSurfaceColor(),
+                    contentColor = launcherMenuContentColor(),
+                ) {
+                    Column { content() }
+                }
             }
         },
     )
