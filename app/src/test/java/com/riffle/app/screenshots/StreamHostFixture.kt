@@ -1,20 +1,42 @@
 package com.riffle.app.screenshots
 
 import com.riffle.app.launcher.expressions.FakeExpressionImageLoader
+import com.riffle.app.launcher.sources.AppSourceDependencies
+import com.riffle.app.launcher.sources.BuiltInSourceDependencies
+import com.riffle.app.launcher.sources.CalendarSourceDependencies
+import com.riffle.app.launcher.sources.InstalledAppSnapshot
+import com.riffle.app.launcher.sources.MediaSourceDependencies
+import com.riffle.app.launcher.sources.NotificationSourceDependencies
+import com.riffle.app.launcher.sources.SourceChangeSource
+import com.riffle.app.launcher.sources.streamSourceRegistry
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.stream.StreamLayoutStorePort
+import com.riffle.app.launcher.stream.enabledStreamRegistry
+import com.riffle.app.launcher.stream.refreshingAlarmProvider
+import com.riffle.app.launcher.stream.streamLoadingScheduler
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.stream.StreamActionResult
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
 import com.riffle.core.domain.launcher.stream.StreamContext
 import com.riffle.core.domain.launcher.stream.StreamLayouts
+import com.riffle.core.domain.launcher.stream.StreamLoadingRule
 import com.riffle.core.domain.launcher.workspace.ItemSource
 import com.riffle.core.domain.launcher.workspace.SourceDescriptor
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceRegistry
+import com.riffle.core.domain.launcher.workspace.settings.InMemoryDisabledSourcesStore
+import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
+import com.riffle.core.domain.launcher.workspace.sources.CalendarEvent
+import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import java.util.concurrent.Executor
 
 private const val STREAM_HOST_TEST_NOW = 1_767_225_600_000L
 
@@ -43,3 +65,77 @@ internal fun emptyStreamHost(): StreamHost =
         imageLoader = FakeExpressionImageLoader(),
         formats = FixedStreamFormats(),
     )
+
+/**
+ * A [StreamHost] built the way the activity builds it (`streamSourceRegistry`, `enabledStreamRegistry`, a real
+ * `StreamContentProvider` with the production Loading deadline) with only the platform services faked, the item
+ * sources reading on [executor], a real thread like the device's. [activeNotifications] are what the notification
+ * listener holds; [installedApps] what the package manager lists.
+ */
+@Suppress("LongParameterList")
+internal fun realWiringStreamHost(
+    executor: Executor,
+    calendar: SourceAccess = SourceAccess.GRANTED,
+    notifications: NotificationAccessStatus = NotificationAccessStatus.GRANTED,
+    usage: SourceAccess = SourceAccess.GRANTED,
+    activeNotifications: List<LauncherNotification> = emptyList(),
+    installedApps: List<InstalledApp> = emptyList(),
+    loadingTimeoutMillis: Long = StreamLoadingRule.TIMEOUT_MILLIS,
+): StreamHost {
+    val now = StreamFixtures.NOW
+    val deps =
+        BuiltInSourceDependencies(
+            executor = executor,
+            nowEpochMillis = { now },
+            apps =
+                AppSourceDependencies(
+                    installedApps = {
+                        InstalledAppSnapshot(
+                            installedApps,
+                            mapOf(AppProfile.personal().id to AppProfileContentVisibility.VISIBLE),
+                        )
+                    },
+                    shortcuts = { emptyMap() },
+                    recentApps = { emptyList() },
+                    recentAppsAccess = { usage },
+                ),
+            notifications =
+                NotificationSourceDependencies(
+                    repository = { activeNotifications },
+                    access = { notifications },
+                    changes = SourceChangeSource.NONE,
+                    hideRules = { emptyList() },
+                ),
+            calendar =
+                CalendarSourceDependencies(
+                    repository = { _, _ -> emptyList() },
+                    access = { calendar },
+                    agendaRepository =
+                        { from, _ -> listOf(CalendarEvent("e1", "Standup", from + 600_000, from + 1_200_000)) },
+                ),
+            media = MediaSourceDependencies.NONE,
+        )
+    val enablement = StoredSourceEnablement(InMemoryDisabledSourcesStore())
+    val registry = enabledStreamRegistry(streamSourceRegistry(deps), enablement)
+    return StreamHost(
+        provider =
+            StreamContentProvider(
+                registry = registry,
+                alarms = refreshingAlarmProvider(executor, SourceChangeSource.NONE) { null },
+                scheduler = streamLoadingScheduler(),
+                loadingTimeoutMillis = loadingTimeoutMillis,
+            ) { StreamContext(nowEpochMillis = now) },
+        layouts =
+            CachedStreamLayoutRepository(
+                object : StreamLayoutStorePort {
+                    override suspend fun read(): StreamLayouts? = null
+
+                    override suspend fun write(layouts: StreamLayouts) = Unit
+                },
+                CoroutineScope(Dispatchers.Unconfined + Job()),
+            ),
+        actions = { _, _ -> StreamActionResult.NotOffered },
+        imageLoader = FakeExpressionImageLoader(),
+        formats = FixedStreamFormats(),
+    )
+}

@@ -12,11 +12,13 @@ import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionMatcher
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleId
 import com.riffle.core.domain.launcher.workspace.exclusions.ExclusionRuleSet
 import com.riffle.core.domain.launcher.workspace.exclusions.SourceExclusionRule
+import com.riffle.core.domain.launcher.workspace.sources.DelayedTaskScheduler
 import com.riffle.core.domain.launcher.workspace.sources.SharedSourceStream
 import com.riffle.core.domain.launcher.workspace.sources.SourceSink
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class StreamContentProviderTest {
     private class FakeRegistry : SourceRegistry {
@@ -66,6 +68,53 @@ class StreamContentProviderTest {
         registry.sinks.getValue(SourceIds.NOTIFICATIONS).emit(SourceState.Ready(listOf(notificationItem("a"))))
         val ready = assertIs<StreamSectionResult.Ready>(results.last())
         assertEquals("a", (ready.items.single() as NotificationContent).title?.removePrefix("Title "))
+    }
+
+    private class ManualScheduler : DelayedTaskScheduler {
+        val tasks = ArrayList<Pair<Long, Runnable>>()
+        var cancelled = 0
+
+        override fun schedule(
+            delayMillis: Long,
+            task: Runnable,
+        ): SourceSubscription {
+            tasks += delayMillis to task
+            return SourceSubscription { cancelled++ }
+        }
+
+        fun fireAll() = tasks.map { it.second }.forEach(Runnable::run)
+    }
+
+    @Test
+    fun `a section that gets no first answer in time becomes unavailable, and a late answer still shows`() {
+        val scheduler = ManualScheduler()
+        val results = mutableListOf<StreamSectionResult>()
+        val timed =
+            StreamContentProvider(registry, scheduler = scheduler) { StreamContext(nowEpochMillis = NOW) }
+        timed.observe(StreamSection.NOTIFICATIONS) { results += it }
+        assertEquals(StreamSectionResult.Loading, results.last())
+        assertEquals(StreamLoadingRule.TIMEOUT_MILLIS, scheduler.tasks.single().first)
+
+        scheduler.fireAll()
+        assertEquals(StreamSectionResult.Unavailable, results.last())
+
+        registry.sinks.getValue(SourceIds.NOTIFICATIONS).emit(SourceState.Ready(listOf(notificationItem("a"))))
+        assertIs<StreamSectionResult.Ready>(results.last())
+    }
+
+    @Test
+    fun `a section that answers in time is never touched by the deadline, and cancelling drops the deadline`() {
+        val scheduler = ManualScheduler()
+        val results = mutableListOf<StreamSectionResult>()
+        val timed =
+            StreamContentProvider(registry, scheduler = scheduler) { StreamContext(nowEpochMillis = NOW) }
+        val subscription = timed.observe(StreamSection.NOTIFICATIONS) { results += it }
+        registry.sinks.getValue(SourceIds.NOTIFICATIONS).emit(SourceState.PermissionRequired)
+        scheduler.fireAll()
+        assertIs<StreamSectionResult.PermissionRequired>(results.last())
+
+        subscription.cancel()
+        assertTrue(scheduler.cancelled >= 1)
     }
 
     @Test

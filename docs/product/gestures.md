@@ -57,6 +57,7 @@ dock it started on**:
 | --- | --- |
 | The pinned side (pinned apps, the divider, any padding before the dynamic section) | The Library (`OpenAppDrawer`), tracking the finger -- from Home and from the Stream |
 | The dynamic side (live apps, now playing, the Stream button, and the dock padding beyond them) | The Stream, tracking the finger; from the Stream, Home |
+| A live app or now playing icon on the dynamic side | The Stream, tracking the finger, landed on that app's page (on Now for now playing); the pull's own thresholds |
 
 - **Claim.** One finger on the dock body, past touch slop, leading along the natural pull direction (its component along
   it positive and larger than the one across it), before the long-press timeout (`dockPullClaimFor`); off while the layout
@@ -95,8 +96,11 @@ dock it started on**:
   the Stream button; any home gesture bound to "Stream" (`OPEN_STREAM`) or "Library" (`OPEN_LIBRARY`), neither bound by
   default. The "Workspace menu" accessibility action was removed with the menu in P8; the pull
   and the shortcut stopped opening it in P5.
-- **Taps on the dynamic side.** The Stream button toggles Home and the Stream; a live app opens the Stream on that app's
-  stack (the Notifications section scrolls to it and the group comes into view); now playing opens it on the Now section.
+- **Taps on the dynamic side.** The Stream button toggles Home and the Stream; a live app launches the app and now
+  playing launches the player (owner decision 2026-11-13). A **swipe up on a live app's icon** opens the Stream on that
+  app's stack (the Notifications section scrolls to it and the group comes into view); on now playing, on the Now section.
+  A long-press shows the app's menu with "Open in Stream"; TalkBack has "Open <app>" and "Show <app> in Stream", and
+  Shift + Enter on a focused entry shows it in the Stream.
 
 ## The Library (P7)
 
@@ -257,7 +261,10 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | --- | --- | --- | --- |
 | Dock body, pinned side | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the Library, tracking the finger (claims past touch slop when the drag leads along the pull) | same |
 | Dock body, dynamic side | 1-finger in the natural pull direction | **Dock pull**: opens the Stream, tracking the finger (from the Stream: returns Home) | same |
-| Dock, Stream button / live app / now playing | tap | Stream button toggles Home and the Stream; a live app or now playing opens the Stream on its stack or on Now | same |
+| Dock, Stream button | tap | Toggles Home and the Stream | same |
+| Dock, live app / now playing | tap | Launches the app (the player for now playing) | same |
+| Dock, live app / now playing | 1-finger in the natural pull direction, starting on the icon | **Dock pull**: opens the Stream on that app's stack (on Now for now playing), tracking the finger; a pull that starts on the side's background or the Stream button lands where the Stream opens today | same |
+| Dock, live app / now playing | long-press | Menu: Open in Stream, shortcuts, App info, Hide app | same |
 | Dock sections (dynamic, notification row) | 1-finger along the dock run | Section scrolls (owns) | Section scrolls (owns) |
 | Dock sections | 1-finger away from edge | Nothing while shelf expansion is off (reserved for the dock pull) | same |
 | Dock background / icons | 1-finger away from edge | Nothing while shelf expansion is off; falls through to Home in Std/Lib (unbound by default) (reserved for the dock pull) | Nothing (reserved for the dock pull) |

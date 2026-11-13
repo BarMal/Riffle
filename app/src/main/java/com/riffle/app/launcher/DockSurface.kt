@@ -420,9 +420,8 @@ internal fun DockSurfaceStrip(
                         mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
                         runsHorizontally = runsHorizontally,
                         appIconLoader = appIconLoader,
-                        onAction = presentation.interactions.onAction,
+                        interactions = presentation.interactions,
                         onEntryDelegated = onDynamicEntryDelegated,
-                        reducedMotion = presentation.interactions.reducedMotion,
                         suppressStartFade = true,
                     )
                 }

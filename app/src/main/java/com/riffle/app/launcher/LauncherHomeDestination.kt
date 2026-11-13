@@ -149,6 +149,7 @@ fun HomeDestination(
                 }
             },
             modeInterpreter = HomeDockInterpreter(),
+            appShortcuts = state.appShortcutsByApp,
         )
     val pull =
         rememberHomeDockPullBinding(
@@ -159,6 +160,7 @@ fun HomeDestination(
                     available = stream != null,
                     shown = shownStream,
                     split = if (splitting) splitSetup else null,
+                    focus = stream?.focus,
                 ),
             dockPull = dockPull,
             hostState = dockHost,

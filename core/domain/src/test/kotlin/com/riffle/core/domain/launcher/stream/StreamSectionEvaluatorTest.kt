@@ -28,6 +28,41 @@ class StreamSectionEvaluatorTest {
 
     private fun StreamSectionResult.ids(): List<String> = (this as StreamSectionResult.Ready).items.map { it.id.value }
 
+    // --- the honest Loading rule --------------------------------------------------------------------------------
+
+    @Test
+    fun `after the deadline an input that never answered reads as unavailable, not loading`() {
+        val s = StreamSection.NOTIFICATIONS
+        val waiting = StreamSectionInputs()
+        assertEquals(StreamSectionResult.Loading, eval(s, waiting))
+        assertEquals(StreamSectionResult.Unavailable, eval(s, waiting.withLoadingExpired(s)))
+    }
+
+    @Test
+    fun `a section that has no inputs left waiting never expires into unavailable`() {
+        val s = StreamSection.NOTIFICATIONS
+        val answered = StreamSectionInputs(mapOf(SourceIds.NOTIFICATIONS to SourceState.PermissionRequired))
+        assertEquals(eval(s, answered), eval(s, answered.withLoadingExpired(s)))
+    }
+
+    @Test
+    fun `what answered before the deadline still shows when its sibling did not`() {
+        val s = StreamSection.AGENDA
+        val inputs = StreamSectionInputs(mapOf(SourceIds.ICS to ready(), StreamSourceIds.AGENDA to SourceState.Loading))
+        assertEquals(StreamSectionResult.Loading, eval(s, inputs))
+        // The ICS source answered (empty): Empty beats the one that never answered.
+        assertEquals(StreamSectionResult.Empty, eval(s, inputs.withLoadingExpired(s)))
+    }
+
+    @Test
+    fun `the typed inputs expire too, so Tasks and the alarm do not wait for good either`() {
+        val tasks = StreamSection.TASKS
+        assertEquals(StreamSectionResult.Unavailable, eval(tasks, StreamSectionInputs().withLoadingExpired(tasks)))
+        val now = StreamSection.NOW
+        val answered = StreamSectionInputs(alarm = TypedSourceState.Ready(emptyList()))
+        assertEquals(TypedSourceState.Ready(emptyList<NextAlarm>()), answered.withLoadingExpired(now).alarm)
+    }
+
     // --- availability -----------------------------------------------------------------------------------------
 
     @Test
