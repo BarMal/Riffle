@@ -95,7 +95,7 @@ class StreamOpenTransitionTest {
                 sinceAction++
             }
             if (sinceAction >= shellDelayFrames && actions.isNotEmpty()) {
-                val action = actions.removeFirst()
+                val action = actions.removeAt(0)
                 composeRule.runOnUiThread {
                     if (action == LauncherShellAction.OpenStream) shellShown = true
                     if (action == LauncherShellAction.OpenHome) shellShown = false
