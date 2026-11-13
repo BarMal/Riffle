@@ -40,6 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * What the shell needs to show the Stream: the content provider (one shared subscription per source, nothing read until
@@ -102,6 +103,11 @@ internal class StreamFocusRequests {
     fun handled(id: Long) {
         if (pending?.id == id) pending = null
     }
+
+    /** Drops a landing nothing has consumed: the pull that asked for it sprang back. */
+    fun cancel() {
+        pending = null
+    }
 }
 
 /** The device class the Stream is drawn for, readable from the provider's threads. */
@@ -130,7 +136,8 @@ internal fun StreamDestination(
     val layouts by host.layouts.layouts.collectAsState()
     val layout = layouts.forPosture(deviceClass)
     val enabledSections = layout.enabledSections.map { it.section }
-    val results = rememberStreamSectionResults(host.provider, enabledSections)
+    val attempts = remember(host) { mutableStateMapOf<StreamSection, Int>() }
+    val results = rememberStreamSectionResults(host.provider, enabledSections, attempts)
     val scope = rememberCoroutineScope()
     val failures =
         remember(
@@ -164,6 +171,7 @@ internal fun StreamDestination(
             },
             onRefreshTasks = { scope.launch(Dispatchers.Default) { host.tasks?.refresh() } },
             onConnectTasks = onConnectTasks,
+            onRetrySection = { section -> attempts[section] = (attempts[section] ?: 0) + 1 },
             onRequestAccess = { sources ->
                 sources.firstOrNull()?.let { host.requestAccess(StreamSourceIds.userSourceOf(it)) }
             },
@@ -210,22 +218,36 @@ internal fun StreamDestination(
 /**
  * The latest result of each of [sections], observed while the Stream is composed. A section's subscription lives only
  * as long as it is shown; callbacks arrive on the provider's threads and are posted to the main thread.
+ *
+ * The map handed out is a NEW immutable map for every change: the surface keys what it derives from it (the pages)
+ * on its identity, and a single mutable map instance would never invalidate them (the Stream sat on "Loading" for
+ * good on a device for exactly that reason). A change in [attempts] for a section (its Retry) drops the section's
+ * subscription and result and observes it afresh.
  */
 @Composable
 internal fun rememberStreamSectionResults(
     provider: StreamContentProvider,
     sections: List<StreamSection>,
+    attempts: Map<StreamSection, Int> = emptyMap(),
 ): Map<StreamSection, StreamSectionResult> {
-    val results = remember(provider) { mutableStateMapOf<StreamSection, StreamSectionResult>() }
+    val results = remember(provider) { mutableStateOf<Map<StreamSection, StreamSectionResult>>(emptyMap()) }
     sections.forEach { section ->
         key(section) {
-            DisposableEffect(provider, section) {
+            val attempt = attempts[section] ?: 0
+            DisposableEffect(provider, section, attempt) {
                 val main = Handler(Looper.getMainLooper())
+                val live = AtomicBoolean(true)
+                if (section in results.value) results.value = results.value - section
                 val subscription =
-                    provider.observe(section) { result -> main.post { results[section] = result } }
-                onDispose { subscription.cancel() }
+                    provider.observe(section) { result ->
+                        main.post { if (live.get()) results.value = results.value + (section to result) }
+                    }
+                onDispose {
+                    live.set(false)
+                    subscription.cancel()
+                }
             }
         }
     }
-    return results
+    return results.value
 }

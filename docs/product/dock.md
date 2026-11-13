@@ -81,8 +81,12 @@ Each side of the dock opens its own world (ADR 0003): the pinned side the Librar
 | Pull away from the edge, starting on the dynamic side | Stream, tracking the finger |
 | The same pull on the dynamic side while the Stream shows | Home |
 | Tap the Stream button | Switches to the Stream, and back to Home from it |
-| Tap a live app | Stream, landed on that app's stack in the Notifications section |
-| Tap now playing | Stream, landed on the Now section |
+| Tap a live app | Launches the app (the same launch as a pinned icon, in its own profile) |
+| Swipe up on a live app (away from the edge, on any edge) | Stream, landed on that app's stack in the Notifications section, tracking the finger |
+| Long-press a live app | Its menu: Open in Stream, the app's shortcuts, App info, Hide app |
+| Tap now playing | Launches the player app |
+| Swipe up on now playing | Stream, landed on the Now section |
+| Swipe up on the dynamic side's background or on the Stream button | Stream, where it opens today (the page it was last left on, else Now) |
 
 - **Natural pull direction**: away from the dock's edge, toward the screen interior -- a bottom dock pulls up, a top dock
   down, a left dock right, a right dock left. It works the same on every edge, and a dock with a moved edge (a workspace
@@ -119,7 +123,9 @@ Each side of the dock opens its own world (ADR 0003): the pinned side the Librar
   actions "Open Stream" (or "Back to Home" while the Stream shows) and "Open Library"; **Ctrl + the arrow of the pull
   direction** opens the Stream (or returns Home), **Ctrl + Shift + that arrow** opens the Library. Every dynamic entry is
   a 48 dp target with a spoken label ("Messages, 3 new", "Now playing: <title>", "Stream"); the Stream button is selected
-  while the Stream shows.
+  while the Stream shows. A live app or now playing entry has the click action "Open <app>" and, in the same single
+  `customActions` list, "Show <app> in Stream"; **Shift + Enter** on a focused entry does the same (Enter and Space open
+  the app).
 - Home gestures can be bound to "Stream" (`OPEN_STREAM`) and "Library" (`OPEN_LIBRARY`); neither is bound by default.
   "Search" (`OPEN_SEARCH`, bound to swipe down by default) opens the Library with its field focused.
 - The workspace menu is no longer reached by the pull, and since P8 it and its "Workspace menu" accessibility action no
@@ -165,8 +171,8 @@ on/off apply and there is no second notification pipeline (`DockDynamicSide` in 
 
 1. **Live apps**: the apps with something new, which are the groups of the Stream's Notifications section, newest first
    (ties by group key), at most **live app slots** of them (zero to five, default three). A pinned app can appear here
-   too: tapping the pinned icon launches it, tapping the live entry opens the Stream on its stack. The entry carries the
-   count as a badge.
+   too: either icon launches it when tapped; a swipe up from the live entry opens the Stream on its stack. The entry carries
+   the count as a badge.
 2. **Now playing**: one entry while a media session is active (the Now section's media). It is not counted in the slots.
 3. **The Stream button**: always last, so the handle exists when nothing is live.
 
@@ -356,3 +362,20 @@ still draws in full before the static side is sized; nothing shrinks below a pin
 fit; the behaviour still holds on every edge and in RTL; the pull still works in its natural
 direction on every edge; the Stream button is still last; and a layout with no live app slots still has its Stream button
 and now playing.
+
+### Live app entries: tap opens the app, swipe up opens its stack
+
+Owner decision, 2026-11-13: a live app entry on the dynamic side behaves like the app, with the Stream a swipe away.
+
+- **Tap** launches the app, by the same action a pinned icon uses (`LaunchApp` with the entry's own profile). An app the
+  launcher cannot resolve has nothing to launch, so its tap still opens its page in the Stream.
+- **Swipe up** (the natural pull direction, on any edge) from the icon opens the Stream landed on that app's stack, tracking
+  the finger with the same claim and commit thresholds as the dynamic-side pull. It is the same pull: the side is read
+  from where the finger landed, and so is the entry (`dockPullEntryAt`, `dockPullLandingEntry`; each entry reports its
+  bounds). The landing is asked for when the pull starts, so the first frame is already on that page, and dropped if the
+  pull springs back. Starting on the dynamic side's background or on the Stream button lands where it does today. While
+  the Stream shows, the pull still returns Home.
+- **Now playing**: tap opens the player app, swipe up opens the Stream on Now.
+- **Long-press** on a live app or now playing: "Open in Stream", then the app's shortcuts, App info and Hide app (no
+  Uninstall or dock edits: the entry is not pinned).
+- **Stream button**: unchanged; a tap toggles Home and the Stream.

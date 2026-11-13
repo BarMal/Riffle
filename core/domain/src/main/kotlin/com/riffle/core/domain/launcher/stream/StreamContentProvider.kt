@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.workspace.SourceState
 import com.riffle.core.domain.launcher.workspace.SourceSubscription
 import com.riffle.core.domain.launcher.workspace.container.ContextChanges
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
+import com.riffle.core.domain.launcher.workspace.sources.DelayedTaskScheduler
 
 /**
  * What the Stream UI (P4) consumes: [observe] a [StreamSection] and receive a [StreamSectionResult] each time
@@ -30,6 +31,12 @@ class StreamContentProvider(
     private val tasks: TaskProvider = NotConnectedTaskProvider,
     private val alarms: NextAlarmProvider = NoAlarmProvider,
     private val contextChanges: ContextChanges? = null,
+    /**
+     * Enforces [StreamLoadingRule]: a section that has had no first answer after [loadingTimeoutMillis] is delivered as
+     * unavailable (what did answer still shows). Null means no deadline (tests that drive the sources by hand).
+     */
+    private val scheduler: DelayedTaskScheduler? = null,
+    private val loadingTimeoutMillis: Long = StreamLoadingRule.TIMEOUT_MILLIS,
     private val context: () -> StreamContext,
 ) {
     private val sources = SharedSourceRegistry(registry)
@@ -53,6 +60,8 @@ class StreamContentProvider(
         private var issued = 0L
         private var delivered = 0L
         private var started = false
+        private var expired = false
+        private var deadline: SourceSubscription? = null
 
         @Volatile private var closed = false
 
@@ -66,6 +75,11 @@ class StreamContentProvider(
             contextChanges?.observe { refresh() }?.let { handle ->
                 val stale = synchronized(lock) { closed.also { if (!it) watching = handle } }
                 if (stale) handle.cancel()
+            }
+            scheduler?.let { timer ->
+                val task = timer.schedule(loadingTimeoutMillis) { update { expired = true } }
+                val stale = synchronized(lock) { closed.also { if (!it) deadline = task } }
+                if (stale) task.cancel()
             }
             synchronized(lock) { started = true }
             refresh()
@@ -90,7 +104,9 @@ class StreamContentProvider(
             synchronized(lock) {
                 if (closed || !started) return
                 sequence = ++issued
-                inputs = StreamSectionInputs(itemStates.toMap(), tasksState, alarmState)
+                inputs =
+                    StreamSectionInputs(itemStates.toMap(), tasksState, alarmState)
+                        .let { if (expired) it.withLoadingExpired(section) else it }
             }
             val result =
                 runCatching { StreamSectionEvaluator.evaluate(section, inputs, context()) }
@@ -115,9 +131,10 @@ class StreamContentProvider(
             synchronized(lock) {
                 if (closed) return
                 closed = true
-                toCancel = subscriptions.toList() + listOfNotNull(watching)
+                toCancel = subscriptions.toList() + listOfNotNull(watching, deadline)
                 subscriptions.clear()
                 watching = null
+                deadline = null
             }
             toCancel.forEach { it.cancel() }
         }

@@ -53,8 +53,13 @@ Use a busy, bright wallpaper and then a dark one.
 - [ ] **Narrow target question (open).** Is the dynamic side, with only the Stream button, too narrow to start a pull
       reliably with a thumb? If you miss it, note the edge and width. If it fails, the fallback in ADR 0003 (pull
       anywhere on the Dock, choose by half) has to be built.
-- [ ] **Taps.** Pinned app launches. Stream button toggles Home and the Stream. A live app opens the Stream on that
-      app's page. Now playing opens it on Now.
+- [ ] **Taps.** Pinned app launches. Stream button toggles Home and the Stream. A live app launches the app. Now
+      playing launches the player.
+- [ ] **Swipe up on a live app.** Swipe up from a live app's icon: the Stream follows the finger and opens on that
+      app's page. From now playing: on Now. From the dynamic side's background or the Stream button: where it opens
+      today. Release early: it springs back and the next plain open is unaffected. Check a side dock too.
+- [ ] **Live app long-press.** The menu has Open in Stream, the app's shortcuts, App info and Hide app. With TalkBack:
+      "Open <app>" and "Show <app> in Stream".
 - [ ] **Long-press and drag.** Long-press a pin for its menu; drag to reorder; drag out to Home.
 
 ## Home
@@ -89,8 +94,13 @@ Use a busy, bright wallpaper and then a dark one.
       targets are 48 dp, a tap jumps to the page, and the current marker stays in view.
 - [ ] **A notification arriving while on a page** never moves the page you are on; a page that vanishes hands over to its
       neighbour. Reopening the Stream returns to the page you left.
-- [ ] **Dock tap lands on the app's page.** Tap a live app in the Dock: the Stream opens on that app's page. If its
-      notifications were cleared meanwhile it opens on the first Notifications page.
+- [ ] **Dock swipe lands on the app's page.** Swipe up from a live app in the Dock: the Stream opens on that app's page.
+      If its notifications were cleared meanwhile it opens on the first Notifications page.
+- [ ] **Every page leaves Loading.** Open the Stream: each of the six pages shows its content, or its honest state (no
+      access, nothing to show, not connected) within a few seconds; none stays on "Loading", and one that could not
+      be read says so with Retry.
+- [ ] **No flash on opening.** Open the Stream by pull, by the Stream button and with reduced motion on: Home fades as the
+      Stream comes in, it never reappears at full strength over the Stream, and under reduced motion it is a cut.
 - [ ] **Show as and Undo.** Long-press a page header (or its options button): Stack or List applies to every page of
       that section; Undo restores. Move and Hide section work. Settings > Stream shows the same values and edits live.
 - [ ] **Media.** With a player running: artwork, title and artist, play or pause, next, previous, scrub, the queue

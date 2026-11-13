@@ -10,7 +10,27 @@ data class StreamSectionInputs(
     val items: Map<SourceId, SourceState> = emptyMap(),
     val tasks: TypedSourceState<TaskContent> = TypedSourceState.Loading,
     val alarm: TypedSourceState<NextAlarm> = TypedSourceState.Loading,
-)
+) {
+    /**
+     * The honest-Loading rule: once a section has waited [StreamLoadingRule.TIMEOUT_MILLIS] for a first answer, every
+     * input of [section] that has not answered reads as unavailable, so the section shows what did arrive, else its
+     * Unavailable state with Retry, never Loading for good. An input that answered keeps its state.
+     */
+    fun withLoadingExpired(section: StreamSection): StreamSectionInputs =
+        StreamSectionInputs(
+            items =
+                section.itemSources.associateWith { id ->
+                    items[id]?.takeUnless { it == SourceState.Loading } ?: SourceState.Unavailable
+                },
+            tasks = if (tasks == TypedSourceState.Loading) TypedSourceState.Unavailable else tasks,
+            alarm = if (alarm == TypedSourceState.Loading) TypedSourceState.Unavailable else alarm,
+        )
+}
+
+/** How long a Stream section may show Loading while a first result is genuinely pending. */
+object StreamLoadingRule {
+    const val TIMEOUT_MILLIS = 5_000L
+}
 
 /**
  * The pure core of the Stream: source states in, one [StreamSectionResult] out. Per section it

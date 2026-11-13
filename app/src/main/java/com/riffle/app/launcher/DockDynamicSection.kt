@@ -1,9 +1,10 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,17 +25,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -59,10 +71,10 @@ internal fun DockDynamicSection(
     mainAxisDp: Int,
     runsHorizontally: Boolean,
     appIconLoader: AppIconLoader,
-    onAction: (LauncherShellAction) -> Unit,
-    /** Receives the key of an entry whose intent is [DockDynamicEntryIntent.Delegate]. */
+    /** The dock's own interactions: where actions go, the haptics of a long-press, reduced motion. */
+    interactions: DockInteractions,
+    /** Receives the key of an entry whose intent is [DockDynamicEntryIntent.Delegate], or shown in the Stream. */
     onEntryDelegated: (String) -> Unit = {},
-    reducedMotion: Boolean = false,
     // The edge against the section divider is an internal seam, not the dock's real edge -- see the
     // matching suppressEndFade on DockSlotStrip (#1174).
     suppressStartFade: Boolean = false,
@@ -77,7 +89,7 @@ internal fun DockDynamicSection(
     ScrollSelectedEntryIntoView(
         selectedIndex = entries.indexOfFirst(DockDynamicEntry::isSelected),
         entryPitchDp = iconSizeDp + spacingDp,
-        reducedMotion = reducedMotion,
+        reducedMotion = interactions.reducedMotion,
         scrollState = scrollState,
     )
     // No modifier parameter, against the usual convention: the section's extent is measured for it
@@ -100,11 +112,14 @@ internal fun DockDynamicSection(
                 appIconLoader = appIconLoader,
                 onActivate = {
                     when (val intent = entry.intent) {
-                        is DockDynamicEntryIntent.Dispatch -> onAction(intent.action)
+                        is DockDynamicEntryIntent.Dispatch -> interactions.onAction(intent.action)
                         DockDynamicEntryIntent.Delegate -> onEntryDelegated(entry.key)
                         null -> Unit
                     }
                 },
+                // "Show in Stream" is the entry's key handed back: a live app or now playing lands its page.
+                onShowInStream = { onEntryDelegated(entry.key) },
+                interactions = interactions,
             )
         }
     }
@@ -175,11 +190,14 @@ private fun ScrollSelectedEntryIntoView(
  * icon for the same reason.
  */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun DockDynamicSectionTile(
     entry: DockDynamicEntry,
     iconSizeDp: Int,
     appIconLoader: AppIconLoader,
     onActivate: () -> Unit,
+    onShowInStream: () -> Unit,
+    interactions: DockInteractions,
 ) {
     val label = entry.label
     val identity = entry.identity
@@ -195,17 +213,33 @@ private fun DockDynamicSectionTile(
     // it, not because of anything about the app itself. This tile now shares that same mask.
     val tileShape = RoundedCornerShape(DOCK_ICON_MASK_CORNER_RADIUS_DP.dp)
     val spotlightColor = rememberGlassSpotlightColor(identity = identity, appIconLoader = appIconLoader)
+    val entryBoundsSink = LocalDockDynamicEntryBoundsSink.current
+    DisposableEffect(entry.key, entryBoundsSink) { onDispose { entryBoundsSink(entry.key, null) } }
+    val isMenuExpanded = remember(entry.key) { mutableStateOf(false) }
+    val hasMenu = entry.openInStreamMenuLabel != null
     Box(
         modifier =
             Modifier
                 .requiredSize(iconSizeDp.dp)
+                .onGloballyPositioned { coordinates -> entryBoundsSink(entry.key, coordinates.boundsInRoot()) }
                 .glassSpotlightSource(key = "dynamic:${entry.key}", color = spotlightColor)
                 .testTag(dockDynamicSectionTileTestTag(label))
-                .semantics {
-                    contentDescription = entry.contentDescription
-                    selected = isSelected
-                }
-                .clickable(enabled = entry.intent != null, onClick = onActivate)
+                .dynamicEntryAccess(entry, isSelected, onShowInStream)
+                .combinedClickable(
+                    enabled = entry.intent != null,
+                    onClickLabel = entry.openLabel,
+                    onClick = onActivate,
+                    onLongClick =
+                        if (hasMenu) {
+                            {
+                                interactions.haptics.longPress()
+                                isMenuExpanded.value = true
+                            }
+                        } else {
+                            null
+                        },
+                    onLongClickLabel = "Show $label actions".takeIf { hasMenu },
+                )
                 // A ring over the icon's edge rather than anything behind or around it: the tile is
                 // exactly one dock icon wide and the run was measured on that, so the mark for
                 // "this is the one showing" cannot be allowed to take any room.
@@ -225,6 +259,15 @@ private fun DockDynamicSectionTile(
         DockDynamicTileIcon(entry, iconSizeDp, tileShape, appIconLoader)
         if (entry.symbol == DockDynamicSymbol.NowPlaying) NowPlayingMark(Modifier.align(Alignment.BottomEnd))
         NotificationCountBadge(count = entry.badgeCount)
+        if (hasMenu) {
+            DynamicEntryMenu(
+                entry = entry,
+                expanded = isMenuExpanded.value,
+                onDismiss = { isMenuExpanded.value = false },
+                onShowInStream = onShowInStream,
+                onAction = interactions.onAction,
+            )
+        }
     }
 }
 
@@ -297,6 +340,12 @@ private const val NOW_PLAYING_MARK_DP = 18
 internal val LocalDockDynamicBoundsSink = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
 
 /**
+ * Where each dynamic entry is, in root coordinates by key (null once it leaves composition), so a pull that starts on
+ * an app's icon can land the Stream on that app. The dock host provides the sink; outside it nothing listens.
+ */
+internal val LocalDockDynamicEntryBoundsSink = staticCompositionLocalOf<(String, Rect?) -> Unit> { { _, _ -> } }
+
+/**
  * A dynamic entry is a compact tile: exactly the 48 dp touch target, whatever size the pinned icons are. The pins keep
  * their own (Home-sized) icons and the dynamic side takes only this much room per entry, so a large pinned icon never
  * makes the side beside it grow, and an entry is never under a touch target.
@@ -311,3 +360,63 @@ private const val SELECTED_ENTRY_RING_DP = 2
 internal fun dockDynamicSectionTileTestTag(label: String): String = "dock-dynamic-entry:$label"
 
 internal const val DOCK_DYNAMIC_SECTION_TEST_TAG = "dock-dynamic-section"
+
+/**
+ * What a screen reader and a keyboard get on a dynamic entry: its description and selection, and for an app entry
+ * "Show <app> in Stream" (the swipe up's equivalent) and Shift + Enter. ONE semantics block, so one `customActions`
+ * list: two would drop the earlier one. The Enter taken for Shift + Enter is taken through its release too, so it
+ * never also opens the app.
+ */
+@Composable
+private fun Modifier.dynamicEntryAccess(
+    entry: DockDynamicEntry,
+    isSelected: Boolean,
+    onShowInStream: () -> Unit,
+): Modifier {
+    val showInStreamLabel = entry.showInStreamLabel
+    val latestShow = rememberUpdatedState(onShowInStream)
+    val enterTaken = remember { mutableStateOf(false) }
+    return semantics {
+        contentDescription = entry.contentDescription
+        selected = isSelected
+        if (showInStreamLabel != null) {
+            customActions = listOf(CustomAccessibilityAction(showInStreamLabel) { latestShow.value().let { true } })
+        }
+    }.onPreviewKeyEvent { event ->
+        val enter = event.key == Key.Enter || event.key == Key.NumPadEnter
+        when {
+            showInStreamLabel == null || !enter -> false
+            event.type == KeyEventType.KeyDown && event.isShiftPressed -> {
+                enterTaken.value = true
+                latestShow.value()
+                true
+            }
+            event.type == KeyEventType.KeyUp && enterTaken.value -> {
+                enterTaken.value = false
+                true
+            }
+            else -> false
+        }
+    }
+}
+
+/** The long-press menu of an app entry: "Open in Stream", then the app's own shortcuts, App info and Hide. */
+@Composable
+private fun DynamicEntryMenu(
+    entry: DockDynamicEntry,
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    onShowInStream: () -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val latestShow = rememberUpdatedState(onShowInStream)
+    val items =
+        remember(entry.openInStreamMenuLabel, entry.appMenu) {
+            listOfNotNull(
+                entry.openInStreamMenuLabel?.let { label ->
+                    ShortcutContextMenuItem(label = label, onSelect = { latestShow.value() })
+                },
+            ) + entry.appMenu
+        }
+    ShortcutContextMenu(expanded = expanded, items = items, onDismissRequest = onDismiss, onAction = onAction)
+}

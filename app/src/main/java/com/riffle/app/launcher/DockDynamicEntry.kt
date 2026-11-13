@@ -3,7 +3,9 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppIdentity
 
 /**
- * One entry on the dock's dynamic side: what it shows, and what a tap on it does.
+ * One entry on the dock's dynamic side: what it shows, and what a tap on it does. A live app or now playing entry also
+ * says what showing it in the Stream means ([showInStreamLabel]): a swipe up from it, a long-press item, an
+ * accessibility action and Shift+Enter all do that.
  *
  * The dynamic side lists live apps, now playing and the Stream button (ADR 0003), so the entry carries
  * its own intent rather than the section inferring one from a shared entry type. That keeps the
@@ -20,6 +22,19 @@ internal data class DockDynamicEntry(
     val intent: DockDynamicEntryIntent?,
     /** What to draw over (or instead of) the app icon: the Stream button's glyph, now playing's play mark. */
     val symbol: DockDynamicSymbol? = null,
+    /**
+     * What a tap says to a screen reader ("Open Gmail") and the custom action that shows the entry's page in the
+     * Stream ("Show Gmail in Stream"); both null for the Stream button, which has only its own tap.
+     */
+    val openLabel: String? = null,
+    val showInStreamLabel: String? = null,
+    /**
+     * The long-press menu of an app entry: its shortcuts, App info and Hide, under "Open in Stream" (which the tile
+     * adds). Empty means no menu beyond that.
+     */
+    val appMenu: List<ShortcutContextMenuItem> = emptyList(),
+    /** The long-press menu's "Open in Stream", localised by whoever built the entry. */
+    val openInStreamMenuLabel: String? = null,
 )
 
 /** A mark the dock draws itself on a dynamic entry. */

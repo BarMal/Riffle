@@ -11,9 +11,11 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -63,6 +65,12 @@ internal class HomeDockHostState {
      * which side a touch started on (pinned: Library; dynamic: Stream).
      */
     val dynamicBounds: MutableState<Rect?> = mutableStateOf(null)
+
+    /**
+     * Where each dynamic entry is in root coordinates, by key. The dock pull reads it to land the Stream on the app a
+     * pull started on. Entries come and go with what is live, so it is a map the tiles keep current.
+     */
+    val dynamicEntryBounds: SnapshotStateMap<String, Rect> = mutableStateMapOf()
 
     /** Whether an item being dragged in the mode's content would land on the dock if released now. */
     val isDropTargetHighlighted: MutableState<Boolean> = mutableStateOf(false)
@@ -207,8 +215,6 @@ internal fun HomeDockHost(
             onExtentChanged = onExtentChanged,
         )
 
-    val dynamicBoundsSink: (Rect?) -> Unit =
-        remember(hostState) { { bounds -> hostState.dynamicBounds.value = bounds } }
     var hostBoxOriginInRoot by remember { mutableStateOf<Offset?>(null) }
     Box(
         modifier =
@@ -221,7 +227,8 @@ internal fun HomeDockHost(
         Box(modifier = dockModifier.graphicsLayer { alpha = dockContentRevealAlpha() }) {
             CompositionLocalProvider(
                 LocalDockBackgroundAlpha provides dockBackgroundAlpha,
-                LocalDockDynamicBoundsSink provides dynamicBoundsSink,
+                LocalDockDynamicBoundsSink provides rememberDynamicBoundsSink(hostState),
+                LocalDockDynamicEntryBoundsSink provides rememberDynamicEntryBoundsSink(hostState),
             ) {
                 StandardHomeDockArea(
                     layout = visibleLayout,
@@ -392,3 +399,18 @@ private const val UNMEASURED_DOCK_EXTENT_PX = -1
 internal const val HOME_CONTENT_Z_INDEX = -1f
 
 private const val HOME_DOCK_FOLDER_Z_INDEX = 1f
+
+/** Where the dynamic section reports its bounds, into [hostState], for the dock pull to read. */
+@Composable
+private fun rememberDynamicBoundsSink(hostState: HomeDockHostState): (Rect?) -> Unit =
+    remember(hostState) { { bounds -> hostState.dynamicBounds.value = bounds } }
+
+/** Where each dynamic entry reports its bounds (null when it leaves), into [hostState], for the dock pull to read. */
+@Composable
+private fun rememberDynamicEntryBoundsSink(hostState: HomeDockHostState): (String, Rect?) -> Unit =
+    remember(hostState) {
+        { key, bounds ->
+            val known = hostState.dynamicEntryBounds
+            if (bounds == null) known.remove(key) else known[key] = bounds
+        }
+    }

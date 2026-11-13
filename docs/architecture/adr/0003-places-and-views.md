@@ -76,7 +76,7 @@ workspaces stop being user-facing.
 | **Home** | Apps, folders and widgets the user placed; the standard Android launcher model | Yes, by hand | It is the start page; swipe between its pages |
 | **Dock** | Pinned favourites on one side; on the other, live apps and the Stream button | Pins by hand; the dynamic side fills itself | Always visible, on every surface |
 | **Library** | Every installed app, and search | No, it sorts itself | Pull up on the Dock's pinned side; swipe down on Home opens it with search focused |
-| **Stream** | The actions centre: now playing and its queue, notifications, recent apps, events, to-dos, feeds | No; only which sections, their order and their view | Pull up on the Dock's dynamic side, or tap its Stream button; tapping a live app lands on that app's stack |
+| **Stream** | The actions centre: now playing and its queue, notifications, recent apps, events, to-dos, feeds | No; only which sections, their order and their view | Pull up on the Dock's dynamic side, or tap its Stream button; swiping up on a live app lands on that app's stack |
 
 Home press returns to the start page. Back closes the Library or collapses a focused card.
 
@@ -93,7 +93,9 @@ Each side of the Dock opens its own world: the pinned side the static one, the d
 | Pull up on the pinned side | Library |
 | Pull up on the dynamic side | Stream, tracking the finger; unfolded, stopping partway leaves a split |
 | Tap the Stream button | Switches to the Stream, and back to Home from it |
-| Tap a live app | Stream, landed on that app's stack |
+| Tap a live app | Launches the app |
+| Swipe up on a live app | Stream, landed on that app's stack, tracking the finger |
+| Tap now playing / swipe up on it | Launches the player / Stream, landed on Now |
 
 - The dynamic side holds apps with something new, plus one entry for now playing while media is active.
   Events, to-dos and feeds get no entry, because they are always present.
@@ -297,6 +299,12 @@ Later outcomes, driven by what the owner saw on the phone (all 2026-11-12):
 | 14 | Glass looked opaque near-black over the wallpaper | Fixed (#1450): the shader keeps the backdrop's alpha, each weight has a wallpaper tint floor, and the Dock follows its own "Dock background" setting exactly |
 | 15 | The Dock after the Dock rework was short and its icons small | Restored to the reference look (#1452): pinned icons always at the Icon size setting, a scrolling pinned run with edge fades and an 8 dp minimum gap, a compact dynamic side that leaves at least three pins, the bar one icon plus chrome tall. Custom dock colours were not restored |
 | 16 | Label pills on Home | Off by default (plain text with a soft shadow); "Label background" in Settings > Home turns the pill back on |
+
+Owner decisions after the first device run (2026-11-13):
+
+| # | Question | Decision |
+| --- | --- | --- |
+| 17 | What a tap on a live app on the Dock's dynamic side does | Live app tap opens the app; swipe up opens its stack. Now playing the same (tap opens the player, swipe up opens Now); the Stream button is unchanged |
 
 ## Consequences
 

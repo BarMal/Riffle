@@ -56,3 +56,30 @@ fun dockPullDestinationFor(
         streamShown -> DockPullDestination.HOME
         else -> DockPullDestination.STREAM
     }
+
+/** One entry of the dynamic side as the pull sees it: its [key] and its extent along the Dock's run (px). */
+data class DockPullEntryExtent(
+    val key: String,
+    val start: Float,
+    val end: Float,
+)
+
+/**
+ * The entry under a touch that landed at [position] along the Dock's run, in the same space as the [entries] extents,
+ * or null when it landed on none of them (the gap between entries, the Dock's padding, the pinned side). The last
+ * entry listed wins where two overlap, which is the one drawn on top.
+ */
+fun dockPullEntryAt(
+    position: Float,
+    entries: List<DockPullEntryExtent>,
+): String? = entries.lastOrNull { position >= it.start && position < it.end }?.key
+
+/**
+ * Which dynamic entry a pull lands the Stream on (ADR 0003, The Dock is the handle): a pull that opens the Stream and
+ * starts on an entry lands on that entry's page, the entry being [entryKey]; a pull that starts anywhere else, or
+ * leads to the Library or Home, lands where the Stream opens today (the last page). Null means "no landing".
+ */
+fun dockPullLandingEntry(
+    destination: DockPullDestination,
+    entryKey: String?,
+): String? = entryKey.takeIf { destination == DockPullDestination.STREAM }
