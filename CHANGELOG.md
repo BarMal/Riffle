@@ -9,6 +9,19 @@ has been run on a physical device except what the owner reported; see
 [`places-views-device-checklist.md`](docs/development/places-views-device-checklist.md), and export a backup before
 installing. Entries are in the order they were built; where a later one changes an earlier one, it says so.
 
+### Changed
+
+- One flat glass, lit at the edge: every glass surface is now a flat, even translucent tint with its light at the
+  edges, after the owner's desktop bar. A 1 dp border is brightest along the top and fades down the sides, following
+  the surface's own shape, with a soft specular hairline inside the top edge that fades out toward both ends; a
+  surface with a colour shows it as thin strips of light along its top and bottom edges (the spotlight already did
+  around the outline). Nothing scales with the surface's height, so the hard bevel, seam and dark wedge corners the old
+  sheen drew on pills and tall cards are gone. The weights are now different fill alphas (Thin 0.66, Regular 0.72, Thick
+  0.80) and keep the over-wallpaper legibility floors; the Dock still follows its "Dock background" setting exactly.
+  Reduced transparency is opaque with faint edge lights. It is plain Compose drawing, so the screenshot tests show the
+  real thing. Removed with it: the backdrop-refraction shader, the backdrop capture and the five-layer sheen, and the
+  "Frost strength" and "Edge refraction" settings (stored values still decode and are ignored).
+
 ### Added
 
 - Typed Stream content in the domain: `StreamContent` (notification, media with an optional queue, event including calendar feeds and the next alarm, article, task, recent app), the six `StreamSection`s and `StreamContentProvider`, which observes a section as loading, ready, empty, permission required, not connected, unavailable or off, with Hide rules and content levels applied and each section's fixed grouping, sorting and limits. The Stream (below) draws it.

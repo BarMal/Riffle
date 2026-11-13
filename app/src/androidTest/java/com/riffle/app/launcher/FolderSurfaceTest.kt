@@ -55,13 +55,14 @@ class FolderSurfaceTest {
         // transparent and shows the wallpaper. Sample the interior instead.
         val actual = image[image.width / 2, image.height / 2]
         val corner = image[0, 0]
-        // The surface is Regular glass: the panel tint at that weight's tint alpha over whatever is behind it.
-        // The sheen and the content scrim add a little on top, hence the wider tolerance.
+        // The surface is Regular glass: a flat fill of the panel tint at that weight's fill alpha over whatever is
+        // behind it. The centre is well away from the edge lights (a 1dp border and hairline), so the only slack
+        // needed is 8-bit rounding and the compositing order of the test device's GPU.
         val glass = GlassMaterialTokens.forWeight(GlassWeight.Regular)
         val expected =
             launcherThemeSurfaceTokens(colorScheme = lightScheme)
                 .panelColor
-                .copy(alpha = glass.softwareTintAlpha(supportsBlur = true))
+                .copy(alpha = glass.fillAlpha)
                 .compositeOver(wallpaper)
 
         assertColorClose(expected, actual, tolerance = GLASS_TOLERANCE)
@@ -88,6 +89,6 @@ class FolderSurfaceTest {
     }
 
     private companion object {
-        const val GLASS_TOLERANCE = 0.06f
+        const val GLASS_TOLERANCE = 0.03f
     }
 }

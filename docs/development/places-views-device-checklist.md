@@ -19,17 +19,25 @@ Use a busy, bright wallpaper and then a dark one.
 
 - [ ] **Dock at the default (72%) shows the wallpaper.** Expected: the wallpaper is visible through the Dock, tinted, text
       and icons readable. Failure: an opaque near-black bar (the bug fixed in #1450 returning).
-- [ ] **Dock background 0% is clear, 100% is opaque** (Settings > Dock). Expected: exactly that, with sheen still drawn
+- [ ] **Dock background 0% is clear, 100% is opaque** (Settings > Dock). Expected: exactly that, with the edge lights still drawn
       at 0%. Failure: 0% still looks tinted, or 100% still shows the wallpaper.
 - [ ] **Search pill, folders (open one), page indicator, widget frames** are translucent over the wallpaper, not black.
 - [ ] **Text over a bright wallpaper** on the Dock, folders and Settings sections stays readable.
-- [ ] **Library sheet and Stream cards** over Home or the Stream blur what is behind them (app content), unlike chrome
-      over the wallpaper, which can only tint. Failure: a flat opaque sheet, or a visible tint seam.
+- [ ] **Flat body, lit edge** (the owner's dislike of the old bevel). Look at the spine, a page header, a Stream
+      card (Stack and List, and a tall one such as now playing), the Dock and the search pill. Expected: one even
+      tint with no lighter band, trapezoid, horizontal seam or dark corner wedges; a thin bright edge along the top
+      that fades down the sides, following the rounded corners exactly; a faint line just inside the top edge that
+      fades out toward both ends. A tall card has the same edge as a pill. Failure: any bevel, or an edge that is
+      thicker on tall surfaces.
+- [ ] **Library sheet and Stream cards** are a flat Thick or Regular tint over what is behind them with the same edge
+      lights. Failure: a visible tint seam.
+- [ ] **Tint as light.** A card from a coloured app shows that colour as a thin glow along its edges, not as a
+      coloured body; text stays readable.
 - [ ] **Reduced transparency** (Settings > Appearance): every glass surface becomes an opaque tint, no wallpaper
-      showing, sheen faint. Turn it off again and the glass returns.
-- [ ] **Sheen and spotlight follow the rounded Dock**: the highlight hugs the corners; the colour glow under pinned
-      icons moves when the icons change and stops (no idle animation, check with a profiler or battery drain overnight if
-      in doubt). Folders and the Library search results panel also glow from their icons.
+      showing, edge lights faint. Turn it off again and the glass returns.
+- [ ] **Spotlight follows the rounded Dock**: the colour glow under pinned icons hugs the corners and moves when the
+      icons change and stops (no idle animation, check with a profiler or battery drain overnight if in doubt).
+      Folders and the Library search results panel also glow from their icons.
 - [ ] **Reduced motion** (system "Remove animations" or Settings > Motion): the spotlight snaps and every page,
       split and Library change is a cut or a fade, never a slide.
 

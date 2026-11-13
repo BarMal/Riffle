@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,20 +21,19 @@ import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.ResolvedLiquidGlass
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Glass over the system wallpaper. On a real phone the wallpaper is outside the app's content, so the
- * backdrop the glass shader samples is TRANSPARENT there. These tests mimic that: a pure red root
- * (the wallpaper), and beside the glass a captured backdrop whose content is transparent. The glass
- * must show the red through the tint; a shader that always outputs an opaque pixel shows an opaque
- * dark tint with no red in it (the regression these guard against).
+ * Glass over the system wallpaper. On a real phone the wallpaper is outside the app, so all the glass
+ * can do is lay its flat tint over it. These tests mimic that with a pure red root (the wallpaper) and
+ * check the centre of a surface -- well away from the 1dp edge lights and the 24dp the border takes to
+ * fade -- is exactly the tint at the weight's fill alpha over red: `tint * a + red * (1 - a)`.
  *
- * They run the real AGSL shader path (API 33+, a backdrop installed, glass settings provided, not
- * Robolectric), so they assume API 33+ and are meaningless on the JVM.
+ * Assumptions: the test device renders sRGB with plain source-over compositing (so 8-bit rounding is
+ * the only error, hence a 0.03 tolerance, a few 1/255 steps), and the surface is 200dp square so the
+ * centre is 100dp from every edge.
  */
 @RunWith(AndroidJUnit4::class)
 class GlassOverWallpaperTest {
@@ -43,32 +41,24 @@ class GlassOverWallpaperTest {
     val composeRule = createComposeRule()
 
     private val wallpaper = Color.Red
-    private val glassSettings = ResolvedLiquidGlass(0.45f, 0.2f, false)
+    private val glassSettings = ResolvedLiquidGlass(reducedMotion = false)
 
     @Test
-    fun regularGlassOverATransparentBackdropShowsTheWallpaperThroughTheTint() {
-        assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+    fun regularGlassShowsTheWallpaperThroughItsFlatTint() {
         val tint = Color(0xFFFFFBFE)
         composeRule.setContent {
             Box(Modifier.fillMaxSize().background(wallpaper)) {
                 LightTheme {
-                    ProvideLiquidGlassBackdrop { backdropCapture ->
-                        // The captured content is empty: the wallpaper area. It is a sibling of the glass, so the
-                        // glass never samples itself.
-                        Box(Modifier.fillMaxSize().then(backdropCapture))
-                        GlassSurface(
-                            modifier = Modifier.size(200.dp).testTag(TAG),
-                            weight = GlassWeight.Regular,
-                            tint = tint,
-                        )
-                    }
+                    GlassSurface(
+                        modifier = Modifier.size(200.dp).testTag(TAG),
+                        weight = GlassWeight.Regular,
+                        tint = tint,
+                    )
                 }
             }
         }
 
-        val tokens = GlassMaterialTokens.regular
-        val alpha = tokens.shaderTintAlphaOverWallpaper(tokens.effectiveFrost(glassSettings.frostStrengthFraction))
-        val expected = tint.copy(alpha = alpha).compositeOver(wallpaper)
+        val expected = tint.copy(alpha = GlassMaterialTokens.regular.fillAlpha).compositeOver(wallpaper)
         val actual = centrePixel()
 
         assertClose(expected, actual)
@@ -78,21 +68,18 @@ class GlassOverWallpaperTest {
 
     @Test
     fun dockBackgroundAtZeroPercentIsClearOverTheWallpaper() {
-        assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
         setDock(backgroundAlphaPercent = 0)
         assertClose(wallpaper, centrePixel())
     }
 
     @Test
     fun dockBackgroundAtOneHundredPercentIsTheTintOverTheWallpaper() {
-        assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
         setDock(backgroundAlphaPercent = 100)
         assertClose(lightScheme.surfaceVariant, centrePixel())
     }
 
     @Test
     fun dockBackgroundAtFiftyPercentIsHalfTheTintOverTheWallpaper() {
-        assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
         setDock(backgroundAlphaPercent = 50)
         assertClose(lightScheme.surfaceVariant.copy(alpha = 0.5f).compositeOver(wallpaper), centrePixel())
     }
@@ -102,15 +89,12 @@ class GlassOverWallpaperTest {
         composeRule.setContent {
             Box(Modifier.fillMaxSize().background(wallpaper)) {
                 LightTheme {
-                    ProvideLiquidGlassBackdrop { backdropCapture ->
-                        Box(Modifier.fillMaxSize().then(backdropCapture))
-                        Box(
-                            Modifier
-                                .size(240.dp, 96.dp)
-                                .testTag(TAG)
-                                .dockSurfaceAppearance(dock),
-                        )
-                    }
+                    Box(
+                        Modifier
+                            .size(240.dp, 96.dp)
+                            .testTag(TAG)
+                            .dockSurfaceAppearance(dock),
+                    )
                 }
             }
         }
@@ -135,7 +119,6 @@ class GlassOverWallpaperTest {
         expected: Color,
         actual: Color,
     ) {
-        // The sheen adds a little light on top, hence the tolerance.
         val ok =
             kotlin.math.abs(expected.red - actual.red) < TOLERANCE &&
                 kotlin.math.abs(expected.green - actual.green) < TOLERANCE &&
@@ -145,6 +128,6 @@ class GlassOverWallpaperTest {
 
     private companion object {
         const val TAG = "glassOverWallpaper"
-        const val TOLERANCE = 0.08f
+        const val TOLERANCE = 0.03f
     }
 }

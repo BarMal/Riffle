@@ -25,8 +25,8 @@ import com.riffle.core.domain.launcher.settings.ResolvedLiquidGlass
  * The theme follows the Robolectric `night` qualifier through its SYSTEM mode, which is how the
  * dark-theme variants are produced.
  *
- * Glass is always on; [reducedTransparency] is the one top-level off switch for it (opaque tint,
- * faint sheen).
+ * Glass is always on; [reducedTransparency] is the one top-level off switch for it (opaque fill,
+ * faint edge lights).
  */
 @Composable
 internal fun ScreenshotBackdrop(
@@ -37,8 +37,6 @@ internal fun ScreenshotBackdrop(
         reducedTransparency = reducedTransparency,
         liquidGlass =
             ResolvedLiquidGlass(
-                0.45f,
-                0.2f,
                 reducedMotion = false,
                 reducedTransparency = reducedTransparency,
             ),
