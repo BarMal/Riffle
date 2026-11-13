@@ -51,7 +51,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | **Privacy and access** | Access | Default home app, notification access, usage access, calendar, floating dock access, each with its state and a way to change it |
 | | Privacy | Hide launcher content in screenshots and recents; how much the Stream shows (content level) for each source that can show private content |
 | **Backup** | | Export, import. Includes calendar feeds and which Stream sections are on. Never content, never any token |
-| **About** | | Version and build |
+| **About** | | Version and build. Diagnostics: **What apps publish** (opens a read-only sub-page listing what each app exposes to a launcher: shortcuts, notification shapes, media session, widgets, with a redacted Copy report; never notification text or contact names) |
 
 Removed pages: Workspaces, Sources and its nine source detail pages, Saved lenses, Contextual, Cards appearance
 (redirect), RSS feeds and Calendar feeds as top-level pages, Permissions and Privacy as two pages (merged), the
