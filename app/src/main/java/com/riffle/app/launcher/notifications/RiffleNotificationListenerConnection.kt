@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.notifications
 
+import android.service.notification.StatusBarNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 
 object RiffleNotificationListenerConnection {
@@ -35,6 +36,13 @@ object RiffleNotificationListenerConnection {
         key: LauncherNotificationKey,
         durationMillis: Long,
     ): Boolean = listener?.snooze(key, durationMillis) ?: false
+
+    /**
+     * The platform's active notifications, read straight from the connected listener for the diagnostics page;
+     * null when the listener is not connected or the read fails.
+     */
+    fun activeNotifications(): List<StatusBarNotification>? =
+        listener?.let { connected -> runCatching { connected.activeNotifications?.toList() }.getOrNull() }
 
     private fun notifyObservers() {
         observers.toList().forEach { observer -> observer() }

@@ -32,11 +32,21 @@ internal fun SettingsHiddenAppsPageContent(
 }
 
 @Composable
-internal fun SettingsVersionPageContent(state: SettingsSurfaceState) {
+internal fun SettingsVersionPageContent(
+    state: SettingsSurfaceState,
+    onPageSelected: (SettingsPage) -> Unit,
+) {
     SettingsSection(title = stringResource(R.string.settings_page_version)) {
         VersionInformationSetting(
             appVersionLabel = state.appVersionLabel,
             appBuildIdentityLabel = state.appBuildIdentityLabel,
+        )
+    }
+    SettingsSection(title = stringResource(R.string.settings_section_diagnostics)) {
+        SettingsClickableRow(
+            title = stringResource(R.string.settings_page_app_publish),
+            subtitle = stringResource(R.string.settings_page_app_publish_summary),
+            onClick = { onPageSelected(SettingsPage.APP_PUBLISH) },
         )
     }
 }

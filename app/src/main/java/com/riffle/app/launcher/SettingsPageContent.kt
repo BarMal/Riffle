@@ -72,7 +72,8 @@ internal fun SettingsPageContent(
             SettingsPage.MOTION -> SettingsMotionPageContent(state = state, onAction = onAction)
             SettingsPage.PRIVACY -> SettingsPrivacyPageContent(state = state, onAction = onAction)
             SettingsPage.BACKUP -> SettingsBackupPageContent(onAction = onAction)
-            SettingsPage.VERSION -> SettingsVersionPageContent(state = state)
+            SettingsPage.VERSION -> SettingsVersionPageContent(state = state, onPageSelected = onPageSelected)
+            SettingsPage.APP_PUBLISH -> SettingsAppPublishPageContent(state = state)
         }
     }
 }
