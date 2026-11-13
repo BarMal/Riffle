@@ -42,7 +42,7 @@ data class StreamSectionLayout(
 
 /**
  * How Home and the Stream share an expanded posture (ADR 0003, Folded and unfolded), remembered per posture: the
- * Stream's [fraction] of the room when split, and the [lastShown] state the Stream button returns to ([SplitMode.SPLIT]
+ * Stream's [fraction] of the room when split, and the [lastShown] state the Dock press returns to ([SplitMode.SPLIT]
  * or [SplitMode.STREAM_ONLY], never Home only). Folded and phone postures store the defaults and never read them.
  */
 data class StreamSplit(

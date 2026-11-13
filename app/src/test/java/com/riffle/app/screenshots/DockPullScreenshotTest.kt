@@ -8,7 +8,6 @@ import androidx.compose.ui.test.performTouchInput
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
-import com.riffle.app.launcher.dockDynamicSectionTileTestTag
 import com.riffle.app.launcher.stream.STREAM_SURFACE_TEST_TAG
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -25,10 +24,13 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The Dock pull by side (ADR 0003, The Dock is the handle) through the real [HomeDestination]: a pull that starts on
- * the dynamic side opens the Stream, tracking the finger (the Stream slides in from the Dock's edge as Home fades),
- * one that starts on the pinned side opens the Library, and a short pull springs back. The shell is stood in for by
- * recording the actions the pull asks for. Screenshots: at rest, mid-pull, and mid-pull with reduced motion.
+ * The Dock's two gestures through the real [HomeDestination] (ADR 0003, Amendment 3): a pull away from the Dock's edge
+ * opens the Library (tracking the finger, as the sheet rises from the Dock's edge), whichever side of the Dock it
+ * starts
+ * on, and a press toward the edge, released past the threshold, toggles Home and the Stream (the existing transition
+ * then
+ * runs from rest); a short pull or press springs back. The shell is stood in for by recording the actions the gesture
+ * asks for. Screenshots: at rest, mid-pull to the Library (also with reduced motion), and the Dock pressed.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -46,34 +48,33 @@ class DockPullScreenshotTest {
     }
 
     @Test
-    fun streamPullMid() {
+    fun libraryPullMid() {
         render(ScreenshotFixtures.homeState())
-        pull(from = Side.DYNAMIC, fraction = 0.35f, release = false)
-        composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).assertExists()
+        pull(fraction = 0.35f, release = false)
         composeRule.captureScreen()
     }
 
     @Test
-    fun streamPullMidReducedMotion() {
+    fun libraryPullMidReducedMotion() {
         val reduced =
             LauncherSettings(motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON))
         render(ScreenshotFixtures.homeState().copy(launcherSettings = reduced))
-        pull(from = Side.DYNAMIC, fraction = 0.35f, release = false)
+        pull(fraction = 0.35f, release = false)
         composeRule.captureScreen()
     }
 
     @Test
-    fun aPullFromTheDynamicSideOpensTheStream() {
+    fun theDockPressedDownBeforeTheRelease() {
         render(ScreenshotFixtures.homeState())
-        pull(from = Side.DYNAMIC, fraction = 0.6f, release = true)
-        composeRule.waitForIdle()
-        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
+        composeRule.pressDock(distancePx = PRESS_PX, release = false)
+        composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).assertDoesNotExist()
+        composeRule.captureScreen()
     }
 
     @Test
-    fun aPullFromThePinnedSideOpensTheLibrary() {
+    fun aPullOnTheDockOpensTheLibrary() {
         render(ScreenshotFixtures.homeState())
-        pull(from = Side.PINNED, fraction = 0.6f, release = true)
+        pull(fraction = 0.6f, release = true)
         composeRule.waitForIdle()
         assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenAppDrawer), actions)
     }
@@ -81,48 +82,79 @@ class DockPullScreenshotTest {
     @Test
     fun aShortPullSpringsBackAndOpensNothing() {
         render(ScreenshotFixtures.homeState())
-        pull(from = Side.DYNAMIC, fraction = 0.08f, release = true)
+        pull(fraction = 0.08f, release = true)
         composeRule.waitForIdle()
         assertTrue(actions.isEmpty())
         composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).assertDoesNotExist()
     }
 
     @Test
-    fun theSamePullFromTheStreamReturnsHome() {
+    fun aPullFromTheStreamStillOpensTheLibraryOverIt() {
         render(ScreenshotFixtures.homeState(), streamShown = true)
-        pull(from = Side.DYNAMIC, fraction = 0.6f, release = true)
-        composeRule.waitForIdle()
-        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenHome), actions)
-    }
-
-    @Test
-    fun aPinnedSidePullFromTheStreamOpensTheLibrary() {
-        render(ScreenshotFixtures.homeState(), streamShown = true)
-        pull(from = Side.PINNED, fraction = 0.6f, release = true)
+        pull(fraction = 0.6f, release = true)
         composeRule.waitForIdle()
         assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenAppDrawer), actions)
     }
 
     @Test
-    fun aBottomDockPullsUpToTheStream() = streamPullOn(DockPosition.BOTTOM)
-
-    @Test
-    fun aTopDockPullsDownToTheStream() = streamPullOn(DockPosition.TOP)
-
-    @Test
-    fun aLeftDockPullsRightToTheStream() = streamPullOn(DockPosition.LEFT)
-
-    @Test
-    fun aRightDockPullsLeftToTheStream() = streamPullOn(DockPosition.RIGHT)
-
-    private fun streamPullOn(edge: DockPosition) {
-        render(ScreenshotFixtures.homeState(dockPosition = edge))
-        pull(from = Side.DYNAMIC, fraction = 0.6f, release = true, edge = edge)
-        composeRule.waitForIdle()
+    fun aPressOpensTheStream() {
+        render(ScreenshotFixtures.homeState())
+        composeRule.pressDock(distancePx = PRESS_PX)
         assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
     }
 
-    private enum class Side { PINNED, DYNAMIC }
+    @Test
+    fun theSamePressFromTheStreamReturnsHome() {
+        render(ScreenshotFixtures.homeState(), streamShown = true)
+        composeRule.pressDock(distancePx = PRESS_PX)
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenHome), actions)
+    }
+
+    @Test
+    fun aShortPressSpringsBackAndOpensNothing() {
+        render(ScreenshotFixtures.homeState())
+        // Past touch slop (16 dp) so it is a press, short of the 28 dp threshold, on whatever density the device has.
+        composeRule.pressDock(distancePx = SHORT_PRESS_DP * composeRule.density.density)
+        assertTrue(actions.isEmpty())
+        composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun aBottomDockIsPressedDown() = pressOn(DockPosition.BOTTOM)
+
+    @Test
+    fun aTopDockIsPressedUp() = pressOn(DockPosition.TOP)
+
+    @Test
+    fun aLeftDockIsPressedLeft() = pressOn(DockPosition.LEFT)
+
+    @Test
+    fun aRightDockIsPressedRight() = pressOn(DockPosition.RIGHT)
+
+    @Test
+    fun aBottomDockPulledUpOpensTheLibrary() = pullOn(DockPosition.BOTTOM)
+
+    @Test
+    fun aTopDockPulledDownOpensTheLibrary() = pullOn(DockPosition.TOP)
+
+    @Test
+    fun aLeftDockPulledRightOpensTheLibrary() = pullOn(DockPosition.LEFT)
+
+    @Test
+    fun aRightDockPulledLeftOpensTheLibrary() = pullOn(DockPosition.RIGHT)
+
+    private fun pullOn(edge: DockPosition) {
+        render(ScreenshotFixtures.homeState(dockPosition = edge))
+        pull(fraction = 0.6f, release = true, edge = edge)
+        composeRule.waitForIdle()
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenAppDrawer), actions)
+    }
+
+    private fun pressOn(edge: DockPosition) {
+        render(ScreenshotFixtures.homeState(dockPosition = edge))
+        composeRule.pressDock(distancePx = PRESS_PX, edge = edge)
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
+    }
 
     private fun render(
         state: LauncherShellState,
@@ -142,13 +174,8 @@ class DockPullScreenshotTest {
         composeRule.waitForIdle()
     }
 
-    /**
-     * A steady pull away from the dock's edge by a fraction of the window, starting on the dock's [from] side: the
-     * Stream button's tile for the dynamic side, the start of the dock's own area (before the dynamic section) for the
-     * pinned one.
-     */
+    /** A steady pull away from the dock's edge by a fraction of the window, starting on the Dock's body. */
     private fun pull(
-        from: Side,
         fraction: Float,
         release: Boolean,
         edge: DockPosition = DockPosition.BOTTOM,
@@ -161,17 +188,8 @@ class DockPullScreenshotTest {
                 DockPosition.TOP, DockPosition.LEFT -> 1f
             }
         val total = (if (vertical) window.height else window.width) * fraction * sign
-        val tag = if (from == Side.DYNAMIC) dockDynamicSectionTileTestTag("Stream") else HOME_DOCK_PULL_TEST_TAG
-        composeRule.onNodeWithTag(tag).performTouchInput {
-            val start =
-                if (from == Side.DYNAMIC) {
-                    center
-                } else if (vertical) {
-                    Offset(width * PINNED_FRACTION, height / 2f)
-                } else {
-                    Offset(width / 2f, height * PINNED_FRACTION)
-                }
-            down(start)
+        composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).performTouchInput {
+            down(center)
             repeat(PULL_STEPS) {
                 moveBy(if (vertical) Offset(0f, total / PULL_STEPS) else Offset(total / PULL_STEPS, 0f))
             }
@@ -182,6 +200,7 @@ class DockPullScreenshotTest {
 
     private companion object {
         const val PULL_STEPS = 12
-        const val PINNED_FRACTION = 0.05f
+        const val PRESS_PX = 150f
+        const val SHORT_PRESS_DP = 22f
     }
 }

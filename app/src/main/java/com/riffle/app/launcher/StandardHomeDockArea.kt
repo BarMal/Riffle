@@ -48,6 +48,7 @@ internal fun StandardHomeDockArea(
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
     dynamicEntries: List<DockDynamicEntry> = emptyList(),
     onDynamicEntryDelegated: (String) -> Unit = {},
+    contextual: Boolean = false,
     staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     staticItemTapOverride: (AppIdentity) -> LauncherShellAction? = { null },
     isDraggedItemOverDock: Boolean = false,
@@ -134,6 +135,7 @@ internal fun StandardHomeDockArea(
                 widgetPickerDockPreview = widgetPickerDockPreview,
                 dynamicEntries = dynamicEntries,
                 onDynamicEntryDelegated = onDynamicEntryDelegated,
+                contextual = contextual,
             )
         }
     }
@@ -182,6 +184,7 @@ private fun DockOrShelf(
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
     dynamicEntries: List<DockDynamicEntry>,
     onDynamicEntryDelegated: (String) -> Unit,
+    contextual: Boolean,
 ) {
     if (showDockShelf) {
         ExpandedDockSurface(
@@ -213,6 +216,7 @@ private fun DockOrShelf(
             // same section with room to say more, so drawing both would show every entry twice.
             dynamicEntries = dynamicEntries,
             onDynamicEntryDelegated = onDynamicEntryDelegated,
+            contextual = contextual,
         )
     }
 }

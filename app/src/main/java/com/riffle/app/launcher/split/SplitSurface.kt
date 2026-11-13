@@ -127,7 +127,7 @@ internal class SplitPaneState(private val scope: CoroutineScope) {
     /** Whether something other than rest is moving the panes. */
     fun isMoving(pull: DockPullState): Boolean = (pull.running && pull.splitting) || dragShare != null || settling
 
-    /** Where a pull starts: the mode now, the mode a Stream button returns to, and whether a split fits. */
+    /** Where a pull starts: the mode now, the mode a press of the Dock returns to, and whether a split fits. */
     fun pullSetup(): SplitPullSetup = SplitPullSetup(restMode, split.lastShown, splitAvailable)
 
     /** Whether the divider is composed: in a split at rest, or being moved by the user. */

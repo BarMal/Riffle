@@ -7,7 +7,7 @@ data class DockModel(
     val isEnabled: Boolean = true,
     /**
      * How many live apps (apps with something new) the dynamic side shows, between [MIN_DOCK_LIVE_APP_SLOTS] (none:
-     * the side holds only now playing and the Stream button) and [MAX_DOCK_LIVE_APP_SLOTS]. It replaces the earlier
+     * the side holds only now playing) and [MAX_DOCK_LIVE_APP_SLOTS]. It replaces the earlier
      * "show notification cards" switch and "notification slot count" (ADR 0003, The Dock is the handle); the dynamic
      * side is drawn in full ahead of the pinned icons, and more live apps than this are reached in the Stream.
      */

@@ -40,7 +40,7 @@ import java.util.concurrent.Executor
 
 private const val STREAM_HOST_TEST_NOW = 1_767_225_600_000L
 
-/** A [StreamHost] over no sources, with a fixed clock: the Stream draws its states, the Dock its Stream button. */
+/** A [StreamHost] over no sources, with a fixed clock: the Stream draws its states, the Dock its tiles. */
 internal fun emptyStreamHost(): StreamHost =
     StreamHost(
         provider =

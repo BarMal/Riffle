@@ -31,7 +31,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The Stream (ADR 0003, Views; P13 and P14): the pager of pages on compact phones, every section's page in both views
- * with its spine, the section states as pages, an expanded notification thread and now-playing queue, the whole
+ * in the Dock's order (no spine or header), the section states as pages, an expanded notification thread and
+ * now-playing queue, the whole
  * surface in the dark, with large text and with reduced transparency, the Show as menu, and unfolded: two pages side by
  * side and the Stage view with its rail, full and collapsed. The clock, the images and the locale are fixed
  * (`StreamFixtures`), so a render is the same every run.
@@ -44,7 +45,7 @@ class StreamScreenshotTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun pagerOpensOnTheFirstPageWithItsSpine() = surface()
+    fun pagerOpensOnTheFirstPage() = surface()
 
     @Test
     fun nowStack() = page(StreamPageKeys.NOW, StreamView.STACK)
@@ -153,14 +154,7 @@ class StreamScreenshotTest {
     }
 
     @Test
-    fun spineLaterInTheRowWithTheCurrentPageEmphasised() = surface(initialPageKey = StreamPageKeys.TASKS)
-
-    @Test
-    fun showAsMenuOnAPageHeader() {
-        surface(initialPageKey = StreamPageKeys.MAIL)
-        composeRule.onNodeWithContentDescription("Notifications options").performClick()
-        composeRule.captureScreen()
-    }
+    fun aPageLaterInTheDocksOrderWithNoSpineOrHeader() = surface(initialPageKey = StreamPageKeys.TASKS)
 
     @Test
     fun everySectionHiddenOffersThemBack() {

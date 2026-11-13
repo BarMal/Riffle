@@ -17,10 +17,12 @@ import com.riffle.app.launcher.DockInteractions
 import com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.dockCrossAxisDp
+import com.riffle.app.launcher.stream.glyph
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.stream.StreamSection
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -43,7 +45,7 @@ class DockSizingScreenshotTest {
 
     @Test
     fun fivePinsFitBesideTheDynamicSide() {
-        // The phone template: Home and dock icons are the same 44 dp, and five pins plus the Stream button fit.
+        // The phone template: Home and dock icons are the same 44 dp, and five pins plus a tile fit.
         render(ScreenshotFixtures.homeState(sizing = sizing(pins = 5)))
         assertDockHeight(dockIconSizeDp = 44)
     }
@@ -126,7 +128,7 @@ class DockSizingScreenshotTest {
         assertDockHeight(dockIconSizeDp = 56)
     }
 
-    /** The Dock alone: [liveApps] live apps and the Stream button on its dynamic side, none at all when null. */
+    /** The Dock alone: [liveApps] live apps and a tile on its dynamic side, none at all when null. */
     private fun renderDock(
         pins: Int,
         iconSizeDp: Int,
@@ -155,7 +157,7 @@ class DockSizingScreenshotTest {
                         interactions = DockInteractions(onAction = {}),
                         dynamicEntries =
                             liveApps?.let {
-                                live.mapIndexed { index, app -> liveEntry(app, badgeCount = index + 1) } + streamEntry
+                                live.mapIndexed { index, app -> liveEntry(app, badgeCount = index + 1) } + tileEntry
                             }.orEmpty(),
                     )
                 }
@@ -177,16 +179,16 @@ class DockSizingScreenshotTest {
         intent = DockDynamicEntryIntent.Delegate,
     )
 
-    private val streamEntry =
+    private val tileEntry =
         DockDynamicEntry(
-            key = "stream",
-            label = "Stream",
+            key = "ctx:now",
+            label = "Now",
             identity = null,
             badgeCount = 0,
             isSelected = false,
-            contentDescription = "Open Stream",
+            contentDescription = "Now",
             intent = DockDynamicEntryIntent.Delegate,
-            symbol = DockDynamicSymbol.Stream,
+            symbol = DockDynamicSymbol.Glyph(StreamSection.NOW.glyph()),
         )
 
     private fun render(

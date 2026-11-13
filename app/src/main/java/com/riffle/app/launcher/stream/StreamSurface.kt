@@ -29,6 +29,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
@@ -55,6 +56,9 @@ import com.riffle.app.launcher.GlassSurface
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
+import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
+import com.riffle.core.domain.launcher.dock.DockPageOrder
+import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.stream.StreamFocus
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
@@ -65,10 +69,10 @@ import com.riffle.core.domain.launcher.stream.StreamPagePlanner
 import com.riffle.core.domain.launcher.stream.StreamPagesPerView
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
-import com.riffle.core.domain.launcher.stream.StreamSpine
 import com.riffle.core.domain.launcher.stream.StreamStage
 import com.riffle.core.domain.launcher.stream.StreamView
 import com.riffle.core.domain.launcher.stream.StreamWideView
+import com.riffle.core.domain.launcher.stream.ref
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -84,8 +88,11 @@ private const val CLOCK_TICK_MILLIS = 30_000L
 private class PageJump(val key: String, val id: Long)
 
 /**
- * The Stream (ADR 0003, Views): the actions centre as a horizontal pager of pages, each page one vertically scrolling
- * stack or list of one section's content (see [StreamPagePlanner]), with the spine above it as the page indicator. On
+ * The Stream (ADR 0003, Views, Amendment 3): the actions centre as a horizontal pager of pages, each page one
+ * vertically
+ * scrolling stack or list of one section's content (see [StreamPagePlanner]), in the Dock's order ([DockPageOrder]).
+ * There is no spine or page header: the Dock's contextual mode is the page indicator ([dockLink] tells it which page is
+ * open and lists the pages), and a long-press of a tile there asks for the page options. On
  * an expanded posture ([wideLayout]) the layout's [StreamWideView] chooses between that pager (two pages side by side
  * when the width allows) and the Stage view, a rail of live stages beside the selected stage's stack.
  *
@@ -112,6 +119,12 @@ internal fun StreamSurface(
     onPageChanged: (String) -> Unit = {},
     /** An expanded posture: the Stage view and two pages side by side are available. */
     wideLayout: Boolean = false,
+    /** How many live apps the Dock shows, which the order of the pages follows. */
+    liveAppSlots: Int = DEFAULT_DOCK_LIVE_APP_SLOTS,
+    /**
+     * Where the Dock's contextual mode learns the pages and the open one, and asks for a page option; null in tests.
+     */
+    dockLink: StreamDockLink? = null,
 ) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -172,16 +185,22 @@ internal fun StreamSurface(
             },
         )
 
-    val pages = remember(layout, results) { StreamPagePlanner.plan(layout, results) }
+    val dockEntries = remember(results, liveAppSlots) { results.dockLiveEntries(liveAppSlots) }
+    val pages =
+        remember(layout, results, dockEntries) {
+            DockPageOrder.order(
+                pages = StreamPagePlanner.plan(layout, results),
+                liveGroupKeys = DockPageOrder.liveGroupKeys(dockEntries),
+                nowPlaying = dockEntries.any { entry -> entry is DockDynamicSideEntry.NowPlaying },
+            )
+        }
     val state = rememberStreamPageState(pages, results, initialPageKey, focusRequest, onFocusHandled, env.reducedMotion)
     LaunchedEffect(state.settledKey, state.restoring) {
         val key = state.settledKey
         if (key != null && !state.restoring) onPageChanged(key)
     }
-    val enabled = layout.enabledSections
-    val actionsFor: (StreamPage) -> StreamPageActions = { page ->
-        val index = enabled.indexOfFirst { it.section == page.section }
-        StreamPageActions(index > 0, index in 0 until enabled.lastIndex) { view -> onShowAs(page.section, view) }
+    if (dockLink != null) {
+        DockLinkEffects(dockLink, pages, surfaceCallbacks, onShowAs)
     }
     val menu =
         StreamMenuModel(
@@ -202,9 +221,9 @@ internal fun StreamSurface(
                         state = state,
                         env = liveEnv,
                         callbacks = surfaceCallbacks,
-                        actionsFor = actionsFor,
                         menu = menu,
                         onMenuAction = onMenuAction,
+                        dockLink = dockLink,
                     )
                 else ->
                     StreamPagesMode(
@@ -212,10 +231,8 @@ internal fun StreamSurface(
                         state = state,
                         env = liveEnv,
                         callbacks = surfaceCallbacks,
-                        actionsFor = actionsFor,
-                        menu = menu,
-                        onMenuAction = onMenuAction,
                         perView = StreamPagesPerView.forWidth(widthDp, wideLayout),
+                        dockLink = dockLink,
                     )
             }
         }
@@ -321,7 +338,7 @@ private fun StreamFocusRequest.isWaiting(pages: List<StreamPage>): Boolean {
     return (page?.body as? StreamPageBody.State)?.result == StreamSectionResult.Loading
 }
 
-/** The pager of pages with the spine above it. Two pages share the width when [perView] is 2. */
+/** The pager of pages. Two pages share the width when [perView] is 2. */
 @Composable
 @Suppress("LongParameterList", "LongMethod")
 private fun StreamPagesMode(
@@ -329,10 +346,8 @@ private fun StreamPagesMode(
     state: StreamPageState,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
-    actionsFor: (StreamPage) -> StreamPageActions,
-    menu: StreamMenuModel,
-    onMenuAction: (StreamMenuAction) -> Unit,
     perView: Int,
+    dockLink: StreamDockLink?,
 ) {
     val latestPages by rememberUpdatedState(pages)
     val keys = pages.map { it.key }
@@ -365,56 +380,42 @@ private fun StreamPagesMode(
             latestPages.getOrNull(pagerState.currentPage)?.key?.let { key -> state.select(key, jump = false) }
         }
     }
+    // The page in front is the Dock's open icon: it follows the pager, so a swipe moves the ring when it passes
+    // halfway.
+    LaunchedEffect(pagerState, dockLink) {
+        snapshotFlow { latestPages.getOrNull(pagerState.currentPage)?.key }
+            .collect { key -> dockLink?.publishCurrent(key) }
+    }
     val previousPage = stringResource(R.string.stream_previous_page)
     val nextPage = stringResource(R.string.stream_next_page)
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {
-        StreamSpineBar(
-            pages = pages,
-            currentIndex = pagerState.currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0)),
-            focusIndex =
-                StreamSpine.focusIndex(
-                    pagerState.currentPage,
-                    pagerState.currentPageOffsetFraction,
-                    pages.size,
-                ),
-            env = env,
-            menu = menu,
-            onSelect = goTo,
-            onMenuAction = onMenuAction,
-            modifier = Modifier.padding(horizontal = RiffleSpacing.l),
-        )
-        HorizontalPager(
-            state = pagerState,
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .testTag(STREAM_PAGER_TEST_TAG)
-                    .semantics {
-                        // The one custom-actions list of the pager: every swipe has an action.
-                        customActions =
-                            listOf(
-                                CustomAccessibilityAction(previousPage) {
-                                    goTo(pagerState.currentPage - 1)
-                                    pagerState.currentPage > 0
-                                },
-                                CustomAccessibilityAction(nextPage) {
-                                    goTo(pagerState.currentPage + 1)
-                                    pagerState.currentPage < latestPages.lastIndex
-                                },
-                            )
-                    },
-            pageSize = if (perView > 1) splitPageSize(perView) else PageSize.Fill,
-            pageSpacing = RiffleSpacing.s,
-            beyondViewportPageCount = 0,
-            key = { index -> latestPages.getOrNull(index)?.key ?: index },
-        ) { index ->
-            val page = latestPages.getOrNull(index)
-            if (page != null) {
-                val actions = actionsFor(page)
-                StreamPageView(page, env, callbacks, actions.canMoveUp, actions.canMoveDown, actions.onShowAs)
-            }
-        }
+    HorizontalPager(
+        state = pagerState,
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(top = RiffleSpacing.s)
+                .testTag(STREAM_PAGER_TEST_TAG)
+                .semantics {
+                    // The one custom-actions list of the pager: every swipe has an action.
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(previousPage) {
+                                goTo(pagerState.currentPage - 1)
+                                pagerState.currentPage > 0
+                            },
+                            CustomAccessibilityAction(nextPage) {
+                                goTo(pagerState.currentPage + 1)
+                                pagerState.currentPage < latestPages.lastIndex
+                            },
+                        )
+                },
+        pageSize = if (perView > 1) splitPageSize(perView) else PageSize.Fill,
+        pageSpacing = RiffleSpacing.s,
+        beyondViewportPageCount = 0,
+        key = { index -> latestPages.getOrNull(index)?.key ?: index },
+    ) { index ->
+        val page = latestPages.getOrNull(index)
+        if (page != null) StreamPageView(page, env, callbacks)
     }
 }
 
@@ -434,10 +435,11 @@ private fun StreamStageMode(
     state: StreamPageState,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
-    actionsFor: (StreamPage) -> StreamPageActions,
     menu: StreamMenuModel,
     onMenuAction: (StreamMenuAction) -> Unit,
+    dockLink: StreamDockLink?,
 ) {
+    LaunchedEffect(state.currentKey, dockLink) { dockLink?.publishCurrent(state.currentKey) }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {
         StreamStageBar(menu, onMenuAction, Modifier.padding(horizontal = RiffleSpacing.l))
         StreamStageView(
@@ -447,7 +449,6 @@ private fun StreamStageMode(
             previousKeys = state.previousKeys,
             env = env,
             callbacks = callbacks,
-            actionsFor = actionsFor,
             onSelect = { key -> state.select(key, jump = false) },
             modifier = Modifier.weight(1f),
         )
@@ -541,4 +542,36 @@ internal fun StreamEnvironment.withLiveClock(): StreamEnvironment {
         }
     }
     return if (formats.live) copy(nowEpochMillis = now) else this
+}
+
+/**
+ * Keeps the Dock's contextual mode in step with the Stream: lists the pages in front of it (cleared when the Stream
+ * leaves) and applies the page options its tiles ask for through the Stream's own handlers, so each keeps its Undo.
+ */
+@Composable
+private fun DockLinkEffects(
+    dockLink: StreamDockLink,
+    pages: List<StreamPage>,
+    callbacks: StreamCallbacks,
+    onShowAs: (StreamSection, StreamView) -> Unit,
+) {
+    val refs = pages.map(StreamPage::ref)
+    SideEffect { dockLink.publishPages(refs) }
+    DisposableEffect(dockLink) { onDispose { dockLink.clear() } }
+    val latestCallbacks by rememberUpdatedState(callbacks)
+    val latestShowAs by rememberUpdatedState(onShowAs)
+    val request = dockLink.pendingOption
+    LaunchedEffect(request) {
+        val pending = request ?: return@LaunchedEffect
+        when (val option = pending.option) {
+            is StreamPageOption.ShowAs -> latestShowAs(option.section, option.view)
+            is StreamPageOption.Move ->
+                latestCallbacks.onLayoutAction(StreamLayoutAction.Move(option.section, option.delta))
+            is StreamPageOption.Hide ->
+                latestCallbacks.onLayoutAction(StreamLayoutAction.SetEnabled(option.section, false))
+            is StreamPageOption.Show ->
+                latestCallbacks.onLayoutAction(StreamLayoutAction.SetEnabled(option.section, true))
+        }
+        dockLink.optionHandled(pending.id)
+    }
 }

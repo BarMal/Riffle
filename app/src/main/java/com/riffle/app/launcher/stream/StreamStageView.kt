@@ -52,7 +52,6 @@ import com.riffle.core.domain.launcher.stream.StreamPage
 import com.riffle.core.domain.launcher.stream.StreamPageBody
 import com.riffle.core.domain.launcher.stream.StreamRailMode
 import com.riffle.core.domain.launcher.stream.StreamStage
-import com.riffle.core.domain.launcher.stream.StreamView
 
 internal const val STREAM_STAGE_RAIL_TEST_TAG = "stream-stage-rail"
 internal const val STREAM_STAGE_MAIN_TEST_TAG = "stream-stage-main"
@@ -65,13 +64,6 @@ private val ThumbHeight = 88.dp
 private val ThumbFrontHeight = 72.dp
 private val ThumbStep = RiffleSpacing.xs + RiffleSpacing.xxs
 private val IconThumbSize = RiffleSpacing.xxxl + RiffleSpacing.s
-
-/** What a page's menu and Show as need from the section it belongs to, which the surface knows. */
-internal class StreamPageActions(
-    val canMoveUp: Boolean,
-    val canMoveDown: Boolean,
-    val onShowAs: (StreamView) -> Unit,
-)
 
 /**
  * The Stage view of the whole Stream (ADR 0003, Views), after Stage Manager on macOS: a rail along the leading edge
@@ -89,7 +81,6 @@ internal fun StreamStageView(
     previousKeys: List<String>,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
-    actionsFor: (StreamPage) -> StreamPageActions,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -112,14 +103,10 @@ internal fun StreamStageView(
                     StageRail(model.rail, railMode, env, onSelect, this@SharedTransitionLayout, this@AnimatedContent)
                     Box(modifier = Modifier.weight(1f).fillMaxHeight().testTag(STREAM_STAGE_MAIN_TEST_TAG)) {
                         model.selected?.let { page ->
-                            val actions = actionsFor(page)
                             StreamPageView(
                                 page = page,
                                 env = env,
                                 callbacks = callbacks,
-                                canMoveUp = actions.canMoveUp,
-                                canMoveDown = actions.canMoveDown,
-                                onShowAs = actions.onShowAs,
                                 modifier =
                                     stageBounds(
                                         page.key,

@@ -14,7 +14,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The dock's accessibility actions are one list: "Open Library" and "Open Stream" from the pull. Two semantics
+ * The dock's accessibility actions are one list: "Open Library" from the pull and "Show live pages" from the press.
+ * Two semantics
  * modifiers on one node do not merge their custom actions, so a regression here would silently drop one set from
  * TalkBack. There is no "Workspace menu" action any more.
  */
@@ -43,6 +44,6 @@ class DockAccessibilityActionsTest {
                 .onNodeWithTag(HOME_DOCK_PULL_TEST_TAG)
                 .fetchSemanticsNode()
                 .config[SemanticsActions.CustomActions]
-        assertEquals(listOf("Open Library", "Open Stream"), actions.map { it.label })
+        assertEquals(listOf("Open Library", "Show live pages"), actions.map { it.label })
     }
 }

@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.test.core.app.ApplicationProvider
+import com.riffle.app.launcher.stream.StreamPageOption
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -9,6 +10,10 @@ import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
+import com.riffle.core.domain.launcher.stream.StreamLayout
+import com.riffle.core.domain.launcher.stream.StreamLayoutAction
+import com.riffle.core.domain.launcher.stream.StreamLayoutReducer
+import com.riffle.core.domain.launcher.stream.StreamSection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -18,7 +23,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The dock's dynamic entries (live apps, now playing, the Stream button): what each says and what a tap means. */
+/** The dock's dynamic entries (live apps, now playing, the contextual tiles): what each says and what a tap means. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class DockDynamicSideEntriesTest {
@@ -39,7 +44,8 @@ class DockDynamicSideEntriesTest {
         assertEquals("Messages", entry.label)
         assertEquals(3, entry.badgeCount)
         assertEquals(chat.identity, entry.identity)
-        // A tap opens the app (the same launch a pinned icon does, in its own profile); the swipe up shows its page.
+        // A tap opens the app (the same launch a pinned icon does, in its own profile); a press that starts on it
+        // shows its page.
         assertEquals(DockDynamicEntryIntent.Dispatch(LauncherShellAction.LaunchApp(chat.identity)), entry.intent)
         assertEquals("Open Messages", entry.openLabel)
         assertEquals("Show Messages in Stream", entry.showInStreamLabel)
@@ -100,7 +106,7 @@ class DockDynamicSideEntriesTest {
             DockDynamicSideEntry.NowPlaying("chat", "personal", "Music", null)
                 .toDockEntry(listOf(chat), streamShown = false, resources = resources)
 
-        // A tap opens the player app; the swipe up shows the Now page.
+        // A tap opens the player app; a press that starts on it shows the Now page.
         assertEquals(DockDynamicEntryIntent.Dispatch(LauncherShellAction.LaunchApp(chat.identity)), titled.intent)
         assertEquals("Show Messages in Stream", titled.showInStreamLabel)
         assertEquals("Now playing: Midnight City", titled.contentDescription)
@@ -110,49 +116,123 @@ class DockDynamicSideEntriesTest {
     }
 
     @Test
-    fun theStreamButtonIsSelectedWhileTheStreamShowsAndSaysWhereATapGoes() {
-        val closed =
-            DockDynamicSideEntry.StreamButton.toDockEntry(
-                emptyList(),
-                streamShown = false,
+    fun inTheContextualModeATapOnALiveAppShowsItsPageAndItsLongPressLeadsWithThePageOptions() {
+        val live = DockDynamicSideEntry.LiveApp("chat:personal", "chat", "personal", "Chat", count = 3)
+        val option = ShortcutContextMenuItem(label = "Show as List", onSelect = {})
+        val entry =
+            live.toDockEntry(
+                listOf(chat),
+                streamShown = true,
                 resources = resources,
+                selected = true,
+                pageMenu = listOf(option),
             )
-        val open = DockDynamicSideEntry.StreamButton.toDockEntry(emptyList(), streamShown = true, resources = resources)
 
-        assertEquals("Stream", closed.label)
-        assertEquals("Stream", closed.contentDescription)
-        // The Stream button is unchanged: its tap toggles, and it has no "show in Stream" of its own.
-        assertEquals(DockDynamicEntryIntent.Delegate, closed.intent)
-        assertNull(closed.showInStreamLabel)
-        assertNull(closed.openInStreamMenuLabel)
-        assertFalse(closed.isSelected)
-        assertEquals("Stream, back to Home", open.contentDescription)
+        assertEquals(DockDynamicEntryIntent.Delegate, entry.intent)
+        assertEquals("Show Messages", entry.openLabel)
+        // The tap already shows the page, so there is no separate "Show in Stream" or "Open in Stream".
+        assertNull(entry.showInStreamLabel)
+        assertNull(entry.openInStreamMenuLabel)
+        assertTrue(entry.isSelected)
+        assertEquals(listOf("Show as List", "App info", "Hide app"), entry.appMenu.map { it.label })
+    }
+
+    @Test
+    fun theHomeModeKeepsTheLaunchTapAndTheOpenInStreamMenu() {
+        val entry =
+            DockDynamicSideEntry.LiveApp("chat:personal", "chat", "personal", "Chat", count = 3)
+                .toDockEntry(listOf(chat), streamShown = false, resources = resources)
+        assertFalse(entry.isSelected)
+        assertEquals("Open in Stream", entry.openInStreamMenuLabel)
+        assertEquals("Open Messages", entry.openLabel)
+    }
+
+    @Test
+    fun aContextualTileNamesItsSectionAndShowsItsPageOnATap() {
+        val tile = DockDynamicSideEntry.ContextTile(StreamSection.AGENDA)
+        val open = tile.toDockEntry(emptyList(), streamShown = true, resources = resources, selected = true)
+        val other = tile.toDockEntry(emptyList(), streamShown = true, resources = resources)
+
+        assertEquals("ctx:agenda", open.key)
+        assertEquals("Agenda", open.label)
+        assertEquals("Agenda", open.contentDescription)
+        assertEquals("Show Agenda", open.openLabel)
+        assertEquals(DockDynamicEntryIntent.Delegate, open.intent)
+        assertNull(open.identity)
+        assertTrue(open.isContextTile)
         assertTrue(open.isSelected)
-        assertEquals(DockDynamicSymbol.Stream, closed.symbol)
+        assertFalse(other.isSelected)
     }
 
     @Test
     fun aTapIsReadFromTheEntrysKey() {
-        assertEquals(DockDynamicTarget.StreamButton, dockDynamicEntryTarget("stream"))
-        assertEquals(DockDynamicTarget.Focus(StreamFocusTarget.Now), dockDynamicEntryTarget("now"))
-        assertEquals(
-            DockDynamicTarget.Focus(StreamFocusTarget.AppStack("chat:personal")),
-            dockDynamicEntryTarget("live:chat:personal"),
-        )
+        assertEquals(StreamFocusTarget.Now, dockDynamicEntryTarget("now"))
+        assertEquals(StreamFocusTarget.AppStack("chat:personal"), dockDynamicEntryTarget("live:chat:personal"))
+        assertEquals(StreamFocusTarget.Section(StreamSection.RECENTS), dockDynamicEntryTarget("ctx:recents"))
+        assertNull(dockDynamicEntryTarget("ctx:nothing"))
         assertNull(dockDynamicEntryTarget("nothing"))
+        // The Stream button is gone: its old key means nothing.
+        assertNull(dockDynamicEntryTarget("stream"))
     }
 
     @Test
     fun everyEntryTheDomainMakesIsReadBackToTheSameTarget() {
         val live = DockDynamicSideEntry.LiveApp("chat:personal", "chat", "personal", null, 1)
+        assertEquals(StreamFocusTarget.AppStack(live.groupKey), dockDynamicEntryTarget(live.key))
         assertEquals(
-            DockDynamicTarget.Focus(StreamFocusTarget.AppStack(live.groupKey)),
-            dockDynamicEntryTarget(live.key),
-        )
-        assertEquals(
-            DockDynamicTarget.Focus(StreamFocusTarget.Now),
+            StreamFocusTarget.Now,
             dockDynamicEntryTarget(DockDynamicSideEntry.NowPlaying("m", null, null, null).key),
         )
-        assertEquals(DockDynamicTarget.StreamButton, dockDynamicEntryTarget(DockDynamicSideEntry.StreamButton.key))
+        StreamSection.entries.forEach { section ->
+            assertEquals(
+                StreamFocusTarget.Section(section),
+                dockDynamicEntryTarget(DockDynamicSideEntry.ContextTile(section).key),
+            )
+        }
+    }
+
+    @Test
+    fun aTilesPageOptionsOfferTheOtherViewMoveAndHide() {
+        val requests = mutableListOf<StreamPageOption>()
+        val layout = StreamLayout.DEFAULT
+        val tiles = listOf(StreamSection.NOW, StreamSection.RECENTS, StreamSection.AGENDA)
+        val items =
+            pageOptionMenu(
+                DockDynamicSideEntry.ContextTile(StreamSection.RECENTS),
+                layout,
+                tiles,
+                resources,
+                requests::add,
+            )
+
+        assertEquals(
+            listOf("Show as List", "Move earlier", "Move later", "Hide section"),
+            items.map { it.label },
+        )
+        items.forEach { item -> item.onSelect?.invoke() }
+        assertEquals(
+            listOf(
+                StreamPageOption.ShowAs(StreamSection.RECENTS, com.riffle.core.domain.launcher.stream.StreamView.LIST),
+                // Recents earlier steps over Notifications, which draws no tile.
+                StreamPageOption.Move(StreamSection.RECENTS, -2),
+                StreamPageOption.Move(StreamSection.RECENTS, 1),
+                StreamPageOption.Hide(StreamSection.RECENTS),
+            ),
+            requests,
+        )
+    }
+
+    @Test
+    fun aLiveAppOffersNoMoveAndAHiddenSectionIsOfferedBack() {
+        val hidden =
+            StreamLayoutReducer.reduce(StreamLayout.DEFAULT, StreamLayoutAction.SetEnabled(StreamSection.FEEDS, false))
+        val items =
+            pageOptionMenu(
+                DockDynamicSideEntry.LiveApp("chat:personal", "chat", "personal", "Chat", 1),
+                hidden,
+                listOf(StreamSection.NOW),
+                resources,
+            ) {}
+        assertEquals(listOf("Show as List", "Hide section", "Show Feeds"), items.map { it.label })
     }
 }

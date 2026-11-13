@@ -18,6 +18,7 @@ import com.riffle.app.launcher.DockInteractions
 import com.riffle.app.launcher.EmptyAppIconLoader
 import com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
 import com.riffle.app.launcher.dockItemTestTag
+import com.riffle.app.launcher.stream.glyph
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -26,6 +27,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.stream.StreamSection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -36,7 +38,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The device test `DockPinnedRunScrollTest` without an emulator: eight 56 dp pins beside the Stream button in a 400 dp
+ * The device test `DockPinnedRunScrollTest` without an emulator: eight 56 dp pins beside a tile in a 400 dp
  * dock keep their size, the last one lies past the dock's edge until the run is scrolled to it, and scrolling brings it
  * fully inside without resizing anything. (`boundsInRoot` is clipped and collapses to an empty rect for a pin that is
  * fully clipped, so the laid-out position is what says where an unscrolled pin is.)
@@ -82,7 +84,7 @@ class DockPinnedRunScrollJvmTest {
                         widgetViewFactory = EmptyHomeWidgetViewFactory,
                         position = DockPosition.BOTTOM,
                         interactions = DockInteractions(onAction = {}),
-                        dynamicEntries = listOf(streamEntry),
+                        dynamicEntries = listOf(tileEntry),
                     )
                 }
             }
@@ -100,16 +102,16 @@ class DockPinnedRunScrollJvmTest {
             label = name,
         )
 
-    private val streamEntry =
+    private val tileEntry =
         DockDynamicEntry(
-            key = "stream",
-            label = "Stream",
+            key = "ctx:now",
+            label = "Now",
             identity = null,
             badgeCount = 0,
             isSelected = false,
-            contentDescription = "Open Stream",
+            contentDescription = "Now",
             intent = DockDynamicEntryIntent.Delegate,
-            symbol = DockDynamicSymbol.Stream,
+            symbol = DockDynamicSymbol.Glyph(StreamSection.NOW.glyph()),
         )
 
     private companion object {

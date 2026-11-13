@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.app.launcher.stream.glyph
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -19,6 +20,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.stream.StreamSection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -39,7 +41,7 @@ class DockPinnedRunScrollTest {
 
     @Test
     fun pinsKeepTheirSizeBesideTheDynamicSideAndTheBarKeepsItsHeight() {
-        setContent(entries = listOf(streamEntry))
+        setContent(entries = listOf(tileEntry))
 
         val first = boundsOf(dockItemTestTag(pins.first().id))
         val surface = boundsOf(HOME_DOCK_SURFACE_TEST_TAG)
@@ -51,7 +53,7 @@ class DockPinnedRunScrollTest {
 
     @Test
     fun theLastPinIsReachedByScrollingNotBySqueezing() {
-        setContent(entries = listOf(streamEntry))
+        setContent(entries = listOf(tileEntry))
         val surface = boundsOf(HOME_DOCK_SURFACE_TEST_TAG)
 
         // The run is longer than its viewport: the last pin is laid out past the dock's own edge until scrolled to.
@@ -105,16 +107,16 @@ class DockPinnedRunScrollTest {
             label = name,
         )
 
-    private val streamEntry =
+    private val tileEntry =
         DockDynamicEntry(
-            key = "stream",
-            label = "Stream",
+            key = "ctx:now",
+            label = "Now",
             identity = null,
             badgeCount = 0,
             isSelected = false,
-            contentDescription = "Open Stream",
+            contentDescription = "Now",
             intent = DockDynamicEntryIntent.Delegate,
-            symbol = DockDynamicSymbol.Stream,
+            symbol = DockDynamicSymbol.Glyph(StreamSection.NOW.glyph()),
         )
 
     private companion object {

@@ -37,6 +37,22 @@ data class StreamPage(
 }
 
 /**
+ * What the Dock needs to know of a page: enough to draw its tile or ring its app's icon, and to bring it to the front.
+ * [key] is the page's key; [groupKey] is the app or feed it is for, null for a section's single page.
+ */
+data class StreamPageRef(
+    val key: String,
+    val section: StreamSection,
+    val groupKey: String?,
+) {
+    /** True for a live app's page: a Notifications group page, which the Dock draws as that app's icon. */
+    val isAppPage: Boolean get() = section == StreamSection.NOTIFICATIONS && groupKey != null
+}
+
+/** The page as the Dock sees it. */
+fun StreamPage.ref(): StreamPageRef = StreamPageRef(key = key, section = section, groupKey = groupKey)
+
+/**
  * Plans the Stream's pages from the layout and what each section delivered (ADR 0003, Views):
  *
  * - **Now**: one page (media with its queue, the next event, the alarm).

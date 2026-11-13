@@ -16,12 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import com.riffle.app.launcher.designsystem.RiffleMotion
+import com.riffle.core.domain.launcher.dock.DockPress
 import com.riffle.core.domain.launcher.dockpull.DockPullClaim
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
@@ -38,7 +40,7 @@ import kotlinx.coroutines.launch
 
 /**
  * What an expanded posture's pull needs to know where it starts (ADR 0003, Folded and unfolded): the mode it starts
- * from, the last-used shown mode a Stream button settles at, and whether the screen has room for a split at all.
+ * from, the last-used shown mode a press settles at, and whether the screen has room for a split at all.
  */
 internal class SplitPullSetup(
     val startMode: SplitMode,
@@ -309,34 +311,35 @@ internal interface DockPullGestureHost {
     /** The pull's full travel in dp: the window's extent along [direction]'s axis. */
     fun travelDp(direction: DockPullDirection): Float
 
-    /** Where a pull that landed at [position] (in the gesture's own coordinates) leads. */
-    fun destinationAt(position: Offset): DockPullDestination
+    /** The press that toggles the Home and the contextual mode (a drag toward the Dock's edge, then release). */
+    val press: DockPressState
 
-    /**
-     * A pull toward [destination] has just been claimed; it landed at [position] (the gesture's own coordinates). The
-     * host prepares what the destination needs before the surfaces move, such as where the Stream lands.
-     */
-    fun pullStarted(
-        destination: DockPullDestination,
-        position: Offset,
-    ) = Unit
+    /** Whether a press may start now: a Stream to toggle to or from, and a pull may start. */
+    val canPress: Boolean
+
+    /** The dynamic entry a touch that landed at [position] (in the gesture's own coordinates) is on, or null. */
+    fun pressEntryAt(position: Offset): String?
 
     /** The split a pull on an expanded posture moves through, or null where the Stream and Home swap completely. */
     fun splitSetup(): SplitPullSetup? = null
 }
 
 /**
- * The Dock pull gesture on the dock body, in the dock edge's natural [direction].
+ * The Dock's pull and press gestures on the dock body, in the dock edge's natural pull [direction].
  *
  * On the Main pass, after the dock's own children: a section scroll along the run or an item's long-press drag
- * consumes its touches first and the pull yields. A drag only becomes a pull once it leaves touch slop mostly along
- * [direction] ([dockPullClaimFor]) and before the long-press timeout, so a held press stays a long-press. Where it
- * leads is decided by which side the finger landed on ([DockPullGestureHost.destinationAt]). A finger landing on a
- * settling pull catches it at once. Deltas are handed over in dp; only their component along the pull moves it.
+ * consumes its touches first and the gesture yields. A drag only becomes one once it leaves touch slop and before the
+ * long-press timeout, so a held press stays a long-press: mostly along [direction] it is a pull, which opens the
+ * Library
+ * ([dockPullClaimFor]); mostly the opposite way, toward the Dock's own edge, it is a press ([DockPress.claimFor]),
+ * which
+ * toggles the Home and the contextual mode when released past its threshold, and drags along the run are left to the
+ * Dock's scroll. A finger landing on a settling pull catches it at once. Deltas are handed over in dp.
  *
  * Place it before any translation of the dock, so the finger is measured in the dock's resting coordinates rather than
- * ones that move with the finger. This is the one pointer loop the Dock pull needs: it claims by direction, which the
- * platform's drag detectors cannot express (ADR 0002).
+ * ones that move with the finger. This is the one pointer loop the Dock needs: it claims by direction, in both
+ * directions, which the platform's drag detectors cannot express (ADR 0002). The Dock's row scroll and fling are the
+ * platform's own.
  */
 internal fun Modifier.dockPullInput(
     direction: DockPullDirection,
@@ -347,58 +350,122 @@ internal fun Modifier.dockPullInput(
             val down = awaitFirstDown(requireUnconsumed = false)
             val tracker = VelocityTracker()
             tracker.addPosition(down.uptimeMillis, down.position)
-            val caught = host.state.catchSettle()
-            if (!caught) {
-                if (!host.canPull) return@awaitEachGesture
-                val claimed = awaitPullClaim(down, direction, tracker, host)
-                if (!claimed) return@awaitEachGesture
+            if (host.state.catchSettle()) {
+                trackPull(down.id, tracker, host.state)
+                return@awaitEachGesture
             }
-            trackPull(down.id, tracker, host.state)
+            if (!host.canPull) return@awaitEachGesture
+            when (awaitClaim(down, direction, tracker, host)) {
+                DockClaim.PULL -> trackPull(down.id, tracker, host.state)
+                DockClaim.PRESS -> trackPress(down, direction, host.press)
+                DockClaim.NONE -> Unit
+            }
         }
     }
 
-/** Waits for the touch to become a pull (true) or something else (false); starts the pull on a claim. */
-private suspend fun AwaitPointerEventScope.awaitPullClaim(
+/** What a touch on the Dock turned out to be. */
+private enum class DockClaim { PULL, PRESS, NONE }
+
+/** Waits for the touch to become a pull or a press, or something else; starts the pull or the press on a claim. */
+private suspend fun AwaitPointerEventScope.awaitClaim(
     down: PointerInputChange,
     direction: DockPullDirection,
     tracker: VelocityTracker,
     host: DockPullGestureHost,
-): Boolean {
+): DockClaim {
     val touchSlopPx = viewConfiguration.touchSlop
     val claimed =
         withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-            var decision: Boolean? = null
+            var decision: DockClaim? = null
             while (decision == null) {
                 val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
                 if (change == null || !change.pressed || change.isConsumed) {
-                    decision = false
+                    decision = DockClaim.NONE
                 } else {
                     tracker.addPosition(change.uptimeMillis, change.position)
                     val drag = change.position - down.position
-                    when (dockPullClaimFor(direction, drag.x, drag.y, touchSlopPx)) {
-                        DockPullClaim.UNDECIDED -> Unit
-                        DockPullClaim.REJECT -> decision = false
-                        DockPullClaim.CLAIM -> {
-                            change.consume()
-                            val destination = host.destinationAt(down.position)
-                            host.pullStarted(destination, down.position)
-                            host.state.start(
-                                destination = destination,
-                                direction = direction,
-                                travelDp = host.travelDp(direction),
-                                reducedMotion = host.reducedMotion,
-                                split = host.splitSetup(),
-                            )
-                            // From where the finger landed, so the Stream tracks it 1:1 from the start.
-                            host.state.drag(drag.x / density, drag.y / density)
-                            decision = true
-                        }
+                    decision = claimFor(direction, drag, touchSlopPx, host)
+                    if (decision == DockClaim.PULL) {
+                        change.consume()
+                        host.state.start(
+                            destination = DockPullDestination.LIBRARY,
+                            direction = direction,
+                            travelDp = host.travelDp(direction),
+                            reducedMotion = host.reducedMotion,
+                            split = null,
+                        )
+                        // From where the finger landed, so the sheet tracks it 1:1 from the start.
+                        host.state.drag(drag.x / density, drag.y / density)
+                    } else if (decision == DockClaim.PRESS) {
+                        change.consume()
+                        host.press.begin(host.pressEntryAt(down.position))
+                        host.press.update(DockPress.travelDp(direction, drag.x / density, drag.y / density))
                     }
                 }
             }
             decision
         }
-    return claimed == true
+    return claimed ?: DockClaim.NONE
+}
+
+/** What a drag of [drag] px from the landing is so far: undecided (null), a pull, a press, or neither. */
+private fun claimFor(
+    direction: DockPullDirection,
+    drag: Offset,
+    touchSlopPx: Float,
+    host: DockPullGestureHost,
+): DockClaim? {
+    val pull = dockPullClaimFor(direction, drag.x, drag.y, touchSlopPx)
+    val press =
+        if (host.canPress) DockPress.claimFor(direction, drag.x, drag.y, touchSlopPx) else DockPullClaim.REJECT
+    return when {
+        pull == DockPullClaim.CLAIM -> DockClaim.PULL
+        press == DockPullClaim.CLAIM -> DockClaim.PRESS
+        pull == DockPullClaim.UNDECIDED -> null
+        else -> DockClaim.NONE
+    }
+}
+
+/**
+ * Follows a claimed press until the finger lifts (release, committing when it passed the threshold) or goes away
+ * (cancel). Each change is also consumed on the Initial pass, before the Dock's children see it, so a tile the press
+ * started on cannot take the release for a tap.
+ */
+private suspend fun AwaitPointerEventScope.trackPress(
+    down: PointerInputChange,
+    direction: DockPullDirection,
+    press: DockPressState,
+) {
+    var finished = false
+    try {
+        while (!finished) {
+            awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }?.consume()
+            val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
+            finished = trackPressStep(change, down, direction, press)
+        }
+    } finally {
+        // The gesture was torn down mid-press (the dock left composition): never leave the press stranded.
+        if (!finished) press.cancel()
+    }
+}
+
+/** One event of a tracked press; true once the press has ended. */
+private fun AwaitPointerEventScope.trackPressStep(
+    change: PointerInputChange?,
+    down: PointerInputChange,
+    direction: DockPullDirection,
+    press: DockPressState,
+): Boolean {
+    if (change == null) {
+        press.cancel()
+        return true
+    }
+    val drag = change.position - down.position
+    val travelDp = DockPress.travelDp(direction, drag.x / density, drag.y / density)
+    press.update(travelDp)
+    change.consume()
+    if (!change.pressed) press.release(travelDp)
+    return !change.pressed
 }
 
 /** Follows the claimed pointer until it lifts (release) or goes away (cancel). */

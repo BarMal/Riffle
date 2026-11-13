@@ -5,8 +5,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -34,15 +34,15 @@ import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
 import com.riffle.core.domain.launcher.workspace.ItemTarget
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The Stream's pages on a real touch pipeline (ADR 0003, Views; docs/product/gestures.md): a sideways swipe changes the
- * page and moves the spine, a vertical swipe moves the stack inside the page and never the pager, the spine's tabs and
- * the pager's accessibility actions are the non-gesture ways, and the Stage view brings a rail stage to the centre.
+ * The Stream's pages on a real touch pipeline (ADR 0003, Views, Amendment 3; docs/product/gestures.md): a sideways swipe
+ * changes the page and tells the Dock (which moves its ring), a vertical swipe moves the stack inside the page and never
+ * the pager, the pager's accessibility actions are the non-gesture ways (the Dock's tiles are the other, tested with the
+ * Dock), and the Stage view brings a rail stage to the centre.
  */
 @RunWith(AndroidJUnit4::class)
 class StreamPagesInteractionTest {
@@ -93,6 +93,9 @@ class StreamPagesInteractionTest {
                     )
             )
 
+    /** What the Stream tells the Dock: the page in front. */
+    private val dock = StreamDockLink()
+
     private fun show(
         layout: StreamLayout = StreamLayout.DEFAULT,
         wide: Boolean = false,
@@ -114,23 +117,27 @@ class StreamPagesInteractionTest {
                     callbacks = StreamCallbacks(),
                     initialPageKey = chat,
                     wideLayout = wide,
+                    dockLink = dock,
                 )
             }
         }
         composeRule.waitForIdle()
     }
 
-    private fun marker(key: String) = composeRule.onNodeWithTag(streamSpineMarkerTestTag(key))
+    private fun assertOpen(key: String) {
+        composeRule.waitForIdle()
+        assertEquals(key, dock.currentKey)
+    }
 
     @Test
-    fun aSidewaysSwipeChangesThePageAndTheSpineFollows() {
+    fun aSidewaysSwipeChangesThePageAndTheDockFollows() {
         show()
-        marker(chat).assertIsSelected()
+        assertOpen(chat)
 
         composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput { swipeLeft() }
         composeRule.waitForIdle()
 
-        marker(mail).assertIsSelected()
+        assertOpen(mail)
         composeRule.onNodeWithText("Only mail").assertIsDisplayed()
     }
 
@@ -140,15 +147,15 @@ class StreamPagesInteractionTest {
         composeRule.onNodeWithText("First chat").assertIsDisplayed()
         composeRule.onNodeWithText("Card 1 of 3").assertIsDisplayed()
 
-        // Inside the stack, below the page's header row: the default swipe runs the pager's whole height, so a swipe down
-        // starts over the header (not the stack) and a fast one flings the stack to its last card.
+        // Inside the stack: the default swipe runs the pager's whole height, so these start low and end high in it, and
+        // a fast one flings the stack to its last card.
         composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
             swipeUp(startY = height * STACK_LOW, endY = height * STACK_HIGH)
         }
         composeRule.waitForIdle()
 
         // The page stayed; the stack moved on from its first card (a fling may carry it more than one).
-        marker(chat).assertIsSelected()
+        assertOpen(chat)
         composeRule.onNodeWithText("Card 1 of 3").assertDoesNotExist()
         composeRule.onNode(hasText("Card ", substring = true)).assertIsDisplayed()
 
@@ -156,27 +163,39 @@ class StreamPagesInteractionTest {
             swipeDown(startY = height * STACK_HIGH, endY = height * STACK_LOW)
         }
         composeRule.waitForIdle()
-        marker(chat).assertIsSelected()
+        assertOpen(chat)
         composeRule.onNodeWithText("Card 1 of 3").assertIsDisplayed()
         composeRule.onNodeWithText("First chat").assertIsDisplayed()
     }
 
     @Test
-    fun theSpineAndThePagerActionsAreTheNonGestureWays() {
+    fun thePagersActionsAreTheNonGestureWaysToChangePage() {
         show()
-        marker(mail).performClick()
-        composeRule.waitForIdle()
-        marker(mail).assertIsSelected()
+        assertOpen(chat)
 
         val labels =
             composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode().config[SemanticsActions.CustomActions]
                 .map { it.label }
         assertEquals(listOf("Previous page", "Next page"), labels)
-        val role =
-            composeRule.onNodeWithTag(
-                streamSpineMarkerTestTag(mail),
-            ).fetchSemanticsNode().config[SemanticsProperties.Role]
-        assertTrue(role.toString().contains("Tab"))
+
+        // Fetch the node off the main thread (fetching synchronises), then run only the action on it.
+        val next =
+            composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode().config[SemanticsActions.CustomActions]
+                .first { it.label == "Next page" }
+        composeRule.runOnUiThread { next.action() }
+        composeRule.waitForIdle()
+        assertOpen(mail)
+    }
+
+    @Test
+    fun thePagesAreInTheDocksOrderForItsTilesAndThereIsNoSpine() {
+        show()
+        composeRule.waitForIdle()
+        // Live apps first (the newer notification's app leads), then the built-in pages.
+        assertEquals(listOf(chat, mail), dock.pages.map { it.key }.take(2))
+        composeRule.onAllNodes(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Tab),
+        ).assertCountEquals(0)
     }
 
     @Test

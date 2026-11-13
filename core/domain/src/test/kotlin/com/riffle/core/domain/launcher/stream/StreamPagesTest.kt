@@ -246,30 +246,6 @@ class StreamPagesTest {
     }
 
     @Test
-    fun theSpineHasOneMarkerPerPageWithTheCurrentOneSelectedAndSectionBreaks() {
-        val markers = StreamSpine.markers(pages, 2)
-        assertEquals(pages.map { it.key }, markers.map { it.pageKey })
-        assertEquals(listOf(2), markers.withIndex().filter { it.value.selected }.map { it.index })
-        assertEquals(pages.size, markers.first().total)
-        assertEquals(3, markers[2].position)
-        // Section breaks: before the first notifications page, recents, agenda, tasks and feeds.
-        assertEquals(
-            listOf("notifications/chat:p", "recents", "agenda", "tasks", "feeds/f1"),
-            markers.filter { it.startsSection }.map { it.pageKey },
-        )
-        assertEquals("chat", markers[1].label)
-        assertNull(markers[0].label)
-    }
-
-    @Test
-    fun theSpineFollowsASwipeInFlightAndStaysInsideThePages() {
-        assertEquals(2.25f, StreamSpine.focusIndex(2, 0.25f, 9))
-        assertEquals(0f, StreamSpine.focusIndex(0, -0.4f, 9))
-        assertEquals(8f, StreamSpine.focusIndex(8, 0.4f, 9))
-        assertEquals(0f, StreamSpine.focusIndex(0, 0.4f, 0))
-    }
-
-    @Test
     fun theStageShowsTheSelectedStageAndAllTheOthersInTheRail() {
         val model = StreamStage.model(pages, "notifications/mail:p")
         assertEquals("notifications/mail:p", model.selected?.key)

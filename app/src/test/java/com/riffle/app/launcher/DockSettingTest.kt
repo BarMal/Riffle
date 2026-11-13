@@ -8,7 +8,7 @@ class DockSettingTest {
     @Test
     fun liveAppSlotsSubtitleExplainsNoLiveApps() {
         assertEquals(
-            "The dock's second side shows only now playing and the Stream button",
+            "The dock's second side shows only now playing",
             dockLiveAppSlotsSubtitle(slots = 0, notificationAccessStatus = NotificationAccessStatus.REVOKED),
         )
     }
@@ -75,15 +75,15 @@ class DockSettingTest {
     @Test
     fun dockSizeSummaryNamesThePinnedIconsAndTheDynamicSide() {
         assertEquals(
-            "Shows up to 7 pinned icons, then now playing and the Stream button",
+            "Shows up to 7 pinned icons, then now playing",
             dockSizeSummaryText(capacity = 7, liveAppSlots = 0),
         )
         assertEquals(
-            "Shows up to 7 pinned icons, then 1 live app, now playing and the Stream button",
+            "Shows up to 7 pinned icons, then 1 live app and now playing",
             dockSizeSummaryText(capacity = 7, liveAppSlots = 1),
         )
         assertEquals(
-            "Shows up to 7 pinned icons, then 3 live apps, now playing and the Stream button",
+            "Shows up to 7 pinned icons, then 3 live apps and now playing",
             dockSizeSummaryText(capacity = 7, liveAppSlots = 3),
         )
     }

@@ -114,9 +114,9 @@ internal fun dockSizeSummaryText(
     liveAppSlots: Int,
 ): String =
     when (liveAppSlots) {
-        0 -> "Shows up to $capacity pinned icons, then now playing and the Stream button"
-        1 -> "Shows up to $capacity pinned icons, then 1 live app, now playing and the Stream button"
-        else -> "Shows up to $capacity pinned icons, then $liveAppSlots live apps, now playing and the Stream button"
+        0 -> "Shows up to $capacity pinned icons, then now playing"
+        1 -> "Shows up to $capacity pinned icons, then 1 live app and now playing"
+        else -> "Shows up to $capacity pinned icons, then $liveAppSlots live apps and now playing"
     }
 
 /**
@@ -138,8 +138,8 @@ private fun DockCapacitySetting(
 )
 
 /**
- * How many live apps (apps with something new) the dynamic side shows, ahead of now playing and the Stream button. More
- * than this are reached in the Stream. Zero leaves the side with only now playing and the Stream button.
+ * How many live apps (apps with something new) the dynamic side shows, ahead of now playing. More
+ * than this are reached in the Stream. Zero leaves the side with only now playing.
  */
 @Composable
 private fun DockLiveAppSlotsSetting(
@@ -359,7 +359,7 @@ internal fun dockLiveAppSlotsSubtitle(
     notificationAccessStatus: NotificationAccessStatus,
 ): String {
     if (slots == 0) {
-        return "The dock's second side shows only now playing and the Stream button"
+        return "The dock's second side shows only now playing"
     }
 
     return when (notificationAccessStatus) {

@@ -38,8 +38,8 @@ internal object OnboardingText {
                 "Your apps, folders and widgets, placed by hand. Press and hold to arrange them, and swipe " +
                     "between pages."
             OnboardingStep.DOCK ->
-                "Always visible. Pin favourites on one side; on the other, apps with something new and a " +
-                    "Stream button. Pull up on the pinned side for the Library, on the other for the Stream."
+                "Always visible. Pin favourites, and see apps with something new beside them. Pull up for the " +
+                    "Library; press the Dock down and let go for the Stream, and again to come back."
             OnboardingStep.LIBRARY ->
                 "Every installed app, sorted for you, with search at the top. Pull up on the Dock's pinned " +
                     "side, or swipe down on Home."

@@ -501,6 +501,62 @@ is the least reachable part when unfolded).
 Apple's iPhone Duo (2026) moves its Dock to the side of the unfolded screen for thumb reach, with a
 left-handed option. Riffle's Dock differs in also carrying live pages and being the origin of cards.
 
+## Amendment 3 (owner, 2026-11-13): one Dock with two modes, and motion
+
+Decided with working prototypes on the UX canvas (boards M1 to M3). It replaces "The Dock has two faces" in
+Amendment 1 and the swipe-down flip; the rest of Amendments 1 and 2 stands. Being built in slices; see
+`docs/product/dock-modes-plan.md`.
+
+### One Dock, two modes
+
+| Mode | The Dock holds | Scrolls |
+| --- | --- | --- |
+| Home | Pinned apps, a divider, live apps (apps with notifications) | No |
+| Contextual | The same icons in the same order, then a divider and the contextual sources: Now, Today, Recents, Feeds | Yes, sideways, with inertia |
+
+- **Nothing swaps.** Icons shared by both modes keep their order and place; the contextual mode only adds tiles
+  after them and scrolls the row along so they are in view. The open page's icon is ringed. There is no
+  separate row of page markers, no second layer, and no handle or Stream button on the Dock.
+- **Every icon has a stack.** A live app's stack is its cards. A contextual source's stack is its content
+  (what is playing and its queue, the day's events and tasks, recent apps, feed items). An app with nothing
+  live shows its shortcuts.
+- **Stacks are ordered as the Dock is.** Swiping the cards left or right moves to the neighbouring icon's
+  stack, and the Dock scrolls to keep that icon in view.
+
+### One gesture, three depths
+
+| What you do | Result |
+| --- | --- |
+| Press the Dock down and release | The last page fans out and the Dock enters the contextual mode |
+| Start that press on an icon | That icon's stack fans out instead |
+| Press down and hold, or slide sideways while pressed | The Dock extends early and a selection follows the finger, with the icon ringed and its name shown above the Dock; holding near either end scrolls the row. Release to fan out the selection |
+| Press down and release in the contextual mode | Everything goes back and the Dock returns to the Home mode |
+| Tap an icon | Home: opens the app. Contextual: switches to that stack |
+| Drag the Dock sideways (contextual mode) | Scrolls it |
+
+Swiping up on an icon was tried and dropped: opposite directions for "all cards" and "one app" felt wrong, and
+only live apps responded. A hidden second row and a permanently two-row Dock were also tried and dropped.
+
+**Precedents.** Pull, slide and release is Sailfish OS's pulley menu, which also gave a haptic tick per item;
+choosing a dock item in one stroke is Palm webOS's launch wave; a stack you swipe and tap to expand is
+Samsung's Now Bar. Pressing a dock down to launch cards is Riffle's own, and has no visible affordance, so it
+needs a first-run hint and an accessibility action that does the same.
+
+### Motion
+
+- **Everything comes out of the Dock and goes back into it.**
+- **Springs, calm.** A slight settle and no bounce, with one exception below.
+- **The trampoline.** Pressing dips the Dock under the finger with rising resistance while Home begins to fade.
+  On release the Dock springs back past rest and settles, and the cards fan out of it in sequence, front card
+  first, as Home fades away.
+- **Closing is the opening played backwards in time**: last card out is first back in, the cards gather speed
+  into the Dock, the bounce runs in reverse and ends in the dip, then the Dock rises as Home fades in.
+- **The card stack** follows the finger, flings with light inertia, and a slight magnet draws it onto a card.
+  A peeking card is the real card clipped to its top strip; the clip opens as it comes to the front.
+- **Haptics.** A light tick when a card lands and for each icon passed while selecting.
+- **Reduced motion.** With the system setting on, every transition is a short fade.
+- **Settings, for now:** speed (200 ms default), trampoline, inertia, magnet, hold time and haptics.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as
