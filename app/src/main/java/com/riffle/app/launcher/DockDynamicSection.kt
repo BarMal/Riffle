@@ -52,9 +52,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 /**
- * The dock's dynamic side: live apps (apps with something new), now playing while media is active, and the Stream
- * button, always last (ADR 0003, The Dock is the handle). It is also where a pull on the dock opens the Stream, so it
- * reports its bounds through [LocalDockDynamicBoundsSink].
+ * The dock's dynamic side: live apps (apps with something new), now playing while media is active and, in the
+ * contextual mode, a tile for each Stream page that is not an app (ADR 0003, Amendment 3). It reports its bounds
+ * through
+ * [LocalDockDynamicBoundsSink], and where each entry is through [LocalDockDynamicEntryBoundsSink], so a press that
+ * starts on an icon opens that icon's page.
  *
  * Compact 48 dp tiles (see [dockDynamicEntryExtentDp]), because this runs *inside* the dock beside the pinned items:
  * the side takes only the room its entries need (up to the dock's slot limit) and never the pinned icons'. The shelf's
@@ -78,6 +80,11 @@ internal fun DockDynamicSection(
     // The edge against the section divider is an internal seam, not the dock's real edge -- see the
     // matching suppressEndFade on DockSlotStrip (#1174).
     suppressStartFade: Boolean = false,
+    // The contextual mode's one scrolling row carries these entries with no scroll or mask of their own, the row
+    // around them scrolls and keeps the ringed entry in view.
+    inline: Boolean = false,
+    // The index of the first contextual tile, which a divider precedes: the live entries come before it.
+    dividerBeforeIndex: Int? = null,
 ) {
     if (entries.isEmpty() || mainAxisDp <= 0) {
         return
@@ -86,26 +93,29 @@ internal fun DockDynamicSection(
     val iconSizeDp = dockDynamicEntryExtentDp()
     val spacingDp = slotMetrics.itemSpacingDp
     val scrollState = rememberScrollState()
-    ScrollSelectedEntryIntoView(
-        selectedIndex = entries.indexOfFirst(DockDynamicEntry::isSelected),
-        entryPitchDp = iconSizeDp + spacingDp,
-        reducedMotion = interactions.reducedMotion,
-        scrollState = scrollState,
-    )
+    if (!inline) {
+        ScrollSelectedEntryIntoView(
+            selectedIndex = entries.indexOfFirst(DockDynamicEntry::isSelected),
+            entryPitchDp = iconSizeDp + spacingDp,
+            reducedMotion = interactions.reducedMotion,
+            scrollState = scrollState,
+        )
+    }
     // No modifier parameter, against the usual convention: the section's extent is measured for it
     // by the dock and a caller-supplied one would only fight that.
     val runModifier =
         Modifier
             .testTag(DOCK_DYNAMIC_SECTION_TEST_TAG)
             .then(
-                if (runsHorizontally) {
-                    Modifier.width(mainAxisDp.dp).horizontalScroll(scrollState)
-                } else {
-                    Modifier.height(mainAxisDp.dp).verticalScroll(scrollState)
+                when {
+                    inline -> Modifier
+                    runsHorizontally -> Modifier.width(mainAxisDp.dp).horizontalScroll(scrollState)
+                    else -> Modifier.height(mainAxisDp.dp).verticalScroll(scrollState)
                 },
             )
     val tiles: @Composable () -> Unit = {
-        entries.forEach { entry ->
+        entries.forEachIndexed { index, entry ->
+            if (index == dividerBeforeIndex) DockSectionDivider(runsHorizontally = runsHorizontally)
             DockDynamicSectionTile(
                 entry = entry,
                 iconSizeDp = iconSizeDp,
@@ -136,10 +146,16 @@ internal fun DockDynamicSection(
         modifier =
             Modifier
                 .onGloballyPositioned { coordinates -> boundsSink(coordinates.boundsInRoot()) }
-                .dockOverflowMask(
-                    runsHorizontally = runsHorizontally,
-                    fadeStart = overflowAffordance.showStart && !suppressStartFade,
-                    fadeEnd = overflowAffordance.showEnd,
+                .then(
+                    if (inline) {
+                        Modifier
+                    } else {
+                        Modifier.dockOverflowMask(
+                            runsHorizontally = runsHorizontally,
+                            fadeStart = overflowAffordance.showStart && !suppressStartFade,
+                            fadeEnd = overflowAffordance.showEnd,
+                        )
+                    },
                 ),
     ) {
         if (runsHorizontally) {
@@ -216,7 +232,7 @@ private fun DockDynamicSectionTile(
     val entryBoundsSink = LocalDockDynamicEntryBoundsSink.current
     DisposableEffect(entry.key, entryBoundsSink) { onDispose { entryBoundsSink(entry.key, null) } }
     val isMenuExpanded = remember(entry.key) { mutableStateOf(false) }
-    val hasMenu = entry.openInStreamMenuLabel != null
+    val hasMenu = entry.openInStreamMenuLabel != null || entry.appMenu.isNotEmpty()
     Box(
         modifier =
             Modifier
@@ -257,7 +273,7 @@ private fun DockDynamicSectionTile(
         contentAlignment = Alignment.TopEnd,
     ) {
         DockDynamicTileIcon(entry, iconSizeDp, tileShape, appIconLoader)
-        if (entry.symbol == DockDynamicSymbol.NowPlaying) NowPlayingMark(Modifier.align(Alignment.BottomEnd))
+        if (entry.symbol is DockDynamicSymbol.NowPlaying) NowPlayingMark(Modifier.align(Alignment.BottomEnd))
         NotificationCountBadge(count = entry.badgeCount)
         if (hasMenu) {
             DynamicEntryMenu(
@@ -271,7 +287,7 @@ private fun DockDynamicSectionTile(
     }
 }
 
-/** What fills a tile: the Stream button's glyph, the app's icon, or its initial when the launcher cannot resolve it. */
+/** What fills a tile: a contextual tile's glyph, the app's icon, or its initial when the launcher cannot resolve it. */
 @Composable
 private fun DockDynamicTileIcon(
     entry: DockDynamicEntry,
@@ -280,7 +296,7 @@ private fun DockDynamicTileIcon(
     appIconLoader: AppIconLoader,
 ) {
     val identity = entry.identity
-    if (identity != null && entry.symbol != DockDynamicSymbol.Stream) {
+    if (identity != null && entry.symbol !is DockDynamicSymbol.Glyph) {
         LauncherAppIcon(
             identity = identity,
             label = entry.label,
@@ -298,11 +314,12 @@ private fun DockDynamicTileIcon(
                 .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        if (entry.symbol == DockDynamicSymbol.Stream) {
+        val glyph = (entry.symbol as? DockDynamicSymbol.Glyph)?.glyph
+        if (glyph != null) {
             Icon(
-                imageVector = DockIcons.Stream,
+                imageVector = glyph,
                 contentDescription = null,
-                modifier = Modifier.requiredSize((iconSizeDp * STREAM_GLYPH_FRACTION).dp),
+                modifier = Modifier.requiredSize((iconSizeDp * TILE_GLYPH_FRACTION).dp),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         } else {
@@ -330,17 +347,18 @@ private fun NowPlayingMark(modifier: Modifier) {
     )
 }
 
-private const val STREAM_GLYPH_FRACTION = 0.58f
+private const val TILE_GLYPH_FRACTION = 0.58f
 private const val NOW_PLAYING_MARK_DP = 18
 
 /**
- * Where the dynamic section is, in root coordinates (null once it leaves composition), so the dock pull can tell which
- * side a touch started on. The dock host provides the sink; outside it nothing listens.
+ * Where the dynamic section is, in root coordinates (null once it leaves composition), so an expanded posture knows
+ * which
+ * end of the dock it is at. The dock host provides the sink; outside it nothing listens.
  */
 internal val LocalDockDynamicBoundsSink = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
 
 /**
- * Where each dynamic entry is, in root coordinates by key (null once it leaves composition), so a pull that starts on
+ * Where each dynamic entry is, in root coordinates by key (null once it leaves composition), so a press that starts on
  * an app's icon can land the Stream on that app. The dock host provides the sink; outside it nothing listens.
  */
 internal val LocalDockDynamicEntryBoundsSink = staticCompositionLocalOf<(String, Rect?) -> Unit> { { _, _ -> } }
@@ -354,7 +372,7 @@ internal fun dockDynamicEntryExtentDp(): Int = DOCK_DYNAMIC_ENTRY_EXTENT_DP
 
 private const val DOCK_DYNAMIC_ENTRY_EXTENT_DP = 48
 
-/** The ring marking the entry whose destination is currently showing (the Stream button while the Stream is up). */
+/** The ring marking the entry whose page is open (contextual mode). */
 private const val SELECTED_ENTRY_RING_DP = 2
 
 internal fun dockDynamicSectionTileTestTag(label: String): String = "dock-dynamic-entry:$label"
@@ -363,7 +381,8 @@ internal const val DOCK_DYNAMIC_SECTION_TEST_TAG = "dock-dynamic-section"
 
 /**
  * What a screen reader and a keyboard get on a dynamic entry: its description and selection, and for an app entry
- * "Show <app> in Stream" (the swipe up's equivalent) and Shift + Enter. ONE semantics block, so one `customActions`
+ * "Show <app> in Stream" (the press that starts on the icon, in the Home mode) and Shift + Enter. ONE semantics
+ * block, so one `customActions`
  * list: two would drop the earlier one. The Enter taken for Shift + Enter is taken through its release too, so it
  * never also opens the app.
  */

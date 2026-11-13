@@ -3,20 +3,18 @@ package com.riffle.app.screenshots
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import com.riffle.app.launcher.DrawnSurface
 import com.riffle.app.launcher.DrawnSurfaceKey
+import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HOME_SURFACE_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.STREAM_PULL_SURFACE_TEST_TAG
-import com.riffle.app.launcher.dockDynamicSectionTileTestTag
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
@@ -29,8 +27,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Opening the Stream from the Dock's Stream button, frame by frame (the test clock is stepped by hand): one continuous
- * reveal. Home never stays at full opacity once the Stream has started to come in, the Stream is always on screen (or
+ * Opening the Stream by pressing the Dock down and releasing, frame by frame (the test clock is stepped by hand): the
+ * existing Home and Stream transition, one continuous reveal. Home never stays at full opacity once the Stream has
+ * started to come in, the Stream is always on screen (or
  * moving) while Home is fading, and the frame the shell agrees (a frame or several after the settle) changes nothing.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -106,7 +105,7 @@ class StreamOpenTransitionTest {
         return seen
     }
 
-    private fun tapStreamButton(
+    private fun pressDockDown(
         reducedMotion: Boolean,
         startShown: Boolean,
         shellDelayFrames: Int,
@@ -115,7 +114,7 @@ class StreamOpenTransitionTest {
         show(reducedMotion)
         composeRule.waitForIdle()
         composeRule.mainClock.autoAdvance = false
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).performClick()
+        composeRule.pressDock(distancePx = PRESS_PX, settle = false)
         return record(frames = 90, shellDelayFrames = shellDelayFrames)
     }
 
@@ -156,18 +155,18 @@ class StreamOpenTransitionTest {
     }
 
     @Test
-    fun theStreamButtonOpensTheStreamAsOneContinuousReveal() {
-        assertOpensContinuously(tapStreamButton(reducedMotion = false, startShown = false, shellDelayFrames = 0))
+    fun pressingTheDockOpensTheStreamAsOneContinuousReveal() {
+        assertOpensContinuously(pressDockDown(reducedMotion = false, startShown = false, shellDelayFrames = 0))
     }
 
     @Test
     fun aShellThatAnswersSeveralFramesLaterChangesNothing() {
-        assertOpensContinuously(tapStreamButton(reducedMotion = false, startShown = false, shellDelayFrames = 8))
+        assertOpensContinuously(pressDockDown(reducedMotion = false, startShown = false, shellDelayFrames = 8))
     }
 
     @Test
-    fun theStreamButtonClosesTheStreamAsOneContinuousReveal() {
-        val frames = tapStreamButton(reducedMotion = false, startShown = true, shellDelayFrames = 3)
+    fun pressingTheDockClosesTheStreamAsOneContinuousReveal() {
+        val frames = pressDockDown(reducedMotion = false, startShown = true, shellDelayFrames = 3)
         val log = frames.describe()
         var lastHome = 0f
         var lastTravel = 0f
@@ -195,7 +194,7 @@ class StreamOpenTransitionTest {
     @Test
     fun underReducedMotionTheStreamCutsInWithNoFrameBetween() {
         // Frame 0 is the state right after the tap, before any frame has been drawn: the drawn frames are 1 on.
-        val frames = tapStreamButton(reducedMotion = true, startShown = false, shellDelayFrames = 2).drop(1)
+        val frames = pressDockDown(reducedMotion = true, startShown = false, shellDelayFrames = 2).drop(1)
         val log = frames.describe()
         val firstCut = frames.indexOfFirst { it.home == null }
         assertTrue("never cut to the Stream\n$log", firstCut in 0..3)
@@ -207,22 +206,29 @@ class StreamOpenTransitionTest {
     }
 
     @Test
-    fun aPullTracksTheFingerAndEndsWithoutAFlash() {
+    fun aPressChangesNothingOnScreenUntilItIsReleasedAndThenEndsWithoutAFlash() {
         shellShown = false
         show(reducedMotion = false)
         composeRule.waitForIdle()
         composeRule.mainClock.autoAdvance = false
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).performTouchInput {
-            down(center)
-            repeat(20) { moveBy(Offset(0f, -40f)) }
-        }
+        // The finger goes down and the Dock is pressed past the threshold, but not released: the existing transition
+        // waits for the release (a later slice draws the dip from the press's progress).
+        composeRule.pressDock(distancePx = PRESS_PX, release = false, settle = false)
         val frames = mutableListOf(frame())
         repeat(4) {
             composeRule.mainClock.advanceTimeByFrame()
             frames += frame()
         }
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).performTouchInput { up() }
+        frames.forEach { assertEquals(1f, it.home?.alpha) }
+        assertTrue("the Stream moved while the Dock was only pressed", frames.all { it.stream == null })
+        assertTrue("nothing was asked of the shell before the release: $actions", actions.isEmpty())
+
+        composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).performTouchInput { up() }
         frames += record(frames = 90, shellDelayFrames = 4)
         assertOpensContinuously(frames)
+    }
+
+    private companion object {
+        const val PRESS_PX = 150f
     }
 }

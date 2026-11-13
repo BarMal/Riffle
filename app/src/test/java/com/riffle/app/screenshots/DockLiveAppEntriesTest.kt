@@ -10,10 +10,10 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -24,12 +24,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.requestFocus
+import com.riffle.app.launcher.DOCK_CONTEXTUAL_ROW_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.dockDynamicSectionTileTestTag
 import com.riffle.app.launcher.stream.STREAM_SURFACE_TEST_TAG
 import com.riffle.app.launcher.stream.StreamHost
-import com.riffle.app.launcher.stream.streamSpineMarkerTestTag
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -48,10 +48,12 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.concurrent.Executors
 
 /**
- * A live app on the Dock's dynamic side (ADR 0003, The Dock is the handle), through the real [HomeDestination] over the
- * real Stream wiring: a tap opens the app, a swipe up from its icon opens the Stream on that app's page, a swipe from
- * anywhere else on the side lands where the Stream opens today, a long-press offers the app's menu with "Open in
- * Stream", and a screen reader and a keyboard can do all of it.
+ * A live app on the Dock's dynamic side (ADR 0003, Amendment 3), through the real [HomeDestination] over the real
+ * Stream wiring: a tap opens the app, a press that starts on its icon (the Dock pressed down, then released) opens the
+ * Stream on that app's page, a press from anywhere else lands on the first page, a long-press offers the app's menu
+ * with
+ * "Open in Stream", and in the contextual mode its tile is ringed while its page is open and a tap switches pages. A
+ * screen reader and a keyboard can do all of it.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -122,26 +124,28 @@ class DockLiveAppEntriesTest {
     private fun tile(app: com.riffle.core.domain.launcher.apps.InstalledApp) =
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(app.label))
 
-    private fun pageMarker(app: com.riffle.core.domain.launcher.apps.InstalledApp) =
-        composeRule.onNodeWithTag(
-            streamSpineMarkerTestTag(
-                StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "${app.identity.packageName.value}:$personal"),
-            ),
-        )
+    private fun pageKey(app: com.riffle.core.domain.launcher.apps.InstalledApp) =
+        StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "${app.identity.packageName.value}:$personal")
 
-    private fun swipeUpFrom(tileTag: String) {
-        composeRule.onNodeWithTag(tileTag).performTouchInput {
-            down(center)
-            repeat(12) { moveBy(Offset(0f, -60f), delayMillis = 16) }
-            up()
-        }
+    /** Whether the page of [app] is the one in front, and so its Dock tile is the ringed one. */
+    private fun assertOpen(app: com.riffle.core.domain.launcher.apps.InstalledApp) {
+        composeRule.waitForIdle()
+        assertEquals(pageKey(app), host.dock.currentKey)
+        tile(app).assertIsSelected()
+    }
+
+    /** Presses the Dock down by a tile's own press, starting on [tileTag], and releases. */
+    private fun pressFrom(
+        tileTag: String,
+        distancePx: Float = 150f,
+    ) {
+        composeRule.pressDock(distancePx, node = composeRule.onNodeWithTag(tileTag))
     }
 
     private fun waitForStream() {
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            val streamTile = dockDynamicSectionTileTestTag("Stream")
             composeRule.onAllNodesWithTag(STREAM_SURFACE_TEST_TAG).fetchSemanticsNodes().isNotEmpty() &&
-                composeRule.onAllNodesWithTag(streamTile).fetchSemanticsNodes().isNotEmpty()
+                host.dock.currentKey != null
         }
         composeRule.waitForIdle()
     }
@@ -161,41 +165,65 @@ class DockLiveAppEntriesTest {
     }
 
     @Test
-    fun aSwipeUpFromALiveAppsIconOpensTheStreamOnThatAppsPage() {
+    fun aPressThatStartsOnALiveAppsIconOpensTheStreamOnThatAppsPage() {
         show()
-        swipeUpFrom(dockDynamicSectionTileTestTag(mail.label))
+        pressFrom(dockDynamicSectionTileTestTag(mail.label))
         waitForStream()
 
         composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).assertIsDisplayed()
-        pageMarker(mail).assertIsSelected()
+        assertOpen(mail)
         assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
         assertEquals("the landing was consumed", null, host.focus.pending)
+        assertTrue("the press never launches the app", actions.none { it is LauncherShellAction.LaunchApp })
     }
 
     @Test
-    fun aSwipeUpFromTheStreamButtonOpensTheStreamWhereItOpensToday() {
+    fun aPressFromAnywhereElseOpensTheStreamWhereItOpensWithNothingRemembered() {
         show()
-        swipeUpFrom(dockDynamicSectionTileTestTag("Stream"))
+        composeRule.pressDock(distancePx = 150f, start = { Offset(width * 0.05f, height / 2f) })
         waitForStream()
 
         composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(streamSpineMarkerTestTag(StreamSection.NOW.storedId)).assertIsSelected()
+        // No page is remembered, so it opens on its first page when it opens, which is Now; no app's page is landed on.
+        assertEquals(StreamPageKeys.NOW, host.dock.currentKey)
         assertEquals(null, host.focus.pending)
+        tile(chat).assertIsNotSelected()
+        tile(mail).assertIsNotSelected()
     }
 
     @Test
-    fun aPullThatSpringsBackLeavesNoLandingBehind() {
+    fun aPressThatDoesNotPassTheThresholdLeavesNoLandingBehind() {
         show()
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(mail.label)).performTouchInput {
-            down(center)
-            moveBy(Offset(0f, -30f), delayMillis = 400)
-            moveBy(Offset(0f, -30f), delayMillis = 400)
-            // Far too slow and short to commit: it springs back.
-            up()
-        }
-        composeRule.waitForIdle()
+        // Past touch slop (16 dp, so it is a press and not a tap) but short of the 28 dp threshold.
+        pressFrom(dockDynamicSectionTileTestTag(mail.label), distancePx = 22f * composeRule.density.density)
         composeRule.waitUntil(timeoutMillis = 5_000) { host.focus.pending == null }
         assertTrue(composeRule.onAllNodesWithTag(STREAM_SURFACE_TEST_TAG).fetchSemanticsNodes().isEmpty())
+        assertTrue("nothing was asked of the shell: $actions", actions.isEmpty())
+    }
+
+    @Test
+    fun inTheContextualModeTheLiveAppsAndAnExtraTilePerPageShareOneRowAndATapSwitchesPages() {
+        show()
+        pressFrom(dockDynamicSectionTileTestTag(mail.label))
+        waitForStream()
+        actions.clear()
+
+        // The same live apps in the same order, then the tiles of the pages that are not apps.
+        assertOpen(mail)
+        composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).assertExists()
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Recents")).assertExists()
+        tile(chat).assertIsNotSelected()
+
+        // A tap switches the page; it does not launch the app.
+        tile(chat).performClick()
+        waitForStream()
+        assertOpen(chat)
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Recents")).performClick()
+        composeRule.waitForIdle()
+        assertEquals(StreamPageKeys.RECENTS, host.dock.currentKey)
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Recents")).assertIsSelected()
+        tile(chat).assertIsNotSelected()
+        assertTrue("a tap in the contextual mode switches pages, it launches nothing: $actions", actions.isEmpty())
     }
 
     @Test
@@ -221,7 +249,7 @@ class DockLiveAppEntriesTest {
         composeRule.onNodeWithText("Open in Stream").performClick()
         waitForStream()
 
-        pageMarker(mail).assertIsSelected()
+        assertOpen(mail)
     }
 
     @Test
@@ -234,16 +262,7 @@ class DockLiveAppEntriesTest {
 
         composeRule.runOnUiThread { node.config[SemanticsActions.CustomActions].single().action() }
         waitForStream()
-        pageMarker(mail).assertIsSelected()
-    }
-
-    @Test
-    fun theStreamButtonHasNoShowInStreamAction() {
-        show()
-        val node = tile(ScreenshotFixtures.mail).fetchSemanticsNode()
-        assertTrue(SemanticsProperties.ContentDescription in node.config)
-        val button = composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).fetchSemanticsNode()
-        assertTrue(SemanticsActions.CustomActions !in button.config)
+        assertOpen(mail)
     }
 
     @OptIn(ExperimentalTestApi::class)
@@ -260,7 +279,7 @@ class DockLiveAppEntriesTest {
             keyUp(Key.ShiftLeft)
         }
         waitForStream()
-        pageMarker(chat).assertIsSelected()
+        assertOpen(chat)
         assertTrue("Shift+Enter never launches the app", actions.none { it is LauncherShellAction.LaunchApp })
     }
 }

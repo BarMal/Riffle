@@ -25,12 +25,11 @@
     <string name="stream_show_hidden_section">Show %1$s</string>
     <string name="stream_current_view">Currently %1$s</string>
 
-    <!-- Pages, the spine and the Stage view -->
+    <!-- Pages and the Stage view -->
     <plurals name="stream_page_items">
         <item quantity="one">%1$d item</item>
         <item quantity="other">%1$d items</item>
     </plurals>
-    <string name="stream_spine_marker">%1$s, page %2$d of %3$d</string>
     <string name="stream_previous_page">Previous page</string>
     <string name="stream_next_page">Next page</string>
     <string name="stream_wide_pages">Pages</string>
@@ -138,7 +137,7 @@
     <string name="stream_recents_frequent">Often used</string>
 
     <!-- Dock accessibility actions that reach the Stream -->
-    <string name="stream_dock_open_action">Open Stream</string>
+    <string name="stream_dock_open_action">Show live pages</string>
     <string name="stream_dock_close_action">Back to Home</string>
     <string name="dock_open_library_action">Open Library</string>
     <string name="split_divider_label">Divider between Home and Stream</string>
@@ -149,10 +148,8 @@
     <string name="split_action_split">Split</string>
     <string name="split_action_stream_only">Stream only</string>
 
-    <!-- The Dock's dynamic side: live apps, now playing and the Stream button (ADR 0003) -->
+    <!-- The Dock's dynamic side: live apps, now playing and, in the contextual mode, a tile per Stream page (ADR 0003) -->
     <string name="dock_live_app_slots_title">Live apps</string>
-    <string name="dock_stream_button_label">Stream</string>
-    <string name="dock_stream_button_close_label">Stream, back to Home</string>
     <string name="dock_now_playing_label">Now playing</string>
     <string name="dock_now_playing_titled_label">Now playing: %1$s</string>
     <string name="dock_live_app_label">%1$s, %2$d new</string>
@@ -160,6 +157,11 @@
     <string name="dock_live_app_open_action">Open %1$s</string>
     <string name="dock_live_app_show_in_stream_action">Show %1$s in Stream</string>
     <string name="dock_live_app_open_in_stream_menu">Open in Stream</string>
+    <string name="dock_live_app_show_action">Show %1$s</string>
+    <string name="dock_tile_show_action">Show %1$s</string>
+    <string name="dock_tile_show_as">Show as %1$s</string>
+    <string name="dock_tile_move_earlier">Move earlier</string>
+    <string name="dock_tile_move_later">Move later</string>
     <!-- The Library (ADR 0003) -->
     <string name="library_title">Library</string>
     <string name="library_search_label">Search apps</string>

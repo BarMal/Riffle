@@ -111,7 +111,7 @@ fun HomeDestination(
                 )
             }
         }
-    // The dynamic side is the Stream's: live apps, now playing and the Stream button, whichever mode is showing.
+    // The dynamic side is the Stream's: live apps and now playing, and in the contextual mode a tile per page.
     val dockInterpreter =
         rememberDockDynamicSide(
             stream = stream,
@@ -121,7 +121,7 @@ fun HomeDestination(
             deviceClass = state.homeLayoutSet.activeKey.deviceClass,
             onOpenStream = { target ->
                 if (state.destination.isLibrary) {
-                    // The Library is open: the Stream button leaves it for the Stream, no pull to animate.
+                    // The Library is open: a tile or a live app leaves it for the Stream, no transition to animate.
                     target?.let { stream?.focus?.request(it) }
                     onAction(LauncherShellAction.OpenStream)
                 } else {
@@ -130,18 +130,6 @@ fun HomeDestination(
                         dockPull,
                         target,
                         shownStream,
-                        plan.dockEdge.pullDirection,
-                        state.reducedMotion(),
-                        splitSetup(),
-                    )
-                }
-            },
-            onCloseStream = {
-                if (state.destination.isLibrary) {
-                    onAction(LauncherShellAction.OpenHome)
-                } else {
-                    dockPull.open(
-                        DockPullDestination.HOME,
                         plan.dockEdge.pullDirection,
                         state.reducedMotion(),
                         splitSetup(),
@@ -161,6 +149,29 @@ fun HomeDestination(
                     shown = shownStream,
                     split = if (splitting) splitSetup else null,
                     focus = stream?.focus,
+                    // Pressing the Dock down and releasing toggles the Home and the contextual mode: from Home it opens
+                    // the Stream on the page of the icon the press started on (else the last page), from the Stream it
+                    // goes back to Home.
+                    onPress = { entryKey ->
+                        if (shownStream) {
+                            dockPull.open(
+                                DockPullDestination.HOME,
+                                plan.dockEdge.pullDirection,
+                                state.reducedMotion(),
+                                splitSetup(),
+                            )
+                        } else {
+                            openStream(
+                                stream,
+                                dockPull,
+                                entryKey?.let(::dockDynamicEntryTarget),
+                                shownStream,
+                                plan.dockEdge.pullDirection,
+                                state.reducedMotion(),
+                                splitSetup(),
+                            )
+                        }
+                    },
                 ),
             dockPull = dockPull,
             hostState = dockHost,
@@ -255,6 +266,7 @@ fun HomeDestination(
                                 appIconLoader = appIconLoader,
                                 reducedMotion = state.reducedMotion(),
                                 onConnectTasks = openTasksSettings,
+                                liveAppSlots = dockHostState.homeLayout.dock.liveAppSlots,
                                 contentPadding =
                                     streamPaneInsets(
                                         insets =
@@ -468,6 +480,7 @@ private fun StreamHomeSurface(
             appIconLoader = appIconLoader,
             reducedMotion = state.launcherSettings.motion.reducedMotion,
             contentPadding = insets,
+            liveAppSlots = state.homeLayout.dock.liveAppSlots,
             onConnectTasks = onConnectTasks,
         )
     }

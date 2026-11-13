@@ -3,8 +3,6 @@
 package com.riffle.app.launcher.stream
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,22 +20,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,10 +42,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import com.riffle.app.R
 import com.riffle.app.launcher.GlassSurface
-import com.riffle.app.launcher.ShowAsMenuItems
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -61,7 +51,6 @@ import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.EventKind
 import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamGroupKeys
-import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.stream.StreamPage
 import com.riffle.core.domain.launcher.stream.StreamPageBody
 import com.riffle.core.domain.launcher.stream.StreamSection
@@ -99,7 +88,7 @@ internal fun StreamView.titleRes(): Int =
         StreamView.LIST -> R.string.stream_show_as_list
     }
 
-/** The glyph of a section, for the header, the spine and the Stage rail of a page that has no app icon. */
+/** The glyph of a section, for the Dock's tile and the Stage rail of a page that has no app icon. */
 internal fun StreamSection.glyph(): ImageVector =
     when (this) {
         StreamSection.NOW -> Icons.Filled.PlayArrow
@@ -120,19 +109,16 @@ internal fun StreamPage.countText(): String =
     if (count <= 0) "" else pluralStringResource(R.plurals.stream_page_items, count, count)
 
 /**
- * One page of the Stream (ADR 0003, Views): a header (the app's icon or the section's glyph, the name, how many items,
- * and the options button or long-press for Show as, Move and Hide) over the page's content as its section's stored
- * view, a vertical Stack of overlapping cards or a List of rows. A labelled pane for assistive technology. Text-heavy
- * content stops at 640 dp.
+ * One page of the Stream (ADR 0003, Views, Amendment 3): the page's content as its section's stored view, a vertical
+ * Stack of overlapping cards or a List of rows, with no header of its own: the Dock is the page indicator, and the
+ * page's options (Show as, Move, Hide) are on a long-press of its Dock tile. A labelled pane for assistive technology.
+ * Text-heavy content stops at 640 dp.
  */
 @Composable
 internal fun StreamPageView(
     page: StreamPage,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onShowAs: (StreamView) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val title = page.title()
@@ -145,133 +131,10 @@ internal fun StreamPageView(
                     .padding(horizontal = RiffleSpacing.l),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         ) {
-            StreamPageHeader(page, title, env, canMoveUp, canMoveDown, onShowAs, callbacks)
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) { StreamPageBodyView(page, env, callbacks) }
         }
     }
 }
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun StreamPageHeader(
-    page: StreamPage,
-    title: String,
-    env: StreamEnvironment,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onShowAs: (StreamView) -> Unit,
-    callbacks: StreamCallbacks,
-) {
-    var menuOpen by remember { mutableStateOf(false) }
-    val sectionTitle = stringResource(page.section.titleRes())
-    Box {
-        // The header sits on thin glass, so its text reads over any wallpaper.
-        GlassSurface(
-            modifier = Modifier.fillMaxWidth(),
-            weight = GlassWeight.Thin,
-            shape = RiffleShapes.medium,
-            tint = MaterialTheme.colorScheme.surfaceContainer,
-        ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = StreamMinTarget)
-                        .combinedClickable(
-                            onLongClickLabel = stringResource(R.string.stream_header_long_press_label),
-                            onLongClick = { menuOpen = true },
-                            onClick = {},
-                        )
-                        .padding(start = RiffleSpacing.m),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-            ) {
-                StreamPageGlyph(page, env, HeaderIconSize)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    val count = page.countText()
-                    if (count.isNotEmpty()) {
-                        Text(
-                            text = count,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(StreamMinTarget)) {
-                    Icon(
-                        Icons.Filled.MoreVert,
-                        contentDescription = stringResource(R.string.stream_section_options, sectionTitle),
-                    )
-                }
-            }
-        }
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            PageMenuItems(
-                page = page,
-                canMoveUp = canMoveUp,
-                canMoveDown = canMoveDown,
-                onClose = { menuOpen = false },
-                onShowAs = onShowAs,
-                callbacks = callbacks,
-            )
-        }
-    }
-}
-
-/** Show as (for the page's whole section), then the section's Move and Hide: the one menu every page shares. */
-@Composable
-private fun ColumnScope.PageMenuItems(
-    page: StreamPage,
-    canMoveUp: Boolean,
-    canMoveDown: Boolean,
-    onClose: () -> Unit,
-    onShowAs: (StreamView) -> Unit,
-    callbacks: StreamCallbacks,
-) {
-    ShowAsMenuItems(
-        options = StreamView.entries,
-        current = page.view,
-        optionLabel = { option -> stringResource(option.titleRes()) },
-        onSelect = { option ->
-            onClose()
-            onShowAs(option)
-        },
-    )
-    HorizontalDivider()
-    if (canMoveUp) {
-        MenuAction(R.string.stream_move_up) {
-            onClose()
-            callbacks.onLayoutAction(StreamLayoutAction.Move(page.section, -1))
-        }
-    }
-    if (canMoveDown) {
-        MenuAction(R.string.stream_move_down) {
-            onClose()
-            callbacks.onLayoutAction(StreamLayoutAction.Move(page.section, 1))
-        }
-    }
-    MenuAction(R.string.stream_hide_section) {
-        onClose()
-        callbacks.onLayoutAction(StreamLayoutAction.SetEnabled(page.section, false))
-    }
-}
-
-@Composable
-private fun MenuAction(
-    @StringRes label: Int,
-    onClick: () -> Unit,
-) {
-    DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = onClick)
-}
-
-private val HeaderIconSize = RiffleSpacing.xxl
 
 /** The app's icon for an app page, else the section's glyph. Decorative: the title names the page. */
 @Composable

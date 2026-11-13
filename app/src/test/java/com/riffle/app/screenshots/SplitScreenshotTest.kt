@@ -9,15 +9,13 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
+import com.riffle.app.launcher.DOCK_CONTEXTUAL_ROW_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
-import com.riffle.app.launcher.dockDynamicSectionTileTestTag
 import com.riffle.app.launcher.split.SPLIT_DIVIDER_TEST_TAG
 import com.riffle.app.launcher.split.SPLIT_HOME_PANE_TEST_TAG
 import com.riffle.app.launcher.split.SPLIT_STREAM_PANE_TEST_TAG
@@ -42,8 +40,9 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The unfolded split (ADR 0003, Folded and unfolded) through the real [HomeDestination]: Home and the Stream side by
  * side with a movable divider, the Stream alone, and the tabletop's stacked panes over the hinge. The screenshots show
- * each; the behaviour checks cover the divider's actions and keys, the Dock pull settling to the nearest of the three
- * states, and the phone staying a full switch. The shell is a recording lambda.
+ * each; the behaviour checks cover the divider's actions and keys, the Dock press opening the last-used mode and
+ * returning Home, and the phone
+ * staying a full switch. The shell is a recording lambda.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -246,43 +245,40 @@ class SplitScreenshotTest {
     }
 
     @Test
-    fun aPartialPullFromHomeLeavesTheSplit() {
+    fun pressingTheDockFromHomeOpensTheLastUsedMode() {
         render(streamShown = false, lastShown = SplitMode.STREAM_ONLY)
-        pullFromDynamicSide(fraction = 0.5f)
+        composeRule.pressDock(distancePx = PRESS_PX)
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
+        assertEquals(SplitMode.STREAM_ONLY, host.layouts.layoutFor(HomeLayoutDeviceClass.FOLDABLE).split.lastShown)
+    }
+
+    @Test
+    fun pressingTheDockFromHomeOpensTheSplitWhenThatWasTheLastUsedMode() {
+        render(streamShown = false, lastShown = SplitMode.SPLIT)
+        composeRule.pressDock(distancePx = PRESS_PX)
         assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
         assertEquals(SplitMode.SPLIT, host.layouts.layoutFor(HomeLayoutDeviceClass.FOLDABLE).split.lastShown)
     }
 
     @Test
-    fun aLongPullFromHomeReachesTheStreamAlone() {
-        render(streamShown = false, lastShown = SplitMode.SPLIT)
-        pullFromDynamicSide(fraction = 0.95f)
-        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
-        assertEquals(SplitMode.STREAM_ONLY, host.layouts.layoutFor(HomeLayoutDeviceClass.FOLDABLE).split.lastShown)
-    }
-
-    @Test
-    fun aShortPullFromHomeOpensNothing() {
+    fun aShortPressFromHomeOpensNothing() {
         render(streamShown = false)
-        pullFromDynamicSide(fraction = 0.08f)
+        // Past touch slop (16 dp) so it is a press, short of the 28 dp threshold, on whatever density the device has.
+        composeRule.pressDock(distancePx = SHORT_PRESS_DP * composeRule.density.density)
         assertTrue(actions.isEmpty())
     }
 
     @Test
-    fun theStreamButtonOpensTheLastUsedModeAndTogglesBackToHome() {
-        render(streamShown = false, lastShown = SplitMode.STREAM_ONLY)
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).performClick()
-        composeRule.waitForIdle()
-        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), actions)
-        assertEquals(SplitMode.STREAM_ONLY, host.layouts.layoutFor(HomeLayoutDeviceClass.FOLDABLE).split.lastShown)
+    fun pressingTheDockReturnsHomeFromTheSplit() {
+        render()
+        composeRule.pressDock(distancePx = PRESS_PX)
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenHome), actions)
     }
 
     @Test
-    fun theStreamButtonReturnsHomeFromTheSplit() {
+    fun theDockShowsItsPageTilesBesideTheSplitStream() {
         render()
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).performClick()
-        composeRule.waitForIdle()
-        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenHome), actions)
+        composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).assertExists()
     }
 
     @Test
@@ -293,20 +289,9 @@ class SplitScreenshotTest {
         assertTrue(!paneExists(SPLIT_HOME_PANE_TEST_TAG))
     }
 
-    private fun pullFromDynamicSide(fraction: Float) {
-        val window = composeRule.onRoot().fetchSemanticsNode().size
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Stream")).performTouchInput {
-            down(center)
-            // Slow, and held still before the release, so stopping partway is a position and not a fling.
-            repeat(PULL_STEPS) { moveBy(Offset(0f, -window.height * fraction / PULL_STEPS), delayMillis = 60) }
-            advanceEventTime(300)
-            up()
-        }
-        composeRule.waitForIdle()
-    }
-
     private companion object {
-        const val PULL_STEPS = 12
+        const val PRESS_PX = 150f
+        const val SHORT_PRESS_DP = 22f
         const val DRAG_STEPS = 8
         const val DRAG_STEP_PX = 20f
     }

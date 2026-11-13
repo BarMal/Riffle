@@ -3,13 +3,12 @@ package com.riffle.app.screenshots
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamHost
-import com.riffle.app.launcher.stream.streamSpineMarkerTestTag
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamLoadingRule
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
@@ -57,7 +56,16 @@ class StreamLoadsEndToEndJvmTest {
             loadingTimeoutMillis = loadingTimeoutMillis,
         )
 
+    private lateinit var shown: StreamHost
+
+    /** Brings [section]'s page to the front the way the Dock's tile does: a landing request. */
+    private fun openSection(section: StreamSection) {
+        composeRule.runOnUiThread { shown.focus.request(StreamFocusTarget.Section(section)) }
+        composeRule.waitForIdle()
+    }
+
     private fun show(host: StreamHost) {
+        shown = host
         composeRule.setContent {
             ScreenshotBackdrop {
                 StreamDestination(
@@ -74,7 +82,7 @@ class StreamLoadsEndToEndJvmTest {
 
     private fun assertNoPageStaysLoading() {
         StreamSection.entries.forEach { section ->
-            composeRule.onNodeWithTag(streamSpineMarkerTestTag(section.storedId)).performClick()
+            openSection(section)
             composeRule.waitUntil(timeoutMillis = 5_000) {
                 composeRule.onAllNodesWithText("Loading").fetchSemanticsNodes().isEmpty()
             }
@@ -112,7 +120,7 @@ class StreamLoadsEndToEndJvmTest {
                 loadingTimeoutMillis = 300,
             ),
         )
-        composeRule.onNodeWithTag(streamSpineMarkerTestTag(StreamSection.NOTIFICATIONS.storedId)).performClick()
+        openSection(StreamSection.NOTIFICATIONS)
         composeRule.waitUntil(timeoutMillis = 5_000) {
             composeRule.onAllNodesWithText("This can't be shown right now.").fetchSemanticsNodes().isNotEmpty()
         }

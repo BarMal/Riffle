@@ -2,29 +2,36 @@ package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import com.riffle.app.R
 import com.riffle.app.launcher.stream.StreamHost
+import com.riffle.app.launcher.stream.StreamPageOption
+import com.riffle.app.launcher.stream.dockLiveEntries
 import com.riffle.app.launcher.stream.rememberStreamSectionResults
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.dock.DockDynamicSide
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
+import com.riffle.core.domain.launcher.dock.DockRing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamSection
-import com.riffle.core.domain.launcher.stream.StreamSectionResult
 
 /**
- * The Dock's dynamic side as the dock draws it (ADR 0003): the entries of [DockDynamicSide] over what the Stream's
- * Notifications and Now sections deliver -- so Hide rules and content levels have already applied and there is no
- * second notification pipeline -- as neutral [DockDynamicEntry] values, and the reading of a tap on one.
+ * The Dock's dynamic side as the dock draws it (ADR 0003, Amendment 3): the entries of [DockDynamicSide] over what the
+ * Stream's Notifications and Now sections deliver -- so Hide rules and content levels have already applied and there is
+ * no second notification pipeline -- as neutral [DockDynamicEntry] values, and the reading of a tap on one.
  *
- * Returns [modeInterpreter] with its dynamic entries replaced: whichever mode is showing, the dynamic side is the same.
- * Without a Stream the side is empty (there is nothing to open).
+ * In the Home mode ([shown] false) the side is the live apps and now playing; in the contextual mode ([shown], the
+ * Stream
+ * showing) the same entries are followed by a tile for each Stream page that is not an app, the entry of the open
+ * page is
+ * ringed, and a tap switches the Stream's page. Returns [modeInterpreter] with its dynamic entries replaced. Without a
+ * Stream the side is empty (there is nothing to open).
  */
 @Composable
 @Suppress("LongParameterList")
@@ -35,7 +42,6 @@ internal fun rememberDockDynamicSide(
     installedApps: List<InstalledApp>,
     deviceClass: HomeLayoutDeviceClass,
     onOpenStream: (StreamFocusTarget?) -> Unit,
-    onCloseStream: () -> Unit,
     modeInterpreter: HomeDockInterpreter,
     appShortcuts: AppShortcutsByApp = emptyMap(),
 ): HomeDockInterpreter {
@@ -43,70 +49,94 @@ internal fun rememberDockDynamicSide(
     // The provider reads the options of the posture on screen; keep it current even before the Stream has opened.
     SideEffect { stream.posture.deviceClass = deviceClass }
     val results = rememberStreamSectionResults(stream.provider, listOf(StreamSection.NOTIFICATIONS, StreamSection.NOW))
-    val notifications = results[StreamSection.NOTIFICATIONS]
-    val now = results[StreamSection.NOW]
-    val groups = (notifications as? StreamSectionResult.Ready)?.groups.orEmpty()
-    val media = (now as? StreamSectionResult.Ready)?.items?.filterIsInstance<MediaContent>()?.firstOrNull()
-    val side = remember(groups, media, liveAppSlots) { DockDynamicSide.entries(groups, media, liveAppSlots) }
+    val live = remember(results, liveAppSlots) { results.dockLiveEntries(liveAppSlots) }
+    val link = stream.dock
+    val layouts by stream.layouts.layouts.collectAsState()
+    val layout = layouts.forPosture(deviceClass)
+    // The contextual tiles are the Stream's pages that are not apps, in the Dock's order; only the contextual mode
+    // has them.
+    val tileSections =
+        if (shown) {
+            DockDynamicSide.contextSections(link.pages, nowPlaying = live.any { it is DockDynamicSideEntry.NowPlaying })
+        } else {
+            emptyList()
+        }
+    val side =
+        remember(live, tileSections) { live + tileSections.map(DockDynamicSideEntry::ContextTile) }
+    val ringed =
+        if (shown) {
+            DockRing.entryKeyFor(link.pages.firstOrNull { page -> page.key == link.currentKey }, side.map { it.key })
+        } else {
+            null
+        }
     val resources = LocalContext.current.resources
+    val pageOptions = remember(link) { { option: StreamPageOption -> link.requestOption(option) } }
     val entries =
-        remember(side, installedApps, shown, resources, appShortcuts) {
-            side.map { entry -> entry.toDockEntry(installedApps, shown, resources, appShortcuts) }
+        remember(side, installedApps, shown, resources, appShortcuts, ringed, layout, tileSections) {
+            side.map { entry ->
+                entry.toDockEntry(
+                    installedApps = installedApps,
+                    streamShown = shown,
+                    resources = resources,
+                    appShortcuts = appShortcuts,
+                    selected = entry.key == ringed,
+                    pageMenu =
+                        if (shown) pageOptionMenu(entry, layout, tileSections, resources, pageOptions) else emptyList(),
+                )
+            }
         }
     val latestOpen = rememberUpdatedState(onOpenStream)
-    val latestClose = rememberUpdatedState(onCloseStream)
-    val latestShown = rememberUpdatedState(shown)
     return modeInterpreter.copy(
         dynamicEntries = entries,
-        onDynamicEntryDelegated = { key ->
-            when (val target = dockDynamicEntryTarget(key)) {
-                DockDynamicTarget.StreamButton ->
-                    if (latestShown.value) latestClose.value() else latestOpen.value(null)
-                is DockDynamicTarget.Focus -> latestOpen.value(target.focus)
-                null -> Unit
-            }
-        },
+        contextual = shown,
+        onDynamicEntryDelegated = { key -> dockDynamicEntryTarget(key)?.let { target -> latestOpen.value(target) } },
     )
 }
 
 /**
- * What a key means to the Stream, by its key: the Stream button toggles Home and the Stream; a live app or now playing
- * shows its page ([Focus]). A tap on an app entry launches the app (see [toDockEntry]); [Focus] is the swipe up, the
- * long-press item and the accessibility action.
+ * What a key means to the Stream, by its key: a live app, now playing or a contextual tile shows its page. A tap on an
+ * app entry in the Home mode launches the app instead (see [toDockEntry]); landing on the page is the press that starts
+ * on the icon, the long-press item, the accessibility action and, in the contextual mode, the tap.
  */
-internal sealed interface DockDynamicTarget {
-    /** The Stream button: toggles Home and the Stream. */
-    data object StreamButton : DockDynamicTarget
-
-    /** A live app or now playing: the Stream, landed on [focus]. */
-    data class Focus(val focus: StreamFocusTarget) : DockDynamicTarget
-}
-
-internal fun dockDynamicEntryTarget(key: String): DockDynamicTarget? =
+internal fun dockDynamicEntryTarget(key: String): StreamFocusTarget? =
     when {
-        key == DockDynamicSideEntry.StreamButton.key -> DockDynamicTarget.StreamButton
-        key == NOW_PLAYING_KEY -> DockDynamicTarget.Focus(StreamFocusTarget.Now)
-        key.startsWith(LIVE_APP_KEY_PREFIX) ->
-            DockDynamicTarget.Focus(StreamFocusTarget.AppStack(key.removePrefix(LIVE_APP_KEY_PREFIX)))
+        key == DockDynamicSideEntry.NOW_PLAYING_KEY -> StreamFocusTarget.Now
+        key.startsWith(LIVE_APP_KEY_PREFIX) -> StreamFocusTarget.AppStack(key.removePrefix(LIVE_APP_KEY_PREFIX))
+        key.startsWith(CONTEXT_TILE_KEY_PREFIX) ->
+            StreamSection.fromStoredId(key.removePrefix(CONTEXT_TILE_KEY_PREFIX))?.let(StreamFocusTarget::Section)
         else -> null
     }
 
-private const val NOW_PLAYING_KEY = "now"
 private const val LIVE_APP_KEY_PREFIX = "live:"
+private const val CONTEXT_TILE_KEY_PREFIX = "ctx:"
 
+@Suppress("LongParameterList")
 internal fun DockDynamicSideEntry.toDockEntry(
     installedApps: List<InstalledApp>,
     streamShown: Boolean,
     resources: android.content.res.Resources,
     appShortcuts: AppShortcutsByApp = emptyMap(),
+    /** Whether this entry is the one of the open page (contextual mode): it is ringed. */
+    selected: Boolean = false,
+    /** The page options a long-press adds (contextual mode): Show as, Move, Hide. */
+    pageMenu: List<ShortcutContextMenuItem> = emptyList(),
 ): DockDynamicEntry =
     when (this) {
         is DockDynamicSideEntry.LiveApp ->
             liveAppEntry(installedApps.appFor(packageName, profileId), resources, appShortcuts)
         is DockDynamicSideEntry.NowPlaying ->
             nowPlayingEntry(installedApps.appFor(packageName, profileId), resources, appShortcuts)
-        DockDynamicSideEntry.StreamButton -> DockDynamicSideEntry.StreamButton.streamButtonEntry(streamShown, resources)
-    }
+        is DockDynamicSideEntry.ContextTile -> contextTileEntry(resources)
+    }.inMode(streamShown, selected, pageMenu, resources)
+
+private fun List<InstalledApp>.appFor(
+    packageName: String,
+    profileId: String?,
+): InstalledApp? {
+    val ofPackage = filter { app -> app.identity.packageName.value == packageName }
+    return ofPackage.firstOrNull { app -> profileId == null || app.identity.profile.id.value == profileId }
+        ?: ofPackage.firstOrNull()
+}
 
 /** A live app: a tap opens the app (one the launcher cannot resolve still opens its page), the swipe up its page. */
 private fun DockDynamicSideEntry.LiveApp.liveAppEntry(
@@ -152,25 +182,6 @@ private fun DockDynamicSideEntry.NowPlaying.nowPlayingEntry(
     ).withAppActions(playerName, app, resources, appShortcuts)
 }
 
-/** The Stream button, unchanged: a tap toggles Home and the Stream. */
-private fun DockDynamicSideEntry.StreamButton.streamButtonEntry(
-    streamShown: Boolean,
-    resources: android.content.res.Resources,
-): DockDynamicEntry =
-    DockDynamicEntry(
-        key = key,
-        label = resources.getString(R.string.dock_stream_button_label),
-        identity = null,
-        badgeCount = 0,
-        isSelected = streamShown,
-        contentDescription =
-            resources.getString(
-                if (streamShown) R.string.dock_stream_button_close_label else R.string.dock_stream_button_label,
-            ),
-        intent = DockDynamicEntryIntent.Delegate,
-        symbol = DockDynamicSymbol.Stream,
-    )
-
 /** What an app entry adds: the spoken click and "Show in Stream" labels, and the long-press menu. */
 private fun DockDynamicEntry.withAppActions(
     name: String?,
@@ -184,15 +195,6 @@ private fun DockDynamicEntry.withAppActions(
         appMenu = app?.let { liveAppMenuItems(it, appShortcuts) }.orEmpty(),
         openInStreamMenuLabel = resources.getString(R.string.dock_live_app_open_in_stream_menu),
     )
-
-private fun List<InstalledApp>.appFor(
-    packageName: String,
-    profileId: String?,
-): InstalledApp? {
-    val ofPackage = filter { app -> app.identity.packageName.value == packageName }
-    return ofPackage.firstOrNull { app -> profileId == null || app.identity.profile.id.value == profileId }
-        ?: ofPackage.firstOrNull()
-}
 
 /**
  * The long-press menu of a live app (or the playing app), under "Open in Stream": the app's own shortcuts, App info and

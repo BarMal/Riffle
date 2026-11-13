@@ -7,14 +7,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotSelected
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -22,20 +18,19 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.stream.STREAM_OPTIONS_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
-import com.riffle.app.launcher.stream.STREAM_SPINE_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_STAGE_MAIN_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_STAGE_RAIL_TEST_TAG
 import com.riffle.app.launcher.stream.StreamCallbacks
+import com.riffle.app.launcher.stream.StreamDockLink
 import com.riffle.app.launcher.stream.StreamFocusRequest
+import com.riffle.app.launcher.stream.StreamPageOption
 import com.riffle.app.launcher.stream.StreamSurface
-import com.riffle.app.launcher.stream.streamSpineMarkerTestTag
 import com.riffle.app.launcher.stream.streamStageThumbTestTag
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamContent
@@ -62,14 +57,21 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The Stream's behaviour as pages: landing, the pager and the spine, Show as and Undo, every state's way out, the
+ * The Stream's behaviour as pages: landing, the pager in the Dock's order and what it tells the Dock (the open
+ * page), the
+ * page options the Dock's tiles ask for with their Undo, every state's way out, the
  * media transport and the notification reply, every callback reaching the page of every section, page stability while
  * content comes and goes, and on an expanded posture the two-up pager and the Stage view.
  */
+@Suppress("LargeClass")
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ScreenshotDevices.SDK], qualifiers = ScreenshotDevices.COMPACT_PHONE)
 class StreamBehaviorTest {
+    private companion object {
+        const val MAX_PAGE_STEPS = 12
+    }
+
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -84,6 +86,9 @@ class StreamBehaviorTest {
     private var connects = 0
 
     private val handledFocus = mutableListOf<Long>()
+
+    /** What the Stream tells the Dock's contextual mode: its pages in the Dock's order and the open one. */
+    private val dock = StreamDockLink()
 
     private fun show(
         initialResults: Map<StreamSection, StreamSectionResult> = defaultResults(),
@@ -114,6 +119,7 @@ class StreamBehaviorTest {
                     initialPageKey = initialPageKey,
                     onPageChanged = { key -> pageChanges += key },
                     wideLayout = wide,
+                    dockLink = dock,
                 )
             }
         }
@@ -122,16 +128,35 @@ class StreamBehaviorTest {
     private fun defaultResults(): Map<StreamSection, StreamSectionResult> =
         StreamSection.entries.associateWith { StreamFixtures.ready(it) }
 
-    private fun marker(key: String): SemanticsNodeInteraction =
-        composeRule.onNodeWithTag(streamSpineMarkerTestTag(key)).also { it.performScrollTo() }
-
-    private fun goTo(key: String) {
-        marker(key).performClick()
+    /** The page in front is [key]: what the Dock rings. */
+    private fun assertOpen(key: String) {
         composeRule.waitForIdle()
+        assertEquals(key, dock.currentKey)
     }
 
-    private fun optionsButton(section: String): SemanticsNodeInteraction =
-        composeRule.onNodeWithContentDescription("$section options")
+    /** Brings [key] to the front the way a screen reader does: the pager's Next and Previous page actions. */
+    private fun goTo(key: String) {
+        repeat(MAX_PAGE_STEPS) {
+            composeRule.waitForIdle()
+            val keys = dock.pages.map { it.key }
+            val to = keys.indexOf(key)
+            check(to >= 0) { "$key is not a page: $keys" }
+            val from = keys.indexOf(dock.currentKey)
+            if (from == to) return
+            val label = if (to > from) "Next page" else "Previous page"
+            composeRule.runOnUiThread {
+                composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode()
+                    .config[SemanticsActions.CustomActions].first { it.label == label }.action()
+            }
+        }
+        error("never reached $key")
+    }
+
+    /** What a long-press of a Dock tile asks of the Stream (ADR 0003, Amendment 3), asked the way the Dock asks it. */
+    private fun option(option: StreamPageOption) {
+        composeRule.runOnUiThread { dock.requestOption(option) }
+        composeRule.waitForIdle()
+    }
 
     private fun customActionLabels(): List<String> =
         composeRule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions))
@@ -147,7 +172,7 @@ class StreamBehaviorTest {
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
-        marker(StreamPageKeys.MAIL).assertIsSelected()
+        assertOpen(StreamPageKeys.MAIL)
         assertEquals(listOf(7L), handledFocus)
     }
 
@@ -159,7 +184,7 @@ class StreamBehaviorTest {
         )
         composeRule.waitForIdle()
 
-        marker(StreamPageKeys.NOW).assertIsSelected()
+        assertOpen(StreamPageKeys.NOW)
         assertEquals(listOf(8L), handledFocus)
     }
 
@@ -168,7 +193,7 @@ class StreamBehaviorTest {
         show(focus = StreamFocusRequest(11, StreamFocusTarget.Section(StreamSection.AGENDA)))
         composeRule.waitForIdle()
 
-        marker(StreamPageKeys.AGENDA).assertIsSelected()
+        assertOpen(StreamPageKeys.AGENDA)
         assertEquals(listOf(11L), handledFocus)
     }
 
@@ -177,7 +202,7 @@ class StreamBehaviorTest {
         show(focus = StreamFocusRequest(9, StreamFocusTarget.AppStack("gone:personal")))
         composeRule.waitForIdle()
 
-        marker(StreamPageKeys.CHAT).assertIsSelected()
+        assertOpen(StreamPageKeys.CHAT)
         assertEquals(listOf(9L), handledFocus)
     }
 
@@ -193,7 +218,7 @@ class StreamBehaviorTest {
         results = defaultResults()
         composeRule.waitForIdle()
 
-        marker(StreamPageKeys.MAIL).assertIsSelected()
+        assertOpen(StreamPageKeys.MAIL)
         assertEquals(listOf(10L), handledFocus)
     }
 
@@ -201,7 +226,7 @@ class StreamBehaviorTest {
     fun theLastPageIsRememberedAndReturnedTo() {
         show(initialPageKey = StreamPageKeys.TASKS)
         composeRule.waitForIdle()
-        marker(StreamPageKeys.TASKS).assertIsSelected()
+        assertOpen(StreamPageKeys.TASKS)
 
         goTo(StreamPageKeys.AGENDA)
         assertEquals(StreamPageKeys.AGENDA, pageChanges.last())
@@ -219,61 +244,93 @@ class StreamBehaviorTest {
         results = defaultResults()
         composeRule.waitForIdle()
 
-        marker(StreamPageKeys.MAIL).assertIsSelected()
+        assertOpen(StreamPageKeys.MAIL)
         assertEquals(StreamPageKeys.MAIL, pageChanges.last())
     }
 
-    // The pager and the spine --------------------------------------------------------------------------------------
+    // The pager, in the Dock's order ---------------------------------------------------------------------------------
 
     @Test
-    fun theSpineHasOneTabPerPageAndTheCurrentOneIsSelected() {
+    fun thePagesFollowTheDocksOrderAndTheFirstIsOpen() {
         show()
-        val tabs =
-            composeRule.onAllNodes(
-                SemanticsMatcher.expectValue(SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Tab),
-            )
-        // Now, two notification apps, Recents, Agenda, Tasks and two feeds.
-        tabs.assertCountEquals(8)
-        marker(StreamPageKeys.NOW).assertIsSelected()
-        marker(StreamPageKeys.CHAT).assertIsNotSelected()
-        composeRule.onNodeWithContentDescription("Chat, page 2 of 8").assertExists()
-        composeRule.onNodeWithTag(STREAM_SPINE_TEST_TAG).assertExists()
+        composeRule.waitForIdle()
+        // The Dock's live apps (newest first), now playing, then the built-in pages in the layout's order; a feed's
+        // pages stay together.
+        assertEquals(
+            listOf(
+                StreamPageKeys.CHAT,
+                StreamPageKeys.MAIL,
+                StreamPageKeys.NOW,
+                StreamPageKeys.RECENTS,
+                StreamPageKeys.AGENDA,
+                StreamPageKeys.TASKS,
+                StreamPageKeys.FEED_A,
+                StreamPageKeys.FEED_B,
+            ),
+            dock.pages.map { it.key },
+        )
+        assertOpen(StreamPageKeys.CHAT)
     }
 
     @Test
-    fun tappingAMarkerJumpsToItsPage() {
-        show()
-        goTo(StreamPageKeys.MAIL)
-        marker(StreamPageKeys.MAIL).assertIsSelected()
-        composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
-        goTo(StreamPageKeys.FEED_B)
-        composeRule.onNodeWithText("Notes from the desktop shell").assertIsDisplayed()
+    fun theLiveAppSlotsDecideWhichAppPagesLeadAndTheOthersFollowThem() {
+        results = defaultResults()
+        composeRule.setContent {
+            ScreenshotBackdrop {
+                StreamSurface(
+                    layout = layout,
+                    results = results,
+                    env = StreamFixtures.environment(),
+                    callbacks = StreamCallbacks(),
+                    contentPadding = PaddingValues(),
+                    liveAppSlots = 1,
+                    dockLink = dock,
+                )
+            }
+        }
+        composeRule.waitForIdle()
+        // One live app on the Dock (the newest); the other app's page keeps its place right behind it.
+        assertEquals(
+            listOf(StreamPageKeys.CHAT, StreamPageKeys.MAIL, StreamPageKeys.NOW),
+            dock.pages.map { it.key }.take(3),
+        )
     }
 
     @Test
-    fun swipingSidewaysChangesThePageAndTheSpineFollows() {
+    fun swipingSidewaysChangesThePageAndTellsTheDock() {
         show()
         composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput { swipeLeft() }
         composeRule.waitForIdle()
-        marker(StreamPageKeys.CHAT).assertIsSelected()
-        composeRule.onNodeWithText("Are we still on for lunch tomorrow?").assertIsDisplayed()
+        assertOpen(StreamPageKeys.MAIL)
+        composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
+    }
+
+    @Test
+    fun thereIsNoSpineAndNoPageHeader() {
+        show()
+        composeRule.waitForIdle()
+        composeRule.onAllNodes(
+            SemanticsMatcher.expectValue(SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Tab),
+        ).assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("Chat options").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("Notifications options").assertCountEquals(0)
     }
 
     @Test
     fun everySwipeHasAnActionAndThePagerKeepsOneList() {
-        show()
+        show(initialPageKey = StreamPageKeys.NOW)
         val pagerActions =
             composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode().config[SemanticsActions.CustomActions]
         assertEquals(listOf("Previous page", "Next page"), pagerActions.map { it.label })
         composeRule.runOnUiThread { pagerActions.first { it.label == "Next page" }.action() }
         composeRule.waitForIdle()
-        marker(StreamPageKeys.CHAT).assertIsSelected()
+        assertOpen(StreamPageKeys.RECENTS)
         composeRule.runOnUiThread {
             composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode().config[SemanticsActions.CustomActions]
                 .first { it.label == "Previous page" }.action()
         }
         composeRule.waitForIdle()
-        marker(StreamPageKeys.NOW).assertIsSelected()
+        assertOpen(StreamPageKeys.NOW)
     }
 
     @Test
@@ -291,7 +348,7 @@ class StreamBehaviorTest {
     fun aNewNotificationDoesNotJumpThePager() {
         show(initialPageKey = StreamPageKeys.MAIL)
         composeRule.waitForIdle()
-        marker(StreamPageKeys.MAIL).assertIsSelected()
+        assertOpen(StreamPageKeys.MAIL)
 
         // A third app posts: its page is the newest, so it leads the Notifications pages.
         val ready = StreamFixtures.ready(StreamSection.NOTIFICATIONS)
@@ -304,15 +361,18 @@ class StreamBehaviorTest {
                         id = com.riffle.core.domain.launcher.stream.StreamContentId("notifications:maps:1"),
                         title = "Arrived",
                         text = "You have arrived.",
+                        postedAtEpochMillis = StreamFixtures.NOW,
                     ),
                 ),
             )
         results = results + (StreamSection.NOTIFICATIONS to StreamSectionResult.Ready(listOf(newest) + ready.groups))
         composeRule.waitForIdle()
 
-        marker(StreamPageKeys.MAIL).assertIsSelected()
+        assertOpen(StreamPageKeys.MAIL)
         composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
-        composeRule.onAllNodesWithContentDescription("Maps, page 2 of 9").assertCountEquals(1)
+        // The new app is the Dock's first live app, so its page leads the pager too.
+        assertEquals("notifications/maps:personal", dock.pages.first().key)
+        assertEquals(9, dock.pages.size)
     }
 
     @Test
@@ -320,12 +380,12 @@ class StreamBehaviorTest {
         show(initialPageKey = StreamPageKeys.MAIL)
         composeRule.waitForIdle()
 
-        // Mail's notifications are cleared: Chat is before it, Recents after it, and the pager moves on to Recents.
+        // Mail's notifications are cleared: Chat is before it, Now after it, and the pager moves on to Now.
         val chatOnly = StreamSectionResult.Ready(StreamFixtures.ready(StreamSection.NOTIFICATIONS).groups.take(1))
         results = results + (StreamSection.NOTIFICATIONS to chatOnly)
         composeRule.waitForIdle()
 
-        marker(StreamPageKeys.RECENTS).assertIsSelected()
+        assertOpen(StreamPageKeys.NOW)
     }
 
     @Test
@@ -343,8 +403,7 @@ class StreamBehaviorTest {
         composeRule.waitForIdle()
         assertEquals(StreamView.STACK, layout.viewOf(StreamSection.NOTIFICATIONS))
 
-        optionsButton("Notifications").performClick()
-        composeRule.onNodeWithText("List").performClick()
+        option(StreamPageOption.ShowAs(StreamSection.NOTIFICATIONS, StreamView.LIST))
 
         assertEquals(StreamView.LIST, layout.viewOf(StreamSection.NOTIFICATIONS))
         composeRule.onNodeWithText("Notifications shown as List").assertIsDisplayed()
@@ -361,40 +420,37 @@ class StreamBehaviorTest {
     }
 
     @Test
-    fun longPressOnAPageHeaderOpensTheSameMenu() {
-        show(initialPageKey = StreamPageKeys.AGENDA)
-        composeRule.waitForIdle()
-        composeRule.onAllNodesWithText("Agenda").onFirst().performTouchInput { longClick() }
-        composeRule.onNodeWithText("Show as").assertIsDisplayed()
-        composeRule.onNodeWithText("Stack").performClick()
-        assertEquals(StreamView.STACK, layout.viewOf(StreamSection.AGENDA))
-    }
-
-    @Test
     fun choosingTheViewAlreadyShownChangesNothing() {
         show(initialPageKey = StreamPageKeys.CHAT)
-        optionsButton("Notifications").performClick()
-        composeRule.onNodeWithText("Stack").performClick()
+        option(StreamPageOption.ShowAs(StreamSection.NOTIFICATIONS, StreamView.STACK))
         assertEquals(StreamLayout.DEFAULT, layout)
     }
 
     @Test
-    fun aSectionCanBeMovedHiddenAndShownAgainWithoutAGesture() {
+    fun aSectionCanBeMovedHiddenAndShownAgainFromTheDocksTiles() {
         show(initialPageKey = StreamPageKeys.CHAT)
-        optionsButton("Notifications").performClick()
-        composeRule.onNodeWithText("Move up").performClick()
+        option(StreamPageOption.Move(StreamSection.NOTIFICATIONS, -1))
         assertEquals(StreamSection.NOTIFICATIONS, layout.sections.first().section)
 
         goTo(StreamPageKeys.FEED_A)
-        optionsButton("Feeds").performClick()
-        composeRule.onNodeWithText("Hide section").performClick()
+        option(StreamPageOption.Hide(StreamSection.FEEDS))
         assertTrue(StreamSection.FEEDS !in layout.enabledSections.map { it.section })
         composeRule.onNodeWithText("Feeds hidden").assertIsDisplayed()
 
-        // The Stream's own menu offers the hidden section back.
-        composeRule.onNodeWithTag(STREAM_OPTIONS_TEST_TAG).performClick()
-        composeRule.onNodeWithText("Show Feeds").performClick()
+        // A hidden section is offered back by the Dock's tiles.
+        option(StreamPageOption.Show(StreamSection.FEEDS))
         assertTrue(layout.layoutOf(StreamSection.FEEDS).enabled)
+    }
+
+    @Test
+    fun anOptionIsAppliedOnceAndTheRequestIsClearedAfterIt() {
+        show(initialPageKey = StreamPageKeys.CHAT)
+        option(StreamPageOption.Hide(StreamSection.TASKS))
+        assertEquals(null, dock.pendingOption)
+        // Asking for the same option twice in a row is two requests: the second is a no-op on the layout.
+        option(StreamPageOption.Hide(StreamSection.TASKS))
+        assertEquals(null, dock.pendingOption)
+        assertTrue(StreamSection.TASKS !in layout.enabledSections.map { it.section })
     }
 
     @Test
@@ -517,7 +573,7 @@ class StreamBehaviorTest {
 
     @Test
     fun theMediaTransportAndScrubberActThroughTheGateway() {
-        show()
+        show(initialPageKey = StreamPageKeys.NOW)
         composeRule.onNodeWithContentDescription("Pause").performClick()
         composeRule.onNodeWithContentDescription("Next track").performClick()
         composeRule.onNodeWithContentDescription("Previous track").performClick()
@@ -532,7 +588,7 @@ class StreamBehaviorTest {
 
     @Test
     fun theQueueExpandsAndCollapses() {
-        show()
+        show(initialPageKey = StreamPageKeys.NOW)
         composeRule.onNodeWithContentDescription("Show queue").performClick()
         composeRule.onNodeWithText("Reunion").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Hide queue").performClick()
@@ -730,18 +786,22 @@ class StreamBehaviorTest {
 
     @Test
     @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
-    fun theStreamsMenuShowsAsPagesOrStageAndUndoes() {
+    fun theStagesMenuShowsAsPagesOrStageAndUndoes() {
+        // The pager has no bar of its own to hold the Stream's menu any more (Settings > Stream chooses Pages or
+        // Stage);
+        // the Stage keeps its slim bar and its menu.
+        layout = StreamLayout(wideView = StreamWideView.STAGE)
         show(wide = true)
         composeRule.onNodeWithTag(STREAM_OPTIONS_TEST_TAG).performClick()
-        composeRule.onNodeWithText("Stage").performClick()
-        assertEquals(StreamWideView.STAGE, layout.wideView)
-        composeRule.onNodeWithText("Stream shown as Stage").assertIsDisplayed()
-        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("Pages").performClick()
+        assertEquals(StreamWideView.PAGES, layout.wideView)
+        composeRule.onNodeWithText("Stream shown as Pages").assertIsDisplayed()
+        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertDoesNotExist()
 
         composeRule.onNodeWithText("Undo").performClick()
         composeRule.waitForIdle()
-        assertEquals(StreamWideView.PAGES, layout.wideView)
-        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertDoesNotExist()
+        assertEquals(StreamWideView.STAGE, layout.wideView)
+        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
     }
 
     @Test

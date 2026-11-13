@@ -35,10 +35,7 @@ import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.DockPullEntryExtent
 import com.riffle.core.domain.launcher.dockpull.StreamPullFrame
-import com.riffle.core.domain.launcher.dockpull.dockPullDestinationFor
 import com.riffle.core.domain.launcher.dockpull.dockPullEntryAt
-import com.riffle.core.domain.launcher.dockpull.dockPullLandingEntry
-import com.riffle.core.domain.launcher.dockpull.dockPullSideAt
 import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.dockpull.streamPullFrame
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -52,12 +49,18 @@ internal class StreamPullInputs(
     val shown: Boolean,
     /** Where a pull starts on an expanded posture (Home only, split, Stream only), read fresh; null on the phone. */
     val split: (() -> SplitPullSetup?)? = null,
-    /** Where the Stream lands: a pull that starts on a live app's icon asks it to land on that app. */
+    /** Where the Stream lands; a landing a pull asked for and that sprang back is dropped. */
     val focus: StreamFocusRequests? = null,
+    /**
+     * A committed press of the Dock (down, then release past the threshold): toggles the Home and the contextual mode.
+     * Called with the key of the dynamic entry the press started on, or null.
+     */
+    val onPress: (entryKey: String?) -> Unit = {},
 )
 
 /**
- * How [HomeDestination] wires the Dock pull into the Dock and the two surfaces (ADR 0003, The Dock is the handle).
+ * How [HomeDestination] wires the Dock's pull (the Library) and press (Home and the contextual mode) into the Dock and
+ * the two surfaces (ADR 0003, Amendment 3).
  *
  * Every per-frame value (the Stream's slide, Home's fade) is read inside a graphics layer from [frame], so a pull
  * redraws without recomposing; composition only reads what changes at a pull's start and end ([isTransitioning]).
@@ -68,6 +71,12 @@ internal class HomeDockPullBinding(
     /** For the Dock body: the pull gesture and the accessibility actions. */
     val dockModifier: Modifier,
     private val dockPull: DockPullState,
+    /**
+     * The Dock's press, for whatever draws it (ADR 0003, Amendment 3, Motion): [DockPressState.progress] runs 0 to 1
+     * while
+     * the Dock is pressed down and [DockPressState.onReleased] says how it ended.
+     */
+    val press: DockPressState,
     private val frame: State<StreamPullFrame>,
     /** What Home is drawn at once no pull runs: 0 where a committed switch left the Stream over it, else 1. */
     private val homeAlphaAtRest: () -> Float = { 1f },
@@ -162,7 +171,8 @@ internal fun rememberHomeDockPullBinding(
     val canPull =
         state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen && !state.destination.isLibrary
     val latestStream = rememberUpdatedState(stream)
-    BindPullCallbacks(dockPull, rememberUpdatedState(onAction), latestStream)
+    val press = remember { DockPressState() }
+    BindPullCallbacks(dockPull, press, rememberUpdatedState(onAction), latestStream)
     val frameState =
         remember(dockPull, reducedMotion) {
             derivedStateOf { streamPullFrame(dockPull.progress, dockPull.opening, reducedMotion) }
@@ -176,6 +186,7 @@ internal fun rememberHomeDockPullBinding(
             rootSize = rootSize,
             direction = direction,
             stream = stream,
+            press = press,
             hostState = hostState,
             dockCoordinates = dockCoordinates,
         )
@@ -200,6 +211,7 @@ internal fun rememberHomeDockPullBinding(
         rootModifier = rootModifier,
         dockModifier = dockModifier,
         dockPull = dockPull,
+        press = press,
         frame = frameState,
         homeAlphaAtRest = { restAlpha(dockPull, latestStream.value, streamSurface = false) },
         streamAlphaAtRest = { restAlpha(dockPull, latestStream.value, streamSurface = true) },
@@ -221,14 +233,21 @@ private fun restAlpha(
     return if (streamShown == streamSurface) 1f else 0f
 }
 
-/** Connects the pull's end to the shell: a commit sends its action, a spring-back drops the landing it asked for. */
+/**
+ * Connects the pull's and the press's end to the shell: a commit sends its action, a spring-back drops the landing it
+ * asked for, and a committed press hands the entry it started on to the host, which toggles the mode.
+ */
 @Composable
 private fun BindPullCallbacks(
     dockPull: DockPullState,
+    press: DockPressState,
     latestOnAction: State<(LauncherShellAction) -> Unit>,
     latestStream: State<StreamPullInputs>,
 ) {
     SideEffect {
+        press.onReleased = { release ->
+            if (release.committed) latestStream.value.onPress(release.startedOnEntryKey)
+        }
         dockPull.onCommitted = { destination ->
             latestOnAction.value(
                 when (destination) {
@@ -248,7 +267,10 @@ private class DockCoordinates {
     var coordinates: LayoutCoordinates? = null
 }
 
-/** The Dock's pull equivalents: "Open Library", and "Open Stream" or "Back to Home"; and the same on the keyboard. */
+/**
+ * The Dock's gesture equivalents: "Open Library" for the pull, and "Show live pages" or "Back to Home" for the press;
+ * and the same on the keyboard.
+ */
 private class DockPullActions(
     val modifier: Modifier,
     private val open: (DockPullDestination) -> Boolean,
@@ -310,6 +332,7 @@ private fun rememberDockPullGestureHost(
     rootSize: State<IntSize>,
     direction: DockPullDirection,
     stream: StreamPullInputs,
+    press: DockPressState,
     hostState: HomeDockHostState,
     dockCoordinates: DockCoordinates,
 ): DockPullGestureHost {
@@ -338,11 +361,12 @@ private fun rememberDockPullGestureHost(
 
             override fun splitSetup(): SplitPullSetup? = latestStream.value.split?.invoke()
 
-            override fun pullStarted(
-                destination: DockPullDestination,
-                position: Offset,
-            ) {
-                val focus = latestStream.value.focus ?: return
+            override val press: DockPressState = press
+
+            override val canPress: Boolean
+                get() = latestStream.value.available && this.canPull
+
+            override fun pressEntryAt(position: Offset): String? {
                 val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position
                 val alongRun = latestDirection.value.unitY != 0f
                 val entries =
@@ -354,26 +378,7 @@ private fun rememberDockPullGestureHost(
                         )
                     }
                 // Only along the run: the section is as thick as its tiles, and a touch on it is on a tile or a gap.
-                val along = if (alongRun) inRoot.x else inRoot.y
-                val key = dockPullLandingEntry(destination, dockPullEntryAt(along, entries))
-                (key?.let(::dockDynamicEntryTarget) as? DockDynamicTarget.Focus)?.let { focus.request(it.focus) }
-            }
-
-            override fun destinationAt(position: Offset): DockPullDestination {
-                val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position
-                // A vertical pull belongs to a dock that runs along the window's width, and the other way round.
-                val alongRun = latestDirection.value.unitY != 0f
-                val dock = hostState.bounds.value
-                val dynamic = hostState.dynamicBounds.value
-                val side =
-                    dockPullSideAt(
-                        position = if (alongRun) inRoot.x else inRoot.y,
-                        dockStart = if (alongRun) dock?.left ?: 0f else dock?.top ?: 0f,
-                        dockEnd = if (alongRun) dock?.right ?: 0f else dock?.bottom ?: 0f,
-                        dynamicStart = dynamic?.let { if (alongRun) it.left else it.top },
-                        dynamicEnd = dynamic?.let { if (alongRun) it.right else it.bottom },
-                    )
-                return dockPullDestinationFor(side, latestStream.value.shown, latestStream.value.available)
+                return dockPullEntryAt(if (alongRun) inRoot.x else inRoot.y, entries)
             }
         }
     }

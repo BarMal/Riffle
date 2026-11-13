@@ -21,6 +21,7 @@ import com.riffle.app.launcher.expressions.ExpressionImageLoader
 import com.riffle.app.launcher.expressions.LocalItemHider
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.split.supportsSplit
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
@@ -68,6 +69,8 @@ class StreamHost internal constructor(
     internal val taskSettings: TasksSettingsController? = null,
     /** The page the Stream was last left on, per posture, for this session. */
     internal val pages: StreamPageMemory = StreamPageMemory(),
+    /** What the Stream and the Dock's contextual mode tell each other: the pages, the open one, page options. */
+    internal val dock: StreamDockLink = StreamDockLink(),
 )
 
 /**
@@ -129,6 +132,8 @@ internal fun StreamDestination(
     reducedMotion: Boolean,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
+    /** How many live apps the Dock shows: the pages of the first of them come first, as the Dock's icons do. */
+    liveAppSlots: Int = DEFAULT_DOCK_LIVE_APP_SLOTS,
     onConnectTasks: () -> Unit = {},
 ) {
     LaunchedEffect(host) { host.layouts.initialize() }
@@ -212,6 +217,8 @@ internal fun StreamDestination(
         initialPageKey = remember(host, deviceClass) { host.pages.last(deviceClass) },
         onPageChanged = { key -> host.pages.remember(deviceClass, key) },
         wideLayout = deviceClass.supportsSplit(),
+        liveAppSlots = liveAppSlots,
+        dockLink = host.dock,
     )
 }
 

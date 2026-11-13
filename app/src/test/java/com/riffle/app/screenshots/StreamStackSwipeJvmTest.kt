@@ -3,7 +3,6 @@ package com.riffle.app.screenshots
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -16,10 +15,10 @@ import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.expressions.NoExpressionImageLoader
 import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
 import com.riffle.app.launcher.stream.StreamCallbacks
+import com.riffle.app.launcher.stream.StreamDockLink
 import com.riffle.app.launcher.stream.StreamEnvironment
 import com.riffle.app.launcher.stream.StreamSurface
 import com.riffle.app.launcher.stream.SystemStreamFormats
-import com.riffle.app.launcher.stream.streamSpineMarkerTestTag
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.notifications.NotificationPriority
 import com.riffle.core.domain.launcher.stream.NotificationAction
@@ -33,6 +32,7 @@ import com.riffle.core.domain.launcher.stream.StreamPrivacy
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
 import com.riffle.core.domain.launcher.workspace.ItemTarget
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,13 +42,15 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The device test `StreamPagesInteractionTest.aVerticalSwipeMovesTheStackAndNeverThePager` without an emulator. A swipe
- * inside the stack moves the stack (a fast one flings it more than a card) and never the pager; the pager's default
- * full-height swipe down starts over the page header, outside the stack, so the swipes here start inside it.
+ * inside the stack moves the stack (a fast one flings it more than a card) and never the pager; the swipes here start
+ * inside the stack, and the page that stays in front is the one the Dock rings.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ScreenshotDevices.SDK], qualifiers = ScreenshotDevices.COMPACT_PHONE)
 class StreamStackSwipeJvmTest {
+    private val dock = StreamDockLink()
+
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -113,6 +115,7 @@ class StreamStackSwipeJvmTest {
                     callbacks = StreamCallbacks(),
                     initialPageKey = chat,
                     wideLayout = false,
+                    dockLink = dock,
                 )
             }
         }
@@ -124,7 +127,7 @@ class StreamStackSwipeJvmTest {
             swipeUp(startY = height * STACK_LOW, endY = height * STACK_HIGH)
         }
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag(streamSpineMarkerTestTag(chat)).assertIsSelected()
+        assertEquals(chat, dock.currentKey)
         composeRule.onNodeWithText("Card 1 of 3").assertDoesNotExist()
         composeRule.onNode(hasText("Card ", substring = true)).assertIsDisplayed()
 
@@ -132,7 +135,7 @@ class StreamStackSwipeJvmTest {
             swipeDown(startY = height * STACK_HIGH, endY = height * STACK_LOW)
         }
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag(streamSpineMarkerTestTag(chat)).assertIsSelected()
+        assertEquals(chat, dock.currentKey)
         composeRule.onNodeWithText("Card 1 of 3").assertIsDisplayed()
         composeRule.onNodeWithText("First chat").assertIsDisplayed()
     }

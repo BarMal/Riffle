@@ -86,6 +86,8 @@ internal fun Dock(
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
     dynamicEntries: List<DockDynamicEntry> = emptyList(),
     onDynamicEntryDelegated: (String) -> Unit = {},
+    /** The contextual mode (the Stream is showing): one scrolling row of the same icons plus the page tiles. */
+    contextual: Boolean = false,
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
 
@@ -103,6 +105,7 @@ internal fun Dock(
                 previewSlotCount = if (widgetPickerDockPreview != null) 1 else 0,
                 runsHorizontally = position.isHorizontalEdge,
                 dynamicEntryCount = dynamicEntries.size,
+                contextualTileCount = if (contextual) dynamicEntries.count(DockDynamicEntry::isContextTile) else 0,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -143,6 +146,9 @@ internal fun DockSlotStrip(
     // there reads as scrollability that isn't there and, worse, draws over the icon run rather than
     // the dock's own background (#1174). Only the true outer edge of the whole strip earns a fade.
     suppressEndFade: Boolean = false,
+    // The contextual mode's one scrolling row carries the pinned icons at full size and spacing, with no scroll or mask
+    // of their own: the row around them scrolls.
+    inline: Boolean = false,
 ) {
     val scrollState = rememberScrollState()
     val dragState = remember { mutableStateOf<DockDragState?>(null) }
@@ -173,12 +179,19 @@ internal fun DockSlotStrip(
     Box(
         modifier =
             Modifier
-                .dockRunSize(runsHorizontally, contentViewportMainAxisDp.dp)
-                .clipToBounds()
-                .dockOverflowMask(
-                    runsHorizontally = runsHorizontally,
-                    fadeStart = overflowAffordance.showStart,
-                    fadeEnd = overflowAffordance.showEnd && !suppressEndFade,
+                .dockRunSize(runsHorizontally, if (inline) contentMainAxisDp else contentViewportMainAxisDp.dp)
+                .then(
+                    if (inline) {
+                        Modifier
+                    } else {
+                        Modifier
+                            .clipToBounds()
+                            .dockOverflowMask(
+                                runsHorizontally = runsHorizontally,
+                                fadeStart = overflowAffordance.showStart,
+                                fadeEnd = overflowAffordance.showEnd && !suppressEndFade,
+                            )
+                    },
                 ),
         contentAlignment = Alignment.Center,
     ) {
@@ -187,7 +200,7 @@ internal fun DockSlotStrip(
             modifier =
                 Modifier
                     .dockRunSize(runsHorizontally, contentMainAxisDp)
-                    .dockRunScroll(runsHorizontally, scrollState),
+                    .then(if (inline) Modifier else Modifier.dockRunScroll(runsHorizontally, scrollState)),
             itemSpacingDp = slotMetrics.itemSpacingDp,
         ) {
             repeat(renderedSlotCount) { index ->
@@ -482,7 +495,7 @@ internal fun dockContainerMainAxisDp(
  * How much of the dock's run the dynamic section gets.
  *
  * The dynamic side goes first: what actually shows is capped to [slotLimit] tiles' worth (the live app
- * slots, plus now playing and the Stream button; fewer entries than that shrinks the section instead of
+ * slots, plus now playing; fewer entries than that shrinks the section instead of
  * padding it out; more scrolls, see
  * [DockDynamicSection]), drawn in full whenever the run has room for it -- the static side is what
  * gives way, sized afterwards from whatever this leaves (see [dockContainerMainAxisDp]'s
@@ -546,11 +559,19 @@ internal fun dockSurfaceStripShowsDynamicSection(
     dynamicEntries: List<DockDynamicEntry>,
 ): Boolean = surfaceMetrics.dynamicSectionMainAxisDp > 0 && dynamicEntries.isNotEmpty()
 
-/** The strip's own run: the full [DockSurfaceMetrics.surfaceMainAxisDp] only when it is drawn. */
+/**
+ * The strip's own run: the full [DockSurfaceMetrics.surfaceMainAxisDp] only when the dynamic section or the contextual
+ * mode's row is drawn.
+ */
 internal fun dockSurfaceStripMainAxisDp(
     surfaceMetrics: DockSurfaceMetrics,
     showDynamicSection: Boolean,
-): Int = if (showDynamicSection) surfaceMetrics.surfaceMainAxisDp else surfaceMetrics.containerMainAxisDp
+): Int =
+    if (showDynamicSection || surfaceMetrics.contextualRun != null) {
+        surfaceMetrics.surfaceMainAxisDp
+    } else {
+        surfaceMetrics.containerMainAxisDp
+    }
 
 internal fun dockRenderedSlotCount(
     capacity: Int,

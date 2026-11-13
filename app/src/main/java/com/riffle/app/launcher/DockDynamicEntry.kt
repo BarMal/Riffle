@@ -1,16 +1,17 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.riffle.core.domain.launcher.apps.AppIdentity
 
 /**
  * One entry on the dock's dynamic side: what it shows, and what a tap on it does. A live app or now playing entry also
- * says what showing it in the Stream means ([showInStreamLabel]): a swipe up from it, a long-press item, an
+ * says what showing it in the Stream means ([showInStreamLabel]): a press that starts on it, a long-press item, an
  * accessibility action and Shift+Enter all do that.
  *
- * The dynamic side lists live apps, now playing and the Stream button (ADR 0003), so the entry carries
- * its own intent rather than the section inferring one from a shared entry type. That keeps the
- * section itself free of any notion of the Stream or launching: it lays out entries, marks the
- * selected one, and reports taps (Decision 2 in docs/product/modes-dock-handle-and-cards-plan.md).
+ * The dynamic side lists live apps and now playing, and in the contextual mode a tile for each Stream page that is not
+ * an app (ADR 0003, Amendment 3), so the entry carries its own intent rather than the section inferring one from a
+ * shared entry type. That keeps the section itself free of any notion of the Stream or launching: it lays out entries,
+ * marks the selected one, and reports taps (Decision 2 in docs/product/modes-dock-handle-and-cards-plan.md).
  */
 internal data class DockDynamicEntry(
     val key: String,
@@ -20,11 +21,14 @@ internal data class DockDynamicEntry(
     val isSelected: Boolean,
     val contentDescription: String,
     val intent: DockDynamicEntryIntent?,
-    /** What to draw over (or instead of) the app icon: the Stream button's glyph, now playing's play mark. */
+    /** What to draw over (or instead of) the app icon: a contextual tile's glyph, now playing's play mark. */
     val symbol: DockDynamicSymbol? = null,
     /**
-     * What a tap says to a screen reader ("Open Gmail") and the custom action that shows the entry's page in the
-     * Stream ("Show Gmail in Stream"); both null for the Stream button, which has only its own tap.
+     * What a tap says to a screen reader ("Open Gmail", or "Show Gmail" in the contextual mode) and, in the Home
+     * mode, the
+     * custom action that shows the entry's page in the Stream ("Show Gmail in Stream"), the non-gesture way of the
+     * press
+     * that starts on an icon.
      */
     val openLabel: String? = null,
     val showInStreamLabel: String? = null,
@@ -38,12 +42,12 @@ internal data class DockDynamicEntry(
 )
 
 /** A mark the dock draws itself on a dynamic entry. */
-internal enum class DockDynamicSymbol {
-    /** The Stream button: a stack of cards, drawn in place of an app icon. */
-    Stream,
-
+internal sealed interface DockDynamicSymbol {
     /** Now playing: a small play mark in the corner of the playing app's icon. */
-    NowPlaying,
+    data object NowPlaying : DockDynamicSymbol
+
+    /** A contextual tile (Now, Agenda, Recents, ...): the section's [glyph], drawn in place of an app icon. */
+    data class Glyph(val glyph: ImageVector) : DockDynamicSymbol
 }
 
 /**
@@ -61,3 +65,6 @@ internal sealed interface DockDynamicEntryIntent {
     /** Hand the entry's key back to the mode that supplied it; the dock itself attaches no meaning. */
     data object Delegate : DockDynamicEntryIntent
 }
+
+/** Whether this is a contextual tile (a Stream page that is not an app), which only the contextual mode has. */
+internal val DockDynamicEntry.isContextTile: Boolean get() = symbol is DockDynamicSymbol.Glyph

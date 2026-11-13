@@ -24,7 +24,7 @@ private fun testDockShortcut(id: String): AppShortcutItem =
  * How the dock's run is divided between its two sections.
  *
  * The dynamic section is sized from its own
- * [com.riffle.core.domain.launcher.home.DockModel.liveAppSlots] cap (plus now playing and the Stream button), drawn
+ * [com.riffle.core.domain.launcher.home.DockModel.liveAppSlots] cap (plus now playing), drawn
  * in full whenever the run has room, never padded out beyond how many entries actually exist. The static
  * side is sized from its own [com.riffle.core.domain.launcher.home.DockModel.capacity] cap
  * afterwards, from whatever room the dynamic section has left -- notifications go first, and the
@@ -122,7 +122,8 @@ class DockDynamicSectionMetricsTest {
 
     @Test
     fun theStaticSideIsCappedToWhatTheDynamicSectionLeaves() {
-        // A 560dp run, a dynamic section that draws in full at 228dp (4 entries, 48dp/12dp) plus the
+        // A 560dp run, a dynamic section that draws in full at 228dp (4 entries: 3 live app slots and now playing,
+        // 48dp/12dp) plus the
         // 17dp rule leaves 315dp for the static side -- less than capacity alone would draw for 10
         // icons at this icon size (10*48 + 9*12 = 588dp), so the static side is capped, not the
         // dynamic one.
@@ -132,14 +133,14 @@ class DockDynamicSectionMetricsTest {
                     DockModel(
                         capacity = 10,
                         items = List(10) { index -> testDockShortcut("app-$index") },
-                        liveAppSlots = 2,
+                        liveAppSlots = 3,
                         iconSizeDp = 48,
                         itemSpacingDp = 12,
                     ),
                 isEditing = false,
                 availableMainAxisDp = 560,
                 runsHorizontally = true,
-                dynamicEntryCount = 4,
+                dynamicEntryCount = 5,
             )
 
         assertEquals(228, surfaceMetrics?.dynamicSectionMainAxisDp)
@@ -343,7 +344,7 @@ class DockDynamicSectionMetricsTest {
 
     @Test
     fun sixPinsBesideTwoDynamicEntriesAreNotSqueezedAndTheRunScrolls() {
-        // The owner's phone: six pins, one live app and the Stream button on 404 dp. The dynamic side takes exactly
+        // The owner's phone: six pins, one live app and now playing on 404 dp. The dynamic side takes exactly
         // its two compact 48 dp entries (2 x 48 + 10), the pins keep 56 dp and scroll in what is left.
         val metrics =
             dockSurfaceMetrics(
@@ -365,9 +366,9 @@ class DockDynamicSectionMetricsTest {
         val one = dockSurfaceMetrics(phoneDock(pins = 3), false, 404, dynamicEntryCount = 1)!!
         val limited = dockSurfaceMetrics(phoneDock(pins = 3, liveAppSlots = 0), false, 404, dynamicEntryCount = 9)!!
 
-        // One entry: one compact tile. Zero live app slots still leave now playing and the Stream button.
+        // One entry: one compact tile. Zero live app slots still leave now playing.
         assertEquals(48, one.dynamicSectionMainAxisDp)
-        assertEquals(2 * 48 + 10, limited.dynamicSectionMainAxisDp)
+        assertEquals(48, limited.dynamicSectionMainAxisDp)
     }
 
     @Test
@@ -384,5 +385,49 @@ class DockDynamicSectionMetricsTest {
         val staticFloor = dockStaticFloorMainAxisDp(slotCount = 8, iconSizeDp = 56, spacingDp = 10)
         assertEquals(404 - staticFloor - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP, metrics.dynamicSectionMainAxisDp)
         assertEquals(56, metrics.slotMetrics.iconSizeDp)
+    }
+
+    @Test
+    fun theContextualModeIsOneRowOfPinsEntriesAndTilesAsLongAsItsContentUpToTheRun() {
+        // 3 pins (56 dp, 10 apart = 188), a rule (17), 2 live entries and 3 tiles (48 dp, 10 apart, a rule between
+        // groups).
+        val dock = phoneDock(pins = 3)
+        val roomy = dockSurfaceMetrics(dock, false, 560, dynamicEntryCount = 5, contextualTileCount = 3)!!
+        val run = requireNotNull(roomy.contextualRun)
+
+        assertEquals(188 + 17 + (5 * 48) + (3 * 10) + (17 + 2 * 10), run.contentDp)
+        assertEquals(5, run.entries.size)
+        // Everything fits in 560 dp, so the dock is as long as its row plus its padding and the row does not scroll.
+        assertEquals(run.contentDp + 2 * DOCK_MAIN_AXIS_PADDING_DP, roomy.surfaceMainAxisDp)
+    }
+
+    @Test
+    fun aRowLongerThanTheRunIsCappedAndScrolls() {
+        val crowded =
+            dockSurfaceMetrics(phoneDock(pins = 6), false, 404, dynamicEntryCount = 8, contextualTileCount = 5)!!
+        assertEquals(404, crowded.surfaceMainAxisDp)
+        assertEquals(true, requireNotNull(crowded.contextualRun).contentDp + 2 * DOCK_MAIN_AXIS_PADDING_DP > 404)
+    }
+
+    @Test
+    fun theHomeModeHasNoContextualRunAndKeepsItsOwnLayout() {
+        val home = dockSurfaceMetrics(phoneDock(pins = 3), false, 404, dynamicEntryCount = 2)!!
+        assertEquals(null, home.contextualRun)
+        assertEquals(2 * 48 + 10, home.dynamicSectionMainAxisDp)
+    }
+
+    @Test
+    fun theContextualRowKeepsThePinnedIconsAtFullSpacingWhereTheHomeModeCompactsThem() {
+        val dock = phoneDock(pins = 6)
+        val run = requireNotNull(dockContextualRun(dock, renderedSlotCount = 6, entryCount = 2, tileCount = 0).entries)
+        // 6 pins at full size and spacing (6 * 56 + 5 * 10 = 386), a rule, then the first entry.
+        assertEquals(386 + DOCK_SECTION_DIVIDER_MAIN_AXIS_DP, run.first().startDp)
+    }
+
+    @Test
+    fun aDockWithNoPinsAndNothingDynamicKeepsABodyOneIconLong() {
+        val empty = DockModel(capacity = 3, items = emptyList(), iconSizeDp = 56, itemSpacingDp = 10)
+        val metrics = dockSurfaceMetrics(empty, false, 404)!!
+        assertEquals(56 + 2 * DOCK_MAIN_AXIS_PADDING_DP, metrics.surfaceMainAxisDp)
     }
 }

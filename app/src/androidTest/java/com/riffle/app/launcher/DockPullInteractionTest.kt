@@ -26,11 +26,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The dock pull (ADR 0003, The Dock is the handle) through the real [HomeDestination], with no Stream (so the
- * dock has no dynamic side and every pull starts on the pinned side): a bottom dock pulled up far or fast enough
- * opens the Library through the shell's OpenAppDrawer; a short slow pull springs back; a pull into the edge or along
- * the dock's run does nothing but what it did before; the pull no longer opens the workspace menu; and the dock's
- * accessibility action performs the same open. Pulls from the dynamic side (the Stream) are covered by
+ * The dock pull (ADR 0003, Amendment 3) through the real [HomeDestination], with no Stream (so the dock has no dynamic
+ * side and no press): a bottom dock pulled up far or fast enough opens the Library through the shell's OpenAppDrawer; a
+ * short slow pull springs back; a pull into the edge (a press, which needs a Stream) or along the dock's run does
+ * nothing but what it did before; the pull no longer opens the workspace menu; and the dock's accessibility action
+ * performs the same open. The press that toggles Home and the Stream is [DockPressInteractionTest] and
  * DockPullScreenshotTest, which runs on the JVM.
  *
  * The shell is a recording lambda, so an open shows up as the one action it was asked for.
@@ -148,7 +148,7 @@ class DockPullInteractionTest {
                 .map { action -> action.label }
         pull(dyFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
 
-        // No Stream host here, so no "Open Stream"; and no "Workspace menu" any more.
+        // No Stream host here, so no "Show live pages"; and no "Workspace menu" any more.
         assertEquals(listOf("Open Library"), labels)
         composeRule.runOnIdle { assertEquals(listOf(OPEN_LIBRARY), actions) }
     }

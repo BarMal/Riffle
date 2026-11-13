@@ -61,14 +61,14 @@ internal class HomeDockHostState {
     val bounds: MutableState<Rect?> = mutableStateOf(null)
 
     /**
-     * The dynamic section's bounds in root coordinates, null while there is none. The dock pull reads it to tell
-     * which side a touch started on (pinned: Library; dynamic: Stream).
+     * The dynamic section's bounds in root coordinates, null while there is none. An expanded posture reads it to tell
+     * which end of the Dock the dynamic side is at.
      */
     val dynamicBounds: MutableState<Rect?> = mutableStateOf(null)
 
     /**
-     * Where each dynamic entry is in root coordinates, by key. The dock pull reads it to land the Stream on the app a
-     * pull started on. Entries come and go with what is live, so it is a map the tiles keep current.
+     * Where each dynamic entry is in root coordinates, by key. The Dock's press reads it to land the Stream on the icon
+     * a press started on. Entries come and go with what is live, so it is a map the tiles keep current.
      */
     val dynamicEntryBounds: SnapshotStateMap<String, Rect> = mutableStateMapOf()
 
@@ -116,6 +116,8 @@ internal data class HomeDockInterpreter(
     val dynamicEntries: List<DockDynamicEntry>? = null,
     /** Receives the key of a dynamic entry whose intent is [DockDynamicEntryIntent.Delegate]. */
     val onDynamicEntryDelegated: (String) -> Unit = {},
+    /** The Dock's contextual mode (the Stream is showing): one scrolling row of the same icons plus the page tiles. */
+    val contextual: Boolean = false,
     /** Items the mode adds to a pinned app's long-press menu; a tap on a pinned app always opens it. */
     val staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     /**
@@ -242,6 +244,7 @@ internal fun HomeDockHost(
                     widgetPickerDockPreview = hostState.widgetDropPreview.value,
                     dynamicEntries = interpreter.dynamicEntries.orEmpty(),
                     onDynamicEntryDelegated = interpreter.onDynamicEntryDelegated,
+                    contextual = interpreter.contextual,
                     staticItemMenuExtras = interpreter.staticItemMenuExtras,
                     staticItemTapOverride = interpreter.staticItemTapOverride,
                     isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,
@@ -400,12 +403,12 @@ internal const val HOME_CONTENT_Z_INDEX = -1f
 
 private const val HOME_DOCK_FOLDER_Z_INDEX = 1f
 
-/** Where the dynamic section reports its bounds, into [hostState], for the dock pull to read. */
+/** Where the dynamic section reports its bounds, into [hostState], for the split to read. */
 @Composable
 private fun rememberDynamicBoundsSink(hostState: HomeDockHostState): (Rect?) -> Unit =
     remember(hostState) { { bounds -> hostState.dynamicBounds.value = bounds } }
 
-/** Where each dynamic entry reports its bounds (null when it leaves), into [hostState], for the dock pull to read. */
+/** Where each dynamic entry reports its bounds (null when it leaves), into [hostState], for the Dock press to read. */
 @Composable
 private fun rememberDynamicEntryBoundsSink(hostState: HomeDockHostState): (String, Rect?) -> Unit =
     remember(hostState) {
