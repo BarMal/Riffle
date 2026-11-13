@@ -88,7 +88,7 @@ data class SplitLayout(
  * The Stream's surface stops at the Dock's room (Home's pads for it), so what it draws is the same from a split to
  * Stream only.
  *
- * Which side the Stream takes: for a bottom or top Dock, the side nearer the Dock's dynamic side (the Stream button is
+ * Which side the Stream takes: for a bottom or top Dock, the side nearer the Dock's dynamic side (the live apps are
  * there), so the pull and the pane are one gesture; for a side Dock, the side away from the Dock (Home keeps the Dock's
  * edge); in a stacked (tabletop) split, the pane nearer the Dock for a bottom or top Dock, and the lower pane for a
  * side Dock. Never across a hinge: a pane that would cover a hinge is cut back to the larger side of it.

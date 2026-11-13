@@ -38,6 +38,13 @@ object GestureThresholds {
     const val DOCK_PULL_MINIMUM_FLING_DISTANCE_DP: Float = 8f
 
     /**
+     * How far the Dock is pressed down (toward its own edge) for a release to toggle the Home and the contextual mode.
+     * Short on purpose: the Dock sits at the edge, so there is little room to press into, and it is clear of
+     * [DOCK_SHELF_CLAIM_DP].
+     */
+    const val DOCK_PRESS_COMMIT_DP: Float = 28f
+
+    /**
      * Pointer count at which the home gesture layer claims the touch outright, ahead of any child
      * (card stack, pager): a three-finger swipe is a home-page gesture wherever it starts.
      */

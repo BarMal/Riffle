@@ -28,7 +28,7 @@ enum class SplitMode(val storedId: String) {
 }
 
 /**
- * The pure transitions between [SplitMode]s. The Stream button toggles Home only and the last-used "Stream shown" state
+ * The pure transitions between [SplitMode]s. The Dock press toggles Home only and the last-used "Stream shown" state
  * (split or Stream only); the Home press always returns to Home only; a divider or pull that ends in a shown state
  * becomes the new last-used one.
  */
@@ -46,7 +46,7 @@ object SplitModes {
         splitAvailable: Boolean,
     ): SplitMode = if (streamShown) shownMode(lastShown, splitAvailable) else SplitMode.HOME_ONLY
 
-    /** Tapping the Stream button from [current]: Home only goes to the last-used shown mode, any other to Home only. */
+    /** Pressing the Dock from [current]: Home only goes to the last-used shown mode, any other to Home only. */
     fun afterStreamButton(
         current: SplitMode,
         lastShown: SplitMode,
