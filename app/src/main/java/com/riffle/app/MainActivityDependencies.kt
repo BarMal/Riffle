@@ -82,7 +82,9 @@ import com.riffle.app.launcher.stream.ManualChangeSource
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.stream.StreamPlatform
 import com.riffle.app.launcher.stream.StreamPostureHolder
+import com.riffle.app.launcher.stream.enabledStreamRegistry
 import com.riffle.app.launcher.stream.largeIconBytesFor
+import com.riffle.app.launcher.stream.streamLoadingScheduler
 import com.riffle.app.launcher.stream.todoist.HttpUrlConnectionTransport
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.app.launcher.stream.todoist.TodoistTaskApi
@@ -106,17 +108,14 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
 import com.riffle.core.domain.launcher.stream.StreamContext
-import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.stream.TaskConnectionState
 import com.riffle.core.domain.launcher.stream.TaskConnectionStatus
 import com.riffle.core.domain.launcher.stream.TaskTimer
 import com.riffle.core.domain.launcher.stream.TodoistTaskProvider
 import com.riffle.core.domain.launcher.workspace.SourceId
-import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
 import com.riffle.core.domain.launcher.workspace.lens.ZoneDayBucketer
 import com.riffle.core.domain.launcher.workspace.pool.PoolHostIds
-import com.riffle.core.domain.launcher.workspace.settings.AliasedSourceEnablement
 import com.riffle.core.domain.launcher.workspace.settings.SourceContentPrivacy
 import com.riffle.core.domain.launcher.workspace.settings.SourceEnablement
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceContentPrivacy
@@ -376,11 +375,7 @@ internal class MainActivityDependencies(
             tasks = tasks.provider,
             taskActions = tasks.provider,
             taskSettings = tasks.settings,
-            registry =
-                EnablementSourceRegistry(
-                    registry,
-                    AliasedSourceEnablement(enablement, mapOf(StreamSourceIds.AGENDA to SourceIds.CALENDAR)),
-                ),
+            registry = enabledStreamRegistry(registry, enablement),
             alarms = alarm.provider,
             actions =
                 AndroidStreamActionGateway(
@@ -456,6 +451,7 @@ internal class MainActivityDependencies(
                 registry = platform.registry,
                 tasks = platform.tasks,
                 alarms = platform.alarms,
+                scheduler = streamLoadingScheduler(),
                 contextChanges = mergedContextChanges(exclusionRepository, contentPrivacy, streamLayoutRepository),
                 context = {
                     StreamContext(

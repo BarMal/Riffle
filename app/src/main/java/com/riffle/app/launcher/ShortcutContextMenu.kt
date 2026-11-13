@@ -38,6 +38,8 @@ internal data class ShortcutContextMenuItem(
     val action: LauncherShellAction? = null,
     val enabled: Boolean = true,
     val submenuItems: List<ShortcutContextMenuItem> = emptyList(),
+    /** For an item that is not a shell action (the dock's "Open in Stream"); [action] is ignored when this is set. */
+    val onSelect: (() -> Unit)? = null,
 )
 
 internal fun shortcutContextMenuItems(
@@ -124,7 +126,7 @@ internal fun ShortcutContextMenu(
                         submenuItems = item.submenuItems
                     } else {
                         dismissMenu()
-                        onAction(requireNotNull(item.action))
+                        item.onSelect?.invoke() ?: onAction(requireNotNull(item.action))
                     }
                 },
             )
@@ -241,5 +243,5 @@ private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem
         ShortcutContextSurface.DOCK_PANEL -> emptyList()
     }
 
-private val AppShortcut.contextMenuLabel: String
+internal val AppShortcut.contextMenuLabel: String
     get() = longLabel ?: shortLabel

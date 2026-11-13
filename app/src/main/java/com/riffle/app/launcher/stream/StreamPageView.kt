@@ -338,7 +338,12 @@ private fun StreamStateBody(
         StreamSectionResult.Loading ->
             StreamStateMessage(stringResource(R.string.stream_loading), showSpinner = !env.reducedMotion)
         StreamSectionResult.Empty -> StreamStateMessage(stringResource(section.emptyRes()))
-        StreamSectionResult.Unavailable -> StreamStateMessage(stringResource(R.string.stream_unavailable))
+        StreamSectionResult.Unavailable ->
+            StreamStateMessage(
+                message = stringResource(R.string.stream_unavailable),
+                actionLabel = stringResource(R.string.stream_task_retry),
+                onAction = { callbacks.onRetrySection(section) },
+            )
         is StreamSectionResult.NotConnected -> StreamStateMessage(stringResource(R.string.stream_not_connected_tasks))
         StreamSectionResult.Off ->
             StreamStateMessage(

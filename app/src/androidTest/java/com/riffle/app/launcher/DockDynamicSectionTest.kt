@@ -109,6 +109,49 @@ class DockDynamicSectionTest {
     }
 
     @Test
+    fun anAppEntryHasOneClickActionAndOneShowInStreamActionOnTheSameNode() {
+        // A live app opens when tapped; a screen reader also gets "Show in Stream" (the swipe up's equivalent) from
+        // the SAME node's one customActions list, and it hands the entry's key back like the long-press item does.
+        var delegatedKey: String? = null
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(420.dp)) {
+                    Dock(
+                        dock = DockModel(capacity = 2, items = listOf(camera, mail)),
+                        isEditing = false,
+                        notificationGroupsByApp = emptyList(),
+                        appShortcutsByApp = emptyMap(),
+                        appIconLoader = EmptyAppIconLoader,
+                        widgetViewFactory = EmptyHomeWidgetViewFactory,
+                        position = DockPosition.BOTTOM,
+                        interactions = DockInteractions(onAction = { actions += it }),
+                        dynamicEntries =
+                            listOf(
+                                chatEntry.copy(
+                                    openLabel = "Open Chat",
+                                    showInStreamLabel = "Show Chat in Stream",
+                                    openInStreamMenuLabel = "Open in Stream",
+                                ),
+                            ),
+                        onDynamicEntryDelegated = { key -> delegatedKey = key },
+                    )
+                }
+            }
+        }
+
+        val node = composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).fetchSemanticsNode()
+        assertEquals("Open Chat", node.config[SemanticsActions.OnClick].label)
+        assertEquals(listOf("Show Chat in Stream"), node.config[SemanticsActions.CustomActions].map { it.label })
+
+        composeRule.runOnUiThread { node.config[SemanticsActions.CustomActions].single().action() }
+        composeRule.runOnIdle {
+            assertEquals(chatEntry.key, delegatedKey)
+            assertTrue("showing in the Stream never launches the app", actions.isEmpty())
+        }
+    }
+
+    @Test
     fun anEntryWithNothingToDispatchStaysPutWhenTapped() {
         // A notification whose app the launcher can no longer resolve: the entry is still worth
         // showing, and tapping it does nothing rather than opening something arbitrary.

@@ -4,6 +4,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
@@ -37,7 +39,10 @@ class DockDynamicSideEntriesTest {
         assertEquals("Messages", entry.label)
         assertEquals(3, entry.badgeCount)
         assertEquals(chat.identity, entry.identity)
-        assertEquals(DockDynamicEntryIntent.Delegate, entry.intent)
+        // A tap opens the app (the same launch a pinned icon does, in its own profile); the swipe up shows its page.
+        assertEquals(DockDynamicEntryIntent.Dispatch(LauncherShellAction.LaunchApp(chat.identity)), entry.intent)
+        assertEquals("Open Messages", entry.openLabel)
+        assertEquals("Show Messages in Stream", entry.showInStreamLabel)
         assertNull(entry.symbol)
     }
 
@@ -49,6 +54,41 @@ class DockDynamicSideEntriesTest {
 
         assertEquals("Gone, 2 new", entry.contentDescription)
         assertNull(entry.identity)
+        // Nothing to launch: a tap keeps opening its page in the Stream.
+        assertEquals(DockDynamicEntryIntent.Delegate, entry.intent)
+    }
+
+    @Test
+    fun aLiveAppsLongPressMenuIsItsShortcutsAppInfoAndHide() {
+        val shortcut =
+            AppShortcut(
+                id = AppShortcutId("compose"),
+                appIdentity = chat.identity,
+                shortLabel = "Compose",
+                longLabel = "New message",
+            )
+        val entry =
+            DockDynamicSideEntry.LiveApp("chat:personal", "chat", "personal", "Chat", count = 3)
+                .toDockEntry(
+                    listOf(chat),
+                    streamShown = false,
+                    resources = resources,
+                    appShortcuts = mapOf(chat.identity to listOf(shortcut)),
+                )
+
+        assertEquals("Open in Stream", entry.openInStreamMenuLabel)
+        assertEquals(
+            listOf("App shortcuts (1)", "App info", "Hide app"),
+            entry.appMenu.map { it.label },
+        )
+        assertEquals(
+            LauncherShellAction.OpenAppInfo(chat.identity),
+            entry.appMenu.single { it.label == "App info" }.action,
+        )
+        assertEquals(
+            LauncherShellAction.HideApp(chat.identity),
+            entry.appMenu.single { it.label == "Hide app" }.action,
+        )
     }
 
     @Test
@@ -60,6 +100,9 @@ class DockDynamicSideEntriesTest {
             DockDynamicSideEntry.NowPlaying("chat", "personal", "Music", null)
                 .toDockEntry(listOf(chat), streamShown = false, resources = resources)
 
+        // A tap opens the player app; the swipe up shows the Now page.
+        assertEquals(DockDynamicEntryIntent.Dispatch(LauncherShellAction.LaunchApp(chat.identity)), titled.intent)
+        assertEquals("Show Messages in Stream", titled.showInStreamLabel)
         assertEquals("Now playing: Midnight City", titled.contentDescription)
         assertEquals("Now playing", withheld.contentDescription)
         assertEquals(DockDynamicSymbol.NowPlaying, titled.symbol)
@@ -78,6 +121,10 @@ class DockDynamicSideEntriesTest {
 
         assertEquals("Stream", closed.label)
         assertEquals("Stream", closed.contentDescription)
+        // The Stream button is unchanged: its tap toggles, and it has no "show in Stream" of its own.
+        assertEquals(DockDynamicEntryIntent.Delegate, closed.intent)
+        assertNull(closed.showInStreamLabel)
+        assertNull(closed.openInStreamMenuLabel)
         assertFalse(closed.isSelected)
         assertEquals("Stream, back to Home", open.contentDescription)
         assertTrue(open.isSelected)

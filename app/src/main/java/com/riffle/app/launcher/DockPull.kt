@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
@@ -23,7 +22,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import com.riffle.app.launcher.designsystem.RiffleMotion
-import com.riffle.core.domain.launcher.designsystem.RiffleMotionTokens
 import com.riffle.core.domain.launcher.dockpull.DockPullClaim
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
@@ -121,6 +119,9 @@ internal class DockPullState(
 
     /** Called when a pull commits, with where it leads; the host dispatches the shell action. */
     var onCommitted: (DockPullDestination) -> Unit = {}
+
+    /** Called when a pull ends without committing (it sprang back), so what it prepared can be dropped. */
+    var onCancelled: () -> Unit = {}
 
     /**
      * A finger landed on a settling pull: catch it where it is and track from there. Returns whether there was a
@@ -241,9 +242,7 @@ internal class DockPullState(
         settleJob?.cancel()
         settleJob =
             scope.launch {
-                Animatable(progress).animateTo(target, animationSpec = dockPullSettleSpec(reducedMotion)) {
-                    progress = value
-                }
+                animateProgressTo(target)
                 onSplitSettled(mode)
                 if (shownChanges) pendingStreamShown = mode.showsStream
                 running = false
@@ -251,8 +250,19 @@ internal class DockPullState(
                 progress = 0f
                 if (shownChanges) {
                     onCommitted(if (mode.showsStream) DockPullDestination.STREAM else DockPullDestination.HOME)
+                } else {
+                    onCancelled()
                 }
             }
+    }
+
+    /** The settle: the smooth spring, or under reduced motion an instant cut to the end (no frame in between). */
+    private suspend fun animateProgressTo(target: Float) {
+        if (reducedMotion) {
+            progress = target
+        } else {
+            Animatable(progress).animateTo(target, animationSpec = dockPullSettleSpec()) { progress = value }
+        }
     }
 
     private fun settle(outcome: SettleOutcome) {
@@ -261,9 +271,7 @@ internal class DockPullState(
         settleJob?.cancel()
         settleJob =
             scope.launch {
-                Animatable(progress).animateTo(target, animationSpec = dockPullSettleSpec(reducedMotion)) {
-                    progress = value
-                }
+                animateProgressTo(target)
                 if (outcome == SettleOutcome.COMMIT) {
                     if (destination == DockPullDestination.LIBRARY) {
                         pendingLibraryShown = true
@@ -274,7 +282,7 @@ internal class DockPullState(
                 running = false
                 splitting = false
                 progress = 0f
-                if (outcome == SettleOutcome.COMMIT) onCommitted(destination)
+                if (outcome == SettleOutcome.COMMIT) onCommitted(destination) else onCancelled()
             }
     }
 }
@@ -285,13 +293,9 @@ internal fun rememberDockPullState(): DockPullState {
     return remember(scope) { DockPullState(scope) }
 }
 
-/** The settle: the smooth spring, or under reduced motion a short crossfade to the same end. */
-private fun dockPullSettleSpec(reducedMotion: Boolean): AnimationSpec<Float> =
-    if (reducedMotion) {
-        tween(durationMillis = RiffleMotionTokens.DURATION_REDUCED_MOTION_MILLIS * 2)
-    } else {
-        RiffleMotion.smooth(visibilityThreshold = DOCK_PULL_PROGRESS_THRESHOLD)
-    }
+/** The animated settle: the smooth spring. (Under reduced motion there is no animation: [DockPullState] cuts.) */
+private fun dockPullSettleSpec(): AnimationSpec<Float> =
+    RiffleMotion.smooth(visibilityThreshold = DOCK_PULL_PROGRESS_THRESHOLD)
 
 /** What the Dock pull gesture needs from its host, read fresh at each gesture. */
 internal interface DockPullGestureHost {
@@ -307,6 +311,15 @@ internal interface DockPullGestureHost {
 
     /** Where a pull that landed at [position] (in the gesture's own coordinates) leads. */
     fun destinationAt(position: Offset): DockPullDestination
+
+    /**
+     * A pull toward [destination] has just been claimed; it landed at [position] (the gesture's own coordinates). The
+     * host prepares what the destination needs before the surfaces move, such as where the Stream lands.
+     */
+    fun pullStarted(
+        destination: DockPullDestination,
+        position: Offset,
+    ) = Unit
 
     /** The split a pull on an expanded posture moves through, or null where the Stream and Home swap completely. */
     fun splitSetup(): SplitPullSetup? = null
@@ -367,8 +380,10 @@ private suspend fun AwaitPointerEventScope.awaitPullClaim(
                         DockPullClaim.REJECT -> decision = false
                         DockPullClaim.CLAIM -> {
                             change.consume()
+                            val destination = host.destinationAt(down.position)
+                            host.pullStarted(destination, down.position)
                             host.state.start(
-                                destination = host.destinationAt(down.position),
+                                destination = destination,
                                 direction = direction,
                                 travelDp = host.travelDp(direction),
                                 reducedMotion = host.reducedMotion,

@@ -53,4 +53,29 @@ class DockPullSideTest {
         dynamicStart: Float?,
         dynamicEnd: Float?,
     ) = dockPullSideAt(position, dockStart = 0f, dockEnd = 400f, dynamicStart = dynamicStart, dynamicEnd = dynamicEnd)
+
+    private val entries =
+        listOf(
+            DockPullEntryExtent("live:chat:personal", 300f, 348f),
+            DockPullEntryExtent("live:mail:personal", 352f, 400f),
+            DockPullEntryExtent("stream", 404f, 452f),
+        )
+
+    @Test
+    fun aTouchOnAnEntryFindsThatEntryAndOneInTheGapOrElsewhereFindsNone() {
+        assertEquals("live:chat:personal", dockPullEntryAt(320f, entries))
+        assertEquals("live:mail:personal", dockPullEntryAt(352f, entries))
+        assertEquals("stream", dockPullEntryAt(420f, entries))
+        assertEquals(null, dockPullEntryAt(350f, entries))
+        assertEquals(null, dockPullEntryAt(100f, entries))
+        assertEquals(null, dockPullEntryAt(452f, entries))
+    }
+
+    @Test
+    fun aPullThatOpensTheStreamLandsOnTheEntryItStartedOnAndNothingElseLandsAnywhere() {
+        assertEquals("live:chat", dockPullLandingEntry(DockPullDestination.STREAM, "live:chat"))
+        assertEquals(null, dockPullLandingEntry(DockPullDestination.STREAM, null))
+        assertEquals(null, dockPullLandingEntry(DockPullDestination.HOME, "live:chat"))
+        assertEquals(null, dockPullLandingEntry(DockPullDestination.LIBRARY, "live:chat"))
+    }
 }

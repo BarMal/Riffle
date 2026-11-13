@@ -23,15 +23,21 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
 import com.riffle.app.R
+import com.riffle.app.launcher.stream.StreamFocusRequests
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
+import com.riffle.core.domain.launcher.dockpull.DockPullEntryExtent
 import com.riffle.core.domain.launcher.dockpull.StreamPullFrame
 import com.riffle.core.domain.launcher.dockpull.dockPullDestinationFor
+import com.riffle.core.domain.launcher.dockpull.dockPullEntryAt
+import com.riffle.core.domain.launcher.dockpull.dockPullLandingEntry
 import com.riffle.core.domain.launcher.dockpull.dockPullSideAt
 import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.dockpull.streamPullFrame
@@ -46,6 +52,8 @@ internal class StreamPullInputs(
     val shown: Boolean,
     /** Where a pull starts on an expanded posture (Home only, split, Stream only), read fresh; null on the phone. */
     val split: (() -> SplitPullSetup?)? = null,
+    /** Where the Stream lands: a pull that starts on a live app's icon asks it to land on that app. */
+    val focus: StreamFocusRequests? = null,
 )
 
 /**
@@ -61,6 +69,10 @@ internal class HomeDockPullBinding(
     val dockModifier: Modifier,
     private val dockPull: DockPullState,
     private val frame: State<StreamPullFrame>,
+    /** What Home is drawn at once no pull runs: 0 where a committed switch left the Stream over it, else 1. */
+    private val homeAlphaAtRest: () -> Float = { 1f },
+    /** What the Stream is drawn at once no pull runs: 1 where it is shown, else 0. */
+    private val streamAlphaAtRest: () -> Float = { 1f },
 ) {
     /** Whether the Stream is being pulled in or out (or is settling after it): both surfaces are composed then. */
     val isTransitioning: Boolean
@@ -81,38 +93,55 @@ internal class HomeDockPullBinding(
      * sheet rises and stays out while that covers it ([libraryShown]). Identity at rest.
      */
     fun homeModifier(libraryShown: Boolean = false): Modifier =
-        Modifier.graphicsLayer {
-            alpha = coveredAlpha(libraryShown, streamAlpha = frame.value.homeAlpha)
-        }
+        Modifier
+            .testTag(HOME_SURFACE_TEST_TAG)
+            .semantics { drawnSurface = DrawnSurface(homeAlpha(libraryShown), 0f) }
+            .graphicsLayer { alpha = homeAlpha(libraryShown) }
 
     /**
      * For the Stream: it slides in from the Dock's edge (or out toward the interior); reduced motion fades it. Under
      * the Library's sheet it fades out like Home does.
      */
     fun streamModifier(libraryShown: Boolean = false): Modifier =
-        Modifier.graphicsLayer {
-            if (dockPull.streamRunning && !dockPull.splitting) {
-                val current = frame.value
-                val direction = dockPull.direction
-                translationX = direction.unitX * current.streamOffsetFraction * size.width
-                translationY = direction.unitY * current.streamOffsetFraction * size.height
-                alpha = current.streamAlpha
-            } else {
-                alpha = coveredAlpha(libraryShown, streamAlpha = 1f)
+        Modifier
+            .testTag(STREAM_PULL_SURFACE_TEST_TAG)
+            .semantics { drawnSurface = DrawnSurface(streamAlpha(libraryShown), streamTravel()) }
+            .graphicsLayer {
+                if (dockPull.streamRunning && !dockPull.splitting) {
+                    val travel = streamTravel()
+                    translationX = dockPull.direction.unitX * travel * size.width
+                    translationY = dockPull.direction.unitY * travel * size.height
+                }
+                alpha = streamAlpha(libraryShown)
             }
-        }
 
-    /** What a surface under the Library shows at: [streamAlpha] while a Stream pull runs, else faded by the sheet. */
-    private fun coveredAlpha(
-        libraryShown: Boolean,
-        streamAlpha: Float,
-    ): Float =
+    /**
+     * What Home is drawn at right now. Read it in a draw block or a semantics block.
+     *
+     * Once the pull is over, Home is drawn as it rests: gone behind the Stream when that is where the switch ended,
+     * else fully shown. It is not left at full opacity for the frame between the pull ending and the composition
+     * catching up (that frame showed the app grid flashing over the Stream).
+     */
+    private fun homeAlpha(libraryShown: Boolean): Float =
         when {
-            dockPull.streamRunning && !dockPull.splitting -> streamAlpha
+            dockPull.streamRunning && !dockPull.splitting -> frame.value.homeAlpha
             dockPull.libraryRunning -> 1f - dockPull.progress.coerceIn(0f, 1f)
             libraryShown -> 0f
-            else -> 1f
+            else -> homeAlphaAtRest()
         }
+
+    /** What the Stream is drawn at right now: the mirror of [homeAlpha], so neither flashes as the pull ends. */
+    private fun streamAlpha(libraryShown: Boolean): Float =
+        when {
+            dockPull.streamRunning && !dockPull.splitting -> frame.value.streamAlpha
+            dockPull.libraryRunning -> 1f - dockPull.progress.coerceIn(0f, 1f)
+            libraryShown -> 0f
+            else -> streamAlphaAtRest()
+        }
+
+    /** How far the Stream is from rest along the pull axis, as a fraction of the window (0 at rest). */
+    private fun streamTravel(): Float =
+        if (dockPull.streamRunning && !dockPull.splitting) frame.value.streamOffsetFraction else 0f
 }
 
 @Composable
@@ -132,18 +161,8 @@ internal fun rememberHomeDockPullBinding(
     // The Library is already open then: it closes by Back, Home, a pull down on its header or its Close action.
     val canPull =
         state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen && !state.destination.isLibrary
-    val latestOnAction = rememberUpdatedState(onAction)
-    SideEffect {
-        dockPull.onCommitted = { destination ->
-            latestOnAction.value(
-                when (destination) {
-                    DockPullDestination.LIBRARY -> LauncherShellAction.OpenAppDrawer
-                    DockPullDestination.STREAM -> LauncherShellAction.OpenStream
-                    DockPullDestination.HOME -> LauncherShellAction.OpenHome
-                },
-            )
-        }
-    }
+    val latestStream = rememberUpdatedState(stream)
+    BindPullCallbacks(dockPull, rememberUpdatedState(onAction), latestStream)
     val frameState =
         remember(dockPull, reducedMotion) {
             derivedStateOf { streamPullFrame(dockPull.progress, dockPull.opening, reducedMotion) }
@@ -182,7 +201,46 @@ internal fun rememberHomeDockPullBinding(
         dockModifier = dockModifier,
         dockPull = dockPull,
         frame = frameState,
+        homeAlphaAtRest = { restAlpha(dockPull, latestStream.value, streamSurface = false) },
+        streamAlphaAtRest = { restAlpha(dockPull, latestStream.value, streamSurface = true) },
     )
+}
+
+/**
+ * What a surface is drawn at once no pull runs: Home gone behind the Stream and the Stream fully shown where a switch
+ * to the Stream ended (a committed one counts at once), the other way round where it ended at Home. An expanded
+ * posture rests in a split or Stream-only layout the split panes draw themselves, so both stay at 1 there.
+ */
+private fun restAlpha(
+    dockPull: DockPullState,
+    stream: StreamPullInputs,
+    streamSurface: Boolean,
+): Float {
+    if (stream.split != null) return 1f
+    val streamShown = dockPull.pendingStreamShown ?: stream.shown
+    return if (streamShown == streamSurface) 1f else 0f
+}
+
+/** Connects the pull's end to the shell: a commit sends its action, a spring-back drops the landing it asked for. */
+@Composable
+private fun BindPullCallbacks(
+    dockPull: DockPullState,
+    latestOnAction: State<(LauncherShellAction) -> Unit>,
+    latestStream: State<StreamPullInputs>,
+) {
+    SideEffect {
+        dockPull.onCommitted = { destination ->
+            latestOnAction.value(
+                when (destination) {
+                    DockPullDestination.LIBRARY -> LauncherShellAction.OpenAppDrawer
+                    DockPullDestination.STREAM -> LauncherShellAction.OpenStream
+                    DockPullDestination.HOME -> LauncherShellAction.OpenHome
+                },
+            )
+        }
+        // A pull that sprang back must not leave its landing behind for the next time the Stream opens.
+        dockPull.onCancelled = { latestStream.value.focus?.cancel() }
+    }
 }
 
 /** Where the Dock body is laid out, so a touch in its own coordinates can be placed against the dynamic section. */
@@ -280,6 +338,27 @@ private fun rememberDockPullGestureHost(
 
             override fun splitSetup(): SplitPullSetup? = latestStream.value.split?.invoke()
 
+            override fun pullStarted(
+                destination: DockPullDestination,
+                position: Offset,
+            ) {
+                val focus = latestStream.value.focus ?: return
+                val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position
+                val alongRun = latestDirection.value.unitY != 0f
+                val entries =
+                    hostState.dynamicEntryBounds.map { (key, bounds) ->
+                        DockPullEntryExtent(
+                            key = key,
+                            start = if (alongRun) bounds.left else bounds.top,
+                            end = if (alongRun) bounds.right else bounds.bottom,
+                        )
+                    }
+                // Only along the run: the section is as thick as its tiles, and a touch on it is on a tile or a gap.
+                val along = if (alongRun) inRoot.x else inRoot.y
+                val key = dockPullLandingEntry(destination, dockPullEntryAt(along, entries))
+                (key?.let(::dockDynamicEntryTarget) as? DockDynamicTarget.Focus)?.let { focus.request(it.focus) }
+            }
+
             override fun destinationAt(position: Offset): DockPullDestination {
                 val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position
                 // A vertical pull belongs to a dock that runs along the window's width, and the other way round.
@@ -299,3 +378,12 @@ private fun rememberDockPullGestureHost(
         }
     }
 }
+
+/** What a surface is drawn at, for tests: its opacity and how far it is from rest (fraction of the window). */
+internal data class DrawnSurface(val alpha: Float, val travelFraction: Float)
+
+internal val DrawnSurfaceKey = SemanticsPropertyKey<DrawnSurface>("DrawnSurface")
+private var SemanticsPropertyReceiver.drawnSurface by DrawnSurfaceKey
+
+internal const val HOME_SURFACE_TEST_TAG = "home-surface"
+internal const val STREAM_PULL_SURFACE_TEST_TAG = "stream-pull-surface"

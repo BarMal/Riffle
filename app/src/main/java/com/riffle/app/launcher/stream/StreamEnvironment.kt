@@ -99,6 +99,8 @@ internal data class StreamCallbacks(
     val onRefreshTasks: () -> Unit = {},
     /** "Connect Todoist": opens Settings > Stream > Tasks. */
     val onConnectTasks: () -> Unit = {},
+    /** "Retry" on a section that could not be read (or did not answer in time): observe it afresh. */
+    val onRetrySection: (StreamSection) -> Unit = {},
 )
 
 internal fun StreamContent.appRef(): StreamAppRef? =
