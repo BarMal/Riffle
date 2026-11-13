@@ -178,10 +178,12 @@ class StreamPagesInteractionTest {
                 .map { it.label }
         assertEquals(listOf("Previous page", "Next page"), labels)
 
-        composeRule.runOnUiThread {
+        // Fetch the node off the main thread (fetching synchronises), then run only the action on it.
+        val next =
             composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode().config[SemanticsActions.CustomActions]
-                .first { it.label == "Next page" }.action()
-        }
+                .first { it.label == "Next page" }
+        composeRule.runOnUiThread { next.action() }
+        composeRule.waitForIdle()
         assertOpen(mail)
     }
 
