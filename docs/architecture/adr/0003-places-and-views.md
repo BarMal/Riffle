@@ -453,6 +453,54 @@ Samsung's Now Bar and Apple's Dynamic Island; per-app card stacks come from Time
 combination, with the launcher's Dock as the single surface that flips between apps and live content, is
 Riffle's own.
 
+## Amendment 2 (owner, 2026-11-13): unfolded, and layout per posture
+
+Decided on the UX canvas. Not built yet. It replaces the unfolded "Pages or Stage" views and the Home and
+Stream split of the original decision (decision 13 and the Folded and unfolded rule). Motion is still open.
+
+### Layout is a setting per posture
+
+Folded and unfolded each keep their own layout. The owner leans towards configurability over one fixed answer.
+
+| Setting | Options | Folded default | Unfolded default |
+| --- | --- | --- | --- |
+| Dock edge | Bottom, right, left | Bottom | Right |
+| App pages scroll | Sideways, up and down | Sideways | Up and down |
+| Page indicator | Beside the Dock, in the Dock, off | Beside (above its middle) | Beside (in front of its middle) |
+| Drag the indicator to scroll quickly | On, off | On | On |
+
+The indicator always runs the way the pages scroll, so a quick-scroll drag never moves pages at right angles
+to it. Cards and live content stack upright in both postures.
+
+### Unfolded
+
+- **The Dock is centred on its edge** and shows both faces at once: search at its top end, pinned apps, then
+  the live pages. There is nothing to flip.
+- **The Home page dots sit in front of the middle of the Dock**, as they sit above its middle when folded.
+  The card stack attaches beside the live pages, below the dots; an open card covers the dots while it is open.
+- **Cards are the same upright stack as folded**: older cards as tabs above the front card. The stack touches
+  the Dock beside the live pages, so it reads as coming out of the Dock. A stack that floats as a free
+  column was drawn and felt like a separate component.
+- **Opening a card** makes it wider and taller from the same spot, with its actions inside it. At rest the
+  grid has about two thirds of the screen and the cards a third; an open card may take up to half.
+- **Home is one continuous grid**, not two pages side by side. It fades out softly at every edge and towards
+  the cards and the Dock; it is never cut off at the Dock.
+- **App peek-through** is a setting: apps show faintly behind the cards, or nothing shows behind them.
+- **Search** opens as a panel attached to the Dock, the way a card does, with the field at the bottom of the
+  panel nearest the keyboard. The Dock shortens while the keyboard is up.
+
+### Tried and dropped
+
+A bottom Dock with a cluster under each thumb; the folded layout centred over blurred Home; two Home pages
+side by side; a sideways stack as a full-height panel (too much dead space) and as a compact card with
+photo-only strips (older cards unreadable); a flat page-dots pill beside the Dock (the centre of the screen
+is the least reachable part when unfolded).
+
+### Precedent
+
+Apple's iPhone Duo (2026) moves its Dock to the side of the unfolded screen for thumb reach, with a
+left-handed option. Riffle's Dock differs in also carrying live pages and being the origin of cards.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as
