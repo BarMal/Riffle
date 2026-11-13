@@ -466,7 +466,7 @@ Folded and unfolded each keep their own layout. The owner leans towards configur
 | --- | --- | --- | --- |
 | Dock edge | Bottom, right, left | Bottom | Right |
 | App pages scroll | Sideways, up and down | Sideways | Up and down |
-| Page indicator | Beside the Dock, in the Dock, off | Beside (above the Dock) | Beside (just in from the Dock) |
+| Page indicator | Beside the Dock, in the Dock, off | Beside (above the Dock) | In the Dock, at its middle |
 | Drag the indicator to scroll quickly | On, off | On | On |
 
 The indicator always runs the way the pages scroll, so a quick-scroll drag never moves pages at right angles
@@ -474,8 +474,9 @@ to it. Cards and live content stack upright in both postures.
 
 ### Unfolded
 
-- **The Dock is centred on its edge** and shows both faces at once: search at its top end, pinned apps, then
-  the live pages. There is nothing to flip.
+- **The Dock is centred on its edge** and shows both faces at once: search at its top end, pinned apps, the
+  Home page dots at its middle, then the live pages. There is nothing to flip. The dots sit in the Dock
+  because the card stack occupies the space beside its middle.
 - **Cards are the same upright stack as folded**: older cards as tabs above the front card. The stack touches
   the Dock level with its page marker, so it reads as coming out of the Dock. A stack that floats as a free
   column was drawn and felt like a separate component.
