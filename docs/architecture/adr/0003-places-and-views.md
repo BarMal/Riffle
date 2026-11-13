@@ -380,6 +380,79 @@ the code at acceptance.
   the live card, an animation of the spine's markers between sections, a per-page stack-depth setting.
 - **Glass over the wallpaper cannot blur it**, which the original Material section did not anticipate.
 
+## Amendment 1 (owner, 2026-11-13): the Dock is the origin (folded)
+
+Decided on the UX canvas after device feedback on the first build. Not built yet. It changes how the four
+Places are reached and drawn on a folded device; the Places, typed content and the single material stand. The
+unfolded layout is still open and is not covered here.
+
+**Why.** The first build put the Stream spine and page header at the top of the screen, far from the thumb, and
+the Dock's dynamic section repeated what the spine showed. Controls now cluster at the Dock and content grows
+from it.
+
+### The Dock has two faces
+
+| Face | Dock shows | Behind it |
+| --- | --- | --- |
+| Apps | Pinned apps, a divider, live apps | Home |
+| Live | The live pages as markers; the focused marker widens to show its name and count | Stream |
+
+- **Swipe down on the Dock** flips between the faces. There is no Stream button.
+- **Slide along the live face** to change page. The live apps are the page markers, so there is no separate
+  spine and no page header.
+- On the apps face a live app keeps its gestures: tap opens the app, swipe up opens its page.
+- Whether pinned apps stay visible as a second row on the live face is a setting; hidden is the default.
+
+### Stream: browse, then open
+
+- **Browse.** A page is a stack of cards, anchored towards the Dock: the front card is nearest the thumb and
+  older cards peek above it. This reverses TimeScape's direction on purpose, because the Dock is the origin.
+  A peeking card is clipped to the part the card in front does not cover, so fills never add up.
+- **Open.** Tapping a card grows it in place into its full content (a conversation, the player, an event).
+  The Dock gains a row with that card's actions (reply field, Dismiss, Snooze, transport), so reading sits
+  high and acting sits under the thumb.
+- **Today.** Agenda and Tasks are one page: the next event in front with a countdown and actions, a
+  "To do today" checklist card, then later events and tomorrow.
+- **Images.** Browse and open cards show the contact photo with the app icon as a badge. Browse cards show one
+  small thumbnail; open cards show image content in full. All of it comes from the notification, so it
+  appears only when the sending app provides it.
+- **Page options** (show as stack or list, move, hide) move off the page header to a long-press on its marker.
+
+### Card colour
+
+A card's fill is tinted with its app's main icon colour. The edge stays the neutral glass edge and the
+spotlight lights the content only. A coloured border was tried and rejected as too harsh.
+
+### Home, Library and search
+
+- **Home handle.** Page dots and search are one pill above the Dock: tap searches, and dragging along the
+  dots still scrubs quickly between pages.
+- **Search** opens inside the Dock, above the keyboard. Best matches sit nearest the thumb; further results
+  stack above them.
+- **Library** is pages of every app in a grid, the same as the App library Home, with no sheet behind it.
+  The earlier categories sheet was a misreading of the owner's decision and is dropped.
+- **Home mode** (Placed items or App library) and the feature switches (Stream, Dock live apps, Library),
+  including a Simple mode that leaves only the App library and the Dock, stand as agreed on 2026-11-12.
+
+### Settings this adds (Stream)
+
+| Setting | Options (default first) |
+| --- | --- |
+| Where an open card sits | Centre of the screen; just above the Dock; grows out of the Dock |
+| Where its actions sit | In the Dock; on the card |
+| Card colour | App tint strength (22%); coloured glow on the top edge (off) |
+| Behind the cards | Wallpaper only; Home blurred and dimmed |
+| Pinned apps while in Stream | Hidden until you swipe down; kept as a second Dock row |
+
+Over blurred Home the tint is raised so text stays readable.
+
+### Precedents
+
+Read high and act low is the split Samsung's One UI is built on; a bar that becomes live controls resembles
+Samsung's Now Bar and Apple's Dynamic Island; per-app card stacks come from TimeScape and webOS. The
+combination, with the launcher's Dock as the single surface that flips between apps and live content, is
+Riffle's own.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as
