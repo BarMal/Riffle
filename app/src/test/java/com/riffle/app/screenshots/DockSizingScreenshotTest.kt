@@ -178,7 +178,7 @@ class DockSizingScreenshotTest {
                 val visible = bounds.height
                 assertTrue(
                     "$moment: ${item.label} is cut: $visible of $tall",
-                    visible < 1f || abs(visible - tall) < 4f,
+                    visible < 1f || abs(visible - tall) < 1.5f,
                 )
             }
         }

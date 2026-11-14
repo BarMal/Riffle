@@ -213,10 +213,26 @@ internal fun DockSlotStrip(
     val runsHorizontally = position.isHorizontalEdge
     val contentMainAxisDp = dockSlotContentMainAxisDp(renderedSlotCount, slotMetrics).dp
 
+    // A scrolling run's viewport holds its whole icons to the pixel: the icons and the gaps are laid out at rounded
+    // pixel sizes, which a viewport given in dp would miss by a few pixels and clip the last icon with.
+    val viewportDp =
+        if (inline) {
+            contentMainAxisDp
+        } else if (dockPinnedRunScrolls(renderedSlotCount, slotMetrics, contentViewportMainAxisDp)) {
+            with(strideDensity) {
+                val spacingPx = slotMetrics.itemSpacingDp.dp.roundToPx()
+                val strideDp = (slotMetrics.iconSizeDp + slotMetrics.itemSpacingDp).coerceAtLeast(1)
+                val whole = ((contentViewportMainAxisDp + slotMetrics.itemSpacingDp) / strideDp).coerceAtLeast(1)
+                val px = whole * slotMetrics.iconSizeDp.dp.roundToPx() + (whole - 1) * spacingPx
+                (px + 0.5f).toDp()
+            }
+        } else {
+            contentViewportMainAxisDp.dp
+        }
     Box(
         modifier =
             Modifier
-                .dockRunSize(runsHorizontally, if (inline) contentMainAxisDp else contentViewportMainAxisDp.dp)
+                .dockRunSize(runsHorizontally, viewportDp)
                 .then(
                     if (inline) {
                         Modifier
