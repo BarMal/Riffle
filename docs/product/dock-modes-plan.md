@@ -982,3 +982,99 @@ Six things the owner found on a foldable (unfolded, Dock on the right edge), eac
   scrolls by design and whose reveal leaves a 24 dp peek of the neighbour, an icon the viewport cuts is faded by how much
   of it is in view (`DockEdgeFade`: the visible fraction squared; per-item opacity read in the draw layer, no mask,
   gradient or offscreen layer), so the clipped end reads as "more this way" and not as a half icon.
+
+## Device fixes, round 4 (cards)
+
+Twelve things the owner found on a foldable (mostly unfolded, Dock on the right edge), most of them in how a card opens
+and closes and what an open card shows. Fixes 2, 3 and 4 share one structural change and are one commit; 7 and 8 share one; 13 is
+only partly done; 10 and 11 are **not done**: see the end.
+
+### Opening and closing a card
+
+- **"Open" opens the notification's app (fix 1).** The open card's "Open" sent the notification's content intent with
+  a plain `PendingIntent.send()`. From Android 14 a pending intent that starts an activity is a background activity
+  start unless the sender opts in, and a notification listener's launcher has no standing of its own, so the system
+  dropped it. Every send from a notification (its content intent, and the provider actions the Stream uses for Reply)
+  now goes through `PendingIntentSender`: on API 34+ it carries `ActivityOptions.setPendingIntentBackgroundActivityStartMode(
+  MODE_BACKGROUND_ACTIVITY_START_ALLOWED)`; a cancelled intent fails once (the Stream's gateway then launches the app,
+  as it already did when there was no intent or the handle was gone); a refused opt-in is retried plain. The API 36
+  creator-side modes are not compiled against (compile SDK is 35) and are not needed for the launcher as sender. The
+  decision (options, cancellation, retry) is `PendingIntentSender.send`, pure over a dispatch function, and tested with
+  the gateway's own fallback (`AndroidStreamActionGatewayTest`). A successful Open leaves the Stream and the card as they
+  were, as every other Stream action does (the app comes to the front over the launcher).
+- **No hard cut-off while a card opens or closes (fix 2).** The cause was the open card's frame: it was laid out at its
+  full content height and *drawn clipped* to the part that had grown, so its bottom edge (and its rounded corners and
+  border) was sliced by a straight line at the column's bottom until the spring ended. On the unfolded column the column
+  itself also grew on a second spring, so the card's room lagged the card. Now the card is a whole card at every frame
+  (`OpenCardFrame`: it is measured at the height it has now, its glass drawn at that size, its content keeping its top
+  and scrolling, as it does once open) and it is drawn by the surface as an overlay (`OpenCardLayer`,
+  `OpenCardLayerHost`) over the whole of its area, outside the pager. The unfolded host (`StreamColumnSurface`) is
+  as wide and as tall as an open card may be and **never changes size**; the pages stand in the column's own rectangle
+  inside it (`pageBounds`, tagged `stream-pages`, the old `stream-column`). Nothing between the card and the screen
+  clips it. Test: `UnfoldedStreamColumnTest` and `FoldedAppsBehindCardsTest` step the test clock through an opening and
+  a closing and, at every frame, compare the card's laid-out bounds with its drawn bounds (a node's `boundsInRoot` is
+  clipped by its parents, `positionInRoot` and size are not).
+- **One motion, no recomposition per frame (fix 3).** Before: `StreamStack` read the card's growth in composition (to
+  decide whether to keep drawing a closing card), so the whole stack and every card of it recomposed on every frame of
+  the spring; the column's width and height ran on a second spring and were read in layout, so the pager, the stack and
+  all its cards relaid out each frame; Home's cells read the fade in their draw layer already, but the fade's inputs were
+  re-assigned (new lambdas) on every recomposition of the Home destination. Now there is one progress, the open card's
+  (`OpenCardHolder.motion`, run by the surface), read only in layout and draw: the card's frame, the strips' translation
+  (a graphics layer), the grid's fade (`GridFadeField.column`, read in each cell's `graphicsLayer`). The stack reads
+  whether the card is still drawn through a `derivedStateOf`, so it recomposes when the card appears and when it is
+  gone, not between. The fan-out on opening the Stream and the Dock's dip were already draw-phase (`dockFan`,
+  `dockDipDp`) and are unchanged. Test: `RecompositionProbe` (a test hook: a `SideEffect` in a Home grid cell and in each
+  stack slot) counts recompositions while the card is mid-way open and mid-way closing; the count must not move.
+- **A tap outside an open card closes it, anywhere (fix 4).** While a card is open a scrim covers the window over Home
+  and under the Stream and the Dock (`OPEN_CARD_SCRIM_TEST_TAG`): a tap on an app, the room beside the column or the
+  wallpaper closes the card and does nothing else; the Dock keeps its own rule (a press closes the card first) and
+  "Close card" stays. With only the stack showing: unfolded, a tap on a visible app launches it (Home is live beside the
+  stack), a tap on Home's empty room (`detectUnconsumedTap`, which watches the lift after every child has had its turn
+  and consumes nothing) or on the column's own empty room closes the Stream; folded, a tap on the stack's empty room
+  closes the Stream.
+
+### What an open card shows
+
+- **The strips behind an open card (fix 5).** The blank slabs were not reproduced: in the Robolectric stack of four
+  notifications the strips behind an open card show their avatar and title both before and after the change
+  (`theCardsBehindAnOpenCardStayAsStripsWithTheirOwnTitles`, with a screenshot). The open card is now drawn outside the
+  stack, so nothing of it can sit over the strips. Not confirmed on a device.
+- **The same line twice (fix 6).** An app that lists a message in both its messaging style's lists (or twice) produced
+  two consecutive identical thread lines. `NotificationThreadSummary.withoutEchoes` drops a message that is the same
+  sender, text *and time* as the one before it, in the platform mapper and again in the domain's thread (so a stored
+  snapshot with the echo is cleaned too). The same words at different times are a conversation and stay.
+- **Avatar and badge (fix 7).** `NotificationContent.conversation` (a messaging style, or the message category) and
+  `hasPerson` decide whether there is a person: only then a round photo or initials, with the app's icon badged at the
+  corner; any other notification shows the app's icon, no initials, no badge. The badge is never drawn on the app's icon,
+  nor on a photo that is the app's icon (`IconLookalike`, a 8x8 mean colour difference, for a large icon an app sets to
+  its own logo). The rule is `AvatarPlanner` (pure, tested).
+- **The picture (fix 8).** `StreamPicture` spans the card's content width at its own proportions (`PictureLayout`, capped
+  at 280 dp, cropped about its centre) with all four corners at the card's inner radius (24 dp less the 16 dp of padding);
+  the open card's height follows its content (it no longer fills the room it is given) within the column's limits.
+- **Keyboard (fix 9).** The open card is a header (pinned), a body that scrolls and the actions (pinned): when the room
+  shrinks the thread gives way, not the header or the reply row. The strips behind it peek out only while three of them
+  and a card of at least 240 dp fit (`OpenCardLayout.stripsFit`); otherwise they are not drawn, never overlapped.
+
+### Look
+
+- **Faded apps (fix 12).** The fade was a smoothstep over the 144 dp *outside* the column and a step to 22% at its edge,
+  so one column of apps at ~96% sat next to one at 22%. It is now one smooth curve of the signed distance from the
+  column's edge: untouched 240 dp outside it, falling through the edge (about 38%) to a floor of 30% at 64 dp inside it
+  (`StreamGridFade`: `FEATHER_DP` 240, `INNER_DP` 64, `PEEK_ALPHA` 0.30). Still per-cell opacity in the draw phase; no blur,
+  gradient or offscreen layer.
+
+### Also in this round
+
+- **A tap on a strip behind an open card opens that card (fix 13, partly).** The overlay's scrim reads where a tap lands:
+  on a strip it brings that card to the front and opens it in place (the card's content swaps, the motion stays open); else
+  it closes the card. Not built: dragging the stack while a card is open, the nested-scroll hand-off with the thread, and
+  Next/Previous opening the neighbour.
+- **The ringed Dock icon opens its app (fix 14).** In the contextual mode a tap on a live app or a pinned app whose page is
+  showing launches the app (`LaunchApp`); any other tap shows its page, tiles and now playing are unchanged, and the
+  ringed icon's click label reads "Open <app>" (a pinned icon's now says "Show/Open <app>" too).
+
+### Not done
+
+- **Fix 10, swipe a card sideways to dismiss it,** and **fix 11, the notification's own action buttons.** Neither was
+  started: a half-built gesture or a half-plumbed pending-intent path is worse than none.
+- Fix 13's drag, nested scroll and accessibility actions.
