@@ -72,9 +72,11 @@ class DockRealFingerPressInteractionTest {
     fun aRealPressStartedOnAContextualTileReturnsHome() {
         setContent(streamShown = true)
         val took = realPress(landingOn(tileNodes()))
+        // Build the report here: fetching nodes synchronises, which is not allowed inside runOnIdle.
+        val why = report()
         composeRule.runOnIdle {
             assertTrue("the press was not a real one: $took ms", took >= MIN_REAL_PRESS_MILLIS)
-            assertTrue("the Dock press did not return Home: $sent ${report()}", LauncherShellAction.OpenHome in sent)
+            assertTrue("the Dock press did not return Home: $sent $why", LauncherShellAction.OpenHome in sent)
         }
     }
 
@@ -88,8 +90,10 @@ class DockRealFingerPressInteractionTest {
                 },
             ).fetchSemanticsNodes()
         realPress(landingOn(pinned))
+        // Build the report here: fetching nodes synchronises, which is not allowed inside runOnIdle.
+        val why = report()
         composeRule.runOnIdle {
-            assertTrue("the Dock press did not return Home: $sent ${report()}", LauncherShellAction.OpenHome in sent)
+            assertTrue("the Dock press did not return Home: $sent $why", LauncherShellAction.OpenHome in sent)
         }
     }
 
@@ -97,8 +101,10 @@ class DockRealFingerPressInteractionTest {
     fun anUnhurriedPressHeldLongStillReturnsHome() {
         setContent(streamShown = true)
         realPress(landingOn(tileNodes()), dragMillis = 450L, restMillis = 600L)
+        // Build the report here: fetching nodes synchronises, which is not allowed inside runOnIdle.
+        val why = report()
         composeRule.runOnIdle {
-            val message = "an unhurried press did not return Home: $sent ${report()}"
+            val message = "an unhurried press did not return Home: $sent $why"
             assertTrue(message, LauncherShellAction.OpenHome in sent)
         }
         assertTrue(
@@ -111,8 +117,10 @@ class DockRealFingerPressInteractionTest {
     fun aThumbThatDriftsAlongTheRowButStaysOnItsTileStillReturnsHome() {
         setContent(streamShown = true)
         realPress(landingOn(tileNodes()), driftDp = 18f)
+        // Build the report here: fetching nodes synchronises, which is not allowed inside runOnIdle.
+        val why = report()
         composeRule.runOnIdle {
-            assertTrue("a drifting press did not return Home: $sent ${report()}", LauncherShellAction.OpenHome in sent)
+            assertTrue("a drifting press did not return Home: $sent $why", LauncherShellAction.OpenHome in sent)
         }
     }
 
@@ -138,7 +146,9 @@ class DockRealFingerPressInteractionTest {
             composeRule.onAllNodesWithTag(tile.config[SemanticsProperties.TestTag]).fetchSemanticsNodes().firstOrNull()
         val scrolled = moved == null || abs(moved.positionInRoot.x - tileX) > 20f
         assertTrue("the row did not scroll: $before ${report()}", scrolled)
-        composeRule.runOnIdle { assertTrue("a horizontal drag pressed the Dock: $sent ${report()}", sent.isEmpty()) }
+        // Build the report here: fetching nodes synchronises, which is not allowed inside runOnIdle.
+        val why = report()
+        composeRule.runOnIdle { assertTrue("a horizontal drag pressed the Dock: $sent $why", sent.isEmpty()) }
     }
 
     @Test
