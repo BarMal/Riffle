@@ -388,10 +388,6 @@
     <string name="setting_appearance_accent_keywords">accent colour blue teal rose amber</string>
     <string name="setting_appearance_custom_accent">Custom accent</string>
     <string name="setting_appearance_custom_accent_keywords">custom accent colour picker hex</string>
-    <string name="setting_appearance_frost">Frost strength</string>
-    <string name="setting_appearance_frost_keywords">glass frost blur</string>
-    <string name="setting_appearance_refraction">Edge refraction</string>
-    <string name="setting_appearance_refraction_keywords">glass refraction edge</string>
     <string name="setting_appearance_spotlight">Spotlight flow</string>
     <string name="setting_appearance_spotlight_keywords">glass spotlight flow</string>
     <string name="setting_appearance_reduced_transparency">Reduced transparency</string>

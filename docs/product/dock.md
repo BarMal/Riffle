@@ -286,9 +286,20 @@ on/off apply and there is no second notification pipeline (`DockDynamicSide` in 
 Events, to-dos and feeds get no entry in the Home mode, because they are always present in the Stream. Each entry is a
 compact 48 dp tile (the touch target, whatever size the pinned icons are) and a spotlight source like the pinned icons; the
 side takes only the width its entries need, up to the slot limit, and scrolls on its own when it has more entries than room.
-In the contextual mode the whole Dock is one row (`DockContextualRow`): the pinned icons at full size and spacing, a
-divider, the live entries, a divider, the tiles; it is as long as that, up to the run the Dock may have, and scrolls the
-rest (`DockRunGeometry` says where each item lies).
+In the contextual mode the whole Dock is one row (`DockContextualRow`): the pinned icons, a divider, the live entries,
+a divider, the tiles; it is as long as that, up to the run the Dock may have, and scrolls the rest (`DockRunGeometry`
+says where each item lies).
+
+**Contextual sizing.** In the row every item is one size, the 48 dp touch target: pinned icons, live apps and tiles
+alike (a tile is never larger than an app icon). The Dock's own icon size is the Home mode's and is not touched; the
+pinned icons only draw at 48 dp in the row. The gap between items is the Dock's own item spacing, closed up (to no less
+than 4 dp) until six whole items fit the run, so a 360 dp phone shows at least six items across
+(`DockRunGeometry.contextualSpacingDp`). When the row scrolls by itself to reveal the open page's icon it stops with a
+whole item at the leading edge, never a clipped sliver: the scroll lands on an item's start (`DockRunScroll.toRevealWhole`),
+moving back to the item before so the row reads as one that goes on, and moving forward so the item and its
+neighbour both show. The row's end carries trailing padding so that scrolling all the way leaves a whole item at the
+leading edge too (`DockRunGeometry.Run.endPaddingDp`). The soft fade at an edge shows only while there is more
+content beyond that edge. A finger's own fling is free and may rest between items. Touch targets stay 48 dp.
 
 **Live app slots** (Settings > Dock) replaces "Dock notifications" and "Notification space", and the workspace dock
 dynamic section. A dock stored before it decodes: notification cards on keeps the old slot count (clamped), off becomes

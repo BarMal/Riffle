@@ -11,7 +11,6 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.riffle.core.domain.launcher.designsystem.GlassMaterialTokens
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -55,13 +54,13 @@ class FolderSurfaceTest {
         // transparent and shows the wallpaper. Sample the interior instead.
         val actual = image[image.width / 2, image.height / 2]
         val corner = image[0, 0]
-        // The surface is Regular glass: the panel tint at that weight's tint alpha over whatever is behind it.
-        // The sheen and the content scrim add a little on top, hence the wider tolerance.
-        val glass = GlassMaterialTokens.forWeight(GlassWeight.Regular)
+        // The surface is Regular glass: the weight's flat fill (see glassFillColor) mixed with the panel tint over whatever is
+        // behind it. The centre is well away from the edge lights (a 1dp border and hairline), so the only slack
+        // needed is 8-bit rounding and the compositing order of the test device's GPU.
         val expected =
             launcherThemeSurfaceTokens(colorScheme = lightScheme)
                 .panelColor
-                .copy(alpha = glass.softwareTintAlpha(supportsBlur = true))
+                .let { panel -> glassFillColor(GlassWeight.Regular, panel) }
                 .compositeOver(wallpaper)
 
         assertColorClose(expected, actual, tolerance = GLASS_TOLERANCE)
@@ -88,6 +87,6 @@ class FolderSurfaceTest {
     }
 
     private companion object {
-        const val GLASS_TOLERANCE = 0.06f
+        const val GLASS_TOLERANCE = 0.03f
     }
 }

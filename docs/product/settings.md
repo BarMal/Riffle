@@ -44,7 +44,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | Tasks (under Stream) | | Todoist: the connection status (Not connected, Connected, or rejected), a password-style API token field with Save and a "Where is my token?" link, and Remove token. See [stream-tasks.md](stream-tasks.md) |
 | Feeds (under Stream) | | The feeds source (on or off), background refresh, only on Wi-Fi, only while charging, refresh now, the feed list, add a feed |
 | **Appearance** | Colour | Colour mode, accent, custom accent |
-| | Glass | Reduced transparency, frost strength, edge refraction, spotlight flow |
+| | Glass | Reduced transparency, spotlight flow |
 | | Shape and type | Corners (standard, compact, rounded), typography (standard, system, monospace) |
 | **Gestures** | One finger, Two fingers, Pinch, Three fingers | The 14 swipe and pinch bindings on Home. Actions: None, Open notifications, Open search, Open Library, Open Stream, Open settings, Edit Home, Page overview, Full-screen Home, Next page, Previous page, Launch app, Launch shortcut. Reset |
 | **Motion and haptics** | Motion | Animation performance, reduced motion, feedback strength (all choice rows) |
@@ -69,7 +69,7 @@ per device class, so both show the device tabs.
 | Floating dock | "Overlay edge", "overlay dock" (the edge setting is just "Edge" on that page) |
 | Hidden items | "Hidden items and rules", "Hide rules", exclusions |
 | Hidden apps | (kept, as the Library's own list) |
-| Glass | "Liquid glass", the GLASS preset |
+| Glass | "Liquid glass", the GLASS preset, "Frost strength", "Edge refraction" (removed with the refraction shader: the flat glass has nothing to frost or refract; stored values still decode and are ignored) |
 | Corners | "Card corners" |
 | Icon size (Dock) | "Dock height" |
 | Colour | "Color" (British spelling throughout Settings; `SettingsPagesTest` fails on the common American spellings in the Settings strings) |

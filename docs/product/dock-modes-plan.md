@@ -334,3 +334,58 @@ rule no longer leans on it:
 **Left for 4b and later.** Shortcut stacks for pinned apps (`DockChoice.pageFor` still answers null for them), the combined
 Today page, settings for inertia and magnet (slice 6; `DockMotionTuning.inertia` and `magnet` are ready), card tint and
 images, the opened-card redesign (slice 5).
+
+### Glass and Dock sizing (after slice 4a)
+
+A visual slice between the dock-modes slices; it changes no gesture.
+
+**Built.**
+
+- **The flat glass, lighter.** One flat translucent fill, lit only at the edge (a 1 dp border brightest at the top, an
+  inner top hairline, strips of an app's colour along the top and bottom): the restyle of `551f194`, re-applied on top of
+  the current code and made lighter and more see-through with the owner's signed-off values (Thin 12%, Regular 16% of a
+  light blue-white, Thick a darker 56%; the details are in `design-language.md`). The Dock's "Dock background" setting
+  maps its default (72%) to the Thin fill. The shader, backdrop capture, sheen and the Frost and Refraction settings are
+  gone (stored values decode and are ignored); reduced transparency stays and now uses the Thick fill.
+- **Defensive drawing.** The edge lights draw nothing under 1 px or for a non-finite size, clamp the outline's radii,
+  fall back to a rectangle for a malformed outline and keep gradient stops strictly increasing; `GlassEdgeOutlineTest`
+  and `GlassDegenerateSizeTest` cover 0 x 0, 1 x 1, hairline-thin and oversized-radius surfaces.
+- **Contextual Dock sizing.** One row of equal 48 dp items (pinned, live and tiles), the gap closed up until six whole
+  items fit a 360 dp phone, a programmatic scroll that stops on a whole item, and trailing padding so the row's end does
+  too (`DockRunGeometry`, `DockRunScroll.toRevealWhole`). The Home mode's size and icon size are unchanged.
+
+**What differed.**
+
+- `551f194` made CI's device job die at about test 38 of 218 (`DockDynamicSectionTest`); the cause was never found. Part
+  of this slice is a read of that drawing code for degenerate-size and software-GPU hazards; see the change's notes. The
+  restyle should be watched on the next device run.
+- The Dock's thickness still follows its icon size setting in the contextual mode, so a Dock set to 56 dp holds 48 dp
+  items in a 56 dp-deep strip.
+
+
+**The emulator and the edge lights (found on CI's device job).** With the flat glass, the device job's emulator
+went away during the first test that drew a Dock holding icons: no app exception, signal, ANR or low-memory kill
+was logged; the emulator stopped logging and then was gone from adb. A temporary device probe that drew the
+glass one piece at a time, in a fixed order and first in the run, showed:
+
+- Glass surfaces alone (with an edge tint, with the spotlight), the Dock's background alone and an empty Dock
+  draw without harm.
+- A Dock with pinned apps is harmless with the edge lights off (with or without the spotlight), and with only
+  the hairline, only a solid border or only the gradient border.
+- The same Dock with the hairline and the gradient border together took the emulator down, on its first frame
+  in five runs out of six.
+
+So no single call is at fault; more edge light on a Dock with icons makes the emulator's default software
+renderer (`swiftshader_indirect`) more likely to die. Two changes came of it:
+
+- The border's ramp is drawn as a few solid strokes clipped to bands (`borderBands`) rather than one stroke
+  with a gradient brush. This made the death rarer but did not remove it.
+- The device job runs the emulator on its ANGLE-based software renderer (`-gpu swangle_indirect`, in
+  `.github/workflows/ci.yml`). On it the same frames draw and every device test runs.
+
+Nothing here has been seen on a phone's GPU. If the default renderer is wanted back, the first thing to try is
+the Dock with a plainer edge (a border and no hairline), which every probe survived.
+
+**Search on Thick.** With the run completing, `LauncherSearchSurfaceTest` showed the search field and results
+(Regular glass) no longer contrast with a black wallpaper in the light theme. Both are dense text and are now
+Thick.

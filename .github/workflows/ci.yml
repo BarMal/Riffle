@@ -83,6 +83,12 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
+          # The runner's default options with one change: the ANGLE-based software renderer
+          # (swangle_indirect) in place of swiftshader_indirect. With the default one the whole
+          # emulator went away, with no app exception or signal logged, whenever the Dock drew the
+          # flat glass's edge lights over its icons; the same frames draw on this renderer and all
+          # the device tests run. See docs/product/dock-modes-plan.md, "Glass and Dock sizing".
+          emulator-options: -no-window -gpu swangle_indirect -no-snapshot -noaudio -no-boot-anim
           script: ./gradlew deviceVerify
 
       # Keeps the instrumentation report and the device's logcat (UTP writes it under

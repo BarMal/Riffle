@@ -100,38 +100,81 @@ Tokens: **elevation** (dp), used for both tonal and shadow elevation.
 ### One glass, three weights
 
 Glass is the only look (ADR 0003). Every translucent surface is drawn by one primitive,
-`GlassSurface(weight, shape, tint)`, at one of three weights. The weights own the frost, the tint
-alpha, the contrast scrim, the hairline and the shadow, so feature code carries no literal surface
-alpha or blur radius. The numbers live in `core/domain/.../designsystem/GlassMaterialTokens.kt`.
+`GlassSurface(weight, shape, tint)`, at one of three weights. The material is **one flat translucent
+tint with its light at the edges**, modelled on the owner's desktop bar. The numbers live in
+`core/domain/.../designsystem/GlassMaterialTokens.kt` (`GlassWeightTokens`, `GlassEdgeTokens`), so
+feature code carries no literal surface alpha or dp.
 
-| Weight | Used for | Treatment |
+#### The reference: the desktop bar ("Serein")
+
+The owner's Quickshell bar (`dotfiles/config/quickshell`: `GlassPill.qml`, `GlassPillOverlay.qml`,
+`Hairline.qml`, `Serein.qml`, `docs/shell-design-plan.md`) is the anatomy: one flat translucent tint, a
+1 px border that is a light rather than a box, a specular line just inside the top edge that fades out
+at both ends, and tint as strips of light along the top and bottom edges. One implied light, top-centre;
+fading lines rather than boxes; generous rounding; nothing loops. (Its caustic spot, bottom shadow and
+wide top specular band are not part of the look the owner means.) Riffle's values are lighter and more
+see-through than the bar's, signed off by the owner on a design canvas over a dark wallpaper; they are the
+numbers below.
+
+#### The Riffle material
+
+- **Fill.** One flat tint colour at one alpha over whatever is behind. No gradient across the
+  body, no bevel, no inner shadow, no caustic, no refraction or dispersion, no blur, and nothing that
+  scales with the surface's height. The weight changes the alpha, and Thick also the colour:
+
+  | Weight | Dark theme | Light theme |
+  |---|---|---|
+  | `Thin` | light blue-white `rgb(196, 202, 236)` at **12%** | near-white at 30% |
+  | `Regular` | the same tint at **16%** | near-white at 40% |
+  | `Thick` | a darker, heavier `rgb(58, 62, 96)` at **56%** | pale grey-white at 78% |
+
+  The surface's own `tint` (the theme's surface, so dynamic colour) is mixed in at 20%; the weight's
+  base is the other 80% (`GlassMaterialTokens.fill`, `glassFillColor`). Whether the theme is dark is
+  read from the tint's luminance. The Dock follows its "Dock background" setting: 0% clear, the Thin
+  fill at the default (72%), opaque (its own surface colour) at 100%, linear between
+  (`GlassMaterialTokens.dockFill`).
+- **Edge lights** (`GlassEdgeLights.kt`, plain Compose drawing along the surface's own `Outline`, so
+  pills, circles, continuous corners and any `Shape` are followed exactly):
+  - a 1 dp white **border**, 55% along the top edge, falling over 24 dp to 14% down the sides, and
+    easing over the last 16 dp to 6% at the bottom edge (a vertical gradient with stops at fixed dp);
+  - a 1 dp **inner hairline** just inside the top border, 18% at the middle, 9% at 12% from
+    either end, 0 at the ends;
+  - on light glass the sides and bottom turn from white toward black (a white edge on a light pane
+    is invisible; its shaded edge is not) and the alphas are boosted by up to 1.6;
+  - the weight scales all of it a little (`edgeScale`: 0.85, 1, 1.15).
+  - It is defensive about degenerate sizes: nothing is drawn for a surface under 1 px on a side or not
+    finite, the outline's radii are clamped to half the shortest side, a malformed outline falls back to
+    the rectangle and gradient stops are kept strictly increasing (`safeEdgeOutline`; tests
+    `GlassEdgeOutlineTest` and `GlassDegenerateSizeTest`).
+- **Tint light.** A surface with a colour shows it as light, never as a tinted body (card tinting is a
+  later slice). The spotlight (`glassSpotlightSource`, the icon-colour glow that follows the outline) is the
+  main case: the Dock, folders, Library tiles, search results, Stream cards and stacks. A surface with one
+  fixed colour passes `edgeTint` and gets strips: 7 dp at 38% to 0 along the top, 5 dp at 0 to 20% along
+  the bottom. The fill stays a neutral surface colour.
+- **No idle animation.** Nothing in the material animates. The spotlight draws frames only while its
+  sources change, then stops. Serein's "breathe" clock is deliberately not ported.
+- **Reduced transparency** makes every surface take the **Thick fill** (its colour, in the theme's own
+  light or dark base) at 92%, so nothing busy shows through behind text; the edge lights stay at half
+  strength and so does the spotlight. Reduced motion makes the spotlight snap.
+- **Legibility.** The fills are light and see-through on purpose, so over a bright or busy wallpaper
+  Thin and Regular text can lose contrast: they are meant for a dark wallpaper and for short labels.
+  Anything that carries dense text sits on Thick (`GlassBlendTest` pins that Thick keeps 4.5:1 over a
+  mid-grey wallpaper and the lighter weights do not). There is no per-weight legibility floor any more.
+
+| Weight | Used for | Edge lights |
 |---|---|---|
-| `Thin` | Dock, chips, row backgrounds, page indicator | Light frost, hairline top highlight, no shadow |
-| `Regular` | Cards, widgets' frames, folders, the search pill and results panel | Full frost, hairline, one soft shadow, tint |
-| `Thick` | Library sheet, menus, pickers, the focused card, settings sections, panels | Heavy frost with a contrast scrim behind text, no shadow of its own |
+| `Thin` | Dock, chips, row backgrounds, page indicator, spine, headers | 0.85x |
+| `Regular` | Cards, widgets' frames, folders, the search pill and results panel | 1x |
+| `Thick` | Library sheet, menus, pickers, the focused card, settings sections, panels | 1.15x |
 
-- **Glass over the system wallpaper.** The wallpaper is outside the app's content, so glass cannot
-  blur or refract it; there the surface is the tint at the weight's tint alpha, plus the sheen and
-  the spotlight, with the real wallpaper showing through. Frost and refraction apply to app content
-  behind a surface. Each weight has a floor tint alpha over the wallpaper (`wallpaperTintAlpha`) high
-  enough to keep 4.5:1 text contrast over the worst wallpaper, and the dock uses its own "Dock
-  background" setting exactly (0% clear, 100% opaque). The blend is `GlassBlend` in `core/domain`,
-  which the AGSL shader mirrors.
-- **Sheen everywhere.** The dock's glass sheen (`glassSheen`: top specular, caustic spot, inner
-  shadow, rim line, cool border) is part of the primitive for every weight, driven by the surface's
-  own shape. The weight scales it (the hairline most on `Thick`, least on `Thin`).
-- **Spotlight wherever a surface holds coloured things.** `GlassSurface(spotlight = true)` lights its
-  two long edges with the colours of what it holds, each reported by `Modifier.glassSpotlightSource`,
-  and follows the surface's own `Shape` and its longer axis. Used by the Dock, open folders, the
-  search results panel and `ItemCard` (lit by the item's app colour). A surface with no coloured
-  content gets the sheen only. It asks for frames only while its sources change, then stops.
-- **Tint** comes from two places only: the wallpaper (chrome) and an app's own colour (cards,
-  spotlight).
-- **Fallbacks are part of the material, not separate looks.** Reduced transparency (Settings >
-  Appearance, `AppearanceSettings.reducedTransparency`) makes every glass surface an opaque tint with
-  no backdrop sampling, keeps the sheen faint and the spotlight at half strength. Reduced motion
-  makes the spotlight snap. Without a backdrop to sample (a popup window, below API 33) the blurred
-  tint layer applies. Glass is always on: there is no switch for it, and no other theme preset.
+- **Glass over the system wallpaper cannot blur it.** The wallpaper is outside the app's content, so
+  nothing the app draws can sample, blur or refract it (the first liquid-glass build tried: commit
+  3fa90ba). A flat material does not need to: the tint lets the real wallpaper show through. There is
+  no backdrop capture and no shader.
+- **Tint** comes from two places only: the wallpaper (chrome) and an app's own colour (as light at
+  the edges of its cards, stacks and tiles).
+- **Glass is always on**: there is no switch for it and no other theme preset; reduced transparency
+  is the one off switch.
 
 ### Stream card geometry
 
@@ -150,12 +193,17 @@ image, a checklist) is taller, and a pile is as tall as its tallest card so the 
 thumbnails are miniatures at 88 dp.
 
 Do
-- Express depth with one soft, single-source shadow and a tonal step; add a hairline highlight on
-  glass surfaces (the sheen does this).
-- Pick a weight, not an alpha. Use the same level for a surface's tonal and shadow elevation.
+- Light the edge, not the body: a bright thin top edge that fades down the sides and out at both ends
+  of the specular hairline. Fixed dp thicknesses.
+- Pick a weight, not an alpha.
 - Honour the reduced-transparency setting: it is one switch, read through `LocalLiquidGlassSettings`.
 
 Don't
+- Don't let anything in the material scale with the surface's height (the old sheen's top band,
+  caustic and bottom shadow did, and read as a bevel, a seam and dark wedge corners on tall surfaces).
+- Don't add a gradient across the body, an inner shadow, a bevel, a caustic, refraction or an idle
+  animation.
+- Don't tint the body with an app's colour; show it as light at the edge.
 - Don't mix unrelated elevations on siblings, or stack shadows.
 - Don't put text on translucent surfaces without the contrast guarantee in `wallpaperAwareSurface`.
 - Don't draw a translucent background outside `GlassSurface`.

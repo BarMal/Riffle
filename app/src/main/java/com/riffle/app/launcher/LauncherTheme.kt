@@ -42,7 +42,7 @@ fun RiffleLauncherTheme(
     reducedTransparency: Boolean = false,
     /** Wallpaper-derived Material colour on Android 12+; tests pass false for the fixed fallback scheme. */
     dynamicColor: Boolean = true,
-    liquidGlass: ResolvedLiquidGlass = ResolvedLiquidGlass(0.45f, 0.2f, false),
+    liquidGlass: ResolvedLiquidGlass = ResolvedLiquidGlass(reducedMotion = false),
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -91,7 +91,7 @@ internal val LocalLauncherThemeSurfaceTokens =
  * parameter list. Provided once here, alongside every other app-wide theme/appearance local.
  */
 internal val LocalLiquidGlassSettings =
-    staticCompositionLocalOf { ResolvedLiquidGlass(0.45f, 0.2f, reducedMotion = false) }
+    staticCompositionLocalOf { ResolvedLiquidGlass(reducedMotion = false) }
 
 internal data class LauncherThemeSurfaceTokens(
     val panelColor: Color = Color.Unspecified,

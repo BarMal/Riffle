@@ -151,7 +151,8 @@ private fun SearchTopControls(
                 .widthIn(max = SEARCH_CONTROLS_MAX_WIDTH_DP.dp)
                 .fillMaxWidth()
                 .testTag(SEARCH_CONTROLS_TEST_TAG),
-        weight = GlassWeight.Regular,
+        // The search field and its filters are dense text: Thick, so they read over any wallpaper.
+        weight = GlassWeight.Thick,
         shape = LocalLauncherPanelShape.current,
         contentColor = launcherPanelContentColor(),
         tint = launcherPanelSurfaceColor(),
@@ -221,7 +222,8 @@ internal fun SearchResultList(
             // The results panel: one glass surface lit by the colours of the apps it lists.
             GlassSurface(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                weight = GlassWeight.Regular,
+                // Results are a list of text rows: Thick, as above.
+                weight = GlassWeight.Thick,
                 shape = LocalLauncherCardShape.current,
                 tint = launcherPanelSurfaceColor(),
                 contentColor = launcherPanelContentColor(),
