@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import com.riffle.core.domain.launcher.dock.DockClosingJoin
 import com.riffle.core.domain.launcher.dock.DockClosingPlan
 import com.riffle.core.domain.launcher.dock.DockFan
@@ -89,7 +90,7 @@ internal class DockMotionState(
     var reduced: Boolean = false
         private set
 
-    /** The speed, trampoline and magnet; the settings slice sets them. */
+    /** The speed, trampoline, magnet and hold time; set from Settings > Motion. */
     var tuning: DockMotionTuning = DockMotionTuning()
 
     /** Whether the Stream is, or is on its way to being, open: what the shell has been told. */
@@ -376,6 +377,12 @@ internal class DockMotionState(
 
 /** The next frame's time in nanoseconds: the platform's frame clock, which a test's clock drives too. */
 private suspend fun awaitFrameNanos(): Long = androidx.compose.runtime.withFrameNanos { it }
+
+/**
+ * The adjustable motion (Settings > Motion) for what draws below the Home destination: the card stack's drag, fling and
+ * magnet and the open card's growth. The defaults where nothing provides it (tests, previews).
+ */
+internal val LocalDockMotionTuning = staticCompositionLocalOf { DockMotionTuning() }
 
 @Composable
 internal fun rememberDockMotionState(): DockMotionState {

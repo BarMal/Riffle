@@ -72,12 +72,23 @@ fun HomeDestination(
     /** The Stream (ADR 0003); with [streamShown] it replaces the Home surface and the Dock stays under it. */
     stream: StreamHost? = null,
     streamShown: Boolean = false,
+    /**
+     * Where the first-run hint ("press the Dock down to see what's live") tells the shell it is done with, by its
+     * button or by the Stream having opened by any route. Null where the host shows no hint (the hint is not drawn).
+     */
+    onDockPressHintSeen: (() -> Unit)? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val dockHost = rememberHomeDockHostState()
     val dockPull = rememberDockPullState()
     // The trampoline and the fan: the Dock's own motion between Home and the Stream (not on an expanded posture).
     val motion = rememberDockMotionState()
+    // The adjustable motion (Settings > Motion): the springs, the press and the stack read it; defaults change nothing.
+    val dockMotionSettings = state.launcherSettings.motion.dock
+    val dockTuning = remember(dockMotionSettings) { dockMotionSettings.tuning() }
+    SideEffect { motion.tuning = dockTuning }
+    // The light ticks (a card landing, an icon passed while choosing) have their own switch on top of the strength.
+    val tickHaptics = remember(haptics, dockMotionSettings.ticks) { haptics.withTicks(dockMotionSettings.ticks) }
     // Hold to choose: the selection while a press on the Dock is choosing.
     val choice = remember { DockChoiceState() }
     // "Connect Todoist" in the Tasks section: Settings > Stream > Tasks.
@@ -200,7 +211,7 @@ fun HomeDestination(
             motion = motion,
             hostState = dockHost,
             choice = choice,
-            haptics = haptics,
+            haptics = tickHaptics,
             onAction = onAction,
         )
 
@@ -212,6 +223,20 @@ fun HomeDestination(
     val showStream = stream != null && (shownStream || pull.isTransitioning || streamForTiles)
     val showHome = !shownStream || pull.isTransitioning || pull.motionShowsHome
     val showLibrary = shownLibrary || pull.isLibraryTransitioning
+    val hintSeen = state.launcherSettings.hints.dockPressSeen
+    val hintShown =
+        shouldShowDockPressHint(
+            seen = hintSeen,
+            streamAvailable = stream != null && onDockPressHintSeen != null,
+            streamShown = shownStream,
+            libraryShown = showLibrary,
+            motionRunning = motion.running,
+            choosing = choice.choosing,
+        )
+    // The Stream opening by any route (the press, a tap on a live app, an accessibility action) means it was found.
+    LaunchedEffect(shownStream, hintSeen) {
+        if (shownStream && !hintSeen) onDockPressHintSeen?.invoke()
+    }
     // Once the Library's sheet covers Home or the Stream they are invisible, so assistive technology skips them too.
     val covered = shownLibrary && !pull.isLibraryTransitioning
     val coveredSemantics = if (covered) Modifier.clearAndSetSemantics {} else Modifier
@@ -240,7 +265,8 @@ fun HomeDestination(
     CompositionLocalProvider(
         LocalGlanceHost provides glanceHost,
         LocalDockFan provides pull.fanSource,
-        LocalLauncherHaptics provides haptics,
+        LocalLauncherHaptics provides tickHaptics,
+        LocalDockMotionTuning provides dockTuning,
     ) {
         ProvideLiquidGlassBackdrop { backdropCapture ->
             Box(
@@ -338,6 +364,14 @@ fun HomeDestination(
                         haptics = haptics,
                         pull = pull,
                         onAction = onAction,
+                    )
+                }
+                // The first-run hint: shown once on Home, gone for good once dismissed or once the Stream has opened.
+                if (hintShown) {
+                    DockPressHint(
+                        dockBounds = dockHost.bounds.value,
+                        pull = plan.dockEdge.pullDirection,
+                        onDismiss = { onDockPressHintSeen?.invoke() },
                     )
                 }
             }

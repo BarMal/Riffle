@@ -167,5 +167,5 @@ internal fun cardsPerSecond(
     density: Float,
 ): Float = StackFling.velocityCards(pxPerSecond / density)
 
-/** The Dock motion tuning the stack runs with until the settings slice exposes it. */
+/** The Dock motion tuning the stack runs with where nothing provides the settings' (tests, previews): the defaults. */
 internal val StackDefaultTuning = DockMotionTuning(inertia = DockMotionConstants.DEFAULT_STACK_INERTIA)

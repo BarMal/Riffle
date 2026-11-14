@@ -340,6 +340,36 @@ enum class SettingKey(
     ),
     MOTION_REDUCED(SettingsPage.MOTION, R.string.setting_motion_reduced, R.string.setting_motion_reduced_keywords),
     MOTION_HAPTICS(SettingsPage.MOTION, R.string.setting_motion_haptics, R.string.setting_motion_haptics_keywords),
+    MOTION_SPEED(SettingsPage.MOTION, R.string.setting_motion_speed, R.string.setting_motion_speed_keywords),
+    MOTION_TRAMPOLINE(
+        SettingsPage.MOTION,
+        R.string.setting_motion_trampoline,
+        R.string.setting_motion_trampoline_keywords,
+    ),
+    MOTION_INERTIA(SettingsPage.MOTION, R.string.setting_motion_inertia, R.string.setting_motion_inertia_keywords),
+    MOTION_MAGNET(SettingsPage.MOTION, R.string.setting_motion_magnet, R.string.setting_motion_magnet_keywords),
+    MOTION_HOLD(SettingsPage.MOTION, R.string.setting_motion_hold, R.string.setting_motion_hold_keywords),
+    MOTION_TICKS(SettingsPage.MOTION, R.string.setting_motion_ticks, R.string.setting_motion_ticks_keywords),
+    STREAM_CARD_TINT(
+        SettingsPage.STREAM_CARDS,
+        R.string.setting_stream_card_tint,
+        R.string.setting_stream_card_tint_keywords,
+    ),
+    STREAM_CARD_GLOW(
+        SettingsPage.STREAM_CARDS,
+        R.string.setting_stream_card_glow,
+        R.string.setting_stream_card_glow_keywords,
+    ),
+    STREAM_OPEN_CARD_POSITION(
+        SettingsPage.STREAM_CARDS,
+        R.string.setting_stream_open_card_position,
+        R.string.setting_stream_open_card_position_keywords,
+    ),
+    STREAM_ACTIONS_POSITION(
+        SettingsPage.STREAM_CARDS,
+        R.string.setting_stream_actions_position,
+        R.string.setting_stream_actions_position_keywords,
+    ),
     ACCESS_DEFAULT_HOME(
         SettingsPage.PRIVACY,
         R.string.setting_access_default_home,

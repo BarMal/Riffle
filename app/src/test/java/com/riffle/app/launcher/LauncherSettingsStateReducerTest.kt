@@ -16,12 +16,14 @@ import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.StreamSettings
@@ -348,6 +350,50 @@ class LauncherSettingsStateReducerTest {
 
         assertEquals(1, secondState.launcherSettings.rss.feeds.size)
         assertTrue(secondState.configuredFeeds.size == 1)
+    }
+
+    @Test
+    fun persistsTheDockMotionSettingsHoldsThemToTheirRangesAndKeepsTheRest() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val reduced =
+            reducer.reduce(
+                LauncherShellState(),
+                LauncherShellAction.SelectReducedMotionPreference(ReducedMotionPreference.ON),
+            )
+        assertEquals(DockMotionSettings(), reduced.launcherSettings.motion.dock)
+
+        val tuned =
+            reducer.reduce(
+                reduced,
+                LauncherShellAction.SetDockMotion(DockMotionSettings(speedMillis = 320, ticks = false)),
+            )
+        val clamped =
+            reducer.reduce(
+                tuned,
+                LauncherShellAction.SetDockMotion(DockMotionSettings(speedMillis = 5, inertiaPercent = 900)),
+            )
+
+        assertEquals(320, tuned.launcherSettings.motion.dock.speedMillis)
+        assertEquals(false, tuned.launcherSettings.motion.dock.ticks)
+        assertEquals(DockMotionSettings.MIN_SPEED_MILLIS, clamped.launcherSettings.motion.dock.speedMillis)
+        assertEquals(DockMotionSettings.MAX_INERTIA_PERCENT, clamped.launcherSettings.motion.dock.inertiaPercent)
+        // Reduced motion is its own setting and still on.
+        assertEquals(ReducedMotionPreference.ON, clamped.launcherSettings.motion.reducedMotionPreference)
+        assertEquals(clamped.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun dismissingTheDockPressHintStoresItAsSeen() {
+        val repository = FakeLauncherSettingsRepository()
+        assertEquals(false, LauncherShellState().launcherSettings.hints.dockPressSeen)
+
+        val dismissed =
+            reducer(launcherSettingsRepository = repository)
+                .reduce(LauncherShellState(), LauncherShellAction.DismissDockPressHint)
+
+        assertEquals(true, dismissed.launcherSettings.hints.dockPressSeen)
+        assertEquals(dismissed.launcherSettings, repository.savedSettings)
     }
 
     private fun reducer(

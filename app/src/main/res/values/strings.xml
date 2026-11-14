@@ -210,6 +210,8 @@
     <string name="dock_live_app_label">%1$s, %2$d new</string>
     <string name="dock_live_app_unnamed_label">App with %1$d new</string>
     <string name="dock_live_app_open_action">Open %1$s</string>
+    <string name="dock_press_hint">Press the Dock down to see what\'s live</string>
+    <string name="dock_press_hint_dismiss">Got it</string>
     <string name="dock_live_app_show_in_stream_action">Show %1$s in Stream</string>
     <string name="dock_live_app_open_in_stream_menu">Open in Stream</string>
     <string name="dock_live_app_show_action">Show %1$s</string>
@@ -256,6 +258,9 @@
     <string name="settings_page_stream">Stream</string>
     <string name="settings_page_stream_summary">Sections, their order and Show as</string>
     <string name="settings_page_stream_keywords">stream sections cards actions centre</string>
+    <string name="settings_page_stream_cards">Cards</string>
+    <string name="settings_page_stream_cards_summary">Card colour, where an open card sits and its actions</string>
+    <string name="settings_page_stream_cards_keywords">cards colour tint glow open card position actions dock</string>
     <string name="settings_page_stream_notifications">Notifications</string>
     <string name="settings_page_stream_notifications_summary">Access and hidden items</string>
     <string name="settings_page_stream_notifications_keywords">notifications source hidden rules</string>
@@ -482,6 +487,26 @@
     <string name="setting_motion_reduced_keywords">reduced motion minimise animations accessibility</string>
     <string name="setting_motion_haptics">Feedback strength</string>
     <string name="setting_motion_haptics_keywords">haptics vibration feedback</string>
+    <string name="setting_motion_speed">Opening speed</string>
+    <string name="setting_motion_speed_keywords">speed opening duration fast slow animation dock stream</string>
+    <string name="setting_motion_trampoline">Dock bounce</string>
+    <string name="setting_motion_trampoline_keywords">trampoline bounce dip spring dock press</string>
+    <string name="setting_motion_inertia">Card stack coasting</string>
+    <string name="setting_motion_inertia_keywords">inertia fling coast momentum cards stack swipe</string>
+    <string name="setting_motion_magnet">Card snapping</string>
+    <string name="setting_motion_magnet_keywords">magnet snap pull cards stack settle</string>
+    <string name="setting_motion_hold">Hold time to choose</string>
+    <string name="setting_motion_hold_keywords">hold press long choose select dock delay</string>
+    <string name="setting_motion_ticks">Light ticks</string>
+    <string name="setting_motion_ticks_keywords">ticks haptics vibration cards dock choose</string>
+    <string name="setting_stream_card_tint">Card colour strength</string>
+    <string name="setting_stream_card_tint_keywords">card tint colour strength app stream</string>
+    <string name="setting_stream_card_glow">Glow on the top edge</string>
+    <string name="setting_stream_card_glow_keywords">card glow top edge colour stream</string>
+    <string name="setting_stream_open_card_position">Where an open card sits</string>
+    <string name="setting_stream_open_card_position_keywords">open card position centre above dock stream</string>
+    <string name="setting_stream_actions_position">Where its actions sit</string>
+    <string name="setting_stream_actions_position_keywords">card actions position dock reply stream</string>
     <string name="setting_access_default_home">Default home app</string>
     <string name="setting_access_default_home_keywords">default home launcher home role set</string>
     <string name="setting_access_notifications">Notification access</string>
@@ -536,6 +561,10 @@
     <string name="settings_section_glass">Glass</string>
     <string name="settings_section_shape_and_type">Shape and type</string>
     <string name="settings_section_motion">Motion</string>
+    <string name="settings_section_dock_motion">Dock and Stream</string>
+    <string name="settings_motion_dock_intro">How the Dock opens the Stream. Reduced motion above turns all of this into a short fade.</string>
+    <string name="settings_motion_ticks_on">A light tick when a card lands and for each icon you pass</string>
+    <string name="settings_motion_ticks_off">No ticks</string>
     <string name="settings_section_access">Access</string>
 
     <!-- Shared controls -->
@@ -558,6 +587,19 @@
     <string name="settings_hidden_apps_count">%1$d hidden</string>
 
     <!-- Stream -->
+    <string name="settings_stream_cards_intro">How cards look and where an open card and its actions sit.</string>
+    <string name="settings_stream_cards_preview">Preview</string>
+    <string name="settings_stream_cards_preview_title">Sample message</string>
+    <string name="settings_stream_cards_preview_body">This is how a card looks with these settings.</string>
+    <string name="settings_stream_cards_preview_description">Preview of a card at %1$d percent colour</string>
+    <string name="settings_stream_card_glow_on">The card\'s colour also shows along its top edge</string>
+    <string name="settings_stream_card_glow_off">Colour in the card only</string>
+    <string name="settings_stream_open_centre">Centre</string>
+    <string name="settings_stream_open_above_dock">Above the Dock</string>
+    <string name="settings_stream_open_grows_out">Grows out of the Dock</string>
+    <string name="settings_stream_open_grows_out_note">Grows out of the Dock is kept for later and looks like Above the Dock for now.</string>
+    <string name="settings_stream_actions_in_dock">In the Dock</string>
+    <string name="settings_stream_actions_on_card">On the card</string>
     <string name="settings_stream_intro">Choose which sections the Stream shows, in what order and how. These are the same choices as long-pressing a section header in the Stream.</string>
     <string name="settings_stream_section_on">On</string>
     <string name="settings_stream_section_off">Off. The section is hidden from the Stream.</string>
