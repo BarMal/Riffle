@@ -40,6 +40,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
@@ -380,6 +381,8 @@ class LauncherActionDomainTest {
                     "SelectCardActionsPlacement",
                     LauncherShellAction.SelectCardActionsPlacement(CardActionsPlacement.ON_CARD),
                 ),
+                settings("SetDockMotion", LauncherShellAction.SetDockMotion(DockMotionSettings(speedMillis = 300))),
+                settings("DismissDockPressHint", LauncherShellAction.DismissDockPressHint),
                 settings(
                     "SetScreenContentProtection",
                     LauncherShellAction.SetScreenContentProtection(enabled = true),

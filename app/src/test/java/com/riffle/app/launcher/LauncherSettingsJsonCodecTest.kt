@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.designsystem.CardTint
+import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -19,10 +20,12 @@ import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
+import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.HomeBehaviourSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
@@ -597,6 +600,77 @@ class LauncherSettingsJsonCodecTest {
             OpenCardPlacement.GROWS_OUT_OF_DOCK,
             decodeLauncherSettings(encodeLauncherSettings(settings)).stream.openCardPlacement,
         )
+    }
+
+    @Test
+    fun roundTripsTheDockMotionSettings() {
+        val settings =
+            LauncherSettings(
+                motion =
+                    MotionSettings(
+                        dock =
+                            DockMotionSettings(
+                                speedMillis = 300,
+                                trampolinePercent = 0,
+                                inertiaPercent = 180,
+                                magnetPercent = 70,
+                                holdMillis = 400,
+                                ticks = false,
+                            ),
+                    ),
+            )
+
+        assertEquals(settings.motion.dock, decodeLauncherSettings(encodeLauncherSettings(settings)).motion.dock)
+    }
+
+    @Test
+    fun aBlobSavedBeforeTheDockMotionSettingsExistedDecodesToTheDefaults() {
+        // The motion block as the previous build wrote it: no `dock` key at all.
+        val old =
+            """{"version": 11, "motion": {"reducedMotionPreference": "ON", "reducedMotion": true, """ +
+                """"performanceTargetFps": "FPS_90"}}"""
+        val decoded = decodeLauncherSettings(old)
+
+        assertEquals(DockMotionSettings(), decoded.motion.dock)
+        assertEquals(ReducedMotionPreference.ON, decoded.motion.reducedMotionPreference)
+        assertEquals(MotionPerformanceTargetFps.FPS_90, decoded.motion.performanceTargetFps)
+        assertEquals(DockMotionSettings(), decodeLauncherSettings("{}").motion.dock)
+        assertEquals(HintSettings(), decodeLauncherSettings("{}").hints)
+    }
+
+    @Test
+    fun theDockMotionDefaultsAreTodaysConstants() {
+        val defaults = DockMotionSettings()
+
+        assertEquals(200, defaults.speedMillis)
+        assertEquals(220, defaults.holdMillis)
+        assertEquals(DockMotionTuning(), defaults.tuning())
+        assertTrue(defaults.ticks)
+    }
+
+    @Test
+    fun outOfRangeDockMotionValuesAreHeldToTheirRangesAndAMissingKeyKeepsItsDefault() {
+        val json =
+            """{"motion": {"dock": {"speedMillis": 9000, "trampolinePercent": -5, "inertiaPercent": 9999, """ +
+                """"holdMillis": 1}}}"""
+        val decoded = decodeLauncherSettings(json).motion.dock
+
+        assertEquals(DockMotionSettings.MAX_SPEED_MILLIS, decoded.speedMillis)
+        assertEquals(0, decoded.trampolinePercent)
+        assertEquals(DockMotionSettings.MAX_INERTIA_PERCENT, decoded.inertiaPercent)
+        assertEquals(DockMotionSettings.MIN_HOLD_MILLIS, decoded.holdMillis)
+        assertEquals(DockMotionSettings.DEFAULT_MAGNET_PERCENT, decoded.magnetPercent)
+        assertTrue(decoded.ticks)
+        assertEquals(DockMotionSettings(), decodeLauncherSettings("""{"motion": {"dock": "broken"}}""").motion.dock)
+    }
+
+    @Test
+    fun theFirstRunHintIsStoredAsSeenAndAnOldBlobHasNotSeenIt() {
+        val seen = LauncherSettings(hints = HintSettings(dockPressSeen = true))
+
+        assertTrue(decodeLauncherSettings(encodeLauncherSettings(seen)).hints.dockPressSeen)
+        assertFalse(decodeLauncherSettings("""{"version": 11}""").hints.dockPressSeen)
+        assertFalse(decodeLauncherSettings("""{"hints": 3}""").hints.dockPressSeen)
     }
 
     @Test

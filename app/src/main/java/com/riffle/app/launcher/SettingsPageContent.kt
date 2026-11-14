@@ -56,6 +56,7 @@ internal fun SettingsPageContent(
                     onPageSelected = onPageSelected,
                     onAction = onAction,
                 )
+            SettingsPage.STREAM_CARDS -> SettingsStreamCardsPageContent(state = state, onAction = onAction)
             SettingsPage.STREAM_NOTIFICATIONS ->
                 SettingsStreamNotificationsPageContent(state = state, onPageSelected = onPageSelected)
             SettingsPage.HIDDEN_ITEMS -> SettingsExclusionsPageContent(state = state, onAction = onAction)

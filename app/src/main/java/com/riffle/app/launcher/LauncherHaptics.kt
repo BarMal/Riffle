@@ -41,6 +41,24 @@ enum class LauncherHapticEvent {
     CANCEL,
 }
 
+/**
+ * [this] with the light ticks (detents and boundaries) silenced when [ticks] is false (Light ticks in Settings).
+ * Everything else, a long press included, still follows the feedback strength.
+ */
+internal fun LauncherHaptics.withTicks(ticks: Boolean): LauncherHaptics =
+    if (ticks) this else TicklessLauncherHaptics(this)
+
+private class TicklessLauncherHaptics(
+    private val delegate: LauncherHaptics,
+) : LauncherHaptics {
+    override fun longPress() = delegate.longPress()
+
+    override fun perform(event: LauncherHapticEvent) {
+        if (event == LauncherHapticEvent.DETENT || event == LauncherHapticEvent.BOUNDARY) return
+        delegate.perform(event)
+    }
+}
+
 object NoopLauncherHaptics : LauncherHaptics {
     override fun longPress() = Unit
 }

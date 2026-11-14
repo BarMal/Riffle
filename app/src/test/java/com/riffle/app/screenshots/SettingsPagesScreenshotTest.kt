@@ -76,6 +76,16 @@ class SettingsPagesScreenshotTest {
             tasksSettings(TaskConnectionState.TOKEN_REJECTED),
         )
 
+    @Test fun streamCards() = composeRule.renderSettingsPage(SettingsPage.STREAM_CARDS)
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun streamCardsDark() = composeRule.renderSettingsPage(SettingsPage.STREAM_CARDS)
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun motionAndHapticsDark() = composeRule.renderSettingsPage(SettingsPage.MOTION)
+
     @Test fun streamAgenda() = composeRule.renderSettingsPage(SettingsPage.STREAM_AGENDA)
 
     @Test

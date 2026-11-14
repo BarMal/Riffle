@@ -474,6 +474,13 @@ private fun LauncherDestination(
                                 (state.destination.isLibrary && state.libraryOverStream)
                         ),
                 onAction = settingsPageActionRouter.onAction,
+                // The first-run hint waits for the setup card to be done with; once seen it is never shown again.
+                onDockPressHintSeen =
+                    if (state.shouldShowSetupCard) {
+                        null
+                    } else {
+                        { settingsPageActionRouter.onAction(LauncherShellAction.DismissDockPressHint) }
+                    },
             )
 
         ShellDestination.NOTIFICATIONS ->

@@ -13,7 +13,7 @@ Their spring, magnet and timing constants are the starting values; the settings 
 | 3. Hold to choose | Press and hold or slide while pressed: early extend, selection ring, name label, edge scrolling, haptic tick per icon. Starting a press on an icon opens that icon's stack. **Built**, see "As built". | 1, 2 |
 | 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet (**4a, built**, see "As built"); swiping left and right between stacks in Dock order (built in slice 1); shortcuts stacks for apps with nothing live, the Today page (agenda and tasks) and Recents as a stack (**4b, built**, see "As built"). | 1 |
 | 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. **Built**, see "As built". | 4 |
-| 6. Settings | Stream settings (open card position, actions position, tint, background, pinned apps), motion settings, the accessibility action and the first-run hint. | 2 to 5 |
+| 6. Settings | Stream settings (open card position, actions position, tint, background, pinned apps), motion settings, the accessibility action and the first-run hint. **Built**, see "As built" (background and pinned apps deferred). | 2 to 5 |
 | 7. Home and Library | The combined search-and-page handle with quick-drag, search opening from the Dock, the paged Library, Home mode (Placed items or App library) and the feature switches. | none |
 
 ## Rules for every slice
@@ -475,6 +475,61 @@ unfolded layout.
 - **A person icon per message** (a thread with several senders' photos) and the conversation's own icon: the newest
   message's sender photo is the avatar.
 - **The settings page** (slice 6): the tint, glow, open-card and actions controls.
+
+### Slice 6: Settings (built)
+
+**Built.**
+
+- **Settings > Stream > Cards** (`SettingsPage.STREAM_CARDS`, `SettingsStreamCardsPage.kt`; a "Cards" row at the top of the
+  Stream page). Card colour strength (0 to 40 percent, default 22) with a live preview card drawn by `GlassSurface` with the
+  same `GlassCardTint` a Stream card gets, the top glow switch (off), where an open card sits (Centre, Above the Dock, Grows
+  out of the Dock; Centre) and where its actions sit (In the Dock, On the card; In the Dock). They send the actions slice 5
+  already had; "Grows out of the Dock" is offered, stored and drawn as above the Dock, and the page says so.
+- **Settings > Motion > Dock and Stream** (`DockMotionSettings` in `core:domain`, `MotionSettings.dock`; defaults equal the
+  old constants, so nothing changes until one moves): opening speed 100 to 400 ms in 10 ms steps (200), dock bounce 0 to 100
+  percent in tens (50), card stack coasting 0 to 250 percent in tens (100), card snapping 0 to 100 percent in tens (40),
+  hold time to choose 100 to 600 ms in 20 ms steps (220) and light ticks on or off (on). `DockMotionSettings.tuning()` is
+  the `DockMotionTuning` the springs read: `LauncherHomeDestination` hands it to `DockMotionState` (the press, the springs,
+  the closing plan, the hold time) and, as `LocalDockMotionTuning`, to the card stack (drag, fling, magnet) and the open
+  card's growth. Reduced motion is resolved as before and still wins. The ticks switch wraps the shell's haptics
+  (`withTicks`: detents and boundaries are dropped, everything else follows the feedback strength) for the stack and for
+  choosing from the Dock. Stored as a `dock` object in the `motion` section: an old blob has no such key and decodes to the
+  defaults, each value is clamped to its range, a mistyped section reads as the defaults.
+- **First-run hint** (`DockPressHint.kt`, `HintSettings.dockPressSeen`, action `DismissDockPressHint`). One Thick glass pill
+  beside the Dock, on the side the Dock opens toward: "Press the Dock down to see what's live" and a "Got it" button
+  (a 48 dp text button; announced as a polite live region; no touch outside itself). It shows on Home when there is a
+  Stream and the shell has asked for it (`onDockPressHintSeen` is non-null, which it is except while the setup card shows),
+  and not while the Stream, the Library, a motion or a choice is up. The button, or the Stream opening by any route, stores
+  it as seen and it is never shown again. There is no Simple mode or other reduced-interruption mode yet; it joins
+  `shouldShowDockPressHint` when slice 7 adds one.
+- **Accessibility audit.** Every gesture of slices 1 to 5 already had a non-gesture route except one: the press that starts
+  on a pinned icon. Found and kept: Dock press (custom actions "Show live pages" / "Back to Home", "Close card", Ctrl +
+  arrow), press on a live app's icon ("Show <app> in Stream" and Shift + Enter), hold or slide to choose (tap the tile or icon
+  in the contextual mode, which is also what the actions open), card stack drag, fling and magnet ("Previous card" and
+  "Next card" on the stack, a click on a peeking card, Enter on the front one), open card ("Open card", a tap or Enter, "Close
+  card" on the card and the Dock), swiping between stacks (the pager's previous and next page actions and the tiles), the
+  Dock row's scrolling (the platform's scroll actions) and the page options (their custom actions). Added: "Show <app> in
+  Stream" as a custom action on a pinned icon in the Home mode (`DockShortcut`); in the contextual mode a tap does it.
+- **Tests.** JVM, `core:domain`: `DockMotionSettingsTest` (defaults are today's tuning, clamping, every value reaches the
+  tuning, speed, trampoline, inertia, magnet and hold time change what the motion functions do). JVM, `app`: codec
+  (round trip, an old blob decodes to the defaults, out-of-range values clamped, hints), reducer (`SetDockMotion`,
+  `DismissDockPressHint`), `DockPressHintTest` (when it shows, where it sits), `LauncherHapticsTicksTest`, and the action
+  and page tests. On Robolectric, `StreamAndMotionSettingsTest` (a change on either page reaches the saved settings through
+  the real reducer; screenshots dark, light and large type), `DockPressHintBehaviorTest`, and the Cards and Motion pages in
+  `SettingsPagesScreenshotTest`.
+
+**What differed from the design.**
+
+- **Behind the cards and pinned apps in the Stream are not built.** Amendment 3 superseded the second Dock row (the
+  contextual mode always shows the pinned icons), so "Pinned apps while in Stream" has nothing to switch; "Home blurred and
+  dimmed" needs a blur, which new drawing may not use, and there is no stored concept of either. Left out rather than
+  invented.
+- **The Cards page is a sub-page** of Stream (`SettingsPagesTest` lists it among the Stream's children on purpose).
+- **Haptics.** The feedback strength setting (Off, Light, Medium, Strong) stays; the new switch only silences the ticks.
+- **The hint is not drawn in a host that does not ask for it**, so existing Home tests and goldens are unchanged.
+
+**Left for later.** Behind the cards, "Grows out of the Dock" as a real growth, a Simple mode exclusion for the hint, and a
+device test of the hint (the behaviour is covered on Robolectric).
 
 ### Glass and Dock sizing (after slice 4a)
 
