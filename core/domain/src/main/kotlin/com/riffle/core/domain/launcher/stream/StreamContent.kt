@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.stream
 
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.notifications.NotificationPriority
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
@@ -228,4 +229,34 @@ data class RecentAppContent(
     val foregroundMillis: Long = 0L,
 ) : StreamContent {
     override val timeEpochMillis: Long? get() = lastUsedEpochMillis
+}
+
+enum class AppShortcutAction {
+    LAUNCH,
+}
+
+/**
+ * One launcher shortcut of an app (static, dynamic or pinned), as a card of a pinned app's shortcuts page: the
+ * shortcut's icon, short label and, when it differs, long label. A tap launches it. [shortcutId] is null for the
+ * "Open <app>" card an app with no shortcuts (or no launcher role) has instead; that card opens the app. Never
+ * persisted; it is built from the shortcuts the launcher already read for the Dock's long-press menu.
+ */
+data class AppShortcutContent(
+    override val id: StreamContentId,
+    val app: StreamAppRef,
+    val appIdentity: AppIdentity,
+    val appLabel: String?,
+    val shortcutId: String?,
+    val shortLabel: String?,
+    val longLabel: String?,
+    val icon: ItemImageHandle?,
+    val enabled: Boolean = true,
+    val disabledMessage: String? = null,
+    val actions: Set<AppShortcutAction> = setOf(AppShortcutAction.LAUNCH),
+    override val privacy: StreamPrivacy = StreamPrivacy.VISIBLE,
+) : StreamContent {
+    override val timeEpochMillis: Long? get() = null
+
+    /** True for the card that opens the app itself. */
+    val opensApp: Boolean get() = shortcutId == null
 }

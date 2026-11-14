@@ -15,7 +15,7 @@ class DockChoiceTest {
     // What is selectable -------------------------------------------------------------------------------------------
 
     @Test
-    fun liveAppsNowPlayingAndTilesHaveAPageAndArePinnedAppsNotSelectable() {
+    fun liveAppsNowPlayingTilesAndPinnedAppsHaveAPageAndAnythingElseDoesNot() {
         assertEquals(StreamFocusTarget.Now, DockChoice.pageFor(DockDynamicSideEntry.NOW_PLAYING_KEY))
         assertEquals(
             StreamFocusTarget.AppStack("chat:p"),
@@ -25,11 +25,79 @@ class DockChoiceTest {
             StreamFocusTarget.Section(StreamSection.RECENTS),
             DockChoice.pageFor(DockDynamicSideEntry.contextTileKey(StreamSection.RECENTS)),
         )
-        // A pinned app (its item id), an unknown section and anything else have no page yet.
+        // A pinned app opens its live page, else its shortcuts page: the target names the app.
+        assertEquals(
+            StreamFocusTarget.AppShortcuts("mail:personal"),
+            DockChoice.pageFor(DockDynamicSideEntry.pinnedAppKey("mail:personal")),
+        )
+        assertTrue(DockChoice.isSelectable(DockDynamicSideEntry.pinnedAppKey("mail:personal")))
+        // An unknown section and anything else (a dock item's id, a folder) have no page.
         assertNull(DockChoice.pageFor("item-123"))
         assertNull(DockChoice.pageFor("ctx:nothing"))
         assertFalse(DockChoice.isSelectable("item-123"))
         assertTrue(DockChoice.isSelectable("now"))
+    }
+
+    @Test
+    fun aPinnedAppKeyIsTheAppKeyUnderThePrefixAndRoundTripsThroughThePage() {
+        assertEquals("pin:mail:personal", DockDynamicSideEntry.pinnedAppKey("mail:personal"))
+        assertEquals(
+            StreamFocusTarget.AppShortcuts("a.b.c:work"),
+            DockChoice.pageFor(DockDynamicSideEntry.pinnedAppKey("a.b.c:work")),
+        )
+    }
+
+    @Test
+    fun withPinnedAppsSelectableTheNearestItemMayBeOne() {
+        val row =
+            listOf(
+                DockChoiceItem(DockDynamicSideEntry.pinnedAppKey("a:personal"), 0f, 48f),
+                DockChoiceItem(DockDynamicSideEntry.pinnedAppKey("b:personal"), 56f, 104f),
+                DockChoiceItem("live:chat:p", 120f, 168f),
+                DockChoiceItem("folder-1", 176f, 224f),
+            )
+        assertEquals("pin:a:personal", DockChoice.nearestSelectable(20f, row))
+        assertEquals("pin:b:personal", DockChoice.nearestSelectable(90f, row))
+        assertEquals("live:chat:p", DockChoice.nearestSelectable(150f, row))
+        // A folder in the Dock has no page, so the nearest item with one wins.
+        assertEquals("live:chat:p", DockChoice.nearestSelectable(210f, row))
+    }
+
+    @Test
+    fun aPressThatEndsOnThePinnedAppItStartedOnClosesAndOnAnotherPinnedAppSwitches() {
+        val a = DockDynamicSideEntry.pinnedAppKey("a:personal")
+        val b = DockDynamicSideEntry.pinnedAppKey("b:personal")
+        // Open Stream, a thumb that stayed on the pinned app: a plain press.
+        assertEquals(
+            DockPressOutcome.Close,
+            DockChoice.outcome(
+                true,
+                true,
+                true,
+                selectedKey = a,
+                cancelling = false,
+                startedOnEntryKey = a,
+                startedNearKey = a,
+            ),
+        )
+        // Slid onto the next pinned app: its shortcuts page.
+        assertEquals(
+            DockPressOutcome.SwitchPage(b),
+            DockChoice.outcome(
+                true,
+                true,
+                true,
+                selectedKey = b,
+                cancelling = false,
+                startedOnEntryKey = a,
+                startedNearKey = a,
+            ),
+        )
+        // From Home, a press that starts on a pinned app opens its page.
+        assertEquals(
+            DockPressOutcome.OpenPage(a),
+            DockChoice.outcome(false, true, false, selectedKey = null, cancelling = false, startedOnEntryKey = a),
+        )
     }
 
     // The nearest selectable item ----------------------------------------------------------------------------------

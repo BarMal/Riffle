@@ -29,7 +29,7 @@ class DockContextualTest {
         body = StreamPageBody.State(StreamSectionResult.Empty),
     )
 
-    // The planner's order for the default layout: now, notifications (three apps), recents, agenda, tasks, feeds (two).
+    // The planner's order for the default layout: now, notifications (three apps), recents, today, feeds (two).
     private val planned =
         listOf(
             page(StreamSection.NOW),
@@ -37,8 +37,7 @@ class DockContextualTest {
             page(StreamSection.NOTIFICATIONS, "mail:p"),
             page(StreamSection.NOTIFICATIONS, "maps:p"),
             page(StreamSection.RECENTS),
-            page(StreamSection.AGENDA),
-            page(StreamSection.TASKS),
+            page(StreamSection.TODAY),
             page(StreamSection.FEEDS, "f1"),
             page(StreamSection.FEEDS, "f2"),
         )
@@ -55,8 +54,7 @@ class DockContextualTest {
                 "notifications/maps:p",
                 "now",
                 "recents",
-                "agenda",
-                "tasks",
+                "today",
                 "feeds/f1",
                 "feeds/f2",
             ),
@@ -83,6 +81,76 @@ class DockContextualTest {
     }
 
     @Test
+    fun theShortcutsPagesOfPinnedAppsComeFirstInTheDocksOrderThenTheLiveApps() {
+        val withShortcuts =
+            listOf(page(StreamSection.SHORTCUTS, "files:personal"), page(StreamSection.SHORTCUTS, "maps:personal")) +
+                planned
+        val ordered =
+            DockPageOrder.order(
+                withShortcuts,
+                liveGroupKeys = listOf("mail:p"),
+                nowPlaying = false,
+                // The pinned apps' order in the Dock, not the order the planner listed their pages in.
+                pinnedGroupKeys = listOf("maps:personal", "files:personal"),
+            )
+        assertEquals(
+            listOf(
+                "shortcuts/maps:personal",
+                "shortcuts/files:personal",
+                "notifications/mail:p",
+                "notifications/chat:p",
+                "notifications/maps:p",
+                "now",
+                "recents",
+                "today",
+            ),
+            keys(ordered).take(8),
+        )
+        assertEquals(keys(withShortcuts).sorted(), keys(ordered).sorted())
+    }
+
+    @Test
+    fun aShortcutsPageNoPinnedKeyNamesStillKeepsItsPlaceBeforeTheLiveApps() {
+        val withShortcuts = listOf(page(StreamSection.SHORTCUTS, "files:personal")) + planned
+        val ordered = DockPageOrder.order(withShortcuts, listOf("chat:p"), nowPlaying = false)
+        assertEquals("shortcuts/files:personal", keys(ordered).first())
+    }
+
+    @Test
+    fun aShortcutsPageIsAnAppPageSoItDrawsNoTile() {
+        val shortcuts = page(StreamSection.SHORTCUTS, "files:personal").ref()
+        assertTrue(shortcuts.isAppPage && shortcuts.isShortcutsPage && !shortcuts.isLiveAppPage)
+        assertEquals(
+            listOf(StreamSection.NOW),
+            DockDynamicSide.contextSections(listOf(shortcuts, page(StreamSection.NOW).ref()), nowPlaying = false),
+        )
+    }
+
+    @Test
+    fun theOpenShortcutsPageRingsItsPinnedAppAndALivePageFallsBackToThePinnedIconWhenNoLiveEntryStandsForIt() {
+        val keys = listOf("pin:files:personal", "pin:mail:p", "live:chat:p", "ctx:today")
+        assertEquals(
+            "pin:files:personal",
+            DockRing.entryKeyFor(
+                StreamPageRef("shortcuts/files:personal", StreamSection.SHORTCUTS, "files:personal"),
+                keys,
+            ),
+        )
+        assertEquals(
+            "live:chat:p",
+            DockRing.entryKeyFor(StreamPageRef("notifications/chat:p", StreamSection.NOTIFICATIONS, "chat:p"), keys),
+        )
+        // A live page past the Dock's live slots, of an app that is pinned: the pinned icon is ringed.
+        assertEquals(
+            "pin:mail:p",
+            DockRing.entryKeyFor(StreamPageRef("notifications/mail:p", StreamSection.NOTIFICATIONS, "mail:p"), keys),
+        )
+        assertNull(
+            DockRing.entryKeyFor(StreamPageRef("shortcuts/gone:p", StreamSection.SHORTCUTS, "gone:p"), keys),
+        )
+    }
+
+    @Test
     fun withNoLiveAppsThePagesKeepTheLayoutOrder() {
         val noApps = planned.filterNot { it.ref().isAppPage }
         assertEquals(keys(noApps), keys(DockPageOrder.order(noApps, emptyList(), nowPlaying = false)))
@@ -106,7 +174,7 @@ class DockContextualTest {
         assertEquals(firstOfEach, tileSections)
     }
 
-    private val entryKeys = listOf("live:chat:p", "live:mail:p", "now", "ctx:agenda", "ctx:feeds")
+    private val entryKeys = listOf("live:chat:p", "live:mail:p", "now", "ctx:today", "ctx:feeds")
 
     @Test
     fun theOpenAppPageRingsItsLiveAppIcon() {
@@ -130,27 +198,27 @@ class DockContextualTest {
     fun theNowPageRingsNowPlayingWhileItIsShownElseItsTile() {
         val now = StreamPageRef("now", StreamSection.NOW, null)
         assertEquals("now", DockRing.entryKeyFor(now, entryKeys))
-        assertEquals("ctx:now", DockRing.entryKeyFor(now, listOf("ctx:now", "ctx:agenda")))
+        assertEquals("ctx:now", DockRing.entryKeyFor(now, listOf("ctx:now", "ctx:today")))
     }
 
     @Test
     fun anyPageOfASectionRingsThatSectionsTile() {
         val second = StreamPageRef("feeds/f2", StreamSection.FEEDS, "f2")
         assertEquals("ctx:feeds", DockRing.entryKeyFor(second, entryKeys))
-        assertEquals("ctx:agenda", DockRing.entryKeyFor(StreamPageRef("agenda", StreamSection.AGENDA, null), entryKeys))
+        assertEquals("ctx:today", DockRing.entryKeyFor(StreamPageRef("today", StreamSection.TODAY, null), entryKeys))
     }
 
     @Test
     fun aSectionWithoutATileOrNoOpenPageRingsNothing() {
-        assertNull(DockRing.entryKeyFor(StreamPageRef("tasks", StreamSection.TASKS, null), entryKeys))
+        assertNull(DockRing.entryKeyFor(StreamPageRef("recents", StreamSection.RECENTS, null), entryKeys))
         assertNull(DockRing.entryKeyFor(null, entryKeys))
     }
 
-    private val tiles = listOf(StreamSection.NOW, StreamSection.RECENTS, StreamSection.AGENDA, StreamSection.TASKS)
+    private val tiles = listOf(StreamSection.NOW, StreamSection.RECENTS, StreamSection.TODAY)
 
     @Test
     fun movingATileEarlierOrLaterIsAOneStepLayoutMoveOverSectionsThatDrawNoTile() {
-        // Layout order: now, notifications, recents, agenda, tasks, feeds. Recents earlier jumps over notifications.
+        // Layout order: now, notifications, recents, today, feeds. Recents earlier jumps over notifications.
         assertEquals(-2, DockTileMoves.deltaFor(StreamLayout.DEFAULT, tiles, StreamSection.RECENTS, -1))
         assertEquals(1, DockTileMoves.deltaFor(StreamLayout.DEFAULT, tiles, StreamSection.RECENTS, 1))
     }
@@ -158,7 +226,7 @@ class DockContextualTest {
     @Test
     fun aTileAtEitherEndCannotMovePastIt() {
         assertNull(DockTileMoves.deltaFor(StreamLayout.DEFAULT, tiles, StreamSection.NOW, -1))
-        assertNull(DockTileMoves.deltaFor(StreamLayout.DEFAULT, tiles, StreamSection.TASKS, 1))
+        assertNull(DockTileMoves.deltaFor(StreamLayout.DEFAULT, tiles, StreamSection.TODAY, 1))
         assertNull(DockTileMoves.deltaFor(StreamLayout.DEFAULT, tiles, StreamSection.FEEDS, 1))
     }
 
@@ -171,7 +239,7 @@ class DockContextualTest {
                 StreamLayoutAction.Move(StreamSection.RECENTS, delta),
             )
         val order = moved.sections.map { it.section }.filter { it in tiles }
-        assertEquals(listOf(StreamSection.RECENTS, StreamSection.NOW, StreamSection.AGENDA, StreamSection.TASKS), order)
+        assertEquals(listOf(StreamSection.RECENTS, StreamSection.NOW, StreamSection.TODAY), order)
     }
 
     @Test

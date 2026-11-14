@@ -22,10 +22,19 @@ data class StreamGroup(
 sealed interface StreamSectionResult {
     data object Loading : StreamSectionResult
 
-    /** At least one item, grouped, sorted and limited. Sections that do not group have one group. */
-    data class Ready(val groups: List<StreamGroup>) : StreamSectionResult {
+    /**
+     * At least one item, grouped, sorted and limited. Sections that do not group have one group.
+     *
+     * The Today page reads two kinds of source and draws what is there beside what is not: [gaps] say what each input
+     * that gave no content said (the calendar needs permission, no task account is connected, tasks are readable
+     * but there are none). They are empty for every other section. A result with only gaps (no group) is ready too:
+     * Today with a connected task list that has nothing on it still draws its checklist and its add field.
+     */
+    data class Ready(val groups: List<StreamGroup>, val gaps: List<StreamGap> = emptyList()) : StreamSectionResult {
         init {
-            require(groups.isNotEmpty() && groups.all { it.items.isNotEmpty() }) { "A ready section has content." }
+            require(groups.all { it.items.isNotEmpty() } && (groups.isNotEmpty() || gaps.isNotEmpty())) {
+                "A ready section has content."
+            }
         }
 
         val items: List<StreamContent> get() = groups.flatMap(StreamGroup::items)
@@ -45,6 +54,13 @@ sealed interface StreamSectionResult {
     /** The user turned every source of this section off (Settings > Sources). */
     data object Off : StreamSectionResult
 }
+
+/**
+ * What one input of a section that reads several said when it gave no content: [source] and its [state], which is
+ * [StreamSectionResult.PermissionRequired], [StreamSectionResult.NotConnected], [StreamSectionResult.Unavailable] or
+ * [StreamSectionResult.Empty] (readable, nothing there). An input that is off says nothing.
+ */
+data class StreamGap(val source: SourceId, val state: StreamSectionResult)
 
 /** Receives a section's results; may be called from any thread (never the main thread), never after cancel. */
 fun interface StreamSectionListener {

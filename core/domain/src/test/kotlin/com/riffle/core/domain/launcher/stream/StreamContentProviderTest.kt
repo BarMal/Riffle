@@ -120,8 +120,8 @@ class StreamContentProviderTest {
     @Test
     fun `two sections reading one source share one upstream`() {
         collect(StreamSection.NOW)
-        collect(StreamSection.AGENDA)
-        collect(StreamSection.AGENDA)
+        collect(StreamSection.TODAY)
+        collect(StreamSection.TODAY)
         assertEquals(1, registry.connects[SourceIds.CALENDAR])
         assertEquals(1, registry.connects[StreamSourceIds.AGENDA])
         assertEquals(1, registry.connects[SourceIds.ICS])
@@ -164,9 +164,11 @@ class StreamContentProviderTest {
     }
 
     @Test
-    fun `the tasks section reads not connected by default and the now section needs no alarm source`() {
-        val (tasks, _) = collect(StreamSection.TASKS)
-        assertEquals(StreamSectionResult.NotConnected(), tasks.last())
+    fun `the today section reads not connected by default and the now section needs no alarm source`() {
+        val (today, _) = collect(StreamSection.TODAY)
+        registry.sinks.getValue(StreamSourceIds.AGENDA).emit(SourceState.Ready(emptyList()))
+        registry.sinks.getValue(SourceIds.ICS).emit(SourceState.Ready(emptyList()))
+        assertEquals(StreamSectionResult.NotConnected(), today.last())
 
         val (now, _) = collect(StreamSection.NOW)
         registry.sinks.getValue(SourceIds.MEDIA).emit(SourceState.Ready(emptyList()))
@@ -176,7 +178,7 @@ class StreamContentProviderTest {
     }
 
     @Test
-    fun `a task provider feeds the tasks section and an evaluation failure reads unavailable`() {
+    fun `a task provider feeds the today section and an evaluation failure reads unavailable`() {
         var push: ((TypedSourceState<TaskContent>) -> Unit)? = null
         val tasks =
             object : TaskProvider {
@@ -193,7 +195,7 @@ class StreamContentProviderTest {
                 StreamContext(nowEpochMillis = NOW)
             }
         val results = mutableListOf<StreamSectionResult>()
-        custom.observe(StreamSection.TASKS) { results += it }
+        custom.observe(StreamSection.TODAY) { results += it }
 
         push!!(TypedSourceState.Ready(listOf(TaskContent(StreamContentId("t"), "Pay rent"))))
         assertIs<StreamSectionResult.Ready>(results.last())

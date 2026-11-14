@@ -68,10 +68,9 @@ object StreamLayoutCodec {
     private fun decodePosture(root: StoredValue.Obj): Pair<HomeLayoutDeviceClass, StreamLayout>? {
         val deviceClass = enumOrNull<HomeLayoutDeviceClass>(root.string("deviceClass")) ?: return null
         val stored =
-            root.array("sections")
-                .mapNotNull { (it as? StoredValue.Obj)?.let(::decodeSection) }
+            mapLegacySections(root.array("sections").mapNotNull { (it as? StoredValue.Obj)?.let(::decodeRawSection) })
                 .distinctBy { it.section }
-        val missing = StreamSection.entries.filter { section -> stored.none { it.section == section } }
+        val missing = StreamSection.layoutSections.filter { section -> stored.none { it.section == section } }
         val sections = stored + missing.map { StreamSectionLayout(it) }
         val options = (root.fields["options"] as? StoredValue.Obj)?.let(::decodeOptions) ?: StreamSectionOptions()
         val split = (root.fields["split"] as? StoredValue.Obj)?.let(::decodeSplit) ?: StreamSplit()
@@ -100,13 +99,61 @@ object StreamLayoutCodec {
             "view" to str(layout.view.storedId),
         )
 
-    private fun decodeSection(root: StoredValue.Obj): StreamSectionLayout? {
-        val section = root.string("id")?.let(StreamSection::fromStoredId) ?: return null
-        return StreamSectionLayout(
-            section = section,
+    /** One stored section entry as it was written, before the retired ids are mapped. [view] is null when unknown. */
+    private data class RawSection(
+        val id: String,
+        val enabled: Boolean,
+        val view: StreamView?,
+    )
+
+    private fun decodeRawSection(root: StoredValue.Obj): RawSection? {
+        val id = root.string("id") ?: return null
+        return RawSection(
+            id = id,
             enabled = root.bool("enabled") ?: true,
-            view = StreamView.fromStoredId(root.string("view")) ?: StreamLayout.defaultViewOf(section),
+            view = StreamView.fromStoredId(root.string("view")),
         )
+    }
+
+    /**
+     * The sections of a stored posture as [StreamSectionLayout]s, in stored order, with the retired `agenda` and
+     * `tasks` entries (one page each before the Today page) mapped to [StreamSection.TODAY], deterministically:
+     *
+     * - A layout that already names `today` keeps it as written and drops the retired entries.
+     * - Otherwise Today takes the place of Agenda (or, with no Agenda, of Tasks) and the other entry goes; it is
+     *   shown when either was shown (hidden only when both were hidden, or the one there was), and takes Agenda's
+     *   view (Tasks' when there is no Agenda, the default when neither stored a known one).
+     * - Entries for sections a layout does not hold (the derived shortcuts) and unknown ids are dropped.
+     */
+    private fun mapLegacySections(raw: List<RawSection>): List<StreamSectionLayout> {
+        val agenda = raw.firstOrNull { it.id == LegacyStreamSections.AGENDA_ID }
+        val tasks = raw.firstOrNull { it.id == LegacyStreamSections.TASKS_ID }
+        val hasToday = raw.any { it.id == StreamSection.TODAY.storedId }
+        val legacy = listOfNotNull(agenda, tasks)
+        val mapped =
+            if (hasToday || legacy.isEmpty()) {
+                null
+            } else {
+                RawSection(
+                    id = StreamSection.TODAY.storedId,
+                    enabled = legacy.any { it.enabled },
+                    view = agenda?.view ?: tasks?.view,
+                )
+            }
+        val anchor = agenda ?: tasks
+        return raw.mapNotNull { entry ->
+            when {
+                LegacyStreamSections.isLegacy(entry.id) -> mapped.takeIf { entry === anchor }
+                else -> entry
+            }
+        }.mapNotNull { entry ->
+            val section = StreamSection.fromStoredId(entry.id)?.takeIf { it.inLayout } ?: return@mapNotNull null
+            StreamSectionLayout(
+                section = section,
+                enabled = entry.enabled,
+                view = entry.view ?: StreamLayout.defaultViewOf(section),
+            )
+        }
     }
 
     private fun encodeOptions(options: StreamSectionOptions): StoredValue.Obj =

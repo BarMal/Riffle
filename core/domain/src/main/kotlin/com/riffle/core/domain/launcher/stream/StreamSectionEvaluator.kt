@@ -53,6 +53,7 @@ object StreamSectionEvaluator {
         val states = section.states(inputs)
         val content = states.flatMap { it.content(section, context) }
         val groups = StreamSectionQueries.run(section, content, context)
+        if (section == StreamSection.TODAY) todayResult(groups, states)?.let { return it }
         return when {
             groups.isNotEmpty() -> StreamSectionResult.Ready(groups)
             states.any { it is Slot.Loading } -> StreamSectionResult.Loading
@@ -69,6 +70,44 @@ object StreamSectionEvaluator {
             else -> StreamSectionResult.Off
         }
     }
+
+    /**
+     * Today draws what is there beside what is not: events and tasks are ready together with what each input that gave
+     * none said ([StreamGap]), and a connected task list with nothing on it is ready (the checklist and its add
+     * field). Null when there is nothing of that kind to say, and the usual availability rules apply.
+     */
+    private fun todayResult(
+        groups: List<StreamGroup>,
+        states: List<Slot>,
+    ): StreamSectionResult? {
+        val gaps =
+            StreamSection.TODAY.slotSources().zip(states).mapNotNull { (source, slot) ->
+                when (slot) {
+                    is Slot.Permission ->
+                        StreamGap(
+                            source,
+                            StreamSectionResult.PermissionRequired(listOf(StreamSourceIds.userSourceOf(slot.source))),
+                        )
+                    is Slot.NotConnected -> StreamGap(source, StreamSectionResult.NotConnected(slot.reason))
+                    // Only the task list says so: a calendar feed that did not answer is not worth a card of its own.
+                    Slot.Unavailable ->
+                        StreamGap(source, StreamSectionResult.Unavailable).takeIf { source == StreamSourceIds.TASKS }
+                    is Slot.Ready -> StreamGap(source, StreamSectionResult.Empty).takeIf { _ -> slot.isEmptyTasks }
+                    Slot.Loading, Slot.Off -> null
+                }
+            }
+        return when {
+            groups.isNotEmpty() -> StreamSectionResult.Ready(groups, gaps)
+            // A readable, empty task list is something to draw even while the calendar is still answering.
+            gaps.any { it.source == StreamSourceIds.TASKS && it.state == StreamSectionResult.Empty } ->
+                StreamSectionResult.Ready(emptyList(), gaps)
+            else -> null
+        }
+    }
+
+    private fun StreamSection.slotSources(): List<SourceId> =
+        itemSources +
+            listOfNotNull(StreamSourceIds.TASKS.takeIf { readsTasks }, StreamSourceIds.ALARM.takeIf { readsAlarm })
 
     /** A section with no inputs at all reads as empty. */
     private fun StreamSection.states(inputs: StreamSectionInputs): List<Slot> =
@@ -95,6 +134,9 @@ object StreamSectionEvaluator {
         data object Off : Slot
 
         data class Ready(val ready: ReadyContent) : Slot {
+            /** A readable task list with no task on it. */
+            val isEmptyTasks: Boolean get() = ready is ReadyContent.Tasks && ready.tasks.isEmpty()
+
             override fun content(
                 section: StreamSection,
                 context: StreamContext,

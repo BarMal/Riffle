@@ -19,14 +19,16 @@ import kotlin.math.hypot
 object DockChoice {
     /**
      * The Stream page the Dock item keyed [entryKey] opens when chosen, or null when it has none and so cannot be
-     * chosen. THE decision of what is selectable: live apps, now playing and the contextual tiles have a page; a pinned
-     * app has none yet (its shortcut stack is a later slice, which only has to answer here to make it selectable).
+     * chosen. THE decision of what is selectable: live apps, now playing, the contextual tiles and the pinned apps
+     * (their live page, else their shortcuts page) have a page.
      */
     fun pageFor(entryKey: String): StreamFocusTarget? =
         when {
             entryKey == DockDynamicSideEntry.NOW_PLAYING_KEY -> StreamFocusTarget.Now
             entryKey.startsWith(DockDynamicSideEntry.LIVE_APP_KEY_PREFIX) ->
                 StreamFocusTarget.AppStack(entryKey.removePrefix(DockDynamicSideEntry.LIVE_APP_KEY_PREFIX))
+            entryKey.startsWith(DockDynamicSideEntry.PINNED_APP_KEY_PREFIX) ->
+                StreamFocusTarget.AppShortcuts(entryKey.removePrefix(DockDynamicSideEntry.PINNED_APP_KEY_PREFIX))
             entryKey.startsWith(DockDynamicSideEntry.CONTEXT_TILE_KEY_PREFIX) ->
                 StreamSection.fromStoredId(entryKey.removePrefix(DockDynamicSideEntry.CONTEXT_TILE_KEY_PREFIX))
                     ?.let(StreamFocusTarget::Section)

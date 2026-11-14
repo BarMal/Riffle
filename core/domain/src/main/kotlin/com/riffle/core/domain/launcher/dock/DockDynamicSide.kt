@@ -60,6 +60,12 @@ sealed interface DockDynamicSideEntry {
         /** What a contextual tile's key starts with, then its section's stored id. */
         const val CONTEXT_TILE_KEY_PREFIX: String = "ctx:"
 
+        /** What a pinned app's key starts with, then its app key (`package:profile`). */
+        const val PINNED_APP_KEY_PREFIX: String = "pin:"
+
+        /** The key of the pinned app whose app key is [appKey]. */
+        fun pinnedAppKey(appKey: String): String = "$PINNED_APP_KEY_PREFIX$appKey"
+
         /** The key of the live app whose notifications group is [groupKey]. */
         fun liveAppKey(groupKey: String): String = "$LIVE_APP_KEY_PREFIX$groupKey"
 

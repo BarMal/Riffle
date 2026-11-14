@@ -47,7 +47,7 @@ class GlanceWidgetsTest {
             GlanceWidgets.catalogue.map { it.storedId },
         )
         assertEquals(
-            listOf(StreamSection.NOW, StreamSection.AGENDA, StreamSection.FEEDS),
+            listOf(StreamSection.NOW, StreamSection.TODAY, StreamSection.FEEDS),
             GlanceWidgets.catalogue.map { it.section },
         )
     }

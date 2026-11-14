@@ -91,6 +91,9 @@ object StreamActionPolicy {
                 is EventContent -> action == StreamAction.Open && EventAction.OPEN in content.actions
                 is ArticleContent -> article(content, action)
                 is RecentAppContent -> action == StreamAction.Open && RecentAppAction.LAUNCH in content.actions
+                is AppShortcutContent ->
+                    action == StreamAction.Open && AppShortcutAction.LAUNCH in content.actions &&
+                        (content.enabled || content.opensApp)
                 is TaskContent -> task(content, action)
             }
 

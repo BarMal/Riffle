@@ -77,7 +77,7 @@ data class StreamSplit(
 }
 
 /**
- * What the Stream shows on one posture: the six fixed sections (each exactly once) in the user's order, each on or
+ * What the Stream shows on one posture: the five fixed sections (each exactly once) in the user's order, each on or
  * off and drawn as a Stack or a List, plus the few per-section [options] the ADR allows. Holds no content. The
  * sections are fixed by [StreamSection]; the user only chooses which are on, their order and their view.
  */
@@ -93,7 +93,7 @@ data class StreamLayout(
         require(
             sections.map {
                 it.section
-            }.toSet() == StreamSection.entries.toSet() && sections.size == StreamSection.entries.size,
+            }.toSet() == StreamSection.layoutSections.toSet() && sections.size == StreamSection.layoutSections.size,
         ) {
             "A Stream layout holds every section exactly once."
         }
@@ -107,20 +107,11 @@ data class StreamLayout(
     fun viewOf(section: StreamSection): StreamView = layoutOf(section).view
 
     companion object {
-        /** Now, Notifications and Feeds read as cards, Recents as an icon row, Agenda and Tasks as rows. */
-        fun defaultViewOf(section: StreamSection): StreamView =
-            when (section) {
-                StreamSection.NOW,
-                StreamSection.NOTIFICATIONS,
-                StreamSection.RECENTS,
-                StreamSection.FEEDS,
-                -> StreamView.STACK
-                StreamSection.AGENDA,
-                StreamSection.TASKS,
-                -> StreamView.LIST
-            }
+        /** Every section reads as a stack of cards by default; a list of rows is the other way to show one. */
+        @Suppress("UNUSED_PARAMETER")
+        fun defaultViewOf(section: StreamSection): StreamView = StreamView.STACK
 
-        fun defaultSections(): List<StreamSectionLayout> = StreamSection.entries.map { StreamSectionLayout(it) }
+        fun defaultSections(): List<StreamSectionLayout> = StreamSection.layoutSections.map { StreamSectionLayout(it) }
 
         val DEFAULT = StreamLayout()
     }

@@ -7,6 +7,8 @@ data class AppShortcut(
     val longLabel: String? = null,
     val enabled: Boolean = true,
     val disabledMessage: String? = null,
+    /** The platform's rank (lower comes first); equal ranks keep the order the platform answered in. */
+    val rank: Int = 0,
 )
 
 @JvmInline
