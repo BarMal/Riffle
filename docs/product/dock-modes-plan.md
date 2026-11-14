@@ -362,3 +362,30 @@ A visual slice between the dock-modes slices; it changes no gesture.
 - The Dock's thickness still follows its icon size setting in the contextual mode, so a Dock set to 56 dp holds 48 dp
   items in a 56 dp-deep strip.
 
+
+**The emulator and the edge lights (found on CI's device job).** With the flat glass, the device job's emulator
+went away during the first test that drew a Dock holding icons: no app exception, signal, ANR or low-memory kill
+was logged; the emulator stopped logging and then was gone from adb. A temporary device probe that drew the
+glass one piece at a time, in a fixed order and first in the run, showed:
+
+- Glass surfaces alone (with an edge tint, with the spotlight), the Dock's background alone and an empty Dock
+  draw without harm.
+- A Dock with pinned apps is harmless with the edge lights off (with or without the spotlight), and with only
+  the hairline, only a solid border or only the gradient border.
+- The same Dock with the hairline and the gradient border together took the emulator down, on its first frame
+  in five runs out of six.
+
+So no single call is at fault; more edge light on a Dock with icons makes the emulator's default software
+renderer (`swiftshader_indirect`) more likely to die. Two changes came of it:
+
+- The border's ramp is drawn as a few solid strokes clipped to bands (`borderBands`) rather than one stroke
+  with a gradient brush. This made the death rarer but did not remove it.
+- The device job runs the emulator on its ANGLE-based software renderer (`-gpu swangle_indirect`, in
+  `.github/workflows/ci.yml`). On it the same frames draw and every device test runs.
+
+Nothing here has been seen on a phone's GPU. If the default renderer is wanted back, the first thing to try is
+the Dock with a plainer edge (a border and no hairline), which every probe survived.
+
+**Search on Thick.** With the run completing, `LauncherSearchSurfaceTest` showed the search field and results
+(Regular glass) no longer contrast with a black wallpaper in the light theme. Both are dense text and are now
+Thick.
