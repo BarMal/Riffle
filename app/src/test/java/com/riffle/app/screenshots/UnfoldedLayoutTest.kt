@@ -219,22 +219,99 @@ class UnfoldedLayoutTest {
         assertTrue("it still runs the way the pages scroll", handle.height > handle.width)
     }
 
-    @Test
-    fun anUnfoldedRightDockWithSidewaysPagesKeepsTheRowBelowThePages() {
-        // A row runs across a side Dock's edge, so it stays in the row below the pages instead of a strip as wide as
-        // the row, which would squeeze the pages.
-        val sideways = LayoutSettings(unfolded = PostureLayoutSettings(pageScroll = PageScrollDirection.HORIZONTAL))
-        show(unfolded(layout = sideways))
-        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+    private val sideways =
+        LayoutSettings(unfolded = PostureLayoutSettings(pageScroll = PageScrollDirection.HORIZONTAL))
+
+    /** The handle stands as a column in front of the side Dock's middle, on Home's side, whatever the pages do. */
+    private fun assertColumnInFrontOfTheDock(dockEdge: DockPosition) {
         val dock = bounds(HOME_DOCK_PULL_TEST_TAG)
         val handle = bounds(HOME_HANDLE_TEST_TAG)
+        if (dockEdge == DockPosition.RIGHT) {
+            assertTrue("the handle is in front of the Dock, on Home's side", handle.right <= dock.left + 1f)
+            assertTrue("and just in from it", dock.left - handle.right < 20f * dp)
+        } else {
+            assertTrue("the handle is in front of the Dock, on Home's side", handle.left >= dock.right - 1f)
+            assertTrue("and just in from it", handle.left - dock.right < 20f * dp)
+        }
+        assertCentredOnTheDocksMiddle(dock, handle, vertical = true)
+        assertTrue("a column along the Dock", handle.height > handle.width)
+        composeRule.onNodeWithTag(HOME_HANDLE_STRIP_TEST_TAG).assertExists()
+        val dots = composeRule.onNodeWithContentDescription("Page selector").fetchSemanticsNode().boundsInRoot
+        assertEquals("the dots are stacked", 30f * dp, dots.height, 1f * dp)
+    }
 
-        assertTrue("a row for pages that scroll sideways", handle.width > handle.height)
-        assertTrue("the handle is below the pages, at the bottom", handle.bottom > root.bottom - 60f * dp)
-        assertTrue("and beside the Dock, not under it", handle.right <= dock.left + 1f)
-        val pagesCentre = firstPage().fetchSemanticsNode().boundsInRoot.center.x
-        assertEquals("centred in the pages' column", pagesCentre, handle.center.x, 2f * dp)
-        composeRule.onNodeWithTag(HOME_HANDLE_STRIP_TEST_TAG).assertDoesNotExist()
+    @Test
+    fun anUnfoldedRightDockWithSidewaysPagesAlsoHasAColumnInFrontOfItsMiddle() {
+        show(unfolded(layout = sideways))
+        assertColumnInFrontOfTheDock(DockPosition.RIGHT)
+        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        assertTrue("not at the bottom of the page", bounds(HOME_HANDLE_TEST_TAG).bottom < root.bottom - 200f * dp)
+    }
+
+    @Test
+    fun anUnfoldedLeftDockWithSidewaysPagesAlsoHasAColumnInFrontOfItsMiddle() {
+        show(unfolded(dock = DockPosition.LEFT, layout = sideways))
+        assertColumnInFrontOfTheDock(DockPosition.LEFT)
+    }
+
+    @Test
+    fun aLeftDockWithPagesThatScrollUpAndDownHasTheSameColumn() {
+        show(unfolded(dock = DockPosition.LEFT))
+        assertColumnInFrontOfTheDock(DockPosition.LEFT)
+    }
+
+    private fun assertTheGridLaysOutBesideTheColumn(
+        edge: DockPosition,
+        layout: LayoutSettings,
+    ) {
+        show(unfolded(dock = edge, layout = layout))
+        val handle = bounds(HOME_HANDLE_TEST_TAG)
+        val grid = firstPage().fetchSemanticsNode().boundsInRoot
+        if (edge == DockPosition.RIGHT) {
+            assertTrue("the grid ends before the handle", grid.right <= handle.left + 1f)
+        } else {
+            assertTrue("the grid starts after the handle", grid.left >= handle.right - 1f)
+        }
+        // The column takes its room from the margin on the Dock's side first: the grid is not narrower than the room
+        // left beside the Dock and the column by more than the margin the column stood in.
+        firstPage().assertIsDisplayed()
+    }
+
+    @Test
+    fun theGridLaysOutBesideTheColumnOnARightDockWithSidewaysPages() =
+        assertTheGridLaysOutBesideTheColumn(DockPosition.RIGHT, sideways)
+
+    @Test
+    fun theGridLaysOutBesideTheColumnOnALeftDockWithSidewaysPages() =
+        assertTheGridLaysOutBesideTheColumn(DockPosition.LEFT, sideways)
+
+    @Test
+    fun theGridLaysOutBesideTheColumnOnARightDockWithUpAndDownPages() =
+        assertTheGridLaysOutBesideTheColumn(DockPosition.RIGHT, LayoutSettings())
+
+    @Test
+    fun draggingDownTheColumnScrubsSidewaysPagesInPageOrder() {
+        show(unfolded(layout = sideways))
+        composeRule.onNodeWithContentDescription("Page selector").performTouchInput {
+            swipe(start = Offset(center.x, 1f), end = Offset(center.x, height - 1f))
+        }
+        composeRule.waitForIdle()
+        assertEquals(LauncherShellAction.SelectHomePage(LauncherPageId("page-3")), actions.last())
+        assertFalse("a drag along the dots must not open search: $actions", LauncherShellAction.OpenSearch in actions)
+        assertEquals("Page 3 of 3", selectorState())
+    }
+
+    @Test
+    fun withTheIndicatorOffASideDocksColumnKeepsJustTheSearchGlyph() {
+        val off =
+            PostureLayoutSettings(pageScroll = PageScrollDirection.HORIZONTAL, indicator = PageIndicatorPlacement.OFF)
+        show(unfolded(layout = LayoutSettings(unfolded = off)))
+        composeRule.onAllNodesWithContentDescription("Page selector").assertCountEquals(0)
+        composeRule.onNodeWithContentDescription("Search").assertIsDisplayed()
+        val dock = bounds(HOME_DOCK_PULL_TEST_TAG)
+        val handle = bounds(HOME_HANDLE_TEST_TAG)
+        assertTrue("still in front of the Dock", handle.right <= dock.left + 1f)
+        assertCentredOnTheDocksMiddle(dock, handle, vertical = true)
     }
 
     @Test
@@ -253,14 +330,9 @@ class UnfoldedLayoutTest {
 
     @Test
     @Config(qualifiers = ScreenshotDevices.COMPACT_PHONE)
-    fun foldedWithARightDockKeepsItsSidewaysPagesAndTheRowBelowThem() {
+    fun foldedWithARightDockKeepsItsSidewaysPagesAndHasTheColumnInFrontOfTheDock() {
         show(folded(dock = DockPosition.RIGHT))
-        val dock = bounds(HOME_DOCK_PULL_TEST_TAG)
-        val handle = bounds(HOME_HANDLE_TEST_TAG)
-
-        assertTrue("folded keeps its sideways pages, so the handle is a row", handle.width > handle.height)
-        assertTrue("beside the Dock, not under it", handle.right <= dock.left + 1f)
-        composeRule.onNodeWithTag(HOME_HANDLE_STRIP_TEST_TAG).assertDoesNotExist()
+        assertColumnInFrontOfTheDock(DockPosition.RIGHT)
     }
 
     @Test
@@ -528,6 +600,20 @@ class UnfoldedLayoutTest {
     @Test
     @Config(qualifiers = ScreenshotDevices.NIGHT)
     fun unfoldedAppLibraryHomeWithTheRightDockDark() = shoot(appLibraryHome(unfolded()))
+
+    @Test
+    fun unfoldedHomeWithSidewaysPagesAndTheRightDockLight() = shoot(unfolded(layout = sideways))
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun unfoldedHomeWithSidewaysPagesAndTheLeftDockDark() = shoot(unfolded(dock = DockPosition.LEFT, layout = sideways))
+
+    @Test
+    fun unfoldedHomeWithUpAndDownPagesAndTheLeftDockLight() = shoot(unfolded(dock = DockPosition.LEFT))
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun unfoldedHomeWithUpAndDownPagesAndTheRightDockDark() = shoot(unfolded())
 
     @Test
     @Config(qualifiers = ScreenshotDevices.NIGHT)

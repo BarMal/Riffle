@@ -585,12 +585,39 @@ private fun StandardHomeColumn(
     }
 
     val layoutSettings = state.presentation.layout
-    val handleAxis = layoutSettings.pageScroll.handleAxis
+    // Beside a side Dock the handle is always the column along it; above a bottom Dock it follows the pages.
+    val handleAxis = HomeHandleLayout.axisFor(dockEdge, layoutSettings.pageScroll)
     val browsing = state.visibleLayout.editMode == HomeEditMode.Browsing
     // A column of dots beside a side Dock stands in a column of its own just in from the Dock, in front of its middle;
     // a row stays in the row below the pages (above a bottom Dock), inside the bottom controls. While pages are being
     // edited there is no handle.
-    val handleInStrip = browsing && HomeHandleLayout.stripFor(dockEdge, handleAxis) != HandleStrip.BOTTOM_ROW
+    val handleInStrip = browsing && HomeHandleLayout.stripFor(dockEdge) != HandleStrip.BOTTOM_ROW
+    // The column stands in the pages' margin on the Dock's side first, so the grid gives up only what that margin
+    // could not hold (the way the row above a bottom Dock takes its height), and lays out in the rest.
+    val handleReservedDp =
+        if (handleInStrip) {
+            val pageCount = state.visibleLayout.pages.size
+            HomeHandleLayout.reservedDp(
+                dockEdge,
+                handleAxis,
+                pageCount,
+                layoutSettings.showsDots && HomeHandle.showsDots(pageCount),
+            )
+        } else {
+            0
+        }
+    val pagerStartMargin =
+        if (dockEdge == DockPosition.LEFT) {
+            HomeHandleLayout.remainingMarginDp(margins.start.coerceAtLeast(0), handleReservedDp)
+        } else {
+            margins.start.coerceAtLeast(0)
+        }
+    val pagerEndMargin =
+        if (dockEdge == DockPosition.RIGHT) {
+            HomeHandleLayout.remainingMarginDp(margins.end.coerceAtLeast(0), handleReservedDp)
+        } else {
+            margins.end.coerceAtLeast(0)
+        }
     val onOpenPage: (Int) -> Unit = { pageIndex ->
         state.visibleLayout.pages.getOrNull(pageIndex)?.let { page ->
             actions.onAction(LauncherShellAction.SelectHomePage(page.id))
@@ -662,9 +689,9 @@ private fun StandardHomeColumn(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(
-                        start = margins.start.coerceAtLeast(0).dp,
+                        start = pagerStartMargin.dp,
                         top = margins.top.coerceAtLeast(0).dp,
-                        end = margins.end.coerceAtLeast(0).dp,
+                        end = pagerEndMargin.dp,
                         bottom = margins.bottom.coerceAtLeast(0).dp,
                     ),
         )

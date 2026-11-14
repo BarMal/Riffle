@@ -40,22 +40,37 @@ data class HandleSize(
  */
 object HomeHandleLayout {
     /**
-     * The strip the handle stands in for a Dock on [dockEdge], the pill running along [axis]: just in from the Dock, on
-     * Home's side of it. A column beside a left or right Dock is along the Dock, so it stands in a column of its own in
-     * front of the Dock's middle. A row stands in the row below the pages, above a bottom Dock; a row beside a side
-     * Dock runs across the Dock's edge, and a strip as wide as the row would squeeze the pages (and clip their labels),
-     * so it keeps the row below the pages, where it always was.
+     * The strip the handle stands in for a Dock on [dockEdge]: beside a left or right Dock always the column in front
+     * of the Dock's middle, on Home's side of it, whichever way the pages scroll; a row above a bottom Dock (and, as it
+     * always was, below the pages for a top Dock).
      */
-    fun stripFor(
-        dockEdge: DockPosition,
-        axis: HandleAxis,
-    ): HandleStrip =
-        when {
-            axis != HandleAxis.VERTICAL -> HandleStrip.BOTTOM_ROW
-            dockEdge == DockPosition.LEFT -> HandleStrip.LEFT_COLUMN
-            dockEdge == DockPosition.RIGHT -> HandleStrip.RIGHT_COLUMN
-            else -> HandleStrip.BOTTOM_ROW
+    fun stripFor(dockEdge: DockPosition): HandleStrip =
+        when (dockEdge) {
+            DockPosition.LEFT -> HandleStrip.LEFT_COLUMN
+            DockPosition.RIGHT -> HandleStrip.RIGHT_COLUMN
+            DockPosition.TOP,
+            DockPosition.BOTTOM,
+            -> HandleStrip.BOTTOM_ROW
         }
+
+    /**
+     * The axis the pill runs along for a Dock on [dockEdge] and pages that scroll [pageScroll]: along a side Dock
+     * (down the column, glyph first and the dots stacked) whichever way the pages scroll, and along the pages above a
+     * bottom Dock. A drag along it scrubs the pages in page order either way.
+     */
+    fun axisFor(
+        dockEdge: DockPosition,
+        pageScroll: PageScrollDirection,
+    ): HandleAxis = if (dockEdge.isHorizontalEdge) pageScroll.handleAxis else HandleAxis.VERTICAL
+
+    /**
+     * The pages' margin on the Dock's side once the handle's column stands in it: the handle takes its room from the
+     * margin first, so the grid gives up only what the margin could not hold ([reservedDp] past [marginDp]).
+     */
+    fun remainingMarginDp(
+        marginDp: Int,
+        reservedDp: Int,
+    ): Int = (marginDp - reservedDp).coerceAtLeast(0)
 
     /**
      * The pill's length along [axis]: the glyph's square, then (while there are dots) the dots and the room after them.
@@ -96,7 +111,7 @@ object HomeHandleLayout {
         showsDots: Boolean = HomeHandle.showsDots(pageCount),
     ): Int {
         val size = sizeDp(axis, pageCount, showsDots)
-        return if (stripFor(dockEdge, axis) == HandleStrip.BOTTOM_ROW) size.heightDp else size.widthDp
+        return if (stripFor(dockEdge) == HandleStrip.BOTTOM_ROW) size.heightDp else size.widthDp
     }
 
     /** The coordinate of a point that lies along [axis]: x for a row, y for a column. */
