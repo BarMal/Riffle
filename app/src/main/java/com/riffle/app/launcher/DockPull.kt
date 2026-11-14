@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.animation.core.Animatable
@@ -38,6 +40,7 @@ import com.riffle.core.domain.launcher.split.SplitSettle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /**
  * What an expanded posture's pull needs to know where it starts (ADR 0003, Folded and unfolded): the mode it starts
@@ -324,8 +327,17 @@ internal interface DockPullGestureHost {
     /** How long a press is held still past the threshold before it turns into choosing, in milliseconds. */
     val holdMillis: Long
 
+    /**
+     * Whether holding still past the threshold turns a press into choosing: from Home (the Stream is not out). With the
+     * Stream out a finger that rests is just a slow press that closes it, so only sliding along the run chooses.
+     */
+    val holdChooses: Boolean
+
     /** The dynamic entry a touch that landed at [position] (in the gesture's own coordinates) is on, or null. */
     fun pressEntryAt(position: Offset): String?
+
+    /** The selectable Dock item nearest a touch that landed at [position] (the gesture's coordinates), or null. */
+    fun pressNearestSelectableAt(position: Offset): String?
 
     /** A pull is taking over: whatever the trampoline is running goes to its end at once. */
     fun settleMotion() {}
@@ -399,37 +411,84 @@ private suspend fun AwaitPointerEventScope.awaitClaim(
         withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
             var decision: DockClaim? = null
             while (decision == null) {
-                val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
-                if (change == null || !change.pressed || change.isConsumed) {
-                    decision = DockClaim.NONE
+                // A press is decided ahead of the Dock's children, on the Initial pass: a drag that leads toward the
+                // Dock's edge is the press's from the moment it leaves slop, however far it also strays along the
+                // run, so the row's scroll (which claims along the run) and a tile's click cannot take it first.
+                val early = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }
+                if (early != null && claimsPress(direction, down, early, host)) {
+                    tracker.addPosition(early.uptimeMillis, early.position)
+                    early.consume()
+                    beginPress(early, down, direction, host, claimed)
+                    decision = DockClaim.PRESS
                 } else {
-                    tracker.addPosition(change.uptimeMillis, change.position)
-                    val drag = change.position - down.position
-                    decision = claimFor(direction, drag, touchSlopPx, host)
-                    if (decision == DockClaim.PULL) {
-                        change.consume()
-                        host.settleMotion()
-                        host.state.start(
-                            destination = DockPullDestination.LIBRARY,
-                            direction = direction,
-                            travelDp = host.travelDp(direction),
-                            reducedMotion = host.reducedMotion,
-                            split = null,
-                        )
-                        // From where the finger landed, so the sheet tracks it 1:1 from the start.
-                        host.state.drag(drag.x / density, drag.y / density)
-                    } else if (decision == DockClaim.PRESS) {
-                        change.consume()
-                        claimed.position = change.position
-                        claimed.timeMillis = change.uptimeMillis
-                        host.press.begin(host.pressEntryAt(down.position))
-                        host.press.update(DockPress.travelDp(direction, drag.x / density, drag.y / density))
-                    }
+                    val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
+                    decision = decideOnMain(change, down, direction, tracker, host, claimed, touchSlopPx)
                 }
             }
             decision
         }
     return decided ?: DockClaim.NONE
+}
+
+/** Whether [change] (the finger's latest place) makes the touch a press: it left slop toward the Dock's edge. */
+private fun AwaitPointerEventScope.claimsPress(
+    direction: DockPullDirection,
+    down: PointerInputChange,
+    change: PointerInputChange,
+    host: DockPullGestureHost,
+): Boolean {
+    if (!host.canPress || !change.pressed || change.isConsumed) return false
+    val drag = change.position - down.position
+    return DockPress.claimFor(direction, drag.x, drag.y, viewConfiguration.touchSlop) == DockPullClaim.CLAIM
+}
+
+/** Starts the press at [change]: the host and the press learn where it landed and how far it already went. */
+private fun AwaitPointerEventScope.beginPress(
+    change: PointerInputChange,
+    down: PointerInputChange,
+    direction: DockPullDirection,
+    host: DockPullGestureHost,
+    claimed: PressSample,
+) {
+    val drag = change.position - down.position
+    claimed.position = change.position
+    claimed.timeMillis = change.uptimeMillis
+    host.press.begin(host.pressEntryAt(down.position), host.pressNearestSelectableAt(down.position))
+    host.press.update(DockPress.travelDp(direction, drag.x / density, drag.y / density))
+}
+
+/** One event on the Main pass, after the children: a pull is claimed here (a child's own drag wins over it). */
+@Suppress("LongParameterList")
+private fun AwaitPointerEventScope.decideOnMain(
+    change: PointerInputChange?,
+    down: PointerInputChange,
+    direction: DockPullDirection,
+    tracker: VelocityTracker,
+    host: DockPullGestureHost,
+    claimed: PressSample,
+    touchSlopPx: Float,
+): DockClaim? {
+    if (change == null || !change.pressed || change.isConsumed) return DockClaim.NONE
+    tracker.addPosition(change.uptimeMillis, change.position)
+    val drag = change.position - down.position
+    val decision = claimFor(direction, drag, touchSlopPx, host)
+    if (decision == DockClaim.PULL) {
+        change.consume()
+        host.settleMotion()
+        host.state.start(
+            destination = DockPullDestination.LIBRARY,
+            direction = direction,
+            travelDp = host.travelDp(direction),
+            reducedMotion = host.reducedMotion,
+            split = null,
+        )
+        // From where the finger landed, so the sheet tracks it 1:1 from the start.
+        host.state.drag(drag.x / density, drag.y / density)
+    } else if (decision == DockClaim.PRESS) {
+        change.consume()
+        beginPress(change, down, direction, host, claimed)
+    }
+    return decision
 }
 
 /** What a drag of [drag] px from the landing is so far: undecided (null), a pull, a press, or neither. */
@@ -467,11 +526,12 @@ private suspend fun AwaitPointerEventScope.trackPress(
 ) {
     val press = host.press
     val hold = host.holdMillis
+    val timing = ChoiceTiming(hold, host.holdChooses)
     var start = DockChoiceStart()
     var sample = claimed
     var finished = false
     try {
-        start = feedChoice(start, sample, down, direction, hold, press, host.canChoose)
+        start = feedChoice(start, sample, down, direction, timing, press, host.canChoose)
         while (!finished) {
             val deadline = start.deadlineMillis(hold)
             val first =
@@ -485,14 +545,14 @@ private suspend fun AwaitPointerEventScope.trackPress(
             if (first == null) {
                 // The finger rested for the hold time: it is a selection now.
                 sample = PressSample(sample.position, requireNotNull(deadline))
-                start = feedChoice(start, sample, down, direction, hold, press, host.canChoose)
+                start = feedChoice(start, sample, down, direction, timing, press, host.canChoose)
                 continue
             }
             first.changes.firstOrNull { it.id == down.id }?.consume()
             val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
             if (change != null) {
                 sample = PressSample(change.position, change.uptimeMillis)
-                start = feedChoice(start, sample, down, direction, hold, press, host.canChoose)
+                start = feedChoice(start, sample, down, direction, timing, press, host.canChoose)
             }
             finished = trackPressStep(change, down, direction, press)
         }
@@ -501,6 +561,12 @@ private suspend fun AwaitPointerEventScope.trackPress(
         if (!finished) press.cancel()
     }
 }
+
+/** How long a rest chooses, and whether it does at all (not with the Stream out, where only a slide chooses). */
+private class ChoiceTiming(
+    val holdMillis: Long,
+    val holdStarts: Boolean,
+)
 
 /**
  * Feeds the finger's [sample] to [start] and, when that turns the press into choosing, tells [press]. The lift is a
@@ -511,7 +577,7 @@ private fun AwaitPointerEventScope.feedChoice(
     sample: PressSample,
     down: PointerInputChange,
     direction: DockPullDirection,
-    hold: Long,
+    timing: ChoiceTiming,
     press: DockPressState,
     canChoose: Boolean,
 ): DockChoiceStart {
@@ -519,8 +585,11 @@ private fun AwaitPointerEventScope.feedChoice(
     val drag = sample.position - down.position
     val travelDp = DockPress.travelDp(direction, drag.x / density, drag.y / density)
     val alongDp = (if (direction.unitY != 0f) drag.x else drag.y) / density
-    val next = start.next(sample.timeMillis, travelDp, alongDp, hold)
-    if (next.choosing) press.beginChoosing(sample.position)
+    val next = start.next(sample.timeMillis, travelDp, alongDp, timing.holdMillis, timing.holdStarts)
+    if (next.choosing) {
+        val slid = abs(alongDp) > next.slideDp(timing.holdStarts)
+        press.beginChoosing(sample.position, if (slid) "slide" else "hold", travelDp, alongDp)
+    }
     return next
 }
 

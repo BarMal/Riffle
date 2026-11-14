@@ -101,7 +101,8 @@ class DockHoldToChooseInteractionTest {
     @Test
     fun choosingWhileTheStreamIsOutSwitchesThePageAndKeepsTheStream() {
         setContent(streamShown = true)
-        pressAndHold()
+        // With the Stream out only sliding along the run chooses: holding still is a slow press that closes it.
+        pressAndSlideToEnd()
 
         holdAtEnd()
         assertEquals(LAST_TILE, label())
@@ -155,6 +156,19 @@ class DockHoldToChooseInteractionTest {
             repeat(STEPS) { moveBy(Offset(0f, PRESS_PX / STEPS), delayMillis = STEP_MILLIS) }
         }
         composeRule.mainClock.advanceTimeBy(HOLD_PLUS_MILLIS)
+        composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) { label() != null }
+        composeRule.mainClock.advanceTimeByFrame()
+    }
+
+    /** Presses the Dock down and slides along the run to the far end: sliding chooses at once, with no hold. */
+    private fun pressAndSlideToEnd() {
+        val width = composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).fetchSemanticsNode().size.width
+        composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).performTouchInput {
+            down(center)
+            repeat(STEPS) { moveBy(Offset(0f, PRESS_PX / STEPS), delayMillis = STEP_MILLIS) }
+            // Along the run at the depth the press has reached: choosing needs the Dock still pressed past its threshold.
+            moveTo(Offset(width - END_INSET_PX, center.y + PRESS_PX), delayMillis = STEP_MILLIS)
+        }
         composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) { label() != null }
         composeRule.mainClock.advanceTimeByFrame()
     }

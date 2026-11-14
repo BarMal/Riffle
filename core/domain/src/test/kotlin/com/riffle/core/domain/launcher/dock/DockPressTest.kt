@@ -69,4 +69,19 @@ class DockPressTest {
         assertEquals(DockPullClaim.REJECT, claim(DockPullDirection.UP, 10f, 4f))
         assertEquals(DockPullClaim.REJECT, claim(DockPullDirection.RIGHT, -3f, 10f))
     }
+
+    @Test
+    fun theDominantAxisAtTheMomentSlopIsCrossedDecidesDiagonalsToo() {
+        // A thumb's diagonal: mostly down with some drift along the run is a press (not the row's scroll)...
+        assertEquals(DockPullClaim.CLAIM, claim(DockPullDirection.UP, 7f, 9f))
+        assertEquals(DockPullClaim.CLAIM, claim(DockPullDirection.UP, -7f, 9f))
+        assertEquals(DockPullClaim.CLAIM, claim(DockPullDirection.UP, 20f, 21f))
+        // ...mostly along the run is the scroll's, even with some downward component, and an exact tie is not a press.
+        assertEquals(DockPullClaim.REJECT, claim(DockPullDirection.UP, 9f, 7f))
+        assertEquals(DockPullClaim.REJECT, claim(DockPullDirection.UP, 8f, 8f))
+        // A drag up (away from the edge) is never a press, however vertical.
+        assertEquals(DockPullClaim.REJECT, claim(DockPullDirection.UP, 3f, -12f))
+        // 35 dp down with 18 sideways is a press.
+        assertEquals(DockPullClaim.CLAIM, claim(DockPullDirection.UP, 18f, 35f))
+    }
 }

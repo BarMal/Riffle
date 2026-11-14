@@ -206,6 +206,82 @@ object is ready for slice 6), bottom-anchored stack behaviour, the unfolded layo
 **Left for later.** Shortcut stacks for pinned apps (slice 4 only has to make `DockChoice.pageFor` answer for them), the
 settings for hold time and haptics (slice 6; the tuning field is ready), the first-run hint, the unfolded layout.
 
+### Fix: closing by press on a device
+
+The owner, on a phone with gesture navigation: "I could only exit the context menu by using the home button, the dock
+gesture didn't work."
+
+**Cause.** Slice 3 turned a press that rests past the threshold into choosing after 220 ms, in both modes, and assumed that
+nothing selectable in the contextual mode changes nothing. A real press (a finger lands on a tile or an app icon, which fill
+the row edge to edge, drags 30 to 45 dp and lifts) lasts about half a second, so it almost always rested for 220 ms: it became
+a selection, the finger was over a tile, and the release switched to that page (the one already showing) instead of
+closing. Every test before this injected a press from the Dock's centre lasting 160 ms with no rest, so none of them could
+see it. Opening from Home was unaffected: there the same selection opens the Stream.
+
+**Ruled out, from the code.** The row's `horizontalScroll` and the tiles' `combinedClickable` do not take a mostly vertical
+drag (the scroll claims only the horizontal one; the click detectors consume the lift, and the press consumes it first on the
+Initial pass); the Dock's loop sits above both, observes on the Main pass after them, and a quick flick from a tile closes. The
+dip translates the Dock inside the gesture, so the finger is measured in resting coordinates. The room is there: a finger on a tile
+has about 54 dp below it in the fixture (more on a device, where the navigation bar's inset sits below the Dock), against the
+28 dp threshold, and the system's gesture area is only entered by touches that start in it. A system cancel is a cancel and
+was not seen to happen. Whether a particular phone's gesture navigation behaves differently cannot be settled without one.
+
+**Fix.** `DockChoiceStart.next(holdStarts)`: with the Stream open only a slide of more than 14 dp along the run chooses;
+holding never does. And `DockChoice.outcome(startedNearKey)`: a selection at the lift that is the item nearest where the
+finger landed closes like a plain press (a thumb drifts, and a press that began on a pinned app has no page of its own), so
+only a move onto another item switches pages. Holding still to choose from Home is unchanged. The UI feeds both
+(`DockPullGestureHost.holdChooses`, `pressNearestSelectableAt`). System Back while the Stream shows already returned Home
+(`LauncherShellBackHandling`, enabled for every destination but Home); a test now pins it.
+
+**Tests.** `DockChoiceTest` (hold never chooses with the Stream open, the slide still does, the near-start selection closes);
+Robolectric `DockRealFingerPressTest` (a press of about half a second landing on a tile, on a pinned app, held long, drifting
+along the row, quick, and from Home, through the real `HomeDestination`) and `StreamBackReturnsHomeTest`; device
+`DockRealFingerPressInteractionTest` and `StreamBackInteractionTest`. Rewritten on purpose because the behaviour changed:
+`DockHoldToChooseTest.choosingWhileTheStreamIsOutSwitchesPagesAndDoesNotClose` and the device
+`DockHoldToChooseInteractionTest.choosingWhileTheStreamIsOutSwitchesThePageAndKeepsTheStream` chose the open Stream's page by
+holding still; they now slide (and the JVM one asserts that holding does not choose).
+
+**Follow-up: the press is decided ahead of the row's scroll.** CI's emulator run failed two tests that move sideways
+(a thumb drifting 18 dp along the row while pressing; a press that slides to choose). Two causes, one in each:
+
+- The slide test (`choosingWhileTheStreamIsOutSwitchesThePageAndKeepsTheStream`) was my rewrite's fault: it moved to the
+  Dock's mid-height as well as along the run, which lifts the finger back above the 28 dp threshold, and choosing never
+  starts short of it. It now slides at the depth the press reached (the Robolectric twin already did).
+- The drift test is the real gap. The press was claimed on the Main pass, after the children, so the row's
+  `horizontalScroll` (which claims the first event where the sideways distance alone passes slop) and a tile's handlers saw a
+  diagonal thumb's events first; when the sideways part passed slop in the same event as the whole did, the scroll took and
+  consumed it and the Dock's loop abandoned the touch. Robolectric's fine-grained injected events rarely cross both in one
+  event; a device's do. Not confirmed on a device here; the code path is the evidence.
+
+The Dock now decides a press on the Initial pass (`DockPull.kt`, `awaitClaim`): the first event past slop that leads toward
+the Dock's edge and more along that than across (`DockPress.claimFor`, the dominant axis at that moment, so 35 dp down with
+18 sideways is a press) is consumed there, before the row or a tile sees it, and from then on `trackPress` consumes every
+event on Initial. Mostly horizontal drags are not claimed and the row scrolls and flings as the platform does. The pull
+(Library) is still claimed on the Main pass, after the children, so a child's own drag wins over it. ADR 0002: no platform
+detector claims "the perpendicular axis ahead of a child scrollable"; the Initial pass of the one custom pointer loop is the
+primitive that does. Tests: `DockPressTest` (diagonals), `DockRealFingerPressTest` and the device
+`DockRealFingerPressInteractionTest` (a mostly horizontal drag scrolls the row and sends nothing).
+
+**Second follow-up: a thumb's drift never chooses in the open Stream.** CI still failed
+`DockRealFingerPressInteractionTest.aThumbThatDriftsAlongTheRowButStaysOnItsTileStillReturnsHome` after the Initial-pass claim
+(the slide-to-choose and the horizontal-scroll tests passed, so the press was being claimed). The press was therefore ending
+in the choice rules: 18 dp of drift is past the 14 dp slide that starts choosing, and the outcome then depends on the selection
+at the lift matching the item nearest the landing. I could not find from the code which part differed on the emulator (a
+neighbour's midpoint, the row moving under the finger, or the selection being null); no Robolectric run reproduces it. So the
+rule no longer leans on it:
+
+- With the Stream open choosing starts only on a deliberate slide, `DockMotionConstants.CHOOSE_SLIDE_FROM_OPEN_DP` = 36 dp
+  (Home keeps 14 dp, `CHOOSE_SLIDE_DP`); a thumb that drifts 18 dp or more is a plain press and closes. Because choosing
+  is what scrolls the row at its ends, a finger that has not slid that far never scrolls the row either.
+- A selection at the lift that is the item nearest the landing still closes, and now so does a committed press that has
+  nothing selectable (it was `Revert`; the test that asserted that was changed on purpose).
+- The Dock records what it decided (`DockPressDiagnostics`, a test-only semantics property `DockPressDiagnosticsKey` on the
+  Dock body, like `DockDipKey`): presses claimed, whether it began in the open Stream, the entry it started on, the selectable
+  item nearest the landing and where that item lay, what started choosing (slide or hold) and the travel and slide then, at
+  the lift the selection, whether it was cancelling, committed, the travel and where the landing item lay, and the outcome.
+  The real-finger device tests put it, the landing point, the screen size and density and the row's position before and after
+  in every failure message.
+
 ### Slice 4a: The stack (built)
 
 **Built.**
