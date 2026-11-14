@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
@@ -35,6 +36,7 @@ import com.riffle.app.launcher.glance.GlanceHost
 import com.riffle.app.launcher.glance.LocalGlanceHost
 import com.riffle.app.launcher.library.LibrarySheet
 import com.riffle.app.launcher.library.libraryState
+import com.riffle.app.launcher.search.DockSearchSurface
 import com.riffle.app.launcher.split.SplitPaneState
 import com.riffle.app.launcher.split.SplitPanes
 import com.riffle.app.launcher.split.rememberSplitPaneState
@@ -43,11 +45,14 @@ import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
+import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.HomeHandle
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.ModeDockEdges
 import com.riffle.core.domain.launcher.home.ModeSurface
@@ -223,6 +228,8 @@ fun HomeDestination(
     val showStream = stream != null && (shownStream || pull.isTransitioning || streamForTiles)
     val showHome = !shownStream || pull.isTransitioning || pull.motionShowsHome
     val showLibrary = shownLibrary || pull.isLibraryTransitioning
+    // Search is its own surface, opened from the Dock: it is the Library's destination but not its sheet.
+    val searchOpen = state.destination == ShellDestination.SEARCH
     val hintSeen = state.launcherSettings.hints.dockPressSeen
     val hintShown =
         shouldShowDockPressHint(
@@ -357,6 +364,8 @@ fun HomeDestination(
                 }
                 if (showLibrary) {
                     LibraryHomeSurface(
+                        search = searchOpen,
+                        tuning = dockTuning,
                         state = dockHostState,
                         dockHost = dockHost,
                         dockPosition = plan.dockEdge,
@@ -372,6 +381,8 @@ fun HomeDestination(
                         dockBounds = dockHost.bounds.value,
                         pull = plan.dockEdge.pullDirection,
                         onDismiss = { onDockPressHintSeen?.invoke() },
+                        // The Home handle stands just above a bottom Dock; the hint sits above the handle.
+                        clearance = if (plan.dockEdge == DockPosition.BOTTOM) HomeHandle.TOUCH_TARGET_DP.dp else 0.dp,
                     )
                 }
             }
@@ -486,6 +497,8 @@ private fun rememberLibraryShown(
  */
 @Composable
 private fun LibraryHomeSurface(
+    search: Boolean,
+    tuning: DockMotionTuning,
     state: LauncherShellState,
     dockHost: HomeDockHostState,
     dockPosition: DockPosition,
@@ -524,6 +537,19 @@ private fun LibraryHomeSurface(
                 .zIndex(HOME_CONTENT_Z_INDEX)
                 .dockInteractionPadding(dockPosition, dockExtent),
     ) {
+        if (search) {
+            // Search rises from the Dock (the handle above it, or the Dock's own action), field on the Dock's edge.
+            DockSearchSurface(
+                modifier = Modifier.padding(insets),
+                state = libraryState,
+                context = context,
+                reducedMotion = state.reducedMotion(),
+                direction = dockPosition.pullDirection,
+                tuning = tuning,
+                onClose = close,
+            )
+            return@Box
+        }
         // The margin around the sheet belongs to it: a tap there closes the Library instead of reaching what is under.
         Box(
             modifier =

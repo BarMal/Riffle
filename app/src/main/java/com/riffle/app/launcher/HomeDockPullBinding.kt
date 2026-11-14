@@ -286,7 +286,7 @@ internal fun rememberHomeDockPullBinding(
             hostState = hostState,
             dockCoordinates = dockCoordinates,
         )
-    val actions = dockPullActions(dockPull, motion, canPull, stream, direction, reducedMotion)
+    val actions = dockPullActions(dockPull, motion, canPull, stream, direction, reducedMotion, onAction)
     val dockModifier =
         Modifier
             .testTag(HOME_DOCK_PULL_TEST_TAG)
@@ -474,7 +474,7 @@ private class DockCoordinates {
 
 /**
  * The Dock's gesture equivalents: "Open Library" for the pull, and "Show live pages" or "Back to Home" for the press;
- * and the same on the keyboard.
+ * and the same on the keyboard. "Search" is the handle's tap, from the Dock.
  */
 private class DockPullActions(
     val modifier: Modifier,
@@ -505,8 +505,11 @@ private fun dockPullActions(
     stream: StreamPullInputs,
     direction: DockPullDirection,
     reducedMotion: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
 ): DockPullActions {
+    val latestOnAction = rememberUpdatedState(onAction)
     val libraryLabel = stringResource(R.string.dock_open_library_action)
+    val searchLabel = stringResource(R.string.dock_search_action)
     val streamLabel = stringResource(streamActionLabelRes(stream))
     val streamDestination =
         if (stream.available) {
@@ -540,6 +543,12 @@ private fun dockPullActions(
                             .takeIf { canPull },
                         streamDestination?.takeIf { canPull }?.let { destination ->
                             CustomAccessibilityAction(streamLabel) { open(destination) }
+                        },
+                        // Search opens from the Dock (the handle above it taps the same way): a running change ends.
+                        CustomAccessibilityAction(searchLabel) {
+                            motion.finishNow()
+                            latestOnAction.value(LauncherShellAction.OpenSearch)
+                            true
                         },
                     )
             }

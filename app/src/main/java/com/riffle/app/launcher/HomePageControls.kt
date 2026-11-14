@@ -56,8 +56,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
@@ -66,11 +69,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.HomeHandle
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import kotlin.math.roundToInt
@@ -529,6 +534,8 @@ fun PageIndicator(
                 .pageIndicatorSemantics(
                     pageCount = pageCount,
                     selectedPageIndex = selectedPageIndex,
+                    previousPageLabel = stringResource(R.string.home_handle_previous_page),
+                    nextPageLabel = stringResource(R.string.home_handle_next_page),
                     onPageSelected = onPageSelected,
                 ),
         contentAlignment = Alignment.CenterStart,
@@ -740,6 +747,8 @@ private fun pageIndicatorHandleLift(
 private fun Modifier.pageIndicatorSemantics(
     pageCount: Int,
     selectedPageIndex: Int,
+    previousPageLabel: String,
+    nextPageLabel: String,
     onPageSelected: (Int) -> Unit,
 ): Modifier =
     semantics {
@@ -757,6 +766,23 @@ private fun Modifier.pageIndicatorSemantics(
                 true
             }
         }
+        // The quick-drag's non-gesture equivalent that needs no value: a step either way, as plain actions.
+        val steps =
+            listOfNotNull(
+                HomeHandle.step(selectedPageIndex, pageCount, -1)?.let { page ->
+                    CustomAccessibilityAction(previousPageLabel) {
+                        onPageSelected(page)
+                        true
+                    }
+                },
+                HomeHandle.step(selectedPageIndex, pageCount, 1)?.let { page ->
+                    CustomAccessibilityAction(nextPageLabel) {
+                        onPageSelected(page)
+                        true
+                    }
+                },
+            )
+        if (steps.isNotEmpty()) customActions = steps
     }
 
 private data class PageIndicatorDragCallbacks(
@@ -870,13 +896,12 @@ internal fun pageIndicatorDragTargetIndex(
     pageCount: Int,
     layoutDirection: LayoutDirection = LayoutDirection.Ltr,
 ): Int {
-    if (pageCount <= 1 || trackWidthPx <= 0f) return 0
-
-    val trackProgress = dragPositionPx / trackWidthPx
-    val logicalProgress = if (layoutDirection == LayoutDirection.Rtl) 1f - trackProgress else trackProgress
-    return (logicalProgress * (pageCount - 1))
-        .roundToInt()
-        .coerceIn(0, pageCount - 1)
+    return HomeHandle.pageAt(
+        dragPositionPx = dragPositionPx,
+        trackWidthPx = trackWidthPx,
+        pageCount = pageCount,
+        rtl = layoutDirection == LayoutDirection.Rtl,
+    )
 }
 
 /** The exact inverse of [pageIndicatorDragTargetIndex]: where a page's dot sits along the track. */
@@ -886,11 +911,12 @@ internal fun pageIndicatorHandleRestOffsetPx(
     pageCount: Int,
     layoutDirection: LayoutDirection = LayoutDirection.Ltr,
 ): Float {
-    if (pageCount <= 1) return 0f
-
-    val progress = index.toFloat() / (pageCount - 1)
-    val trackProgress = if (layoutDirection == LayoutDirection.Rtl) 1f - progress else progress
-    return (trackProgress * trackWidthPx).coerceIn(0f, trackWidthPx)
+    return HomeHandle.offsetOf(
+        page = index,
+        trackWidthPx = trackWidthPx,
+        pageCount = pageCount,
+        rtl = layoutDirection == LayoutDirection.Rtl,
+    )
 }
 
 internal fun pageIndicatorStateDescription(
@@ -898,10 +924,10 @@ internal fun pageIndicatorStateDescription(
     pageCount: Int,
 ): String = "Page ${selectedPageIndex + 1} of $pageCount"
 
-private const val PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
-private const val PAGE_INDICATOR_DOT_DIAMETER_DP = 6
-private const val PAGE_INDICATOR_DOT_SPACING_DP = 6
-private const val PAGE_INDICATOR_DOT_ALPHA = 0.28f
+private const val PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = HomeHandle.TOUCH_TARGET_DP
+private const val PAGE_INDICATOR_DOT_DIAMETER_DP = HomeHandle.DOT_DIAMETER_DP
+private const val PAGE_INDICATOR_DOT_SPACING_DP = HomeHandle.DOT_SPACING_DP
+private const val PAGE_INDICATOR_DOT_ALPHA = 0.4f
 private const val PAGE_INDICATOR_HANDLE_DIAMETER_DP = 14
 private const val PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP = 44
 private const val PAGE_INDICATOR_HANDLE_LIFT_SCALE = 1.3f
