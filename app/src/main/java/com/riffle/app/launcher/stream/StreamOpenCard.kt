@@ -65,7 +65,15 @@ internal fun OpenStreamCard(
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     val actions = StreamCardActions.forContent(content, queueShown)
-    StreamCardSurface(content.id.value, content.appRef(), content.iconHandle(), env, modifier) { sourceModifier ->
+    // A notification's card is swiped away by its header: the whole card follows the finger.
+    val swipe = rememberSwipeDismissState(content, callbacks, env.reducedMotion)
+    StreamCardSurface(
+        content.id.value,
+        content.appRef(),
+        content.iconHandle(),
+        env,
+        modifier.swipeLayer(swipe),
+    ) { sourceModifier ->
         // Three parts, so that a card that is shorter than its content (the keyboard is up, the window is short) gives
         // up its middle and not its ends: the header stays at the top and the actions (the reply field) at the bottom,
         // and the thread between them scrolls.
@@ -79,7 +87,9 @@ internal fun OpenStreamCard(
                     .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.m),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
         ) {
-            if (content is NotificationContent) OpenNotificationHeader(content, env, groupKey, callbacks, hideChoices)
+            if (content is NotificationContent) {
+                OpenNotificationHeader(content, env, groupKey, callbacks, hideChoices, Modifier.swipeToDismiss(swipe))
+            }
             Column(
                 modifier = Modifier.weight(1f, fill = false).verticalScroll(bodyScroll),
                 verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
@@ -126,8 +136,10 @@ private fun OpenNotificationHeader(
     groupKey: String?,
     callbacks: StreamCallbacks,
     hideChoices: List<com.riffle.core.domain.launcher.workspace.settings.HideChoice>,
+    modifier: Modifier = Modifier,
 ) {
     Row(
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
     ) {

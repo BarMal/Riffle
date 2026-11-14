@@ -85,6 +85,10 @@ internal fun realWiringStreamHost(
     notifications: NotificationAccessStatus = NotificationAccessStatus.GRANTED,
     usage: SourceAccess = SourceAccess.GRANTED,
     activeNotifications: List<LauncherNotification> = emptyList(),
+    /** The notifications the listener holds now, when they change during the test (else [activeNotifications]). */
+    activeNotificationsNow: (() -> List<LauncherNotification>)? = null,
+    /** Told when the listener's notifications changed; [SourceChangeSource.NONE] when they never do. */
+    notificationChanges: SourceChangeSource = SourceChangeSource.NONE,
     installedApps: List<InstalledApp> = emptyList(),
     loadingTimeoutMillis: Long = StreamLoadingRule.TIMEOUT_MILLIS,
     /** Which notifications take an inline reply and a snooze (none by default, as on the activity's first read). */
@@ -120,9 +124,9 @@ internal fun realWiringStreamHost(
                 ),
             notifications =
                 NotificationSourceDependencies(
-                    repository = { activeNotifications },
+                    repository = { activeNotificationsNow?.invoke() ?: activeNotifications },
                     access = { notifications },
-                    changes = SourceChangeSource.NONE,
+                    changes = notificationChanges,
                     hideRules = { emptyList() },
                     canReply = canReply,
                     canSnooze = canSnooze,
