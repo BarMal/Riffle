@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,12 +17,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.core.domain.launcher.designsystem.CardTint
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.LayoutPosture
 import com.riffle.core.domain.launcher.settings.LayoutSettings
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.StreamSettings
+import com.riffle.core.domain.launcher.stream.StreamCardActions
 
 internal const val STREAM_CARD_PREVIEW_TEST_TAG = "settings-stream-card-preview"
 
@@ -39,7 +42,13 @@ private val PreviewAppColor = Color(0xFF3B82F6)
 internal fun SettingsStreamCardsPageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
-) = SettingsStreamCards(settings = state.settings.stream, layout = state.settings.layout, onAction = onAction)
+) =
+    SettingsStreamCards(
+        settings = state.settings.stream,
+        layout = state.settings.layout,
+        foldedDockEdge = state.postureDockEdges.getValue(LayoutPosture.FOLDED),
+        onAction = onAction,
+    )
 
 /** The page over plain [settings], so a screenshot test draws it without a shell. */
 @Composable
@@ -48,6 +57,8 @@ internal fun SettingsStreamCards(
     settings: StreamSettings,
     onAction: (LauncherShellAction) -> Unit,
     layout: LayoutSettings = LayoutSettings(),
+    /** The edge the Dock stands on folded: a side Dock holds no row for an open card's actions. */
+    foldedDockEdge: DockPosition = DockPosition.BOTTOM,
 ) {
     Text(
         modifier = Modifier.padding(horizontal = 8.dp),
@@ -120,23 +131,57 @@ internal fun SettingsStreamCards(
         SettingsChoiceRow(
             modifier = Modifier.settingAnchor(SettingKey.STREAM_OPEN_CARD_POSITION),
             title = SettingKey.STREAM_OPEN_CARD_POSITION.label(),
+            subtitle = stringResource(R.string.settings_stream_open_card_position_subtitle),
             options = OpenCardPlacement.entries,
             selected = settings.openCardPlacement,
             onSelect = { placement -> onAction(LauncherShellAction.SelectOpenCardPlacement(placement)) },
             label = { placement -> stringResource(placement.labelRes()) },
             optionTag = ::openCardPlacementTestTag,
         )
+        val actions = cardActionsRowPlan(settings.cardActionsPlacement, foldedDockEdge)
         SettingsChoiceRow(
             modifier = Modifier.settingAnchor(SettingKey.STREAM_ACTIONS_POSITION),
             title = SettingKey.STREAM_ACTIONS_POSITION.label(),
-            options = CardActionsPlacement.entries,
-            selected = settings.cardActionsPlacement,
+            subtitle = stringResource(actions.subtitleRes),
+            options = actions.options,
+            selected = actions.selected,
             onSelect = { placement -> onAction(LauncherShellAction.SelectCardActionsPlacement(placement)) },
             label = { placement -> stringResource(placement.labelRes()) },
             optionTag = ::cardActionsPlacementTestTag,
         )
     }
 }
+
+/**
+ * What the "where its actions sit" row offers. The Dock holds a row of the open card's actions only folded, with the
+ * Dock along the bottom edge: a side Dock is a strip one icon wide and the unfolded stack's column stands on the Dock,
+ * so there the actions are always on the card. A choice that would do nothing is not offered.
+ */
+internal class CardActionsRowPlan(
+    val options: List<CardActionsPlacement>,
+    val selected: CardActionsPlacement,
+    @StringRes val subtitleRes: Int,
+)
+
+internal fun cardActionsRowPlan(
+    stored: CardActionsPlacement,
+    foldedDockEdge: DockPosition,
+): CardActionsRowPlan =
+    if (StreamCardActions.effectiveActionsPlacement(CardActionsPlacement.IN_DOCK, foldedDockEdge) ==
+        CardActionsPlacement.IN_DOCK
+    ) {
+        CardActionsRowPlan(
+            options = CardActionsPlacement.entries,
+            selected = stored,
+            subtitleRes = R.string.settings_stream_actions_position_subtitle,
+        )
+    } else {
+        CardActionsRowPlan(
+            options = listOf(CardActionsPlacement.ON_CARD),
+            selected = CardActionsPlacement.ON_CARD,
+            subtitleRes = R.string.settings_stream_actions_position_side_dock_subtitle,
+        )
+    }
 
 /** A sample card drawn with the same glass and tint a Stream card gets, so the strength can be judged as it moves. */
 @Composable

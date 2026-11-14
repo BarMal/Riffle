@@ -643,6 +643,9 @@
     <string name="settings_stream_cards_preview_description">Preview of a card at %1$d percent colour</string>
     <string name="settings_stream_card_glow_on">The card\'s colour also shows along its top edge</string>
     <string name="settings_stream_card_glow_off">Colour in the card only</string>
+    <string name="settings_stream_open_card_position_subtitle">Folded. On the unfolded stack an open card always grows from the Dock.</string>
+    <string name="settings_stream_actions_position_subtitle">Folded, with the Dock along the bottom. Anywhere else the actions are on the card.</string>
+    <string name="settings_stream_actions_position_side_dock_subtitle">The Dock is on a side when folded, so the actions are always on the card.</string>
     <string name="settings_stream_open_centre">Centre</string>
     <string name="settings_stream_open_above_dock">Above the Dock</string>
     <string name="settings_stream_actions_in_dock">In the Dock</string>
