@@ -189,4 +189,70 @@ class StreamShortcutPagesTest {
         )
         assertNull(StreamFocus.resolvePage(StreamFocusTarget.AppShortcuts("com.gone:personal"), pages))
     }
+
+    private fun liveChatPage(vararg titles: String): StreamPage {
+        val items =
+            titles.mapIndexed { index, title ->
+                com.riffle.core.domain.launcher.workspace.ItemTarget.App("com.chat", "personal").let { target ->
+                    NotificationContent(
+                        id = StreamContentId("n:$index"),
+                        app = StreamAppRef("com.chat", "personal"),
+                        appLabel = "Chat",
+                        title = title,
+                        text = "x",
+                        icon = null,
+                        image = null,
+                        postedAtEpochMillis = 100L - index,
+                        category = null,
+                        priority = null,
+                        target = target,
+                        actions = setOf(NotificationAction.OPEN, NotificationAction.DISMISS),
+                        privacy = StreamPrivacy.VISIBLE,
+                    )
+                }
+            }
+        return StreamPagePlanner.plan(
+            StreamLayout.DEFAULT,
+            mapOf(
+                StreamSection.NOTIFICATIONS to
+                    StreamSectionResult.Ready(listOf(StreamGroup("com.chat:personal", "Chat", items, items.size))),
+            ),
+        ).first { page -> page.section == StreamSection.NOTIFICATIONS }
+    }
+
+    @Test
+    fun aPinnedAppThatIsLiveHasOnePageLeadingWithItsNotificationsThenItsShortcutCards() {
+        val shortcuts =
+            StreamShortcutPages.plan(
+                listOf(chat, files),
+                emptySet(),
+                mapOf(
+                    chat.identity to
+                        listOf(shortcut(chat, "compose", "Compose"), shortcut(chat, "scan", "Scan", rank = 1)),
+                ),
+                launcherRole = true,
+            )
+        val live = liveChatPage("Sam", "Priya")
+        val pages = StreamShortcutPages.merge(listOf(live), shortcuts)
+
+        // Files has nothing live: its shortcuts page stays. Chat has one page, the live one: no shortcuts page too.
+        assertEquals(listOf("shortcuts/com.files:personal", "notifications/com.chat:personal"), pages.map { it.key })
+        val merged = pages.last()
+        assertEquals(StreamSection.NOTIFICATIONS, merged.section)
+        val items = (merged.body as StreamPageBody.Content).items
+        // The notifications lead, newest first (the live page's own order), the shortcut cards follow in rank order.
+        assertEquals(listOf("Sam", "Priya"), items.take(2).map { assertIs<NotificationContent>(it).title })
+        assertEquals(listOf("Compose", "Scan"), items.drop(2).map { assertIs<AppShortcutContent>(it).shortLabel })
+        assertEquals(4, merged.count)
+        assertIs<NotificationContent>(merged.lead)
+    }
+
+    @Test
+    fun mergingLeavesPagesOfAppsThatAreNotPinnedAndAppsWithNothingLiveAlone() {
+        val shortcuts = StreamShortcutPages.plan(listOf(files), emptySet(), emptyMap(), launcherRole = true)
+        val live = liveChatPage("Sam")
+        val pages = StreamShortcutPages.merge(listOf(live), shortcuts)
+        assertEquals(listOf("shortcuts/com.files:personal", "notifications/com.chat:personal"), pages.map { it.key })
+        assertEquals(live, pages.last())
+    }
 }

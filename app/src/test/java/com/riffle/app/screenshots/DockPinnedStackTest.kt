@@ -156,6 +156,8 @@ class DockPinnedStackTest {
         composeRule.pressDock(distancePx = PRESS_PX, settle = false, start = { landing })
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         assertTrue("the press did not open the Stream: $sent", LauncherShellAction.OpenStream in sent)
+        // The request waits for the Stream's notifications (the app's live page would replace its shortcuts page).
+        composeRule.waitForIdle()
         awaitPage(cameraPage)
     }
 

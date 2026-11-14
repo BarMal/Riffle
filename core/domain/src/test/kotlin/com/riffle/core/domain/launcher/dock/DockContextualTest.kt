@@ -110,6 +110,24 @@ class DockContextualTest {
     }
 
     @Test
+    fun aPinnedAppThatIsLiveHasItsLivePageAtItsIconsPlaceInTheRun() {
+        val withShortcuts = listOf(page(StreamSection.SHORTCUTS, "files:p")) + planned
+        val ordered =
+            DockPageOrder.order(
+                withShortcuts,
+                // The Dock draws no live entry for the pinned chat app; mail is live and not pinned.
+                liveGroupKeys = listOf("mail:p"),
+                nowPlaying = false,
+                pinnedGroupKeys = listOf("files:p", "chat:p"),
+            )
+        assertEquals(
+            listOf("shortcuts/files:p", "notifications/chat:p", "notifications/mail:p", "notifications/maps:p", "now"),
+            keys(ordered).take(5),
+        )
+        assertEquals(keys(withShortcuts).sorted(), keys(ordered).sorted())
+    }
+
+    @Test
     fun aShortcutsPageNoPinnedKeyNamesStillKeepsItsPlaceBeforeTheLiveApps() {
         val withShortcuts = listOf(page(StreamSection.SHORTCUTS, "files:personal")) + planned
         val ordered = DockPageOrder.order(withShortcuts, listOf("chat:p"), nowPlaying = false)

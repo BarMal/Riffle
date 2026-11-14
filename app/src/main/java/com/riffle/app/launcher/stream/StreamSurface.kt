@@ -46,6 +46,7 @@ import com.riffle.core.domain.launcher.dock.DockPageOrder
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.stream.OpenCardEvent
 import com.riffle.core.domain.launcher.stream.StreamFocus
+import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.stream.StreamPage
@@ -54,6 +55,7 @@ import com.riffle.core.domain.launcher.stream.StreamPageNavigation
 import com.riffle.core.domain.launcher.stream.StreamPagePlanner
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
+import com.riffle.core.domain.launcher.stream.StreamShortcutPages
 import com.riffle.core.domain.launcher.stream.StreamView
 import com.riffle.core.domain.launcher.stream.ref
 import kotlinx.coroutines.delay
@@ -165,11 +167,14 @@ internal fun StreamSurface(
             },
         )
 
-    val dockEntries = remember(results, liveAppSlots) { results.dockLiveEntries(liveAppSlots) }
+    val dockEntries =
+        remember(results, liveAppSlots, pinnedGroupKeys) {
+            results.dockLiveEntries(liveAppSlots, pinnedGroupKeys.toSet())
+        }
     val pages =
         remember(layout, results, dockEntries, shortcutPages, pinnedGroupKeys) {
             DockPageOrder.order(
-                pages = shortcutPages + StreamPagePlanner.plan(layout, results),
+                pages = StreamShortcutPages.merge(StreamPagePlanner.plan(layout, results), shortcutPages),
                 liveGroupKeys = DockPageOrder.liveGroupKeys(dockEntries),
                 nowPlaying = dockEntries.any { entry -> entry is DockDynamicSideEntry.NowPlaying },
                 pinnedGroupKeys = pinnedGroupKeys,
@@ -309,7 +314,14 @@ private fun defaultPageKey(pages: List<StreamPage>): String? =
 private fun StreamFocusRequest.isWaiting(pages: List<StreamPage>): Boolean {
     val key = StreamFocus.resolvePage(target, pages)
     val page = pages.firstOrNull { it.key == key }
-    return (page?.body as? StreamPageBody.State)?.result == StreamSectionResult.Loading
+
+    fun StreamPage.isLoading() = (body as? StreamPageBody.State)?.result == StreamSectionResult.Loading
+    // A pinned app's page is its live page once the notifications have arrived: until then its shortcuts page is only
+    // a placeholder that the live page replaces, so the request waits rather than land on it.
+    val liveStillLoading =
+        target is StreamFocusTarget.AppShortcuts && page?.section == StreamSection.SHORTCUTS &&
+            pages.any { it.section == StreamSection.NOTIFICATIONS && it.groupKey == null && it.isLoading() }
+    return page?.isLoading() == true || liveStillLoading
 }
 
 /** The pager of pages: one at a time, swiped sideways. */

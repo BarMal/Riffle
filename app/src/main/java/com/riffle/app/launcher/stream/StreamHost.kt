@@ -219,15 +219,11 @@ internal fun StreamDestination(
             nowEpochMillis = host.formats.now(),
             cardSettings = streamSettings,
         )
-    val liveGroupKeys =
-        remember(results) {
-            (results[StreamSection.NOTIFICATIONS] as? StreamSectionResult.Ready)
-                ?.groups?.map { it.key }.orEmpty().toSet()
-        }
     // Built when the pinned apps, what is live or the shortcuts change, never on a recomposition of the Stream.
     val shortcutPages =
-        remember(pinnedApps, liveGroupKeys, appShortcuts, launcherRole) {
-            StreamShortcutPages.plan(pinnedApps, liveGroupKeys, appShortcuts, launcherRole)
+        remember(pinnedApps, appShortcuts, launcherRole) {
+            // Every pinned app has one; those that are live are folded into their notifications page (see `merge`).
+            StreamShortcutPages.plan(pinnedApps, emptySet(), appShortcuts, launcherRole)
         }
     val pinnedGroupKeys = remember(pinnedApps) { pinnedApps.map { StreamShortcutPages.appKeyOf(it.identity) } }
     StreamSurface(

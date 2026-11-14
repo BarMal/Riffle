@@ -35,6 +35,8 @@ object DockPageOrder {
      * [pages] (the planner's, in the layout's section order) in the Dock's order. [liveGroupKeys] are the notification
      * groups of the live apps the Dock shows, in the Dock's order; [nowPlaying] says the now playing entry is shown,
      * which stands for the Now page and puts it right after the live apps instead of at its place in the layout.
+     * [pinnedGroupKeys] are the pinned apps' keys in the Dock's order: each one's page (live, else shortcuts) sits at
+     * its icon's place in the run, so a pinned app that is live is not also in the live apps.
      */
     fun order(
         pages: List<StreamPage>,
@@ -43,10 +45,16 @@ object DockPageOrder {
         pinnedGroupKeys: List<String> = emptyList(),
     ): List<StreamPage> {
         val shortcutPages = pages.filter { page -> page.ref().isShortcutsPage }
-        val pinned = pinnedGroupKeys.mapNotNull { key -> shortcutPages.firstOrNull { page -> page.groupKey == key } }
         val appPages = pages.filter { page -> page.ref().isLiveAppPage }
-        val live = liveGroupKeys.mapNotNull { key -> appPages.firstOrNull { page -> page.groupKey == key } }
-        val otherApps = appPages - live.toSet()
+        // A pinned app has one icon: its live page when it has one, else its shortcuts page, at the icon's place.
+        val pinned =
+            pinnedGroupKeys.mapNotNull { key ->
+                appPages.firstOrNull { page -> page.groupKey == key }
+                    ?: shortcutPages.firstOrNull { page -> page.groupKey == key }
+            }
+        val live =
+            liveGroupKeys.mapNotNull { key -> appPages.firstOrNull { page -> page.groupKey == key } } - pinned.toSet()
+        val otherApps = appPages - live.toSet() - pinned.toSet()
         val now = if (nowPlaying) pages.filter { page -> page.section == StreamSection.NOW } else emptyList()
         val rest = pages - appPages.toSet() - shortcutPages.toSet() - now.toSet()
         return pinned + (shortcutPages - pinned.toSet()) + live + otherApps + now + rest

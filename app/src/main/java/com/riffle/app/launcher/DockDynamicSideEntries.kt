@@ -63,9 +63,11 @@ internal fun rememberDockDynamicSide(
     // The provider reads the options of the posture on screen; keep it current even before the Stream has opened.
     SideEffect { stream.posture.deviceClass = deviceClass }
     val results = rememberStreamSectionResults(stream.provider, listOf(StreamSection.NOTIFICATIONS, StreamSection.NOW))
+    // A pinned app is drawn once: its pinned icon carries the badge and stands for its live page.
+    val pinnedAppKeys = remember(pinnedApps) { pinnedApps.map { StreamShortcutPages.appKeyOf(it.identity) }.toSet() }
     val live =
-        remember(results, liveAppSlots, showLiveApps) {
-            if (showLiveApps) results.dockLiveEntries(liveAppSlots) else emptyList()
+        remember(results, liveAppSlots, showLiveApps, pinnedAppKeys) {
+            if (showLiveApps) results.dockLiveEntries(liveAppSlots, pinnedAppKeys) else emptyList()
         }
     val link = stream.dock
     val layouts by stream.layouts.layouts.collectAsState()
