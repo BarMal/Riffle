@@ -40,6 +40,50 @@ internal object StreamContentDetails {
         }
     }
 
+    /**
+     * What was read out of the notification's own layout, as the mapper noted it on [item]; null when it noted none.
+     * The lines and the embedded layout are body text and the picture is an image: [showBody] and [showImages] say
+     * which the content level lets through (the title follows the title, which the caller has already redacted).
+     */
+    fun custom(
+        item: Item,
+        showBody: Boolean,
+        showImages: Boolean,
+    ): CustomNotificationContent? {
+        if (item.ext[NotificationItemMapper.CUSTOM_KEY] != ItemExtValue.Flag(true)) return null
+
+        fun lines(
+            count: ItemExtKey,
+            prefix: String,
+        ): List<String> =
+            (0 until (item.number(count) ?: 0L).toInt().coerceAtMost(CustomNotificationMapping.MAX_BIG_LINES))
+                .mapNotNull { index -> item.text(ItemExtKey("$prefix$index")) }
+        return CustomNotificationContent(
+            title = item.text(NotificationItemMapper.CUSTOM_TITLE_KEY),
+            lines =
+                if (showBody) {
+                    lines(
+                        NotificationItemMapper.CUSTOM_LINES_KEY,
+                        "notification.custom_l",
+                    )
+                } else {
+                    emptyList()
+                },
+            bigLines =
+                if (showBody) {
+                    lines(
+                        NotificationItemMapper.CUSTOM_BIG_LINES_KEY,
+                        "notification.custom_b",
+                    )
+                } else {
+                    emptyList()
+                },
+            thumbnail = if (showImages) imageHandle(item, NotificationItemMapper.CUSTOM_THUMBNAIL_KEY) else null,
+            embed = showBody && item.ext[NotificationItemMapper.CUSTOM_EMBED_KEY] == ItemExtValue.Flag(true),
+            revision = item.number(NotificationItemMapper.CUSTOM_REVISION_KEY) ?: 0L,
+        )
+    }
+
     /** Whether the notification is a conversation with a person (a messaging style, or the message category). */
     fun isConversation(item: Item): Boolean =
         item.ext[NotificationItemMapper.CONVERSATION_KEY] == ItemExtValue.Flag(true)

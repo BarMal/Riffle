@@ -130,6 +130,7 @@ object StreamContentMapper {
             thread = if (showBody) StreamContentDetails.thread(item) else emptyList(),
             ownActions = if (showBody) StreamContentDetails.ownActions(item) else emptyList(),
             conversation = StreamContentDetails.isConversation(item),
+            custom = StreamContentDetails.custom(item, showBody, showImages),
             person =
                 if (showImages) {
                     StreamContentDetails.imageHandle(

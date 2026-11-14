@@ -88,6 +88,11 @@ data class NotificationContent(
      * the inline reply. Ids and titles only; the platform intents stay with the listener. Empty when redacted.
      */
     val ownActions: List<NotificationOwnAction> = emptyList(),
+    /**
+     * What was read out of the notification's own layout, for a notification that fills in no title or text (see
+     * [CustomNotificationContent]); null for any other, and when redacted.
+     */
+    val custom: CustomNotificationContent? = null,
 ) : StreamContent {
     override val timeEpochMillis: Long get() = postedAtEpochMillis
 
@@ -109,7 +114,21 @@ data class NotificationContent(
     val headline: String?
         get() =
             title?.takeIf { it.isNotBlank() }
-                ?: if (hidden) null else appLabel?.takeIf { it.isNotBlank() } ?: app.packageName
+                ?: if (hidden) null else custom?.title ?: appLabel?.takeIf { it.isNotBlank() } ?: app.packageName
+
+    /**
+     * What the card draws under its header, best first: the conversation, else the text the app filled in, else what
+     * its own layout says (extracted, or embedded when it has no text).
+     */
+    val body: NotificationBody
+        get() =
+            when {
+                thread.isNotEmpty() -> NotificationBody.Thread(thread)
+                !text.isNullOrBlank() -> NotificationBody.Text(text)
+                custom != null && (custom.embed || custom.lines.isNotEmpty() || custom.bigLines.isNotEmpty()) ->
+                    NotificationBody.Custom(custom)
+                else -> NotificationBody.None
+            }
 
     /** The app's name as the card's second line; null when the title line already is the app's name. */
     val secondaryLabel: String? get() = appLabel?.takeIf { it.isNotBlank() && it != headline }

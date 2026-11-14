@@ -11,6 +11,7 @@ import com.riffle.app.launcher.calendar.sourceAccess
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
+import com.riffle.app.launcher.notifications.NotificationCustomContentStore
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnection
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
@@ -111,11 +112,20 @@ private fun androidBuiltInSourceDependencies(
             NotificationSourceDependencies(
                 repository = notificationRepository,
                 access = notificationAccess::getNotificationAccessStatus,
-                changes = SourceChangeSource.merge(listOf(snapshotChanges, listenerConnectionChanges)),
+                changes =
+                    SourceChangeSource.merge(
+                        listOf(
+                            snapshotChanges,
+                            listenerConnectionChanges,
+                            // A layout is read after its notification is saved: the card follows when it has been.
+                            SourceChangeSource { onChanged -> NotificationCustomContentStore.observe(onChanged) },
+                        ),
+                    ),
                 hideRules = hideRules,
                 canReply = { key -> AndroidNotificationStageActionGateway.replyActionId(key) != null },
                 canSnooze = { RiffleNotificationListenerConnection.isConnected() },
                 ownActions = AndroidNotificationStageActionGateway::ownActionsFor,
+                customContent = NotificationCustomContentStore::contentFor,
             ),
         calendar = calendar,
         media = media,

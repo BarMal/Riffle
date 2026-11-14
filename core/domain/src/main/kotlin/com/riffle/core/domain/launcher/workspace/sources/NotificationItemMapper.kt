@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleFilter
 import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 import com.riffle.core.domain.launcher.notifications.NotificationThreadSummary
+import com.riffle.core.domain.launcher.stream.CustomNotificationContent
 import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.stream.NotificationOwnActions
 import com.riffle.core.domain.launcher.workspace.Item
@@ -44,6 +45,11 @@ data class NotificationItemInput(
      * are as transient as the notification's content.
      */
     val ownActions: (LauncherNotificationKey) -> List<NotificationOwnAction> = { emptyList() },
+    /**
+     * What the listener read out of the live notification's own layout ([CustomNotificationContent]), or null. Asked
+     * per notification and never stored.
+     */
+    val customContent: (LauncherNotificationKey) -> CustomNotificationContent? = { null },
 )
 
 /**
@@ -166,6 +172,7 @@ class NotificationItemMapper(
                 ext[ItemExtKey("notification.own${index}_title")] = ItemExtValue.Text(action.title)
             }
         }
+        input.customContent(notification.key)?.let { custom -> ext.putAll(customExt(custom)) }
         val thread =
             NotificationThreadSummary.withoutEchoes(
                 notification.messages.filter { it.text.isNotBlank() }.sortedBy { it.timestampEpochMillis },
@@ -181,7 +188,34 @@ class NotificationItemMapper(
         return ext
     }
 
+    private fun customExt(custom: CustomNotificationContent): Map<ItemExtKey, ItemExtValue> {
+        val ext = LinkedHashMap<ItemExtKey, ItemExtValue>()
+        ext[CUSTOM_KEY] = ItemExtValue.Flag(true)
+        ext[CUSTOM_REVISION_KEY] = ItemExtValue.Number(custom.revision)
+        custom.title?.let { ext[CUSTOM_TITLE_KEY] = ItemExtValue.Text(it) }
+        custom.thumbnail?.let { ext[CUSTOM_THUMBNAIL_KEY] = ItemExtValue.Text(it.key) }
+        if (custom.embed) ext[CUSTOM_EMBED_KEY] = ItemExtValue.Flag(true)
+        ext[CUSTOM_LINES_KEY] = ItemExtValue.Number(custom.lines.size.toLong())
+        custom.lines.forEachIndexed { index, line ->
+            ext[ItemExtKey("notification.custom_l$index")] = ItemExtValue.Text(line)
+        }
+        ext[CUSTOM_BIG_LINES_KEY] = ItemExtValue.Number(custom.bigLines.size.toLong())
+        custom.bigLines.forEachIndexed { index, line ->
+            ext[ItemExtKey("notification.custom_b$index")] = ItemExtValue.Text(line)
+        }
+        return ext
+    }
+
     companion object {
+        /** Set when the notification's own layout was read ([CustomNotificationContent]); its parts follow. */
+        val CUSTOM_KEY = ItemExtKey("notification.custom")
+        val CUSTOM_REVISION_KEY = ItemExtKey("notification.custom_revision")
+        val CUSTOM_TITLE_KEY = ItemExtKey("notification.custom_title")
+        val CUSTOM_THUMBNAIL_KEY = ItemExtKey("notification.custom_thumbnail")
+        val CUSTOM_EMBED_KEY = ItemExtKey("notification.custom_embed")
+        val CUSTOM_LINES_KEY = ItemExtKey("notification.custom_lines")
+        val CUSTOM_BIG_LINES_KEY = ItemExtKey("notification.custom_big_lines")
+
         /** The most messages a thread carries; the newest ones. */
         const val MAX_THREAD = 10
         val KEY_KEY = ItemExtKey("notification.key")

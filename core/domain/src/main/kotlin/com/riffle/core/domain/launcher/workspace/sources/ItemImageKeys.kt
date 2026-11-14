@@ -54,4 +54,10 @@ object ItemImageKeys {
         profileId: AppProfileId,
         notificationKey: String,
     ): ItemImageHandle = ItemImageHandle("notification-picture:${profileId.value}:$notificationKey")
+
+    /** The picture read out of a notification's own layout: held in memory only, as long as it is posted. */
+    fun notificationCustomImage(
+        profileId: AppProfileId,
+        notificationKey: String,
+    ): ItemImageHandle = ItemImageHandle("notification-custom:${profileId.value}:$notificationKey")
 }

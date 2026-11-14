@@ -31,6 +31,7 @@ class RiffleNotificationListenerService : NotificationListenerService() {
             RiffleNotificationListenerConnection.disconnect(this)
             AndroidNotificationStageActionGateway.clear()
             NotificationImageStore.clear()
+            NotificationCustomContentStore.clear()
             // The platform can unbind this listener outside a permission revocation (e.g. OEM battery
             // management). Ask the platform to retry the binding rather than staying silently dead.
             requestRebind(ComponentName(this, RiffleNotificationListenerService::class.java))
@@ -45,13 +46,14 @@ class RiffleNotificationListenerService : NotificationListenerService() {
             sbn?.let { notification ->
                 runCatching { AndroidNotificationStageActionGateway.replace(this, notification) }
             }
-            saveActiveNotifications()
+            saveActiveNotifications(repostedKey = sbn?.key)
         }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         ignoreNotificationListenerFailure {
             sbn?.key?.let(AndroidNotificationStageActionGateway::remove)
+            sbn?.key?.let(NotificationCustomContentStore::remove)
             saveActiveNotifications()
         }
     }
@@ -72,16 +74,26 @@ class RiffleNotificationListenerService : NotificationListenerService() {
      * in a single StatusBarNotification, say) can't discard the snapshot write for every other
      * currently active notification.
      */
-    private fun saveActiveNotifications() {
+    private fun saveActiveNotifications(repostedKey: String? = null) {
         val images = LinkedHashMap<String, NotificationImageBudget.Candidate>()
         val bitmaps = HashMap<String, android.graphics.Bitmap>()
         activeNotifications
             ?.also { notifications ->
                 runCatching { AndroidNotificationStageActionGateway.replaceAll(this, notifications) }
             }?.let { posted -> runCatching { notificationMapper.listed(posted) }.getOrDefault(posted.toList()) }
+            ?.also { listed -> runCatching { NotificationCustomContentStore.retain(listed.map { it.key }.toSet()) } }
             ?.mapNotNull { notification ->
                 runCatching {
                     val mapped = notificationMapper.map(notification)
+                    // A layout of its own is read later, on the main thread; a notification posted again is read
+                    // again (the store holds that to twice a second), and one already read is left alone.
+                    runCatching {
+                        if (notification.key == repostedKey ||
+                            NotificationCustomContentStore.contentFor(mapped.key) == null
+                        ) {
+                            NotificationCustomContentStore.post(this, notification, mapped.profileId)
+                        }
+                    }
                     val captured = NotificationImageCapture.capture(this, notification.notification)
                     val (personHandle, pictureHandle) =
                         NotificationImageCapture.handlesOf(mapped.profileId, mapped.key.value)

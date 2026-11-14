@@ -48,6 +48,7 @@ import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.EventKind
 import com.riffle.core.domain.launcher.stream.EventTiming
+import com.riffle.core.domain.launcher.stream.NotificationBody
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
@@ -197,19 +198,64 @@ internal fun NotificationCard(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
             ) {
-                content.text?.takeIf { it.isNotBlank() }?.let { text ->
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = BODY_LINES,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                } ?: Box(Modifier.weight(1f))
-                StreamThumbnail(content.picture, content.headline, env, BrowseThumbnailSize)
+                NotificationBrowseBody(content, Modifier.weight(1f))
+                StreamThumbnail(
+                    content.picture ?: content.custom?.thumbnail,
+                    content.headline,
+                    env,
+                    BrowseThumbnailSize,
+                )
             }
         }
     }
+}
+
+/**
+ * What a browse card draws under its header ([NotificationContent.body]): the text, or the lines read out of the
+ * notification's own layout, or, when that layout has no text, the layout itself.
+ */
+@Composable
+private fun NotificationBrowseBody(
+    content: NotificationContent,
+    modifier: Modifier = Modifier,
+) {
+    when (val body = content.body) {
+        is NotificationBody.Custom ->
+            if (body.content.embed) {
+                EmbeddedNotificationLayout(
+                    notificationKey = content.notificationKey.orEmpty(),
+                    appLabel = content.appLabel,
+                    big = false,
+                    revision = body.content.revision,
+                    maxHeight = EmbeddedBrowseMaxHeight,
+                    interactive = false,
+                    modifier = modifier,
+                )
+            } else {
+                Column(modifier = modifier) {
+                    body.content.lines.forEach { line -> BrowseLine(line) }
+                }
+            }
+        is NotificationBody.Text -> BrowseLine(body.text, modifier, maxLines = BODY_LINES)
+        is NotificationBody.Thread ->
+            BrowseLine(content.text?.takeIf { it.isNotBlank() } ?: body.messages.last().text, modifier, BODY_LINES)
+        NotificationBody.None -> Box(modifier)
+    }
+}
+
+@Composable
+private fun BrowseLine(
+    text: String,
+    modifier: Modifier = Modifier,
+    maxLines: Int = 1,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
 }
 
 private val BrowseAvatarSize = StreamHeaderIconSize
