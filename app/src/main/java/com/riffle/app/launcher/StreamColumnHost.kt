@@ -133,8 +133,9 @@ internal fun Modifier.dpBounds(bounds: () -> StreamColumnRect?): Modifier =
         }
 
 /**
- * A value that eases between 0 and 1 with [target], on the smooth spring at the opening speed (a snap under reduced motion). The animation
- * runs in the frame clock and is read where it is drawn, so a change never recomposes its reader.
+ * A value that eases between 0 and 1 with [target], on the smooth spring at the opening speed (a snap under reduced
+ * motion). The animation runs in the frame clock and is read where it is drawn, so a change never recomposes its
+ * reader.
  */
 @Composable
 internal fun rememberEasedFraction(

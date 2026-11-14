@@ -18,8 +18,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.core.domain.launcher.designsystem.CardTint
-import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.LayoutPosture
 import com.riffle.core.domain.launcher.settings.LayoutSettings
@@ -43,13 +43,12 @@ private val PreviewAppColor = Color(0xFF3B82F6)
 internal fun SettingsStreamCardsPageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
-) =
-    SettingsStreamCards(
-        settings = state.settings.stream,
-        layout = state.settings.layout,
-        foldedDockEdge = state.postureDockEdges.getValue(LayoutPosture.FOLDED),
-        onAction = onAction,
-    )
+) = SettingsStreamCards(
+    settings = state.settings.stream,
+    layout = state.settings.layout,
+    foldedDockEdge = state.postureDockEdges.getValue(LayoutPosture.FOLDED),
+    onAction = onAction,
+)
 
 /** The page over plain [settings], so a screenshot test draws it without a shell. */
 @Composable

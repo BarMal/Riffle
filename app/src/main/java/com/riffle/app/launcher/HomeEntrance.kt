@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,7 +68,7 @@ internal class HomeEntranceState(
     var arrived: Boolean by mutableStateOf(initial >= 1f)
         private set
 
-    /** Starts the entrance from nothing, on the calm spring at the opening speed (a short fade under reduced motion). */
+    /** Starts the entrance from nothing on the calm spring at the opening speed (a short fade if reduced). */
     fun play(tuning: DockMotionTuning) {
         job?.cancel()
         arrived = false
@@ -186,3 +187,28 @@ internal fun HomeEntranceState.frame(): HomeEntranceFrame {
         translationYDp = -pull.unitY * rise,
     )
 }
+
+/**
+ * Whether the Dock area may ease its size changes (a shelf opening, an icon size, the actions row). Never on the first
+ * frames of Home's entrance and never when the Dock changes edge: then the Dock is laid out where it belongs and only
+ * appears there. An easing size animation would otherwise carry the Dock across the screen as Home settles (the
+ * posture, the insets and the apps arriving after the first frame).
+ */
+@Composable
+internal fun rememberDockSizeEasing(position: DockPosition): Boolean {
+    val arrived = LocalHomeEntrance.current?.arrived ?: true
+    val lastEdge = remember { EdgeMemory(position) }
+    val sameEdge = lastEdge.edge == position
+    SideEffect { lastEdge.edge = position }
+    return arrived && sameEdge
+}
+
+/** The edge the Dock area last stood on, to tell an edge change (it snaps) from a size change (it eases). */
+private class EdgeMemory(
+    var edge: DockPosition,
+)
+
+internal inline fun Modifier.easeSizeWhen(
+    ease: Boolean,
+    easing: Modifier.() -> Modifier,
+): Modifier = if (ease) easing() else this

@@ -32,8 +32,8 @@ import com.riffle.app.launcher.openCardPlacementTestTag
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
-import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.DockMotionSettings

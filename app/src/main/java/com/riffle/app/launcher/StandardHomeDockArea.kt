@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,14 +91,7 @@ internal fun StandardHomeDockArea(
     // The room Home keeps for the Dock is the Dock's own, not the open card's actions row that grows out of it: that
     // row takes room from the Stream above it and leaves Home's grid where it is.
     val extent = remember { DockExtentReport() }
-    // The area eases its size changes (a shelf opening, an icon size, the actions row), but never on the first frames
-    // of Home's entrance and never when the Dock changes edge: then the Dock is laid out where it belongs and only
-    // appears there. An easing size animation would otherwise carry the Dock across the screen as Home settles (the
-    // posture, the insets and the apps arriving after the first frame).
-    val entrance = LocalHomeEntrance.current
-    val lastEdge = remember { EdgeMemory(position) }
-    val easeSize = (entrance?.arrived ?: true) && lastEdge.edge == position
-    SideEffect { lastEdge.edge = position }
+    val easeSize = rememberDockSizeEasing(position)
 
     Column(
         modifier =
@@ -165,16 +157,6 @@ internal fun StandardHomeDockArea(
         }
     }
 }
-
-/** The edge the Dock area last stood on, to tell an edge change (it snaps) from a size change (it eases). */
-private class EdgeMemory(
-    var edge: DockPosition,
-)
-
-private inline fun Modifier.easeSizeWhen(
-    ease: Boolean,
-    easing: Modifier.() -> Modifier,
-): Modifier = if (ease) easing() else this
 
 @Suppress("LongParameterList")
 private fun dockAreaInteractions(

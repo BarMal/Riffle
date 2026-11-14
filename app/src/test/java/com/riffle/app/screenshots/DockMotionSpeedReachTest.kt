@@ -36,8 +36,7 @@ class DockMotionSpeedReachTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private fun tuningAt(speedMillis: Int): DockMotionTuning =
-        DockMotionSettings(speedMillis = speedMillis).tuning()
+    private fun tuningAt(speedMillis: Int): DockMotionTuning = DockMotionSettings(speedMillis = speedMillis).tuning()
 
     /** How far the grid's fade has come [millis] after the Stream opens, at [speedMillis]. */
     private fun fadeAfter(

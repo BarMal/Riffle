@@ -64,6 +64,7 @@ class SettingsControlsHaveKeysTest {
         pages.forEach { shown ->
             composeRule.runOnUiThread { page = shown }
             composeRule.waitForIdle()
+
             fun visit(node: SemanticsNode) {
                 if (node.isControl() && !node.hasAnchorAbove() && !node.isExempt(shown)) {
                     missing += "${node.describe()} on $shown"
@@ -84,10 +85,12 @@ class SettingsControlsHaveKeysTest {
 
     private fun SemanticsNode.isControl(): Boolean {
         val role = config.getOrNull(SemanticsProperties.Role)
-        val slider = config.getOrNull(SemanticsProperties.ProgressBarRangeInfo) != null &&
-            config.getOrNull(SemanticsActions.SetProgress) != null
-        val stepperButton = config.getOrNull(SemanticsProperties.ContentDescription)
-            ?.any { it.startsWith("Increase ") || it.startsWith("Decrease ") } == true
+        val slider =
+            config.getOrNull(SemanticsProperties.ProgressBarRangeInfo) != null &&
+                config.getOrNull(SemanticsActions.SetProgress) != null
+        val stepperButton =
+            config.getOrNull(SemanticsProperties.ContentDescription)
+                ?.any { it.startsWith("Increase ") || it.startsWith("Decrease ") } == true
         return role == Role.Switch || role == Role.RadioButton || role == Role.Button || slider || stepperButton
     }
 
@@ -101,8 +104,10 @@ class SettingsControlsHaveKeysTest {
     }
 
     private fun SemanticsNode.texts(): List<String> =
-        (config.getOrNull(SemanticsProperties.Text)?.map { it.text }.orEmpty() +
-            (config.getOrNull(SemanticsProperties.ContentDescription).orEmpty())) +
+        (
+            config.getOrNull(SemanticsProperties.Text)?.map { it.text }.orEmpty() +
+                (config.getOrNull(SemanticsProperties.ContentDescription).orEmpty())
+        ) +
             children.flatMap { it.texts() }
 
     private fun SemanticsNode.describe(): String = texts().joinToString(" / ").ifBlank { "(no text)" }
