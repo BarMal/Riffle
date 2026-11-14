@@ -2,32 +2,19 @@
 
 package com.riffle.app.launcher.stream
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -49,16 +36,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Density
 import com.riffle.app.R
-import com.riffle.app.launcher.GlassSurface
 import com.riffle.app.launcher.LocalDockFan
-import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
-import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.dock.DockPageOrder
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
@@ -70,12 +52,9 @@ import com.riffle.core.domain.launcher.stream.StreamPage
 import com.riffle.core.domain.launcher.stream.StreamPageBody
 import com.riffle.core.domain.launcher.stream.StreamPageNavigation
 import com.riffle.core.domain.launcher.stream.StreamPagePlanner
-import com.riffle.core.domain.launcher.stream.StreamPagesPerView
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
-import com.riffle.core.domain.launcher.stream.StreamStage
 import com.riffle.core.domain.launcher.stream.StreamView
-import com.riffle.core.domain.launcher.stream.StreamWideView
 import com.riffle.core.domain.launcher.stream.ref
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -88,7 +67,7 @@ internal const val STREAM_PAGER_TEST_TAG = "stream-pager"
 
 private const val CLOCK_TICK_MILLIS = 30_000L
 
-/** A request to bring a page to the front, which the pager or the Stage acts on once; [id] tells repeats apart. */
+/** A request to bring a page to the front, which the pager acts on once; [id] tells repeats apart. */
 private class PageJump(val key: String, val id: Long)
 
 /**
@@ -96,9 +75,8 @@ private class PageJump(val key: String, val id: Long)
  * vertically
  * scrolling stack or list of one section's content (see [StreamPagePlanner]), in the Dock's order ([DockPageOrder]).
  * There is no spine or page header: the Dock's contextual mode is the page indicator ([dockLink] tells it which page is
- * open and lists the pages), and a long-press of a tile there asks for the page options. On
- * an expanded posture ([wideLayout]) the layout's [StreamWideView] chooses between that pager (two pages side by side
- * when the width allows) and the Stage view, a rail of live stages beside the selected stage's stack.
+ * open and lists the pages), and a long-press of a tile there asks for the page options. Folded it fills the screen;
+ * unfolded the same surface stands in a column attached to the Dock (the caller sizes it), so there is one Stream.
  *
  * Stateless apart from which page is showing: layout edits and every user action go out through [callbacks], and
  * [contentPadding] keeps it clear of the system bars and the Dock under it. "Show as" redraws at once and offers Undo.
@@ -121,8 +99,6 @@ internal fun StreamSurface(
     /** The page the Stream was last left on (this session), or null. */
     initialPageKey: String? = null,
     onPageChanged: (String) -> Unit = {},
-    /** An expanded posture: the Stage view and two pages side by side are available. */
-    wideLayout: Boolean = false,
     /** How many live apps the Dock shows, which the order of the pages follows. */
     liveAppSlots: Int = DEFAULT_DOCK_LIVE_APP_SLOTS,
     /**
@@ -174,16 +150,6 @@ internal fun StreamSurface(
             )
         }
     }
-    val onMenuAction: (StreamMenuAction) -> Unit = { action ->
-        val before = latestLayout
-        callbacks.onLayoutAction(action.toLayoutAction())
-        if (action is StreamMenuAction.SetWideView && action.view != before.wideView) {
-            offerUndo(
-                context.getString(R.string.stream_shown_as_stream, context.getString(action.view.titleRes())),
-                before,
-            )
-        }
-    }
     // Every callback reaches every page: only the layout edit is wrapped (for its Undo), the rest are forwarded whole.
     val surfaceCallbacks =
         callbacks.copy(
@@ -219,39 +185,22 @@ internal fun StreamSurface(
     if (dockLink != null) {
         DockLinkEffects(dockLink, pages, surfaceCallbacks, onShowAs)
     }
-    val menu =
-        StreamMenuModel(
-            wideView = layout.wideView.takeIf { wideLayout },
-            hiddenSections = layout.sections.filter { !it.enabled }.map { it.section },
-        )
+    val hiddenSections = layout.sections.filter { !it.enabled }.map { it.section }
     CompositionLocalProvider(LocalOpenCards provides openCards, LocalActionsInDock provides actionsInDock) {
         Box(modifier = modifier.fillMaxSize().testTag(STREAM_SURFACE_TEST_TAG)) {
-            BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-                val widthDp = maxWidth.value.toInt()
-                when {
-                    pages.isEmpty() ->
-                        StreamAllHidden(menu.hiddenSections) { section ->
-                            surfaceCallbacks.onLayoutAction(StreamLayoutAction.SetEnabled(section, true))
-                        }
-                    wideLayout && layout.wideView == StreamWideView.STAGE ->
-                        StreamStageMode(
-                            pages = pages,
-                            state = state,
-                            env = liveEnv,
-                            callbacks = surfaceCallbacks,
-                            menu = menu,
-                            onMenuAction = onMenuAction,
-                            dockLink = dockLink,
-                        )
-                    else ->
-                        StreamPagesMode(
-                            pages = pages,
-                            state = state,
-                            env = liveEnv,
-                            callbacks = surfaceCallbacks,
-                            perView = StreamPagesPerView.forWidth(widthDp, wideLayout),
-                            dockLink = dockLink,
-                        )
+            Box(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
+                if (pages.isEmpty()) {
+                    StreamAllHidden(hiddenSections) { section ->
+                        surfaceCallbacks.onLayoutAction(StreamLayoutAction.SetEnabled(section, true))
+                    }
+                } else {
+                    StreamPagesMode(
+                        pages = pages,
+                        state = state,
+                        env = liveEnv,
+                        callbacks = surfaceCallbacks,
+                        dockLink = dockLink,
+                    )
                 }
             }
             SnackbarHost(
@@ -281,7 +230,6 @@ private class StreamPageState(
     var settledKey: String? by mutableStateOf(null)
     var restoreKey: String? by mutableStateOf(null)
     var jump: PageJump? by mutableStateOf(null)
-    var recentKeys: List<String> by mutableStateOf(emptyList())
     private var lastJumpId = 0L
 
     val restoring: Boolean get() = restoreKey != null
@@ -294,7 +242,6 @@ private class StreamPageState(
         jump: Boolean,
     ) {
         if (key == currentKey && !jump) return
-        recentKeys = StreamStage.recentAfterSelecting(recentKeys, currentKey, key)
         currentKey = key
         settledKey = key
         restoreKey = null
@@ -365,7 +312,7 @@ private fun StreamFocusRequest.isWaiting(pages: List<StreamPage>): Boolean {
     return (page?.body as? StreamPageBody.State)?.result == StreamSectionResult.Loading
 }
 
-/** The pager of pages. Two pages share the width when [perView] is 2. */
+/** The pager of pages: one at a time, swiped sideways. */
 @Composable
 @Suppress("LongParameterList", "LongMethod")
 private fun StreamPagesMode(
@@ -373,7 +320,6 @@ private fun StreamPagesMode(
     state: StreamPageState,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
-    perView: Int,
     dockLink: StreamDockLink?,
 ) {
     val latestPages by rememberUpdatedState(pages)
@@ -438,103 +384,12 @@ private fun StreamPagesMode(
                 },
         // A swipe is not for a page while a card is open (the open card is its own scene): a tile or Back leaves it.
         userScrollEnabled = !LocalOpenCards.current.state.isOpen,
-        pageSize = if (perView > 1) splitPageSize(perView) else PageSize.Fill,
         pageSpacing = RiffleSpacing.s,
         beyondViewportPageCount = 0,
         key = { index -> latestPages.getOrNull(index)?.key ?: index },
     ) { index ->
         val page = latestPages.getOrNull(index)
         if (page != null) StreamPageView(page, env, callbacks)
-    }
-}
-
-/** Each of [count] pages takes an equal share of the width. */
-private fun splitPageSize(count: Int): PageSize =
-    object : PageSize {
-        override fun Density.calculateMainAxisPageSize(
-            availableSpace: Int,
-            pageSpacing: Int,
-        ): Int = (availableSpace - pageSpacing * (count - 1)) / count
-    }
-
-/** The Stage view with its slim top bar (the title and the Stream's own menu). */
-@Composable
-private fun StreamStageMode(
-    pages: List<StreamPage>,
-    state: StreamPageState,
-    env: StreamEnvironment,
-    callbacks: StreamCallbacks,
-    menu: StreamMenuModel,
-    onMenuAction: (StreamMenuAction) -> Unit,
-    dockLink: StreamDockLink?,
-) {
-    LaunchedEffect(state.currentKey, dockLink) { dockLink?.publishCurrent(state.currentKey) }
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {
-        StreamStageBar(menu, onMenuAction, Modifier.padding(horizontal = RiffleSpacing.l))
-        StreamStageView(
-            pages = pages,
-            selectedKey = state.currentKey,
-            recentKeys = state.recentKeys,
-            previousKeys = state.previousKeys,
-            env = env,
-            callbacks = callbacks,
-            onSelect = { key -> state.select(key, jump = false) },
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun StreamStageBar(
-    menu: StreamMenuModel,
-    onMenuAction: (StreamMenuAction) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var menuOpen by remember { mutableStateOf(false) }
-    Box(modifier = modifier.fillMaxWidth()) {
-        GlassSurface(
-            modifier = Modifier.fillMaxWidth(),
-            weight = GlassWeight.Thin,
-            shape = RiffleShapes.full,
-            tint = MaterialTheme.colorScheme.surfaceContainer,
-        ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = StreamMinTarget)
-                        .combinedClickable(
-                            onLongClickLabel = stringResource(R.string.stream_header_long_press_label),
-                            onLongClick = { menuOpen = true },
-                            onClick = {},
-                        )
-                        .padding(start = RiffleSpacing.l),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.stream_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f).semantics { heading() },
-                )
-                if (!menu.isEmpty) {
-                    IconButton(
-                        onClick = { menuOpen = true },
-                        modifier = Modifier.size(StreamMinTarget).testTag(STREAM_OPTIONS_TEST_TAG),
-                    ) {
-                        Icon(
-                            Icons.Filled.MoreVert,
-                            contentDescription =
-                                stringResource(
-                                    R.string.stream_section_options,
-                                    stringResource(R.string.stream_title),
-                                ),
-                        )
-                    }
-                }
-            }
-        }
-        StreamMenu(menu, menuOpen && !menu.isEmpty, { menuOpen = false }, onMenuAction)
     }
 }
 

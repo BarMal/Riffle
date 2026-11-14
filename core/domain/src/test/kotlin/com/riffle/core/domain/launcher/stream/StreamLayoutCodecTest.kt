@@ -320,49 +320,42 @@ class StreamLayoutCodecTest {
     }
 
     @Test
-    fun theWideViewRoundTripsPerPostureAndEveryStoredIdIsKept() {
-        val layouts =
-            StreamLayouts()
-                .with(HomeLayoutDeviceClass.FOLDABLE, StreamLayout(wideView = StreamWideView.STAGE))
-                .with(HomeLayoutDeviceClass.TABLET, StreamLayout(wideView = StreamWideView.PAGES))
-        assertEquals(layouts, StreamLayoutCodec.decode(StreamLayoutCodec.encode(layouts)))
-        assertEquals("pages", StreamWideView.PAGES.storedId)
-        assertEquals("stage", StreamWideView.STAGE.storedId)
-    }
-
-    @Test
-    fun aLayoutStoredBeforeTheStageViewDecodesToPages() {
-        val decoded =
-            StreamLayoutCodec.decode(
-                root(posture("FOLDABLE", listOf(section("now", view = "list")))),
-            )
-        assertEquals(StreamWideView.PAGES, decoded?.forPosture(HomeLayoutDeviceClass.FOLDABLE)?.wideView)
-        assertEquals(StreamView.LIST, decoded?.forPosture(HomeLayoutDeviceClass.FOLDABLE)?.viewOf(StreamSection.NOW))
-    }
-
-    @Test
-    fun anUnknownWideViewReadsAsPagesAndTheNewFieldIsNotWrittenOverOldKeys() {
-        val withUnknown =
+    fun aLayoutStoredWithTheSplitAndTheStageViewStillDecodesAndTheyAreIgnored() {
+        // Stored by the unfolded Home and Stream split and the Pages or Stage view, both replaced by the upright stack
+        // attached to the Dock (ADR 0003, Amendment 2): the sections and options survive, the two fields are dropped.
+        val old =
             obj(
                 "version" to StoredValue.Num(1),
                 "postures" to
                     StoredValue.Arr(
                         listOf(
                             obj(
+                                "deviceClass" to StoredValue.Str("FOLDABLE"),
+                                "sections" to StoredValue.Arr(listOf(section("now", view = "list"))),
+                                "split" to
+                                    obj(
+                                        "fractionPermille" to StoredValue.Num(600),
+                                        "lastShown" to StoredValue.Str("stream"),
+                                    ),
+                                "wideView" to StoredValue.Str("stage"),
+                            ),
+                            obj(
                                 "deviceClass" to StoredValue.Str("TABLET"),
                                 "sections" to StoredValue.Arr(emptyList()),
+                                "split" to StoredValue.Str("not an object"),
                                 "wideView" to StoredValue.Str("carousel"),
                             ),
                         ),
                     ),
             )
-        val decoded = StreamLayoutCodec.decode(withUnknown)
-        assertEquals(StreamWideView.PAGES, decoded?.forPosture(HomeLayoutDeviceClass.TABLET)?.wideView)
-        // An older build reads what this one writes: every key it knows is still there, and it ignores the new one.
-        val staged = StreamLayouts().with(HomeLayoutDeviceClass.TABLET, StreamLayout(wideView = StreamWideView.STAGE))
-        val written = StreamLayoutCodec.encode(staged)
-        val posture = ((written.fields["postures"] as StoredValue.Arr).items.single() as StoredValue.Obj).fields
-        assertTrue(posture.keys.containsAll(listOf("deviceClass", "sections", "options", "split")))
-        assertEquals(StoredValue.Str("stage"), posture["wideView"])
+        val decoded = StreamLayoutCodec.decode(old)
+        assertEquals(StreamView.LIST, decoded?.forPosture(HomeLayoutDeviceClass.FOLDABLE)?.viewOf(StreamSection.NOW))
+        assertEquals(StreamLayout.DEFAULT, decoded?.forPosture(HomeLayoutDeviceClass.TABLET))
+        // Writing it back drops both keys, and what is written reads back as the same layouts.
+        val written = StreamLayoutCodec.encode(decoded!!)
+        val postures = (written.fields["postures"] as StoredValue.Arr).items.map { (it as StoredValue.Obj).fields }
+        assertTrue(postures.all { "split" !in it && "wideView" !in it })
+        assertTrue(postures.all { it.keys.containsAll(listOf("deviceClass", "sections", "options")) })
+        assertEquals(decoded, StreamLayoutCodec.decode(written))
     }
 }

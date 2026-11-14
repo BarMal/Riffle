@@ -100,6 +100,11 @@ data class PostureLayoutSettings(
     val indicator: PageIndicatorPlacement = PageIndicatorPlacement.BESIDE_DOCK,
     /** Whether dragging along the dots scrolls quickly; off, the dots only show where you are. */
     val quickScroll: Boolean = true,
+    /**
+     * Whether apps show faintly through the Stream's cards (unfolded, where Home stays beside and beneath the stack;
+     * ADR 0003, Amendment 2). Off, nothing shows behind them. Read only by the unfolded posture.
+     */
+    val appPeekThrough: Boolean = true,
 ) {
     /** Whether the dots are drawn at all. */
     val showsDots: Boolean get() = indicator != PageIndicatorPlacement.OFF
@@ -163,4 +168,9 @@ data class LayoutSettings(
         posture: LayoutPosture,
         enabled: Boolean,
     ): LayoutSettings = with(posture, forPosture(posture).copy(quickScroll = enabled))
+
+    fun withAppPeekThrough(
+        posture: LayoutPosture,
+        enabled: Boolean,
+    ): LayoutSettings = with(posture, forPosture(posture).copy(appPeekThrough = enabled))
 }

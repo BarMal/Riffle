@@ -402,6 +402,10 @@ class LauncherActionDomainTest {
                 ),
                 settings("SetQuickScroll", LauncherShellAction.SetQuickScroll(LayoutPosture.UNFOLDED, enabled = false)),
                 settings(
+                    "SetAppPeekThrough",
+                    LauncherShellAction.SetAppPeekThrough(LayoutPosture.UNFOLDED, enabled = false),
+                ),
+                settings(
                     "SetFeatureEnabled",
                     LauncherShellAction.SetFeatureEnabled(LauncherFeature.STREAM, enabled = false),
                 ),

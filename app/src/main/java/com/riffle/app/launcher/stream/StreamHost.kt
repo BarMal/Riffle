@@ -26,7 +26,6 @@ import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.StreamSettings
-import com.riffle.core.domain.launcher.split.supportsSplit
 import com.riffle.core.domain.launcher.stream.PinnedApp
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
@@ -243,7 +242,6 @@ internal fun StreamDestination(
         onFocusHandled = host.focus::handled,
         initialPageKey = remember(host, deviceClass) { host.pages.last(deviceClass) },
         onPageChanged = { key -> host.pages.remember(deviceClass, key) },
-        wideLayout = deviceClass.supportsSplit(),
         liveAppSlots = liveAppSlots,
         dockLink = host.dock,
         shortcutPages = shortcutPages,
