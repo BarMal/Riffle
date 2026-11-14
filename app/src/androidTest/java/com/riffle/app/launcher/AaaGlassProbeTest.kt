@@ -3,7 +3,6 @@ package com.riffle.app.launcher
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -14,7 +13,6 @@ import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
-import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -28,10 +26,10 @@ import org.junit.runners.MethodSorters
 /**
  * TEMPORARY diagnostic (remove once the emulator crash is understood). With the flat glass, CI's
  * emulator goes away during the first test that composes the Dock. This class sorts first and draws
- * the same Dock twelve times, each in its own test and in a fixed order. The first run of probes
- * showed every piece of the glass draws once without harm and the emulator went away the second
- * time the same Dock was shown; this run tells a repeat of the same content (dies at the second)
- * from something that builds up (dies later) from something else (dies at the first).
+ * the same Dock with two pinned apps three times under each of four settings, in a fixed order:
+ * neither edge lights nor spotlight, spotlight only, edge lights only, both. A Dock with pinned apps
+ * killed the emulator as the very first test of a run, so the first group the run dies in names the
+ * part responsible (the first group: neither of them).
  */
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -52,58 +50,55 @@ class AaaGlassProbeTest {
     }
 
     @Test
-    fun s01_theSameDockWithTwoPinnedApps() = probe("same dock, time 1") { ProbeDock(items = listOf(camera, mail)) }
+    fun u11_noEdgeLightsNoSpotlight() = switched(edgeLights = false, spotlight = false, "noEdgeLightsNoSpotlight 1")
 
     @Test
-    fun s02_theSameDockWithTwoPinnedApps() = probe("same dock, time 2") { ProbeDock(items = listOf(camera, mail)) }
+    fun u12_noEdgeLightsNoSpotlight() = switched(edgeLights = false, spotlight = false, "noEdgeLightsNoSpotlight 2")
 
     @Test
-    fun s03_theSameDockWithTwoPinnedApps() = probe("same dock, time 3") { ProbeDock(items = listOf(camera, mail)) }
+    fun u13_noEdgeLightsNoSpotlight() = switched(edgeLights = false, spotlight = false, "noEdgeLightsNoSpotlight 3")
 
     @Test
-    fun s04_theSameDockWithTwoPinnedApps() = probe("same dock, time 4") { ProbeDock(items = listOf(camera, mail)) }
+    fun u21_spotlightOnly() = switched(edgeLights = false, spotlight = true, "spotlightOnly 1")
 
     @Test
-    fun s05_theSameDockWithTwoPinnedApps() = probe("same dock, time 5") { ProbeDock(items = listOf(camera, mail)) }
+    fun u22_spotlightOnly() = switched(edgeLights = false, spotlight = true, "spotlightOnly 2")
 
     @Test
-    fun s06_theSameDockWithTwoPinnedApps() = probe("same dock, time 6") { ProbeDock(items = listOf(camera, mail)) }
+    fun u23_spotlightOnly() = switched(edgeLights = false, spotlight = true, "spotlightOnly 3")
 
     @Test
-    fun s07_theSameDockWithTwoPinnedApps() = probe("same dock, time 7") { ProbeDock(items = listOf(camera, mail)) }
+    fun u31_edgeLightsOnly() = switched(edgeLights = true, spotlight = false, "edgeLightsOnly 1")
 
     @Test
-    fun s08_theSameDockWithTwoPinnedApps() = probe("same dock, time 8") { ProbeDock(items = listOf(camera, mail)) }
+    fun u32_edgeLightsOnly() = switched(edgeLights = true, spotlight = false, "edgeLightsOnly 2")
 
     @Test
-    fun s09_theSameDockWithTwoPinnedApps() = probe("same dock, time 9") { ProbeDock(items = listOf(camera, mail)) }
+    fun u33_edgeLightsOnly() = switched(edgeLights = true, spotlight = false, "edgeLightsOnly 3")
 
     @Test
-    fun s10_theSameDockWithTwoPinnedApps() = probe("same dock, time 10") { ProbeDock(items = listOf(camera, mail)) }
+    fun u41_both() = switched(edgeLights = true, spotlight = true, "both 1")
 
     @Test
-    fun s11_theSameDockWithTwoPinnedApps() = probe("same dock, time 11") { ProbeDock(items = listOf(camera, mail)) }
+    fun u42_both() = switched(edgeLights = true, spotlight = true, "both 2")
 
     @Test
-    fun s12_theSameDockWithTwoPinnedApps() = probe("same dock, time 12") { ProbeDock(items = listOf(camera, mail)) }
+    fun u43_both() = switched(edgeLights = true, spotlight = true, "both 3")
 
-    @Test
-    fun t13_glassRoundedThin() =
-        probe("glass rounded thin") {
-            GlassSurface(Modifier.size(200.dp, 80.dp), weight = GlassWeight.Thin, shape = RoundedCornerShape(28.dp))
+    private fun switched(
+        edgeLights: Boolean,
+        spotlight: Boolean,
+        name: String,
+    ) {
+        GlassDiagnostics.edgeLights = edgeLights
+        GlassDiagnostics.spotlight = spotlight
+        try {
+            probe(name) { ProbeDock(items = listOf(camera, mail)) }
+        } finally {
+            GlassDiagnostics.edgeLights = true
+            GlassDiagnostics.spotlight = true
         }
-
-    @Test
-    fun t14_glassWithSpotlight() =
-        probe("glass with spotlight") {
-            GlassSurface(Modifier.size(200.dp, 80.dp), shape = RoundedCornerShape(28.dp), spotlight = true)
-        }
-
-    @Test
-    fun t15_theDocksAppearanceAlone() =
-        probe("dock appearance alone") {
-            Box(Modifier.size(300.dp, 80.dp).dockSurfaceAppearance(DockModel(capacity = 2, items = emptyList())))
-        }
+    }
 
     @Composable
     private fun ProbeDock(items: List<AppShortcutItem>) {

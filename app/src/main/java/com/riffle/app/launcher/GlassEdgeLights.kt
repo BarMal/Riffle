@@ -71,7 +71,12 @@ internal fun Modifier.glassEdgeLights(
     return drawWithCache {
         // A surface with no area to light (0 x 0 while it is laid out away, a collapsed row) draws
         // no edge: the fill and the content are unaffected.
-        val lights = if (size.isDrawable()) bakeEdgeLights(shape, scale, shade, edgeTint) else null
+        val lights =
+            if (GlassDiagnostics.edgeLights && size.isDrawable()) {
+                bakeEdgeLights(shape, scale, shade, edgeTint)
+            } else {
+                null
+            }
         onDrawWithContent {
             val fade = alphaProvider().finiteOr(1f).coerceIn(0f, 1f)
             if (lights != null && fade > 0f) lights.draw(this, fade)
@@ -246,3 +251,15 @@ private fun CacheDrawScope.bakeEdgeLights(
 
 /** Gradient stops closer than this are pushed apart, so no two share a position. */
 private const val MIN_STOP_GAP = 1e-4f
+
+/**
+ * TEMPORARY (remove with AaaGlassProbeTest): switches the device probe flips to find which part of
+ * the glass CI's emulator dies on. Both are on in the app.
+ */
+internal object GlassDiagnostics {
+    @Volatile
+    var edgeLights: Boolean = true
+
+    @Volatile
+    var spotlight: Boolean = true
+}
