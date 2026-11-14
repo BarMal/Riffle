@@ -172,6 +172,8 @@ internal fun Modifier.cardActionAccessibility(
     actions: List<CardAction>,
     callbacks: StreamCallbacks,
     onToggleQueue: (Boolean) -> Unit,
+    /** More actions of the card that are no action on its content (Previous and Next card). */
+    extraActions: List<CustomAccessibilityAction> = emptyList(),
 ): Modifier {
     val dismiss = stringResource(R.string.stream_notification_dismiss)
     val snooze = stringResource(R.string.stream_notification_snooze)
@@ -212,6 +214,6 @@ internal fun Modifier.cardActionAccessibility(
                     }
                     true
                 }
-            }
+            } + extraActions
     }
 }

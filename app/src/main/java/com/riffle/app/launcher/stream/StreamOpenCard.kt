@@ -1,6 +1,7 @@
 package com.riffle.app.launcher.stream
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleShapes
@@ -56,6 +58,10 @@ internal fun OpenStreamCard(
     onQueueShownChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The scroll state of the card's body: the layer reads whether it scrolls to decide who takes a vertical drag. */
+    bodyScroll: ScrollState = rememberScrollState(),
+    /** Previous and Next card as accessibility actions of this card (a stack of more than one card); else null. */
+    cardSteps: CardSteps? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     val actions = StreamCardActions.forContent(content, queueShown)
@@ -68,14 +74,14 @@ internal fun OpenStreamCard(
                 sourceModifier
                     .fillMaxWidth()
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
-                    .cardActionAccessibility(content, actions, callbacks, onQueueShownChange)
+                    .cardActionAccessibility(content, actions, callbacks, onQueueShownChange, cardSteps.actions())
                     .streamClickable(onClose, stringResource(R.string.stream_card_close))
                     .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.m),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
         ) {
             if (content is NotificationContent) OpenNotificationHeader(content, env, groupKey, callbacks, hideChoices)
             Column(
-                modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                modifier = Modifier.weight(1f, fill = false).verticalScroll(bodyScroll),
                 verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
             ) {
                 when (content) {
@@ -93,6 +99,24 @@ internal fun OpenStreamCard(
         }
     }
 }
+
+/** The labels of an open card's Previous and Next card actions and what they do ([step] true: the older card). */
+internal class CardSteps(
+    val previousLabel: String,
+    val nextLabel: String,
+    val step: (older: Boolean) -> Boolean,
+)
+
+/** Previous and Next card as the open card's own custom accessibility actions: the neighbour opens in place. */
+private fun CardSteps?.actions(): List<CustomAccessibilityAction> =
+    if (this == null) {
+        emptyList()
+    } else {
+        listOf(
+            CustomAccessibilityAction(previousLabel) { step(false) },
+            CustomAccessibilityAction(nextLabel) { step(true) },
+        )
+    }
 
 /** The header of an open conversation: who, from which app and when. It stays put while the thread scrolls. */
 @Composable

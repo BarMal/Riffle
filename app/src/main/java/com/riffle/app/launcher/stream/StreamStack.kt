@@ -3,12 +3,10 @@
 package com.riffle.app.launcher.stream
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.ScrollScope
-import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -32,9 +30,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -44,8 +42,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -63,10 +61,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.CountRecomposition
 import com.riffle.app.launcher.DockFanSource
-import com.riffle.app.launcher.LauncherHapticEvent
 import com.riffle.app.launcher.LocalDockFan
-import com.riffle.app.launcher.LocalDockMotionTuning
-import com.riffle.app.launcher.LocalLauncherHaptics
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
@@ -74,6 +69,7 @@ import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.NotificationContent
+import com.riffle.core.domain.launcher.stream.OpenCardBlend
 import com.riffle.core.domain.launcher.stream.OpenCardEvent
 import com.riffle.core.domain.launcher.stream.RecentAppContent
 import com.riffle.core.domain.launcher.stream.StackFling
@@ -84,8 +80,10 @@ import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.TaskContent
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.drop
 import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
 
 private const val MAX_FONT_SCALE_FOR_CARDS = 1.8f
 
@@ -167,7 +165,7 @@ internal fun StreamCard(
  * card, and the keyboard.
  */
 @Composable
-@Suppress("LongMethod", "LongParameterList")
+@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 internal fun StreamStack(
     entries: List<StackEntry>,
     env: StreamEnvironment,
@@ -182,19 +180,21 @@ internal fun StreamStack(
     val ids = remember(entries) { entries.map { it.id }.toSet() }
     // A card that goes away closes; a card open on another page is that page's.
     LaunchedEffect(stackKey, ids) { cards.dispatch(OpenCardEvent.CardsChanged(stackKey, ids)) }
-    val openEntry =
-        entries.firstOrNull { it.id == openState.cardId && openState.pageKey == stackKey && it.opensInPlace }
+    val openedHere = openState.isOpen && openState.pageKey == stackKey
+    val openEntry = entries.firstOrNull { it.id == openState.cardId && openedHere && it.opensInPlace }
     // One motion for the Stream's open card (the holder's): the stack reads it only where it draws.
     val motion = cards.motion
     val frameGeometry = remember(stackKey) { OpenCardFrameGeometry() }
-    var lastOpen by remember(stackKey) { mutableStateOf<StackEntry?>(null) }
-    SideEffect { if (openEntry != null) lastOpen = openEntry }
-    // The card stays drawn while it closes. Whether it is still there is read through a derived value, so the stack
-    // recomposes when the card appears and when it is gone, never once per frame of the growth in between.
-    val currentOpen by rememberUpdatedState(openEntry)
-    val shownState =
-        remember(stackKey) { derivedStateOf { currentOpen ?: lastOpen.takeIf { motion.progress > 0f } } }
-    val shown = shownState.value
+    val mover = rememberStackMover(stackState, entries.size, env.reducedMotion)
+    val latestEntries by rememberUpdatedState(entries)
+    val latestOpenedHere by rememberUpdatedState(openedHere)
+    // The layer is drawn while a card is open here and while it closes. Whether it is still there is read through a
+    // derived value, so the stack recomposes when the card appears and when it is gone, never once per frame between.
+    val layerActive = remember(stackKey) { derivedStateOf { latestOpenedHere || motion.progress > 0f } }
+    // The cards the layer draws: those of the open card's kind at the two positions the stack lies between. The set
+    // changes only when the stack crosses a card, so a drag recomposes nothing between.
+    val overlayIndices =
+        remember(stackKey) { derivedStateOf { openableIndicesAround(stackState.position, latestEntries) } }
     BackHandler(enabled = openEntry != null) { cards.dispatch(OpenCardEvent.CloseByBack) }
     var queueShown by remember(stackKey) { mutableStateOf(true) }
     val actionsOnCard = !LocalActionsInDock.current
@@ -213,6 +213,16 @@ internal fun StreamStack(
         }
     SideEffect { cards.publish(dockActions) }
     DisposableEffect(cards) { onDispose { cards.publish(null) } }
+    // A stack that comes to rest on another card with a card open (a drag, Next or Previous card, a tap on a strip):
+    // that card is open in place, or, with nothing to open, the stack is at rest.
+    LaunchedEffect(stackKey) {
+        snapshotFlow { stackState.settled }.drop(1).collect { index ->
+            val entry = latestEntries.getOrNull(index)
+            if (entry != null && latestOpenedHere) {
+                cards.dispatch(OpenCardEvent.Settled(stackKey, entry.id, entry.opensInPlace))
+            }
+        }
+    }
 
     val open: (StackEntry) -> Unit = { entry ->
         if (entry.opensInPlace) {
@@ -222,10 +232,13 @@ internal fun StreamStack(
         }
     }
     val close = { cards.dispatch(OpenCardEvent.CloseByTap) }
+    val covers: (Int, Float) -> Boolean = { index, r ->
+        layerActive.value && OpenCardBlend.openness(r) > 0f && index in overlayIndices.value
+    }
     Box(modifier = modifier.fillMaxSize()) {
         if (entries.size == 1) {
             val only = entries.single()
-            LoneCard(Modifier, hidden = shown != null) {
+            LoneCard(Modifier, hidden = layerActive.value) {
                 StackEntryCard(
                     entry = only,
                     env = env,
@@ -244,7 +257,9 @@ internal fun StreamStack(
                 groupKey = groupKey,
                 state = stackState,
                 modifier = Modifier,
-                openActive = shown != null,
+                openActive = layerActive.value,
+                mover = mover,
+                covers = covers,
                 frameGeometry = frameGeometry,
                 onOpen = open,
                 onCloseOpen = close,
@@ -255,44 +270,145 @@ internal fun StreamStack(
     val behind = (entries.size - 1).coerceIn(0, StreamCardStackSpec.VISIBLE_PEEKS)
     val strips = StreamCardStackSpec.PITCH_DP.dp * behind
     val placement = StreamCardActions.effectiveCardPlacement(env.cardSettings.openCardPlacement)
-    val shownContent = (shown as? ContentEntry)?.content
+    val density = LocalDensity.current.density
+    val bodies = remember(stackKey) { OpenCardBodies() }
+    val handoff =
+        remember(mover, density) {
+            OpenCardHandoffConnection(mover, density) {
+                latestEntries.getOrNull(StackFling.nearest(stackState.position, latestEntries.size))
+                    ?.let { entry -> bodies.scrollFor(entry.id) }
+            }
+        }
+    val dragsStack = entries.size > 1
+    val dragModifier =
+        remember(mover, handoff, dragsStack) {
+            if (dragsStack) {
+                // A vertical drag of the layer outside the card's scrolling body moves the stack; one that starts in
+                // the body scrolls it, and only what it cannot take, past a threshold, is handed on (the nested
+                // connection, inside the scrollable so that it sees what the body leaves first).
+                Modifier
+                    .scrollable(
+                        state = mover.scrollable,
+                        orientation = Orientation.Vertical,
+                        flingBehavior = mover.flingBehavior,
+                    )
+                    .nestedScroll(handoff)
+            } else {
+                Modifier
+            }
+        }
+    val previous = stringResource(R.string.stream_previous_card)
+    val next = stringResource(R.string.stream_next_card)
     // The open card is not drawn here: it is handed to the surface, which draws it over the whole of its area, outside
-    // the pager and the column, so nothing around it can clip it (see OpenCardLayerHost).
+    // the pager and the column, so nothing around it can clip it (see OpenCardLayerHost). While it closes the cards
+    // last drawn stay (the content may be gone by then).
+    val retained = remember(stackKey) { RetainedLayerCards() }
+    val layerCards =
+        overlayIndices.value.mapNotNull { index ->
+            val entry = entries.getOrNull(index) as? ContentEntry
+            entry?.let { index to it.content }
+        }
+    val drawnCards = if (openedHere) layerCards else retained.cards
+    SideEffect { if (openedHere) retained.cards = layerCards }
     val layer =
-        remember(shownContent, env, callbacks, groupKey, actionsOnCard, queueShown, cardHeight, strips, placement) {
-            shownContent?.let { content ->
+        remember(
+            drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, cardHeight, strips,
+            placement, dragModifier, entries.size, previous, next,
+        ) {
+            if (!layerActive.value) {
+                null
+            } else {
                 OpenCardLayer(
                     geometry = frameGeometry,
                     placement = placement,
                     browseHeight = cardHeight,
                     strips = strips,
                     bottomInset = StackBottomInset,
+                    stack = stackState,
+                    count = entries.size,
+                    reducedMotion = env.reducedMotion,
+                    dragModifier = dragModifier,
                     onClose = close,
                     onStripTap = { rank ->
                         // The strips are the older cards above the front one: open the one that was tapped.
-                        val front = StackFling.nearest(stackState.position, entries.size)
-                        entries.getOrNull(front + rank)?.takeIf { it.opensInPlace }?.let { target ->
-                            stackState.snapTo(front + rank)
-                            open(target)
-                        } ?: close()
+                        val front = StackFling.nearest(stackState.position, latestEntries.size)
+                        if (latestEntries.getOrNull(front + rank)?.opensInPlace == true) {
+                            mover.goTo(front + rank)
+                        } else {
+                            close()
+                        }
                     },
-                ) {
-                    OpenStreamCard(
-                        content = content,
-                        env = env,
-                        callbacks = callbacks,
-                        groupKey = groupKey,
-                        actionsOnCard = actionsOnCard,
-                        queueShown = queueShown,
-                        onQueueShownChange = { queueShown = it },
-                        onClose = close,
-                        modifier = Modifier.fillMaxWidth().testTag(STREAM_OPEN_CARD_TEST_TAG),
-                    )
-                }
+                    cards =
+                        drawnCards.map { (index, content) ->
+                            OpenLayerCard(index, content.id.value) { cardModifier ->
+                                val scroll = rememberScrollState()
+                                DisposableEffect(content.id, scroll) {
+                                    bodies.register(content.id.value, scroll)
+                                    onDispose { bodies.unregister(content.id.value, scroll) }
+                                }
+                                CountRecomposition("open-card:${content.id.value}")
+                                OpenStreamCard(
+                                    content = content,
+                                    env = env,
+                                    callbacks = callbacks,
+                                    groupKey = groupKey,
+                                    actionsOnCard = actionsOnCard,
+                                    queueShown = queueShown,
+                                    onQueueShownChange = { queueShown = it },
+                                    onClose = close,
+                                    bodyScroll = scroll,
+                                    cardSteps =
+                                        if (entries.size > 1) {
+                                            CardSteps(previous, next) { older -> mover.step(older) }
+                                        } else {
+                                            null
+                                        },
+                                    modifier = cardModifier.fillMaxWidth().testTag(STREAM_OPEN_CARD_TEST_TAG),
+                                )
+                            }
+                        },
+                )
             }
         }
     SideEffect { cards.publishLayer(layer) }
     DisposableEffect(cards) { onDispose { cards.publishLayer(null) } }
+}
+
+/** The indices of the cards around [position] (the two it lies between) that open in place, in order. */
+private fun openableIndicesAround(
+    position: Float,
+    entries: List<StackEntry>,
+): List<Int> {
+    if (entries.isEmpty()) return emptyList()
+    val low = floor(position).toInt()
+    val high = ceil(position).toInt()
+    return (low..high).filter { entries.getOrNull(it)?.opensInPlace == true && entries[it] is ContentEntry }
+}
+
+/** The cards the layer drew last while a card was open, so that it can draw them while the card closes. */
+private class RetainedLayerCards {
+    var cards: List<Pair<Int, StreamContent>> = emptyList()
+}
+
+/** The scroll states of the open cards' bodies, by card id: the hand-off asks whether the front one scrolls. */
+internal class OpenCardBodies {
+    private val states = mutableMapOf<String, ScrollState>()
+
+    fun register(
+        id: String,
+        state: ScrollState,
+    ) {
+        states[id] = state
+    }
+
+    fun unregister(
+        id: String,
+        state: ScrollState,
+    ) {
+        if (states[id] === state) states.remove(id)
+    }
+
+    fun scrollFor(id: String): ScrollState? = states[id]
 }
 
 /** The tag of the open card (a test hook). */
@@ -386,56 +502,19 @@ private fun FocusedStack(
     modifier: Modifier,
     /** A card is open over the front card: the stack makes room for it and takes no input. */
     openActive: Boolean,
+    mover: StackMover,
+    /** Whether the open card's layer draws the card at [index] ([r] places from the front) in the slot's place. */
+    covers: (index: Int, r: Float) -> Boolean,
     frameGeometry: OpenCardFrameGeometry,
     onOpen: (StackEntry) -> Unit,
     onCloseOpen: () -> Unit,
 ) {
     val count = items.size
     val dockFan = LocalDockFan.current
-    val haptics = LocalLauncherHaptics.current
-    val density = LocalDensity.current
-    val slopDp = with(density) { LocalViewConfiguration.current.touchSlop.toDp().value }
-    val scope = rememberCoroutineScope()
-    val latestReduced by rememberUpdatedState(env.reducedMotion)
-    val latestCount by rememberUpdatedState(count)
-    val latestHaptics by rememberUpdatedState(haptics)
-    val currentTuning by rememberUpdatedState(LocalDockMotionTuning.current)
-    val tick = { latestHaptics.perform(LauncherHapticEvent.DETENT) }
     LaunchedEffect(count) { state.clampTo(count) }
-
-    val scrollable =
-        rememberScrollableState { delta ->
-            // The platform's delta is the finger's, in px, positive downward (reverseDirection stays false).
-            state.dragBy(deltaDp = delta / density.density, slopDp = slopDp, count = latestCount)
-            delta
-        }
-    val flingBehavior =
-        remember(state) {
-            object : FlingBehavior {
-                override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-                    state.release(
-                        velocityCards = cardsPerSecond(initialVelocity, density.density),
-                        count = latestCount,
-                        tuning = currentTuning,
-                        reduced = latestReduced,
-                        onTick = tick,
-                    )
-                    return 0f
-                }
-            }
-        }
-    // A move without a finger runs inside the scrollable's scroll, so a finger landing on it cancels it and catches it.
-    val goTo: (Int) -> Boolean = { target ->
-        val moves = target in 0 until latestCount && target != state.heading
-        if (moves) {
-            scope.launch { scrollable.scroll { state.glideTo(target, currentTuning, latestReduced, tick) } }
-        }
-        moves
-    }
+    val goTo: (Int) -> Boolean = mover::goTo
+    val step: (Boolean) -> Boolean = mover::step
     val latestOpenActive by rememberUpdatedState(openActive)
-    val step: (Boolean) -> Boolean = { older ->
-        state.stepFromHeading(older, latestCount)?.let(goTo) ?: false
-    }
 
     // Every card of a pile is as tall as the tallest, so the strips that peek out above the front one line up.
     val cardHeight = items.maxOf { it.height }.scaledForFont()
@@ -458,6 +537,7 @@ private fun FocusedStack(
             geometry = geometry,
             cardWidth = cardWidth,
             bottomInset = StackBottomInset,
+            covers = covers,
             modifier =
                 Modifier
                     .matchParentSize()
@@ -471,10 +551,10 @@ private fun FocusedStack(
                     }
                     .clipToBounds()
                     .scrollable(
-                        state = scrollable,
+                        state = mover.scrollable,
                         orientation = Orientation.Vertical,
                         enabled = !openActive,
-                        flingBehavior = flingBehavior,
+                        flingBehavior = mover.flingBehavior,
                     )
                     .onPreviewKeyEvent { event ->
                         if (event.type != KeyEventType.KeyDown) {
