@@ -25,7 +25,8 @@ internal fun SettingsHomeModeSections(
     homeMode: HomeMode,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsSection(title = stringResource(R.string.settings_section_simple_mode)) {
+    // One section: Simple mode overrides what Home shows, so the two read together.
+    SettingsSection(title = stringResource(R.string.settings_section_home_mode)) {
         SettingsSwitchRow(
             modifier = Modifier.settingAnchor(SettingKey.SIMPLE_MODE).testTag(SIMPLE_MODE_TEST_TAG),
             title = SettingKey.SIMPLE_MODE.label(),
@@ -33,8 +34,6 @@ internal fun SettingsHomeModeSections(
             checked = features.simpleMode,
             onCheckedChange = { on -> onAction(LauncherShellAction.SetSimpleMode(on)) },
         )
-    }
-    SettingsSection(title = stringResource(R.string.settings_section_view)) {
         SettingsChoiceRow(
             modifier = Modifier.settingAnchor(SettingKey.HOME_MODE),
             title = SettingKey.HOME_MODE.label(),

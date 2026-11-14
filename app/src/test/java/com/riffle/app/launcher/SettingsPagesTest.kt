@@ -117,6 +117,26 @@ class SettingsPagesTest {
         assertEquals("Corners", text.text(SettingKey.APPEARANCE_CORNERS.labelRes))
         assertEquals("Icon size", text.text(SettingKey.DOCK_ICON_SIZE.labelRes))
         assertEquals("Swipes and pinches on Home", text.valueOf("settings_page_gestures_summary"))
+        // The audit's wording: the sub-page is the Stream's cards, the Dock is capitalised, every Dock label says Dock.
+        assertEquals("Stream cards", title(SettingsPage.STREAM_CARDS))
+        assertEquals("Show the Dock", text.text(SettingKey.DOCK_SHOW.labelRes))
+        assertEquals("Dock position", text.text(SettingKey.DOCK_POSITION.labelRes))
+        assertEquals("Dock background strength", text.text(SettingKey.DOCK_BACKGROUND.labelRes))
+        assertEquals("Show live apps", text.text(SettingKey.FEATURE_DOCK_LIVE_APPS.labelRes))
+        assertEquals("Number of live apps", text.text(SettingKey.DOCK_LIVE_APPS.labelRes))
+    }
+
+    @Test
+    fun aSettingReachedFromTwoPagesIsOneKeyPerPlaceAndSaysWhichPostureItIs() {
+        // Dock position and "Show apps behind the cards" are reached from two pages; in search each posture's
+        // copy on the Layout page says which posture it is, as there is no section header to say so.
+        assertEquals("Dock position, folded", text.text(SettingKey.LAYOUT_FOLDED_DOCK_EDGE.labelRes))
+        assertEquals("Dock position, unfolded", text.text(SettingKey.LAYOUT_UNFOLDED_DOCK_EDGE.labelRes))
+        assertEquals(
+            "Show apps behind the cards, folded",
+            text.text(SettingKey.LAYOUT_FOLDED_APP_PEEK_THROUGH.labelRes),
+        )
+        assertEquals("Show apps behind the cards", text.text(SettingKey.STREAM_APPS_BEHIND_CARDS.labelRes))
     }
 
     @Test

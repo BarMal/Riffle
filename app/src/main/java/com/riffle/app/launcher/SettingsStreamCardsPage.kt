@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -100,25 +101,30 @@ internal fun SettingsStreamCards(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    LayoutPosture.entries.forEachIndexed { index, posture ->
-        SettingsSection(
-            title =
-                stringResource(
-                    if (posture == LayoutPosture.FOLDED) {
-                        R.string.settings_layout_section_folded
-                    } else {
-                        R.string.settings_layout_section_unfolded
-                    },
-                ),
-        ) {
-            SettingsAppsBehindCardsRow(
-                posture = posture,
-                on = layout.forPosture(posture).appPeekThrough,
-                onAction = onAction,
-                modifier =
-                    if (index == 0) Modifier.settingAnchor(SettingKey.STREAM_APPS_BEHIND_CARDS) else Modifier,
-                tag = streamAppsBehindTestTag(posture),
-            )
+    // Both postures' rows are one setting's place: search scrolls to the pair.
+    Column(
+        modifier = Modifier.settingAnchor(SettingKey.STREAM_APPS_BEHIND_CARDS),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        LayoutPosture.entries.forEach { posture ->
+            SettingsSection(
+                title =
+                    stringResource(
+                        if (posture == LayoutPosture.FOLDED) {
+                            R.string.settings_layout_section_folded
+                        } else {
+                            R.string.settings_layout_section_unfolded
+                        },
+                    ),
+            ) {
+                SettingsAppsBehindCardsRow(
+                    posture = posture,
+                    on = layout.forPosture(posture).appPeekThrough,
+                    onAction = onAction,
+                    modifier = Modifier,
+                    tag = streamAppsBehindTestTag(posture),
+                )
+            }
         }
     }
     SettingsSection(title = stringResource(R.string.stream_open_card)) {
