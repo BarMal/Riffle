@@ -244,7 +244,7 @@
     <string name="settings_page_main_summary"></string>
     <string name="settings_page_main_keywords">settings preferences options</string>
     <string name="settings_page_home">Home</string>
-    <string name="settings_page_home_summary">Grid, icons and labels, returning, wallpaper, full screen</string>
+    <string name="settings_page_home_summary">Simple mode, grid, icons and labels, wallpaper, full screen</string>
     <string name="settings_page_home_keywords">home screen layout grid wallpaper</string>
     <string name="settings_page_dock">Dock</string>
     <string name="settings_page_dock_summary">Pinned icons, size, position and live apps</string>
@@ -262,10 +262,10 @@
     <string name="settings_page_hidden_apps_summary">Apps kept out of the Library</string>
     <string name="settings_page_hidden_apps_keywords">hidden apps unhide</string>
     <string name="settings_page_stream">Stream</string>
-    <string name="settings_page_stream_summary">Sections, their order and Show as</string>
+    <string name="settings_page_stream_summary">Sections, their order, Show as and how cards look</string>
     <string name="settings_page_stream_keywords">stream sections cards actions centre</string>
-    <string name="settings_page_stream_cards">Cards</string>
-    <string name="settings_page_stream_cards_summary">Card colour, where an open card sits and its actions</string>
+    <string name="settings_page_stream_cards">Stream cards</string>
+    <string name="settings_page_stream_cards_summary">Card colour, apps behind the cards, and where an open card and its actions sit</string>
     <string name="settings_page_stream_cards_keywords">cards colour tint glow open card position actions dock</string>
     <string name="settings_page_stream_notifications">Notifications</string>
     <string name="settings_page_stream_notifications_summary">Access and hidden items</string>
@@ -292,7 +292,7 @@
     <string name="settings_page_gestures_summary">Swipes and pinches on Home</string>
     <string name="settings_page_gestures_keywords">gestures swipes pinches</string>
     <string name="settings_page_motion">Motion and haptics</string>
-    <string name="settings_page_motion_summary">Animation, reduced motion and feedback</string>
+    <string name="settings_page_motion_summary">Opening speed, reduced motion and feedback</string>
     <string name="settings_page_motion_keywords">motion animation haptics vibration accessibility</string>
     <string name="settings_page_privacy">Privacy and access</string>
     <string name="settings_page_privacy_summary">Default home app, access and what the Stream shows</string>
@@ -367,7 +367,7 @@
     <string name="setting_home_hide_navigation_bar_keywords">full screen navigation bar system bars</string>
     <string name="setting_home_set_up_again">Set up Riffle again</string>
     <string name="setting_home_set_up_again_keywords">set up walkthrough onboarding tour first-time</string>
-    <string name="setting_dock_show">Show dock</string>
+    <string name="setting_dock_show">Show the Dock</string>
     <string name="setting_dock_show_keywords">dock visible hide</string>
     <string name="setting_layout_folded_dock_edge">Dock position, folded</string>
     <string name="setting_layout_folded_dock_edge_keywords">layout folded phone dock edge bottom left right side</string>
@@ -403,13 +403,13 @@
     <string name="setting_dock_alignment_keywords">dock start centre end</string>
     <string name="setting_dock_corner_radius">Dock corner radius</string>
     <string name="setting_dock_corner_radius_keywords">dock corners rounded</string>
-    <string name="setting_dock_background">Background strength</string>
+    <string name="setting_dock_background">Dock background strength</string>
     <string name="setting_dock_background_keywords">dock background opacity</string>
     <string name="setting_dock_grid_spacing">Spacing to the grid</string>
     <string name="setting_dock_grid_spacing_keywords">dock gap spacing grid controls</string>
     <string name="setting_feature_dock_live_apps">Show live apps</string>
     <string name="setting_feature_dock_live_apps_keywords">dock live apps now playing dynamic side switch on off</string>
-    <string name="setting_dock_live_apps">Live apps</string>
+    <string name="setting_dock_live_apps">Number of live apps</string>
     <string name="setting_dock_live_apps_keywords">dock dynamic side notification slots now playing</string>
     <string name="setting_floating_enabled">Floating dock</string>
     <string name="setting_floating_enabled_keywords">overlay handle on off permission</string>
@@ -591,10 +591,11 @@
     <string name="settings_section_wallpaper">Wallpaper</string>
     <string name="settings_section_full_screen">Full screen</string>
     <string name="settings_section_set_up">Set up</string>
-    <string name="settings_section_dynamic_side">Dynamic side</string>
+    <string name="settings_section_dynamic_side">Live apps</string>
     <string name="settings_section_view">View</string>
     <string name="settings_section_features">Features</string>
-    <string name="settings_section_simple_mode">Simple mode</string>
+    <string name="settings_section_home_mode">Home screen</string>
+    <string name="settings_section_card_look">Look</string>
     <string name="settings_home_mode_subtitle">Placed items are the apps, folders and widgets you put on Home. App library shows every app on pages. Your placed items are kept.</string>
     <string name="settings_home_mode_placed">Placed items</string>
     <string name="settings_home_mode_app_library">App library</string>
@@ -643,10 +644,11 @@
     <string name="settings_stream_cards_preview_description">Preview of a card at %1$d percent colour</string>
     <string name="settings_stream_card_glow_on">The card\'s colour also shows along its top edge</string>
     <string name="settings_stream_card_glow_off">Colour in the card only</string>
+    <string name="settings_stream_open_card_position_subtitle">Folded. On the unfolded stack an open card always grows from the Dock.</string>
+    <string name="settings_stream_actions_position_subtitle">Folded, with the Dock along the bottom. Anywhere else the actions are on the card.</string>
+    <string name="settings_stream_actions_position_side_dock_subtitle">The Dock is on a side when folded, so the actions are always on the card.</string>
     <string name="settings_stream_open_centre">Centre</string>
     <string name="settings_stream_open_above_dock">Above the Dock</string>
-    <string name="settings_stream_open_grows_out">Grows out of the Dock</string>
-    <string name="settings_stream_open_grows_out_note">Grows out of the Dock is kept for later and looks like Above the Dock for now.</string>
     <string name="settings_stream_actions_in_dock">In the Dock</string>
     <string name="settings_stream_actions_on_card">On the card</string>
     <string name="settings_stream_intro">Choose which sections the Stream shows, in what order and how. These are the same choices as long-pressing a section header in the Stream.</string>
@@ -726,9 +728,8 @@
     <string name="settings_layout_intro">Folded and unfolded each keep their own layout. A tablet or a desktop window uses the unfolded one.</string>
     <string name="settings_layout_section_folded">Folded</string>
     <string name="settings_layout_section_unfolded">Unfolded</string>
-    <string name="settings_layout_dock_edge_title">Dock position</string>
-    <string name="settings_layout_dock_edge_subtitle">Which edge of the screen the Dock stands on.</string>
     <string name="settings_layout_edge_bottom">Bottom</string>
+    <string name="settings_layout_edge_top">Top</string>
     <string name="settings_layout_edge_left">Left</string>
     <string name="settings_layout_edge_right">Right</string>
     <string name="settings_layout_page_scroll_title">App pages scroll</string>
@@ -744,8 +745,6 @@
     <string name="settings_layout_peek_through_title">Show apps behind the cards</string>
     <string name="settings_layout_peek_through_on">Home stays on screen and fades out under the Stream\'s cards.</string>
     <string name="settings_layout_peek_through_off">Nothing shows behind the Stream\'s cards.</string>
-    <string name="settings_stream_apps_behind_cards_folded">Show apps behind the cards, folded</string>
-    <string name="settings_stream_apps_behind_cards_unfolded">Show apps behind the cards, unfolded</string>
     <string name="settings_stream_apps_behind_cards_note">The same setting as in Layout: one value for each way you hold the device.</string>
     <string name="settings_layout_quick_scroll_off_subtitle">The page dots are off, so there is nothing to drag.</string>
 </resources>

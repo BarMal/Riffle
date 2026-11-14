@@ -149,4 +149,20 @@ class DockMotionSettingsTest {
         const val FRAME = 1f / 60f
         const val MAX_FRAMES = 600
     }
+
+    @Test
+    fun theOpeningSpeedScalesTheSpringsAndFixedPhasesOfMotionOutsideTheDockToo() {
+        val fast = DockMotionSettings(speedMillis = DockMotionSettings.MIN_SPEED_MILLIS).tuning()
+        val default = DockMotionSettings().tuning()
+        val slow = DockMotionSettings(speedMillis = DockMotionSettings.MAX_SPEED_MILLIS).tuning()
+
+        // The default speed leaves a spring and a phase as they were tuned.
+        assertEquals(400f, default.stiffnessFor(400f), 1e-3f)
+        assertEquals(180, default.millisFor(180))
+        // Twice as fast: a spring four times as stiff (it takes the square root of that in time), a phase half as long.
+        assertEquals(1600f, fast.stiffnessFor(400f), 1e-2f)
+        assertEquals(90, fast.millisFor(180))
+        assertEquals(100f, slow.stiffnessFor(400f), 1e-3f)
+        assertEquals(360, slow.millisFor(180))
+    }
 }

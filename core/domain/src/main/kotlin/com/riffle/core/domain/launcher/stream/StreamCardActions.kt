@@ -3,7 +3,6 @@ package com.riffle.core.domain.launcher.stream
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
-import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 
 /**
  * One control of an open card's actions (ADR 0003, Amendment 1, "Stream: browse, then open"): what the Dock's actions
@@ -136,8 +135,4 @@ object StreamCardActions {
         } else {
             CardActionsPlacement.ON_CARD
         }
-
-    /** Where an open card sits: "grows out of the Dock" is drawn as just above the Dock for now (deferred). */
-    fun effectiveCardPlacement(setting: OpenCardPlacement): OpenCardPlacement =
-        if (setting == OpenCardPlacement.GROWS_OUT_OF_DOCK) OpenCardPlacement.ABOVE_DOCK else setting
 }

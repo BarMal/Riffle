@@ -15,6 +15,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.semantics
 import com.riffle.core.domain.launcher.designsystem.CardTint
 import com.riffle.core.domain.launcher.designsystem.GlassMaterialTokens
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -76,7 +79,17 @@ internal fun GlassSurface(
     // A card's coloured glow, when the setting asks for one, is the edge's tint light along the top edge only.
     val glow = if (cardTint?.topGlow == true && cardTint.appColor != null) cardTint.appColor else Color.Unspecified
 
-    Box(modifier = modifier.clip(shape)) {
+    Box(
+        modifier =
+            modifier.clip(shape).then(
+                if (card != null) {
+                    val look = GlassCardLook(fill.toArgb(), glow != Color.Unspecified)
+                    Modifier.semantics { cardLook = look }
+                } else {
+                    Modifier
+                },
+            ),
+    ) {
         Box(Modifier.matchParentSize().background(fill))
         if (spotlightState != null) {
             Box(Modifier.matchParentSize().glassSpotlight(spotlightState, shape))
@@ -114,6 +127,15 @@ internal class GlassCardTint(
     val strengthPercent: Int,
     val topGlow: Boolean = false,
 )
+
+/** What a tinted card is drawn with, exposed to tests: the fill (ARGB) and whether the top-edge glow is lit. */
+internal data class GlassCardLook(
+    val fillArgb: Int,
+    val topGlow: Boolean,
+)
+
+internal val GlassCardLookKey = SemanticsPropertyKey<GlassCardLook>("GlassCardLook")
+internal var SemanticsPropertyReceiver.cardLook by GlassCardLookKey
 
 private class ResolvedCardFill(
     val fill: Color,

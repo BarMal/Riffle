@@ -205,6 +205,11 @@ internal fun HomeDockHost(
     dockDipDp: () -> Float = NoDockDip,
     /** The selection while a press on the dock is choosing (hold to choose): the tiles ring it and a label names it. */
     choice: DockChoiceState? = null,
+    /**
+     * Home's entrance (a fade and a small rise from the Dock's own edge), read where the Dock is drawn. The Dock is
+     * laid out in its final place from the first frame; only its alpha and translation change. Null: no entrance.
+     */
+    entrance: HomeEntranceState? = null,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
     val dockOnAction = interpreter.onAction ?: onAction
@@ -249,12 +254,14 @@ internal fun HomeDockHost(
     ) {
         Box(
             modifier =
-                dockModifier.graphicsLayer {
-                    alpha = dockContentRevealAlpha()
+                dockModifier.exposeHomeEntrance(entrance).graphicsLayer {
+                    val arriving = entrance?.frame()
+                    alpha = dockContentRevealAlpha() * (arriving?.alpha ?: 1f)
                     val dipPx = dockDipDp() * density
-                    // Toward the edge the dock stands on: down for a bottom dock, and so on.
-                    translationX = -pull.unitX * dipPx
-                    translationY = -pull.unitY * dipPx
+                    // Toward the edge the dock stands on: down for a bottom dock, and so on. The entrance starts the
+                    // dock a little further that way and comes back; it moves nothing in layout.
+                    translationX = -pull.unitX * dipPx + (arriving?.translationXDp ?: 0f) * density
+                    translationY = -pull.unitY * dipPx + (arriving?.translationYDp ?: 0f) * density
                 },
         ) {
             CompositionLocalProvider(

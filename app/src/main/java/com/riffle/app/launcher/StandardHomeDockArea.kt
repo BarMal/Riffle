@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.snap
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -91,6 +90,7 @@ internal fun StandardHomeDockArea(
     // The room Home keeps for the Dock is the Dock's own, not the open card's actions row that grows out of it: that
     // row takes room from the Stream above it and leaves Home's grid where it is.
     val extent = remember { DockExtentReport() }
+    val easeSize = rememberDockSizeEasing(position)
 
     Column(
         modifier =
@@ -106,9 +106,11 @@ internal fun StandardHomeDockArea(
                 // height for a side dock's width, or the shelf's own open/close) between one frame and
                 // the next: this eases the resize instead of a hard snap. Reduced motion (Decision:
                 // reduced motion) keeps the snap -- the crossfade it already gets is the whole effect.
-                .animateContentSize(
-                    animationSpec = if (presentation.reducedMotion) snap() else RiffleMotion.smooth(),
-                )
+                .easeSizeWhen(easeSize) {
+                    animateContentSize(
+                        animationSpec = if (presentation.reducedMotion) snap() else RiffleMotion.smooth(),
+                    )
+                }
                 .onSizeChanged { size ->
                     extent.totalPx = if (runsAlongASide) size.width else size.height
                     actions.onDockInteractionExtentChanged(extent.reservedPx())
@@ -122,10 +124,10 @@ internal fun StandardHomeDockArea(
                     top = if (runsAlongASide || position == DockPosition.TOP) margins.top.dp else 0.dp,
                     bottom = if (runsAlongASide || position == DockPosition.BOTTOM) margins.bottom.dp else 0.dp,
                 )
-                .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
+                .easeSizeWhen(easeSize) { dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion)) }
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),
-        verticalArrangement = if (runsAlongASide) Arrangement.Center else Arrangement.Top,
+        verticalArrangement = layout.dock.alignment.sideArrangement(runsAlongASide),
     ) {
         DockShelfExpandButton(interactions = dockInteractions)
         DockActionsRowAt(DockPosition.BOTTOM, position, cardActions, layout, presentation) { rowPx ->

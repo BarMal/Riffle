@@ -124,7 +124,7 @@ internal fun SettingsStreamSections(
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    SettingsSection(title = stringResource(R.string.settings_page_stream_cards)) {
+    SettingsSection(title = stringResource(R.string.settings_section_card_look)) {
         SettingsClickableRow(
             title = stringResource(SettingsPage.STREAM_CARDS.titleRes),
             subtitle = stringResource(SettingsPage.STREAM_CARDS.summaryRes),
@@ -134,9 +134,10 @@ internal fun SettingsStreamSections(
     layout.sections.forEachIndexed { index, entry ->
         val section = entry.section
         val name = stringResource(section.titleRes())
-        SettingsSection(title = name) {
+        // The whole section (on or off, order, Show as) is the setting's place: search scrolls to it.
+        SettingsSection(title = name, modifier = Modifier.settingAnchor(section.settingKey())) {
             SettingsSwitchRow(
-                modifier = Modifier.settingAnchor(section.settingKey()).testTag(streamSectionTestTag(section)),
+                modifier = Modifier.testTag(streamSectionTestTag(section)),
                 title = stringResource(R.string.stream_show_hidden_section, name),
                 subtitle =
                     if (entry.enabled) {
@@ -322,9 +323,12 @@ internal fun SettingsTasksContent(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        SettingsSection(title = stringResource(R.string.settings_page_stream_tasks)) {
+        SettingsSection(
+            title = stringResource(R.string.settings_page_stream_tasks),
+            modifier = Modifier.settingAnchor(SettingKey.TASKS_PROVIDER),
+        ) {
             SettingsListRow(
-                modifier = Modifier.settingAnchor(SettingKey.TASKS_PROVIDER).testTag(TASKS_STATUS_TEST_TAG),
+                modifier = Modifier.testTag(TASKS_STATUS_TEST_TAG),
                 title = stringResource(R.string.settings_tasks_status_title),
                 subtitle =
                     stringResource(

@@ -133,8 +133,9 @@ internal fun Modifier.dpBounds(bounds: () -> StreamColumnRect?): Modifier =
         }
 
 /**
- * A value that eases between 0 and 1 with [target], on the smooth spring (a snap under reduced motion). The animation
- * runs in the frame clock and is read where it is drawn, so a change never recomposes its reader.
+ * A value that eases between 0 and 1 with [target], on the smooth spring at the opening speed (a snap under reduced
+ * motion). The animation runs in the frame clock and is read where it is drawn, so a change never recomposes its
+ * reader.
  */
 @Composable
 internal fun rememberEasedFraction(
@@ -142,8 +143,13 @@ internal fun rememberEasedFraction(
     reducedMotion: Boolean,
 ): Animatable<Float, AnimationVector1D> {
     val fraction = remember { Animatable(if (target) 1f else 0f) }
-    LaunchedEffect(target, reducedMotion) {
-        fraction.animateTo(if (target) 1f else 0f, RiffleMotion.smooth(reducedMotion, visibilityThreshold = 0.001f))
+    // The opening speed setting moves this with the rest of the Stream's motion.
+    val tuning = LocalDockMotionTuning.current
+    LaunchedEffect(target, reducedMotion, tuning) {
+        fraction.animateTo(
+            if (target) 1f else 0f,
+            RiffleMotion.smooth(tuning, reducedMotion, visibilityThreshold = 0.001f),
+        )
     }
     return fraction
 }

@@ -268,6 +268,15 @@ data class DockMotionTuning(
     /** How much longer or shorter than at the default speed a fixed-length phase of the closing runs. */
     val timeScale: Float get() = speed.toFloat() / DockMotionConstants.DEFAULT_SPEED_MILLIS
 
+    /**
+     * The stiffness that makes a spring of stiffness [base] (tuned at the default opening speed) take [timeScale]
+     * times as long: a spring's time scales with the inverse square root of its stiffness.
+     */
+    fun stiffnessFor(base: Float): Float = base / (timeScale * timeScale)
+
+    /** A fixed-length phase of [defaultMillis] at the default speed, as long as the opening speed makes it. */
+    fun millisFor(defaultMillis: Int): Int = (defaultMillis * timeScale).toInt().coerceAtLeast(1)
+
     private companion object {
         const val MIN_SPEED_MILLIS = 20
         const val MILLIS_PER_SECOND = 1000f

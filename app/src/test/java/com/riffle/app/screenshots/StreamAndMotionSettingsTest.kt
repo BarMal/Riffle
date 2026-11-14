@@ -32,6 +32,7 @@ import com.riffle.app.launcher.openCardPlacementTestTag
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
@@ -96,13 +97,17 @@ class StreamAndMotionSettingsTest {
         state = reducer.reduce(state, action)
     }
 
-    private fun showCards() {
+    private fun showCards(foldedDockEdge: DockPosition = DockPosition.BOTTOM) {
         composeRule.setContent {
             ScreenshotBackdrop {
                 Column(
                     modifier = pageModifier(),
                 ) {
-                    SettingsStreamCards(settings = state.launcherSettings.stream, onAction = ::onAction)
+                    SettingsStreamCards(
+                        settings = state.launcherSettings.stream,
+                        onAction = ::onAction,
+                        foldedDockEdge = foldedDockEdge,
+                    )
                 }
             }
         }
@@ -155,8 +160,12 @@ class StreamAndMotionSettingsTest {
     fun choosingWhereAnOpenCardAndItsActionsSitIsSavedAndKeptSelected() {
         showCards()
 
-        composeRule.onNodeWithTag(openCardPlacementTestTag(OpenCardPlacement.ABOVE_DOCK)).performClick()
-        composeRule.onNodeWithTag(cardActionsPlacementTestTag(CardActionsPlacement.ON_CARD)).performClick()
+        composeRule.onNodeWithTag(openCardPlacementTestTag(OpenCardPlacement.ABOVE_DOCK))
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(cardActionsPlacementTestTag(CardActionsPlacement.ON_CARD))
+            .performScrollTo()
+            .performClick()
 
         assertEquals(OpenCardPlacement.ABOVE_DOCK, store.saved?.stream?.openCardPlacement)
         assertEquals(CardActionsPlacement.ON_CARD, store.saved?.stream?.cardActionsPlacement)
@@ -165,14 +174,31 @@ class StreamAndMotionSettingsTest {
     }
 
     @Test
-    fun theDeferredGrowsOutOfTheDockChoiceIsOfferedAndSaysItLooksLikeAboveTheDockForNow() {
+    fun growsOutOfTheDockIsNotOfferedUntilItIsBuilt() {
         showCards()
 
-        composeRule.onNodeWithTag(openCardPlacementTestTag(OpenCardPlacement.GROWS_OUT_OF_DOCK)).performClick()
+        composeRule.onNodeWithText("Grows out of the Dock").assertDoesNotExist()
+        composeRule.onNodeWithText("Above the Dock").assertExists()
+        composeRule.onNodeWithText("Centre").assertExists()
+    }
 
-        assertEquals(OpenCardPlacement.GROWS_OUT_OF_DOCK, store.saved?.stream?.openCardPlacement)
-        composeRule.onNodeWithTag(openCardPlacementTestTag(OpenCardPlacement.GROWS_OUT_OF_DOCK)).assertIsSelected()
-        composeRule.onNodeWithText("Grows out of the Dock is kept for later", substring = true).assertExists()
+    @Test
+    fun withTheFoldedDockOnASideTheActionsAreAlwaysOnTheCardAndSayWhy() {
+        showCards(foldedDockEdge = DockPosition.LEFT)
+
+        composeRule.onNodeWithTag(cardActionsPlacementTestTag(CardActionsPlacement.IN_DOCK)).assertDoesNotExist()
+        composeRule.onNodeWithTag(cardActionsPlacementTestTag(CardActionsPlacement.ON_CARD)).assertIsSelected()
+        composeRule.onNodeWithText("The Dock is on a side when folded", substring = true).assertExists()
+    }
+
+    @Test
+    fun withTheFoldedDockAtTheBottomBothActionPlacementsAreOffered() {
+        showCards()
+
+        composeRule.onNodeWithTag(cardActionsPlacementTestTag(CardActionsPlacement.IN_DOCK)).assertExists()
+        composeRule.onNodeWithTag(cardActionsPlacementTestTag(CardActionsPlacement.ON_CARD)).assertExists()
+        composeRule.onNodeWithText("Folded. On the unfolded stack an open card always grows from the Dock.")
+            .assertExists()
     }
 
     @Test

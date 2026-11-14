@@ -172,10 +172,11 @@ private fun ColumnScope.SettingsPageHeader(
 @Composable
 internal fun SettingsSection(
     title: String,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(

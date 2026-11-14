@@ -17,19 +17,19 @@ data class StreamSettings(
     val cardActionsPlacement: CardActionsPlacement = CardActionsPlacement.IN_DOCK,
 )
 
-/** Where an open card sits on the screen (the first is the default). */
+/**
+ * Where an open card sits on the screen (the first is the default). Folded only: the unfolded stack's column is
+ * attached to the Dock, and its open card always grows from where its browse card stands.
+ */
 enum class OpenCardPlacement {
     /** The card grows where it is in the stack's area and the stack's room is centred around it. */
     CENTRE,
 
-    /** The card sits just above the Dock. */
-    ABOVE_DOCK,
-
     /**
-     * The card grows out of the Dock. Deferred: it is drawn as [ABOVE_DOCK] until the Dock-origin growth is built (the
-     * choice is stored so it is kept when it is).
+     * The card sits just above the Dock. A stored "grows out of the Dock" (offered by an earlier build, never drawn
+     * differently) reads as this one; see `LauncherSettingsJsonCodec`.
      */
-    GROWS_OUT_OF_DOCK,
+    ABOVE_DOCK,
 }
 
 /** Where an open card's actions sit (the first is the default). */
