@@ -25,7 +25,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -53,6 +55,7 @@ import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
 import com.riffle.core.domain.launcher.stream.StreamAppRef
+import com.riffle.core.domain.launcher.stream.StreamCardActions
 import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamPrivacy
 import com.riffle.core.domain.launcher.stream.TaskContent
@@ -160,6 +163,7 @@ internal fun NotificationCard(
     onOpen: (() -> Unit)? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
+    val browseActions = remember(content) { StreamCardActions.onBrowseCard(content) }
     StreamCardSurface(content.id.value, content.app, content.icon, env, modifier) { sourceModifier ->
         Column(
             modifier =
@@ -204,6 +208,26 @@ internal fun NotificationCard(
                     content.headline,
                     env,
                     BrowseThumbnailSize,
+                )
+            }
+            // A live notification (a trip, a download): its own buttons here too, so "Next" needs no opening. Each is a
+            // 48 dp button of its own (its tap is not the card's) and a custom action of the card.
+            if (browseActions.isNotEmpty()) {
+                OwnActionRow(
+                    content = content,
+                    actions = browseActions,
+                    callbacks = callbacks,
+                    tag = BROWSE_OWN_ACTIONS_TEST_TAG,
+                    modifier =
+                        Modifier.semantics {
+                            customActions =
+                                browseActions.map { action ->
+                                    CustomAccessibilityAction(action.title) {
+                                        callbacks.onAction(content, StreamAction.OwnAction(action.id))
+                                        true
+                                    }
+                                }
+                        },
                 )
             }
         }
@@ -257,6 +281,9 @@ private fun BrowseLine(
         modifier = modifier,
     )
 }
+
+/** The tag of the row of a live notification's own buttons on its browse card (a test hook). */
+internal const val BROWSE_OWN_ACTIONS_TEST_TAG = "stream-browse-own-actions"
 
 private val BrowseAvatarSize = StreamHeaderIconSize
 private val BrowseThumbnailSize = 64.dp

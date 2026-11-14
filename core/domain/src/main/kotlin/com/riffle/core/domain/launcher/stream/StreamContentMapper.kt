@@ -131,6 +131,7 @@ object StreamContentMapper {
             ownActions = if (showBody) StreamContentDetails.ownActions(item) else emptyList(),
             conversation = StreamContentDetails.isConversation(item),
             custom = StreamContentDetails.custom(item, showBody, showImages),
+            live = item.ext[NotificationItemMapper.LIVE_KEY] == ItemExtValue.Flag(true),
             person =
                 if (showImages) {
                     StreamContentDetails.imageHandle(

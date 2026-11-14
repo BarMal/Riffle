@@ -93,6 +93,11 @@ data class NotificationContent(
      * [CustomNotificationContent]); null for any other, and when redacted.
      */
     val custom: CustomNotificationContent? = null,
+    /**
+     * The notification is going on now and its app keeps it up to date ([LiveNotificationRule]): its own action
+     * buttons are on the browse card too.
+     */
+    val live: Boolean = false,
 ) : StreamContent {
     override val timeEpochMillis: Long get() = postedAtEpochMillis
 

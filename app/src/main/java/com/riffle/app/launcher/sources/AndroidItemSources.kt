@@ -126,6 +126,7 @@ private fun androidBuiltInSourceDependencies(
                 canSnooze = { RiffleNotificationListenerConnection.isConnected() },
                 ownActions = AndroidNotificationStageActionGateway::ownActionsFor,
                 customContent = NotificationCustomContentStore::contentFor,
+                isLive = AndroidNotificationStageActionGateway::isLive,
             ),
         calendar = calendar,
         media = media,

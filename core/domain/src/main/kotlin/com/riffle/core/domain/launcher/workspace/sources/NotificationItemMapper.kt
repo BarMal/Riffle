@@ -50,6 +50,8 @@ data class NotificationItemInput(
      * per notification and never stored.
      */
     val customContent: (LauncherNotificationKey) -> CustomNotificationContent? = { null },
+    /** Whether the live notification is "live" (`LiveNotificationRule`). Asked per notification; never stored. */
+    val isLive: (LauncherNotificationKey) -> Boolean = { false },
 )
 
 /**
@@ -172,6 +174,7 @@ class NotificationItemMapper(
                 ext[ItemExtKey("notification.own${index}_title")] = ItemExtValue.Text(action.title)
             }
         }
+        if (input.isLive(notification.key)) ext[LIVE_KEY] = ItemExtValue.Flag(true)
         input.customContent(notification.key)?.let { custom -> ext.putAll(customExt(custom)) }
         val thread =
             NotificationThreadSummary.withoutEchoes(
@@ -207,6 +210,9 @@ class NotificationItemMapper(
     }
 
     companion object {
+        /** Set when the notification is going on now and kept up to date (`LiveNotificationRule`). */
+        val LIVE_KEY = ItemExtKey("notification.live")
+
         /** Set when the notification's own layout was read ([CustomNotificationContent]); its parts follow. */
         val CUSTOM_KEY = ItemExtKey("notification.custom")
         val CUSTOM_REVISION_KEY = ItemExtKey("notification.custom_revision")

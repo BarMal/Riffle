@@ -102,6 +102,8 @@ internal class NotificationSourceDependencies(
     val ownActions: (LauncherNotificationKey) -> List<NotificationOwnAction> = { emptyList() },
     /** What was read out of the live notification's own layout (memory only, never stored), or null. */
     val customContent: (LauncherNotificationKey) -> CustomNotificationContent? = { null },
+    /** Whether the live notification is going on now and kept up to date (`LiveNotificationRule`). */
+    val isLive: (LauncherNotificationKey) -> Boolean = { false },
 )
 
 internal class CalendarSourceDependencies(
@@ -255,6 +257,7 @@ private fun notificationStream(
                     canSnooze = notifications.canSnooze,
                     ownActions = notifications.ownActions,
                     customContent = notifications.customContent,
+                    isLive = notifications.isLive,
                 ),
             )
         }

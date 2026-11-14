@@ -10,6 +10,7 @@ import android.media.session.PlaybackState
 import android.os.Bundle
 import android.service.notification.StatusBarNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.stream.LiveNotificationRule
 import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.stream.NotificationOwnActions
 import java.util.concurrent.ConcurrentHashMap
@@ -37,6 +38,7 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
         targets[LauncherNotificationKey(notification.key)] =
             Targets(
                 ownActions = ownActionsOf(platformNotification.actions),
+                live = runCatching { LiveNotificationRule.isLive(liveFactsOf(platformNotification)) }.getOrDefault(false),
                 context = context.applicationContext,
                 contentIntent = platformNotification.contentIntent,
                 providerActions = providerActions,
@@ -100,6 +102,9 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
      */
     fun ownActionsFor(key: LauncherNotificationKey): List<NotificationOwnAction> = targets[key]?.ownActions.orEmpty()
 
+    /** Whether the notification [key] is going on now and kept up to date ([LiveNotificationRule]); false once gone. */
+    fun isLive(key: LauncherNotificationKey): Boolean = targets[key]?.live == true
+
     /** The provider action that takes an inline reply for [key], or null when it has none (or is not live). */
     fun replyActionId(key: LauncherNotificationKey): String? =
         targets[key]?.providerActions?.entries
@@ -131,8 +136,22 @@ internal fun ownActionsOf(actions: Array<Notification.Action>?): List<Notificati
         },
     )
 
+/** What [LiveNotificationRule] asks of a platform notification. */
+internal fun liveFactsOf(notification: Notification): LiveNotificationRule.Facts {
+    val extras = notification.extras
+    return LiveNotificationRule.Facts(
+        ongoing = notification.flags and Notification.FLAG_ONGOING_EVENT != 0,
+        customViews = notification.customContent() != null || notification.customBigContent() != null,
+        progress =
+            (extras?.getInt(Notification.EXTRA_PROGRESS_MAX) ?: 0) > 0 ||
+                extras?.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE) == true,
+        category = notification.category.toLauncherNotificationCategory(),
+    )
+}
+
 private data class Targets(
     val ownActions: List<NotificationOwnAction>,
+    val live: Boolean,
     val context: Context,
     val contentIntent: PendingIntent?,
     val providerActions: Map<String, ProviderTarget>,
