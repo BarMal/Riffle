@@ -95,4 +95,23 @@ class AndroidAppShortcutMapperTest {
         assertFalse(shortcut.enabled)
         assertEquals("Unavailable", shortcut.disabledMessage)
     }
+
+    @Test
+    fun carriesThePlatformsRankSoTheListCanBeOrderedLikeThePlatformOrdersIt() {
+        val shortcut =
+            mapper.map(
+                identity = identity,
+                shortcut =
+                    AndroidAppShortcut(
+                        id = "scan",
+                        shortLabel = "Scan",
+                        longLabel = null,
+                        enabled = true,
+                        disabledMessage = null,
+                        rank = 3,
+                    ),
+            )
+
+        assertEquals(3, shortcut.rank)
+    }
 }

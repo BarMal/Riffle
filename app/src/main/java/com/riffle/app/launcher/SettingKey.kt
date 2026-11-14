@@ -170,15 +170,10 @@ enum class SettingKey(
         R.string.setting_stream_section_recents,
         R.string.setting_stream_section_recents_keywords,
     ),
-    STREAM_SECTION_AGENDA(
+    STREAM_SECTION_TODAY(
         SettingsPage.STREAM,
-        R.string.setting_stream_section_agenda,
-        R.string.setting_stream_section_agenda_keywords,
-    ),
-    STREAM_SECTION_TASKS(
-        SettingsPage.STREAM,
-        R.string.setting_stream_section_tasks,
-        R.string.setting_stream_section_tasks_keywords,
+        R.string.setting_stream_section_today,
+        R.string.setting_stream_section_today_keywords,
     ),
     STREAM_SECTION_FEEDS(
         SettingsPage.STREAM,

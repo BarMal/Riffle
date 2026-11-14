@@ -381,7 +381,7 @@ internal fun dockDynamicEntryExtentDp(): Int = DOCK_DYNAMIC_ENTRY_EXTENT_DP
 private const val DOCK_DYNAMIC_ENTRY_EXTENT_DP = DockRunGeometry.CONTEXTUAL_ITEM_DP
 
 /** The ring marking the entry whose page is open (contextual mode). */
-private const val SELECTED_ENTRY_RING_DP = 2
+internal const val SELECTED_ENTRY_RING_DP = 2
 
 internal fun dockDynamicSectionTileTestTag(label: String): String = "dock-dynamic-entry:$label"
 

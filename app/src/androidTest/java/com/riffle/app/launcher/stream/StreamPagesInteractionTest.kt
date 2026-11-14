@@ -87,7 +87,7 @@ class StreamPagesInteractionTest {
     )
 
     private val results: Map<StreamSection, StreamSectionResult> =
-        StreamSection.entries.associateWith { StreamSectionResult.Empty } +
+        StreamSection.layoutSections.associateWith { StreamSectionResult.Empty } +
             (
                 StreamSection.NOTIFICATIONS to
                     StreamSectionResult.Ready(

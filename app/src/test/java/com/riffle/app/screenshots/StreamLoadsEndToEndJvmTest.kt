@@ -81,7 +81,7 @@ class StreamLoadsEndToEndJvmTest {
     }
 
     private fun assertNoPageStaysLoading() {
-        StreamSection.entries.forEach { section ->
+        StreamSection.layoutSections.forEach { section ->
             openSection(section)
             composeRule.waitUntil(timeoutMillis = 5_000) {
                 composeRule.onAllNodesWithText("Loading").fetchSemanticsNodes().isEmpty()

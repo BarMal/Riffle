@@ -92,7 +92,9 @@ class StreamStackSwipeJvmTest {
     @Test
     fun aVerticalSwipeMovesTheStackAndNeverThePager() {
         val results: Map<StreamSection, StreamSectionResult> =
-            StreamSection.entries.associateWith<StreamSection, StreamSectionResult> { StreamSectionResult.Empty } +
+            StreamSection.layoutSections.associateWith<StreamSection, StreamSectionResult> {
+                StreamSectionResult.Empty
+            } +
                 (
                     StreamSection.NOTIFICATIONS to
                         StreamSectionResult.Ready(

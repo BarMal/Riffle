@@ -365,7 +365,7 @@ class LauncherBackupDocumentTest {
                 HomeLayoutDeviceClass.PHONE,
                 StreamLayoutReducer.reduce(
                     StreamLayout.DEFAULT,
-                    StreamLayoutAction.SetEnabled(StreamSection.TASKS, enabled = false),
+                    StreamLayoutAction.SetEnabled(StreamSection.RECENTS, enabled = false),
                 ),
             )
         val document =
@@ -381,7 +381,7 @@ class LauncherBackupDocumentTest {
         assertEquals(feeds, decoded.calendarFeeds)
         assertEquals(
             false,
-            decoded.stream?.forPosture(HomeLayoutDeviceClass.PHONE)?.layoutOf(StreamSection.TASKS)?.enabled,
+            decoded.stream?.forPosture(HomeLayoutDeviceClass.PHONE)?.layoutOf(StreamSection.RECENTS)?.enabled,
         )
         assertEquals(
             true,

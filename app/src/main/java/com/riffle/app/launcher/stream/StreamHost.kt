@@ -20,10 +20,12 @@ import com.riffle.app.launcher.AppIconLoader
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
 import com.riffle.app.launcher.expressions.LocalItemHider
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.split.supportsSplit
+import com.riffle.core.domain.launcher.stream.PinnedApp
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
@@ -32,6 +34,7 @@ import com.riffle.core.domain.launcher.stream.StreamHideItems
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
+import com.riffle.core.domain.launcher.stream.StreamShortcutPages
 import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.stream.TaskActionOutcome
 import com.riffle.core.domain.launcher.stream.TaskActions
@@ -135,6 +138,12 @@ internal fun StreamDestination(
     /** How many live apps the Dock shows: the pages of the first of them come first, as the Dock's icons do. */
     liveAppSlots: Int = DEFAULT_DOCK_LIVE_APP_SLOTS,
     onConnectTasks: () -> Unit = {},
+    /** The apps pinned in the Dock, in its order: each one with nothing live has a page of its shortcuts. */
+    pinnedApps: List<PinnedApp> = emptyList(),
+    /** The launcher shortcuts of each app, as the launcher already read them for its long-press menus. */
+    appShortcuts: AppShortcutsByApp = emptyMap(),
+    /** Whether Riffle is the Home app: only the Home app can read shortcuts. */
+    launcherRole: Boolean = true,
 ) {
     LaunchedEffect(host) { host.layouts.initialize() }
     SideEffect { host.posture.deviceClass = deviceClass }
@@ -204,6 +213,17 @@ internal fun StreamDestination(
             formats = host.formats,
             nowEpochMillis = host.formats.now(),
         )
+    val liveGroupKeys =
+        remember(results) {
+            (results[StreamSection.NOTIFICATIONS] as? StreamSectionResult.Ready)
+                ?.groups?.map { it.key }.orEmpty().toSet()
+        }
+    // Built when the pinned apps, what is live or the shortcuts change, never on a recomposition of the Stream.
+    val shortcutPages =
+        remember(pinnedApps, liveGroupKeys, appShortcuts, launcherRole) {
+            StreamShortcutPages.plan(pinnedApps, liveGroupKeys, appShortcuts, launcherRole)
+        }
+    val pinnedGroupKeys = remember(pinnedApps) { pinnedApps.map { StreamShortcutPages.appKeyOf(it.identity) } }
     StreamSurface(
         layout = layout,
         results = results,
@@ -219,6 +239,8 @@ internal fun StreamDestination(
         wideLayout = deviceClass.supportsSplit(),
         liveAppSlots = liveAppSlots,
         dockLink = host.dock,
+        shortcutPages = shortcutPages,
+        pinnedGroupKeys = pinnedGroupKeys,
     )
 }
 

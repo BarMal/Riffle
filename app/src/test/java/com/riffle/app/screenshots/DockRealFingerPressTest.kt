@@ -81,7 +81,7 @@ class DockRealFingerPressTest {
         composeRule.waitForIdle()
         if (startShown) {
             composeRule.waitUntil(timeoutMillis = 5_000) {
-                composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Agenda"))
+                composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Today"))
                     .fetchSemanticsNodes().isNotEmpty()
             }
             composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
@@ -229,7 +229,7 @@ class DockRealFingerPressTest {
     fun aMostlyHorizontalDragOnATileStillScrollsTheRowAndDoesNotPress() {
         show(startShown = true)
         val landing = tileCentre()
-        val node = composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Agenda")).fetchSemanticsNodes().first()
+        val node = composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Today")).fetchSemanticsNodes().first()
         val before = node.positionInRoot.x
         val density = composeRule.density.density
         composeRule.onRoot().performTouchInput {
@@ -244,7 +244,7 @@ class DockRealFingerPressTest {
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         composeRule.waitForIdle()
         val after =
-            composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Agenda")).fetchSemanticsNodes().first()
+            composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Today")).fetchSemanticsNodes().first()
                 .positionInRoot.x
         assertTrue("the row did not scroll: $before -> $after", kotlin.math.abs(after - before) > 20f)
         assertTrue("a horizontal drag pressed the Dock: $sent", sent.isEmpty())
@@ -268,7 +268,7 @@ class DockRealFingerPressTest {
     }
 
     private companion object {
-        val TILES = listOf("Now", "Recents", "Agenda", "Tasks", "Feeds")
+        val TILES = listOf("Now", "Recents", "Today", "Feeds")
         const val SEED = 17
         const val DRAG_STEPS = 10
         const val STEP_MILLIS = 16L

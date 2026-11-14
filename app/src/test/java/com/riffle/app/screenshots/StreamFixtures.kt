@@ -49,6 +49,8 @@ internal class FixedStreamFormats(private val nowEpochMillis: Long = StreamFixtu
 
     override fun today(): LocalDate = Instant.ofEpochMilli(nowEpochMillis).atZone(ZoneOffset.UTC).toLocalDate()
 
+    override fun zone(): java.time.ZoneId = ZoneOffset.UTC
+
     private companion object {
         const val MINUTE = 60_000L
     }
@@ -116,6 +118,17 @@ internal object StreamFixtures {
             calendarName = "Product calendar",
             startEpochMillis = NOW + 26 * 60 * MINUTE,
             endEpochMillis = NOW + 27 * 60 * MINUTE,
+            recurring = false,
+        )
+
+    /** A second event today, after the standup. */
+    val lunchEvent =
+        nextEvent.copy(
+            id = StreamContentId("calendar:lunch"),
+            title = "Lunch with Sam",
+            location = "Corner cafe",
+            startEpochMillis = NOW + 4 * 60 * MINUTE,
+            endEpochMillis = NOW + 5 * 60 * MINUTE,
             recurring = false,
         )
 
@@ -261,6 +274,39 @@ internal object StreamFixtures {
 
     val staleTasks = tasks.map { it.copy(stale = true) }
 
+    /** Three shortcuts of [app], as the launcher reads them (one with a long label, one disabled). */
+    fun shortcutsOf(
+        app: com.riffle.core.domain.launcher.apps.InstalledApp,
+    ): com.riffle.core.domain.launcher.apps.AppShortcutsByApp =
+        mapOf(
+            app.identity to
+                listOf(
+                    com.riffle.core.domain.launcher.apps.AppShortcut(
+                        com.riffle.core.domain.launcher.apps.AppShortcutId("recent"),
+                        app.identity,
+                        "Recent",
+                        "Recent files",
+                        rank = 0,
+                    ),
+                    com.riffle.core.domain.launcher.apps.AppShortcut(
+                        com.riffle.core.domain.launcher.apps.AppShortcutId("search"),
+                        app.identity,
+                        "Search",
+                        null,
+                        rank = 1,
+                    ),
+                    com.riffle.core.domain.launcher.apps.AppShortcut(
+                        com.riffle.core.domain.launcher.apps.AppShortcutId("scan"),
+                        app.identity,
+                        "Scan document",
+                        "Scan a document",
+                        enabled = false,
+                        disabledMessage = "Camera access is off",
+                        rank = 2,
+                    ),
+                ),
+        )
+
     private fun group(
         key: String,
         label: String?,
@@ -283,12 +329,13 @@ internal object StreamFixtures {
                         group(StreamGroupKeys.RECENTS, null, recents),
                         group(StreamGroupKeys.FREQUENT, null, frequent),
                     )
-                StreamSection.AGENDA ->
+                StreamSection.TODAY ->
                     listOf(
-                        group("2026-01-01", null, listOf(nextEvent)),
+                        group("2026-01-01", null, listOf(nextEvent, lunchEvent)),
                         group("2026-01-02", null, listOf(feedEvent)),
+                        group(StreamGroupKeys.TASKS, null, tasks),
                     )
-                StreamSection.TASKS -> listOf(group(StreamGroupKeys.TASKS, null, tasks))
+                StreamSection.SHORTCUTS -> emptyList()
                 StreamSection.FEEDS ->
                     listOf(
                         group("feed-a", "Riffle blog", articles),

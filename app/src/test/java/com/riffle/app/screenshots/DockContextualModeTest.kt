@@ -74,7 +74,7 @@ class DockContextualModeTest {
     // The row on its own ------------------------------------------------------------------------------------------
 
     private val pins = List(6) { index -> shortcut("pin$index") }
-    private val sections = StreamSection.entries.filter { it != StreamSection.NOTIFICATIONS }
+    private val sections = StreamSection.layoutSections.filter { it != StreamSection.NOTIFICATIONS }
     private var openKey by mutableStateOf<String?>(null)
     private val delegated = mutableListOf<String>()
 
@@ -249,7 +249,7 @@ class DockContextualModeTest {
         showStream()
         composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).assertExists()
-        listOf("Now", "Recents", "Agenda", "Tasks", "Feeds").forEach { label ->
+        listOf("Now", "Recents", "Today", "Feeds").forEach { label ->
             composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag(label)).fetchSemanticsNodes().let {
                 assertTrue("no tile for $label", it.isNotEmpty())
             }
@@ -263,11 +263,11 @@ class DockContextualModeTest {
     @Test
     fun aTapOnATileSwitchesThePageAndMovesTheRing() {
         showStream()
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Agenda")).performScrollTo().performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) { host.dock.currentKey == "agenda" }
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Today")).performScrollTo().performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) { host.dock.currentKey == "today" }
         composeRule.waitForIdle()
-        assertEquals("agenda", host.dock.currentKey)
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Agenda")).assertIsSelectedTile()
+        assertEquals("today", host.dock.currentKey)
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag("Today")).assertIsSelectedTile()
         assertTrue("a tile launches nothing: $actions", actions.isEmpty())
     }
 
@@ -297,33 +297,33 @@ class DockContextualModeTest {
     fun aTileCanBeMovedEarlierAndLater() {
         showStream()
         val before = tileOrder()
-        assertTrue("Recents leads Agenda by default: $before", before.indexOf("Recents") < before.indexOf("Agenda"))
+        assertTrue("Recents leads Today by default: $before", before.indexOf("Recents") < before.indexOf("Today"))
 
-        longPressAndChoose("Agenda", "Move earlier")
+        longPressAndChoose("Today", "Move earlier")
         val after = tileOrder()
-        assertTrue("Agenda did not move before Recents: $after", after.indexOf("Agenda") < after.indexOf("Recents"))
+        assertTrue("Today did not move before Recents: $after", after.indexOf("Today") < after.indexOf("Recents"))
 
-        longPressAndChoose("Agenda", "Move later")
+        longPressAndChoose("Today", "Move later")
         assertEquals(before, tileOrder())
     }
 
     @Test
     fun aSectionCanBeHiddenAndOfferedBackFromAnotherTile() {
         showStream()
-        longPressAndChoose("Tasks", "Hide section")
-        assertTrue(StreamSection.TASKS !in layout.enabledSections.map { it.section })
-        composeRule.onNodeWithText("Tasks hidden").assertIsDisplayed()
-        composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Tasks")).fetchSemanticsNodes().let {
+        longPressAndChoose("Today", "Hide section")
+        assertTrue(StreamSection.TODAY !in layout.enabledSections.map { it.section })
+        composeRule.onNodeWithText("Today hidden").assertIsDisplayed()
+        composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Today")).fetchSemanticsNodes().let {
             assertTrue("the hidden section still has a tile", it.isEmpty())
         }
 
-        longPressAndChoose("Recents", "Show Tasks")
-        assertTrue(layout.layoutOf(StreamSection.TASKS).enabled)
+        longPressAndChoose("Recents", "Show Today")
+        assertTrue(layout.layoutOf(StreamSection.TODAY).enabled)
     }
 
     /** The labels of the tiles in the row, left to right: by where each is laid out (clipped bounds say nothing). */
     private fun tileOrder(): List<String> =
-        listOf("Now", "Notifications", "Recents", "Agenda", "Tasks", "Feeds")
+        listOf("Now", "Notifications", "Recents", "Today", "Feeds")
             .mapNotNull { label ->
                 composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag(label)).fetchSemanticsNodes()
                     .firstOrNull()?.let { node -> label to node.positionInRoot.x }

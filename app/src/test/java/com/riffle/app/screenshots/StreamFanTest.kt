@@ -54,7 +54,7 @@ class StreamFanTest {
         fan: DockFanSource?,
         layout: StreamLayout = StreamLayout.DEFAULT,
         results: Map<StreamSection, StreamSectionResult> =
-            StreamSection.entries.associateWith { StreamFixtures.ready(it) },
+            StreamSection.layoutSections.associateWith { StreamFixtures.ready(it) },
         initialPageKey: String? = null,
     ) {
         composeRule.setContent {

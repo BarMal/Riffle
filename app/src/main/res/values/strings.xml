@@ -6,8 +6,10 @@
     <string name="stream_section_now">Now</string>
     <string name="stream_section_notifications">Notifications</string>
     <string name="stream_section_recents">Recents</string>
+    <string name="stream_section_today">Today</string>
     <string name="stream_section_agenda">Agenda</string>
     <string name="stream_section_tasks">Tasks</string>
+    <string name="stream_section_shortcuts">Shortcuts</string>
     <string name="stream_section_feeds">Feeds</string>
 
     <!-- Section header, Show as and layout edits -->
@@ -44,8 +46,8 @@
     <string name="stream_empty_now">Nothing is playing and nothing is coming up.</string>
     <string name="stream_empty_notifications">No notifications.</string>
     <string name="stream_empty_recents">No recent apps yet.</string>
-    <string name="stream_empty_agenda">Nothing on your calendar for the next few days.</string>
-    <string name="stream_empty_tasks">No tasks due.</string>
+    <string name="stream_empty_today">Nothing planned today. Enjoy the quiet.</string>
+    <string name="stream_empty_shortcuts">This app has no shortcuts.</string>
     <string name="stream_empty_feeds">No articles yet. Add a feed in Settings.</string>
     <string name="stream_permission_message">Allow access to show this</string>
     <string name="stream_permission_action">Allow access</string>
@@ -113,6 +115,48 @@
     <string name="stream_event_time_span">%1$s to %2$s</string>
     <string name="stream_day_today">Today</string>
     <string name="stream_day_tomorrow">Tomorrow</string>
+
+    <!-- Today -->
+    <string name="stream_today_countdown_now">now</string>
+    <plurals name="stream_today_countdown_starts_in_minutes">
+        <item quantity="one">in %1$d min</item>
+        <item quantity="other">in %1$d min</item>
+    </plurals>
+    <plurals name="stream_today_countdown_starts_in_hours">
+        <item quantity="one">in %1$d h</item>
+        <item quantity="other">in %1$d h</item>
+    </plurals>
+    <plurals name="stream_today_countdown_ends_in_minutes">
+        <item quantity="one">ends in %1$d min</item>
+        <item quantity="other">ends in %1$d min</item>
+    </plurals>
+    <string name="stream_today_countdown_all_day">all day</string>
+    <string name="stream_today_countdown_ended">ended</string>
+    <string name="stream_today_open_in_calendar">Open in calendar</string>
+    <string name="stream_today_todo_title">To do today</string>
+    <string name="stream_today_todo_counts">%1$d left</string>
+    <string name="stream_today_todo_counts_overdue">%1$d left · %2$d overdue</string>
+    <string name="stream_today_todo_nothing">Nothing left to do today.</string>
+    <string name="stream_today_tomorrow_title">Tomorrow</string>
+    <plurals name="stream_today_tomorrow_events">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
+    <plurals name="stream_today_tomorrow_tasks">
+        <item quantity="one">%1$d task</item>
+        <item quantity="other">%1$d tasks</item>
+    </plurals>
+    <string name="stream_today_tomorrow_first">First: %1$s at %2$s</string>
+    <string name="stream_today_tomorrow_first_all_day">First: %1$s, all day</string>
+    <string name="stream_today_agenda_heading">Agenda</string>
+    <string name="stream_today_tasks_heading">Tasks</string>
+
+    <!-- Shortcuts of a pinned app -->
+    <string name="stream_shortcut_open_app">Open %1$s</string>
+    <string name="stream_shortcut_open_app_hint">Opens the app</string>
+    <string name="stream_shortcut_launch">Launch %1$s</string>
+    <string name="stream_shortcuts_need_home">Shortcuts need Riffle to be your Home app.</string>
+    <string name="stream_shortcut_disabled">Not available right now</string>
 
     <!-- Articles -->
     <string name="stream_article_mark_read">Mark as read</string>
@@ -352,10 +396,8 @@
     <string name="setting_stream_section_notifications_keywords">stream notifications section stack list on off order show as</string>
     <string name="setting_stream_section_recents">Recents</string>
     <string name="setting_stream_section_recents_keywords">stream recent apps section stack list on off order show as</string>
-    <string name="setting_stream_section_agenda">Agenda</string>
-    <string name="setting_stream_section_agenda_keywords">stream agenda events section stack list on off order show as</string>
-    <string name="setting_stream_section_tasks">Tasks</string>
-    <string name="setting_stream_section_tasks_keywords">stream tasks to-do section stack list on off order show as</string>
+    <string name="setting_stream_section_today">Today</string>
+    <string name="setting_stream_section_today_keywords">stream today agenda events tasks to-do section stack list on off order show as</string>
     <string name="setting_stream_section_feeds">Feeds</string>
     <string name="setting_stream_section_feeds_keywords">stream feeds news section stack list on off order show as</string>
     <string name="setting_notifications_source">Use notifications</string>
