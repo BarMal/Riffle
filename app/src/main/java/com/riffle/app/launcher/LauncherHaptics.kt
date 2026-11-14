@@ -6,6 +6,7 @@ import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalView
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 
@@ -43,6 +44,12 @@ enum class LauncherHapticEvent {
 object NoopLauncherHaptics : LauncherHaptics {
     override fun longPress() = Unit
 }
+
+/**
+ * The launcher's haptics for a surface that has no parameter to carry them (the Stream's card stack): the Home
+ * destination provides the shell's, which honours the haptic strength setting. Silent by default, as in tests.
+ */
+val LocalLauncherHaptics = staticCompositionLocalOf<LauncherHaptics> { NoopLauncherHaptics }
 
 @Composable
 fun rememberLauncherHaptics(strength: HapticFeedbackStrength): LauncherHaptics {

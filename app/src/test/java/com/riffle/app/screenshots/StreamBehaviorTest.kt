@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -157,6 +158,11 @@ class StreamBehaviorTest {
         composeRule.runOnUiThread { dock.requestOption(option) }
         composeRule.waitForIdle()
     }
+
+    private val aCardPosition =
+        SemanticsMatcher("a card position") { node ->
+            node.config.getOrNull(SemanticsProperties.StateDescription)?.startsWith("Card ") == true
+        }
 
     private fun customActionLabels(): List<String> =
         composeRule.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions))
@@ -408,11 +414,11 @@ class StreamBehaviorTest {
         assertEquals(StreamView.LIST, layout.viewOf(StreamSection.NOTIFICATIONS))
         composeRule.onNodeWithText("Notifications shown as List").assertIsDisplayed()
         // The page is now rows, not a pile of cards.
-        composeRule.onAllNodesWithText("Card 1 of 2").assertCountEquals(0)
+        composeRule.onAllNodes(aCardPosition).assertCountEquals(0)
         // And the section's other page is a list too.
         goTo(StreamPageKeys.MAIL)
         composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
-        composeRule.onAllNodesWithText("Card 1 of 1").assertCountEquals(0)
+        composeRule.onAllNodes(aCardPosition).assertCountEquals(0)
 
         composeRule.onNodeWithText("Undo").performClick()
         composeRule.waitForIdle()
@@ -612,26 +618,51 @@ class StreamBehaviorTest {
     @Test
     fun theNextCardIsReachableWithoutASwipe() {
         show(initialPageKey = StreamPageKeys.CHAT)
-        composeRule.onNodeWithContentDescription("Next card").performClick()
-        composeRule.onNodeWithText("Card 2 of 2").assertIsDisplayed()
+        // The stack's own action (there is no stepper pill): the second card comes to the front.
+        val next =
+            composeRule.onNode(
+                SemanticsMatcher("the stack") { node ->
+                    node.config.getOrNull(SemanticsActions.CustomActions)?.any { it.label == "Next card" } == true
+                },
+            ).fetchSemanticsNode().config[SemanticsActions.CustomActions].first { it.label == "Next card" }
+        composeRule.runOnUiThread { next.action() }
+        composeRule.waitForIdle()
+        composeRule.onNode(
+            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"),
+        ).assertExists()
     }
 
     @Test
-    fun theFocusedCardExposesItsStackAsAccessibilityActions() {
+    fun theStackAndItsFrontCardExposeTheAccessibilityActions() {
         show(initialPageKey = StreamPageKeys.CHAT)
         val labels = customActionLabels()
         assertTrue("Next card" in labels && "Previous card" in labels && "Open card" in labels)
     }
 
     @Test
-    fun theNextCardsPeekOutBelowTheFocusedOneNotBesideIt() {
+    fun theNextCardsPeekOutAboveTheFocusedOneNotBesideIt() {
         show(initialPageKey = StreamPageKeys.CHAT)
         composeRule.waitForIdle()
-        // The second notification is a strip below the first: its title is on screen, lower than the focused card's.
-        val focused = composeRule.onNodeWithText("Sam").fetchSemanticsNode().boundsInRoot
-        val peek = composeRule.onNodeWithText("Priya").fetchSemanticsNode().boundsInRoot
-        assertTrue("the peeking card is below the focused one", peek.top > focused.bottom)
-        assertTrue("and in the same column", kotlin.math.abs(peek.left - focused.left) < focused.width)
+        // The stack is anchored to the Dock (dock modes slice 4a): the older notification is a strip above the first.
+        // (Positions, not bounds: a node's bounds are clipped by its parents.)
+        val focused = composeRule.onNodeWithText("Sam").fetchSemanticsNode()
+        val peeks =
+            composeRule.onAllNodes(
+                SemanticsMatcher("a card slot") { node ->
+                    node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("stream-stack-card:") == true &&
+                        node.config.getOrNull(SemanticsProperties.ContentDescription) != null
+                },
+            ).fetchSemanticsNodes()
+        assertTrue("the second card peeks", peeks.size == 1)
+        val peek = peeks.single()
+        assertTrue(
+            "the peeking card is above the focused one",
+            peek.positionInRoot.y + peek.size.height <= focused.positionInRoot.y,
+        )
+        assertTrue(
+            "and in the same column",
+            kotlin.math.abs(peek.positionInRoot.x - focused.positionInRoot.x) < focused.size.width,
+        )
     }
 
     @Test

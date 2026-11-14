@@ -2,8 +2,11 @@ package com.riffle.app.screenshots
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -43,13 +46,22 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * The device test `StreamPagesInteractionTest.aVerticalSwipeMovesTheStackAndNeverThePager` without an emulator. A swipe
  * inside the stack moves the stack (a fast one flings it more than a card) and never the pager; the swipes here start
- * inside the stack, and the page that stays in front is the one the Dock rings.
+ * inside the stack, and the page that stays in front is the one the Dock rings. Dragging down brings older cards toward
+ * the front (the stack is bottom-anchored), so the swipes run the other way round than before dock modes slice 4a.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ScreenshotDevices.SDK], qualifiers = ScreenshotDevices.COMPACT_PHONE)
 class StreamStackSwipeJvmTest {
     private val dock = StreamDockLink()
+
+    /** The front card says where it is in its stack ("Card 2 of 3") as its state description; there is no pill. */
+    private fun position(text: String) = SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, text)
+
+    private val anyPosition =
+        SemanticsMatcher("a card position") { node ->
+            node.config.getOrNull(SemanticsProperties.StateDescription)?.startsWith("Card ") == true
+        }
 
     @get:Rule
     val composeRule = createComposeRule()
@@ -121,22 +133,24 @@ class StreamStackSwipeJvmTest {
         }
         composeRule.waitForIdle()
         composeRule.onNodeWithText("First chat").assertIsDisplayed()
-        composeRule.onNodeWithText("Card 1 of 3").assertIsDisplayed()
+        composeRule.onNode(position("Card 1 of 3")).assertExists()
+
+        // Dragging down brings older cards toward the front (the stack is anchored to the Dock, older cards peek above
+        // the front one), and a fast swipe flings it past the first card.
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
+            swipeDown(startY = height * STACK_HIGH, endY = height * STACK_LOW)
+        }
+        composeRule.waitForIdle()
+        assertEquals(chat, dock.currentKey)
+        composeRule.onAllNodes(position("Card 1 of 3")).assertCountEquals(0)
+        composeRule.onNode(anyPosition).assertExists()
 
         composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
             swipeUp(startY = height * STACK_LOW, endY = height * STACK_HIGH)
         }
         composeRule.waitForIdle()
         assertEquals(chat, dock.currentKey)
-        composeRule.onNodeWithText("Card 1 of 3").assertDoesNotExist()
-        composeRule.onNode(hasText("Card ", substring = true)).assertIsDisplayed()
-
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
-            swipeDown(startY = height * STACK_HIGH, endY = height * STACK_LOW)
-        }
-        composeRule.waitForIdle()
-        assertEquals(chat, dock.currentKey)
-        composeRule.onNodeWithText("Card 1 of 3").assertIsDisplayed()
+        composeRule.onNode(position("Card 1 of 3")).assertExists()
         composeRule.onNodeWithText("First chat").assertIsDisplayed()
     }
 
