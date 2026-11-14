@@ -106,21 +106,27 @@ object StreamColumn {
         open: Float = 0f,
     ): StreamColumnRect {
         val p = open.coerceIn(0f, 1f)
-        val width = lerp(restWidthDp(window.widthDp), openWidthDp(window.widthDp), p)
+        val wanted = lerp(restWidthDp(window.widthDp), openWidthDp(window.widthDp), p)
+        val width: Float
         val left: Float
         val bottom: Float
         when (window.dockEdge) {
             DockPosition.RIGHT -> {
                 val reserved = window.widthDp - window.safeRightDp - window.dockExtentDp
-                left = (window.dockRestBounds?.left ?: reserved) + DOCK_SIDE_OVERLAP_DP - width
+                val right = (window.dockRestBounds?.left ?: reserved) + DOCK_SIDE_OVERLAP_DP
+                // On a narrow window the width's floor is more than the room beside the Dock: stay on screen.
+                width = wanted.coerceAtMost((right - window.safeLeftDp).coerceAtLeast(0f))
+                left = right - width
                 bottom = sideBottom(window)
             }
             DockPosition.LEFT -> {
                 val reserved = window.safeLeftDp + window.dockExtentDp
                 left = (window.dockRestBounds?.right ?: reserved) - DOCK_SIDE_OVERLAP_DP
+                width = wanted.coerceAtMost((window.widthDp - window.safeRightDp - left).coerceAtLeast(0f))
                 bottom = sideBottom(window)
             }
             else -> {
+                width = wanted
                 val room = (window.safeLeftDp + window.widthDp - window.safeRightDp) / 2f
                 val centre = window.dockBounds?.centreX ?: room
                 val most = window.widthDp - window.safeRightDp - width

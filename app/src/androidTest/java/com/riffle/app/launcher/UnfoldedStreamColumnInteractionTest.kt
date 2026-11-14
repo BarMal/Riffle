@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.app.launcher.expressions.NoExpressionImageLoader
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
@@ -30,6 +31,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
+import com.riffle.core.domain.launcher.stream.StreamColumn
 import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
 import com.riffle.core.domain.launcher.stream.StreamContext
@@ -84,7 +86,13 @@ class UnfoldedStreamColumnInteractionTest {
             "the column is not beside the Dock: $column $dock",
             column.right <= dock.right && column.right > dock.left,
         )
-        assertTrue("the column is not about a third: $column in $root", column.width < root.width * MAX_SHARE)
+        assertTrue("the column runs off the screen: $column in $root", column.left >= root.left)
+        // About a third, and never under its own floor: on a narrow window the floor wins, held to the room there is.
+        val floorPx = with(composeRule.density) { StreamColumn.MIN_REST_WIDTH_DP.dp.toPx() }
+        assertTrue(
+            "the column is not about a third: $column in $root",
+            column.width < maxOf(root.width * MAX_SHARE, floorPx + 1f),
+        )
         // Home stays: its grid is still on screen beside the column.
         assertTrue(
             "Home's grid is gone",

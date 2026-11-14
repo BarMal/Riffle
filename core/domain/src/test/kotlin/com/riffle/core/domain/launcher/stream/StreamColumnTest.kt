@@ -144,4 +144,28 @@ class StreamColumnTest {
         val left = StreamColumn.rect(window(DockPosition.LEFT).copy(verticalHingesDp = listOf(hinge)), open = 1f)
         assertTrue(left.right <= hinge.left, "and a left column stops short of it: ${left.right}")
     }
+
+    @Test
+    fun onAWindowNarrowerThanTheColumnsFloorTheColumnStaysOnScreenBesideARightDock() {
+        val narrow =
+            StreamColumnWindow(widthDp = 320f, heightDp = 640f, dockEdge = DockPosition.RIGHT, dockExtentDp = 72f)
+
+        listOf(0f, 1f).forEach { open ->
+            val rect = StreamColumn.rect(narrow, open)
+            assertTrue(rect.left >= 0f, "left of the screen at open=$open: $rect")
+            assertTrue(rect.right <= 320f - 72f + StreamColumn.PAGE_INSET_DP, "past the Dock at open=$open: $rect")
+        }
+    }
+
+    @Test
+    fun onAWindowNarrowerThanTheColumnsFloorTheColumnStaysOnScreenBesideALeftDock() {
+        val narrow =
+            StreamColumnWindow(widthDp = 320f, heightDp = 640f, dockEdge = DockPosition.LEFT, dockExtentDp = 72f)
+
+        listOf(0f, 1f).forEach { open ->
+            val rect = StreamColumn.rect(narrow, open)
+            assertTrue(rect.right <= 320f, "right of the screen at open=$open: $rect")
+            assertTrue(rect.left >= 72f - StreamColumn.PAGE_INSET_DP, "before the Dock at open=$open: $rect")
+        }
+    }
 }
