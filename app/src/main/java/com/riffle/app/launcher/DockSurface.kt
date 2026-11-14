@@ -198,24 +198,61 @@ private fun dockStaticSideMetrics(
             runsHorizontally = runsHorizontally,
             runMainAxisCapDp = staticMaxRunMainAxisDp,
         )
-    val contentViewportMainAxisDp =
+    val fittedViewportMainAxisDp =
         dockContentViewportMainAxisDp(
             slotCount = visibleSlotCount,
             iconSizeDp = dock.iconSizeDp,
             itemSpacingDp = dock.itemSpacingDp,
             availableDockMainAxisDp = containerMainAxisDp,
         )
+    val slotMetrics =
+        dockSlotRenderMetrics(
+            slotCount = visibleSlotCount,
+            iconSizeDp = dock.iconSizeDp,
+            itemSpacingDp = dock.itemSpacingDp,
+            availableContentMainAxisDp = fittedViewportMainAxisDp,
+        )
+    // A run that still does not fit once the gap has given what it can scrolls; its viewport then holds whole icons
+    // only, so it never rests with an icon cut in half (it scrolls by whole icons too, see DockSlotStrip).
+    val scrolls = dockPinnedRunScrolls(visibleSlotCount, slotMetrics, fittedViewportMainAxisDp)
+    val contentViewportMainAxisDp =
+        if (scrolls) {
+            dockWholeIconsViewportMainAxisDp(
+                viewportMainAxisDp = fittedViewportMainAxisDp,
+                iconSizeDp = slotMetrics.iconSizeDp,
+                spacingDp = slotMetrics.itemSpacingDp,
+            )
+        } else {
+            fittedViewportMainAxisDp
+        }
     return DockStaticSideMetrics(
-        containerMainAxisDp = containerMainAxisDp,
+        // A fixed-length dock keeps its length; a dynamic one is as long as the whole icons it shows.
+        containerMainAxisDp =
+            if (scrolls && dock.backgroundSizing != DockBackgroundSizing.FIXED) {
+                min(containerMainAxisDp, contentViewportMainAxisDp + (DOCK_MAIN_AXIS_PADDING_DP * 2))
+            } else {
+                containerMainAxisDp
+            },
         contentViewportMainAxisDp = contentViewportMainAxisDp,
-        slotMetrics =
-            dockSlotRenderMetrics(
-                slotCount = visibleSlotCount,
-                iconSizeDp = dock.iconSizeDp,
-                itemSpacingDp = dock.itemSpacingDp,
-                availableContentMainAxisDp = contentViewportMainAxisDp,
-            ),
+        slotMetrics = slotMetrics,
     )
+}
+
+/**
+ * The longest run of whole icons, [iconSizeDp] each with [spacingDp] between, that fits in [viewportMainAxisDp]: at
+ * least one icon (a viewport shorter than an icon is left as it is). What a scrolling pinned run is as long as, so
+ * neither end of it shows half an icon at rest.
+ */
+internal fun dockWholeIconsViewportMainAxisDp(
+    viewportMainAxisDp: Int,
+    iconSizeDp: Int,
+    spacingDp: Int,
+): Int {
+    val spacing = spacingDp.coerceAtLeast(0)
+    val stride = iconSizeDp + spacing
+    if (iconSizeDp <= 0 || viewportMainAxisDp < iconSizeDp) return viewportMainAxisDp.coerceAtLeast(0)
+    val whole = ((viewportMainAxisDp + spacing) / stride).coerceAtLeast(1)
+    return (whole * iconSizeDp) + ((whole - 1) * spacing)
 }
 
 @Composable

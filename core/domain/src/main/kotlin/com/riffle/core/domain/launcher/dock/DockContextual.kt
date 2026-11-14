@@ -150,6 +150,30 @@ object DockRunScroll {
 }
 
 /**
+ * How an icon of the contextual row is drawn where the row's viewport cuts it (a clipped end is faded, never left as a
+ * half icon at full strength): its opacity follows how much of it is in view, so a whole icon is 1, one half in view is
+ * a quarter and one fully out is 0, and a row scrolling slides each icon through the values with no step. Per-item
+ * opacity only: no mask, gradient or offscreen layer. Positions are along the row's axis in the same unit.
+ */
+object DockEdgeFade {
+    /** The opacity of an icon spanning [itemStart]..[itemEnd] in a viewport spanning [viewportStart]..[viewportEnd]. */
+    fun alpha(
+        itemStart: Float,
+        itemEnd: Float,
+        viewportStart: Float,
+        viewportEnd: Float,
+    ): Float {
+        val extent = itemEnd - itemStart
+        val visible = (minOf(itemEnd, viewportEnd) - maxOf(itemStart, viewportStart)).coerceIn(0f, maxOf(extent, 0f))
+        // An empty extent, and sub-pixel rounding between the icon's and the viewport's edges, are not a cut.
+        val whole = extent <= 0f || visible >= extent - WHOLE_TOLERANCE
+        return if (whole) 1f else (visible / extent) * (visible / extent)
+    }
+
+    private const val WHOLE_TOLERANCE = 1f
+}
+
+/**
  * Where the items of the contextual mode's one scrolling row lie along its run, in dp, from the start of the row's
  * content (inside the Dock's own padding): the pinned block, a divider, the live entries, a divider, then the tiles.
  * Pure arithmetic over the sizes the Dock draws with, so the scroll that keeps the open icon in view needs no

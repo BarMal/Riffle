@@ -122,7 +122,7 @@ class LauncherGestureSettingsJsonCodecTest {
                 JSONObject()
                     .put(HomeGesture.ONE_FINGER_UP.name, "OPEN_APP_DRAWER")
                     .put(HomeGesture.PINCH_OUT.name, "OPEN_APP_DRAWER")
-                    .put(HomeGesture.ONE_FINGER_DOWN.name, LauncherGestureAction.OPEN_NOTIFICATIONS.name)
+                    .put(HomeGesture.ONE_FINGER_DOWN.name, "OPEN_NOTIFICATIONS")
                     .put(HomeGesture.PINCH_IN.name, LauncherGestureAction.ENTER_HOME_EDIT_MODE.name),
             )
 
@@ -130,8 +130,32 @@ class LauncherGestureSettingsJsonCodecTest {
 
         assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_UP))
         assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.PINCH_OUT))
-        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
+        // The removed notifications binding (swipe down opened the old overview) stays deliberately unbound.
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
         assertEquals(LauncherGestureAction.ENTER_HOME_EDIT_MODE, decoded.actionFor(HomeGesture.PINCH_IN))
+    }
+
+    @Test
+    fun aStoredNotificationsBindingOnSwipeDownDecodesToNothingAndOtherBindingsSurvive() {
+        // Swipe down once opened the notification overview. The binding is gone; the swipe stays unbound rather
+        // than falling back to search, while a stored search binding elsewhere keeps working.
+        val stored =
+            JSONObject().put(
+                "homeGestures",
+                JSONObject()
+                    .put(HomeGesture.ONE_FINGER_DOWN.name, "OPEN_NOTIFICATIONS")
+                    .put(HomeGesture.TWO_FINGER_UP.name, "OPEN_NOTIFICATIONS")
+                    .put(HomeGesture.ONE_FINGER_UP.name, LauncherGestureAction.OPEN_SEARCH.name),
+            )
+
+        val decoded = stored.toGestures(GestureSettings()).homeGestures
+
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.ONE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.NONE, decoded.actionFor(HomeGesture.TWO_FINGER_UP))
+        assertEquals(LauncherGestureAction.OPEN_SEARCH, decoded.actionFor(HomeGesture.ONE_FINGER_UP))
+        // Re-encoding writes the unbound state, not the removed name.
+        val written = encodeGestures(GestureSettings(homeGestures = decoded)).getJSONObject("homeGestures")
+        assertEquals("NONE", written.getString(HomeGesture.ONE_FINGER_DOWN.name))
     }
 
     @Test

@@ -11,6 +11,8 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -27,13 +29,21 @@ import com.riffle.app.launcher.DOCK_CARD_ACTIONS_TEST_TAG
 import com.riffle.app.launcher.DrawnSurfaceKey
 import com.riffle.app.launcher.GridFadeAlphaKey
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
+import com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
+import com.riffle.app.launcher.HOME_GRID_CELL_TEST_TAG
 import com.riffle.app.launcher.HOME_HANDLE_TEST_TAG
+import com.riffle.app.launcher.HOME_INPUT_GATE_TEST_TAG
 import com.riffle.app.launcher.HOME_SURFACE_TEST_TAG
 import com.riffle.app.launcher.HOME_WORKSPACE_GRID_TEST_TAG
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellContent
 import com.riffle.app.launcher.STREAM_COLUMN_TEST_TAG
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.search.DOCK_SEARCH_COLUMN_TEST_TAG
+import com.riffle.app.launcher.search.DOCK_SEARCH_FIELD_TEST_TAG
+import com.riffle.app.launcher.search.DOCK_SEARCH_SURFACE_TEST_TAG
+import com.riffle.app.launcher.search.DockSearchAlphaKey
+import com.riffle.app.launcher.search.DockSearchProgressKey
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_SURFACE_TEST_TAG
 import com.riffle.app.launcher.stream.StreamHost
@@ -77,6 +87,7 @@ import kotlin.math.abs
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ScreenshotDevices.SDK], qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
+@Suppress("LargeClass")
 class UnfoldedStreamColumnTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
@@ -376,6 +387,31 @@ class UnfoldedStreamColumnTest {
     }
 
     @Test
+    fun aDragAcrossOrAlongTheColumnHandleNeverFiresAHomeSwipe() {
+        show()
+        // Beside the right Dock the handle is a column; a swipe left (one finger: next page, folded's way) or down
+        // (search) that starts on it must stay the handle's.
+        composeRule.onNodeWithTag(HOME_HANDLE_TEST_TAG).performTouchInput {
+            swipe(
+                Offset(width / 2f, height * 0.1f),
+                Offset(width / 2f - 200f, height * 0.1f),
+                durationMillis = SWIPE_MILLIS,
+            )
+        }
+        composeRule.waitForIdle()
+        assertTrue("a swipe across the handle reached Home: $sent", sent.isEmpty())
+        composeRule.onNodeWithTag(HOME_HANDLE_TEST_TAG).performTouchInput {
+            swipe(
+                Offset(width / 2f, height * 0.1f),
+                Offset(width / 2f, height * 0.1f + 300f),
+                durationMillis = SWIPE_MILLIS,
+            )
+        }
+        composeRule.waitForIdle()
+        assertTrue("a swipe down the handle reached Home: $sent", sent.none { it == LauncherShellAction.OpenSearch })
+    }
+
+    @Test
     fun theHandleIsNotDrawnWhileTheColumnStandsWhereItDoesAndComesBack() {
         showOpen()
         composeRule.onAllNodesWithTag(HOME_HANDLE_TEST_TAG).assertCountEquals(0)
@@ -541,13 +577,181 @@ class UnfoldedStreamColumnTest {
     fun searchStandsInTheColumnsWidthAgainstTheDock() {
         show(unfolded().searching(query = ""))
         composeRule.waitForIdle()
-        val panel = bounds(com.riffle.app.launcher.search.DOCK_SEARCH_FIELD_TEST_TAG)
+        val panel = bounds(DOCK_SEARCH_FIELD_TEST_TAG)
         val dock = dock()
         assertTrue("the field is against the Dock: ${panel.right} vs ${dock.left}", dock.left - panel.right < 24f * dp)
         assertTrue(
             "and no wider than the column plus its padding: ${panel.width / dp}",
             panel.width <= (StreamColumn.restWidthDp(root().width / dp) + 1f) * dp,
         )
+    }
+
+    @Test
+    fun searchStandsInTheStreamColumnsOwnRectangleAgainstARightDock() = searchMatchesTheColumn(DockPosition.RIGHT)
+
+    @Test
+    fun searchStandsInTheStreamColumnsOwnRectangleAgainstALeftDock() = searchMatchesTheColumn(DockPosition.LEFT)
+
+    /**
+     * Search and the Stream's cards share one rectangle (`StreamColumn.rect`: the same width, the same side against the
+     * Dock's inner edge, the same bottom), and at rest, once its opening spring has ended, the surface is fully opaque
+     * with the field focused.
+     */
+    private fun searchMatchesTheColumn(dockEdge: DockPosition) {
+        show(unfolded(dock = dockEdge, reducedMotion = false).searching(query = ""))
+        composeRule.waitForIdle()
+        val surface = composeRule.onNodeWithTag(DOCK_SEARCH_SURFACE_TEST_TAG).fetchSemanticsNode()
+        assertEquals("the spring has ended", 1f, surface.config[DockSearchProgressKey], 0f)
+        assertEquals("opaque at rest", 1f, surface.config[DockSearchAlphaKey], 0f)
+        composeRule.onNodeWithTag(DOCK_SEARCH_FIELD_TEST_TAG).assertIsFocused()
+        val search = bounds(DOCK_SEARCH_COLUMN_TEST_TAG)
+        val strip = dock()
+        val body = bounds(HOME_DOCK_SURFACE_TEST_TAG)
+
+        shell = unfolded(dock = dockEdge, destination = ShellDestination.STREAM, reducedMotion = false)
+        waitForText("Sam")
+        composeRule.waitForIdle()
+        val column = column()
+        assertEquals("same left: stream $column, search $search", column.left, search.left, 1f)
+        // The Dock is shorter in the Home mode than while the Stream shows its tiles, so the two stand at the Dock's
+        // lower end as it is in each mode: the size and the side are the same, the bottom is the Dock's.
+        assertEquals("same width: stream $column, search $search", column.width, search.width, 1f)
+        assertEquals("same height: stream $column, search $search", column.height, search.height, 1f)
+        assertEquals("its bottom is the Dock's lower end", body.bottom, search.bottom, 4f * dp)
+        val reach =
+            if (dockEdge == DockPosition.RIGHT) search.right - strip.left else strip.right - search.left
+        assertTrue("it touches the Dock's inner edge: $reach", reach in 0f..MAX_REACH * dp)
+    }
+
+    @Test
+    fun searchAndItsFieldAreLiftedAboveTheKeyboardAndTheGridDoesNotMove() {
+        show(unfolded(reducedMotion = false).searching(query = ""))
+        composeRule.waitForIdle()
+        val before = bounds(DOCK_SEARCH_COLUMN_TEST_TAG)
+        val cellsBefore = gridCells()
+        val keyboard = (KEYBOARD_DP * dp).toInt()
+        composeRule.setImeInset(keyboard)
+        val lifted = bounds(DOCK_SEARCH_COLUMN_TEST_TAG)
+        assertTrue(
+            "the panel stands above the keyboard: ${lifted.bottom} vs ${root().bottom - keyboard}",
+            lifted.bottom <= root().bottom - keyboard + 1f,
+        )
+        assertTrue("it moved up", lifted.bottom < before.bottom)
+        assertTrue(
+            "the field is above the keyboard",
+            bounds(DOCK_SEARCH_FIELD_TEST_TAG).bottom <= root().bottom - keyboard + 1f,
+        )
+        assertSameCells("with the keyboard up under search", cellsBefore, gridCells())
+    }
+
+    // Home takes no input while search covers it
+
+    /** Home with search opened over it; where an app of Home's grid stands (under the gate). */
+    private fun searchOverHome(): Offset {
+        show()
+        val spot = composeRule.onAllNodesWithText(firstAppLabel()).onFirst().fetchSemanticsNode().boundsInRoot.center
+        shell = unfolded(reducedMotion = false).searching(query = "")
+        composeRule.waitForIdle()
+        return spot
+    }
+
+    @Test
+    fun withSearchOpenAGateCoversAllOfHomeEdgeToEdge() {
+        searchOverHome()
+        composeRule.onAllNodesWithTag(HOME_INPUT_GATE_TEST_TAG).assertCountEquals(1)
+        assertEquals(root(), bounds(HOME_INPUT_GATE_TEST_TAG))
+    }
+
+    @Test
+    fun withSearchOpenALongPressOnTheAppsBehindItOpensNoMenu() {
+        val spot = searchOverHome()
+        composeRule.onRoot().performTouchInput {
+            down(spot)
+            advanceEventTime(LONG_PRESS_MILLIS)
+            up()
+        }
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithText("Hide app").assertCountEquals(0)
+        composeRule.onAllNodesWithText("App info").assertCountEquals(0)
+        // Search takes it as a press on its room and closes; nothing of Home's is reached.
+        assertTrue("only search closed: $sent", sent.all { it == LauncherShellAction.OpenHome })
+    }
+
+    @Test
+    fun withSearchOpenASwipeOverTheAppsBehindItNeitherPagesHomeNorFiresAHomeSwipe() {
+        val spot = searchOverHome()
+        composeRule.onRoot().performTouchInput { swipe(spot, spot + Offset(0f, 300f), durationMillis = SWIPE_MILLIS) }
+        composeRule.waitForIdle()
+        assertTrue("Home took the swipe: $sent", sent.all { it == LauncherShellAction.OpenHome })
+    }
+
+    @Test
+    fun aPressOnTheRoomAroundSearchClosesItAndReachesNothingBehind() {
+        val spot = searchOverHome()
+        composeRule.onRoot().performTouchInput { click(spot) }
+        composeRule.waitForIdle()
+        assertEquals("the press only closed search", listOf<LauncherShellAction>(LauncherShellAction.OpenHome), sent)
+    }
+
+    @Test
+    fun theGateIsGoneOnceSearchHasClosedAndHomeTakesInputAgain() {
+        show(unfolded(reducedMotion = false).searching(query = ""))
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithTag(HOME_INPUT_GATE_TEST_TAG).assertCountEquals(1)
+        shell = unfolded()
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithTag(HOME_INPUT_GATE_TEST_TAG).assertCountEquals(0)
+    }
+
+    // The grid never moves
+
+    @Test
+    fun homesGridDoesNotMoveWhenTheStreamOpensACardOpensOrTheKeyboardComesUp() {
+        show()
+        val closed = gridCells()
+        assertTrue("the grid has cells", closed.size > 8)
+
+        shell = unfolded(destination = ShellDestination.STREAM)
+        waitForText("Sam")
+        composeRule.waitForIdle()
+        assertSameCells("with the Stream open", closed, gridCells())
+
+        composeRule.onNodeWithText("Sam").performClick()
+        composeRule.waitForIdle()
+        assertTrue("the card opened", theCardIsOpen())
+        assertSameCells("with a card open", closed, gridCells())
+
+        val keyboard = (KEYBOARD_DP * dp).toInt()
+        composeRule.setImeInset(keyboard)
+        assertSameCells("with the keyboard up", closed, gridCells())
+        // What does move for the keyboard is the column: it stands above it.
+        assertTrue(
+            "the open card is lifted above the keyboard: ${column().bottom}",
+            column().bottom <= root().bottom - keyboard + 1f,
+        )
+    }
+
+    private fun firstAppLabel(): String = ScreenshotFixtures.installedApps.first().label
+
+    private fun gridCells(): List<Rect> =
+        composeRule.onAllNodesWithTag(HOME_GRID_CELL_TEST_TAG, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .map { it.boundsInRoot }
+            .sortedWith(compareBy({ it.top }, { it.left }))
+
+    private fun assertSameCells(
+        state: String,
+        expected: List<Rect>,
+        actual: List<Rect>,
+    ) {
+        assertEquals("$state: the number of cells", expected.size, actual.size)
+        expected.zip(actual).forEachIndexed { index, (a, b) ->
+            assertTrue(
+                "$state: cell $index moved from $a to $b",
+                abs(a.left - b.left) < 0.5f && abs(a.top - b.top) < 0.5f &&
+                    abs(a.right - b.right) < 0.5f && abs(a.bottom - b.bottom) < 0.5f,
+            )
+        }
     }
 
     // Screenshots
@@ -590,6 +794,22 @@ class UnfoldedStreamColumnTest {
     @Config(qualifiers = ScreenshotDevices.NIGHT)
     fun unfoldedSearchOnARightDockDark() = shoot(showing = { show(unfolded().searching()) })
 
+    @Test
+    fun unfoldedSearchOnALeftDockLight() = shoot(showing = { show(unfolded(dock = DockPosition.LEFT).searching()) })
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun unfoldedSearchOnALeftDockDark() = shoot(showing = { show(unfolded(dock = DockPosition.LEFT).searching()) })
+
+    @Test
+    fun unfoldedSearchWithTheKeyboardUpLight() =
+        shoot(
+            showing = {
+                show(unfolded().searching())
+                composeRule.setImeInset((KEYBOARD_DP * dp).toInt())
+            },
+        )
+
     private fun openCard() {
         showOpen()
         composeRule.onNodeWithText("Sam").performClick()
@@ -606,6 +826,10 @@ class UnfoldedStreamColumnTest {
         const val WAIT_MILLIS = 10_000L
         const val PRESS_PX = 150f
         const val SWIPE_MILLIS = 200L
+        const val LONG_PRESS_MILLIS = 1_500L
+
+        /** A keyboard's height for the simulated input method inset. */
+        const val KEYBOARD_DP = 300
 
         /** The Dock's margin (12 dp) and the column's reach past the glass (12 dp), with some room. */
         const val MAX_REACH = 30f

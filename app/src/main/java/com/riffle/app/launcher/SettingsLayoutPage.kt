@@ -63,7 +63,7 @@ internal fun SettingsLayoutPageContent(
     }
 }
 
-private enum class LayoutRow { DOCK_EDGE, PAGE_SCROLL, INDICATOR, QUICK_SCROLL }
+private enum class LayoutRow { DOCK_EDGE, PAGE_SCROLL, INDICATOR, QUICK_SCROLL, APPS_BEHIND }
 
 /** The setting a posture's row is, for search to scroll to it. */
 private fun layoutSettingKey(
@@ -77,6 +77,7 @@ private fun layoutSettingKey(
                 LayoutRow.PAGE_SCROLL -> SettingKey.LAYOUT_FOLDED_PAGE_SCROLL
                 LayoutRow.INDICATOR -> SettingKey.LAYOUT_FOLDED_INDICATOR
                 LayoutRow.QUICK_SCROLL -> SettingKey.LAYOUT_FOLDED_QUICK_SCROLL
+                LayoutRow.APPS_BEHIND -> SettingKey.LAYOUT_FOLDED_APP_PEEK_THROUGH
             }
 
         LayoutPosture.UNFOLDED ->
@@ -85,6 +86,7 @@ private fun layoutSettingKey(
                 LayoutRow.PAGE_SCROLL -> SettingKey.LAYOUT_UNFOLDED_PAGE_SCROLL
                 LayoutRow.INDICATOR -> SettingKey.LAYOUT_UNFOLDED_INDICATOR
                 LayoutRow.QUICK_SCROLL -> SettingKey.LAYOUT_UNFOLDED_QUICK_SCROLL
+                LayoutRow.APPS_BEHIND -> SettingKey.LAYOUT_UNFOLDED_APP_PEEK_THROUGH
             }
     }
 
@@ -168,25 +170,22 @@ private fun SettingsPostureLayoutRows(
         enabled = settings.showsDots,
         onCheckedChange = { on -> onAction(LauncherShellAction.SetQuickScroll(posture, on)) },
     )
-    // Only the unfolded posture keeps Home beside and beneath the Stream's stack, so only it has apps to show behind
-    // it.
-    if (posture == LayoutPosture.UNFOLDED) {
-        SettingsSwitchRow(
-            modifier =
-                Modifier
-                    .settingAnchor(SettingKey.LAYOUT_UNFOLDED_APP_PEEK_THROUGH)
-                    .testTag(layoutOptionTestTag(posture, "peek", "through")),
-            title = stringResource(R.string.settings_layout_peek_through_title),
-            subtitle =
-                stringResource(
-                    if (settings.appPeekThrough) {
-                        R.string.settings_layout_peek_through_on
-                    } else {
-                        R.string.settings_layout_peek_through_off
-                    },
-                ),
-            checked = settings.appPeekThrough,
-            onCheckedChange = { on -> onAction(LauncherShellAction.SetAppPeekThrough(posture, on)) },
-        )
-    }
+    // The same value Settings > Stream > Cards writes for this posture (one stored value, two entry points).
+    SettingsSwitchRow(
+        modifier =
+            Modifier
+                .settingAnchor(layoutSettingKey(posture, LayoutRow.APPS_BEHIND))
+                .testTag(layoutOptionTestTag(posture, "peek", "through")),
+        title = stringResource(R.string.settings_layout_peek_through_title),
+        subtitle =
+            stringResource(
+                if (settings.appPeekThrough) {
+                    R.string.settings_layout_peek_through_on
+                } else {
+                    R.string.settings_layout_peek_through_off
+                },
+            ),
+        checked = settings.appPeekThrough,
+        onCheckedChange = { on -> onAction(LauncherShellAction.SetAppPeekThrough(posture, on)) },
+    )
 }

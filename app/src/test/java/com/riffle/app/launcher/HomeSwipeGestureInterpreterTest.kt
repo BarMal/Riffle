@@ -202,7 +202,8 @@ class HomeSwipeGestureInterpreterTest {
         assertEquals(LauncherShellAction.OpenSearch, actionMapper.actionFor(HomeGesture.ONE_FINGER_DOWN))
         assertEquals(LauncherShellAction.SelectNextHomePage, actionMapper.actionFor(HomeGesture.ONE_FINGER_LEFT))
         assertEquals(LauncherShellAction.SelectPreviousHomePage, actionMapper.actionFor(HomeGesture.ONE_FINGER_RIGHT))
-        assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeGesture.TWO_FINGER_UP))
+        // Nothing opens the old notification overview by gesture any more: the Stream is where notifications are.
+        assertNull(actionMapper.actionFor(HomeGesture.TWO_FINGER_UP))
         assertEquals(LauncherShellAction.OpenSettings, actionMapper.actionFor(HomeGesture.TWO_FINGER_DOWN))
         assertEquals(LauncherShellAction.EnterHomeEditMode, actionMapper.actionFor(HomeGesture.PINCH_IN))
     }
@@ -217,7 +218,7 @@ class HomeSwipeGestureInterpreterTest {
                         HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
                         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
                         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
-                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_LIBRARY,
                         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.ENTER_FULLSCREEN_HOME,
                         HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_STREAM,
                     ),
@@ -233,7 +234,7 @@ class HomeSwipeGestureInterpreterTest {
             LauncherShellAction.EnterHomePageOverview,
             actionMapper.actionFor(HomeGesture.ONE_FINGER_RIGHT, settings),
         )
-        assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeGesture.PINCH_OUT, settings))
+        assertEquals(LauncherShellAction.OpenAppDrawer, actionMapper.actionFor(HomeGesture.PINCH_OUT, settings))
         assertEquals(
             LauncherShellAction.SelectFullscreenHomeEnabled(true),
             actionMapper.actionFor(HomeGesture.TWO_FINGER_RIGHT, settings),
@@ -285,13 +286,13 @@ class HomeSwipeGestureInterpreterTest {
             HomeGestureSettings(
                 actions =
                     mapOf(
-                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_NOTIFICATIONS,
-                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_STREAM,
+                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_STREAM,
                     ),
             )
 
         assertEquals(
-            "Conflicting gestures: Open notifications: One-finger swipe up, Two-finger swipe up, Pinch out",
+            "Conflicting gestures: Open Stream: One-finger swipe up, Pinch out",
             homeGestureConflictSummary(GestureSettings(homeGestures = settings)),
         )
     }
@@ -304,7 +305,7 @@ class HomeSwipeGestureInterpreterTest {
                     mapOf(
                         HomeGesture.ONE_FINGER_UP to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                         HomeGesture.TWO_FINGER_UP to LauncherGestureAction.NONE,
-                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_STREAM,
                     ),
             )
 

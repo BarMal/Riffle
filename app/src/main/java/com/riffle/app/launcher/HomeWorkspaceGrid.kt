@@ -158,6 +158,9 @@ private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
 internal const val HOME_WORKSPACE_GRID_TEST_TAG = "home-workspace-grid"
 internal const val HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG = "home-workspace-grid-overflow"
 
+/** One cell of Home's placed grid (every cell, filled or not), for a test to measure the grid by. */
+internal const val HOME_GRID_CELL_TEST_TAG = "home-grid-cell"
+
 @Composable
 private fun RowScope.HomeGridCell(
     state: HomeGridCellState,
@@ -169,7 +172,8 @@ private fun RowScope.HomeGridCell(
         modifier =
             Modifier
                 .weight(1f)
-                .fillMaxHeight(),
+                .fillMaxHeight()
+                .testTag(HOME_GRID_CELL_TEST_TAG),
         contentAlignment = Alignment.Center,
     ) {
         val activeDragSession = state.activeDragSession
@@ -187,13 +191,14 @@ private fun RowScope.HomeGridCell(
             modifier = Modifier.fillMaxSize(),
             onClick = actions.onBackgroundClick,
         )
+        val fade = rememberGridFadeCell()
         Box(
             modifier =
                 Modifier
                     .width(state.cellSize)
                     .fillMaxHeight()
-                    // Flows into the fade under the Stream's column when one stands (unfolded); otherwise nothing.
-                    .gridFade(),
+                    // Flows into the fade under the Stream's column when one stands; otherwise nothing.
+                    .gridFade(fade),
             contentAlignment = Alignment.Center,
         ) {
             if (activeDragSession?.projectedCell == state.cell) {
@@ -235,6 +240,8 @@ private fun RowScope.HomeGridCell(
                 ?.let { preview ->
                     WidgetPickerDragPlaceholder(preview = preview, cellSize = state.cellSize)
                 }
+            // A cell faded out under the column or behind an open card takes no input.
+            GridFadeInputBlock(fade, Modifier.matchParentSize())
         }
     }
 }

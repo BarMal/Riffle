@@ -60,6 +60,21 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun aScrollingRunIsAsLongAsTheWholeIconsThatFit() {
+        // 48dp icons 12dp apart: 3 whole icons take 168dp, 4 take 228dp.
+        assertEquals(168, dockWholeIconsViewportMainAxisDp(viewportMainAxisDp = 227, iconSizeDp = 48, spacingDp = 12))
+        assertEquals(228, dockWholeIconsViewportMainAxisDp(viewportMainAxisDp = 228, iconSizeDp = 48, spacingDp = 12))
+        assertEquals(228, dockWholeIconsViewportMainAxisDp(viewportMainAxisDp = 287, iconSizeDp = 48, spacingDp = 12))
+    }
+
+    @Test
+    fun aViewportShorterThanOneIconIsLeftAsItIsAndNeverGrown() {
+        assertEquals(40, dockWholeIconsViewportMainAxisDp(viewportMainAxisDp = 40, iconSizeDp = 48, spacingDp = 12))
+        assertEquals(0, dockWholeIconsViewportMainAxisDp(viewportMainAxisDp = 0, iconSizeDp = 48, spacingDp = 12))
+        assertEquals(48, dockWholeIconsViewportMainAxisDp(viewportMainAxisDp = 50, iconSizeDp = 48, spacingDp = 12))
+    }
+
+    @Test
     fun dockSlotRenderMetricsPreservesConfiguredSpacingWhenFiveSlotsFit() {
         val metrics =
             dockSlotRenderMetrics(

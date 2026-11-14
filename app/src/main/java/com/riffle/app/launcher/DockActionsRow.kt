@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -110,10 +111,17 @@ internal fun DockActionsRowAt(
     cardActions: OpenCardActions?,
     layout: HomeLayout,
     presentation: StandardHomePresentation,
+    /** The row's height as it grows and goes (0 while none shows), so Home's room for the Dock can leave it out. */
+    onRowHeightChanged: (Int) -> Unit = {},
 ) {
     if (position != at) return
     if (at == DockPosition.TOP) Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
-    DockActionsRow(cardActions, layout.dock.cornerRadiusDp, presentation.reducedMotion)
+    DockActionsRow(
+        cardActions,
+        layout.dock.cornerRadiusDp,
+        presentation.reducedMotion,
+        modifier = Modifier.onSizeChanged { size -> onRowHeightChanged(size.height) },
+    )
 }
 
 private const val REDUCED_FADE_MILLIS = RiffleMotionTokens.DURATION_REDUCED_MOTION_MILLIS

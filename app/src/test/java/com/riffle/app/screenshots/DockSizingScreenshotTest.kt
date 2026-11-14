@@ -17,18 +17,22 @@ import com.riffle.app.launcher.DockInteractions
 import com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.dockCrossAxisDp
+import com.riffle.app.launcher.dockItemTestTag
 import com.riffle.app.launcher.stream.glyph
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.stream.StreamSection
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.abs
 
 /**
  * Home with the Dock at the proportions the owner's reference shows: the bar is one icon plus its chrome tall, a pinned
@@ -126,6 +130,60 @@ class DockSizingScreenshotTest {
     fun fivePinsAloneFill() {
         renderDock(pins = 5, iconSizeDp = 56, liveApps = null)
         assertDockHeight(dockIconSizeDp = 56)
+    }
+
+    @Test
+    fun aCrowdedSideDockNeverRestsWithAnIconCutInHalf() = crowdedSideDock()
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun aCrowdedSideDockNeverRestsWithAnIconCutInHalfDark() = crowdedSideDock()
+
+    /**
+     * A right-edge Dock with more pins than its run can show, beside live apps: every pinned icon at rest is whole or
+     * entirely out of view.
+     */
+    private fun crowdedSideDock() {
+        val iconLoader = SolidColorAppIconLoader()
+        val pinned = ScreenshotFixtures.pins(10)
+        val items = pinned.map { app -> ScreenshotFixtures.shortcut(app) }
+        val icon = 52
+        composeRule.setContent {
+            ScreenshotBackdrop {
+                Box(modifier = Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.CenterEnd) {
+                    Dock(
+                        dock = DockModel(capacity = pinned.size, items = items, iconSizeDp = icon),
+                        isEditing = false,
+                        notificationGroupsByApp = emptyList(),
+                        appShortcutsByApp = emptyMap(),
+                        appIconLoader = iconLoader,
+                        position = DockPosition.RIGHT,
+                        interactions = DockInteractions(onAction = {}),
+                        dynamicEntries =
+                            ScreenshotFixtures.gridApps.take(2).mapIndexed { index, app ->
+                                liveEntry(app, badgeCount = index + 1)
+                            } + tileEntry,
+                    )
+                }
+            }
+        }
+        composeRule.waitForIdle()
+        val density = composeRule.density.density
+
+        fun assertWhole(moment: String) {
+            val tall = icon * density
+            items.forEach { item ->
+                val bounds =
+                    composeRule.onNodeWithTag(dockItemTestTag(item.id)).fetchSemanticsNode().boundsInRoot
+                val visible = bounds.height
+                assertTrue(
+                    "$moment: ${item.label} is cut: $visible of $tall",
+                    visible < 1f || abs(visible - tall) < 1.5f,
+                )
+            }
+        }
+        assertWhole("at rest")
+        composeRule.captureScreen()
     }
 
     /** The Dock alone: [liveApps] live apps and a tile on its dynamic side, none at all when null. */

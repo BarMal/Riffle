@@ -377,6 +377,11 @@ enum class SettingKey(
         R.string.setting_stream_card_glow,
         R.string.setting_stream_card_glow_keywords,
     ),
+    STREAM_APPS_BEHIND_CARDS(
+        SettingsPage.STREAM_CARDS,
+        R.string.setting_stream_apps_behind_cards,
+        R.string.setting_stream_apps_behind_cards_keywords,
+    ),
     STREAM_OPEN_CARD_POSITION(
         SettingsPage.STREAM_CARDS,
         R.string.setting_stream_open_card_position,
@@ -455,6 +460,11 @@ enum class SettingKey(
         SettingsPage.POSTURE_LAYOUT,
         R.string.setting_layout_unfolded_quick_scroll,
         R.string.setting_layout_unfolded_quick_scroll_keywords,
+    ),
+    LAYOUT_FOLDED_APP_PEEK_THROUGH(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_folded_peek_through,
+        R.string.setting_layout_folded_peek_through_keywords,
     ),
     LAYOUT_UNFOLDED_APP_PEEK_THROUGH(
         SettingsPage.POSTURE_LAYOUT,

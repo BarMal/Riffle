@@ -18,6 +18,8 @@ import com.riffle.app.R
 import com.riffle.core.domain.launcher.designsystem.CardTint
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.LayoutPosture
+import com.riffle.core.domain.launcher.settings.LayoutSettings
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.StreamSettings
 
@@ -37,13 +39,15 @@ private val PreviewAppColor = Color(0xFF3B82F6)
 internal fun SettingsStreamCardsPageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
-) = SettingsStreamCards(settings = state.settings.stream, onAction = onAction)
+) = SettingsStreamCards(settings = state.settings.stream, layout = state.settings.layout, onAction = onAction)
 
 /** The page over plain [settings], so a screenshot test draws it without a shell. */
 @Composable
+@Suppress("LongMethod")
 internal fun SettingsStreamCards(
     settings: StreamSettings,
     onAction: (LauncherShellAction) -> Unit,
+    layout: LayoutSettings = LayoutSettings(),
 ) {
     Text(
         modifier = Modifier.padding(horizontal = 8.dp),
@@ -76,6 +80,40 @@ internal fun SettingsStreamCards(
                 ),
             checked = settings.cardTopGlow,
             onCheckedChange = { enabled -> onAction(LauncherShellAction.SetStreamCardTopGlow(enabled)) },
+        )
+    }
+    SettingsSection(title = stringResource(R.string.setting_stream_apps_behind_cards)) {
+        // The same stored value as Settings > Layout: one per posture, two ways to reach it.
+        LayoutPosture.entries.forEachIndexed { index, posture ->
+            val on = layout.forPosture(posture).appPeekThrough
+            SettingsSwitchRow(
+                modifier =
+                    Modifier
+                        .then(
+                            if (index == 0) Modifier.settingAnchor(SettingKey.STREAM_APPS_BEHIND_CARDS) else Modifier,
+                        )
+                        .testTag(streamAppsBehindTestTag(posture)),
+                title =
+                    stringResource(
+                        if (posture == LayoutPosture.FOLDED) {
+                            R.string.settings_stream_apps_behind_cards_folded
+                        } else {
+                            R.string.settings_stream_apps_behind_cards_unfolded
+                        },
+                    ),
+                subtitle =
+                    stringResource(
+                        if (on) R.string.settings_layout_peek_through_on else R.string.settings_layout_peek_through_off,
+                    ),
+                checked = on,
+                onCheckedChange = { enabled -> onAction(LauncherShellAction.SetAppPeekThrough(posture, enabled)) },
+            )
+        }
+        Text(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            text = stringResource(R.string.settings_stream_apps_behind_cards_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
     SettingsSection(title = stringResource(R.string.stream_open_card)) {
@@ -151,3 +189,6 @@ private fun CardActionsPlacement.labelRes(): Int =
         CardActionsPlacement.IN_DOCK -> R.string.settings_stream_actions_in_dock
         CardActionsPlacement.ON_CARD -> R.string.settings_stream_actions_on_card
     }
+
+/** The test tag of the "show apps behind the cards" switch for [posture] on Settings > Stream > Cards. */
+internal fun streamAppsBehindTestTag(posture: LayoutPosture): String = "stream-apps-behind-${posture.name.lowercase()}"

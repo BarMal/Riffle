@@ -168,7 +168,6 @@ internal fun HomeGesture.settingKey(): SettingKey =
 internal fun gestureActionOptions(): List<LauncherGestureAction> =
     listOf(
         LauncherGestureAction.NONE,
-        LauncherGestureAction.OPEN_NOTIFICATIONS,
         LauncherGestureAction.OPEN_SEARCH,
         LauncherGestureAction.OPEN_LIBRARY,
         LauncherGestureAction.OPEN_STREAM,
@@ -186,7 +185,6 @@ internal val LauncherGestureAction.label: String
     get() =
         when (this) {
             LauncherGestureAction.NONE -> "None"
-            LauncherGestureAction.OPEN_NOTIFICATIONS -> "Open notifications"
             LauncherGestureAction.OPEN_SEARCH -> "Open search"
             LauncherGestureAction.OPEN_SETTINGS -> "Open settings"
             LauncherGestureAction.ENTER_HOME_EDIT_MODE -> "Edit Home"

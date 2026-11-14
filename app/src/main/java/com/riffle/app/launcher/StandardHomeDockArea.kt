@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInRoot
@@ -36,7 +37,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun StandardHomeDockArea(
     layout: HomeLayout,
     presentation: StandardHomePresentation,
@@ -87,6 +88,9 @@ internal fun StandardHomeDockArea(
         )
     val margins = layout.settings.grid.margin.centered()
     val runsAlongASide = !position.isHorizontalEdge
+    // The room Home keeps for the Dock is the Dock's own, not the open card's actions row that grows out of it: that
+    // row takes room from the Stream above it and leaves Home's grid where it is.
+    val extent = remember { DockExtentReport() }
 
     Column(
         modifier =
@@ -106,7 +110,8 @@ internal fun StandardHomeDockArea(
                     animationSpec = if (presentation.reducedMotion) snap() else RiffleMotion.smooth(),
                 )
                 .onSizeChanged { size ->
-                    actions.onDockInteractionExtentChanged(if (runsAlongASide) size.width else size.height)
+                    extent.totalPx = if (runsAlongASide) size.width else size.height
+                    actions.onDockInteractionExtentChanged(extent.reservedPx())
                 }
                 .onGloballyPositioned { coordinates ->
                     actions.onDockBoundsChanged(coordinates.boundsInRoot())
@@ -123,7 +128,10 @@ internal fun StandardHomeDockArea(
         verticalArrangement = if (runsAlongASide) Arrangement.Center else Arrangement.Top,
     ) {
         DockShelfExpandButton(interactions = dockInteractions)
-        DockActionsRowAt(DockPosition.BOTTOM, position, cardActions, layout, presentation)
+        DockActionsRowAt(DockPosition.BOTTOM, position, cardActions, layout, presentation) { rowPx ->
+            extent.rowPx = rowPx
+            actions.onDockInteractionExtentChanged(extent.reservedPx())
+        }
         Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
         Box(modifier = Modifier.testTag(HOME_DOCK_TEST_TAG)) {
             DockOrShelf(
@@ -140,7 +148,10 @@ internal fun StandardHomeDockArea(
                 contextual = contextual,
             )
         }
-        DockActionsRowAt(DockPosition.TOP, position, cardActions, layout, presentation)
+        DockActionsRowAt(DockPosition.TOP, position, cardActions, layout, presentation) { rowPx ->
+            extent.rowPx = rowPx
+            actions.onDockInteractionExtentChanged(extent.reservedPx())
+        }
     }
 }
 
@@ -324,3 +335,14 @@ private const val SIDE_DOCK_SHELF_WIDTH_FRACTION = 0.5f
 internal const val HOME_DOCK_TOP_SPACING_DP = 10
 internal const val HOME_DOCK_EXPAND_BUTTON_TEST_TAG = "home-dock-expand-button"
 internal const val HOME_DOCK_TEST_TAG = "home-dock"
+
+/**
+ * What the Dock area reports as the room it takes: its measured size along the cross axis less the height of the open
+ * card's actions row (which is not Home's to make room for), so Home's grid is the same with a card open or closed.
+ */
+private class DockExtentReport {
+    var totalPx: Int = 0
+    var rowPx: Int = 0
+
+    fun reservedPx(): Int = (totalPx - rowPx).coerceAtLeast(0)
+}

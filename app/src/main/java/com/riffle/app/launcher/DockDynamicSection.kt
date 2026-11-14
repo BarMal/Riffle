@@ -240,6 +240,8 @@ private fun DockDynamicSectionTile(
         modifier =
             Modifier
                 .requiredSize(iconSizeDp.dp)
+                // Where the contextual row's viewport cuts it, it fades rather than showing half an icon.
+                .dockEdgeFade()
                 // Where the tile lies, whole: a scrolling row clips what is off its edge, and `boundsInRoot` with it.
                 .onGloballyPositioned { coordinates ->
                     entryBoundsSink(entry.key, Rect(coordinates.positionInRoot(), coordinates.size.toSize()))
