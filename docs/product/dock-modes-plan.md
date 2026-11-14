@@ -925,3 +925,60 @@ Five things the owner found on a phone, each one commit.
 - **The handle is drawn as the Dock's material.** The pill uses the Dock's own `dockSurfaceAppearance` (its "Dock
   background" fill and colour, clear at 0%, reduced transparency, the same edge lights) with the Dock's corner capped at the
   pill's half height (a 32 dp Dock corner keeps it fully rounded).
+
+## Device fixes, round 3
+
+Six things the owner found on a foldable (unfolded, Dock on the right edge), each one commit.
+
+- **Swipe down no longer reaches the handle's drags, and nothing opens the old notification overview.** A drag that
+  starts on the page handle (along it, across it, on the search glyph, on a single page's bare pill) is consumed by the
+  handle (`HomeHandlePill`: a drag detector beside the tap detector; the scrub along the dots still takes it first), so
+  Home's one-finger swipes can no longer fire from it (a drag down a column handle was "swipe down", which opens
+  search). The gesture binding `OPEN_NOTIFICATIONS` is removed (`LauncherGestureAction`, the Gestures page, the mapper); a
+  stored name decodes to no action like any removed one (`LauncherGestureSettingsJsonCodecTest`), and the old default of
+  two fingers up goes with it (now unbound). Swipe down was never bound to notifications by default: it opens search
+  (`OPEN_SEARCH`), which stays the default, and over vertically scrolling pages the pager already owns vertical drags
+  (the arbiter's child axes), so nothing fires there from the page either. The overview surface itself is untouched.
+- **Unfolded search stands in the Stream column's rectangle.** `DockSearchSurface` is placed by `StreamColumn.rect` at
+  rest (`StreamColumnGeometry.restBounds`, from the same window, Dock bounds and insets as the column, so the keyboard
+  lifts it): the same width, the same side against the Dock's inner edge, its bottom at the Dock's lower end as it is in
+  the current mode (the Dock is shorter in the Home mode than while the Stream shows its tiles), growing up with the
+  results; the field and results keep the page's 16 dp inset from the rectangle's edges, as the cards do. The press
+  catcher covers the window. The field takes focus without waiting on layout. The surface exposes its drawn alpha
+  (`DockSearchAlphaKey`) and the tests assert it is 1 once the spring has ended, with the field focused, the panel
+  against a right and a left Dock, and above a simulated keyboard. The cause of the dim, detached panel on the device
+  was not reproduced: the geometry was the Home-sized reservation, not the column's, and the Thick glass over a Home
+  that fades out to the bare wallpaper is a 56% fill (reduced transparency makes it nearly opaque); nothing kept the
+  spring from arriving in any run here. Folded search is unchanged.
+- **Home takes no input while it is hidden.** The Home surface is wrapped in a gate (`HomeInputGate`) that, while search
+  or the Library covers Home or Home is drawn at or below 2% (`HomeDockPullBinding.homeInputBlocked`), lays a full-size
+  node over it that takes every touch, so a tap, a long press, a drag, a page swipe or a Home swipe stops there. Search's
+  own press catcher used to be padded by the system bars and the keyboard's room (the surface was laid out inside those
+  insets), which left strips where Home still received touches; it now covers the whole window and only the panel
+  keeps clear of the insets (see the search item below). Cells of the grid that the Stream's fade has taken below 5%
+  (under the column with nothing peeking through, or behind an open card) take no input either
+  (`GridFadeCell.blocksInput`, `GridFadeInputBlock`, in Home's grid and the paged Library): a cell-sized node over the
+  cell that swallows taps and presses and consumes no movement, so a page's drag still reaches the pager.
+- **Home ignores the keyboard.** Home laid out inside `WindowInsets.safeDrawing`, which includes the keyboard, so an
+  open card's reply field raised the keyboard and shrank Home's grid to a column of small icons. Home's frame and the
+  paged Library standing in for it now use `HomeInsetPolicy.contentInsets()` (system bars and cutout only). Only the
+  Stream's column, an open card, search and the Dock move for the keyboard. Found while proving it: with a card open
+  on a bottom Dock (folded) Home's grid also moved up, because the Dock's measured extent, which Home reserves, counted
+  the open card's actions row growing out of the Dock; the Dock area now reports its extent without that row
+  (`DockExtentReport`). `UnfoldedStreamColumnTest` and `FoldedAppsBehindCardsTest` assert every grid cell
+  (`home-grid-cell`) has the same bounds with the Stream closed, open, a card open and a simulated keyboard inset.
+- **"Show apps behind the cards", folded too.** The setting `layout.<posture>.appPeekThrough` now works in both postures
+  (default folded off, unfolded on; Settings > Layout in each section, and Settings > Stream > Cards with one switch per
+  posture, the same stored value). Folded with it on, Home stays on screen behind the stack (`homeBehind`: the handle
+  stands down, no fade or scale with the trampoline) and its grid fades under the same rectangle `StreamColumn.rect`
+  gives, cell by cell, no blur; off, Home fades out as before. The folded value is stored under its own key
+  (`appsBehindCards`; unfolded keeps `appPeekThrough`) because earlier builds wrote a meaningless `true` for the folded
+  posture, which would otherwise have turned it on for everyone. Card text stays readable over the faded grid through the
+  card fill's contrast guarantee (screenshots, light and dark, of the stack and an open card).
+- **A crowded side Dock never rests with an icon cut in half.** The pinned run in the Home mode, when it still does not
+  fit after the gap has closed up, is now a whole number of icons long (`dockWholeIconsViewportMainAxisDp`; the Dock is
+  as long as what it shows) and scrolls by whole icons (it settles on the nearest whole icon), on every edge, as the
+  bottom Dock's crowded run does. The existing overflow fade at its edges stays as the cue. In the contextual row, which
+  scrolls by design and whose reveal leaves a 24 dp peek of the neighbour, an icon the viewport cuts is faded by how much
+  of it is in view (`DockEdgeFade`: the visible fraction squared; per-item opacity read in the draw layer, no mask,
+  gradient or offscreen layer), so the clipped end reads as "more this way" and not as a half icon.

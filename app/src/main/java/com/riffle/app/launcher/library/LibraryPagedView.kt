@@ -49,6 +49,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.AppDrawerRowOverflowMenu
 import com.riffle.app.launcher.AppListContext
 import com.riffle.app.launcher.AppListSurface
+import com.riffle.app.launcher.GridFadeInputBlock
 import com.riffle.app.launcher.HomeGridLayoutMetrics
 import com.riffle.app.launcher.HomeHandlePill
 import com.riffle.app.launcher.LauncherAppIcon
@@ -61,6 +62,7 @@ import com.riffle.app.launcher.drawerKey
 import com.riffle.app.launcher.drawerRowState
 import com.riffle.app.launcher.gridFade
 import com.riffle.app.launcher.notificationCountFor
+import com.riffle.app.launcher.rememberGridFadeCell
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HandleStrip
@@ -269,11 +271,13 @@ private fun LibraryPageGrid(
                             contentAlignment = Alignment.Center,
                         ) {
                             apps.getOrNull(row * state.pagedGrid.columns + column)?.let { app ->
+                                val fade = rememberGridFadeCell()
                                 Box(
-                                    modifier = Modifier.width(cellSize).fillMaxHeight().gridFade(),
+                                    modifier = Modifier.width(cellSize).fillMaxHeight().gridFade(fade),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     LibraryAppCell(app = app, state = state, context = context)
+                                    GridFadeInputBlock(fade, Modifier.matchParentSize())
                                 }
                             }
                         }

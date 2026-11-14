@@ -194,30 +194,44 @@ private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
 
 /*
  * The layout per posture (ADR 0003, Amendment 2): `layout.folded` and `layout.unfolded`, each `pageScroll`,
- * `indicator`, `quickScroll` and `appPeekThrough`. The Dock edge is not here: it is the Dock's own, stored per
+ * `indicator`, `quickScroll` and "show apps behind the cards" (see [UNFOLDED_APPS_BEHIND_KEY]). The Dock edge is not here: it is the Dock's own, stored per
  * device class with the
  * home layout. An old blob has no `layout` and decodes to each posture's default; a posture, a value or a type this
  * build does not know reads as that posture's default, one field at a time.
  */
 private fun encodeLayoutSettings(settings: LayoutSettings): JSONObject =
     JSONObject()
-        .put("folded", encodePostureLayout(settings.folded))
-        .put("unfolded", encodePostureLayout(settings.unfolded))
+        .put("folded", encodePostureLayout(settings.folded, FOLDED_APPS_BEHIND_KEY))
+        .put("unfolded", encodePostureLayout(settings.unfolded, UNFOLDED_APPS_BEHIND_KEY))
 
-private fun encodePostureLayout(settings: PostureLayoutSettings): JSONObject =
+private fun encodePostureLayout(
+    settings: PostureLayoutSettings,
+    appsBehindKey: String,
+): JSONObject =
     JSONObject()
         .put("pageScroll", settings.pageScroll.storedId)
         .put("indicator", settings.indicator.storedId)
         .put("quickScroll", settings.quickScroll)
-        .put("appPeekThrough", settings.appPeekThrough)
+        .put(appsBehindKey, settings.appPeekThrough)
 
 private fun JSONObject.toLayoutSettings(defaults: LayoutSettings): LayoutSettings =
     LayoutSettings(
-        folded = guarded("folded", defaults.folded, JSONObject::toPostureLayout),
-        unfolded = guarded("unfolded", defaults.unfolded, JSONObject::toPostureLayout),
+        folded = guarded("folded", defaults.folded) { toPostureLayout(it, FOLDED_APPS_BEHIND_KEY) },
+        unfolded = guarded("unfolded", defaults.unfolded) { toPostureLayout(it, UNFOLDED_APPS_BEHIND_KEY) },
     )
 
-private fun JSONObject.toPostureLayout(defaults: PostureLayoutSettings): PostureLayoutSettings =
+/**
+ * "Show apps behind the cards" is stored under `appPeekThrough` unfolded (as it always was) and under its own key
+ * folded: builds before the folded setting was real wrote an `appPeekThrough` of true for the folded posture that
+ * meant nothing, and reading it would have switched the folded Home's behaviour on for everyone.
+ */
+private const val UNFOLDED_APPS_BEHIND_KEY = "appPeekThrough"
+private const val FOLDED_APPS_BEHIND_KEY = "appsBehindCards"
+
+private fun JSONObject.toPostureLayout(
+    defaults: PostureLayoutSettings,
+    appsBehindKey: String,
+): PostureLayoutSettings =
     PostureLayoutSettings(
         pageScroll =
             PageScrollDirection.fromStoredId(optString("pageScroll").takeIf(String::isNotEmpty))
@@ -226,7 +240,7 @@ private fun JSONObject.toPostureLayout(defaults: PostureLayoutSettings): Posture
             PageIndicatorPlacement.fromStoredId(optString("indicator").takeIf(String::isNotEmpty))
                 ?: defaults.indicator,
         quickScroll = (opt("quickScroll") as? Boolean) ?: defaults.quickScroll,
-        appPeekThrough = (opt("appPeekThrough") as? Boolean) ?: defaults.appPeekThrough,
+        appPeekThrough = (opt(appsBehindKey) as? Boolean) ?: defaults.appPeekThrough,
     )
 
 private fun encodeFeatures(settings: FeatureSettings): JSONObject =

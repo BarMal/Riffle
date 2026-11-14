@@ -138,6 +138,8 @@ internal fun rememberEasedFraction(
 internal class StreamColumnGeometry(
     val fade: GridFadeField,
     val bounds: () -> StreamColumnRect?,
+    /** The column as it stands at rest (no card open): where unfolded search stands, the same rectangle. */
+    val restBounds: () -> StreamColumnRect?,
 )
 
 private fun Rect.toDp(density: Float) =
@@ -151,6 +153,7 @@ private fun Rect.toDp(density: Float) =
 @Composable
 @Suppress("LongParameterList")
 internal fun rememberStreamColumnGeometry(
+    /** Whether Home stays behind the Stream, so its grid fades under the stack (unfolded, or folded with apps on). */
     columnMode: Boolean,
     streamShown: Boolean,
     closing: Boolean,
@@ -187,6 +190,7 @@ internal fun rememberStreamColumnGeometry(
             )
         }
     val bounds: () -> StreamColumnRect? = remember(window) { { window?.let { StreamColumn.rect(it, open.value) } } }
+    val restBounds: () -> StreamColumnRect? = remember(window) { { window?.let { StreamColumn.rect(it, 0f) } } }
     val fade = remember { GridFadeField() }
     SideEffect {
         fade.column = bounds
@@ -195,5 +199,5 @@ internal fun rememberStreamColumnGeometry(
         fade.peekThrough = peekThrough
         fade.density = density
     }
-    return remember(fade, bounds) { StreamColumnGeometry(fade, bounds) }
+    return remember(fade, bounds, restBounds) { StreamColumnGeometry(fade, bounds, restBounds) }
 }

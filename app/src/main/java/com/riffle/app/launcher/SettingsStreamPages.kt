@@ -21,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -353,14 +355,10 @@ internal fun SettingsTasksContent(
                             ),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s)) {
-                        TextButton(
-                            modifier = Modifier.testTag(TASKS_SAVE_TEST_TAG),
-                            enabled = token.isNotBlank(),
-                            onClick = {
-                                onSave(token)
-                                token = ""
-                            },
-                        ) { SettingsButtonText(stringResource(R.string.settings_tasks_save)) }
+                        TasksSaveButton(enabled = token.isNotBlank()) {
+                            onSave(token)
+                            token = ""
+                        }
                         TextButton(
                             onClick = { uriHandler.openUri(TODOIST_DEVELOPER_SETTINGS_URL) },
                         ) { SettingsButtonText(stringResource(R.string.settings_tasks_find_token)) }
@@ -402,4 +400,23 @@ internal fun SettingsStreamFeedsPageContent(
         calendarAccess = state.calendarAccessStatus,
     )
     SettingsRssPageContent(state = state, onAction = onAction)
+}
+
+/** Saves the token and puts the keyboard away with the field: left up, it covers the status the page shows next. */
+@Composable
+private fun TasksSaveButton(
+    enabled: Boolean,
+    onSave: () -> Unit,
+) {
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focus = LocalFocusManager.current
+    TextButton(
+        modifier = Modifier.testTag(TASKS_SAVE_TEST_TAG),
+        enabled = enabled,
+        onClick = {
+            focus.clearFocus()
+            keyboard?.hide()
+            onSave()
+        },
+    ) { SettingsButtonText(stringResource(R.string.settings_tasks_save)) }
 }

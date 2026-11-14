@@ -101,8 +101,10 @@ data class PostureLayoutSettings(
     /** Whether dragging along the dots scrolls quickly; off, the dots only show where you are. */
     val quickScroll: Boolean = true,
     /**
-     * Whether apps show faintly through the Stream's cards (unfolded, where Home stays beside and beneath the stack;
-     * ADR 0003, Amendment 2). Off, nothing shows behind them. Read only by the unfolded posture.
+     * "Show apps behind the cards" (ADR 0003, Amendment 2; per posture): Home stays on screen behind the Stream and
+     * its grid fades cell by cell under the cards (it is never cut off, nothing is blurred). Off, Home fades out
+     * while the Stream is open, apart from the unfolded posture where it stays beside the column but nothing shows
+     * under it. Unfolded it is on by default, folded off.
      */
     val appPeekThrough: Boolean = true,
 ) {
@@ -114,7 +116,7 @@ data class PostureLayoutSettings(
 
     companion object {
         /** Folded: pages scroll sideways, the indicator above the Dock. */
-        val FOLDED_DEFAULT = PostureLayoutSettings(pageScroll = PageScrollDirection.HORIZONTAL)
+        val FOLDED_DEFAULT = PostureLayoutSettings(pageScroll = PageScrollDirection.HORIZONTAL, appPeekThrough = false)
 
         /** Unfolded: pages scroll up and down, the indicator just in from the Dock in front of its middle. */
         val UNFOLDED_DEFAULT = PostureLayoutSettings(pageScroll = PageScrollDirection.VERTICAL)

@@ -138,12 +138,16 @@ class LayoutSettingsTest {
     // App peek-through (Amendment 2, U2)
 
     @Test
-    fun appPeekThroughIsOnByDefaultInBothPosturesAndIsSetPerPosture() {
-        assertTrue(LayoutSettings().folded.appPeekThrough)
+    fun appsBehindTheCardsIsOnByDefaultUnfoldedOffFoldedAndIsSetPerPosture() {
+        assertFalse(LayoutSettings().folded.appPeekThrough)
         assertTrue(LayoutSettings().unfolded.appPeekThrough)
         val off = LayoutSettings().withAppPeekThrough(LayoutPosture.UNFOLDED, false)
         assertFalse(off.unfolded.appPeekThrough)
-        assertTrue(off.folded.appPeekThrough)
+        assertFalse(off.folded.appPeekThrough)
         assertEquals(PageScrollDirection.VERTICAL, off.unfolded.pageScroll)
+        val foldedOn = LayoutSettings().withAppPeekThrough(LayoutPosture.FOLDED, true)
+        assertTrue(foldedOn.folded.appPeekThrough)
+        assertTrue(foldedOn.unfolded.appPeekThrough)
+        assertEquals(PageScrollDirection.HORIZONTAL, foldedOn.folded.pageScroll)
     }
 }
