@@ -7,13 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
@@ -34,9 +28,10 @@ import org.junit.runners.MethodSorters
 /**
  * TEMPORARY diagnostic (remove once the emulator crash is understood). With the flat glass, CI's
  * emulator goes away during the first test that composes the Dock. This class sorts first and draws
- * the glass one piece at a time, each in its own test and in a fixed order, so the first probe the
- * run dies in names the piece that kills the emulator. Each probe holds its frame on screen briefly:
- * the emulator dies while drawing, and a probe that only composed would pass.
+ * the same Dock twelve times, each in its own test and in a fixed order. The first run of probes
+ * showed every piece of the glass draws once without harm and the emulator went away the second
+ * time the same Dock was shown; this run tells a repeat of the same content (dies at the second)
+ * from something that builds up (dies later) from something else (dies at the first).
  */
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -57,52 +52,58 @@ class AaaGlassProbeTest {
     }
 
     @Test
-    fun p01_aPlainBox() = probe("plain box") { Box(Modifier.size(200.dp, 80.dp)) }
+    fun s01_theSameDockWithTwoPinnedApps() = probe("same dock, time 1") { ProbeDock(items = listOf(camera, mail)) }
 
     @Test
-    fun p02_glassRectangle() = probe("glass rectangle") { GlassSurface(Modifier.size(200.dp, 80.dp)) }
+    fun s02_theSameDockWithTwoPinnedApps() = probe("same dock, time 2") { ProbeDock(items = listOf(camera, mail)) }
 
     @Test
-    fun p03_glassRoundedThin() =
+    fun s03_theSameDockWithTwoPinnedApps() = probe("same dock, time 3") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun s04_theSameDockWithTwoPinnedApps() = probe("same dock, time 4") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun s05_theSameDockWithTwoPinnedApps() = probe("same dock, time 5") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun s06_theSameDockWithTwoPinnedApps() = probe("same dock, time 6") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun s07_theSameDockWithTwoPinnedApps() = probe("same dock, time 7") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun s08_theSameDockWithTwoPinnedApps() = probe("same dock, time 8") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun s09_theSameDockWithTwoPinnedApps() = probe("same dock, time 9") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun s10_theSameDockWithTwoPinnedApps() = probe("same dock, time 10") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun s11_theSameDockWithTwoPinnedApps() = probe("same dock, time 11") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun s12_theSameDockWithTwoPinnedApps() = probe("same dock, time 12") { ProbeDock(items = listOf(camera, mail)) }
+
+    @Test
+    fun t13_glassRoundedThin() =
         probe("glass rounded thin") {
             GlassSurface(Modifier.size(200.dp, 80.dp), weight = GlassWeight.Thin, shape = RoundedCornerShape(28.dp))
         }
 
     @Test
-    fun p04_glassWithEdgeTint() =
-        probe("glass with edge tint") {
-            GlassSurface(Modifier.size(200.dp, 80.dp), shape = RoundedCornerShape(28.dp), edgeTint = Color.Green)
-        }
-
-    @Test
-    fun p05_glassWithSpotlight() =
+    fun t14_glassWithSpotlight() =
         probe("glass with spotlight") {
             GlassSurface(Modifier.size(200.dp, 80.dp), shape = RoundedCornerShape(28.dp), spotlight = true)
         }
 
     @Test
-    fun p06_theDocksAppearanceAlone() =
+    fun t15_theDocksAppearanceAlone() =
         probe("dock appearance alone") {
             Box(Modifier.size(300.dp, 80.dp).dockSurfaceAppearance(DockModel(capacity = 2, items = emptyList())))
         }
-
-    @Test
-    fun p07_anEmptyDock() = probe("empty dock") { ProbeDock(items = emptyList()) }
-
-    @Test
-    fun p08_aDockWithTwoPinnedApps() = probe("dock with two pinned apps") { ProbeDock(items = listOf(camera, mail)) }
-
-    @Test
-    fun p09_aTapOnAPinnedApp() {
-        probe("dock, then a tap on a pinned app") { ProbeDock(items = listOf(camera, mail)) }
-        val pinned =
-            SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick)
-                .and(hasTestTag(dockItemTestTag(mail.id)).or(hasAnyAncestor(hasTestTag(dockItemTestTag(mail.id)))))
-        composeRule.onNode(pinned).performClick()
-        composeRule.waitForIdle()
-        Thread.sleep(HOLD_MILLIS)
-        Log.i(TAG, "probe drew: after the tap")
-    }
 
     @Composable
     private fun ProbeDock(items: List<AppShortcutItem>) {
@@ -121,7 +122,7 @@ class AaaGlassProbeTest {
 
     private companion object {
         const val TAG = "GlassProbe"
-        const val HOLD_MILLIS = 1200L
+        const val HOLD_MILLIS = 400L
 
         fun shortcut(name: String): AppShortcutItem =
             AppShortcutItem(
