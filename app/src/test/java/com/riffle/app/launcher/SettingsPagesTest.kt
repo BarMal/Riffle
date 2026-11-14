@@ -81,6 +81,7 @@ class SettingsPagesTest {
         assertEquals(SettingsPage.LIBRARY, SettingsPage.HIDDEN_APPS.parent)
         assertEquals(
             listOf(
+                SettingsPage.STREAM_CARDS,
                 SettingsPage.STREAM_NOTIFICATIONS,
                 SettingsPage.STREAM_AGENDA,
                 SettingsPage.STREAM_TASKS,
@@ -137,7 +138,8 @@ class SettingsPagesTest {
         val pagesWithSettings = SettingKey.entries.map { it.page }.toSet()
         listOf(
             SettingsPage.HOME, SettingsPage.DOCK, SettingsPage.FLOATING_DOCK, SettingsPage.LIBRARY,
-            SettingsPage.STREAM, SettingsPage.STREAM_NOTIFICATIONS, SettingsPage.STREAM_AGENDA,
+            SettingsPage.STREAM, SettingsPage.STREAM_CARDS, SettingsPage.STREAM_NOTIFICATIONS,
+            SettingsPage.STREAM_AGENDA,
             SettingsPage.CALENDAR_FEEDS, SettingsPage.STREAM_TASKS, SettingsPage.STREAM_FEEDS,
             SettingsPage.APPEARANCE, SettingsPage.GESTURES, SettingsPage.MOTION, SettingsPage.PRIVACY,
             SettingsPage.BACKUP,

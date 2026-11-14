@@ -39,6 +39,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
@@ -434,6 +435,14 @@ sealed interface LauncherShellAction {
     data class SelectCardActionsPlacement(
         val placement: CardActionsPlacement,
     ) : LauncherShellAction
+
+    /** Settings > Motion: the Dock's and the Stream's adjustable motion (held to its ranges when saved). */
+    data class SetDockMotion(
+        val settings: DockMotionSettings,
+    ) : LauncherShellAction
+
+    /** The first-run hint for pressing the Dock down was shown and dismissed; it is not shown again. */
+    data object DismissDockPressHint : LauncherShellAction
 
     /** Settings > Privacy: hide launcher content in screenshots and recents (off by default). */
     data class SetScreenContentProtection(

@@ -64,6 +64,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.DockFanSource
 import com.riffle.app.launcher.LauncherHapticEvent
 import com.riffle.app.launcher.LocalDockFan
+import com.riffle.app.launcher.LocalDockMotionTuning
 import com.riffle.app.launcher.LocalLauncherHaptics
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
@@ -187,7 +188,8 @@ internal fun StreamStack(
     var lastOpen by remember(stackKey) { mutableStateOf<StackEntry?>(null) }
     SideEffect { if (openEntry != null) lastOpen = openEntry }
     val latestReduced by rememberUpdatedState(env.reducedMotion)
-    LaunchedEffect(openEntry != null) { motion.animateTo(openEntry != null, latestReduced) }
+    val latestTuning by rememberUpdatedState(LocalDockMotionTuning.current)
+    LaunchedEffect(openEntry != null) { motion.animateTo(openEntry != null, latestReduced, latestTuning) }
     val shown = openEntry ?: lastOpen.takeIf { motion.progress > 0f }
     BackHandler(enabled = openEntry != null) { cards.dispatch(OpenCardEvent.CloseByBack) }
     var queueShown by remember(stackKey) { mutableStateOf(true) }
@@ -395,7 +397,7 @@ private fun FocusedStack(
     val latestReduced by rememberUpdatedState(env.reducedMotion)
     val latestCount by rememberUpdatedState(count)
     val latestHaptics by rememberUpdatedState(haptics)
-    val tuning = StackDefaultTuning
+    val currentTuning by rememberUpdatedState(LocalDockMotionTuning.current)
     val tick = { latestHaptics.perform(LauncherHapticEvent.DETENT) }
     LaunchedEffect(count) { state.clampTo(count) }
 
@@ -412,7 +414,7 @@ private fun FocusedStack(
                     state.release(
                         velocityCards = cardsPerSecond(initialVelocity, density.density),
                         count = latestCount,
-                        tuning = tuning,
+                        tuning = currentTuning,
                         reduced = latestReduced,
                         onTick = tick,
                     )
@@ -424,7 +426,7 @@ private fun FocusedStack(
     val goTo: (Int) -> Boolean = { target ->
         val moves = target in 0 until latestCount && target != state.heading
         if (moves) {
-            scope.launch { scrollable.scroll { state.glideTo(target, tuning, latestReduced, tick) } }
+            scope.launch { scrollable.scroll { state.glideTo(target, currentTuning, latestReduced, tick) } }
         }
         moves
     }

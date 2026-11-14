@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
+import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.HomeBehaviourSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
@@ -56,6 +57,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("appearance", encodeAppearance(settings.appearance))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
+        .put("hints", encodeHints(settings.hints))
         .put("home", encodeHomeBehaviour(settings.home))
         .put("liquidGlass", encodeLiquidGlass(settings.liquidGlass))
         .put("motion", encodeMotionSettings(settings.motion))
@@ -101,6 +103,7 @@ private fun decodeLauncherSections(
         appearance = json.guarded("appearance", defaults.appearance) { toAppearance(it, version) },
         gestures = json.guarded("gestures", defaults.gestures, JSONObject::toGestures),
         haptics = json.guarded("haptics", defaults.haptics, JSONObject::toHaptics),
+        hints = json.guarded("hints", defaults.hints, JSONObject::toHints),
         home = json.guarded("home", defaults.home, JSONObject::toHomeBehaviour),
         liquidGlass = json.guarded("liquidGlass", defaults.liquidGlass, JSONObject::toLiquidGlass),
         motion = json.guarded("motion", defaults.motion, JSONObject::toMotionSettings),
@@ -465,6 +468,11 @@ private fun JSONObject.toFeedProfile(): AppProfile? =
 
 /** 11: P9 removed the stage cards settings, contextual behaviour, the after-leaving-Library target and fullscreenHome. */
 internal const val LAUNCHER_SETTINGS_JSON_VERSION = 11
+
+private fun encodeHints(settings: HintSettings): JSONObject = JSONObject().put("dockPressSeen", settings.dockPressSeen)
+
+private fun JSONObject.toHints(defaults: HintSettings): HintSettings =
+    HintSettings(dockPressSeen = optBoolean("dockPressSeen", defaults.dockPressSeen))
 
 private fun encodeStreamSettings(settings: StreamSettings): JSONObject =
     JSONObject()

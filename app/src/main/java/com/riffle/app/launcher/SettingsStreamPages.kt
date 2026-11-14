@@ -125,6 +125,13 @@ internal fun SettingsStreamSections(
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+    SettingsSection(title = stringResource(R.string.settings_page_stream_cards)) {
+        SettingsClickableRow(
+            title = stringResource(SettingsPage.STREAM_CARDS.titleRes),
+            subtitle = stringResource(SettingsPage.STREAM_CARDS.summaryRes),
+            onClick = { onOpenPage(SettingsPage.STREAM_CARDS) },
+        )
+    }
     if (showWideView) SettingsStreamWideView(layout, onLayoutAction)
     layout.sections.forEachIndexed { index, entry ->
         val section = entry.section

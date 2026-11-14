@@ -46,6 +46,12 @@ enum class SettingsPage(
         R.string.settings_page_stream_summary,
         R.string.settings_page_stream_keywords,
     ),
+    STREAM_CARDS(
+        STREAM,
+        R.string.settings_page_stream_cards,
+        R.string.settings_page_stream_cards_summary,
+        R.string.settings_page_stream_cards_keywords,
+    ),
     STREAM_NOTIFICATIONS(
         STREAM,
         R.string.settings_page_stream_notifications,

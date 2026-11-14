@@ -117,6 +117,8 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SetStreamCardTopGlow,
         is LauncherShellAction.SelectOpenCardPlacement,
         is LauncherShellAction.SelectCardActionsPlacement,
+        is LauncherShellAction.SetDockMotion,
+        LauncherShellAction.DismissDockPressHint,
         is LauncherShellAction.SetScreenContentProtection,
         is LauncherShellAction.SelectReturnBehavior,
         is LauncherShellAction.SelectLibraryView,

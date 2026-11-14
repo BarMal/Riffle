@@ -14,6 +14,7 @@ data class LauncherSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
+    val hints: HintSettings = HintSettings(),
     val home: HomeBehaviourSettings = HomeBehaviourSettings(),
     val liquidGlass: LiquidGlassSettings = LiquidGlassSettings(),
     val motion: MotionSettings = MotionSettings(),
@@ -266,6 +267,8 @@ data class MotionSettings(
     val reducedMotionPreference: ReducedMotionPreference = ReducedMotionPreference.SYSTEM,
     val performanceTargetFps: MotionPerformanceTargetFps = MotionPerformanceTargetFps.FPS_120,
     val systemReducedMotion: Boolean = false,
+    /** The Dock's and the Stream's adjustable motion (speed, trampoline, inertia, magnet, hold time, ticks). */
+    val dock: DockMotionSettings = DockMotionSettings(),
 ) {
     val reducedMotion: Boolean
         get() = reducedMotionPreference.resolve(systemReducedMotion)

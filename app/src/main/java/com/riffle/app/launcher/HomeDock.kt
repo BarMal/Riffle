@@ -47,11 +47,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
+import com.riffle.app.R
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -1120,6 +1124,29 @@ private fun DockFolder(
     }
 }
 
+/**
+ * The press that starts on a pinned icon has a non-gesture route: "Show <app> in Stream" (in the contextual mode a tap
+ * already does it).
+ */
+@Composable
+private fun Modifier.showInStreamAction(
+    shortcut: AppShortcutItem,
+    pinned: DockPinnedStream?,
+    enabled: Boolean,
+): Modifier {
+    if (pinned == null || pinned.contextual || !enabled) return this
+    val label = stringResource(R.string.dock_live_app_show_in_stream_action, shortcut.label)
+    return semantics {
+        customActions =
+            listOf(
+                CustomAccessibilityAction(label) {
+                    pinned.onShow(shortcut.appIdentity)
+                    true
+                },
+            )
+    }
+}
+
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 @Suppress("LongMethod")
@@ -1175,6 +1202,7 @@ private fun DockShortcut(
                             Modifier
                         },
                     )
+                    .showInStreamAction(shortcut, pinned, enabled = !state.isEditing)
                     .then(
                         if (state.isEditing) {
                             Modifier.clickable(onClick = { isContextMenuExpanded.value = true })

@@ -5,6 +5,7 @@ import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.coerced
@@ -133,6 +134,21 @@ internal class LauncherSettingsStateReducer(
                     state.withStreamSettings(launcherSettingsRepository) {
                         it.copy(cardActionsPlacement = action.placement)
                     }
+
+                is LauncherShellAction.SetDockMotion ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                motion = state.launcherSettings.motion.copy(dock = action.settings.coerced()),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.DismissDockPressHint ->
+                    state.withLauncherSettings(
+                        settings = state.launcherSettings.copy(hints = HintSettings(dockPressSeen = true)),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
 
                 is LauncherShellAction.SelectOverlayDockEnabled,
                 is LauncherShellAction.SelectOverlayDockEdge,
