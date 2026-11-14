@@ -22,7 +22,11 @@ class LiveNotificationRuleTest {
     fun `an ongoing notification with a layout of its own, a progress bar or a live category is live`() {
         assertTrue(LiveNotificationRule.isLive(Facts(ongoing = true, customViews = true)))
         assertTrue(LiveNotificationRule.isLive(Facts(ongoing = true, progress = true)))
-        for (category in listOf(NotificationCategory.NAVIGATION, NotificationCategory.TRANSPORT, NotificationCategory.PROGRESS)) {
+        for (category in listOf(
+            NotificationCategory.NAVIGATION,
+            NotificationCategory.TRANSPORT,
+            NotificationCategory.PROGRESS,
+        )) {
             assertTrue(LiveNotificationRule.isLive(Facts(ongoing = true, category = category)), category.name)
         }
     }
@@ -42,7 +46,8 @@ class LiveNotificationRuleTest {
 
     // Through the item, the content and the card's controls ---------------------------------------------------------
 
-    private val own = listOf(NotificationOwnAction("provider:0", "End Trip"), NotificationOwnAction("provider:1", "Next"))
+    private val own =
+        listOf(NotificationOwnAction("provider:0", "End Trip"), NotificationOwnAction("provider:1", "Next"))
 
     private fun content(
         live: Boolean,
@@ -90,7 +95,8 @@ class LiveNotificationRuleTest {
 
     @Test
     fun `a live notification whose text is hidden shows no buttons`() {
-        val hidden = content(live = true, SourceContentLevels().with(SourceIds.NOTIFICATIONS, SourceContentLevel.HIDE_TEXT))
+        val hidden =
+            content(live = true, SourceContentLevels().with(SourceIds.NOTIFICATIONS, SourceContentLevel.HIDE_TEXT))
         assertEquals(emptyList(), StreamCardActions.onBrowseCard(hidden))
     }
 

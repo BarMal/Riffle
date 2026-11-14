@@ -179,7 +179,8 @@ class LiveNotificationBrowseActionsTest {
         show(note(1, "Get off at Angel", live = true), note(2, "Earlier", live = false))
         val button = composeRule.onNode(button("Next")).fetchSemanticsNode()
         val pager = composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode()
-        val start = button.positionInRoot + Offset(button.size.width / 2f, button.size.height / 2f) - pager.positionInRoot
+        val start =
+            button.positionInRoot + Offset(button.size.width / 2f, button.size.height / 2f) - pager.positionInRoot
         composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
             down(start)
             repeat(10) { moveBy(Offset(0f, 7.dp.toPx()), delayMillis = 16) }

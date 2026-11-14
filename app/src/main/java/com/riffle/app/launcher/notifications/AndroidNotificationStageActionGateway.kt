@@ -38,7 +38,9 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
         targets[LauncherNotificationKey(notification.key)] =
             Targets(
                 ownActions = ownActionsOf(platformNotification.actions),
-                live = runCatching { LiveNotificationRule.isLive(liveFactsOf(platformNotification)) }.getOrDefault(false),
+                live =
+                    runCatching { LiveNotificationRule.isLive(liveFactsOf(platformNotification)) }
+                        .getOrDefault(false),
                 context = context.applicationContext,
                 contentIntent = platformNotification.contentIntent,
                 providerActions = providerActions,
