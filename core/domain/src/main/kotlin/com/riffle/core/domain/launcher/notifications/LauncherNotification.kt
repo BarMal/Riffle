@@ -16,6 +16,13 @@ data class LauncherNotification(
     val title: String = "",
     val text: String = "",
     val largeIconPngBase64: String? = null,
+    /**
+     * Whether the posting app published a person icon (a contact photo) and a picture (big-picture style). The images
+     * themselves are never part of this value: they are held in memory by the platform listener for as long as the
+     * notification is active (see `NotificationImageStore`), so only these two flags are stored with it.
+     */
+    val hasPersonIcon: Boolean = false,
+    val hasPicture: Boolean = false,
     /** Individual messages when the source notification carries per-message history, newest last. */
     val messages: List<LauncherNotificationMessage> = emptyList(),
     val postedAtEpochMillis: Long,

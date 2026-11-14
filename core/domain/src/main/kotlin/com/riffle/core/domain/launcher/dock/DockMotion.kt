@@ -166,6 +166,19 @@ object DockMotionConstants {
     /** Under reduced motion the stack jumps to its card and fades from this opacity to full over the reduced fade. */
     const val STACK_REDUCED_FADE_FROM: Float = 0.4f
 
+    // The open card (ADR 0003, Amendment 1, "Stream: browse, then open"; `launcher/stream/OpenCardMotion.kt`): a card
+    // grows in place from its browse size to its full content with a critically damped spring, and shrinks back.
+
+    /** The open card's spring takes this many times the speed setting to settle: a little slower than the Dock's. */
+    const val OPEN_CARD_SETTLE_TIME_FACTOR: Float = 1.8f
+
+    /** Where the open card's growth is considered at rest, in progress (0 to 1) and progress per second. */
+    const val OPEN_CARD_SETTLED_PROGRESS: Float = 0.002f
+    const val OPEN_CARD_SETTLED_VELOCITY: Float = 0.02f
+
+    /** Under reduced motion the card is there at once and fades from this opacity to full over the reduced fade. */
+    const val OPEN_CARD_REDUCED_FADE_FROM: Float = 0.4f
+
     // Choosing (hold to choose, `DockChoice.kt`): a press held past the threshold, or slid, becomes a selection.
 
     /** The default hold time: how long a press held still past the threshold waits before it turns into choosing. */
@@ -235,6 +248,12 @@ data class DockMotionTuning(
         get() =
             DockMotionConstants.SETTLE_E_FOLDINGS /
                 (speed * DockMotionConstants.STACK_SETTLE_TIME_FACTOR / MILLIS_PER_SECOND)
+
+    /** The open card's spring frequency, in radians per second. */
+    val openCardOmega: Float
+        get() =
+            DockMotionConstants.SETTLE_E_FOLDINGS /
+                (speed * DockMotionConstants.OPEN_CARD_SETTLE_TIME_FACTOR / MILLIS_PER_SECOND)
 
     /** The inertia kept in its range. */
     val stackInertia: Float get() = inertia.coerceIn(0f, DockMotionConstants.MAX_STACK_INERTIA)

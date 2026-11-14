@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import android.os.SystemClock
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -72,6 +73,27 @@ class SettingsPlacesTest {
         }
     }
 
+    /**
+     * The text is on screen and stays there. Typing raises the keyboard, the settings surface pads itself by the
+     * keyboard's inset, and the keyboard leaves again once its field does: on a small window that pushes a row off
+     * screen and back, on the keyboard's clock rather than Compose's. So wait for the row to hold still on screen
+     * instead of asserting in the middle of that.
+     */
+    private fun assertSettlesOnScreen(text: String) {
+        var shownSince = -1L
+        composeRule.waitUntil(timeoutMillis = SCROLL_TO_SETTING_TIMEOUT_MILLIS) {
+            val shown = runCatching { composeRule.onNodeWithText(text).assertIsDisplayed() }.isSuccess
+            val now = SystemClock.uptimeMillis()
+            if (!shown) {
+                shownSince = -1L
+            } else if (shownSince < 0) {
+                shownSince = now
+            }
+            shown && now - shownSince >= SETTLED_ON_SCREEN_MILLIS
+        }
+        composeRule.onNodeWithText(text).assertIsDisplayed()
+    }
+
     @Test
     fun theMainPageListsTheTenPlacesAndNothingElse() {
         setSurface()
@@ -115,10 +137,7 @@ class SettingsPlacesTest {
 
         // Well down the Feeds page, and on screen because search scrolled to it. The scroll starts a couple of
         // frames after the page opens and is animated, so wait for it to land rather than asserting at once.
-        composeRule.waitUntil(timeoutMillis = SCROLL_TO_SETTING_TIMEOUT_MILLIS) {
-            runCatching { composeRule.onNodeWithText("Only on Wi-Fi").assertIsDisplayed() }.isSuccess
-        }
-        composeRule.onNodeWithText("Only on Wi-Fi").assertIsDisplayed()
+        assertSettlesOnScreen("Only on Wi-Fi")
     }
 
     @Test
@@ -175,22 +194,23 @@ class SettingsPlacesTest {
 
         composeRule.onNodeWithTag(settingsMainRowTestTag(SettingsPage.STREAM)).performScrollTo().performClick()
         composeRule.onNodeWithText("Connect Todoist with a personal token").performScrollTo().performClick()
-        composeRule.onNodeWithText("Not connected").assertIsDisplayed()
+        assertSettlesOnScreen("Not connected")
 
         composeRule.onNodeWithTag(TASKS_TOKEN_FIELD_TEST_TAG).performScrollTo().performTextInput("fake-token-123")
         composeRule.onNodeWithTag(TASKS_SAVE_TEST_TAG).performScrollTo().performClick()
 
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("Connected").assertIsDisplayed()
+        assertSettlesOnScreen("Connected")
         composeRule.onNodeWithTag(TASKS_TOKEN_FIELD_TEST_TAG).assertDoesNotExist()
         composeRule.onNodeWithText("fake-token-123").assertDoesNotExist()
         assertEquals("fake-token-123", saved?.reveal())
 
         composeRule.onNodeWithTag(TASKS_REMOVE_TEST_TAG).performScrollTo().performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("Not connected").assertIsDisplayed()
+        assertSettlesOnScreen("Not connected")
         assertEquals(null, saved)
     }
 }
 
 private const val SCROLL_TO_SETTING_TIMEOUT_MILLIS = 5_000L
+private const val SETTLED_ON_SCREEN_MILLIS = 400L

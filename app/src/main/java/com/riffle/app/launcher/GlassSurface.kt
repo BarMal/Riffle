@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.toArgb
+import com.riffle.core.domain.launcher.designsystem.CardTint
 import com.riffle.core.domain.launcher.designsystem.GlassMaterialTokens
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 
@@ -58,26 +59,101 @@ internal fun GlassSurface(
     contentColor: Color = Color.Unspecified,
     spotlight: Boolean = false,
     edgeTint: Color = Color.Unspecified,
+    cardTint: GlassCardTint? = null,
     content: @Composable () -> Unit = {},
 ) {
-    val fill = glassFillColor(weight, tint, LocalLiquidGlassSettings.current.reducedTransparency)
+    val reducedTransparency = LocalLiquidGlassSettings.current.reducedTransparency
+    val card = cardTint?.let { spec -> resolveCardFill(spec, tint, reducedTransparency) }
+    val fill = card?.fill ?: glassFillColor(weight, tint, reducedTransparency)
     val spotlightState = rememberGlassSpotlightState(enabled = spotlight)
-    val resolvedContentColor = contentColor.takeOrElse { contentColorFor(tint) }
+    val resolvedContentColor = contentColor.takeOrElse { card?.ink ?: contentColorFor(tint) }
+    // A card's coloured glow, when the setting asks for one, is the edge's tint light along the top edge only.
+    val glow = if (cardTint?.topGlow == true && cardTint.appColor != null) cardTint.appColor else Color.Unspecified
 
     Box(modifier = modifier.clip(shape)) {
         Box(Modifier.matchParentSize().background(fill))
         if (spotlightState != null) {
             Box(Modifier.matchParentSize().glassSpotlight(spotlightState, shape))
         }
-        Box(Modifier.matchParentSize().glassEdgeLights(shape, weight, fill, edgeTint))
+        Box(
+            Modifier.matchParentSize().glassEdgeLights(
+                shape,
+                weight,
+                fill,
+                edgeTint.takeOrElse { glow },
+                tintBottom = glow == Color.Unspecified || edgeTint != Color.Unspecified,
+            ),
+        )
         CompositionLocalProvider(
             LocalContentColor provides resolvedContentColor,
             LocalGlassSpotlight provides spotlightState,
         ) {
-            content()
+            if (card != null && contentColor == Color.Unspecified) {
+                // The card's text colour follows its fill: the theme's own text colours would not be readable on it.
+                CardTextColors(card.ink, content)
+            } else {
+                content()
+            }
         }
     }
 }
+
+/**
+ * A Stream card's tint (ADR 0003, Amendment 1, "Card colour"): its app's main icon colour (null: no tint) and how much
+ * of it the fill takes, in percent, and whether the colour also glows along the top edge. The fill is a plain solid
+ * colour from `CardTint`, never a gradient; the edge stays the neutral glass edge.
+ */
+internal class GlassCardTint(
+    val appColor: Color?,
+    val strengthPercent: Int,
+    val topGlow: Boolean = false,
+)
+
+private class ResolvedCardFill(
+    val fill: Color,
+    val ink: Color,
+)
+
+private fun resolveCardFill(
+    spec: GlassCardTint,
+    tint: Color,
+    reducedTransparency: Boolean,
+): ResolvedCardFill {
+    val fill =
+        CardTint.fill(
+            appRgb = spec.appColor?.toArgb()?.and(RGB_MASK),
+            strengthPercent = spec.strengthPercent,
+            darkTheme = tint.luminance() < DARK_TINT_LUMINANCE,
+            reducedTransparency = reducedTransparency,
+        )
+    return ResolvedCardFill(
+        fill = Color(OPAQUE_BLACK or fill.rgb).copy(alpha = fill.alpha),
+        ink = Color(OPAQUE_BLACK or fill.inkRgb),
+    )
+}
+
+/** [content] with the theme's text colours on surfaces swapped for [ink] (and a softer [ink] for secondary text). */
+@Composable
+private fun CardTextColors(
+    ink: Color,
+    content: @Composable () -> Unit,
+) {
+    MaterialTheme(
+        colorScheme =
+            MaterialTheme.colorScheme.copy(
+                onSurface = ink,
+                onSurfaceVariant = ink.copy(alpha = CARD_SECONDARY_TEXT_ALPHA),
+                // Accent text (a time span, a text button) is the ink too: the theme's accent may not be readable.
+                primary = ink,
+            ),
+        shapes = MaterialTheme.shapes,
+        typography = MaterialTheme.typography,
+        content = content,
+    )
+}
+
+/** Secondary text on a card (the app name, the time): the ink, softened. */
+private const val CARD_SECONDARY_TEXT_ALPHA = 0.8f
 
 /**
  * The flat fill [GlassSurface] draws at [weight] for a caller whose tint is [tint]: the weight's own

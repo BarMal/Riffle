@@ -4,25 +4,17 @@ package com.riffle.app.launcher.stream
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -38,10 +30,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
+import com.riffle.app.launcher.GlassCardTint
 import com.riffle.app.launcher.GlassSurface
 import com.riffle.app.launcher.LocalLauncherCardShape
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.glassSpotlightSource
+import com.riffle.app.launcher.rememberAppIconColor
 import com.riffle.app.launcher.rememberGlassSpotlightColor
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.stream.ArticleAction
@@ -49,7 +43,6 @@ import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.EventKind
 import com.riffle.core.domain.launcher.stream.EventTiming
-import com.riffle.core.domain.launcher.stream.NotificationAction
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
@@ -84,7 +77,6 @@ internal object StreamCardHeights {
     val notice: Dp = 144.dp
 }
 
-private val CardIconSize = RiffleSpacing.xl
 private val LeadImageHeight = 112.dp
 private const val BODY_LINES = 2
 
@@ -104,12 +96,16 @@ internal fun StreamCardSurface(
     body: @Composable (Modifier) -> Unit,
 ) {
     val identity = remember(app, icon, env.installedApps) { env.identityFor(app, icon) }
+    val appColor = rememberAppIconColor(identity, env.appIconLoader)
     GlassSurface(
         modifier = modifier,
         weight = weight,
         shape = LocalLauncherCardShape.current,
         tint = MaterialTheme.colorScheme.surfaceContainerHigh,
-        spotlight = identity != null,
+        // The app's colour is in the fill (and, if the setting asks, a glow along the top edge): not also an edge glow,
+        // which read as a coloured outline. The content still reports its colour to a spotlit surface it sits in.
+        spotlight = false,
+        cardTint = GlassCardTint(appColor, env.cardSettings.cardTintPercent, env.cardSettings.cardTopGlow),
     ) {
         val color = rememberGlassSpotlightColor(identity = identity, appIconLoader = env.appIconLoader)
         body(Modifier.glassSpotlightSource(key = key, color = color))
@@ -119,8 +115,12 @@ internal fun StreamCardSurface(
 @Composable
 internal fun hiddenText(): String = stringResource(R.string.stream_hidden_content)
 
-/** A notification: app tint, sender, message, inline image; expands to the thread with reply. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * A notification on a browse card (ADR 0003, Amendment 1, "Browse"): the contact photo as a round avatar with the app's
+ * icon badged at its corner, who and when, the message and, when the notification carries a picture, one small
+ * thumbnail at the trailing edge. A tap opens it in place ([onOpen]); without one (a surface that cannot open a card in
+ * place) it opens the app. Its actions are on the open card: the Dock's row, or the card itself.
+ */
 @Composable
 @Suppress("LongMethod")
 internal fun NotificationCard(
@@ -128,9 +128,8 @@ internal fun NotificationCard(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     groupKey: String?,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onOpen: (() -> Unit)? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     StreamCardSurface(content.id.value, content.app, content.icon, env, modifier) { sourceModifier ->
@@ -139,98 +138,63 @@ internal fun NotificationCard(
                 sourceModifier
                     .fillMaxWidth()
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
+                    .streamClickable(onOpen ?: { callbacks.onAction(content, StreamAction.Open) })
                     .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
-            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
+            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
             ) {
-                StreamIcon(content.icon, env, CardIconSize)
-                Text(
-                    text = content.appLabel.orEmpty(),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = env.formats.age(content.postedAtEpochMillis),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                StreamAvatar(content.avatar, content.icon, content.title ?: content.appLabel, env, BrowseAvatarSize)
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
+                    Text(
+                        text = content.title ?: hiddenText(),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text =
+                            listOfNotNull(
+                                content.appLabel?.takeIf { it.isNotBlank() },
+                                env.formats.age(content.postedAtEpochMillis),
+                            ).joinToString(" · "),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
             }
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = StreamMinTarget)
-                        .streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
             ) {
-                Text(
-                    text = content.title ?: hiddenText(),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
                 content.text?.takeIf { it.isNotBlank() }?.let { text ->
                     Text(
                         text = text,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = BODY_LINES,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
-                }
-            }
-            if (expanded) {
-                NotificationThread(content)
-                content.takeIf { StreamActionPolicy.offers(it, StreamAction.Reply("x")) }
-                    ?.let { NotificationReplyField(it, callbacks) }
-            } else {
-                content.image?.let { StreamLeadImage(it, env, LeadImageHeight / 2) }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.xs)) {
-                if (NotificationAction.REPLY in content.actions && content.notificationKey != null) {
-                    StreamTextButton(
-                        stringResource(R.string.stream_notification_reply),
-                        { onExpandedChange(!expanded) },
-                    )
-                } else if (content.thread.isNotEmpty()) {
-                    StreamTextButton(
-                        stringResource(
-                            if (expanded) {
-                                R.string.stream_notification_hide_thread
-                            } else {
-                                R.string.stream_notification_show_thread
-                            },
-                        ),
-                        { onExpandedChange(!expanded) },
-                    )
-                }
-                if (StreamActionPolicy.offers(content, StreamAction.Dismiss)) {
-                    StreamTextButton(
-                        stringResource(R.string.stream_notification_dismiss),
-                        { callbacks.onAction(content, StreamAction.Dismiss) },
-                    )
-                }
-                if (StreamActionPolicy.offers(content, StreamAction.Snooze())) {
-                    StreamTextButton(
-                        stringResource(R.string.stream_notification_snooze),
-                        { callbacks.onAction(content, StreamAction.Snooze()) },
-                    )
-                }
+                } ?: Box(Modifier.weight(1f))
+                StreamThumbnail(content.picture, content.title, env, BrowseThumbnailSize)
             }
         }
     }
 }
 
+private val BrowseAvatarSize = 48.dp
+private val BrowseThumbnailSize = 64.dp
+
 /** The message history of a messaging notification, oldest first. Nothing when the notification keeps none. */
 @Composable
-private fun NotificationThread(content: NotificationContent) {
+internal fun NotificationThread(content: NotificationContent) {
     if (content.thread.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
+    Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs)) {
         content.thread.takeLast(MAX_THREAD_LINES).forEach { message ->
             Text(
                 text =
@@ -240,41 +204,6 @@ private fun NotificationThread(content: NotificationContent) {
                         append(message.text)
                     },
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun NotificationReplyField(
-    content: NotificationContent,
-    callbacks: StreamCallbacks,
-) {
-    var reply by remember(content.id) { mutableStateOf("") }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
-    ) {
-        OutlinedTextField(
-            value = reply,
-            onValueChange = { reply = it },
-            modifier = Modifier.weight(1f).heightIn(min = StreamMinTarget),
-            placeholder = { Text(stringResource(R.string.stream_notification_reply_hint)) },
-            singleLine = true,
-        )
-        IconButton(
-            onClick = {
-                callbacks.onAction(content, StreamAction.Reply(reply))
-                reply = ""
-            },
-            enabled = reply.isNotBlank(),
-            modifier = Modifier.size(StreamMinTarget),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = stringResource(R.string.stream_notification_send),
             )
         }
     }
@@ -292,6 +221,8 @@ internal fun EventCard(
     modifier: Modifier = Modifier,
     /** The day, said before the time when a pile of events spans days. */
     caption: String? = null,
+    /** A tap opens the event in place; without one (a widget) it opens the event in the calendar. */
+    onOpen: (() -> Unit)? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     StreamCardSurface(content.id.value, null, null, env, modifier) { sourceModifier ->
@@ -300,7 +231,7 @@ internal fun EventCard(
                 sourceModifier
                     .fillMaxWidth()
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
-                    .streamClickable({ callbacks.onAction(content, StreamAction.Open) })
+                    .streamClickable(onOpen ?: { callbacks.onAction(content, StreamAction.Open) })
                     .padding(RiffleSpacing.l),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
         ) {
@@ -541,6 +472,12 @@ internal fun TaskLine(
         }
     }
 }
+
+@Composable
+internal fun taskDueLabel(
+    task: TaskContent,
+    env: StreamEnvironment,
+): String? = taskDueText(task, env)
 
 @Composable
 private fun taskDueText(

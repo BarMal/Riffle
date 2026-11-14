@@ -29,6 +29,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -61,6 +62,7 @@ import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.dock.DockPageOrder
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
+import com.riffle.core.domain.launcher.stream.OpenCardEvent
 import com.riffle.core.domain.launcher.stream.StreamFocus
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
@@ -104,7 +106,7 @@ private class PageJump(val key: String, val id: Long)
  * carry the last page across a close and reopen.
  */
 @Composable
-@Suppress("LongMethod", "LongParameterList")
+@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 internal fun StreamSurface(
     layout: StreamLayout,
     results: Map<StreamSection, StreamSectionResult>,
@@ -131,7 +133,13 @@ internal fun StreamSurface(
     shortcutPages: List<StreamPage> = emptyList(),
     /** The pinned apps' keys in the Dock's order, which the order of their pages follows. */
     pinnedGroupKeys: List<String> = emptyList(),
+    /**
+     * Whether an open card's actions sit in the Dock's row (the setting, on a Dock that can hold one) rather than on
+     * the card. False wherever there is no Dock to hold them.
+     */
+    actionsInDock: Boolean = false,
 ) {
+    val openCards = dockLink?.openCards ?: remember { OpenCardHolder() }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -202,6 +210,8 @@ internal fun StreamSurface(
             )
         }
     val state = rememberStreamPageState(pages, results, initialPageKey, focusRequest, onFocusHandled, env.reducedMotion)
+    // A card open on a page closes when the Stream comes to another one (a tap on a tile, the pager's own actions).
+    LaunchedEffect(state.currentKey) { openCards.dispatch(OpenCardEvent.PageChanged(state.currentKey)) }
     LaunchedEffect(state.settledKey, state.restoring) {
         val key = state.settledKey
         if (key != null && !state.restoring) onPageChanged(key)
@@ -214,44 +224,46 @@ internal fun StreamSurface(
             wideView = layout.wideView.takeIf { wideLayout },
             hiddenSections = layout.sections.filter { !it.enabled }.map { it.section },
         )
-    Box(modifier = modifier.fillMaxSize().testTag(STREAM_SURFACE_TEST_TAG)) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-            val widthDp = maxWidth.value.toInt()
-            when {
-                pages.isEmpty() ->
-                    StreamAllHidden(menu.hiddenSections) { section ->
-                        surfaceCallbacks.onLayoutAction(StreamLayoutAction.SetEnabled(section, true))
-                    }
-                wideLayout && layout.wideView == StreamWideView.STAGE ->
-                    StreamStageMode(
-                        pages = pages,
-                        state = state,
-                        env = liveEnv,
-                        callbacks = surfaceCallbacks,
-                        menu = menu,
-                        onMenuAction = onMenuAction,
-                        dockLink = dockLink,
-                    )
-                else ->
-                    StreamPagesMode(
-                        pages = pages,
-                        state = state,
-                        env = liveEnv,
-                        callbacks = surfaceCallbacks,
-                        perView = StreamPagesPerView.forWidth(widthDp, wideLayout),
-                        dockLink = dockLink,
-                    )
+    CompositionLocalProvider(LocalOpenCards provides openCards, LocalActionsInDock provides actionsInDock) {
+        Box(modifier = modifier.fillMaxSize().testTag(STREAM_SURFACE_TEST_TAG)) {
+            BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
+                val widthDp = maxWidth.value.toInt()
+                when {
+                    pages.isEmpty() ->
+                        StreamAllHidden(menu.hiddenSections) { section ->
+                            surfaceCallbacks.onLayoutAction(StreamLayoutAction.SetEnabled(section, true))
+                        }
+                    wideLayout && layout.wideView == StreamWideView.STAGE ->
+                        StreamStageMode(
+                            pages = pages,
+                            state = state,
+                            env = liveEnv,
+                            callbacks = surfaceCallbacks,
+                            menu = menu,
+                            onMenuAction = onMenuAction,
+                            dockLink = dockLink,
+                        )
+                    else ->
+                        StreamPagesMode(
+                            pages = pages,
+                            state = state,
+                            env = liveEnv,
+                            callbacks = surfaceCallbacks,
+                            perView = StreamPagesPerView.forWidth(widthDp, wideLayout),
+                            dockLink = dockLink,
+                        )
+                }
             }
+            SnackbarHost(
+                hostState = snackbar,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(contentPadding)
+                        .padding(horizontal = RiffleSpacing.l),
+            )
         }
-        SnackbarHost(
-            hostState = snackbar,
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(contentPadding)
-                    .padding(horizontal = RiffleSpacing.l),
-        )
     }
 }
 
@@ -424,6 +436,8 @@ private fun StreamPagesMode(
                             },
                         )
                 },
+        // A swipe is not for a page while a card is open (the open card is its own scene): a tile or Back leaves it.
+        userScrollEnabled = !LocalOpenCards.current.state.isOpen,
         pageSize = if (perView > 1) splitPageSize(perView) else PageSize.Fill,
         pageSpacing = RiffleSpacing.s,
         beyondViewportPageCount = 0,

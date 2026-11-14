@@ -144,8 +144,9 @@ The Stream (ADR 0003) is a full surface that replaces Home with the Dock still d
 Dock's press (above), the home gesture action **Stream** (`OPEN_STREAM`; no gesture is bound to it by default) and
 the Dock's accessibility actions.
 
-- **Close.** Back and the Home button (`OpenDefaultHome`) return to Home, as do the Dock press and "Back to Home". A focused card that is expanded (a notification's thread, now playing's queue) collapses on
-  Back first.
+- **Close.** Back and the Home button (`OpenDefaultHome`) return to Home, as do the Dock press and "Back to Home". **An open
+  card closes first** (dock modes slice 5, below): Back, a press of the Dock and "Back to Home" (which then reads "Close card") each close
+  the open card and leave the Stream where it is; the next one returns Home.
 - **Inside the Stream (P13, P14, dock modes slice 4a).** The Stream is a horizontal pager of pages and each page is one
   vertically scrolling stack or list ([places-views-plan.md](places-views-plan.md), P13). The pager is the platform
   `HorizontalPager` (`Orientation.Horizontal`, ADR 0002); a page's stack is `StreamStack`, bottom-anchored: the front card
@@ -167,13 +168,34 @@ the Dock's accessibility actions.
   - **Reduced motion**: dragging still follows the finger; on release the stack jumps to the card nearest to where the
     finger left it (no coast, spring or magnet) and fades from 40% to full opacity over the 80 ms reduced-motion fade.
   - **Tap**: a peeking card is one 52 dp target that brings it to the front (the card's own buttons are out of reach until
-    it is in front); the front card keeps its own targets and opens as before. The card sunk before the front card is not a
-    strip, so it is reached with Previous card, a drag or the arrow keys.
+    it is in front); a tap on the front card of a conversation, the player, an event or a task **opens it in place**
+    (below), and on a recent app, a shortcut or an article it acts (launches, opens the article) as before. The card sunk
+    before the front card is not a strip, so it is reached with Previous card, a drag or the arrow keys.
+  - **Open** (dock modes slice 5). Tapping the front card grows it in place from its browse size into its full content
+    (`OpenCardFrame`, driven by the critically damped `OpenCardSpring`; reduced motion: no growth, an 80 ms fade) and the
+    cards behind stay as peeking strips above it. While a card is open the stack takes no drag and the pager no swipe. It
+    closes by a tap on it or beside it, **a press of the Dock** (the Dock dips and springs back; the Stream stays: the press
+    is the card's first, `OpenCardHolder.closeByPress`), Back, or by the Stream coming to another page (a tile, the
+    pager's actions) or the card going away. The state and its transitions are `OpenCardReducer` (`OpenCard.kt`). The
+    Dock's press is still claimed when it starts on the actions row's empty space (the row is inside the Dock's gesture,
+    decided on the Initial pass as before), and the row's controls take their own taps and text.
+  - **The actions row** (setting "Where its actions sit": in the Dock, the default, or on the card). While a card is open the
+    Dock gains a row above its icons (below them on a top Dock) holding that card's actions, on Thick glass, rising with the
+    card and leaving with it: a conversation's reply field and send button, Dismiss and Snooze (as the notification offers
+    them); the player's previous, play or pause, next and the queue control; "Open in calendar" (an alarm: "Open clock");
+    Complete for a task; nothing for a recent app or a shortcut (they do not open). Every control is a real focusable control
+    with a 48 dp target (`CardActionControls`), and the open card carries the same actions as accessibility actions
+    (`cardActionAccessibility`: Dismiss, Snooze, the transport, the queue, Open in calendar, Complete). The Dock grows
+    upward (it is anchored at its edge) and the room it reserves grows with it, so the Stream makes room and the open card
+    is not covered; the keyboard raises the Dock and the card with it (both follow the window insets). A Dock down a side
+    holds no row: the actions are on the card then (`StreamCardActions.effectiveActionsPlacement`), and so wherever there
+    is no Dock to hold them (the unfolded split).
   Every gesture has a non-gesture equivalent:
 
   | Gesture | Equivalent |
   | --- | --- |
   | Swipe to the next or previous page | Tap the page's tile or live app in the Dock (contextual mode); the pager's custom actions "Previous page" and "Next page" |
+  | Tap the front card to open it, press the Dock to close it | The front card's custom action "Open card" and Enter or Space; the open card's "Close card" click action and Back; the Dock's action "Close card" (it reads "Back to Home" when no card is open) |
   | Scroll a stack to another card | The stack's own custom actions "Previous card" and "Next card" (Next is an older card, drawn above) and the front card's "Open card"; the arrow keys (up and Page Up: older; down and Page Down: newer); a tap on a peeking card. There is no on-screen stepper (the "Card 2 of 3" pill with arrows was removed in slice 4a); the front card's state description says "Card 2 of 3" |
   | Long-press a page's tile or icon in the Dock for Show as, Move and Hide, and Show for each hidden section | The long-click custom action of the tile (assistive technology), the same menu |
   | Long-press the Stage's bar for the Stream's own menu: Show as Pages or Stage | The options button at its end (Settings > Stream chooses Pages or Stage too) |

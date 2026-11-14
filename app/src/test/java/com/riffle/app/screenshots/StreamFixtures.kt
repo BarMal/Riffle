@@ -1,5 +1,12 @@
 package com.riffle.app.screenshots
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
+import com.riffle.app.launcher.expressions.ExpressionImageLoader
 import com.riffle.app.launcher.expressions.FakeExpressionImageLoader
 import com.riffle.app.launcher.stream.StreamCallbacks
 import com.riffle.app.launcher.stream.StreamEnvironment
@@ -53,6 +60,57 @@ internal class FixedStreamFormats(private val nowEpochMillis: Long = StreamFixtu
 
     private companion object {
         const val MINUTE = 60_000L
+    }
+}
+
+/**
+ * Images for the Stream's screenshots: a picture-like scene for a notification's picture and for artwork, a face-like
+ * disc for a contact photo, and the plain coloured discs of [FakeExpressionImageLoader] for everything else. Nothing is
+ * read from disk or the network.
+ */
+internal class FixtureImageLoader : ExpressionImageLoader {
+    private val plain = FakeExpressionImageLoader()
+
+    override suspend fun load(
+        handle: ItemImageHandle,
+        sizePx: Int,
+    ): ImageBitmap? =
+        when {
+            handle.key.startsWith("notification-picture:") -> scene(sizePx, widthOverHeight = 1.5f)
+            handle.key.startsWith("media-art:") -> scene(sizePx, widthOverHeight = 1f)
+            handle.key.startsWith("notification-person:") -> face(sizePx)
+            else -> plain.load(handle, sizePx)
+        }
+
+    private fun scene(
+        sizePx: Int,
+        widthOverHeight: Float,
+    ): ImageBitmap {
+        val width = sizePx.coerceAtLeast(2)
+        val height = (width / widthOverHeight).toInt().coerceAtLeast(2)
+        val bitmap = ImageBitmap(width, height)
+        val canvas = Canvas(bitmap)
+
+        fun fill(
+            color: Long,
+            draw: (Paint) -> Unit,
+        ) = draw(Paint().apply { this.color = Color(color) })
+        fill(0xFF7CC3F2) { canvas.drawRect(Rect(0f, 0f, width.toFloat(), height.toFloat()), it) }
+        fill(0xFFFFD54F) { canvas.drawCircle(Offset(width * 0.75f, height * 0.28f), height * 0.14f, it) }
+        fill(0xFF3E8E55) { canvas.drawCircle(Offset(width * 0.3f, height * 1.15f), height * 0.7f, it) }
+        fill(0xFF2F6F45) { canvas.drawCircle(Offset(width * 0.85f, height * 1.25f), height * 0.6f, it) }
+        return bitmap
+    }
+
+    private fun face(sizePx: Int): ImageBitmap {
+        val side = sizePx.coerceAtLeast(2)
+        val bitmap = ImageBitmap(side, side)
+        val canvas = Canvas(bitmap)
+        val half = side / 2f
+        canvas.drawRect(Rect(0f, 0f, side.toFloat(), side.toFloat()), Paint().apply { color = Color(0xFF6C7BD9) })
+        canvas.drawCircle(Offset(half, side * 0.4f), side * 0.2f, Paint().apply { color = Color(0xFFF2C6A0) })
+        canvas.drawCircle(Offset(half, side * 1.0f), side * 0.38f, Paint().apply { color = Color(0xFFF2C6A0) })
+        return bitmap
     }
 }
 
@@ -164,6 +222,8 @@ internal object StreamFixtures {
             actions = NotificationAction.entries.toSet(),
             privacy = com.riffle.core.domain.launcher.stream.StreamPrivacy.VISIBLE,
             notificationKey = "0|chat|1",
+            person = ItemImageHandle("notification-person:personal:0|chat|1"),
+            picture = ItemImageHandle("notification-picture:personal:0|chat|1"),
             thread =
                 listOf(
                     NotificationMessage("Sam", "Morning! Got a minute?", NOW - 20 * MINUTE),
@@ -180,6 +240,8 @@ internal object StreamFixtures {
             postedAtEpochMillis = NOW - 30 * MINUTE,
             notificationKey = "0|chat|2",
             thread = emptyList(),
+            person = null,
+            picture = null,
         )
 
     val mailNotification =
@@ -193,6 +255,8 @@ internal object StreamFixtures {
             notificationKey = "0|mail|1",
             actions = setOf(NotificationAction.OPEN, NotificationAction.DISMISS, NotificationAction.HIDE),
             thread = emptyList(),
+            person = null,
+            picture = null,
         )
 
     val recents: List<RecentAppContent> =
@@ -366,7 +430,7 @@ internal object StreamFixtures {
 
     fun environment(reducedMotion: Boolean = false) =
         StreamEnvironment(
-            imageLoader = FakeExpressionImageLoader(),
+            imageLoader = FixtureImageLoader(),
             appIconLoader = SolidColorAppIconLoader(),
             installedApps = ScreenshotFixtures.installedApps,
             reducedMotion = reducedMotion,

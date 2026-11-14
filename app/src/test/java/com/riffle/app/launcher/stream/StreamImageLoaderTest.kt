@@ -95,6 +95,38 @@ class StreamImageLoaderTest {
     }
 
     @Test
+    fun aContactPhotoAndAPictureComeFromMemoryOffTheMainThreadAndAreSizedDownToWhatIsDrawn() {
+        val threads = mutableListOf<Thread>()
+        val big = Bitmap.createBitmap(512, 256, Bitmap.Config.ARGB_8888)
+        val loader =
+            AndroidStreamImageLoader(
+                context.packageManager,
+                notificationBitmap = { key ->
+                    threads += Thread.currentThread()
+                    big.takeIf { key.startsWith("notification-picture:") || key.startsWith("notification-person:") }
+                },
+            )
+
+        val picture = runBlocking { loader.load(ItemImageKeys.notificationPicture(personal, "k"), 128) }!!
+        val person = runBlocking { loader.load(ItemImageKeys.notificationPerson(personal, "k"), 64) }!!
+
+        assertEquals(128, picture.width)
+        assertEquals(64, picture.height)
+        assertEquals(64, person.width)
+        assertTrue(threads.all { it !== Looper.getMainLooper().thread })
+        // The source is never drawn larger than it is.
+        assertEquals(512, runBlocking { loader.load(ItemImageKeys.notificationPicture(personal, "k"), 1024) }!!.width)
+    }
+
+    @Test
+    fun aContactPhotoOrPictureThatHasGoneReadsAsNone() {
+        val loader = AndroidStreamImageLoader(context.packageManager, notificationBitmap = { null })
+
+        assertNull(runBlocking { loader.load(ItemImageKeys.notificationPerson(personal, "k"), 64) })
+        assertNull(runBlocking { loader.load(ItemImageKeys.notificationPicture(personal, "k"), 64) })
+    }
+
+    @Test
     fun anArticlesLeadImageComesFromTheOfflineCacheOffTheMainThread() {
         val threads = mutableListOf<Thread>()
         val bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888).asImageBitmap()

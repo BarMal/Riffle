@@ -19,8 +19,12 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.stream.StreamAction
+import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
+import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
 import com.riffle.core.domain.launcher.stream.StreamContext
 import com.riffle.core.domain.launcher.stream.StreamLayouts
@@ -32,6 +36,8 @@ import com.riffle.core.domain.launcher.workspace.SourceRegistry
 import com.riffle.core.domain.launcher.workspace.settings.InMemoryDisabledSourcesStore
 import com.riffle.core.domain.launcher.workspace.settings.StoredSourceEnablement
 import com.riffle.core.domain.launcher.workspace.sources.CalendarEvent
+import com.riffle.core.domain.launcher.workspace.sources.MediaSessionInfo
+import com.riffle.core.domain.launcher.workspace.sources.MediaSessionReader
 import com.riffle.core.domain.launcher.workspace.sources.SourceAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -81,6 +87,19 @@ internal fun realWiringStreamHost(
     activeNotifications: List<LauncherNotification> = emptyList(),
     installedApps: List<InstalledApp> = emptyList(),
     loadingTimeoutMillis: Long = StreamLoadingRule.TIMEOUT_MILLIS,
+    /** Which notifications take an inline reply and a snooze (none by default, as on the activity's first read). */
+    canReply: (LauncherNotificationKey) -> Boolean = { false },
+    canSnooze: (LauncherNotificationKey) -> Boolean = { false },
+    /** The active media sessions (none by default). */
+    mediaSessions: List<MediaSessionInfo> = emptyList(),
+    /** What an action on content does; refuses everything by default. */
+    actions: StreamActionGateway =
+        object : StreamActionGateway {
+            override fun perform(
+                content: StreamContent,
+                action: StreamAction,
+            ): StreamActionResult = StreamActionResult.NotOffered
+        },
 ): StreamHost {
     val now = StreamFixtures.NOW
     val deps =
@@ -105,6 +124,8 @@ internal fun realWiringStreamHost(
                     access = { notifications },
                     changes = SourceChangeSource.NONE,
                     hideRules = { emptyList() },
+                    canReply = canReply,
+                    canSnooze = canSnooze,
                 ),
             calendar =
                 CalendarSourceDependencies(
@@ -113,7 +134,17 @@ internal fun realWiringStreamHost(
                     agendaRepository =
                         { from, _ -> listOf(CalendarEvent("e1", "Standup", from + 600_000, from + 1_200_000)) },
                 ),
-            media = MediaSourceDependencies.NONE,
+            media =
+                if (mediaSessions.isEmpty()) {
+                    MediaSourceDependencies.NONE
+                } else {
+                    MediaSourceDependencies(
+                        sessions =
+                            object : MediaSessionReader {
+                                override fun activeSessions(): List<MediaSessionInfo> = mediaSessions
+                            },
+                    )
+                },
         )
     val enablement = StoredSourceEnablement(InMemoryDisabledSourcesStore())
     val registry = enabledStreamRegistry(streamSourceRegistry(deps), enablement)
@@ -134,7 +165,7 @@ internal fun realWiringStreamHost(
                 },
                 CoroutineScope(Dispatchers.Unconfined + Job()),
             ),
-        actions = { _, _ -> StreamActionResult.NotOffered },
+        actions = actions,
         imageLoader = FakeExpressionImageLoader(),
         formats = FixedStreamFormats(),
     )

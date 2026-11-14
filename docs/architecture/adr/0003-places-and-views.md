@@ -417,6 +417,8 @@ from it.
 
 ### Stream: browse, then open
 
+*Browse, images and open cards with the Dock's actions row are built in dock modes slice 5.*
+
 - **Browse.** A page is a stack of cards, anchored towards the Dock: the front card is nearest the thumb and
   older cards peek above it. This reverses TimeScape's direction on purpose, because the Dock is the origin.
   A peeking card is clipped to the part the card in front does not cover, so fills never add up.
@@ -432,7 +434,7 @@ from it.
 
 ### Card colour
 
-A card's fill is tinted with its app's main icon colour. The edge stays the neutral glass edge and the
+*Built in dock modes slice 5 (`docs/product/dock-modes-plan.md`).* A card's fill is tinted with its app's main icon colour. The edge stays the neutral glass edge and the
 spotlight lights the content only. A coloured border was tried and rejected as too harsh.
 
 ### Home, Library and search

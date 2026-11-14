@@ -35,6 +35,42 @@ class ActiveNotificationJsonCodecTest {
     }
 
     @Test
+    fun storesOnlyWhetherThereIsAContactPhotoOrAPictureNeverTheImage() {
+        val notifications =
+            listOf(
+                LauncherNotification(
+                    key = LauncherNotificationKey("chat-1"),
+                    packageName = AppPackageName("com.riffle.chat"),
+                    hasPersonIcon = true,
+                    hasPicture = true,
+                    postedAtEpochMillis = 1_000L,
+                ),
+            )
+
+        val encoded = encodeActiveNotifications(notifications)
+        val json = JSONArray(encoded).getJSONObject(0)
+
+        assertEquals(notifications, decodeActiveNotifications(encoded))
+        assertEquals(true, json.getBoolean("hasPicture"))
+        // Nothing but the two flags: no field holds picture data.
+        assertEquals(false, json.has("picturePngBase64"))
+        assertEquals(false, json.has("personIconPngBase64"))
+    }
+
+    @Test
+    fun aSnapshotWrittenBeforeThoseFlagsExistedDecodesWithoutThem() {
+        val old =
+            """[{"key":"k","packageName":"p","profileId":"personal","category":"MESSAGE","priority":"HIGH",""" +
+                """"canDismiss":true,"isMediaSession":false,"title":"t","text":"x","messages":[],""" +
+                """"postedAtEpochMillis":5}]"""
+
+        val decoded = decodeActiveNotifications(old).single()
+
+        assertEquals(false, decoded.hasPersonIcon)
+        assertEquals(false, decoded.hasPicture)
+    }
+
+    @Test
     fun encodesProfileId() {
         val encoded =
             encodeActiveNotifications(

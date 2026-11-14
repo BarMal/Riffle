@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleMotion
+import com.riffle.app.launcher.stream.OpenCardActions
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -52,10 +53,10 @@ internal fun StandardHomeDockArea(
     staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     staticItemTapOverride: (AppIdentity) -> LauncherShellAction? = { null },
     isDraggedItemOverDock: Boolean = false,
+    /** The open card's actions: a row on the inner side of the Dock's icons; null while no card is open. */
+    cardActions: OpenCardActions? = null,
 ) {
-    if (!layout.shouldShowDock()) {
-        return
-    }
+    if (!layout.shouldShowDock()) return
 
     val hasExpandedContent =
         dockHasExpandedContent(
@@ -122,6 +123,7 @@ internal fun StandardHomeDockArea(
         verticalArrangement = if (runsAlongASide) Arrangement.Center else Arrangement.Top,
     ) {
         DockShelfExpandButton(interactions = dockInteractions)
+        DockActionsRowAt(DockPosition.BOTTOM, position, cardActions, layout, presentation)
         Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
         Box(modifier = Modifier.testTag(HOME_DOCK_TEST_TAG)) {
             DockOrShelf(
@@ -138,6 +140,7 @@ internal fun StandardHomeDockArea(
                 contextual = contextual,
             )
         }
+        DockActionsRowAt(DockPosition.TOP, position, cardActions, layout, presentation)
     }
 }
 
@@ -318,6 +321,6 @@ internal fun HomeLayout.dockInteractionRegionExtentDp(position: DockPosition): I
 /** How much of the screen an open side shelf takes, leaving the rest to the workspace. */
 private const val SIDE_DOCK_SHELF_WIDTH_FRACTION = 0.5f
 
-private const val HOME_DOCK_TOP_SPACING_DP = 10
+internal const val HOME_DOCK_TOP_SPACING_DP = 10
 internal const val HOME_DOCK_EXPAND_BUTTON_TEST_TAG = "home-dock-expand-button"
 internal const val HOME_DOCK_TEST_TAG = "home-dock"

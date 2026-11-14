@@ -146,8 +146,8 @@ numbers below.
     finite, the outline's radii are clamped to half the shortest side, a malformed outline falls back to
     the rectangle and gradient stops are kept strictly increasing (`safeEdgeOutline`; tests
     `GlassEdgeOutlineTest` and `GlassDegenerateSizeTest`).
-- **Tint light.** A surface with a colour shows it as light, never as a tinted body (card tinting is a
-  later slice). The spotlight (`glassSpotlightSource`, the icon-colour glow that follows the outline) is the
+- **Tint light.** A surface with a colour shows it as light, never as a tinted body; the one exception is a
+  Stream card, whose fill takes its app's colour (see "Card colour" below). The spotlight (`glassSpotlightSource`, the icon-colour glow that follows the outline) is the
   main case: the Dock, folders, Library tiles, search results, Stream cards and stacks. A surface with one
   fixed colour passes `edgeTint` and gets strips: 7 dp at 38% to 0 along the top, 5 dp at 0 to 20% along
   the bottom. The fill stays a neutral surface colour.
@@ -172,9 +172,37 @@ numbers below.
   3fa90ba). A flat material does not need to: the tint lets the real wallpaper show through. There is
   no backdrop capture and no shader.
 - **Tint** comes from two places only: the wallpaper (chrome) and an app's own colour (as light at
-  the edges of its cards, stacks and tiles).
+  the edges of the Dock, folders and Library tiles, and in the fill of a Stream card).
 - **Glass is always on**: there is no switch for it and no other theme preset; reduced transparency
   is the one off switch.
+
+### Card colour
+
+A Stream card's **fill** is tinted with its app's main icon colour (the same dominant colour the Dock's spotlight
+uses, `rememberAppIconColor`); the **edge stays the neutral glass edge**. A coloured border or outline was tried and
+rejected as too harsh, so a card no longer runs the spotlight's edge glow (that glow, along the long edges, read as an
+outline); the Dock, folders, Library tiles and search keep the spotlight and the `edgeTint` strips as they were.
+`GlassSurface` takes the tint as a parameter (`cardTint = GlassCardTint(appColor, strengthPercent, topGlow)`), so
+feature code still carries no literal surface alpha. The numbers are `core/domain/.../designsystem/CardTint.kt`:
+
+- **The mix.** The fill colour is the app colour at the tint strength (default **22%**, `Stream > Card colour`, range 0 to
+  40%) mixed over the card's base colour, a plain solid colour: no gradient, no blur, no offscreen layer. An app with
+  no vivid colour (a grey icon) and a card with no app (an event, an article) have no tint.
+- **The alpha.** A card is not drawn at Regular's 16%: dense text cannot be read through it over a bright or a dark
+  wallpaper (see `GlassBlend`). A card takes Thick's colours (the dark theme's base a little deeper, `0x181A2E`) and the
+  lowest alpha, from Regular's up, at which its body text keeps **4.5:1** over the worst of a black, a mid-grey and a
+  white backdrop. At the default strength that is about 60 to 80% in the dark theme and 48 to 62% in the light one (up to
+  97% for a white-ish app colour at the maximum strength), so a card stays translucent but is heavier than the old
+  Regular. If no
+  alpha is enough (a mid-lightness colour, where white and black text both fall just short) the fill is pushed toward
+  black or white until it is. Reduced transparency keeps its near-opaque 92% and is tinted the same way.
+- **The text.** The content colour is computed from the resulting fill: whichever of white and black has the better
+  worst-case contrast, so a pale app colour in the dark theme turns its text dark rather than losing it. Inside the card
+  the theme's `onSurface`, `onSurfaceVariant` (the same ink at 80%) and `primary` (accent text) are the ink, so nothing
+  on a card is drawn in a colour the fill was not checked against. `CardTintTest` pins the contrast over very dark, very
+  light, saturated and grey colours at the default and maximum strength, both themes, three backdrops.
+- **The top glow** (setting, off by default) adds the app colour as the edge's tint light along the **top** edge only (the
+  `edgeTint` strip, 7 dp at 38% to 0).
 
 ### Stream card geometry
 
@@ -188,7 +216,7 @@ never overlap and add up; as the card comes toward the front the clip opens and 
 front sinks toward the Dock and fades (down to 92 percent of its size) as the next one is revealed above it. The layout
 is a pure function of one continuous position (`StackGeometry` in `StackMotion.kt`; `r = index - position`: 0 is the
 front card, -1 a card sunk and gone, 1 to 3 peeking, 4 and beyond hidden), so a drag, a coast and a settle all draw
-from the same numbers and at most five cards are composed. Cards are `Regular` glass lit by the owning app's colour; rows' panels are `Thin`. Content that needs more than 168 dp (transport and scrubber, a lead
+from the same numbers and at most five cards are composed. Cards are glass tinted with the owning app's colour (next section); rows' panels are `Thin`. Content that needs more than 168 dp (transport and scrubber, a lead
 image, a checklist) is taller, and a pile is as tall as its tallest card so the strips line up. The Stage rail's
 thumbnails are miniatures at 88 dp.
 
@@ -203,7 +231,8 @@ Don't
   caustic and bottom shadow did, and read as a bevel, a seam and dark wedge corners on tall surfaces).
 - Don't add a gradient across the body, an inner shadow, a bevel, a caustic, refraction or an idle
   animation.
-- Don't tint the body with an app's colour; show it as light at the edge.
+- Don't tint the body with an app's colour, except a Stream card's fill (`CardTint`); everywhere else show it as light
+  at the edge. Don't give a card a coloured border or outline.
 - Don't mix unrelated elevations on siblings, or stack shadows.
 - Don't put text on translucent surfaces without the contrast guarantee in `wallpaperAwareSurface`.
 - Don't draw a translucent background outside `GlassSurface`.

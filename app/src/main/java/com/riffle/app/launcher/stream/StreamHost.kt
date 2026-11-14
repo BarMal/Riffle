@@ -24,6 +24,8 @@ import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.split.supportsSplit
 import com.riffle.core.domain.launcher.stream.PinnedApp
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
@@ -144,6 +146,10 @@ internal fun StreamDestination(
     appShortcuts: AppShortcutsByApp = emptyMap(),
     /** Whether Riffle is the Home app: only the Home app can read shortcuts. */
     launcherRole: Boolean = true,
+    /** How cards are tinted and where an open card and its actions sit (Settings > Stream, a later slice). */
+    streamSettings: StreamSettings = StreamSettings(),
+    /** Whether the Dock can hold an open card's actions row (a Dock along the top or bottom edge). */
+    dockCanHoldActions: Boolean = false,
 ) {
     LaunchedEffect(host) { host.layouts.initialize() }
     SideEffect { host.posture.deviceClass = deviceClass }
@@ -212,6 +218,7 @@ internal fun StreamDestination(
             reducedMotion = reducedMotion,
             formats = host.formats,
             nowEpochMillis = host.formats.now(),
+            cardSettings = streamSettings,
         )
     val liveGroupKeys =
         remember(results) {
@@ -241,6 +248,8 @@ internal fun StreamDestination(
         dockLink = host.dock,
         shortcutPages = shortcutPages,
         pinnedGroupKeys = pinnedGroupKeys,
+        actionsInDock =
+            dockCanHoldActions && streamSettings.cardActionsPlacement == CardActionsPlacement.IN_DOCK,
     )
 }
 

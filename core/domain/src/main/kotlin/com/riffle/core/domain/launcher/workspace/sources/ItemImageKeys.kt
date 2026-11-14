@@ -39,4 +39,19 @@ object ItemImageKeys {
         profileId: AppProfileId,
         notificationKey: String,
     ): ItemImageHandle = ItemImageHandle("notification-art:${profileId.value}:$notificationKey")
+
+    /**
+     * The contact photo of a messaging notification (the sender's or conversation's person icon, when the app
+     * publishes one): held in memory only, for as long as the notification is active.
+     */
+    fun notificationPerson(
+        profileId: AppProfileId,
+        notificationKey: String,
+    ): ItemImageHandle = ItemImageHandle("notification-person:${profileId.value}:$notificationKey")
+
+    /** The picture a notification carries (a big-picture style): held in memory only, as long as it is active. */
+    fun notificationPicture(
+        profileId: AppProfileId,
+        notificationKey: String,
+    ): ItemImageHandle = ItemImageHandle("notification-picture:${profileId.value}:$notificationKey")
 }

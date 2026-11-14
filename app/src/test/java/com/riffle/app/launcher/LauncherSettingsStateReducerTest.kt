@@ -6,6 +6,7 @@ import com.riffle.app.launcher.rss.FeedCacheResult
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
+import com.riffle.core.domain.launcher.designsystem.CardTint
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -14,13 +15,16 @@ import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import org.junit.Assert.assertEquals
@@ -72,6 +76,29 @@ class LauncherSettingsStateReducerTest {
 
         assertEquals(ReturnBehavior.START_PAGE, updatedState.launcherSettings.home.returnBehavior)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsTheStreamCardSettingsAndHoldsTheTintToItsRange() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        assertEquals(StreamSettings(), LauncherShellState().launcherSettings.stream)
+
+        val tinted = reducer.reduce(LauncherShellState(), LauncherShellAction.SelectStreamCardTint(34))
+        val glowing = reducer.reduce(tinted, LauncherShellAction.SetStreamCardTopGlow(enabled = true))
+        val placed = reducer.reduce(glowing, LauncherShellAction.SelectOpenCardPlacement(OpenCardPlacement.ABOVE_DOCK))
+        val acting =
+            reducer.reduce(placed, LauncherShellAction.SelectCardActionsPlacement(CardActionsPlacement.ON_CARD))
+        val clamped = reducer.reduce(acting, LauncherShellAction.SelectStreamCardTint(900))
+
+        assertEquals(34, tinted.launcherSettings.stream.cardTintPercent)
+        assertEquals(true, glowing.launcherSettings.stream.cardTopGlow)
+        assertEquals(OpenCardPlacement.ABOVE_DOCK, placed.launcherSettings.stream.openCardPlacement)
+        assertEquals(CardActionsPlacement.ON_CARD, acting.launcherSettings.stream.cardActionsPlacement)
+        assertEquals(CardTint.MAX_STRENGTH_PERCENT, clamped.launcherSettings.stream.cardTintPercent)
+        assertEquals(clamped.launcherSettings, repository.savedSettings)
+        // Everything the earlier choices set is kept.
+        assertEquals(OpenCardPlacement.ABOVE_DOCK, clamped.launcherSettings.stream.openCardPlacement)
     }
 
     @Test

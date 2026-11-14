@@ -1,22 +1,30 @@
 package com.riffle.app.screenshots
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.stream.StreamCallbacks
+import com.riffle.app.launcher.stream.StreamCard
 import com.riffle.app.launcher.stream.StreamSurface
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
+import com.riffle.core.domain.launcher.designsystem.CardTint
+import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.PinnedApp
+import com.riffle.core.domain.launcher.stream.StreamAppRef
+import com.riffle.core.domain.launcher.stream.StreamContentId
 import com.riffle.core.domain.launcher.stream.StreamGap
 import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamGroupKeys
@@ -190,16 +198,30 @@ class StreamScreenshotTest {
     @Test
     fun notificationExpandedToItsThreadWithReply() {
         surface(initialPageKey = StreamPageKeys.CHAT)
-        composeRule.onAllNodesWithText("Reply").onFirst().performClick()
+        composeRule.onNodeWithText("Are we still on for lunch tomorrow?").performClick()
         composeRule.captureScreen()
     }
 
     @Test
     fun nowPlayingExpandedToItsQueue() {
         surface(initialPageKey = StreamPageKeys.NOW)
-        composeRule.onNodeWithContentDescription("Show queue").performClick()
+        composeRule.onNodeWithText("Midnight City").performClick()
         composeRule.captureScreen()
     }
+
+    @Test
+    fun cardsTintedWithTheirAppsColourLightTheme() = tintedCards()
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun cardsTintedWithTheirAppsColourDarkTheme() = tintedCards()
+
+    @Test
+    fun cardsTintedAtTheMaximumStrength() = tintedCards(strength = CardTint.MAX_STRENGTH_PERCENT)
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun cardsTintedAtTheMaximumStrengthDarkTheme() = tintedCards(strength = CardTint.MAX_STRENGTH_PERCENT)
 
     @Test
     fun aPageLaterInTheDocksOrderWithNoSpineOrHeader() = surface(initialPageKey = StreamPageKeys.TODAY)
@@ -234,6 +256,42 @@ class StreamScreenshotTest {
                 StreamLayoutAction.SetView(StreamSection.NOTIFICATIONS, StreamView.LIST),
             ).fold(StreamLayout.DEFAULT, StreamLayoutReducer::reduce)
         surface(layout = layout)
+    }
+
+    /** One browse card per app, six apps with six different icon colours: what the fill is tinted with. */
+    private fun tintedCards(strength: Int = CardTint.DEFAULT_STRENGTH_PERCENT) {
+        val apps = ScreenshotFixtures.installedApps.take(6)
+        composeRule.setContent {
+            ScreenshotBackdrop {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 48.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    apps.forEachIndexed { index, app ->
+                        StreamCard(
+                            content =
+                                StreamFixtures.chatNotification.copy(
+                                    id = StreamContentId("tint:$index"),
+                                    app = StreamAppRef(app.identity.packageName.value, "personal"),
+                                    appLabel = app.label,
+                                    title = "Sam",
+                                    person = null,
+                                    picture = null,
+                                    image = null,
+                                    thread = emptyList(),
+                                ),
+                            env =
+                                StreamFixtures.environment()
+                                    .copy(cardSettings = StreamSettings(cardTintPercent = strength)),
+                            callbacks = StreamCallbacks(),
+                            groupKey = null,
+                            modifier = Modifier.fillMaxWidth().height(112.dp),
+                        )
+                    }
+                }
+            }
+        }
+        composeRule.captureScreen()
     }
 
     private fun page(

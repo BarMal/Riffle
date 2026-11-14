@@ -38,6 +38,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
@@ -49,6 +50,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
+import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
@@ -411,6 +413,26 @@ sealed interface LauncherShellAction {
 
     data class SelectSearchResultPresentation(
         val presentation: SearchResultPresentation,
+    ) : LauncherShellAction
+
+    /** Settings > Stream (a later slice): how much of its app's colour a card's fill takes, in percent. */
+    data class SelectStreamCardTint(
+        val percent: Int,
+    ) : LauncherShellAction
+
+    /** Whether a card shows its app's colour as a glow along its top edge. */
+    data class SetStreamCardTopGlow(
+        val enabled: Boolean,
+    ) : LauncherShellAction
+
+    /** Where an open Stream card sits. */
+    data class SelectOpenCardPlacement(
+        val placement: OpenCardPlacement,
+    ) : LauncherShellAction
+
+    /** Where an open Stream card's actions sit. */
+    data class SelectCardActionsPlacement(
+        val placement: CardActionsPlacement,
     ) : LauncherShellAction
 
     /** Settings > Privacy: hide launcher content in screenshots and recents (off by default). */
