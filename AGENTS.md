@@ -4,7 +4,7 @@ These instructions apply to coding-agent work in this repository.
 
 ## Project intent
 
-Riffle is a polished standard Android launcher with four fixed Places: **Home** (the apps, folders and widgets the user placed), the **Dock** (pinned favourites on one side, live apps and the Stream button on the other; it is the handle for the other Places), the **Library** (every app, and search) and the **Stream** (the actions centre: now playing, notifications, recents, agenda, tasks, feeds). Each Place has a short closed list of Views swapped in place with "Show as", and the Stream draws six typed kinds of content. The look is one glass material at three weights (see `docs/product/design-language.md`) on top of the Material 3 component baseline; TimeScape and Stage Manager are interaction inspirations only. The decision and its rules are in [ADR 0003](docs/architecture/adr/0003-places-and-views.md).
+Riffle is a polished standard Android launcher with four fixed Places: **Home** (the apps, folders and widgets the user placed), the **Dock** (pinned favourites on one side, live apps and the Stream button on the other; it is the handle for the other Places), the **Library** (every app, and search) and the **Stream** (the actions centre: now playing, notifications, recents, today, feeds, and the shortcuts of the Dock's pinned apps). Each Place has a short closed list of Views swapped in place with "Show as", and the Stream draws seven typed kinds of content. The look is one glass material at three weights (see `docs/product/design-language.md`) on top of the Material 3 component baseline; TimeScape and Stage Manager are interaction inspirations only. The decision and its rules are in [ADR 0003](docs/architecture/adr/0003-places-and-views.md).
 
 ## Operating rules
 
@@ -24,7 +24,7 @@ Riffle is a polished standard Android launcher with four fixed Places: **Home** 
 
 - Every model has one home in one Place. A new idea must be a new View for an existing Place or a new content type for the Stream; if it needs a new Place or a new layer, the answer is no.
 - Views are swapped in place ("Show as", with Undo); there is no editor, wizard or query language, and workspaces, lenses and presets are not user-facing (stored workspaces stay decodable).
-- Stream content is typed (`StreamContent`: notification, media, event, article, task, recent app), each with its own card, row and actions. Do not add a universal item type.
+- Stream content is typed (`StreamContent`: notification, media, event, article, task, recent app, app shortcut), each with its own card, row and actions. Do not add a universal item type. The Today page's checklist, its summary of tomorrow and the notices are cards composed around that content (`TodayPlanner`, `StackEntry`), not content.
 - Every translucent surface is drawn by `GlassSurface` at a weight (Thin, Regular, Thick); feature code contains no literal surface alpha or blur radius. Honour reduced transparency and reduced motion.
 - Avoid large feature monoliths.
 - Keep platform-facing code behind interfaces where practical.

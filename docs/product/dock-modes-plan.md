@@ -11,7 +11,7 @@ Their spring, magnet and timing constants are the starting values; the settings 
 | 1. Dock modes | The Dock's Home and contextual modes: contextual tiles appended after the live apps, the row scrolls in the contextual mode, the open icon is ringed. Press-down-and-release opens and closes. The Stream spine, page header and Stream button go. | none |
 | 2. Trampoline and fan | The dip under the finger, the bounce on release, cards fanning out in sequence, Home fading, and closing as the opening reversed. Reduced-motion fallback. **Built**, see "As built". | 1 |
 | 3. Hold to choose | Press and hold or slide while pressed: early extend, selection ring, name label, edge scrolling, haptic tick per icon. Starting a press on an icon opens that icon's stack. **Built**, see "As built". | 1, 2 |
-| 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet (**4a, built**, see "As built"); swiping left and right between stacks in Dock order (built in slice 1); shortcuts stacks for apps with nothing live and the Today page (agenda and tasks) (**4b**, not yet). | 1 |
+| 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet (**4a, built**, see "As built"); swiping left and right between stacks in Dock order (built in slice 1); shortcuts stacks for apps with nothing live, the Today page (agenda and tasks) and Recents as a stack (**4b, built**, see "As built"). | 1 |
 | 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. | 4 |
 | 6. Settings | Stream settings (open card position, actions position, tint, background, pinned apps), motion settings, the accessibility action and the first-run hint. | 2 to 5 |
 | 7. Home and Library | The combined search-and-page handle with quick-drag, search opening from the Dock, the paged Library, Home mode (Placed items or App library) and the feature switches. | none |
@@ -334,6 +334,78 @@ rule no longer leans on it:
 **Left for 4b and later.** Shortcut stacks for pinned apps (`DockChoice.pageFor` still answers null for them), the combined
 Today page, settings for inertia and magnet (slice 6; `DockMotionTuning.inertia` and `magnet` are ready), card tint and
 images, the opened-card redesign (slice 5).
+
+### Slice 4b: Shortcut stacks, Today and Recents as a stack (built)
+
+**Built.**
+
+- **Shortcut stacks for pinned apps.** `StreamSection.SHORTCUTS` is a derived section (never in a layout, never stored):
+  `StreamShortcutPages.plan` (pure, `core:domain`) gives every pinned app with no live page one page, key
+  `shortcuts/<package:profile>`, of `AppShortcutContent` cards (the new typed content: the shortcut's icon, short label,
+  long label when it differs, a launch action; the "Open <app>" card is the same type with no shortcut id). They are the
+  shortcuts the long-press menu offers, in the platform's rank order (`AppShortcut.rank`, sorted in
+  `AndroidAppShortcutRepository`). Without the launcher role the page is the Open card and a gap, drawn as a notice card
+  behind it ("Shortcuts need Riffle to be your Home app"). A pinned app that is live keeps its notifications page and has no
+  second one. The pages sit in Dock order (`DockPageOrder.order(..., pinnedGroupKeys)`: pinned apps first, as the pinned
+  icons are, then live apps, Now, the rest), so a swipe passes through them and the Dock rings the pinned icon
+  (`DockRing`). The Stream opens on the first page that is not a shortcuts page, so it still opens on Now.
+- **Pinned apps in hold-to-choose.** `DockChoice.pageFor` answers for `pin:<package>:<profile>` with
+  `StreamFocusTarget.AppShortcuts`, which `StreamFocus.resolvePage` lands on the app's live page when it has one, else its
+  shortcuts page. The pinned icons report their bounds like the dynamic entries (`LocalDockDynamicEntryBoundsSink`), so a
+  press that starts on one, a selection that ends on one and the nearest-item rule all see them; `DockChoice.outcome` is
+  unchanged (a selection on the item nearest where the finger landed still closes the open Stream). In the contextual mode a
+  tap on a pinned icon switches to its page (`DockPinnedStream`, `LocalDockPinnedStream`) and the ringed one is
+  `selected`; in the Home mode a tap still launches the app.
+- **Loading and caching.** Shortcuts are the ones the launcher already reads into `LauncherShellState.appShortcutsByApp`
+  when it refreshes the installed apps; the platform's `onShortcutsChanged` already triggers that refresh
+  (`AndroidPackageChangeObserver`). The pages are built from that map only when the pinned apps, what is live, the map or
+  the role change (`remember`), so nothing is loaded for a recomposition and entering the contextual mode reads no more
+  than the long-press menu does. The shortcut's own icon is resolved lazily by the image loader (`shortcut-icon:` handle,
+  `AndroidShortcutIcons`), falling back to the app's icon.
+- **The Today page.** `StreamSection.TODAY` replaces Agenda and Tasks (one tile, Agenda's place in the order). It reads the
+  calendar sources and the tasks; `TodayPlanner` (pure) composes the cards front to back: the next event (a live
+  countdown from `TodayCountdown`, "Open in calendar", Hide), "To do today" (the first three tasks, "3 left · 1 overdue",
+  complete, the add field, refresh), later events, a Tomorrow card (a tap opens its first event or task) and notices for the
+  inputs that gave nothing. The evaluator reports those through `StreamSectionResult.Ready.gaps` (permission, no task
+  account, tasks unavailable, a connected list with nothing on it), so Today draws what there is beside what there is not.
+  The List view is the old Agenda list followed by the old Tasks list under headings. The countdown has its own ticker
+  (`TodayCountdownText`) that wakes only when its words change.
+- **Stored layouts.** Agenda and Tasks were `StreamSection` entries; they are now `LegacyStreamSections` ids that
+  `StreamLayoutCodec` maps on decode: a layout that already names `today` keeps it and drops them; otherwise Today takes
+  Agenda's place (Tasks' when there is no Agenda), is hidden only when every retired entry present was hidden, and takes
+  Agenda's view (Tasks' when there is none). The options for both (`agenda`, `tasks`) still decode under their own keys and
+  both Settings sub-pages are still there, under the one Today row. Encoding writes `today` only.
+- **Recents as a stack.** `RecentAppCard` (icon, name, last used) replaces `RecentAppTile` and the `RecentAppsGrid`; the List
+  view is unchanged. "Often used" is kept: the apps of the second recents group follow the recent ones in the pile with an
+  "Often used" caption (and under its heading in the List); `RecentsOptions.frequentLimit` and the group are as before.
+- **Stack entries.** `StreamStack` draws `StackEntry`s (`ContentEntry` for typed content, plus the checklist, the Tomorrow
+  card and notices), so the cards composed around content are not content kinds.
+- **Tests.** `core:domain`: `TodayPlanTest` (every data combination, overdue, the countdown at its boundaries and its
+  ticker), `StreamShortcutPagesTest`, `StreamLayoutCodecTest` (the old layouts), `StreamSectionEvaluatorTest` (the gaps),
+  `DockChoiceTest`, `DockContextualTest`. Robolectric: `DockPinnedStackTest`, `StreamBehaviorTest` and
+  `StreamScreenshotTest` (Today, shortcuts). Device: `StreamShortcutsTodayInteractionTest` (swipe from a live page to a
+  pinned app's shortcuts, a card launching through a fake launcher, a task ticked, Recents as cards) and
+  `DockContextualRowTest` (the pinned tap and ring).
+
+**What differed from the design.**
+
+- **Existing layouts show Today as a List.** Agenda's stored view is taken as the brief says, and Agenda was a List by
+  default (it is stored explicitly), so most existing users get Today as a List until they choose Stack. New layouts
+  default to Stack for every section.
+- **Tomorrow counts events only, in practice.** The Todoist source fetches today and overdue; tasks due tomorrow are counted
+  when a source returns them (the card supports it) and are not fetched yet (deferred: a wider filter in `TodoistApiMapping`).
+  Events after tomorrow are in the List only.
+- **The Next event glance widget now observes the whole Today section**, since the Agenda section is gone, so it keeps the
+  Todoist source refreshing while a Next event widget is on Home.
+- **No separate load when entering the contextual mode.** The shell's map of shortcuts (loaded at app refresh, refreshed on
+  `onShortcutsChanged`) is the cache; see above.
+- **Shortcuts pages have no List view and no tile.** They are not a layout section, so "Show as", Move and Hide are not
+  offered for them.
+- **A "Retry" button on the stale note became the card's refresh button.** The To do card has no room for a second control;
+  the refresh icon next to the add field does what Retry did.
+
+**Left for later.** Settings (slice 6), card tint and images and the opened-card redesign (slice 5), Tomorrow's tasks, the
+unfolded layout.
 
 ### Glass and Dock sizing (after slice 4a)
 

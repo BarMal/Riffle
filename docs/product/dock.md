@@ -92,20 +92,23 @@ mode only adds tiles after them and scrolls the row along.
 | Home (Home, or the Library over it) | Pinned apps, a divider, live apps (apps with notifications) and now playing | As before: the pinned run and the dynamic side scroll on their own when they do not fit |
 | Contextual (the Stream shows) | The same icons in the same order, then a divider and one tile for each Stream page that is not an app | Yes: one row, sideways (along the run on a side Dock), with the platform's fling |
 
-- **Tiles.** One per built-in page: Now (unless now playing is shown, which stands for it), Recents, Agenda, Tasks and
-  Feeds, in the Stream layout's order (Settings > Stream, or Move earlier / later on a tile). Notifications has a tile
+- **Tiles.** One per built-in page: Now (unless now playing is shown, which stands for it), Recents, Today (the agenda and
+  the tasks, one page since slice 4b) and Feeds, in the Stream layout's order (Settings > Stream, or Move earlier / later on a tile). Notifications has a tile
   only while it holds just a state ("No notifications", "Allow access"), so that page and its action stay reachable.
-  Agenda and Tasks are still two tiles. A page with several pages (one per feed) has one tile, which opens its first.
-  Pinned apps with nothing live have no page yet and are neither ringed nor selectable as pages; a tap on them opens the
-  app.
+  A page with several pages (one per feed) has one tile, which opens its first.
+- **Pinned apps have a stack too** (slice 4b). A pinned app with nothing live has a **shortcuts page** (its launcher
+  shortcuts as cards, or one "Open <app>" card): the pinned icons are ringed when their page is open, a tap on one
+  switches to its page in the contextual mode (in the Home mode it still launches the app), and a press that starts on one
+  or a selection that ends on one opens it (`DockChoice.pageFor`: `pin:<package>:<profile>` gives
+  `StreamFocusTarget.AppShortcuts`, which lands on the app's live page when it has one, else its shortcuts page).
 - **The open page's icon is ringed**, and the row scrolls to keep it in view (`DockRunScroll.toReveal`, with a margin so
   its neighbour peeks), again whenever the page changes by a tap or a swipe of the Stream.
 - **Stream pages follow Dock order.** The Stream's pager order is the Dock's: the live apps newest first (the first
   "live app slots" of them), the pages of apps beyond the slots, now playing's Now page, then the built-in pages in layout
-  order (`DockPageOrder`). Swiping the pager moves the ring when the swipe passes halfway and the Dock scrolls to keep it
-  in view. The Stream opens on the page it was last left on, else on the first page it shows when it opens (Now, in the default layout: its data arrives after it opens, and the page in front stays in front while it does).
-- **Tap.** Home mode: a pinned app, live app or now playing launches its app, as before. Contextual mode: a live app,
-  now playing or a tile switches the Stream to that page (it never launches).
+  order (`DockPageOrder`), after the pinned apps' shortcuts pages, which come first as the pinned icons do in the row. Swiping the pager moves the ring when the swipe passes halfway and the Dock scrolls to keep it
+  in view. The Stream opens on the page it was last left on, else on the first page that is not a shortcuts page (Now, in the default layout: its data arrives after it opens, and the page in front stays in front while it does).
+- **Tap.** Home mode: a pinned app, live app or now playing launches its app, as before. Contextual mode: a pinned app, a
+  live app, now playing or a tile switches the Stream to that page (it never launches).
 - **Long-press.** Home mode keeps the live app menu (Open in Stream, the app's shortcuts, App info, Hide app) and the pinned
   menu. Contextual mode: the page options that used to live on the page header, on the page's icon or tile: **Show as**
   the other view (Stack or List), **Move earlier / later** (tiles only; it steps over sections that draw no tile), **Hide
@@ -121,7 +124,7 @@ mode only adds tiles after them and scrolls the row along.
 - **Accessibility.** The Dock (and the surface root) offers the custom actions **"Show live pages"** (or **"Back to
   Home"** while the Stream shows) and "Open Library"; **Ctrl + the arrow of the pull direction** does the first, with Shift
   the second. In the Home mode a live app or now playing keeps "Show <app> in Stream" (the press that starts on the icon)
-  and Shift + Enter. Every icon and tile is a focusable 48 dp target with a spoken label and a click action ("Show Agenda");
+  and Shift + Enter. Every icon and tile is a focusable 48 dp target with a spoken label and a click action ("Show Today");
   the ringed one is selected. **System Back** (the gesture or the button) while the Stream shows returns to Home
   (`LauncherShellBackHandling`); a focused Stream card unwinds first by its own handler. It is the non-gesture way out on a
   phone, next to the Home button.
