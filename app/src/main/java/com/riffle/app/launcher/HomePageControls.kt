@@ -762,6 +762,10 @@ private fun BoxScope.PageIndicatorHandleOverlay(
 /**
  * The visible, grabbable roundel riding over the indicator's current page. Purely visual -- see
  * [PageIndicatorHandleOverlay] for where the drag that moves it actually lives.
+ *
+ * It is exactly as big as it draws, so it fits inside even the shortest track (two pages). A larger box would be
+ * squeezed to the track's length by the overlay's tight constraints and then centred in what is left, which left the
+ * roundel off its dot (over the search glyph for three pages) whenever the track was shorter than the box.
  */
 @Composable
 private fun PageIndicatorHandle(
@@ -771,31 +775,24 @@ private fun PageIndicatorHandle(
     reducedMotion: Boolean,
 ) {
     val density = LocalDensity.current
-    val touchTargetPx = remember(density) { with(density) { PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP.dp.toPx() } }
+    val diameterPx = remember(density) { with(density) { PAGE_INDICATOR_HANDLE_DIAMETER_DP.dp.toPx() } }
     val lift = pageIndicatorHandleLift(isLifted = isLifted, reducedMotion = reducedMotion)
 
     Box(
         modifier =
             Modifier
                 .offset {
-                    // Along the dots only: across them the overlay's own alignment centres the target.
-                    val along = (offsetPx - touchTargetPx / 2f).roundToInt()
+                    // Along the dots only: across them the overlay's own alignment centres the roundel.
+                    val along = (offsetPx - diameterPx / 2f).roundToInt()
                     if (axis == HandleAxis.VERTICAL) IntOffset(x = 0, y = along) else IntOffset(x = along, y = 0)
                 }
-                .size(PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(PAGE_INDICATOR_HANDLE_DIAMETER_DP.dp)
-                    .testTag(PAGE_INDICATOR_ROUNDEL_TEST_TAG)
-                    .scale(lift.scale)
-                    .shadow(lift.elevation, CircleShape)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-        )
-    }
+                .size(PAGE_INDICATOR_HANDLE_DIAMETER_DP.dp)
+                .testTag(PAGE_INDICATOR_ROUNDEL_TEST_TAG)
+                .scale(lift.scale)
+                .shadow(lift.elevation, CircleShape)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+    )
 }
 
 private data class PageIndicatorHandleLift(val scale: Float, val elevation: Dp)
@@ -1033,7 +1030,6 @@ private const val PAGE_INDICATOR_DOT_DIAMETER_DP = HomeHandle.DOT_DIAMETER_DP
 private const val PAGE_INDICATOR_DOT_SPACING_DP = HomeHandle.DOT_SPACING_DP
 private const val PAGE_INDICATOR_DOT_ALPHA = 0.4f
 private const val PAGE_INDICATOR_HANDLE_DIAMETER_DP = 14
-private const val PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP = 44
 private const val PAGE_INDICATOR_HANDLE_LIFT_SCALE = 1.3f
 private const val PAGE_INDICATOR_HANDLE_LIFT_ELEVATION_DP = 6
 private const val PAGE_INDICATOR_HANDLE_LIFT_ANIMATION_MILLIS = 120

@@ -941,6 +941,7 @@ private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspace
         labelSettings = layout.settings.labels,
         reducedMotion = presentation.reducedMotion,
         widgetViewFactory = presentation.widgetViewFactory,
+        libraryEnabled = presentation.libraryEnabled,
         generatedPage =
             GeneratedPagePresentation(
                 notificationGroupsByApp = presentation.notificationGroupsByApp,
@@ -982,6 +983,8 @@ internal data class StandardHomePresentation(
     val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
     /** The layout of the posture Home is drawn in: which way the pages scroll and what the page dots do. */
     val layout: PostureLayoutSettings = PostureLayoutSettings.FOLDED_DEFAULT,
+    /** Whether the Library is on; a generated page's "More apps" opens it, or search while it is off. */
+    val libraryEnabled: Boolean = true,
 )
 
 internal data class StandardHomeWidgetPickerState(
@@ -1023,6 +1026,8 @@ internal data class HomeGridPresentation(
     val reducedMotion: Boolean = false,
     val widgetViewFactory: HomeWidgetViewFactory,
     val generatedPage: GeneratedPagePresentation = GeneratedPagePresentation(),
+    /** Whether the Library is on, for a generated page's "More apps" button (search stands in while it is off). */
+    val libraryEnabled: Boolean = true,
     /**
      * Which surface these cells belong to, so an item's own menu removes it from the right place.
      * The dock's panel renders through the same grid but is not one of the layout's pages.

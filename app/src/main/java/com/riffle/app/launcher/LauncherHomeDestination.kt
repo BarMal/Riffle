@@ -958,6 +958,7 @@ private fun standardHomePresentation(
             ),
         homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
         layout = state.postureLayout(),
+        libraryEnabled = state.launcherSettings.effectiveFeatures().library,
     )
 
 /** The layout of the posture the device is being held in (ADR 0003, Amendment 2). */
