@@ -32,6 +32,9 @@ object SwipeDismiss {
     /** The farthest an off-screen card is taken, in widths: past the edge of the card, so none of it shows. */
     const val FLY_OFF_WIDTHS = 1.2f
 
+    /** How long a card sent off takes to leave, at the default opening speed. */
+    const val FLY_OFF_MILLIS = 180
+
     /** What a release does. */
     enum class Outcome { DISMISS, SETTLE }
 

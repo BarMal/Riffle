@@ -83,6 +83,8 @@ internal fun HomeHandlePill(
     Box(
         modifier =
             modifier
+                // Comes in with the Dock (Home's entrance): alpha and a rise from the Dock's edge, in the draw phase.
+                .homeEntranceLayer(LocalHomeEntrance.current)
                 .testTag(HOME_HANDLE_TEST_TAG)
                 .size(width = size.widthDp.dp, height = size.heightDp.dp)
                 .pointerInput(onOpenSearch) { detectTapGestures(onTap = { onOpenSearch() }) }

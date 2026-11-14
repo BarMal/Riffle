@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import com.riffle.core.domain.launcher.designsystem.RiffleEasingTokens
 import com.riffle.core.domain.launcher.designsystem.RiffleMotionTokens
 import com.riffle.core.domain.launcher.designsystem.RiffleSpringTokens
+import com.riffle.core.domain.launcher.dock.DockMotionTuning
 
 /**
  * The Riffle motion vocabulary: three springs, two tweens, one easing family.
@@ -31,6 +32,25 @@ object RiffleMotion {
         reducedMotion: Boolean = false,
         visibilityThreshold: T? = null,
     ): FiniteAnimationSpec<T> = springOrSnap(RiffleMotionTokens.Smooth, reducedMotion, visibilityThreshold)
+
+    /**
+     * [smooth] stretched or shrunk by the Dock's opening speed setting (`DockMotionTuning.stiffnessFor`): for motion
+     * that belongs to the Dock and the Stream opening, so the one setting moves all of it.
+     */
+    fun <T> smooth(
+        tuning: DockMotionTuning,
+        reducedMotion: Boolean = false,
+        visibilityThreshold: T? = null,
+    ): FiniteAnimationSpec<T> =
+        if (reducedMotion) {
+            snap()
+        } else {
+            spring(
+                dampingRatio = RiffleMotionTokens.Smooth.dampingRatio,
+                stiffness = tuning.stiffnessFor(RiffleMotionTokens.Smooth.stiffness),
+                visibilityThreshold = visibilityThreshold,
+            )
+        }
 
     /** Large, expressive travel such as a card coming to rest. dampingRatio 0.8, stiffness 200. */
     fun <T> gentle(

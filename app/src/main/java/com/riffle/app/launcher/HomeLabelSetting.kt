@@ -84,9 +84,12 @@ private fun HomeLabelBackgroundSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // The switch and, while it is on, its strength slider are one setting's place.
+    Column(
+        modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_BACKGROUND),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         SettingsSwitchRow(
-            modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_BACKGROUND),
             title = SettingKey.HOME_LABEL_BACKGROUND.label(),
             subtitle = if (settings.showBackground) "Labels sit on a background" else "Plain labels over the wallpaper",
             checked = settings.showBackground,
@@ -94,7 +97,7 @@ private fun HomeLabelBackgroundSetting(
         )
         if (settings.showBackground) {
             DiscreteSettingSlider(
-                title = "Label background opacity",
+                title = "Label background strength",
                 value = settings.backgroundAlphaPercent,
                 valueRange = MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT..MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
                 valueLabel = { "$it%" },
@@ -161,7 +164,7 @@ private fun HomeLabelLineCountSetting(
     modifier = Modifier.settingAnchor(SettingKey.HOME_LABEL_LINES),
     value = settings.maxLines,
     valueRange = MIN_HOME_LABEL_MAX_LINES..MAX_HOME_LABEL_MAX_LINES,
-    valueLabel = Int::toString,
+    valueLabel = { lines -> if (lines == 1) "1 line" else "$lines lines" },
     onValueChange = { value -> onAction(LauncherShellAction.SelectHomeLabelMaxLines(value)) },
 )
 

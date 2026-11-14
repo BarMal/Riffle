@@ -156,6 +156,9 @@ private fun HomeDestinationContent(
     // the cards" is on; its grid then fades under the stack cell by cell. Off folded, Home fades out as it always did.
     val homeBehind = columnMode || (stream != null && state.postureLayout().appPeekThrough)
     val plan = rememberHomeSurfacePlan(state)
+    // Home's entrance: the Dock and the page handle fade in with a small rise from the Dock's own edge when Home
+    // appears (a cold start, or Home coming back after it was hidden), never because a sheet came and went over it.
+    val entrance = rememberHomeEntrance(plan.dockEdge, state.reducedMotion(), dockTuning)
     // A committed pull stands in for the shell's answer until the shell shows it, so the surfaces do not flicker back.
     val shownStream = rememberStreamShown(dockPull, streamShown)
     // Unfolded with the Stream out, the column stands where the handle does: the handle is not drawn then.
@@ -341,6 +344,7 @@ private fun HomeDestinationContent(
         LocalDockFan provides pull.fanSource,
         LocalLauncherHaptics provides tickHaptics,
         LocalDockMotionTuning provides dockTuning,
+        LocalHomeEntrance provides entrance,
     ) {
         ProvideLiquidGlassBackdrop { backdropCapture ->
             Box(
@@ -367,6 +371,7 @@ private fun HomeDestinationContent(
                     dockModifier = pull.dockModifier,
                     dockDipDp = pull::dockDipDp,
                     choice = choice,
+                    entrance = entrance,
                 )
                 // Home first, then the Stream over it: while the Dock's change runs both are composed, and the
                 // Stream's cards rise out of the Dock over Home. Both stay direct siblings of the dock, so their zIndex

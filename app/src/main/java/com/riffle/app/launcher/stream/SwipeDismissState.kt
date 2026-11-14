@@ -20,8 +20,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import com.riffle.app.launcher.LauncherHapticEvent
+import com.riffle.app.launcher.LocalDockMotionTuning
 import com.riffle.app.launcher.LocalLauncherHaptics
 import com.riffle.core.domain.launcher.designsystem.RiffleMotionTokens
+import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamContent
@@ -44,6 +46,8 @@ import kotlinx.coroutines.launch
 internal class SwipeDismissState(
     private val scope: CoroutineScope,
     private val reducedMotion: () -> Boolean,
+    /** The Dock's motion tuning: the opening speed also sets how fast a card leaves and settles back. */
+    private val tuning: () -> DockMotionTuning,
     private val density: Float,
     private val onDismiss: () -> Unit,
 ) {
@@ -91,7 +95,8 @@ internal class SwipeDismissState(
             }
         } else {
             val target = SwipeDismiss.flyOffTarget(offsetPx, velocityPxPerSecond, widthPx)
-            animate(offsetPx, target, animationSpec = tween(FLY_OFF_MILLIS)) { value, _ -> offsetPx = value }
+            val millis = tuning().millisFor(SwipeDismiss.FLY_OFF_MILLIS)
+            animate(offsetPx, target, animationSpec = tween(millis)) { value, _ -> offsetPx = value }
         }
     }
 
@@ -99,14 +104,10 @@ internal class SwipeDismissState(
         if (reducedMotion()) {
             offsetPx = 0f
         } else {
-            val spec = spring<Float>(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)
+            val spec = spring<Float>(Spring.DampingRatioNoBouncy, tuning().stiffnessFor(Spring.StiffnessMedium))
             animate(offsetPx, 0f, animationSpec = spec) { value, _ -> offsetPx = value }
         }
         outFade = 1f
-    }
-
-    private companion object {
-        const val FLY_OFF_MILLIS = 180
     }
 }
 
@@ -126,12 +127,13 @@ internal fun rememberSwipeDismissState(
     val latestCallbacks by rememberUpdatedState(callbacks)
     val latestReduced by rememberUpdatedState(reducedMotion)
     val latestContent by rememberUpdatedState(content)
+    val latestTuning by rememberUpdatedState(LocalDockMotionTuning.current)
     val offered = content != null && SwipeDismiss.offers(content)
     return remember(offered, density) {
         if (!offered) {
             null
         } else {
-            SwipeDismissState(scope, { latestReduced }, density) {
+            SwipeDismissState(scope, { latestReduced }, { latestTuning }, density) {
                 haptics.perform(LauncherHapticEvent.DETENT)
                 latestContent?.let { latestCallbacks.onAction(it, StreamAction.Dismiss) }
             }
