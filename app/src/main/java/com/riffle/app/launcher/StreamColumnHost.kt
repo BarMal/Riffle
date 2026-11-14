@@ -52,6 +52,7 @@ internal const val STREAM_COLUMN_HOST_TEST_TAG = "stream-column-host"
  * faded out beneath.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun StreamColumnSurface(
     stream: StreamHost,
     state: LauncherShellState,

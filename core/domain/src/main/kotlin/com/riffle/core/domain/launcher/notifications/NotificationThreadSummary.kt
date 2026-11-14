@@ -54,7 +54,7 @@ object NotificationThreadSummary {
     }
 
     /**
-     * [messages] without the echoes some apps put in a thread: a message that is the same, sender, text and time, as the
+     * [messages] without the echoes some apps put in a thread: a message that is the same (sender, text, time) as the
      * one just before it (an app that adds a message to both the style and its history, say) is one line, not two. Only
      * consecutive, whole repeats go: the same words sent twice at different times are a conversation, and stay.
      */

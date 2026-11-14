@@ -47,7 +47,7 @@ internal class OpenCardHolder {
     var shown: OpenCardActions? by mutableStateOf(null)
         private set
 
-    /** How far the open card has grown: one motion for the card, the column and the grid's fade (read in layout and draw). */
+    /** How far the open card has grown: one motion for the card, the column and the grid fade (read in draw). */
     val motion: OpenCardMotionState = OpenCardMotionState()
 
     /** The open card as an overlay the surface draws over its whole area, or null while none is shown. */

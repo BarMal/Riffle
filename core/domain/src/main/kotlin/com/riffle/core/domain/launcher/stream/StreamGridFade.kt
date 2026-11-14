@@ -19,7 +19,7 @@ object StreamGridFade {
     /** How far inside the column's edge the fade goes on to reach its floor, in dp. */
     const val INNER_DP = 64f
 
-    /** What an item under the column keeps with apps peeking through: dim, but still an app and not a greyed-out one. */
+    /** What an item under the column keeps with apps peeking through: dim, yet not a greyed-out app. */
     const val PEEK_ALPHA = 0.30f
 
     /** The opacity under the column: [PEEK_ALPHA], or 0 with peek-through off. */

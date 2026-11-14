@@ -6,9 +6,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import kotlin.math.abs
 
 /**
- * Whether two icons are the same picture, to tell a notification's large icon that is the app's own logo from a person's
- * photo. Both are shrunk to a small grid and compared by their mean colour difference, so a logo drawn at another size
- * or a little differently (masked, say) still matches, and a photo of a face does not.
+ * Whether two icons are the same picture, to tell a notification's large icon that is the app's own logo from a
+ * person's photo. Both are shrunk to a small grid and compared by their mean colour difference, so a logo drawn at
+ * another size or a little differently (masked, say) still matches, and a photo of a face does not.
  */
 internal object IconLookalike {
     private const val GRID = 8

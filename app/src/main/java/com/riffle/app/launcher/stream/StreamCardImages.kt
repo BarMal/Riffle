@@ -183,7 +183,7 @@ private val PictureInnerShape = RiffleShapes.small
 
 /** How tall a picture is drawn. Pure, so it is tested. */
 internal object PictureLayout {
-    /** The height of an image of [pixelWidth] x [pixelHeight] drawn [width] wide: its own proportions, at most [max]. */
+    /** The height of a [pixelWidth] x [pixelHeight] image drawn [width] wide: its own proportions, at most [max]. */
     fun heightFor(
         width: Dp,
         pixelWidth: Int,

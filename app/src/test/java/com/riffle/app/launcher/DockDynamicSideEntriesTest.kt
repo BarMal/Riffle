@@ -129,7 +129,10 @@ class DockDynamicSideEntriesTest {
             )
 
         assertEquals(DockDynamicEntryIntent.Delegate, entry.intent)
-        assertEquals("Show Messages", entry.openLabel)
+        // The ringed icon's page is already showing: a second tap opens the app, and its label says so.
+        assertEquals("Open Messages", entry.openLabel)
+        val other = live.toDockEntry(listOf(chat), streamShown = true, resources = resources, selected = false)
+        assertEquals("Show Messages", other.openLabel)
         // The tap already shows the page, so there is no separate "Show in Stream" or "Open in Stream".
         assertNull(entry.showInStreamLabel)
         assertNull(entry.openInStreamMenuLabel)

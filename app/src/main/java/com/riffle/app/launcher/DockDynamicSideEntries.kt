@@ -38,7 +38,7 @@ import com.riffle.core.domain.launcher.stream.StreamShortcutPages
  * Stream the side is empty (there is nothing to open).
  */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun rememberDockDynamicSide(
     stream: StreamHost?,
     shown: Boolean,

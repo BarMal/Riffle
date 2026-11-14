@@ -113,6 +113,7 @@ internal class OpenCardFrameGeometry {
  * the screen is the only edge it can meet.
  */
 @Stable
+@Suppress("LongParameterList")
 internal class OpenCardLayer(
     val geometry: OpenCardFrameGeometry,
     val placement: OpenCardPlacement,
