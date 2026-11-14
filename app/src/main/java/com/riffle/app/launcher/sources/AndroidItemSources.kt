@@ -115,6 +115,7 @@ private fun androidBuiltInSourceDependencies(
                 hideRules = hideRules,
                 canReply = { key -> AndroidNotificationStageActionGateway.replyActionId(key) != null },
                 canSnooze = { RiffleNotificationListenerConnection.isConnected() },
+                ownActions = AndroidNotificationStageActionGateway::ownActionsFor,
             ),
         calendar = calendar,
         media = media,

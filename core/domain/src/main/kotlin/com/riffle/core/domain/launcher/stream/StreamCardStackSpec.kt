@@ -19,8 +19,8 @@ object StreamCardStackSpec {
     const val GAP_DP = 4f
 
     /**
-     * How much of a card its strip shows: the pitch less the gap, from the card's top edge. Every card's header (an icon
-     * or avatar and a one-line title) lies wholly inside it, whatever the kind of card.
+     * How much of a card its strip shows: the pitch less the gap, from the card's top edge. Every card's header (an
+     * icon or avatar and a one-line title) lies wholly inside it, whatever the kind of card.
      */
     const val STRIP_HEIGHT_DP = PITCH_DP - GAP_DP
 

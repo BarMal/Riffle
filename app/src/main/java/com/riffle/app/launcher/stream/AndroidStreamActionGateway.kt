@@ -92,6 +92,16 @@ internal class AndroidStreamActionGateway(
                 notifications.perform(key, NotificationStageAction.ProviderAction(id, "Reply", action.text)).result()
             }
             action is StreamAction.Snooze -> snooze(key, action.durationMillis).result()
+            // One of the notification's own buttons, by id: its PendingIntent is sent as "Open" is (the Android 14
+            // opt-in, a cancelled intent a failure), and a notification that has gone is unavailable.
+            action is StreamAction.OwnAction -> {
+                val own = content.ownActions.firstOrNull { it.id == action.id }
+                if (own == null) {
+                    StreamActionResult.NotOffered
+                } else {
+                    notifications.perform(key, NotificationStageAction.ProviderAction(own.id, own.title)).result()
+                }
+            }
             else -> StreamActionResult.NotOffered
         }
     }

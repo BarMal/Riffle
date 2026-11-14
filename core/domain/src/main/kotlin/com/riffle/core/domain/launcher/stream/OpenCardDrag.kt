@@ -6,11 +6,11 @@ import kotlin.math.min
 
 /*
  * Dragging from one open card to the next in the same stack (ADR 0003, Amendment 1, "Browse, then open"; device fixes,
- * round 5). A vertical drag that starts on a strip, on the open card's pinned header or actions or on the room beside the
- * card moves the stack at once, with the stack's own drag, fling and magnet. A drag that starts in the card's scrolling
- * body scrolls the body first (platform nested scrolling); only what the body cannot take, at its top or its bottom,
- * is handed to the stack, and only once it has gone [OpenCardHandoff.THRESHOLD_DP] past the edge. Pure, so the rules
- * are tested without a screen.
+ * round 5). A vertical drag that starts on a strip, on the open card's pinned header or actions or on the room beside
+ * the card moves the stack at once, with the stack's own drag, fling and magnet. A drag that starts in the card's
+ * scrolling body scrolls the body first (platform nested scrolling); only what the body cannot take, at its top or its
+ * bottom, is handed to the stack, and only once it has gone [OpenCardHandoff.THRESHOLD_DP] past the edge. Pure, so the
+ * rules are tested without a screen.
  */
 
 /**
@@ -78,9 +78,9 @@ class OpenCardHandoff(private val thresholdDp: Float = THRESHOLD_DP) {
 }
 
 /**
- * While the stack moves from one card to the next with a card open, each card is drawn between how its slot in the stack
- * looks and how it looks open, by how near it is to the front: the one coming to the front grows into its open card as
- * the one leaving shrinks back to its strip. One continuous motion of the stack's position.
+ * While the stack moves from one card to the next with a card open, each card is drawn between how its slot in the
+ * stack looks and how it looks open, by how near it is to the front: the one coming to the front grows into its open
+ * card as the one leaving shrinks back to its strip. One continuous motion of the stack's position.
  */
 object OpenCardBlend {
     /**

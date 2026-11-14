@@ -12,6 +12,8 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleFilter
 import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 import com.riffle.core.domain.launcher.notifications.NotificationThreadSummary
+import com.riffle.core.domain.launcher.stream.NotificationOwnAction
+import com.riffle.core.domain.launcher.stream.NotificationOwnActions
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemAction
 import com.riffle.core.domain.launcher.workspace.ItemExtKey
@@ -36,6 +38,12 @@ data class NotificationItemInput(
     val canReply: (LauncherNotificationKey) -> Boolean = { false },
     /** Whether the live notification can be snoozed right now (needs the listener connection). */
     val canSnooze: (LauncherNotificationKey) -> Boolean = { false },
+    /**
+     * The live notification's own action buttons (ids and titles, already filtered and capped, see
+     * [com.riffle.core.domain.launcher.stream.NotificationOwnActions]). Asked per notification and never stored: they
+     * are as transient as the notification's content.
+     */
+    val ownActions: (LauncherNotificationKey) -> List<NotificationOwnAction> = { emptyList() },
 )
 
 /**
@@ -150,6 +158,14 @@ class NotificationItemMapper(
         }
         if (input.canReply(notification.key)) ext[REPLY_KEY] = ItemExtValue.Flag(true)
         if (notification.canDismiss && input.canSnooze(notification.key)) ext[SNOOZE_KEY] = ItemExtValue.Flag(true)
+        val own = input.ownActions(notification.key).take(NotificationOwnActions.MAX)
+        if (own.isNotEmpty()) {
+            ext[OWN_COUNT_KEY] = ItemExtValue.Number(own.size.toLong())
+            own.forEachIndexed { index, action ->
+                ext[ItemExtKey("notification.own${index}_id")] = ItemExtValue.Text(action.id)
+                ext[ItemExtKey("notification.own${index}_title")] = ItemExtValue.Text(action.title)
+            }
+        }
         val thread =
             NotificationThreadSummary.withoutEchoes(
                 notification.messages.filter { it.text.isNotBlank() }.sortedBy { it.timestampEpochMillis },
@@ -175,6 +191,9 @@ class NotificationItemMapper(
         /** Set when the notification is a conversation with a person (a messaging style or the message category). */
         val CONVERSATION_KEY = ItemExtKey("notification.conversation")
         val THREAD_SIZE_KEY = ItemExtKey("notification.thread_size")
+
+        /** How many own action buttons follow (`notification.own<N>_id` and `_title`); absent when there are none. */
+        val OWN_COUNT_KEY = ItemExtKey("notification.own_count")
         val PERSON_ART_KEY = ItemExtKey("notification.person_art")
         val PICTURE_ART_KEY = ItemExtKey("notification.picture_art")
         private val CATEGORY_KEY = ItemExtKey("notification.category")

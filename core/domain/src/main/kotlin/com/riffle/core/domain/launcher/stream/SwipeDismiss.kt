@@ -7,10 +7,11 @@ import kotlin.math.sign
  * Swiping a notification's card sideways to dismiss it (ADR 0003, Amendment 1; device fixes, round 5, item 2), as pure
  * rules: where the gesture exists, when a release dismisses and how the card looks on the way.
  *
- * The rule that settles the conflict with swiping between the Stream's pages: a horizontal drag is the card's only where
- * it starts on the front card of a notification that [StreamActionPolicy] offers Dismiss for ([claimsDrag]); anywhere
- * else on the page (the strips, the empty room, a notification that cannot be dismissed, any other kind of card) it is
- * the pager's, so a page whose front card is dismissible is still left by swiping on its strips or its room.
+ * The rule that settles the conflict with swiping between the Stream's pages: a horizontal drag is the card's only
+ * where it starts on the front card of a notification that [StreamActionPolicy] offers Dismiss for ([claimsDrag]);
+ * anywhere else on the page (the strips, the empty room, a notification that cannot be dismissed, any other kind of
+ * card) it is the pager's, so a page whose front card is dismissible is still left by swiping on its strips or its
+ * room.
  */
 object SwipeDismiss {
     /** A release past this share of the card's width dismisses, however slowly. */
@@ -19,7 +20,7 @@ object SwipeDismiss {
     /** A fling at least this fast (dp per second) dismisses, once the card has left its place a little. */
     const val FLING_VELOCITY_DP_PER_SECOND = 700f
 
-    /** The least the card has travelled (dp) for a fling to dismiss it: a flick of the wrist that barely moved is not. */
+    /** The least the card has travelled (dp) for a fling to dismiss it: a flick that barely moved it is not. */
     const val MIN_FLING_TRAVEL_DP = 24f
 
     /** The card's opacity at a full width of travel: a slight fade, not a vanishing. */
@@ -49,7 +50,7 @@ object SwipeDismiss {
 
     /**
      * What releasing at [offsetPx] (positive: right) with the finger moving at [velocityPxPerSecond] does to a card
-     * [widthPx] wide, on a screen of [density] px per dp: far enough, or fast enough in the way it was taken, dismisses;
+     * [widthPx] wide, on a screen of [density] px per dp: far enough, or fast enough the way it was taken, dismisses;
      * anything else, including a flick back toward where it started, settles back.
      */
     fun decide(

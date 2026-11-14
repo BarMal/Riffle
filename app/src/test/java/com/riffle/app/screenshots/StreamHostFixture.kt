@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
@@ -89,6 +90,8 @@ internal fun realWiringStreamHost(
     activeNotificationsNow: (() -> List<LauncherNotification>)? = null,
     /** Told when the listener's notifications changed; [SourceChangeSource.NONE] when they never do. */
     notificationChanges: SourceChangeSource = SourceChangeSource.NONE,
+    /** The notification's own action buttons (ids and titles) as the listener holds them; none by default. */
+    ownActions: (LauncherNotificationKey) -> List<NotificationOwnAction> = { emptyList() },
     installedApps: List<InstalledApp> = emptyList(),
     loadingTimeoutMillis: Long = StreamLoadingRule.TIMEOUT_MILLIS,
     /** Which notifications take an inline reply and a snooze (none by default, as on the activity's first read). */
@@ -130,6 +133,7 @@ internal fun realWiringStreamHost(
                     hideRules = { emptyList() },
                     canReply = canReply,
                     canSnooze = canSnooze,
+                    ownActions = ownActions,
                 ),
             calendar =
                 CalendarSourceDependencies(

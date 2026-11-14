@@ -10,6 +10,8 @@ import android.media.session.PlaybackState
 import android.os.Bundle
 import android.service.notification.StatusBarNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.stream.NotificationOwnAction
+import com.riffle.core.domain.launcher.stream.NotificationOwnActions
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -34,6 +36,7 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
         val token = platformNotification.extras?.mediaSessionTokenExtraOrNull()
         targets[LauncherNotificationKey(notification.key)] =
             Targets(
+                ownActions = ownActionsOf(platformNotification.actions),
                 context = context.applicationContext,
                 contentIntent = platformNotification.contentIntent,
                 providerActions = providerActions,
@@ -89,6 +92,14 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
         }
     }
 
+    /**
+     * The notification's own action buttons for [key] (the posting app's "Mark as read", "Archive", "Like"): ids and
+     * titles in the notification's order, without the inline reply, at most three. Their `PendingIntent`s stay in this
+     * registry, in memory, and are sent by id ([perform]); nothing here is ever persisted. Empty once the notification
+     * has gone.
+     */
+    fun ownActionsFor(key: LauncherNotificationKey): List<NotificationOwnAction> = targets[key]?.ownActions.orEmpty()
+
     /** The provider action that takes an inline reply for [key], or null when it has none (or is not live). */
     fun replyActionId(key: LauncherNotificationKey): String? =
         targets[key]?.providerActions?.entries
@@ -101,7 +112,27 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
     ): NotificationStageActionResult = targets[key]?.perform(key, action) ?: NotificationStageActionResult.Unavailable
 }
 
+/**
+ * What the listener read of [actions]'s own buttons, filtered by [NotificationOwnActions]. An action without a
+ * `PendingIntent` is not in the registry's provider actions and so is not listed; the id is the registry's own
+ * (`provider:<index>`), so performing it finds its intent.
+ */
+internal fun ownActionsOf(actions: Array<Notification.Action>?): List<NotificationOwnAction> =
+    NotificationOwnActions.select(
+        actions.orEmpty().mapIndexedNotNull { index, action ->
+            action.actionIntent?.let {
+                NotificationOwnActions.Candidate(
+                    id = "provider:$index",
+                    title = action.title?.toString(),
+                    semanticAction = action.semanticAction.takeIf { it != Notification.Action.SEMANTIC_ACTION_NONE },
+                    needsInput = !action.remoteInputs.isNullOrEmpty(),
+                )
+            }
+        },
+    )
+
 private data class Targets(
+    val ownActions: List<NotificationOwnAction>,
     val context: Context,
     val contentIntent: PendingIntent?,
     val providerActions: Map<String, ProviderTarget>,

@@ -107,6 +107,61 @@ class StreamCardActionsTest {
         )
     }
 
+    private val ownActions =
+        listOf(NotificationOwnAction("provider:1", "Mark as read"), NotificationOwnAction("provider:2", "Archive"))
+
+    @Test
+    fun aNotificationsOwnButtonsFollowReplyDismissAndSnoozeInItsOrder() {
+        assertEquals(
+            listOf(
+                CardAction.Reply,
+                CardAction.Dismiss,
+                CardAction.Snooze,
+                CardAction.Own("provider:1", "Mark as read"),
+                CardAction.Own("provider:2", "Archive"),
+            ),
+            StreamCardActions.forContent(chat.copy(ownActions = ownActions)),
+        )
+    }
+
+    @Test
+    fun aNotificationWithOnlyItsOwnButtonsOffersThemWithoutReplyOrDismiss() {
+        val bare = chat.copy(actions = setOf(NotificationAction.OPEN, NotificationAction.HIDE), ownActions = ownActions)
+        assertEquals(
+            listOf(CardAction.Own("provider:1", "Mark as read"), CardAction.Own("provider:2", "Archive")),
+            StreamCardActions.forContent(bare),
+        )
+    }
+
+    @Test
+    fun anOwnButtonIsOnlyOfferedWhileTheNotificationKeyIsThere() {
+        assertEquals(
+            emptyList(),
+            StreamCardActions.forContent(
+                chat.copy(notificationKey = null, ownActions = ownActions),
+            ).filterIsInstance<CardAction.Own>(),
+        )
+    }
+
+    @Test
+    fun anOwnButtonPerformsTheOwnActionByItsId() {
+        assertEquals(
+            StreamAction.OwnAction("provider:2"),
+            StreamCardActions.streamActionFor(CardAction.Own("provider:2", "Archive")),
+        )
+        val content = chat.copy(ownActions = ownActions)
+        assertTrue(StreamActionPolicy.offers(content, StreamAction.OwnAction("provider:1")))
+        // An id the notification does not have is not offered, and neither is any to a redacted one.
+        assertFalse(StreamActionPolicy.offers(content, StreamAction.OwnAction("provider:9")))
+        assertFalse(StreamActionPolicy.offers(chat.copy(notificationKey = null), StreamAction.OwnAction("provider:1")))
+        assertFalse(
+            StreamActionPolicy.offers(
+                content.copy(privacy = StreamPrivacy.REDACTED, notificationKey = null),
+                StreamAction.OwnAction("provider:1"),
+            ),
+        )
+    }
+
     @Test
     fun aNotificationOffersOnlyWhatItCanDo() {
         val noReply = chat.copy(actions = chat.actions - NotificationAction.REPLY - NotificationAction.SNOOZE)

@@ -33,6 +33,9 @@ sealed interface CardAction {
     data class OpenEvent(val kind: EventKind) : CardAction
 
     data object Complete : CardAction
+
+    /** One of the notification's own action buttons: a text button with its [title], performed by its [id]. */
+    data class Own(val id: String, val title: String) : CardAction
 }
 
 /**
@@ -77,7 +80,10 @@ object StreamCardActions {
             CardAction.Reply.takeIf { StreamActionPolicy.offers(content, StreamAction.Reply("x")) },
             CardAction.Dismiss.takeIf { StreamActionPolicy.offers(content, StreamAction.Dismiss) },
             CardAction.Snooze.takeIf { StreamActionPolicy.offers(content, StreamAction.Snooze()) },
-        )
+        ) +
+            content.ownActions
+                .filter { StreamActionPolicy.offers(content, StreamAction.OwnAction(it.id)) }
+                .map { CardAction.Own(it.id, it.title) }
 
     private fun media(
         content: MediaContent,
@@ -111,6 +117,7 @@ object StreamCardActions {
             is CardAction.ToggleQueue -> null
             is CardAction.OpenEvent -> StreamAction.Open
             CardAction.Complete -> StreamAction.Complete
+            is CardAction.Own -> StreamAction.OwnAction(action.id)
         }
 
     /**
