@@ -53,8 +53,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Density
 import com.riffle.app.R
 import com.riffle.app.launcher.GlassSurface
+import com.riffle.app.launcher.LocalDockFan
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.dockFan
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.dock.DockPageOrder
@@ -516,7 +518,7 @@ private fun StreamAllHidden(
     onShow: (StreamSection) -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = RiffleSpacing.l),
+        modifier = Modifier.dockFan(LocalDockFan.current).fillMaxSize().padding(horizontal = RiffleSpacing.l),
         verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
     ) {
         StreamStateMessage(stringResource(R.string.stream_all_hidden))

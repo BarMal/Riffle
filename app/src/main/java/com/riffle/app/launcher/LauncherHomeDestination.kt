@@ -74,12 +74,16 @@ fun HomeDestination(
 ) {
     val dockHost = rememberHomeDockHostState()
     val dockPull = rememberDockPullState()
+    // The trampoline and the fan: the Dock's own motion between Home and the Stream (not on an expanded posture).
+    val motion = rememberDockMotionState()
     // "Connect Todoist" in the Tasks section: Settings > Stream > Tasks.
     val openTasksSettings = { onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.STREAM_TASKS)) }
     val presentation = standardHomePresentation(state, widgetRenderers)
     val plan = rememberHomeSurfacePlan(state)
     // A committed pull stands in for the shell's answer until the shell shows it, so the surfaces do not flicker back.
     val shownStream = rememberStreamShown(dockPull, streamShown)
+    // What the shell shows moving away from where the motion is heading (Home pressed, say) ends it where it is.
+    LaunchedEffect(shownStream) { motion.syncShell(shownStream) }
     // The Library is a sheet over Home or the Stream; a committed pull to it stands in for the shell the same way.
     val shownLibrary = rememberLibraryShown(dockPull, state.destination.isLibrary)
     // On an expanded posture Home and the Stream can share the screen (ADR 0003, Folded and unfolded).
@@ -91,7 +95,7 @@ fun HomeDestination(
     val openStreamFromGlance by rememberUpdatedState<(StreamFocusTarget) -> Unit> { target ->
         openStream(
             stream,
-            dockPull,
+            StreamSwitch(dockPull, motion),
             target,
             shownStream,
             plan.dockEdge.pullDirection,
@@ -127,7 +131,7 @@ fun HomeDestination(
                 } else {
                     openStream(
                         stream,
-                        dockPull,
+                        StreamSwitch(dockPull, motion),
                         target,
                         shownStream,
                         plan.dockEdge.pullDirection,
@@ -154,8 +158,7 @@ fun HomeDestination(
                     // goes back to Home.
                     onPress = { entryKey ->
                         if (shownStream) {
-                            dockPull.open(
-                                DockPullDestination.HOME,
+                            StreamSwitch(dockPull, motion).close(
                                 plan.dockEdge.pullDirection,
                                 state.reducedMotion(),
                                 splitSetup(),
@@ -163,7 +166,7 @@ fun HomeDestination(
                         } else {
                             openStream(
                                 stream,
-                                dockPull,
+                                StreamSwitch(dockPull, motion),
                                 entryKey?.let(::dockDynamicEntryTarget),
                                 shownStream,
                                 plan.dockEdge.pullDirection,
@@ -174,6 +177,7 @@ fun HomeDestination(
                     },
                 ),
             dockPull = dockPull,
+            motion = motion,
             hostState = dockHost,
             onAction = onAction,
         )
@@ -182,7 +186,7 @@ fun HomeDestination(
     val dockHostState = plan.stateFor(plan.shownMode)
     val dockPresentation = standardHomePresentation(dockHostState, widgetRenderers)
     val showStream = stream != null && (shownStream || pull.isTransitioning)
-    val showHome = !shownStream || pull.isTransitioning
+    val showHome = !shownStream || pull.isTransitioning || pull.motionShowsHome
     val showLibrary = shownLibrary || pull.isLibraryTransitioning
     // Once the Library's sheet covers Home or the Stream they are invisible, so assistive technology skips them too.
     val covered = shownLibrary && !pull.isLibraryTransitioning
@@ -209,7 +213,7 @@ fun HomeDestination(
     // The shared backdrop every liquid-glass surface on Home samples from (see `LiquidGlassBackdrop.kt`): installed
     // here, around this content specifically, since this is exactly the wallpaper-plus-surface subtree every glass
     // surface on Home floats above.
-    CompositionLocalProvider(LocalGlanceHost provides glanceHost) {
+    CompositionLocalProvider(LocalGlanceHost provides glanceHost, LocalDockFan provides pull.fanSource) {
         ProvideLiquidGlassBackdrop { backdropCapture ->
             Box(
                 modifier =
@@ -233,10 +237,11 @@ fun HomeDestination(
                     interpreter = dockInterpreter,
                     haptics = haptics,
                     dockModifier = pull.dockModifier,
+                    dockDipDp = pull::dockDipDp,
                 )
-                // Home first, then the Stream over it: while a pull runs both are composed and the Stream slides over
-                // Home. Both stay direct siblings of the dock, so their zIndex ranks them against it (see
-                // HOME_CONTENT_Z_INDEX) and the dock keeps the touches where they overlap.
+                // Home first, then the Stream over it: while the Dock's change runs both are composed, and the
+                // Stream's cards rise out of the Dock over Home. Both stay direct siblings of the dock, so their zIndex
+                // ranks them against it (see HOME_CONTENT_Z_INDEX) and the dock keeps the touches where they overlap.
                 val homeContent: @Composable () -> Unit = {
                     key(plan.currentMode) {
                         ModeSurfaceContent(
@@ -311,12 +316,48 @@ fun HomeDestination(
 private fun LauncherShellState.reducedMotion(): Boolean = launcherSettings.motion.reducedMotion
 
 /**
- * Opens the Stream from a Dock entry: records where it should land, then, when it is not showing, runs the same
- * settle a pull's commit would. When it already shows, only the landing moves.
+ * How the Stream is opened and closed from outside a gesture's own release: the Dock's trampoline on a phone, the
+ * pull's split settle on an expanded posture (where the Stream and Home share the screen and the fan does not apply).
+ */
+private class StreamSwitch(
+    private val dockPull: DockPullState,
+    private val motion: DockMotionState,
+) {
+    /** Whether a closing is already under way, so a request to open takes it back. */
+    val closing: Boolean get() = motion.isClosing
+
+    fun open(
+        direction: DockPullDirection,
+        reducedMotion: Boolean,
+        split: SplitPullSetup?,
+    ) {
+        if (split == null) {
+            motion.run(open = true, reducedMotion = reducedMotion, shown = false)
+        } else {
+            dockPull.open(DockPullDestination.STREAM, direction, reducedMotion, split)
+        }
+    }
+
+    fun close(
+        direction: DockPullDirection,
+        reducedMotion: Boolean,
+        split: SplitPullSetup?,
+    ) {
+        if (split == null) {
+            motion.run(open = false, reducedMotion = reducedMotion, shown = true)
+        } else {
+            dockPull.open(DockPullDestination.HOME, direction, reducedMotion, split)
+        }
+    }
+}
+
+/**
+ * Opens the Stream from a Dock entry: records where it should land, then, when it is not showing (or is on its way
+ * out), runs the Dock's change to it. When it already shows, only the landing moves.
  */
 private fun openStream(
     stream: StreamHost?,
-    dockPull: DockPullState,
+    switch: StreamSwitch,
     target: StreamFocusTarget?,
     shown: Boolean,
     direction: DockPullDirection,
@@ -325,7 +366,7 @@ private fun openStream(
 ) {
     if (stream == null) return
     target?.let(stream.focus::request)
-    if (!shown) dockPull.open(DockPullDestination.STREAM, direction, reducedMotion, split)
+    if (!shown || switch.closing) switch.open(direction, reducedMotion, split)
 }
 
 /**
