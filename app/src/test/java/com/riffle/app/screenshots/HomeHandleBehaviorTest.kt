@@ -303,6 +303,34 @@ class HomeHandleBehaviorTest {
     }
 
     @Test
+    fun aDragDownOrUpFromTheHandleNeverFiresAHomeSwipe() {
+        show()
+        // Swipe down (one finger) is search on Home; the handle is search's own button, so a drag that starts on it
+        // must not be mistaken for that swipe, nor for any other.
+        composeRule.onNodeWithTag(HOME_HANDLE_TEST_TAG).performTouchInput {
+            swipe(Offset(width * 0.1f, height / 2f), Offset(width * 0.1f, height / 2f + 260f), durationMillis = 200)
+        }
+        composeRule.waitForIdle()
+        assertTrue("a swipe down from the handle reached Home: $actions", actions.isEmpty())
+        composeRule.onNodeWithTag(HOME_HANDLE_TEST_TAG).performTouchInput {
+            swipe(Offset(width * 0.1f, height / 2f), Offset(width * 0.1f, height / 2f - 260f), durationMillis = 200)
+        }
+        composeRule.waitForIdle()
+        assertTrue("a swipe up from the handle reached Home: $actions", actions.isEmpty())
+        composeRule.onAllNodesWithTag(DOCK_SEARCH_SURFACE_TEST_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun aDragFromTheHandleOfASinglePageNeverFiresAHomeSwipeEither() {
+        show(ScreenshotFixtures.homeState())
+        composeRule.onNodeWithTag(HOME_HANDLE_TEST_TAG).performTouchInput {
+            swipe(Offset(width * 0.5f, height / 2f), Offset(width * 0.5f, height / 2f + 260f), durationMillis = 200)
+        }
+        composeRule.waitForIdle()
+        assertTrue("a swipe from the handle reached Home: $actions", actions.isEmpty())
+    }
+
+    @Test
     fun aTapOnTheRoomAroundSearchClosesItBackToHome() {
         show()
         composeRule.onNodeWithTag(HOME_HANDLE_TEST_TAG).performClick()

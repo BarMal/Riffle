@@ -91,7 +91,7 @@ Use a busy, bright wallpaper and then a dark one.
       Home > Label background turns a pill on at your stored opacity and off again.
 - [ ] **Edit, folders, widgets, pages** behave as the standard launcher: long-press to edit, drag, make a folder, add
       and resize a widget, add and remove pages.
-- [ ] **Gestures.** Swipe down opens the Library with the keyboard up (Search); two-finger swipe up opens notifications;
+- [ ] **Gestures.** Swipe down opens search with the keyboard up; dragging the page handle never triggers a Home swipe;
       the Stream and Library actions can be bound in Settings > Gestures.
 
 ## Library

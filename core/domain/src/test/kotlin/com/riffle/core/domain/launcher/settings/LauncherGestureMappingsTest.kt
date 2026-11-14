@@ -98,7 +98,7 @@ class LauncherGestureMappingsTest {
             HomeGestureSettings(
                 actions =
                     mapOf(
-                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_SETTINGS,
                     ),
             ).toLauncherGestureMappings()
 
@@ -119,8 +119,8 @@ class LauncherGestureMappingsTest {
             listOf(
                 LauncherGestureConflict(
                     surface = LauncherGestureSurface.HOME_PAGE,
-                    action = LauncherGestureAction.OPEN_NOTIFICATIONS,
-                    gestures = listOf(LauncherGesture.TWO_FINGER_UP, LauncherGesture.TWO_FINGER_LEFT),
+                    action = LauncherGestureAction.OPEN_SETTINGS,
+                    gestures = listOf(LauncherGesture.TWO_FINGER_DOWN, LauncherGesture.TWO_FINGER_LEFT),
                 ),
             ),
             LauncherGestureConflictDetector.conflictsIn(mappings),

@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,8 +51,10 @@ import com.riffle.core.domain.launcher.home.HomeHandleLayout
  * - For assistive technology it is two nodes: "Search" (a button) and the page selector, which says the page, can be
  *   set to a page and has "Previous page" and "Next page".
  *
- * The one pointer input here is the platform's tap detector; the drag is the indicator's own and takes the touch only
- * once it moves past slop, so a tap on the dots still searches.
+ * The pointer inputs here are the platform's tap detector and a drag detector that consumes whatever drag starts on the
+ * handle (along it, across it, on the glyph or on a single page's bare pill), so none of Home's swipes can fire from
+ * it; the scrub along the dots is the indicator's own and takes the touch first, only once it moves past slop, so a tap
+ * on the dots still searches.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -82,7 +85,10 @@ internal fun HomeHandlePill(
             modifier
                 .testTag(HOME_HANDLE_TEST_TAG)
                 .size(width = size.widthDp.dp, height = size.heightDp.dp)
-                .pointerInput(onOpenSearch) { detectTapGestures(onTap = { onOpenSearch() }) },
+                .pointerInput(onOpenSearch) { detectTapGestures(onTap = { onOpenSearch() }) }
+                // Any drag that starts on the handle is the handle's (the dots' own scrub takes the one along them
+                // first): it never reaches Home's swipes, which would turn a drag down the handle into a swipe down.
+                .pointerInput(Unit) { detectDragGestures(onDrag = { change, _ -> change.consume() }) },
         contentAlignment = Alignment.Center,
     ) {
         // The pill is drawn thinner than its touch target: the glass sits in the middle of it.

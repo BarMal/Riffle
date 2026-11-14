@@ -121,7 +121,6 @@ class HomeSwipeGestureActionMapper {
     private fun LauncherGestureAction.toShellAction(launchTarget: LauncherGestureLaunchTarget?): LauncherShellAction? =
         when (this) {
             LauncherGestureAction.NONE -> null
-            LauncherGestureAction.OPEN_NOTIFICATIONS -> LauncherShellAction.OpenNotifications
             LauncherGestureAction.OPEN_SEARCH -> LauncherShellAction.OpenSearch
             LauncherGestureAction.OPEN_SETTINGS -> LauncherShellAction.OpenSettings
             LauncherGestureAction.ENTER_HOME_EDIT_MODE -> LauncherShellAction.EnterHomeEditMode

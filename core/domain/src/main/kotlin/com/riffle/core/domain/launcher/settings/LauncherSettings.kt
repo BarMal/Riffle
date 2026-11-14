@@ -224,7 +224,7 @@ val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
         HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_SEARCH,
         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
-        HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_NOTIFICATIONS,
+        HomeGesture.TWO_FINGER_UP to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
@@ -359,7 +359,6 @@ enum class HomeSwipeGestureDirection {
 
 enum class LauncherGestureAction {
     NONE,
-    OPEN_NOTIFICATIONS,
     OPEN_SEARCH,
     OPEN_SETTINGS,
     ENTER_HOME_EDIT_MODE,
@@ -384,7 +383,8 @@ enum class LauncherGestureAction {
         /**
          * The action a stored [name] means, or null when it names none. Mode-switching and app-drawer
          * bindings (NEXT_MODE / PREVIOUS_MODE, their older ENTER_ / EXIT_ADAPTIVE_STAGE names, and
-         * OPEN_APP_DRAWER) were removed when the dock pull became the only mode-transition trigger, and the
+         * OPEN_APP_DRAWER) were removed when the dock pull became the only mode-transition trigger, OPEN_NOTIFICATIONS
+         * when the Stream became the place for notifications (a swipe no longer opens the old overview), and the
          * workspace menu and app stage actions (OPEN_WORKSPACE_MENU, SELECT_NEXT_APP_STAGE,
          * SELECT_PREVIOUS_APP_STAGE) when the Dock became the handle of the Stream and the Library (P5);
          * like any other unknown name they decode to null, which callers treat as "no action".

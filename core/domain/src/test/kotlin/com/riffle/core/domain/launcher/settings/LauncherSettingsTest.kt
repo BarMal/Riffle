@@ -174,7 +174,7 @@ class LauncherSettingsTest {
         assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, settings.gestures.homeSwipe.left)
         assertEquals(LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE, settings.gestures.homeSwipe.right)
         assertEquals(
-            LauncherGestureAction.OPEN_NOTIFICATIONS,
+            LauncherGestureAction.NONE,
             settings.gestures.homeGestures.actionFor(HomeGesture.TWO_FINGER_UP),
         )
         assertEquals(
@@ -197,7 +197,7 @@ class LauncherSettingsTest {
                             HomeGestureSettings(
                                 actions =
                                     mapOf(
-                                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.OPEN_SETTINGS,
                                     ),
                             ),
                     ),
@@ -207,8 +207,8 @@ class LauncherSettingsTest {
             listOf(
                 LauncherGestureConflict(
                     surface = LauncherGestureSurface.HOME_PAGE,
-                    action = LauncherGestureAction.OPEN_NOTIFICATIONS,
-                    gestures = listOf(LauncherGesture.TWO_FINGER_UP, LauncherGesture.TWO_FINGER_LEFT),
+                    action = LauncherGestureAction.OPEN_SETTINGS,
+                    gestures = listOf(LauncherGesture.TWO_FINGER_DOWN, LauncherGesture.TWO_FINGER_LEFT),
                 ),
             ),
             settings.gestures.conflicts,

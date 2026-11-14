@@ -38,7 +38,7 @@ class HomeGestureConflictDetectorTest {
                 actions =
                     mapOf(
                         HomeGesture.ONE_FINGER_UP to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
-                        HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                        HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_STREAM,
                         HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
                         HomeGesture.PINCH_OUT to LauncherGestureAction.NONE,
                     ),

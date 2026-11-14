@@ -925,3 +925,17 @@ Five things the owner found on a phone, each one commit.
 - **The handle is drawn as the Dock's material.** The pill uses the Dock's own `dockSurfaceAppearance` (its "Dock
   background" fill and colour, clear at 0%, reduced transparency, the same edge lights) with the Dock's corner capped at the
   pill's half height (a 32 dp Dock corner keeps it fully rounded).
+
+## Device fixes, round 3
+
+Six things the owner found on a foldable (unfolded, Dock on the right edge), each one commit.
+
+- **Swipe down no longer reaches the handle's drags, and nothing opens the old notification overview.** A drag that
+  starts on the page handle (along it, across it, on the search glyph, on a single page's bare pill) is consumed by the
+  handle (`HomeHandlePill`: a drag detector beside the tap detector; the scrub along the dots still takes it first), so
+  Home's one-finger swipes can no longer fire from it (a drag down a column handle was "swipe down", which opens
+  search). The gesture binding `OPEN_NOTIFICATIONS` is removed (`LauncherGestureAction`, the Gestures page, the mapper); a
+  stored name decodes to no action like any removed one (`LauncherGestureSettingsJsonCodecTest`), and the old default of
+  two fingers up goes with it (now unbound). Swipe down was never bound to notifications by default: it opens search
+  (`OPEN_SEARCH`), which stays the default, and over vertically scrolling pages the pager already owns vertical drags
+  (the arbiter's child axes), so nothing fires there from the page either. The overview surface itself is untouched.

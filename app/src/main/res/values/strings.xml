@@ -490,7 +490,7 @@
     <string name="setting_gesture_one_finger_right">One-finger swipe right</string>
     <string name="setting_gesture_one_finger_right_keywords">gesture swipe right previous page</string>
     <string name="setting_gesture_two_finger_up">Two-finger swipe up</string>
-    <string name="setting_gesture_two_finger_up_keywords">gesture two fingers swipe up notifications</string>
+    <string name="setting_gesture_two_finger_up_keywords">gesture two fingers swipe up</string>
     <string name="setting_gesture_two_finger_down">Two-finger swipe down</string>
     <string name="setting_gesture_two_finger_down_keywords">gesture two fingers swipe down settings</string>
     <string name="setting_gesture_two_finger_left">Two-finger swipe left</string>
