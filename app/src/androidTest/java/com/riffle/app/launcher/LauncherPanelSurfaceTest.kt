@@ -12,7 +12,6 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.riffle.core.domain.launcher.designsystem.GlassMaterialTokens
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import org.junit.Assert.assertTrue
@@ -46,13 +45,13 @@ class LauncherPanelSurfaceTest {
 
         val image = composeRule.onRoot().captureToImage().toPixelMap()
         val actual = image[image.width / 2, image.height / 2]
-        // The surface is Thick glass: the panel tint at that weight's tint alpha over whatever is behind it.
-        // The sheen and the content scrim add a little on top, hence the wider tolerance.
-        val glass = GlassMaterialTokens.forWeight(GlassWeight.Thick)
+        // The surface is Thick glass: the weight's flat fill (see glassFillColor) mixed with the panel tint over whatever is
+        // behind it. The centre is well away from the edge lights (a 1dp border and hairline), so the only slack
+        // needed is 8-bit rounding and the compositing order of the test device's GPU.
         val expected =
             launcherThemeSurfaceTokens(colorScheme = lightScheme)
                 .panelColor
-                .copy(alpha = glass.softwareTintAlpha(supportsBlur = true))
+                .let { panel -> glassFillColor(GlassWeight.Thick, panel) }
                 .compositeOver(wallpaper)
 
         assertColorClose(expected, actual, tolerance = GLASS_TOLERANCE)
@@ -78,6 +77,6 @@ class LauncherPanelSurfaceTest {
     }
 
     private companion object {
-        const val GLASS_TOLERANCE = 0.06f
+        const val GLASS_TOLERANCE = 0.03f
     }
 }

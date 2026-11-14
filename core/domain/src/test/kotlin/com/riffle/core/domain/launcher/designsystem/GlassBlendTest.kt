@@ -5,98 +5,67 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class GlassBlendTest {
-    private val transparent = GlassBlend.Premultiplied(0f, 0f, 0f, 0f)
-    private val red = GlassBlend.Premultiplied(1f, 0f, 0f, 1f)
-
     @Test
-    fun overOpaqueContentTheTintIsAPlainMix() {
-        val out = GlassBlend.tint(red, 1f, 1f, 1f, 0.4f)
-        assertEquals(1f, out.a, 1e-6f)
-        assertEquals(1f, out.r, 1e-6f)
-        assertEquals(0.4f, out.g, 1e-6f)
-        assertEquals(0.4f, out.b, 1e-6f)
-    }
+    fun theFlatFillIsAPlainSourceOver() {
+        val shown = GlassBlend.flatOver(Triple(0.2f, 0.4f, 0.6f), alpha = 0.5f, background = Triple(1f, 0f, 0f))
 
-    @Test
-    fun overATransparentBackdropTheResultIsTheTintAtItsAlpha() {
-        val out = GlassBlend.tint(transparent, 0.2f, 0.4f, 0.6f, 0.5f)
-        assertEquals(0.5f, out.a, 1e-6f)
-        assertEquals(0.1f, out.r, 1e-6f)
-        assertEquals(0.2f, out.g, 1e-6f)
-        assertEquals(0.3f, out.b, 1e-6f)
-        // The screen then shows the wallpaper through it: red under half-opaque (0.2, 0.4, 0.6) tint.
-        val shown = out.overOpaque(1f, 0f, 0f)
         assertEquals(0.6f, shown.first, 1e-6f)
         assertEquals(0.2f, shown.second, 1e-6f)
         assertEquals(0.3f, shown.third, 1e-6f)
     }
 
     @Test
-    fun zeroTintAlphaOverTheWallpaperIsFullyClear() {
-        val out = GlassBlend.shade(transparent, 1f, 1f, 1f, 0.4f, 0f, 0f)
-        assertEquals(0f, out.a, 1e-6f)
-        assertEquals(0f, out.r, 1e-6f)
+    fun aClearFillShowsTheBackgroundAndAnOpaqueOneTheTint() {
+        val background = Triple(0.9f, 0.1f, 0.3f)
+        val tint = Triple(0.2f, 0.2f, 0.2f)
+
+        assertEquals(background, GlassBlend.flatOver(tint, 0f, background))
+        assertEquals(tint, GlassBlend.flatOver(tint, 1f, background))
+        assertEquals(tint, GlassBlend.flatOver(tint, 3f, background))
     }
 
     @Test
-    fun effectiveAlphaInterpolatesByBackdropAlphaAndIsClamped() {
-        assertEquals(0.9f, GlassBlend.effectiveTintAlpha(0f, 0.4f, 0.9f), 1e-6f)
-        assertEquals(0.4f, GlassBlend.effectiveTintAlpha(1f, 0.4f, 0.9f), 1e-6f)
-        assertEquals(0.65f, GlassBlend.effectiveTintAlpha(0.5f, 0.4f, 0.9f), 1e-6f)
-        assertEquals(0.4f, GlassBlend.effectiveTintAlpha(7f, 0.4f, 0.9f), 1e-6f)
-        assertEquals(1f, GlassBlend.effectiveTintAlpha(0f, 0.4f, 3f), 1e-6f)
-    }
-
-    @Test
-    fun lightKeepsAlphaOverOpaqueContentAndRaisesItOverTransparent() {
-        val opaque = GlassBlend.addLight(GlassBlend.Premultiplied(0.5f, 0.5f, 0.5f, 1f), 0.2f)
-        assertEquals(1f, opaque.a, 1e-6f)
-        assertEquals(0.7f, opaque.r, 1e-6f)
-        val clear = GlassBlend.addLight(transparent, 0.2f)
-        assertEquals(0.2f, clear.a, 1e-6f)
-        assertEquals(0.2f, clear.r, 1e-6f)
-    }
-
-    @Test
-    fun theResultIsAlwaysValidPremultiplied() {
-        listOf(transparent, red, GlassBlend.Premultiplied(0.1f, 0.1f, 0.1f, 0.2f)).forEach { backdrop ->
-            listOf(0f, 0.3f, 1f).forEach { light ->
-                val out = GlassBlend.shade(backdrop, 1f, 1f, 1f, 0.5f, 0.7f, light)
-                assertTrue(out.r <= out.a + 1e-6f && out.g <= out.a + 1e-6f && out.b <= out.a + 1e-6f, "$out")
-                assertTrue(out.a in 0f..1f)
-            }
-        }
-    }
-
-    @Test
-    fun everyWeightKeepsTextReadableOverTheWorstWallpaper() {
-        val lightSurface = Triple(1f, 1f, 1f)
-        val darkText = Triple(0x1C / 255f, 0x1B / 255f, 0x1F / 255f)
-        val darkSurface = Triple(0x14 / 255f, 0x12 / 255f, 0x18 / 255f)
+    fun lightTextOnAnyWeightIsReadableOverADarkWallpaper() {
+        // The owner's fills are light and see-through, signed off over a dark wallpaper (luminance 0.02):
+        // body text must still pass there.
         val lightText = Triple(0xE6 / 255f, 0xE1 / 255f, 0xE5 / 255f)
+        val wallpaper = Triple(0.02f, 0.02f, 0.03f)
         GlassWeight.entries.forEach { weight ->
             val tokens = GlassMaterialTokens.forWeight(weight)
-            // Across the whole frost range the user can pick, over a transparent backdrop.
-            listOf(0f, 0.5f, 1f).forEach { frost ->
-                val alpha = tokens.shaderTintAlphaOverWallpaper(frost)
-                assertTrue(
-                    GlassBlend.worstCaseTextContrast(lightSurface, darkText, alpha) >= GlassBlend.MINIMUM_TEXT_CONTRAST,
-                    "$weight light at frost $frost, alpha $alpha",
+            val base = tokens.darkBaseRgb
+            val rgb = Triple((base shr 16 and 0xFF) / 255f, (base shr 8 and 0xFF) / 255f, (base and 0xFF) / 255f)
+            val shown = GlassBlend.flatOver(rgb, tokens.fillAlpha, wallpaper)
+            val contrast =
+                GlassBlend.contrast(
+                    GlassBlend.luminance(lightText.first, lightText.second, lightText.third),
+                    GlassBlend.luminance(shown.first, shown.second, shown.third),
                 )
-                assertTrue(
-                    GlassBlend.worstCaseTextContrast(darkSurface, lightText, alpha) >= GlassBlend.MINIMUM_TEXT_CONTRAST,
-                    "$weight dark at frost $frost, alpha $alpha",
-                )
-            }
+            assertTrue(contrast >= GlassBlend.MINIMUM_TEXT_CONTRAST, "$weight contrast $contrast")
         }
     }
 
     @Test
-    fun withoutTheFloorThinGlassWouldNotBeReadableOverTheWallpaper() {
-        val thin = GlassMaterialTokens.thin
-        val raw = thin.shaderTintAlpha(thin.effectiveFrost(0.45f))
+    fun theThickFillKeepsDenseTextReadableOverAMidGreyWallpaperButTheThinOnesDoNot() {
+        // This is why dense text sits on Thick: over a mid-grey wallpaper Regular and Thin lose it.
+        val lightText = Triple(0xE6 / 255f, 0xE1 / 255f, 0xE5 / 255f)
+        val textL = GlassBlend.luminance(lightText.first, lightText.second, lightText.third)
+
+        fun over(weight: GlassWeight): Float {
+            val tokens = GlassMaterialTokens.forWeight(weight)
+            val base = tokens.darkBaseRgb
+            val rgb = Triple((base shr 16 and 0xFF) / 255f, (base shr 8 and 0xFF) / 255f, (base and 0xFF) / 255f)
+            val shown = GlassBlend.flatOver(rgb, tokens.fillAlpha, Triple(0.5f, 0.5f, 0.5f))
+            return GlassBlend.contrast(textL, GlassBlend.luminance(shown.first, shown.second, shown.third))
+        }
+        assertTrue(over(GlassWeight.Thick) >= GlassBlend.MINIMUM_TEXT_CONTRAST)
+        assertTrue(over(GlassWeight.Regular) < GlassBlend.MINIMUM_TEXT_CONTRAST)
+    }
+
+    @Test
+    fun aMuchThinnerFillWouldNotBeReadableOverTheWallpaper() {
         val darkText = Triple(0x1C / 255f, 0x1B / 255f, 0x1F / 255f)
-        val contrast = GlassBlend.worstCaseTextContrast(Triple(1f, 1f, 1f), darkText, raw)
+        val contrast = GlassBlend.worstCaseTextContrast(Triple(1f, 1f, 1f), darkText, 0.4f)
+
         assertTrue(contrast < GlassBlend.MINIMUM_TEXT_CONTRAST)
     }
 }

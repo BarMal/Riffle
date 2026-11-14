@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsSelected
@@ -51,6 +52,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.util.concurrent.Executors
@@ -122,6 +124,44 @@ class DockContextualModeTest {
         composeRule.onNodeWithTag(
             dockDynamicSectionTileTestTag(section.name.lowercase().replaceFirstChar { it.uppercase() }),
         )
+
+    private fun itemTags() =
+        pins.map { dockItemTestTag(it.id) } +
+            sections.map { dockDynamicSectionTileTestTag(it.name.lowercase().replaceFirstChar { c -> c.uppercase() }) }
+
+    private fun visibleItemBounds() =
+        itemTags().mapNotNull { tag ->
+            val node = composeRule.onNodeWithTag(tag)
+            val shown = runCatching { node.assertIsDisplayed() }.isSuccess
+            if (shown) node.fetchSemanticsNode().boundsInRoot else null
+        }
+
+    @Test
+    fun aPhoneWideRowShowsSixWholeItemsOfOneSizeAndTheRestScrollsAway() {
+        showRow()
+        val density = RuntimeEnvironment.getApplication().resources.displayMetrics.density
+        val rowLeft = composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).fetchSemanticsNode().boundsInRoot.left
+        val whole = visibleItemBounds().filter { it.width >= 47f * density }
+        assertTrue("fewer than six whole items on show: ${visibleItemBounds()}", whole.size >= 6)
+        // Pinned icons and tiles read as one row of equal items: every whole one is the 48 dp target, never larger.
+        whole.forEach { assertEquals(48f * density, it.width, 1f) }
+        assertEquals(rowLeft, whole.first().left, 1f)
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun theRowStopsWithAWholeItemAtItsLeadingEdgeWhenItScrollsToTheOpenPage() {
+        openKey = "ctx:${sections.last().storedId}"
+        showRow()
+        val density = RuntimeEnvironment.getApplication().resources.displayMetrics.density
+        val rowLeft = composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).fetchSemanticsNode().boundsInRoot.left
+        tile(sections.last()).assertIsDisplayed()
+        val leading = visibleItemBounds().first()
+        assertTrue("a sliver at the leading edge: $leading", leading.width >= 47f * density)
+        assertEquals(rowLeft, leading.left, 1f)
+        // The last item of the row is whole too: the row ends on an item, not part-way through one.
+        assertTrue(tile(sections.last()).fetchSemanticsNode().boundsInRoot.width >= 47f * density)
+    }
 
     @Test
     fun theRowIsOneScrollingRunOfThePinnedIconsAndTheTiles() {

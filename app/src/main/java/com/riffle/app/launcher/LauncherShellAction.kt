@@ -462,10 +462,6 @@ sealed interface LauncherShellAction {
 
     data class SelectReducedTransparency(val reduced: Boolean) : LauncherShellAction
 
-    data class SelectLiquidGlassFrostStrength(val percent: Int) : LauncherShellAction
-
-    data class SelectLiquidGlassRefractionStrength(val percent: Int) : LauncherShellAction
-
     data class SelectLiquidGlassSpotlightFlow(val millis: Int) : LauncherShellAction
 
     data class SelectHomeSwipeGestureAction(

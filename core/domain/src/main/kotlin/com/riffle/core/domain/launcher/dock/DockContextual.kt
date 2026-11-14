@@ -130,6 +130,75 @@ object DockRunScroll {
             }
         return target.coerceIn(0, maxScrollPx.coerceAtLeast(0))
     }
+
+    /**
+     * Like [toReveal] but a scroll this code chooses always stops with a whole item at the leading edge, never a
+     * clipped sliver of one. [stopsPx] are the offsets at which an item begins at the leading edge (the starts of the
+     * row's items, in order, which include 0); [itemIndex] is the item to bring into view, [items] the row's items.
+     *
+     * The item is left where it is when it is already wholly in view. Otherwise the row scrolls to a stop that shows it
+     * whole: moving back (the item is before the viewport) to the stop one item earlier, so the row reads as one that
+     * goes on, else to the item's own; moving forward to the nearest stop that shows the item and the one after it,
+     * else the nearest that shows the item. A stop past [maxScrollPx] is never chosen (the row's own end is a stop,
+     * see [DockRunGeometry.contextual]'s trailing padding), and the result is always one of [stopsPx].
+     */
+    fun toRevealWhole(
+        scrollPx: Int,
+        viewportPx: Int,
+        maxScrollPx: Int,
+        stopsPx: List<Int>,
+        items: List<DockRunGeometry.Extent>,
+        itemIndex: Int,
+        pxPerDp: Float = 1f,
+    ): Int {
+        fun px(dp: Int?): Int? = dp?.let { (it * pxPerDp).toInt() }
+        val start = px(items.getOrNull(itemIndex)?.startDp)
+        val end = px(items.getOrNull(itemIndex)?.endDp)
+        val reachable = stopsPx.filter { stop -> stop in 0..maxScrollPx.coerceAtLeast(0) }.ifEmpty { listOf(0) }
+        return when {
+            start == null || end == null || viewportPx <= 0 || stopsPx.isEmpty() -> scrollPx
+            start >= scrollPx && end <= scrollPx + viewportPx -> scrollPx
+            start < scrollPx ->
+                stopBefore(
+                    reachable,
+                    viewportPx,
+                    start,
+                    end,
+                    previousStart = px(items.getOrNull(itemIndex - 1)?.startDp),
+                )
+            else -> stopAfter(reachable, viewportPx, start, end, nextEnd = px(items.getOrNull(itemIndex + 1)?.endDp))
+        }
+    }
+
+    /** Scrolling back: the stop one item earlier when the item is still whole from it, else the item's own. */
+    private fun stopBefore(
+        reachable: List<Int>,
+        viewportPx: Int,
+        start: Int,
+        end: Int,
+        previousStart: Int?,
+    ): Int {
+        val showing = reachable.filter { stop -> stop <= start && stop + viewportPx >= end }
+        return showing.lastOrNull { stop -> previousStart != null && stop <= previousStart }
+            ?: showing.lastOrNull()
+            ?: reachable.lastOrNull { stop -> stop <= start }
+            ?: reachable.first()
+    }
+
+    /** Scrolling forward: the nearest stop that shows the item and the one after it, else the item alone. */
+    private fun stopAfter(
+        reachable: List<Int>,
+        viewportPx: Int,
+        start: Int,
+        end: Int,
+        nextEnd: Int?,
+    ): Int {
+        val showing = reachable.filter { stop -> stop <= start && stop + viewportPx >= end }
+        return showing.firstOrNull { stop -> nextEnd != null && stop + viewportPx >= nextEnd }
+            ?: showing.firstOrNull()
+            ?: reachable.lastOrNull { stop -> stop <= start }
+            ?: reachable.first()
+    }
 }
 
 /**
@@ -139,23 +208,69 @@ object DockRunScroll {
  * measuring, and the test says where each icon is.
  */
 object DockRunGeometry {
+    /**
+     * The contextual mode's one item size along the run, pinned icons, live apps and tiles alike: the 48 dp touch
+     * target. The pinned icons keep the Dock's own (Home) size in the Home mode and only draw at this one in the row.
+     */
+    const val CONTEXTUAL_ITEM_DP = 48
+
+    /** The fewest whole items the contextual row shows across its viewport when the Dock's run can hold them. */
+    const val MIN_VISIBLE_ITEMS = 6
+
+    /** The least gap the row closes up to for [MIN_VISIBLE_ITEMS]; the Dock's own spacing is its ceiling. */
+    const val MIN_CONTEXTUAL_SPACING_DP = 4
+
     /** One item's extent: [startDp] up to (not including) [endDp]. */
     data class Extent(val startDp: Int, val endDp: Int)
 
     /**
      * The row: [entries] are the extents of the dynamic entries in order (live apps and now playing first, then the
-     * tiles), [contentDp] the row's whole length.
+     * tiles), [contentDp] the row's whole length including [endPaddingDp], [pinned] the extents of the pinned slots.
      */
-    data class Run(val entries: List<Extent>, val contentDp: Int)
+    data class Run(
+        val entries: List<Extent>,
+        val contentDp: Int,
+        val pinned: List<Extent> = emptyList(),
+        val endPaddingDp: Int = 0,
+    ) {
+        /** Every item of the row in order: the pins, then the entries. */
+        val items: List<Extent> get() = pinned + entries
+
+        /**
+         * The offsets (dp) at which an item stands at the leading edge: each item's start, and 0. These are the
+         * places a programmatic scroll may stop.
+         */
+        val stopsDp: List<Int> get() = (listOf(0) + items.map(Extent::startDp)).distinct()
+    }
 
     /**
-     * The contextual row. [staticDp] is the pinned block's length, [liveCount] and [tileCount] how many live entries
-     * and
-     * tiles follow it, [entryDp] one entry's length and [spacingDp] the gap the row leaves between entries, which also
-     * sits either side of the divider between the live entries and the tiles ([dividerDp] wide). The divider between
-     * the
-     * pinned block and the entries is [dividerDp] wide with no gap, as in the Home mode.
+     * How the contextual row spaces its items for a viewport of [viewportDp] along the run: items are
+     * [CONTEXTUAL_ITEM_DP] and the gap is the Dock's own [preferredSpacingDp], closed up (to no less than
+     * [MIN_CONTEXTUAL_SPACING_DP]) until [MIN_VISIBLE_ITEMS] whole items fit. A viewport too short for that at the
+     * minimum gap shows as many as fit.
      */
+    fun contextualSpacingDp(
+        viewportDp: Int,
+        preferredSpacingDp: Int,
+    ): Int {
+        val preferred = preferredSpacingDp.coerceAtLeast(0)
+        val floor = minOf(MIN_CONTEXTUAL_SPACING_DP, preferred)
+        val room = viewportDp - MIN_VISIBLE_ITEMS * CONTEXTUAL_ITEM_DP
+        val fitting = if (room <= 0) 0 else room / (MIN_VISIBLE_ITEMS - 1)
+        return fitting.coerceIn(floor, preferred.coerceAtLeast(floor))
+    }
+
+    /**
+     * The contextual row. [staticDp] is the pinned block's length ([staticCount] pins in it), [liveCount] and
+     * [tileCount] how many live entries and tiles follow it, [entryDp] one entry's length and [spacingDp] the gap the
+     * row leaves between entries, which also sits either side of the divider between the live entries and the tiles
+     * ([dividerDp] wide). The divider between the pinned block and the entries is [dividerDp] wide with no gap, as in
+     * the Home mode.
+     *
+     * With [viewportDp] given, the row ends so that scrolling to its end leaves a whole item at the leading edge:
+     * trailing padding is added up to the next item start (so the last stop is an item's, never a sliver of one).
+     */
+    @Suppress("LongParameterList")
     fun contextual(
         staticDp: Int,
         liveCount: Int,
@@ -163,9 +278,12 @@ object DockRunGeometry {
         entryDp: Int,
         spacingDp: Int,
         dividerDp: Int,
+        staticCount: Int = 0,
+        viewportDp: Int? = null,
     ): Run {
         val count = liveCount + tileCount
-        if (count <= 0) return Run(emptyList(), staticDp.coerceAtLeast(0))
+        val pinned = pinnedExtents(staticCount, staticDp, entryDp)
+        if (count <= 0) return Run(emptyList(), staticDp.coerceAtLeast(0), pinned)
         val first = staticDp.coerceAtLeast(0) + dividerDp
         val entries = ArrayList<Extent>(count)
         var cursor = first
@@ -175,6 +293,28 @@ object DockRunGeometry {
             entries += Extent(cursor, cursor + entryDp)
             cursor += entryDp
         }
-        return Run(entries, cursor)
+        val padding = viewportDp?.let { endPaddingFor(pinned + entries, cursor, it) } ?: 0
+        return Run(entries, cursor + padding, pinned, padding)
+    }
+
+    private fun pinnedExtents(
+        count: Int,
+        staticDp: Int,
+        itemDp: Int,
+    ): List<Extent> {
+        if (count <= 0 || itemDp <= 0) return emptyList()
+        val gap = if (count > 1) ((staticDp - count * itemDp) / (count - 1)).coerceAtLeast(0) else 0
+        return List(count) { index -> Extent(index * (itemDp + gap), index * (itemDp + gap) + itemDp) }
+    }
+
+    /** Padding that makes the last scroll offset (content - viewport) the start of an item. */
+    private fun endPaddingFor(
+        items: List<Extent>,
+        contentDp: Int,
+        viewportDp: Int,
+    ): Int {
+        val maxScroll = contentDp - viewportDp
+        val stop = items.map(Extent::startDp).firstOrNull { start -> start >= maxScroll }
+        return if (maxScroll <= 0 || stop == null) 0 else stop - maxScroll
     }
 }

@@ -13,6 +13,7 @@ import com.riffle.core.domain.launcher.stream.ref
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DockContextualTest {
     private fun page(
@@ -271,5 +272,111 @@ class DockContextualTest {
     fun aRunWithNoEntriesIsJustThePinnedBlock() {
         val run = DockRunGeometry.contextual(100, 0, 0, 48, 10, 17)
         assertEquals(DockRunGeometry.Run(emptyList(), 100), run)
+    }
+
+    @Test
+    fun theRunKnowsWhereEachPinnedItemIs() {
+        // 3 pins of 48 with 10 between them = 164.
+        val run = DockRunGeometry.contextual(164, 1, 1, 48, 10, 17, staticCount = 3)
+        assertEquals(
+            listOf(DockRunGeometry.Extent(0, 48), DockRunGeometry.Extent(58, 106), DockRunGeometry.Extent(116, 164)),
+            run.pinned,
+        )
+        assertEquals(5, run.items.size)
+        assertEquals(listOf(0, 58, 116, 181, 266), run.stopsDp)
+    }
+
+    @Test
+    fun theSpacingClosesUpUntilSixWholeItemsFitButNeverBelowTheFloorOrAboveThePreference() {
+        // 332 dp of viewport (a 360 dp phone): 6 * 48 = 288, 44 left for 5 gaps -> 8.
+        assertEquals(8, DockRunGeometry.contextualSpacingDp(332, 10))
+        // Plenty of room: the Dock's own gap.
+        assertEquals(10, DockRunGeometry.contextualSpacingDp(532, 10))
+        // Too narrow for six even at the floor: the floor.
+        assertEquals(4, DockRunGeometry.contextualSpacingDp(250, 10))
+        // A Dock whose own gap is smaller than the floor keeps its own.
+        assertEquals(2, DockRunGeometry.contextualSpacingDp(250, 2))
+        assertEquals(0, DockRunGeometry.contextualSpacingDp(0, 0))
+    }
+
+    @Test
+    fun sixWholeItemsFitA360DpPhonesViewportWhateverTheDocksOwnGap() {
+        (0..24).forEach { gap ->
+            val spacing = DockRunGeometry.contextualSpacingDp(332, gap)
+            val six = DockRunGeometry.MIN_VISIBLE_ITEMS * DockRunGeometry.CONTEXTUAL_ITEM_DP + 5 * spacing
+            assertTrue(six <= 332 || spacing == minOf(4, gap), "gap $gap -> $spacing: $six")
+        }
+    }
+
+    @Test
+    fun aRowThatOverflowsEndsOnAnItemStartSoTheLastScrollLeavesNoSliver() {
+        // 6 pins + 5 entries at 48/8: content well past a 332 viewport.
+        val run =
+            DockRunGeometry.contextual(
+                staticDp = 6 * 48 + 5 * 8,
+                liveCount = 2,
+                tileCount = 3,
+                entryDp = 48,
+                spacingDp = 8,
+                dividerDp = 17,
+                staticCount = 6,
+                viewportDp = 332,
+            )
+        val maxScroll = run.contentDp - 332
+        assertTrue(maxScroll in run.stopsDp, "max scroll $maxScroll is a stop of ${run.stopsDp}")
+        assertTrue(run.endPaddingDp in 0 until 48 + 17 + 8)
+    }
+
+    @Test
+    fun aRowThatFitsHasNoPaddingAndNoScroll() {
+        val run = DockRunGeometry.contextual(100, 1, 1, 48, 10, 17, staticCount = 2, viewportDp = 500)
+        assertEquals(0, run.endPaddingDp)
+    }
+
+    private val wholeItems = (0 until 12).map { DockRunGeometry.Extent(it * 56, it * 56 + 48) }
+    private val wholeStops = wholeItems.map { it.startDp } + listOf(12 * 56)
+
+    @Test
+    fun anItemAlreadyWhollyInViewIsLeftAlone() {
+        assertEquals(
+            112,
+            DockRunScroll.toRevealWhole(112, 332, 400, wholeStops, wholeItems, itemIndex = 4),
+        )
+    }
+
+    @Test
+    fun scrollingForwardStopsWithAWholeItemAtTheLeadingEdgeAndTheNextOneShowing() {
+        val target = DockRunScroll.toRevealWhole(0, 332, 400, wholeStops, wholeItems, itemIndex = 8)
+        assertTrue(target in wholeStops, "$target is a stop")
+        // The item (448..496) and the one after it (504..552) are both whole in view.
+        assertTrue(target + 332 >= 552)
+        assertTrue(target <= 448)
+    }
+
+    @Test
+    fun scrollingBackStopsAtTheItemBeforeSoTheRowReadsAsOneThatGoesOn() {
+        val target = DockRunScroll.toRevealWhole(448, 332, 400, wholeStops, wholeItems, itemIndex = 2)
+        assertEquals(56, target)
+    }
+
+    @Test
+    fun aStopPastTheRowsEndIsNeverChosenAndTheFirstItemGoesToZero() {
+        val target = DockRunScroll.toRevealWhole(0, 332, 336, wholeStops, wholeItems, itemIndex = 11)
+        assertTrue(target in wholeStops && target <= 336)
+        assertEquals(0, DockRunScroll.toRevealWhole(200, 332, 336, wholeStops, wholeItems, itemIndex = 0))
+    }
+
+    @Test
+    fun noItemMeansNoMove() {
+        assertEquals(40, DockRunScroll.toRevealWhole(40, 300, 100, wholeStops, wholeItems, itemIndex = -1))
+        assertEquals(40, DockRunScroll.toRevealWhole(40, 300, 100, wholeStops, wholeItems, itemIndex = 99))
+    }
+
+    @Test
+    fun theRevealUsesTheDensityToTurnDpIntoPixels() {
+        val stopsPx = wholeStops.map { it * 2 }
+        val target = DockRunScroll.toRevealWhole(0, 664, 800, stopsPx, wholeItems, itemIndex = 9, pxPerDp = 2f)
+        assertTrue(target in stopsPx)
+        assertTrue(target + 664 >= 9 * 56 * 2 + 96)
     }
 }
