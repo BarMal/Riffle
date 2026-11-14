@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
+import com.riffle.core.domain.launcher.dock.DockRunGeometry
 
 /**
  * The dock's dynamic side: live apps (apps with something new), now playing while media is active and, in the
@@ -377,7 +378,7 @@ internal val LocalDockDynamicEntryBoundsSink = staticCompositionLocalOf<(String,
  */
 internal fun dockDynamicEntryExtentDp(): Int = DOCK_DYNAMIC_ENTRY_EXTENT_DP
 
-private const val DOCK_DYNAMIC_ENTRY_EXTENT_DP = 48
+private const val DOCK_DYNAMIC_ENTRY_EXTENT_DP = DockRunGeometry.CONTEXTUAL_ITEM_DP
 
 /** The ring marking the entry whose page is open (contextual mode). */
 private const val SELECTED_ENTRY_RING_DP = 2

@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -103,7 +104,7 @@ internal fun DockContextualRow(
                 dock = dock,
                 renderedSlotCount = surfaceMetrics.renderedSlotCount,
                 contentViewportMainAxisDp = surfaceMetrics.contentViewportMainAxisDp,
-                slotMetrics = surfaceMetrics.slotMetrics.copy(itemSpacingDp = dock.itemSpacingDp),
+                slotMetrics = surfaceMetrics.contextualSlotMetrics,
                 isEditing = isEditing,
                 presentation = presentation,
                 appIconLoader = appIconLoader,
@@ -114,7 +115,7 @@ internal fun DockContextualRow(
             DockSectionDivider(runsHorizontally = runsHorizontally)
             DockDynamicSection(
                 entries = dynamicEntries,
-                slotMetrics = surfaceMetrics.slotMetrics.copy(itemSpacingDp = dock.itemSpacingDp),
+                slotMetrics = surfaceMetrics.contextualSlotMetrics,
                 mainAxisDp = run.contentDp,
                 runsHorizontally = runsHorizontally,
                 appIconLoader = appIconLoader,
@@ -123,8 +124,18 @@ internal fun DockContextualRow(
                 inline = true,
                 dividerBeforeIndex = dynamicEntries.indexOfFirst(DockDynamicEntry::isContextTile).takeIf { it > 0 },
             )
+            RunEndPadding(run.endPaddingDp, runsHorizontally)
         }
     }
+}
+
+/** The end padding that makes the row's last scroll position an item's start, never a clipped sliver. */
+@Composable
+private fun RunEndPadding(
+    paddingDp: Int,
+    runsHorizontally: Boolean,
+) {
+    if (paddingDp > 0) Spacer(if (runsHorizontally) Modifier.width(paddingDp.dp) else Modifier.height(paddingDp.dp))
 }
 
 /**
@@ -145,14 +156,18 @@ private fun RevealForChoosing(
     val first = run.entries.firstOrNull()
     LaunchedEffect(reveal, first, scrollState.maxValue) {
         if (!reveal || first == null) return@LaunchedEffect
-        val target = ((first.startDp - REVEAL_MARGIN_DP) * density).toInt().coerceIn(0, scrollState.maxValue)
+        val target =
+            ((first.startDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP) * density).toInt().coerceIn(0, scrollState.maxValue)
         if (target != scrollState.value) {
             if (reducedMotion) scrollState.scrollTo(target) else scrollState.animateScrollTo(target)
         }
     }
 }
 
-/** Scrolls the row so the ringed entry is in view, whenever the ring moves (and once the row has been measured). */
+/**
+ * Scrolls the row so the ringed entry is in view, whenever the ring moves (and once the row has been measured). The
+ * scroll stops with a whole item at the leading edge, never a clipped sliver (`DockRunScroll.toRevealWhole`).
+ */
 @Composable
 private fun RevealOpenEntry(
     entries: List<DockDynamicEntry>,
@@ -163,26 +178,24 @@ private fun RevealOpenEntry(
 ) {
     val density = LocalDensity.current.density
     val index = entries.indexOfFirst(DockDynamicEntry::isSelected)
-    val extent = run.entries.getOrNull(index)
-    LaunchedEffect(index, extent, viewportDp, scrollState.maxValue) {
-        if (extent == null) return@LaunchedEffect
+    val itemIndex = if (index < 0) -1 else run.pinned.size + index
+    LaunchedEffect(index, run, viewportDp, scrollState.maxValue) {
+        if (itemIndex < 0 || itemIndex >= run.items.size) return@LaunchedEffect
         val target =
-            DockRunScroll.toReveal(
+            DockRunScroll.toRevealWhole(
                 scrollPx = scrollState.value,
                 viewportPx = (viewportDp * density).toInt(),
                 maxScrollPx = scrollState.maxValue,
-                itemStartPx = (extent.startDp * density).toInt(),
-                itemEndPx = (extent.endDp * density).toInt(),
-                // The neighbour peeks past the open icon, so the row reads as one that goes on.
-                marginPx = (REVEAL_MARGIN_DP * density).toInt(),
+                stopsPx = run.stopsDp.map { stop -> (stop * density).toInt() },
+                items = run.items,
+                itemIndex = itemIndex,
+                pxPerDp = density,
             )
         if (target != scrollState.value) {
             if (reducedMotion) scrollState.scrollTo(target) else scrollState.animateScrollTo(target)
         }
     }
 }
-
-private const val REVEAL_MARGIN_DP = 24
 
 internal const val DOCK_CONTEXTUAL_ROW_TEST_TAG = "dock-contextual-row"
 
@@ -203,24 +216,43 @@ internal fun dockEmptyBodyMainAxisDp(
     }
 
 /**
- * Where everything lies in the contextual mode's one row: the pinned icons at full size and spacing (a crowded Home
- * dock compacts them, the row scrolls instead), a divider, the live entries, a divider, the tiles.
+ * How the contextual mode's one row is drawn: every item (pinned icon, live app, tile) is the 48 dp touch target,
+ * the gap closed up from the Dock's own spacing until six whole items fit the Dock's run (see
+ * [DockRunGeometry.contextualSpacingDp]). The Home mode's icon size and spacing are not touched.
+ */
+internal fun dockContextualSlotMetrics(
+    dock: DockModel,
+    maxRunMainAxisDp: Int,
+): DockSlotRenderMetrics =
+    DockSlotRenderMetrics(
+        iconSizeDp = DockRunGeometry.CONTEXTUAL_ITEM_DP,
+        itemSpacingDp =
+            DockRunGeometry.contextualSpacingDp(
+                viewportDp = (maxRunMainAxisDp - (DOCK_MAIN_AXIS_PADDING_DP * 2)).coerceAtLeast(0),
+                preferredSpacingDp = dock.itemSpacingDp,
+            ),
+        overflowMode = DockOverflowMode.Fits,
+    )
+
+/**
+ * Where everything lies in the contextual mode's one row: the pinned icons, a divider, the live entries, a divider,
+ * the tiles, all at [metrics] (see [dockContextualSlotMetrics]), and the row's end padded so scrolling to it leaves a
+ * whole item at the leading edge.
  */
 internal fun dockContextualRun(
-    dock: DockModel,
     renderedSlotCount: Int,
     entryCount: Int,
     tileCount: Int,
+    metrics: DockSlotRenderMetrics,
+    maxRunMainAxisDp: Int,
 ): DockRunGeometry.Run =
     DockRunGeometry.contextual(
-        staticDp =
-            dockSlotContentMainAxisDp(
-                renderedSlotCount,
-                DockSlotRenderMetrics(dock.iconSizeDp, dock.itemSpacingDp, DockOverflowMode.Fits),
-            ),
+        staticDp = dockSlotContentMainAxisDp(renderedSlotCount, metrics),
         liveCount = (entryCount - tileCount).coerceAtLeast(0),
         tileCount = tileCount,
         entryDp = dockDynamicEntryExtentDp(),
-        spacingDp = dock.itemSpacingDp.coerceAtLeast(0),
+        spacingDp = metrics.itemSpacingDp.coerceAtLeast(0),
         dividerDp = DOCK_SECTION_DIVIDER_MAIN_AXIS_DP,
+        staticCount = renderedSlotCount,
+        viewportDp = (maxRunMainAxisDp - (DOCK_MAIN_AXIS_PADDING_DP * 2)).coerceAtLeast(0),
     )

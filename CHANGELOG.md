@@ -9,6 +9,21 @@ has been run on a physical device except what the owner reported; see
 [`places-views-device-checklist.md`](docs/development/places-views-device-checklist.md), and export a backup before
 installing. Entries are in the order they were built; where a later one changes an earlier one, it says so.
 
+### Changed
+
+- One flat glass, lit at the edge, lighter and more see-through: every glass surface is a flat, even translucent tint
+  with its light at the edges, after the owner's desktop bar. A 1 dp border is brightest along the top (55%) and faint at
+  the bottom, with an inner top hairline; a surface with a colour shows it as thin strips of light along its top and
+  bottom edges. Nothing scales with the surface's height, so the hard bevel, seam and dark wedge corners the old sheen
+  drew are gone, and the "All day" text on Agenda rows is no longer covered. The fills are the owner's signed-off
+  values: Thin 12% and Regular 16% of a light blue-white, Thick a darker 56%; the Dock's "Dock background" default draws
+  the Thin fill. Reduced transparency takes the Thick fill, nearly opaque. Removed with it: the backdrop-refraction
+  shader, the backdrop capture, the five-layer sheen and the "Frost strength" and "Edge refraction" settings (stored
+  values still decode and are ignored). The edge drawing is defensive about 0, 1 px and oversized-radius surfaces.
+- The Dock's contextual row (the Stream showing) is denser: pinned icons, live apps and tiles are one row of equal
+  48 dp items, at least six across a 360 dp phone, and it stops with a whole item at the leading edge when it scrolls
+  to the open page's icon. The Home mode is unchanged.
+
 ### Added
 
 - Typed Stream content in the domain: `StreamContent` (notification, media with an optional queue, event including calendar feeds and the next alarm, article, task, recent app), the six `StreamSection`s and `StreamContentProvider`, which observes a section as loading, ready, empty, permission required, not connected, unavailable or off, with Hide rules and content levels applied and each section's fixed grouping, sorting and limits. The Stream (below) draws it.

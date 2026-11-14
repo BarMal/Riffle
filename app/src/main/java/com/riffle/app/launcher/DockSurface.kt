@@ -43,6 +43,8 @@ internal data class DockSurfaceMetrics(
      */
     val contextualRun: DockRunGeometry.Run? = null,
     val contextualMainAxisDp: Int = 0,
+    /** The contextual row's item size and gap; the Home mode's [slotMetrics] otherwise. */
+    val contextualSlotMetrics: DockSlotRenderMetrics = slotMetrics,
 ) {
     /**
      * The whole dock's run: the static side, and the dynamic section and rule beside it.
@@ -139,9 +141,16 @@ internal fun dockSurfaceMetrics(
 
     val staticSide =
         dockStaticSideMetrics(dock, visibleSlotCount, availableMainAxisDp, runsHorizontally, staticMaxRunMainAxisDp)
+    val contextualMetrics = dockContextualSlotMetrics(dock, maxRunMainAxisDp)
     val contextualRun =
         contextualTileCount.takeIf { it > 0 }?.let {
-            dockContextualRun(dock, renderedSlotCount, dynamicEntryCount, contextualTileCount)
+            dockContextualRun(
+                renderedSlotCount,
+                dynamicEntryCount,
+                contextualTileCount,
+                contextualMetrics,
+                maxRunMainAxisDp,
+            )
         }
     return DockSurfaceMetrics(
         renderedSlotCount = renderedSlotCount,
@@ -158,6 +167,7 @@ internal fun dockSurfaceMetrics(
         // row, never longer than the run it may have.
         contextualMainAxisDp =
             contextualRun?.let { run -> min(maxRunMainAxisDp, run.contentDp + (DOCK_MAIN_AXIS_PADDING_DP * 2)) } ?: 0,
+        contextualSlotMetrics = contextualMetrics,
     )
 }
 

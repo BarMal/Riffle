@@ -258,3 +258,31 @@ settings for hold time and haptics (slice 6; the tuning field is ready), the fir
 **Left for 4b and later.** Shortcut stacks for pinned apps (`DockChoice.pageFor` still answers null for them), the combined
 Today page, settings for inertia and magnet (slice 6; `DockMotionTuning.inertia` and `magnet` are ready), card tint and
 images, the opened-card redesign (slice 5).
+
+### Glass and Dock sizing (after slice 4a)
+
+A visual slice between the dock-modes slices; it changes no gesture.
+
+**Built.**
+
+- **The flat glass, lighter.** One flat translucent fill, lit only at the edge (a 1 dp border brightest at the top, an
+  inner top hairline, strips of an app's colour along the top and bottom): the restyle of `551f194`, re-applied on top of
+  the current code and made lighter and more see-through with the owner's signed-off values (Thin 12%, Regular 16% of a
+  light blue-white, Thick a darker 56%; the details are in `design-language.md`). The Dock's "Dock background" setting
+  maps its default (72%) to the Thin fill. The shader, backdrop capture, sheen and the Frost and Refraction settings are
+  gone (stored values decode and are ignored); reduced transparency stays and now uses the Thick fill.
+- **Defensive drawing.** The edge lights draw nothing under 1 px or for a non-finite size, clamp the outline's radii,
+  fall back to a rectangle for a malformed outline and keep gradient stops strictly increasing; `GlassEdgeOutlineTest`
+  and `GlassDegenerateSizeTest` cover 0 x 0, 1 x 1, hairline-thin and oversized-radius surfaces.
+- **Contextual Dock sizing.** One row of equal 48 dp items (pinned, live and tiles), the gap closed up until six whole
+  items fit a 360 dp phone, a programmatic scroll that stops on a whole item, and trailing padding so the row's end does
+  too (`DockRunGeometry`, `DockRunScroll.toRevealWhole`). The Home mode's size and icon size are unchanged.
+
+**What differed.**
+
+- `551f194` made CI's device job die at about test 38 of 218 (`DockDynamicSectionTest`); the cause was never found. Part
+  of this slice is a read of that drawing code for degenerate-size and software-GPU hazards; see the change's notes. The
+  restyle should be watched on the next device run.
+- The Dock's thickness still follows its icon size setting in the contextual mode, so a Dock set to 56 dp holds 48 dp
+  items in a 56 dp-deep strip.
+
