@@ -9,7 +9,7 @@ Their spring, magnet and timing constants are the starting values; the settings 
 | Slice | What it delivers | Depends on |
 | --- | --- | --- |
 | 1. Dock modes | The Dock's Home and contextual modes: contextual tiles appended after the live apps, the row scrolls in the contextual mode, the open icon is ringed. Press-down-and-release opens and closes. The Stream spine, page header and Stream button go. | none |
-| 2. Trampoline and fan | The dip under the finger, the bounce on release, cards fanning out in sequence, Home fading, and closing as the opening reversed. Reduced-motion fallback. | 1 |
+| 2. Trampoline and fan | The dip under the finger, the bounce on release, cards fanning out in sequence, Home fading, and closing as the opening reversed. Reduced-motion fallback. **Built**, see "As built". | 1 |
 | 3. Hold to choose | Press and hold or slide while pressed: early extend, selection ring, name label, edge scrolling, haptic tick per icon. Starting a press on an icon opens that icon's stack. | 1, 2 |
 | 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet; swiping left and right between stacks in Dock order; shortcuts stacks for apps with nothing live; the Today page (agenda and tasks). | 1 |
 | 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. | 4 |
@@ -90,3 +90,63 @@ its progress and release), hold to choose, shortcuts stacks for pinned apps, bot
 settings and the first-run hint (the onboarding text now describes the press), the Library and Home handle, and the unfolded
 layout. Not done in this slice either: the owner's Today page (Agenda and Tasks stay two pages), and the dead split-settle
 path in `DockPullState` can go when slice 2 rewrites the transition.
+
+### Slice 2: Trampoline and fan (built)
+
+**Built.**
+
+- **Pure physics in `:core:domain`** (`launcher/dock/DockMotion.kt`, `DockClosing.kt`). `DockMotionConstants` holds every
+  number (grouped: press, springs, release impulses, fan, closing, reduced motion, catching) and `DockMotionTuning` the
+  three the settings slice exposes (speed 200 ms, trampoline 0.5, magnet 0.4). `DockPressCurve` is the dip
+  (`24 dp * (1 - exp(-travel / 60))`) and Home's pre-fade (up to 0.3); `DockSpring` steps the two springs at a fixed
+  1/240 s (progress: critically damped with a magnet, never overshoots; dip: under-damped, damping ratio 0.675, so it
+  overshoots and settles); `DockRelease` gives the starting kicks (deep, shallow, from an action); `DockFan` gives each
+  card's frame (`t = clamp(q * 1.3 - i * 0.11)` with `q = (p - 0.3) / 0.7`: it rises from the Dock, fades in, scales
+  0.82 to 1) and Home's (alpha `1 - p`, scale down 4%); `DockClosingPlan` simulates the opening once and plays its
+  samples last to first, then the rise, and `joinAt` finds where to join it for a Stream caught part-way;
+  `DockReducedTimeline` is the reduced-motion cross-fade (the design language's 80 ms token).
+- **UI** (`app/.../launcher/`). `DockMotionState` (`DockMotion.kt`) runs the press (REST, PRESSING, RUNNING), the release,
+  the closing and the reduced fade off the frame clock and exposes `progress` and `dip`; `HomeDockPullBinding` wires the
+  press's callbacks (`DockPressState.onBegan` / `onMoved` / `onReleased`) to it, draws Home from it (alpha and a slight
+  scale), and offers the fan to the Stream through a composition local (`DockFanSource`, `LocalDockFan`, the
+  `Modifier.dockFan(source, index)` graphics layer); `HomeDockHost` translates the Dock body by the dip, after the
+  gesture modifier so the press is still measured in resting coordinates. In the Stream, the focused card of a stack and
+  the two behind it fan by rank (`StreamStack`), a lone or expanded card and every other page (`PageScroll`, the
+  all-hidden state) rise as one piece with the front card's timing. The accessibility actions, Ctrl + the arrow, a tap
+  on a live app and Glance's open all go through `motion.run`, the same transition without a finger.
+- **The shell is told at the moments that keep it consistent:** `OpenStream` when an opening starts (the Stream is then
+  the shell's, and the contextual tiles appear with the fan), `OpenHome` when a closing has finished. A finger that lands
+  mid-way is caught where things are (the on-screen frame hands over to the press over 100 ms), so the next release,
+  shallow press or action runs on from there; the closing joins the reversed playback at the progress it was caught at.
+  A Library pull, or the shell showing something else, ends a running motion at once (`finishNow`, `syncShell`).
+- **Reduced motion** uses the repo's existing resolution (`launcherSettings.motion.reducedMotion`: the setting, which by
+  default follows the platform animator scale): no dip, no pre-fade, no bounce, no fan; the press changes nothing on
+  screen and the release is one 80 ms cross-fade, both ways. The old reduced-motion cut (no frame between) is replaced
+  by this fade, as the amendment says.
+- **Tests.** JVM, `core:domain`: `DockMotionTest` (dip curve, press frames, spring: no overshoot of progress at any
+  tuning, overshoot of the dip, trampoline and speed settings, shallow press back to rest, fan order and landing,
+  reduced frames and timeline) and `DockClosingTest` (the closing is the mirror of the opening, gathers speed, ends in the
+  dip then rises, last card out is first back in, joining mid-way, carried dip). On Robolectric: `StreamOpenTransitionTest`
+  (rewritten, see below; frame by frame: dip and pre-fade, open, close, shallow, reduced motion, accessibility actions,
+  four interruptions) and `StreamFanTest` (which cards fan by rank and which pages rise as one piece). The existing press
+  and accessibility device tests (`DockPressInteractionTest` and friends) assert end states and were left as they are.
+
+**What differed from the design.**
+
+- **The fan's overshoot cap.** The prototype lets a card's local progress reach 1.06, which leaves every card 6% of its
+  rise above its resting place when the fan is complete. Here it is clamped to 1, so a finished fan is exactly the stack.
+- **The shell is told at the release** (opening) so the Dock's contextual tiles are there while the cards fan, rather than
+  at the end; closing tells it at the end, so the tiles stay until Home is back.
+- **The fan applies to the focused card and the two behind it** in a stack by rank (cards past the third are not on screen
+  in a fresh stack); a card caught mid-fan when the stack is dragged is not special-cased (the stack and the fan are
+  separate layers).
+- **Expanded postures** (split) keep the pull's own settle for the press; the dip and fan are folded-phone only until the
+  unfolded layout slice. That is why `DockPullState`'s split path (`settleSplit`, `onSplitSettled`, `SplitPullSetup`) and
+  its stream slide (`streamPullFrame`) stay: the press, the accessibility actions and the divider still run through them
+  there, and its tests cover behaviour that still exists. On a phone nothing starts a Stream pull any more; it is left,
+  not removed, for that reason.
+- **The golden of the pressed Dock** (`DockPullScreenshotTest.theDockPressedDownBeforeTheRelease.png`) changes, because the
+  Dock now dips and Home starts to fade there. The recorded image is not committed.
+
+**Left for later.** Haptics (slices 3 and 6), hold to choose, settings UI for speed, trampoline and magnet (the tuning
+object is ready for slice 6), bottom-anchored stack behaviour, the unfolded layout's fan.

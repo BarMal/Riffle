@@ -73,11 +73,14 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   release for a tap.
 - **Commit.** The release commits when the Dock is pressed down `DockPress.COMMIT_DP` = 28 dp (`GestureThresholds
   .DOCK_PRESS_COMMIT_DP`) at the moment of the lift, so a press drawn back before the lift does nothing. There is no
-  velocity rule. A commit runs the existing Home and Stream transition from rest (`DockPullState.open`): the Stream slides
-  in from the Dock's edge while Home fades, or they crossfade under reduced motion. An expanded posture opens the last-used
-  shown state (split or Stream only) and returns to Home only.
-- **What the press exposes** for the next slice's dip, bounce and fan: `DockPressState.progress` (0 to 1, read it in a draw
-  block) while it runs, and `DockPressState.onReleased` (committed or not, and the entry it started on) when it ends.
+  velocity rule. A commit runs the trampoline and the fan (`DockMotionState`, see [the Dock](dock.md)): the Dock dips
+  under the finger with rising resistance while Home starts to fade, bounces past rest on release while the Stream's cards
+  fan out of it in sequence, front card first, and Home fades away; closing is the same played backwards in time; a
+  shallow press just bounces back; a finger landing mid-way catches it and the next release or press runs on from there.
+  Under reduced motion it is one short cross-fade (no dip, bounce or fan). An expanded posture still opens the last-used
+  shown state (split or Stream only) and returns to Home only, by the split's settle.
+- **What the press exposes**: `DockPressState.onBegan`, `onMoved(travelDp)` and `onReleased` (committed or not, and the
+  entry it started on), and `progress` (0 to 1, read it in a draw block). The Dock's motion draws from them.
 - **Starting on an icon.** The entry under the finger is read from where it landed (`dockPullEntryAt` against the bounds
   each dynamic entry reports); only a live app or now playing has a page in this slice, so a press that starts on a pinned
   app, a tile or the background opens the last page. The landing is asked for at the commit and dropped if nothing opens.
