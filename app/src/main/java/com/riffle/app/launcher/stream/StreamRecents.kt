@@ -55,7 +55,7 @@ internal fun RecentAppCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
             ) {
-                StreamIcon(content.icon, env, CardAppIconSize)
+                StreamIcon(content.icon, env, CardAppIconSize, lightsCard = true)
                 Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
                     Text(
                         text = content.label ?: stringResource(R.string.stream_hidden_content),

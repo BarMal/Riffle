@@ -106,7 +106,7 @@ private fun MediaDeck(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         ) {
-            StreamIcon(content.icon, env, RiffleSpacing.xl, shape = RiffleShapes.small)
+            StreamIcon(content.icon, env, RiffleSpacing.xl, shape = RiffleShapes.small, lightsCard = true)
             Column(
                 modifier =
                     Modifier

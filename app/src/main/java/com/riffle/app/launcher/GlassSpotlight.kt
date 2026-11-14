@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -22,9 +21,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -167,6 +166,11 @@ internal fun glassSpotlightCornerRadiusPx(
 @Stable
 internal class GlassSpotlightState(
     private val axis: GlassSpotlightAxis = GlassSpotlightAxis.Longest,
+    /**
+     * Null: the glow runs the whole rim, each thing's colour held to the nearest end (the Dock and its kin). Set: each
+     * thing lights only the rim within this many px of it along the run, and the rest stays neutral (a card).
+     */
+    private val localReachPx: Float? = null,
 ) {
     private val sources = mutableStateMapOf<Any, Pair<Offset, Color?>>()
     private var originInRoot by mutableStateOf(Offset.Zero)
@@ -240,7 +244,7 @@ internal class GlassSpotlightState(
         animate: Boolean,
         flowSeconds: Float,
     ) {
-        snapshotFlow { glassSpotlightTargetProfile(stopsFor(layoutSize, runsHorizontally)) }
+        snapshotFlow { targetProfile() }
             .collectLatest { target ->
                 if (!target.contentEquals(shown)) {
                     if (animate && flowSeconds > 0f && glassSpotlightProfileIsLit(shown)) {
@@ -250,6 +254,21 @@ internal class GlassSpotlightState(
                     }
                 }
             }
+    }
+
+    private fun targetProfile(): FloatArray {
+        val horizontal = runsHorizontally
+        val reach = localReachPx
+        if (reach == null) return glassSpotlightTargetProfile(stopsFor(layoutSize, horizontal))
+        return glassSpotlightLocalProfile(
+            centers =
+                sources.values.map { (center, color) ->
+                    val local = center - originInRoot
+                    (if (horizontal) local.x else local.y) to color
+                },
+            runLengthPx = if (horizontal) layoutSize.width else layoutSize.height,
+            reachPx = reach,
+        )
     }
 
     private fun showNow(target: FloatArray) {
@@ -304,10 +323,13 @@ internal val LocalGlassSpotlight = staticCompositionLocalOf<GlassSpotlightState?
 internal fun rememberGlassSpotlightState(
     axis: GlassSpotlightAxis = GlassSpotlightAxis.Longest,
     enabled: Boolean = true,
+    /** Set for a surface whose things each light only the rim near them (see [GlassSpotlightState]), in dp. */
+    localReachDp: Float? = null,
 ): GlassSpotlightState? {
     val glass = LocalLiquidGlassSettings.current
     val active = enabled
-    val state = remember(axis) { GlassSpotlightState(axis) }
+    val density = LocalDensity.current.density
+    val state = remember(axis, localReachDp, density) { GlassSpotlightState(axis, localReachDp?.times(density)) }
     if (active) {
         LaunchedEffect(state, glass.reducedMotion, glass.spotlightFlowSeconds) {
             state.run(animate = !glass.reducedMotion, flowSeconds = glass.spotlightFlowSeconds)
@@ -359,33 +381,6 @@ internal fun rememberAppIconColor(
                 ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(identity) }
     }
     return color
-}
-
-/**
- * Reports the centre of this icon's visible part and its [color] to the enclosing surface's spotlight
- * -- null [color] for an icon with none, which still marks its place on the run as unlit. A no-op
- * outside a spotlit surface.
- */
-@Composable
-internal fun Modifier.glassSpotlightSource(
-    key: Any,
-    color: Color?,
-): Modifier {
-    val spotlight = LocalGlassSpotlight.current ?: return this
-    DisposableEffect(spotlight, key, color) {
-        onDispose { spotlight.remove(key) }
-    }
-    return onGloballyPositioned { coordinates ->
-        // Only what is actually on screen lights the edge: bounds clipped by the strip's own
-        // scroll viewport, so an icon scrolled out of its section stops glowing -- rather than
-        // casting its colour under the other section, which it still sits beneath, unclipped.
-        val visible = coordinates.boundsInRoot()
-        if (visible.width <= 0f || visible.height <= 0f) {
-            spotlight.remove(key)
-        } else {
-            spotlight.report(key = key, centerInRoot = visible.center, color = color)
-        }
-    }
 }
 
 /**
@@ -474,3 +469,6 @@ private const val MAX_DEPTH_FRACTION = 0.3f
 
 /** The glow is soft, so it is baked at this coarse a texel and stretched: ~12k texels for a phone dock. */
 private const val SPOTLIGHT_TEXEL_DP = 1.5f
+
+/** How far along a card's run its icon's light reaches, to either side of it, in dp: it lights the edge beside it. */
+internal const val CARD_SPOTLIGHT_REACH_DP = 72f

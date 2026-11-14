@@ -51,6 +51,31 @@ class DockDynamicSideTest {
     }
 
     @Test
+    fun aPinnedAppHasNoLiveEntryAndDoesNotUseUpASlot() {
+        val groups = listOf(group("chat", 300), group("mail", 200), group("news", 100))
+        val entries =
+            DockDynamicSide.entries(
+                groups,
+                null,
+                liveAppSlots = 2,
+                pinnedGroupKeys = setOf("chat:personal"),
+            )
+        assertEquals(listOf("live:mail:personal", "live:news:personal"), entries.map { it.key })
+    }
+
+    @Test
+    fun aPinnedKeyOfAnotherProfileDoesNotHideTheOtherProfilesLiveApp() {
+        val entries =
+            DockDynamicSide.entries(
+                listOf(group("chat", 300)),
+                null,
+                liveAppSlots = 3,
+                pinnedGroupKeys = setOf("chat:work"),
+            )
+        assertEquals(listOf("live:chat:personal"), entries.map { it.key })
+    }
+
+    @Test
     fun zeroSlotsLeavesNowPlaying() {
         val entries = DockDynamicSide.entries(listOf(group("chat", 1)), media("music"), liveAppSlots = 0)
         assertEquals(listOf("now"), entries.map { it.key })

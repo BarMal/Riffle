@@ -144,9 +144,13 @@ internal class StreamDockLink {
  * content levels have already applied): the one place both the Dock and the Stream's page order read them from, so the
  * pager follows the Dock.
  */
-internal fun Map<StreamSection, StreamSectionResult>.dockLiveEntries(liveAppSlots: Int): List<DockDynamicSideEntry> {
+internal fun Map<StreamSection, StreamSectionResult>.dockLiveEntries(
+    liveAppSlots: Int,
+    /** The pinned apps' keys (`package:profile`): a pinned app is drawn once, as its pinned icon, not live. */
+    pinnedGroupKeys: Set<String> = emptySet(),
+): List<DockDynamicSideEntry> {
     val groups = (this[StreamSection.NOTIFICATIONS] as? StreamSectionResult.Ready)?.groups.orEmpty()
     val media =
         (this[StreamSection.NOW] as? StreamSectionResult.Ready)?.items?.filterIsInstance<MediaContent>()?.firstOrNull()
-    return DockDynamicSide.entries(groups, media, liveAppSlots)
+    return DockDynamicSide.entries(groups, media, liveAppSlots, pinnedGroupKeys = pinnedGroupKeys)
 }

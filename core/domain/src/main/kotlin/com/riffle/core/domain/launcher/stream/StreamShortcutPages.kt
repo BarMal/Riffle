@@ -42,6 +42,42 @@ object StreamShortcutPages {
             .filter { appKeyOf(it.identity) !in liveGroupKeys }
             .map { app -> page(app, shortcutsByApp[app.identity].orEmpty(), launcherRole) }
 
+    /**
+     * One page per pinned app: [shortcutPages] (from [plan] with no live keys, so every pinned app has one) folded into
+     * the [planned] pages. A pinned app that is live has one page, its notifications page: its notification cards
+     * first (newest in front, each opening in place with its reply, dismiss and snooze), then its shortcut cards (or
+     * the card that opens the app). A pinned app with nothing live keeps its shortcuts page. The result is the
+     * shortcuts pages of apps with nothing live followed by [planned], whose live pages carry the merged cards.
+     */
+    fun merge(
+        planned: List<StreamPage>,
+        shortcutPages: List<StreamPage>,
+    ): List<StreamPage> {
+        val byApp = shortcutPages.associateBy { page -> page.groupKey }
+        val liveKeys = planned.filter { page -> page.ref().isLiveAppPage }.mapNotNull { page -> page.groupKey }.toSet()
+        val merged =
+            planned.map { page ->
+                val shortcuts = if (page.ref().isLiveAppPage) byApp[page.groupKey] else null
+                if (shortcuts == null) page else page.withShortcuts(shortcuts)
+            }
+        return shortcutPages.filter { page -> page.groupKey !in liveKeys } + merged
+    }
+
+    private fun StreamPage.withShortcuts(shortcuts: StreamPage): StreamPage {
+        val live = body as? StreamPageBody.Content
+        val extra = shortcuts.body as? StreamPageBody.Content
+        val group = live?.groups?.firstOrNull()
+        return if (live == null || extra == null || group == null) {
+            this
+        } else {
+            val cards = extra.groups.flatMap(StreamGroup::items)
+            copy(
+                count = count + cards.size,
+                body = StreamPageBody.Content(listOf(group.copy(items = group.items + cards)), live.gaps + extra.gaps),
+            )
+        }
+    }
+
     private fun page(
         app: PinnedApp,
         shortcuts: List<AppShortcut>,

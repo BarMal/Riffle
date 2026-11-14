@@ -110,6 +110,24 @@ class DockContextualTest {
     }
 
     @Test
+    fun aPinnedAppThatIsLiveHasItsLivePageAtItsIconsPlaceInTheRun() {
+        val withShortcuts = listOf(page(StreamSection.SHORTCUTS, "files:p")) + planned
+        val ordered =
+            DockPageOrder.order(
+                withShortcuts,
+                // The Dock draws no live entry for the pinned chat app; mail is live and not pinned.
+                liveGroupKeys = listOf("mail:p"),
+                nowPlaying = false,
+                pinnedGroupKeys = listOf("files:p", "chat:p"),
+            )
+        assertEquals(
+            listOf("shortcuts/files:p", "notifications/chat:p", "notifications/mail:p", "notifications/maps:p", "now"),
+            keys(ordered).take(5),
+        )
+        assertEquals(keys(withShortcuts).sorted(), keys(ordered).sorted())
+    }
+
+    @Test
     fun aShortcutsPageNoPinnedKeyNamesStillKeepsItsPlaceBeforeTheLiveApps() {
         val withShortcuts = listOf(page(StreamSection.SHORTCUTS, "files:personal")) + planned
         val ordered = DockPageOrder.order(withShortcuts, listOf("chat:p"), nowPlaying = false)
@@ -401,50 +419,58 @@ class DockContextualTest {
         assertEquals(0, run.endPaddingDp)
     }
 
-    private val wholeItems = (0 until 12).map { DockRunGeometry.Extent(it * 56, it * 56 + 48) }
-    private val wholeStops = wholeItems.map { it.startDp } + listOf(12 * 56)
+    // The reveal rule: a wholly visible item never moves the row; else the least move, a peek on the side it came from.
+    private val view = 300
+    private val max = 500
+
+    private fun reveal(
+        scroll: Int,
+        start: Int,
+        margin: Int = 24,
+    ) = DockRunScroll.toReveal(scroll, view, max, itemStartPx = start, itemEndPx = start + 48, marginPx = margin)
 
     @Test
-    fun anItemAlreadyWhollyInViewIsLeftAlone() {
-        assertEquals(
-            112,
-            DockRunScroll.toRevealWhole(112, 332, 400, wholeStops, wholeItems, itemIndex = 4),
-        )
+    fun aWhollyVisibleItemNeverMovesTheRowEvenWithinTheMarginOfAnEdge() {
+        assertEquals(100, reveal(scroll = 100, start = 100))
+        assertEquals(100, reveal(scroll = 100, start = 102))
+        assertEquals(100, reveal(scroll = 100, start = 100 + view - 48))
+        assertEquals(0, reveal(scroll = 0, start = 0))
     }
 
     @Test
-    fun scrollingForwardStopsWithAWholeItemAtTheLeadingEdgeAndTheNextOneShowing() {
-        val target = DockRunScroll.toRevealWhole(0, 332, 400, wholeStops, wholeItems, itemIndex = 8)
-        assertTrue(target in wholeStops, "$target is a stop")
-        // The item (448..496) and the one after it (504..552) are both whole in view.
-        assertTrue(target + 332 >= 552)
-        assertTrue(target <= 448)
+    fun anItemClippedAtTheStartScrollsBackByTheLeastPlusThePeek() {
+        // 20 px of it is hidden: it comes whole into view with the neighbour before it peeking.
+        assertEquals(180 - 24, reveal(scroll = 200, start = 180))
     }
 
     @Test
-    fun scrollingBackStopsAtTheItemBeforeSoTheRowReadsAsOneThatGoesOn() {
-        val target = DockRunScroll.toRevealWhole(448, 332, 400, wholeStops, wholeItems, itemIndex = 2)
-        assertEquals(56, target)
+    fun anItemClippedAtTheEndScrollsForwardByTheLeastPlusThePeek() {
+        // Its last 20 px are past the end of the viewport (scroll 100 shows 100..400).
+        val start = 100 + view - 28
+        assertEquals(start + 48 + 24 - view, reveal(scroll = 100, start = start))
     }
 
     @Test
-    fun aStopPastTheRowsEndIsNeverChosenAndTheFirstItemGoesToZero() {
-        val target = DockRunScroll.toRevealWhole(0, 332, 336, wholeStops, wholeItems, itemIndex = 11)
-        assertTrue(target in wholeStops && target <= 336)
-        assertEquals(0, DockRunScroll.toRevealWhole(200, 332, 336, wholeStops, wholeItems, itemIndex = 0))
+    fun anItemOffScreenOnEitherSideIsBroughtInWithThePeekOnTheSideItCameFrom() {
+        assertEquals(400 + 48 + 24 - view, reveal(scroll = 0, start = 400))
+        assertEquals(60 - 24, reveal(scroll = 300, start = 60))
     }
 
     @Test
-    fun noItemMeansNoMove() {
-        assertEquals(40, DockRunScroll.toRevealWhole(40, 300, 100, wholeStops, wholeItems, itemIndex = -1))
-        assertEquals(40, DockRunScroll.toRevealWhole(40, 300, 100, wholeStops, wholeItems, itemIndex = 99))
+    fun theFirstAndLastItemsStopAtTheRowsEndsWithNoPeekPastThem() {
+        assertEquals(0, reveal(scroll = 300, start = 0))
+        assertEquals(0, reveal(scroll = 300, start = 10))
+        assertEquals(max, reveal(scroll = 0, start = 752))
     }
 
     @Test
-    fun theRevealUsesTheDensityToTurnDpIntoPixels() {
-        val stopsPx = wholeStops.map { it * 2 }
-        val target = DockRunScroll.toRevealWhole(0, 664, 800, stopsPx, wholeItems, itemIndex = 9, pxPerDp = 2f)
-        assertTrue(target in stopsPx)
-        assertTrue(target + 664 >= 9 * 56 * 2 + 96)
+    fun anItemLongerThanTheViewportIsAlignedAtItsStart() {
+        assertEquals(120, DockRunScroll.toReveal(0, 100, 500, itemStartPx = 120, itemEndPx = 300, marginPx = 24))
+    }
+
+    @Test
+    fun noRoomForTheMarginDropsTheMarginNotTheItem() {
+        // A 300 px viewport with a 280 px item: only 10 px a side is spare, so the peek shrinks to it.
+        assertEquals(400 + 280 + 10 - view, DockRunScroll.toReveal(0, view, 1000, 400, 680, marginPx = 24))
     }
 }

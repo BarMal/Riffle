@@ -46,6 +46,55 @@ internal fun glassSpotlightTargetProfile(stops: List<GlassSpotlightStop>): Float
 }
 
 /**
+ * The profile of a surface whose things each light only the part of the rim near them (a card: its icon lights the
+ * edge beside it and the rest of the edge stays neutral), where [glassSpotlightTargetProfile] holds the nearest colour
+ * flat out to both ends. [centers] are the things' centres along the run in px with their colours (null: unlit, no
+ * glow); each lit one contributes a soft bell [reachPx] wide to either side of its centre (zero at the reach, so a
+ * source far from a stretch of the edge leaves it dark). Where bells overlap the stronger one sets the strength and
+ * the colour is their strength-weighted mix. Premultiplied like every profile.
+ */
+internal fun glassSpotlightLocalProfile(
+    centers: List<Pair<Float, Color?>>,
+    runLengthPx: Float,
+    reachPx: Float,
+): FloatArray {
+    val profile = emptyGlassSpotlightProfile()
+    val lit =
+        centers.mapNotNull { (centerPx, color) ->
+            color?.takeIf { centerPx in 0f..runLengthPx }?.let { centerPx to glassSpotlightGlowColor(it) }
+        }
+    if (lit.isEmpty() || runLengthPx <= 0f || reachPx <= 0f) return profile
+    for (sample in 0 until DOCK_SPOTLIGHT_PROFILE_SAMPLES) {
+        val position = (sample + 0.5f) / DOCK_SPOTLIGHT_PROFILE_SAMPLES * runLengthPx
+        var strongest = 0f
+        var total = 0f
+        var red = 0f
+        var green = 0f
+        var blue = 0f
+        for ((centerPx, color) in lit) {
+            val weight = glassSpotlightBell(abs(position - centerPx) / reachPx)
+            strongest = maxOf(strongest, weight)
+            total += weight
+            red += color.red * weight
+            green += color.green * weight
+            blue += color.blue * weight
+        }
+        if (total > 0f) {
+            val base = sample * CHANNELS
+            profile[base] = red / total * strongest
+            profile[base + 1] = green / total * strongest
+            profile[base + 2] = blue / total * strongest
+            profile[base + 3] = strongest
+        }
+    }
+    return profile
+}
+
+/** A soft bell: 1 at the centre, 0 from [distance] (as a share of the reach) 1 outwards, smooth between. */
+internal fun glassSpotlightBell(distance: Float): Float =
+    if (distance >= 1f) 0f else 0.5f * (1f + kotlin.math.cos(Math.PI.toFloat() * distance.coerceAtLeast(0f)))
+
+/**
  * The glow's colour [position] (0..1) of the way along the run: linear between the two
  * [edgeStops] either side of it, in unpremultiplied colour -- what a linear gradient through the
  * same stops draws.

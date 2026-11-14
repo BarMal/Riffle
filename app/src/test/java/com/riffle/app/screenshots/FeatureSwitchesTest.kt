@@ -74,7 +74,8 @@ class FeatureSwitchesTest {
             if (withNotifications) {
                 realWiringStreamHost(
                     executor = executor,
-                    activeNotifications = listOf(notification(ScreenshotFixtures.mail)),
+                    // Maps is not pinned: a pinned app that is live has no live entry of its own.
+                    activeNotifications = listOf(notification(ScreenshotFixtures.maps)),
                     installedApps = ScreenshotFixtures.installedApps,
                 )
             } else {
@@ -212,7 +213,7 @@ class FeatureSwitchesTest {
         show(withNotifications = true)
 
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag(ScreenshotFixtures.mail.label))
+            composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag(ScreenshotFixtures.maps.label))
                 .fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -224,7 +225,7 @@ class FeatureSwitchesTest {
         val appeared =
             runCatching {
                 composeRule.waitUntil(timeoutMillis = 1_500) {
-                    composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag(ScreenshotFixtures.mail.label))
+                    composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag(ScreenshotFixtures.maps.label))
                         .fetchSemanticsNodes().isNotEmpty()
                 }
             }.isSuccess

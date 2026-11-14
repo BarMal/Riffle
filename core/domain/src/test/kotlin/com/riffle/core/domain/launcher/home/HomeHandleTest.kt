@@ -114,28 +114,41 @@ class HomeHandlePlacementTest {
         assertEquals(HandleAxis.VERTICAL, PageScrollDirection.VERTICAL.handleAxis)
     }
 
-    private fun strip(
-        edge: DockPosition,
-        axis: HandleAxis,
-    ) = HomeHandleLayout.stripFor(edge, axis)
-
     @Test
-    fun aColumnBesideASideDockStandsInFrontOfItsMiddleOnHomesSide() {
-        assertEquals(HandleStrip.LEFT_COLUMN, strip(DockPosition.LEFT, HandleAxis.VERTICAL))
-        assertEquals(HandleStrip.RIGHT_COLUMN, strip(DockPosition.RIGHT, HandleAxis.VERTICAL))
+    fun besideASideDockTheHandleIsAlwaysAColumnInFrontOfItsMiddleOnHomesSide() {
+        assertEquals(HandleStrip.LEFT_COLUMN, HomeHandleLayout.stripFor(DockPosition.LEFT))
+        assertEquals(HandleStrip.RIGHT_COLUMN, HomeHandleLayout.stripFor(DockPosition.RIGHT))
+        // Whichever way the pages scroll, it runs down the column, along the Dock.
+        PageScrollDirection.entries.forEach { scroll ->
+            assertEquals(HandleAxis.VERTICAL, HomeHandleLayout.axisFor(DockPosition.LEFT, scroll))
+            assertEquals(HandleAxis.VERTICAL, HomeHandleLayout.axisFor(DockPosition.RIGHT, scroll))
+        }
     }
 
     @Test
-    fun aRowStaysInTheRowBelowThePagesWhateverTheDockEdge() {
-        // Above a bottom Dock it is just in from it. Beside a side Dock it would run across the Dock's edge, and a
-        // strip as wide as the row would squeeze the pages, so it keeps the row it always had.
-        HandleAxis.entries.forEach { axis ->
-            assertEquals(HandleStrip.BOTTOM_ROW, strip(DockPosition.BOTTOM, axis))
-            // A top Dock is not offered; a layout that still holds it keeps the handle where it always was.
-            assertEquals(HandleStrip.BOTTOM_ROW, strip(DockPosition.TOP, axis))
-        }
-        assertEquals(HandleStrip.BOTTOM_ROW, strip(DockPosition.LEFT, HandleAxis.HORIZONTAL))
-        assertEquals(HandleStrip.BOTTOM_ROW, strip(DockPosition.RIGHT, HandleAxis.HORIZONTAL))
+    fun aBottomDockKeepsTheRowAboveItAndTheHandleFollowsThePagesThere() {
+        assertEquals(HandleStrip.BOTTOM_ROW, HomeHandleLayout.stripFor(DockPosition.BOTTOM))
+        // A top Dock is not offered; a layout that still holds it keeps the handle where it always was.
+        assertEquals(HandleStrip.BOTTOM_ROW, HomeHandleLayout.stripFor(DockPosition.TOP))
+        assertEquals(
+            HandleAxis.HORIZONTAL,
+            HomeHandleLayout.axisFor(DockPosition.BOTTOM, PageScrollDirection.HORIZONTAL),
+        )
+        assertEquals(HandleAxis.VERTICAL, HomeHandleLayout.axisFor(DockPosition.BOTTOM, PageScrollDirection.VERTICAL))
+    }
+
+    @Test
+    fun theHandleTakesItsRoomFromTheMarginOnTheDocksSideFirst() {
+        // A 16 dp margin holds 16 dp of the 48 dp column: the grid gives up the other 32, never the whole 48.
+        assertEquals(0, HomeHandleLayout.remainingMarginDp(marginDp = 16, reservedDp = 48))
+        assertEquals(0, HomeHandleLayout.remainingMarginDp(marginDp = 48, reservedDp = 48))
+        assertEquals(12, HomeHandleLayout.remainingMarginDp(marginDp = 60, reservedDp = 48))
+
+        // The room the grid loses in all is the reservation not covered by the margin.
+        // (The column is 48 dp wide in the layout, the margin shrinks to what is left of it.)
+        fun lostDp(margin: Int) = 48 + HomeHandleLayout.remainingMarginDp(margin, 48) - margin
+        assertEquals(32, lostDp(16))
+        assertEquals(0, lostDp(60))
     }
 
     @Test
@@ -171,8 +184,8 @@ class HomeHandlePlacementTest {
         assertEquals(48, HomeHandleLayout.reservedDp(DockPosition.BOTTOM, HandleAxis.HORIZONTAL, pageCount = 5))
         assertEquals(48, HomeHandleLayout.reservedDp(DockPosition.LEFT, HandleAxis.VERTICAL, pageCount = 5))
         assertEquals(48, HomeHandleLayout.reservedDp(DockPosition.RIGHT, HandleAxis.VERTICAL, pageCount = 5))
-        // A row beside a side Dock stays in the row below the pages: its height, never a strip as wide as the row.
-        assertEquals(48, HomeHandleLayout.reservedDp(DockPosition.RIGHT, HandleAxis.HORIZONTAL, pageCount = 5))
+        // Beside a side Dock the handle is always the column, whatever the pages do: a column's width, 48 dp.
+        assertEquals(48, HomeHandleLayout.reservedDp(DockPosition.RIGHT, HandleAxis.VERTICAL, pageCount = 9))
         // A column above a bottom Dock stands in the row above it, as tall as the column is long.
         assertEquals(
             HomeHandleLayout.lengthDp(5),

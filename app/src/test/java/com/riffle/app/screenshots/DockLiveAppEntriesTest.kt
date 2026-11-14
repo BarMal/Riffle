@@ -103,7 +103,15 @@ class DockLiveAppEntriesTest {
                 // A keyboard user: focus can only land on a tile once the input mode is the keyboard's.
                 LaunchedEffect(keyboard) { if (keyboard) inputMode.requestInputMode(InputMode.Keyboard) }
                 HomeDestination(
-                    state = ScreenshotFixtures.homeState(),
+                    // Mail and Chat are live here, so they are not pinned (a pinned live app is drawn once: see
+                    // DockPinnedLiveAppTest).
+                    state =
+                        ScreenshotFixtures.homeState(
+                            sizing =
+                                ScreenshotFixtures.HomeSizing(
+                                    pins = listOf(ScreenshotFixtures.camera, ScreenshotFixtures.browser),
+                                ),
+                        ),
                     appIconLoader = SolidColorAppIconLoader(),
                     stream = host,
                     streamShown = shellShown,

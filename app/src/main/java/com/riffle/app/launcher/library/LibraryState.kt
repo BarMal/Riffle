@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.matches
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
@@ -47,6 +48,8 @@ internal data class LibraryState(
     val controlsSpacingDp: Int = 0,
     /** The layout of the posture the Library is drawn in: which way the pages scroll and what the handle does. */
     val pagedLayout: PostureLayoutSettings = PostureLayoutSettings.FOLDED_DEFAULT,
+    /** The Dock the paged View's handle stands in front of: the handle is drawn as the same material. */
+    val dock: DockModel? = null,
 ) {
     val isSearching: Boolean get() = query.isNotBlank()
 }
@@ -78,4 +81,5 @@ internal fun LauncherShellState.libraryState(): LibraryState =
         labels = homeLayout.settings.labels,
         controlsSpacingDp = homeLayout.dock.homeControlsSpacingDp,
         pagedLayout = launcherSettings.layout.forDeviceClass(homeLayoutSet.activeKey.deviceClass),
+        dock = homeLayout.dock,
     )

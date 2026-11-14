@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.HandleAxis
 import com.riffle.core.domain.launcher.home.HomeHandle
 import com.riffle.core.domain.launcher.home.HomeHandleLayout
@@ -66,6 +67,11 @@ internal fun HomeHandlePill(
     axis: HandleAxis = HandleAxis.HORIZONTAL,
     showsDots: Boolean = true,
     dragEnabled: Boolean = true,
+    /**
+     * The Dock the handle stands in front of: the pill is drawn as the same material (its "Dock background" fill and
+     * colour, 0% clear, reduced transparency, the same edge lights). Null: the plain Thin glass.
+     */
+    dock: DockModel? = null,
 ) {
     val dots = showsDots && HomeHandle.showsDots(pageCount)
     val searchLabel = stringResource(R.string.home_handle_search)
@@ -81,17 +87,26 @@ internal fun HomeHandlePill(
     ) {
         // The pill is drawn thinner than its touch target: the glass sits in the middle of it.
         val inset = ((HomeHandle.TOUCH_TARGET_DP - HomeHandle.PILL_HEIGHT_DP) / 2).dp
-        GlassSurface(
-            modifier =
-                Modifier.matchParentSize().padding(
-                    horizontal = if (vertical) inset else 0.dp,
-                    vertical = if (vertical) 0.dp else inset,
-                ),
-            weight = GlassWeight.Thin,
-            shape = RoundedCornerShape(HomeHandle.PILL_HEIGHT_DP.dp),
-            tint = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        val pillModifier =
+            Modifier.matchParentSize().padding(
+                horizontal = if (vertical) inset else 0.dp,
+                vertical = if (vertical) 0.dp else inset,
+            )
+        if (dock != null) {
+            // The Dock's own material, by its own modifiers: the pill follows the Dock's fill setting and colour and
+            // wears the same edge lights. Fully rounded unless the Dock's corner is tighter than the pill's half
+            // height.
+            val radius = dock.cornerRadiusDp.coerceIn(0, HomeHandle.PILL_HEIGHT_DP / 2)
+            Box(pillModifier.dockSurfaceAppearance(dock, RoundedCornerShape(radius.dp)))
+        } else {
+            GlassSurface(
+                modifier = pillModifier,
+                weight = GlassWeight.Thin,
+                shape = RoundedCornerShape(HomeHandle.PILL_HEIGHT_DP.dp),
+                tint = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         val content: @Composable () -> Unit = {
             HomeHandleGlyph(searchLabel = searchLabel, onOpenSearch = onOpenSearch)
             if (dots) {

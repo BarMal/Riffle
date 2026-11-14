@@ -87,6 +87,9 @@ object DockDynamicSide {
      * (the contextual mode only) one [DockDynamicSideEntry.ContextTile] for each of [contextSections], in that order.
      * The Home mode passes none, so it holds no tile; the entries it shares with the contextual mode keep their order.
      *
+     * An app is drawn once: a group whose key is in [pinnedGroupKeys] (`package:profile` of a pinned app) has no live
+     * entry, the pinned icon stands for its page (and does not use up a live slot).
+     *
      * [notificationGroups] are the groups of the Stream's Notifications section (so Hide rules and privacy have
      * applied); a group with no notification content is skipped. Live apps are ordered by their newest notification,
      * newest first, ties by group key.
@@ -96,10 +99,12 @@ object DockDynamicSide {
         media: MediaContent?,
         liveAppSlots: Int,
         contextSections: List<StreamSection> = emptyList(),
+        pinnedGroupKeys: Set<String> = emptySet(),
     ): List<DockDynamicSideEntry> {
         val slots = liveAppSlots.coerceIn(MIN_DOCK_LIVE_APP_SLOTS, MAX_DOCK_LIVE_APP_SLOTS)
         val live =
             notificationGroups
+                .filter { group -> group.key !in pinnedGroupKeys }
                 .mapNotNull(::liveApp)
                 .sortedWith(newestFirst)
                 .map { it.second }

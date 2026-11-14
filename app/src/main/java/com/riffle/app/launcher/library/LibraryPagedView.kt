@@ -66,7 +66,6 @@ import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HandleStrip
 import com.riffle.core.domain.launcher.home.HomeHandle
 import com.riffle.core.domain.launcher.home.HomeHandleLayout
-import com.riffle.core.domain.launcher.home.handleAxis
 import com.riffle.core.domain.launcher.library.LibraryPaging
 import com.riffle.core.domain.launcher.settings.PageScrollDirection
 import kotlinx.coroutines.launch
@@ -108,9 +107,9 @@ internal fun LibraryPagedView(
     val margins = state.pagedMargins
     // The pages scroll the way the posture says, and the handle follows them (ADR 0003, Amendment 2).
     val layout = state.pagedLayout
-    val axis = layout.pageScroll.handleAxis
+    val axis = HomeHandleLayout.axisFor(dockEdge, layout.pageScroll)
     val verticalPages = layout.pageScroll == PageScrollDirection.VERTICAL
-    val strip = HomeHandleLayout.stripFor(dockEdge, axis)
+    val strip = HomeHandleLayout.stripFor(dockEdge)
     val dots = layout.showsDots && HomeHandle.showsDots(pageCount)
 
     val pageContent: @Composable (Int) -> Unit = { index ->
@@ -148,13 +147,17 @@ internal fun LibraryPagedView(
             }
         }
     }
+    val reservedDp = HomeHandleLayout.reservedDp(dockEdge, axis, pageCount, dots)
+    // A column beside a side Dock stands in the pages' margin on the Dock's side first (the way the row above a bottom
+    // Dock takes its height): the pages keep the rest of the margin and the grid lays out in what is left.
+    val dockSideMargin = { margin: Int -> HomeHandleLayout.remainingMarginDp(margin, reservedDp) }
     val pagerModifier =
         Modifier
             .fillMaxSize()
             .padding(
-                start = margins.start.dp,
+                start = (if (strip == HandleStrip.LEFT_COLUMN) dockSideMargin(margins.start) else margins.start).dp,
                 top = margins.top.dp,
-                end = margins.end.dp,
+                end = (if (strip == HandleStrip.RIGHT_COLUMN) dockSideMargin(margins.end) else margins.end).dp,
                 bottom = margins.bottom.dp,
             )
     val pager: @Composable (Modifier) -> Unit = { outer ->
@@ -189,6 +192,7 @@ internal fun LibraryPagedView(
                 axis = axis,
                 showsDots = layout.showsDots,
                 dragEnabled = layout.dragsToScroll,
+                dock = state.dock,
             )
         }
     }

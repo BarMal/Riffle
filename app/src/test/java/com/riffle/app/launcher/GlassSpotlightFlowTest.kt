@@ -30,6 +30,54 @@ class GlassSpotlightFlowTest {
         assertEquals(0.5f, target[3], EIGHT_BIT_STEP)
     }
 
+    private fun alphaAt(
+        profile: FloatArray,
+        fraction: Float,
+    ) = profile[(fraction * (DOCK_SPOTLIGHT_PROFILE_SAMPLES - 1)).toInt() * 4 + 3]
+
+    @Test
+    fun aLocalSourceLightsOnlyTheEdgeNearItAndFallsOffWithDistance() {
+        // A 400 px run with one red icon 50 px in and a reach of 100 px.
+        val profile = glassSpotlightLocalProfile(listOf(50f to Color.Red), runLengthPx = 400f, reachPx = 100f)
+        assertTrue(glassSpotlightProfileIsLit(profile))
+        val near = alphaAt(profile, 50f / 400f)
+        val mid = alphaAt(profile, 100f / 400f)
+        val far = alphaAt(profile, 300f / 400f)
+        assertTrue("brightest at the source: $near", near > 0.9f)
+        assertTrue("fading with distance: $near > $mid > $far", near > mid && mid > far)
+        // Beyond the reach the edge is left neutral: not the uniform outline a flat profile would draw.
+        assertEquals(0f, far, 0f)
+        assertEquals(0f, alphaAt(profile, 1f), 0f)
+    }
+
+    @Test
+    fun aLocalProfileWithNothingLitOrAnUnlitSourceIsDark() {
+        assertFalse(glassSpotlightProfileIsLit(glassSpotlightLocalProfile(emptyList(), 400f, 100f)))
+        assertFalse(glassSpotlightProfileIsLit(glassSpotlightLocalProfile(listOf(50f to null), 400f, 100f)))
+        // A source scrolled out of the run lights nothing.
+        assertFalse(glassSpotlightProfileIsLit(glassSpotlightLocalProfile(listOf(-5f to Color.Red), 400f, 100f)))
+    }
+
+    @Test
+    fun twoLocalSourcesKeepTheirOwnColoursAndMixWhereTheyMeet() {
+        val profile =
+            glassSpotlightLocalProfile(listOf(50f to Color.Red, 350f to Color.Blue), runLengthPx = 400f, reachPx = 200f)
+        val atRed = glassSpotlightProfileColorAt(profile, 50f / 400f)
+        val atBlue = glassSpotlightProfileColorAt(profile, 350f / 400f)
+        assertTrue(atRed.red > atRed.blue)
+        assertTrue(atBlue.blue > atBlue.red)
+        val between = glassSpotlightProfileColorAt(profile, 0.5f)
+        assertTrue("both colours are in the middle", between.red > 0.1f && between.blue > 0.1f)
+    }
+
+    @Test
+    fun theBellIsOneAtTheCentreZeroAtTheReachAndSmoothBetween() {
+        assertEquals(1f, glassSpotlightBell(0f), 1e-6f)
+        assertEquals(0.5f, glassSpotlightBell(0.5f), 1e-6f)
+        assertEquals(0f, glassSpotlightBell(1f), 0f)
+        assertEquals(0f, glassSpotlightBell(3f), 0f)
+    }
+
     @Test
     fun settlesExactlyOnTheTargetWithinAFewSeconds() {
         val shown = glassSpotlightTargetProfile(listOf(GlassSpotlightStop(0.2f, Color.Red)))

@@ -56,7 +56,7 @@ internal fun StreamAvatar(
     val initial = name?.trim()?.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()
     // A badge only where there is something to badge: a photo, or initials. Without either the app icon is the avatar.
     val badged = photo != null || initial != null
-    Box(modifier = modifier.size(size).clearAndSetSemantics {}) {
+    Box(modifier = modifier.size(size).cardSpotlightSource("avatar").clearAndSetSemantics {}) {
         when {
             loaded != null ->
                 Image(
