@@ -113,8 +113,8 @@ class StreamRealDataTest {
     fun `a message an app lists twice is one line of the thread, the same words at another time stay`() {
         val echoed =
             listOf(
-                message("Claude", "Old 80 width (+1 more)", 5),
-                message("Claude", "Old 80 width (+1 more)", 5),
+                message("Pilot", "Old 80 width (+1 more)", 5),
+                message("Pilot", "Old 80 width (+1 more)", 5),
                 message("Ann", "ok", 6),
                 message("Ann", "ok", 7),
             )
@@ -123,7 +123,7 @@ class StreamRealDataTest {
         assertEquals(listOf("Old 80 width (+1 more)", "ok", "ok"), content.thread.map { it.text })
 
         val onlyEchoes =
-            listOf(message("Claude", "Old 80 width (+1 more)", 5), message("Claude", "Old 80 width (+1 more)", 5))
+            listOf(message("Pilot", "Old 80 width (+1 more)", 5), message("Pilot", "Old 80 width (+1 more)", 5))
         val single =
             assertIs<NotificationContent>(StreamContentMapper.map(notificationItems(messaging(onlyEchoes)).single()))
         assertEquals(emptyList(), single.thread)

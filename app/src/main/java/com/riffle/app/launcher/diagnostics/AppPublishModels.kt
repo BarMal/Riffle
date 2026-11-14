@@ -65,6 +65,67 @@ data class MessageInput(
     val hasPersonIcon: Boolean,
 )
 
+/**
+ * One view of a notification's own layout as the platform side read it by inflating the layout: raw values, among
+ * them the text a text view shows. Transient: only [toShape] output is ever shown or copied, and that keeps the
+ * text's length and never the text.
+ */
+data class LayoutViewInput(
+    /** How deep the view is in the layout: 0 is the root. */
+    val depth: Int,
+    val className: String,
+    /** The entry name of the view's id in the app's resources ("stops_away"); null when it has no id or no name. */
+    val resourceEntryName: String?,
+    val clickable: Boolean,
+    /** The platform's visibility value: 0 visible, 4 invisible, 8 gone. */
+    val visibility: Int,
+    /** A text view's text; null for any other view. */
+    val text: CharSequence? = null,
+    val textSizeSp: Float? = null,
+    /** An image view's picture size in pixels; null for any other view and for an image view with no picture. */
+    val imageWidthPx: Int? = null,
+    val imageHeightPx: Int? = null,
+)
+
+/** One line of a layout's outline: the structure of a view, with no content. */
+data class LayoutViewShape(
+    val depth: Int,
+    /** The class's simple name ("TextView"). */
+    val className: String,
+    val resourceEntryName: String?,
+    val clickable: Boolean,
+    val visibility: String,
+    /** How many characters a text view shows. The text itself is not kept. */
+    val textLength: Int?,
+    val textSizeSp: Int?,
+    val imageSize: String?,
+)
+
+/** The most views of one layout an outline lists. */
+const val MAX_OUTLINE_VIEWS = 80
+
+private const val VISIBILITY_INVISIBLE = 4
+private const val VISIBILITY_GONE = 8
+
+fun LayoutViewInput.toShape(): LayoutViewShape =
+    LayoutViewShape(
+        depth = depth.coerceAtLeast(0),
+        className = className.substringAfterLast('.').substringAfterLast('$').ifBlank { "View" },
+        resourceEntryName = resourceEntryName?.takeIf(String::isNotBlank),
+        clickable = clickable,
+        visibility =
+            when (visibility) {
+                VISIBILITY_INVISIBLE -> "invisible"
+                VISIBILITY_GONE -> "gone"
+                else -> "visible"
+            },
+        // The length only: what a notification says is never part of a shape.
+        textLength = text?.length,
+        textSizeSp = textSizeSp?.let { kotlin.math.round(it).toInt() },
+        imageSize =
+            if (imageWidthPx != null && imageHeightPx != null) "$imageWidthPx x $imageHeightPx px" else null,
+    )
+
 /** Raw values read from one posted notification. Transient: only [toShape] output is ever shown or copied. */
 data class NotificationInput(
     val category: String?,
@@ -83,6 +144,12 @@ data class NotificationInput(
     val progress: Int,
     val progressIndeterminate: Boolean,
     val actions: List<ActionInput>,
+    /**
+     * The views of the notification's own compact and expanded layouts in drawing order; null when it has no such
+     * layout or the layout could not be inflated.
+     */
+    val contentLayout: List<LayoutViewInput>? = null,
+    val bigContentLayout: List<LayoutViewInput>? = null,
 )
 
 data class ProgressShape(
@@ -112,6 +179,9 @@ data class NotificationShape(
     val messagesWithPersonIcon: Int,
     val progress: ProgressShape?,
     val actions: List<ActionShape>,
+    /** The outline of the notification's own compact and expanded layouts: structure only, never content. */
+    val contentLayout: List<LayoutViewShape>? = null,
+    val bigContentLayout: List<LayoutViewShape>? = null,
 )
 
 fun NotificationInput.toShape(): NotificationShape =
@@ -138,6 +208,8 @@ fun NotificationInput.toShape(): NotificationShape =
         // Action titles are app-defined UI ("Reply", "Mark as read"), shown on purpose.
         actions =
             actions.map { ActionShape(title = it.title?.toString().orEmpty(), hasRemoteInput = it.hasRemoteInput) },
+        contentLayout = contentLayout?.take(MAX_OUTLINE_VIEWS)?.map(LayoutViewInput::toShape),
+        bigContentLayout = bigContentLayout?.take(MAX_OUTLINE_VIEWS)?.map(LayoutViewInput::toShape),
     )
 
 /** "android.app.Notification$MessagingStyle" becomes "MessagingStyle". */

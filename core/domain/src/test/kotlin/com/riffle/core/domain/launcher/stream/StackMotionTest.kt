@@ -370,4 +370,101 @@ class StackMotionTest {
         const val FRAME = 1f / 60f
         const val MAX_FRAMES = 600
     }
+
+    // Cards of their own heights (device fixes, round 6, item 4) -----------------------------------------------------
+
+    private val mixed = StackGeometry(heightsDp = listOf(88f, 168f, 120f, 208f, 88f))
+
+    @Test
+    fun theFrontCardIsItsOwnHeightAndTheStripsBehindItSitOnItsTopAPitchApart() {
+        for (front in 0..1) {
+            val own = mixed.heightOf(front)
+            val frontFrame = mixed.frame(front, front.toFloat())
+            assertEquals(own, frontFrame.topDp, eps)
+            assertEquals(own, frontFrame.visibleHeightDp, eps)
+            for (rank in 1..3) {
+                val strip = mixed.frame(front + rank, front.toFloat())
+                // A strip is a pitch above the one in front whatever its own card's height: the strips line up.
+                assertEquals(own + pitch * rank, strip.topDp, eps)
+                assertEquals(pitch - gap, strip.visibleHeightDp, eps)
+            }
+        }
+    }
+
+    @Test
+    fun aShortFrontCardLeavesTheStripsLowerThanATallOne() {
+        val behindShort = mixed.frame(1, 0f).topDp
+        val behindTall = mixed.frame(2, 1f).topDp
+        assertTrue(behindShort < behindTall, "$behindShort < $behindTall")
+        assertEquals(88f, mixed.frontHeightAt(0f), eps)
+        assertEquals(168f, mixed.frontHeightAt(1f), eps)
+    }
+
+    @Test
+    fun betweenTwoCardsTheFrontTopMovesFromTheOnesHeightToTheOthersWithoutAJump() {
+        var last = mixed.frontHeightAt(0f)
+        for (step in 1..100) {
+            val position = step / 100f
+            val now = mixed.frontHeightAt(position)
+            assertTrue(now >= last - eps, "rises from 88 to 168 monotonically at $position")
+            assertTrue(now - last <= (168f - 88f) / 100f + eps, "no jump at $position")
+            last = now
+        }
+        assertEquals(128f, mixed.frontHeightAt(0.5f), eps)
+        // Held past either end (the rubber band): the end card's height.
+        assertEquals(88f, mixed.frontHeightAt(-0.3f), eps)
+        assertEquals(88f, mixed.frontHeightAt(4.4f), eps)
+    }
+
+    @Test
+    fun cardsOfTheirOwnHeightsNeverOverlapAndEveryFrameIsContinuousInPosition() {
+        var previous: List<StackCardFrame>? = null
+        for (step in 0..400) {
+            val position = step / 100f
+            val frames = (0..4).map { mixed.frame(it, position) }
+            // No overlap: a card's slot ends at or above the top of the card in front of it.
+            for (index in 1..4) {
+                val card = frames[index]
+                val inFront = frames[index - 1]
+                if (card.isVisible && inFront.isVisible) {
+                    assertTrue(
+                        card.visibleBottomDp >= inFront.topDp - eps,
+                        "card $index over ${index - 1} at $position",
+                    )
+                }
+            }
+            previous?.let { before ->
+                for (index in 0..4) {
+                    val moved = kotlin.math.abs(frames[index].topDp - before[index].topDp)
+                    assertTrue(moved <= 3f, "card $index jumps $moved dp at $position")
+                }
+            }
+            previous = frames
+        }
+    }
+
+    @Test
+    fun aCardArrivingAtTheFrontOpensFromAStripToItsOwnHeight() {
+        // Card 1 (168 dp) comes to the front as the 88 dp card sinks.
+        var last = mixed.frame(1, 0f).visibleHeightDp
+        assertEquals(pitch - gap, last, eps)
+        for (step in 1..100) {
+            val now = mixed.frame(1, step / 100f).visibleHeightDp
+            assertTrue(now >= last - eps, "opens monotonically")
+            last = now
+        }
+        assertEquals(168f, last, eps)
+    }
+
+    @Test
+    fun aStackOfCardsAllAlikeIsTheSameAsOneWithTheirHeightsGiven() {
+        val alike = StackGeometry(heightsDp = List(5) { 168f })
+        val uniform = StackGeometry(168f)
+        for (step in 0..40) {
+            val position = step / 10f
+            for (index in 0..4) {
+                assertEquals(uniform.frame(index - position), alike.frame(index, position))
+            }
+        }
+    }
 }

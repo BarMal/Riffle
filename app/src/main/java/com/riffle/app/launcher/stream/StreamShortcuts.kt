@@ -63,6 +63,8 @@ internal fun AppShortcutCard(
                         top = StreamHeaderTopPadding,
                         bottom = RiffleSpacing.s,
                     ),
+            // The detail starts below what a strip shows (a pitch), so none of it peeks out along the cut.
+            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
         ) {
             // From the top: the icon and the name are what the card's strip shows (the detail is under them).
             StreamCardHeader(

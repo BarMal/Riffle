@@ -60,11 +60,12 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * What the strip of a card says, for every kind of card (device fix round 5, item 4). A card behind the one in front
- * shows only the top 52 dp of itself (`StreamCardStackSpec.STRIP_HEIGHT_DP`), so every card's header, an icon or an
- * avatar and a one-line title, has to lie inside that. Each kind is drawn at the size a stack draws it at, clipped to a
- * strip, and its icon and title nodes (the unmerged tree keeps them) must lie wholly inside the strip. A merged page
- * (a notification and its app's shortcuts) is then checked through the real stack, with a card open.
+ * What the strip of a card says, for every kind of card (device fix round 5, item 4). A card behind the one in
+ * front shows the top 56 dp of itself down its middle (`StreamCardStackSpec.STRIP_HEIGHT_DP`), so every card's
+ * header, an icon or an avatar and a one-line title, has to lie inside that. Each kind is drawn at the size a
+ * stack draws it at, clipped to a strip, and its icon and title nodes (the unmerged tree keeps them) must lie
+ * wholly inside the strip. A merged page (a notification and its app's shortcuts) is then checked through the real
+ * stack, with a card open.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

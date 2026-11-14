@@ -65,6 +65,7 @@
     <string name="stream_dock_close_card_action">Close card</string>
     <!-- Pictures a notification carries: a generic description, never the content of the picture. -->
     <string name="stream_picture">Picture</string>
+    <string name="stream_notification_layout">Layout from %1$s</string>
     <string name="stream_picture_from">Picture from %1$s</string>
     <string name="stream_artwork">Artwork</string>
 

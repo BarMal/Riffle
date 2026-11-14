@@ -198,7 +198,7 @@ class StreamScreenshotTest {
     @Test
     fun notificationExpandedToItsThreadWithReply() {
         surface(initialPageKey = StreamPageKeys.CHAT)
-        composeRule.onNodeWithText("Are we still on for lunch tomorrow?").performClick()
+        composeRule.onNodeWithText("Sam: Are we still on for lunch tomorrow?").performClick()
         composeRule.captureScreen()
     }
 

@@ -93,6 +93,110 @@ class AppPublishModelsTest {
         assertTrue(text.contains("Chat widget"))
     }
 
+    private fun layoutViews() =
+        listOf(
+            LayoutViewInput(0, "android.widget.LinearLayout", null, clickable = false, visibility = 0),
+            LayoutViewInput(
+                depth = 1,
+                className = "android.widget.TextView",
+                resourceEntryName = "stops_away",
+                clickable = false,
+                visibility = 0,
+                text = SECRET_LAYOUT_TEXT,
+                textSizeSp = 13.6f,
+            ),
+            LayoutViewInput(
+                depth = 1,
+                className = "android.widget.ImageView",
+                resourceEntryName = "line_icon",
+                clickable = false,
+                visibility = 4,
+                imageWidthPx = 96,
+                imageHeightPx = 48,
+            ),
+            LayoutViewInput(
+                depth = 2,
+                className = "android.widget.Button",
+                resourceEntryName = null,
+                clickable = true,
+                visibility = 8,
+                text = SECRET_BUTTON_TEXT,
+                textSizeSp = 14f,
+            ),
+        )
+
+    @Test
+    fun aLayoutsOutlineKeepsStructureAndLengthsAndNeverTheText() {
+        val shapes = layoutViews().map { it.toShape() }
+
+        assertEquals(
+            LayoutViewShape(1, "TextView", "stops_away", false, "visible", SECRET_LAYOUT_TEXT.length, 14, null),
+            shapes[1],
+        )
+        assertEquals(
+            LayoutViewShape(1, "ImageView", "line_icon", false, "invisible", null, null, "96 x 48 px"),
+            shapes[2],
+        )
+        assertEquals(
+            listOf(
+                "  LinearLayout, clickable no, visible",
+                "    TextView #stops_away, clickable no, visible, text ${SECRET_LAYOUT_TEXT.length} chars, 14 sp",
+                "    ImageView #line_icon, clickable no, invisible, image 96 x 48 px",
+                "      Button, clickable yes, gone, text ${SECRET_BUTTON_TEXT.length} chars, 14 sp",
+            ),
+            shapes.map { it.outlineLine() },
+        )
+    }
+
+    @Test
+    fun theReportListsACustomLayoutsOutlineAndStillNeverContainsItsText() {
+        val custom =
+            secretNotification().copy(
+                hasContentView = true,
+                hasBigContentView = true,
+                contentLayout = layoutViews(),
+                // The expanded layout could not be inflated.
+                bigContentLayout = null,
+            )
+        val report =
+            AppPublishReport(
+                appLabel = "Navigator",
+                packageName = "com.example.nav",
+                shortcuts = PublishSection(),
+                notifications = PublishSection(items = listOf(custom.toShape())),
+                media = PublishSection(),
+                widgets = PublishSection(),
+            )
+        val text = report.toPlainText()
+
+        assertTrue(text.contains("Layout (content): 4 views"))
+        assertTrue(
+            text.contains("TextView #stops_away, clickable no, visible, text ${SECRET_LAYOUT_TEXT.length} chars"),
+        )
+        assertTrue(text.contains("Layout (big): could not be read"))
+        listOf(SECRET_LAYOUT_TEXT, SECRET_BUTTON_TEXT, SECRET_TITLE, SECRET_BODY, SECRET_MESSAGE, SECRET_CONTACT)
+            .forEach { secret -> assertFalse("report leaks \"$secret\"", text.contains(secret)) }
+        // The screen draws the same lines as the copied report.
+        val lines = custom.toShape().detailLines()
+        assertFalse(lines.any { it.contains(SECRET_LAYOUT_TEXT) || it.contains(SECRET_BUTTON_TEXT) })
+        // The page's promise is still made, and still true.
+        assertTrue(text.contains("Notification text, message bodies and contact names are never included."))
+    }
+
+    @Test
+    fun aNotificationWithoutALayoutOfItsOwnHasNoOutlineAndALongLayoutIsCapped() {
+        assertFalse(secretNotification().toShape().detailLines().any { it.startsWith("Layout") })
+        val long =
+            secretNotification().copy(
+                hasContentView = true,
+                contentLayout =
+                    List(
+                        MAX_OUTLINE_VIEWS + 30,
+                    ) { LayoutViewInput(0, "android.view.View", null, false, 0) },
+            )
+        assertEquals(MAX_OUTLINE_VIEWS, long.toShape().contentLayout?.size)
+    }
+
     @Test
     fun emptySectionsAndProblemsAreStatedClearly() {
         val text =
@@ -171,5 +275,7 @@ class AppPublishModelsTest {
         const val SECRET_BODY = "Meet me at the hospital"
         const val SECRET_MESSAGE = "my password is hunter2"
         const val SECRET_CONTACT = "Dr Marguerite Okonkwo"
+        const val SECRET_LAYOUT_TEXT = "Get off at St Thomas' Hospital"
+        const val SECRET_BUTTON_TEXT = "Cancel the oncology visit"
     }
 }

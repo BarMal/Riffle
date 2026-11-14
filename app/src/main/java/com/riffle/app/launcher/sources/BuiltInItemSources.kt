@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
+import com.riffle.core.domain.launcher.stream.CustomNotificationContent
 import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemSource
@@ -87,6 +88,7 @@ internal class MediaSourceDependencies(
     }
 }
 
+@Suppress("LongParameterList")
 internal class NotificationSourceDependencies(
     val repository: LauncherNotificationRepository,
     /** Never prompts; only reports what the user already enabled. */
@@ -98,6 +100,10 @@ internal class NotificationSourceDependencies(
     val canSnooze: (LauncherNotificationKey) -> Boolean = { false },
     /** The live notification's own action buttons (ids and titles; the intents stay with the listener). */
     val ownActions: (LauncherNotificationKey) -> List<NotificationOwnAction> = { emptyList() },
+    /** What was read out of the live notification's own layout (memory only, never stored), or null. */
+    val customContent: (LauncherNotificationKey) -> CustomNotificationContent? = { null },
+    /** Whether the live notification is going on now and kept up to date (`LiveNotificationRule`). */
+    val isLive: (LauncherNotificationKey) -> Boolean = { false },
 )
 
 internal class CalendarSourceDependencies(
@@ -250,6 +256,8 @@ private fun notificationStream(
                     canReply = notifications.canReply,
                     canSnooze = notifications.canSnooze,
                     ownActions = notifications.ownActions,
+                    customContent = notifications.customContent,
+                    isLive = notifications.isLive,
                 ),
             )
         }

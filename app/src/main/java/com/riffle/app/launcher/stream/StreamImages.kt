@@ -32,6 +32,7 @@ import com.riffle.app.launcher.BoundedCache
 import com.riffle.app.launcher.apps.ShortcutIconKey
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
+import com.riffle.app.launcher.notifications.NotificationCustomContentStore
 import com.riffle.app.launcher.notifications.NotificationImageStore
 import com.riffle.app.launcher.workspace.ItemImageKeyParser
 import com.riffle.app.launcher.workspace.ParsedImageKey
@@ -62,7 +63,9 @@ internal class AndroidStreamImageLoader(
     /** The icon of the launcher shortcut this handle names, or null (the app's icon is drawn instead). */
     private val shortcutIcon: (ItemImageHandle) -> Drawable? = { null },
     /** The contact photo or picture of an active notification (held in memory by the listener), or null. */
-    private val notificationBitmap: (String) -> android.graphics.Bitmap? = NotificationImageStore::bitmapFor,
+    private val notificationBitmap: (String) -> android.graphics.Bitmap? = { key ->
+        NotificationImageStore.bitmapFor(key) ?: NotificationCustomContentStore.bitmapFor(key)
+    },
 ) : ExpressionImageLoader {
     private val cache = BoundedCache<String, ImageBitmap>(MAX_CACHED_IMAGES)
 
@@ -78,7 +81,7 @@ internal class AndroidStreamImageLoader(
             key.startsWith(MediaArtworkStore.HANDLE_PREFIX) -> withContext(ioDispatcher) { artwork(handle, size) }
             key.startsWith(NOTIFICATION_ART_PREFIX) -> withContext(ioDispatcher) { notificationImage(handle) }
             // A contact photo or a picture lives in memory while its notification is active: never cached here.
-            NotificationImageStore.holds(key) ->
+            NotificationImageStore.holds(key) || NotificationCustomContentStore.holds(key) ->
                 withContext(ioDispatcher) { scaledTo(notificationBitmap(key), size) }
             else -> cachedImage(handle, size)
         }
