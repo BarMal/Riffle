@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HomeBehaviourSettings
@@ -30,6 +31,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
 import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
+import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -37,6 +39,7 @@ import com.riffle.core.domain.launcher.settings.PrivacySettings
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
+import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.homeSystemBars
@@ -61,6 +64,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("privacy", encodePrivacy(settings.privacy))
         .put("rss", encodeRssSettings(settings.rss))
         .put("search", encodeSearchSettings(settings.search))
+        .put("stream", encodeStreamSettings(settings.stream))
         .toString()
 
 /**
@@ -106,6 +110,7 @@ private fun decodeLauncherSections(
         privacy = json.guarded("privacy", defaults.privacy, JSONObject::toPrivacy),
         rss = json.guarded("rss", defaults.rss, JSONObject::toRssSettings),
         search = json.guarded("search", defaults.search, JSONObject::toSearchSettings),
+        stream = json.guarded("stream", defaults.stream, JSONObject::toStreamSettings),
     )
 }
 
@@ -460,3 +465,23 @@ private fun JSONObject.toFeedProfile(): AppProfile? =
 
 /** 11: P9 removed the stage cards settings, contextual behaviour, the after-leaving-Library target and fullscreenHome. */
 internal const val LAUNCHER_SETTINGS_JSON_VERSION = 11
+
+private fun encodeStreamSettings(settings: StreamSettings): JSONObject =
+    JSONObject()
+        .put("cardTintPercent", settings.cardTintPercent)
+        .put("cardTopGlow", settings.cardTopGlow)
+        .put("openCardPlacement", settings.openCardPlacement.name)
+        .put("cardActionsPlacement", settings.cardActionsPlacement.name)
+
+// A stored name this build does not know (a newer build's placement) reads as the default; the tint is held to its range.
+private fun JSONObject.toStreamSettings(defaults: StreamSettings): StreamSettings =
+    StreamSettings(
+        cardTintPercent = optInt("cardTintPercent", defaults.cardTintPercent),
+        cardTopGlow = optBoolean("cardTopGlow", defaults.cardTopGlow),
+        openCardPlacement =
+            runCatching { OpenCardPlacement.valueOf(optString("openCardPlacement")) }
+                .getOrDefault(defaults.openCardPlacement),
+        cardActionsPlacement =
+            runCatching { CardActionsPlacement.valueOf(optString("cardActionsPlacement")) }
+                .getOrDefault(defaults.cardActionsPlacement),
+    ).coerced()

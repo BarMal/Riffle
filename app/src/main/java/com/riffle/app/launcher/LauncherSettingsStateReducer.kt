@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.withReducedTransparency
 
@@ -117,6 +118,22 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectStreamCardTint ->
+                    state.withStreamSettings(launcherSettingsRepository) { it.copy(cardTintPercent = action.percent) }
+
+                is LauncherShellAction.SetStreamCardTopGlow ->
+                    state.withStreamSettings(launcherSettingsRepository) { it.copy(cardTopGlow = action.enabled) }
+
+                is LauncherShellAction.SelectOpenCardPlacement ->
+                    state.withStreamSettings(launcherSettingsRepository) {
+                        it.copy(openCardPlacement = action.placement)
+                    }
+
+                is LauncherShellAction.SelectCardActionsPlacement ->
+                    state.withStreamSettings(launcherSettingsRepository) {
+                        it.copy(cardActionsPlacement = action.placement)
+                    }
+
                 is LauncherShellAction.SelectOverlayDockEnabled,
                 is LauncherShellAction.SelectOverlayDockEdge,
                 is LauncherShellAction.SelectOverlayDockHandleThickness,
@@ -223,3 +240,13 @@ private val LauncherShellAction.isAppearanceSettingsAction: Boolean
 
             else -> false
         }
+
+/** The state with its Stream settings changed by [change] (held to their ranges) and saved. */
+private fun LauncherShellState.withStreamSettings(
+    repository: LauncherSettingsRepository,
+    change: (StreamSettings) -> StreamSettings,
+): LauncherShellState =
+    withLauncherSettings(
+        settings = launcherSettings.copy(stream = change(launcherSettings.stream).coerced()),
+        launcherSettingsRepository = repository,
+    )

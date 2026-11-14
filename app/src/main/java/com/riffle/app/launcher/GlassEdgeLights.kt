@@ -59,6 +59,8 @@ internal fun Modifier.glassEdgeLights(
     fill: Color,
     edgeTint: Color = Color.Unspecified,
     alphaProvider: () -> Float = { 1f },
+    /** Whether [edgeTint] also lights the bottom edge; a card's coloured glow is the top edge's only. */
+    tintBottom: Boolean = true,
 ): Modifier {
     val reduced = LocalLiquidGlassSettings.current.reducedTransparency
     val tokens = GlassMaterialTokens.forWeight(weight)
@@ -72,7 +74,7 @@ internal fun Modifier.glassEdgeLights(
     return drawWithCache {
         // A surface with no area to light (0 x 0 while it is laid out away, a collapsed row) draws
         // no edge: the fill and the content are unaffected.
-        val lights = if (size.isDrawable()) bakeEdgeLights(shape, scale, shade, edgeTint) else null
+        val lights = if (size.isDrawable()) bakeEdgeLights(shape, scale, shade, edgeTint, tintBottom) else null
         onDrawWithContent {
             val fade = alphaProvider().finiteOr(1f).coerceIn(0f, 1f)
             if (lights != null && fade > 0f) lights.draw(this, fade)
@@ -223,6 +225,7 @@ private fun CacheDrawScope.bakeEdgeLights(
     scale: Float,
     shade: Color,
     edgeTint: Color,
+    tintBottom: Boolean,
 ): EdgeLights {
     val heightDp = size.height / density
     val white = { alpha: Float -> Color.White.copy(alpha = (alpha * scale).coerceIn(0f, 1f)) }
@@ -248,7 +251,8 @@ private fun CacheDrawScope.bakeEdgeLights(
         if (edgeTint != Color.Unspecified && edgeTint.alpha > 0f) {
             listOfNotNull(
                 tintStrip(GlassEdgeTokens.TINT_TOP_STRIP_DP, GlassEdgeTokens.TINT_TOP_ALPHA, true),
-                tintStrip(GlassEdgeTokens.TINT_BOTTOM_STRIP_DP, GlassEdgeTokens.TINT_BOTTOM_ALPHA, false),
+                tintStrip(GlassEdgeTokens.TINT_BOTTOM_STRIP_DP, GlassEdgeTokens.TINT_BOTTOM_ALPHA, false)
+                    .takeIf { tintBottom },
             ).filter { strip -> strip.size.height >= MIN_LIT_PX }
         } else {
             emptyList()
