@@ -170,6 +170,11 @@ internal class LauncherSettingsStateReducer(
                         it.withQuickScroll(action.posture, action.enabled)
                     }
 
+                is LauncherShellAction.SetAppPeekThrough ->
+                    state.withLayoutSettings(launcherSettingsRepository) {
+                        it.withAppPeekThrough(action.posture, action.enabled)
+                    }
+
                 is LauncherShellAction.SetFeatureEnabled ->
                     state.withLauncherSettings(
                         settings =

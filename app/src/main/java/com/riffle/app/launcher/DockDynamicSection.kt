@@ -366,6 +366,13 @@ private const val NOW_PLAYING_MARK_DP = 18
 internal val LocalDockDynamicBoundsSink = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
 
 /**
+ * Where the Dock's body (its glass) is, in root coordinates (null once it leaves composition), so the Stream's
+ * column on
+ * an unfolded posture can stand against it. The dock host provides the sink; outside it nothing listens.
+ */
+internal val LocalDockBodyBoundsSink = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
+
+/**
  * Where each dynamic entry is, in root coordinates by key (null once it leaves composition), so a press that starts on
  * an app's icon can land the Stream on that app. The dock host provides the sink; outside it nothing listens.
  */

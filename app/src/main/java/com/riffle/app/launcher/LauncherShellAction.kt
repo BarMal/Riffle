@@ -567,6 +567,12 @@ sealed interface LauncherShellAction {
         val enabled: Boolean,
     ) : LauncherShellAction
 
+    /** Settings > Layout: whether apps show faintly through the Stream's cards (unfolded) or nothing does. */
+    data class SetAppPeekThrough(
+        val posture: LayoutPosture,
+        val enabled: Boolean,
+    ) : LauncherShellAction
+
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
 
     data class SelectOverlayDockEdge(val edge: OverlayDockEdge) : LauncherShellAction

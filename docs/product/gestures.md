@@ -28,7 +28,7 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 > arbitration that is live is the Std/Lib column (the standard Home surface), the Dock pull, the Library and the Stream.
 
 > **P13 and P14 (2026-11-12).** The Stream is a horizontal pager of pages, each one vertically scrolling stack or list,
-> with a spine as the page indicator; unfolded postures can show it as Pages (two side by side) or as the Stage view. See
+> with a spine as the page indicator; unfolded postures once showed it as Pages (two side by side) or as the Stage view; both are replaced by the column attached to the Dock (dock modes U2). See
 > ["The Stream (P4, entry points restated by P5)"](#the-stream-p4-entry-points-restated-by-p5) and the arbitration table.
 
 > **P7 (2026-11-12).** The Library is its own surface: a Thick glass sheet that rises over Home or the Stream with the
@@ -80,8 +80,8 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   under the finger with rising resistance while Home starts to fade, bounces past rest on release while the Stream's cards
   fan out of it in sequence, front card first, and Home fades away; closing is the same played backwards in time; a
   shallow press just bounces back; a finger landing mid-way catches it and the next release or press runs on from there.
-  Under reduced motion it is one short cross-fade (no dip, bounce or fan). An expanded posture still opens the last-used
-  shown state (split or Stream only) and returns to Home only, by the split's settle.
+  Under reduced motion it is one short cross-fade (no dip, bounce or fan). Every posture runs it; unfolded Home stays
+  beside and under the Stream's column.
 - **What the press exposes**: `DockPressState.onBegan`, `onMoved(travelDp)` and `onReleased` (committed or not, whether
   it was choosing, and the entry it started on), `onChoosingBegan` and `onChoosingMoved` (hold to choose, below), and
   `progress` (0 to 1, read it in a draw block). The Dock's motion draws from them.
@@ -126,8 +126,8 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   Library" and Ctrl + Shift + the arrow. Switching page: the tiles are focusable 48 dp targets with a spoken name and a
   click action ("Show Today"), and the pager's custom actions "Previous page" and "Next page". Page options: the tile's
   long-press menu (its own long-click action for assistive technology).
-- **Expanded postures (P6).** The split's divider and its actions are unchanged; the pull no longer settles among Home only,
-  split and Stream only (it only opens the Library), the press and the divider reach them.
+- **Expanded postures.** The P6 split and its divider are gone (dock modes U2): the press opens the Stream in a column attached
+  to the Dock, as folded, with Home beside and under it.
 - **Library pull (P7).** Unchanged: the sheet rises from the Dock's edge as the finger moves, 1:1, while what is under it
   fades; it commits by `DockPullThresholds` (30% of the travel or 600 dp/s toward the interior), can be caught mid-settle,
   and under reduced motion fades in. While the Library shows neither the pull nor the press is claimed.
@@ -189,7 +189,7 @@ the Dock's accessibility actions.
     upward (it is anchored at its edge) and the room it reserves grows with it, so the Stream makes room and the open card
     is not covered; the keyboard raises the Dock and the card with it (both follow the window insets). A Dock down a side
     holds no row: the actions are on the card then (`StreamCardActions.effectiveActionsPlacement`), and so wherever there
-    is no Dock to hold them (the unfolded split).
+    is no Dock to hold them (the unfolded column).
   Every gesture has a non-gesture equivalent:
 
   | Gesture | Equivalent |
@@ -198,19 +198,12 @@ the Dock's accessibility actions.
   | Tap the front card to open it, press the Dock to close it | The front card's custom action "Open card" and Enter or Space; the open card's "Close card" click action and Back; the Dock's action "Close card" (it reads "Back to Home" when no card is open) |
   | Scroll a stack to another card | The stack's own custom actions "Previous card" and "Next card" (Next is an older card, drawn above) and the front card's "Open card"; the arrow keys (up and Page Up: older; down and Page Down: newer); a tap on a peeking card. There is no on-screen stepper (the "Card 2 of 3" pill with arrows was removed in slice 4a); the front card's state description says "Card 2 of 3" |
   | Long-press a page's tile or icon in the Dock for Show as, Move and Hide, and Show for each hidden section | The long-click custom action of the tile (assistive technology), the same menu |
-  | Long-press the Stage's bar for the Stream's own menu: Show as Pages or Stage | The options button at its end (Settings > Stream chooses Pages or Stage too) |
-  | Tap a Stage rail thumbnail | It is a tab (a button named "Bring Chat to the front") |
 
   Each page is a labelled pane, the pager carries one custom-actions list, and no node carries two (the page actions are
   on the pager, Next and Previous card on the stack, Open card on the front card, Hide on each card). The cards are
   individually focusable in order, the front card first; a peeking card is one node whose description reads the card's
   whole text (what its strip hides) and whose click action is "Bring to front". The pages are in the Dock's order, and
   there is no spine or page header: the Dock is the page indicator.
-- **The Stage (P14).** On an unfolded posture the Stage view has no swipes: the rail is a column of tabs that scrolls
-  vertically (`verticalScroll`) and a tap brings a stage to the centre; the selected stage's stack is the same
-  bottom-anchored `StreamStack` (the Stage and the split keep no stack of their own). Two pages side by side (Pages on a wide screen) are one pager showing two, so a swipe still moves one
-  page.
-
 ## Mode transitions (history; the Home/Library pull was retired by P5)
 
 **The dock pull is the only mode-transition trigger** (plan Decision 9). It moves between a device
@@ -329,7 +322,6 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Card stack | 1-finger across stack axis | – | Stage pager (horizontal) |
 | Stream page (stack, list, tiles) | 1-finger vertical | Page scrolls: the stack follows the finger (dragging down brings older cards forward), flings with light inertia and settles on a card with a magnet, rubber-banding past the first or last card; or the list scrolls | same |
 | Stream page | 1-finger horizontal | Stream pager (owns): next or previous page, the Dock's ring follows | same |
-| Stream Stage rail (unfolded) | tap a thumbnail / vertical drag | Brings that stage to the centre (shared-element transition) / scrolls the rail | same |
 | Card stack | 2-finger | – | Stack (first finger's drag wins; see limitations) |
 | Card stack | 3-finger | – | **Home claims** (unbound by default) |
 | Grid / workspace | 1-finger horizontal | Page pager (owns) | – |

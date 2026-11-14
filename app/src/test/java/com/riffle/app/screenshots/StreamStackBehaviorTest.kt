@@ -151,7 +151,6 @@ class StreamStackBehaviorTest {
                             ),
                         callbacks = StreamCallbacks(onAction = { content, action -> actions += content to action }),
                         initialPageKey = chat,
-                        wideLayout = false,
                         dockLink = dock,
                     )
                 }

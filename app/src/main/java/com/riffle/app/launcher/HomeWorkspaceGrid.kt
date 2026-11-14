@@ -191,7 +191,9 @@ private fun RowScope.HomeGridCell(
             modifier =
                 Modifier
                     .width(state.cellSize)
-                    .fillMaxHeight(),
+                    .fillMaxHeight()
+                    // Flows into the fade under the Stream's column when one stands (unfolded); otherwise nothing.
+                    .gridFade(),
             contentAlignment = Alignment.Center,
         ) {
             if (activeDragSession?.projectedCell == state.cell) {

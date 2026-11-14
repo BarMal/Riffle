@@ -1,7 +1,6 @@
 package com.riffle.core.domain.launcher.stream
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.split.SplitMode
 import com.riffle.core.domain.launcher.workspace.StoredValue
 import com.riffle.core.domain.launcher.workspace.arr
 import com.riffle.core.domain.launcher.workspace.array
@@ -14,7 +13,6 @@ import com.riffle.core.domain.launcher.workspace.obj
 import com.riffle.core.domain.launcher.workspace.str
 import com.riffle.core.domain.launcher.workspace.string
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
-import kotlin.math.roundToInt
 
 const val CURRENT_STREAM_LAYOUT_SCHEMA_VERSION = 1
 
@@ -32,7 +30,6 @@ const val CURRENT_STREAM_LAYOUT_SCHEMA_VERSION = 1
 object StreamLayoutCodec {
     /** Counts above this are never useful and would only make evaluation slow. */
     private const val MAX_COUNT = 50L
-    private const val PERMILLE = 1000f
     private const val MAX_AGE_MILLIS = 365L * 24L * 60L * 60L * 1000L
 
     fun encode(layouts: StreamLayouts): StoredValue.Obj =
@@ -45,8 +42,6 @@ object StreamLayoutCodec {
                             "deviceClass" to str(deviceClass.name),
                             "sections" to arr(layout.sections.map(::encodeSection)),
                             "options" to encodeOptions(layout.options),
-                            "split" to encodeSplit(layout.split),
-                            "wideView" to str(layout.wideView.storedId),
                         )
                     },
                 ),
@@ -73,23 +68,10 @@ object StreamLayoutCodec {
         val missing = StreamSection.layoutSections.filter { section -> stored.none { it.section == section } }
         val sections = stored + missing.map { StreamSectionLayout(it) }
         val options = (root.fields["options"] as? StoredValue.Obj)?.let(::decodeOptions) ?: StreamSectionOptions()
-        val split = (root.fields["split"] as? StoredValue.Obj)?.let(::decodeSplit) ?: StreamSplit()
-        // A layout stored before the Stage view has no such field; an unknown id reads as Pages too.
-        val wideView = StreamWideView.fromStoredId(root.string("wideView")) ?: StreamWideView.PAGES
-        return deviceClass to StreamLayout(sections, options, split, wideView)
-    }
-
-    /** The fraction is stored in permille so it stays an integer; a layout stored before P6 reads as defaults. */
-    private fun encodeSplit(split: StreamSplit): StoredValue.Obj =
-        obj(
-            "fractionPermille" to num((split.fraction * PERMILLE).roundToInt()),
-            "lastShown" to str(split.lastShown.storedId),
-        )
-
-    private fun decodeSplit(root: StoredValue.Obj): StreamSplit {
-        val fraction = root.long("fractionPermille")?.let { it.toFloat() / PERMILLE } ?: StreamSplit.DEFAULT_FRACTION
-        val lastShown = SplitMode.fromStoredId(root.string("lastShown")) ?: SplitMode.SPLIT
-        return StreamSplit.of(fraction, lastShown)
+        // The unfolded Home and Stream split and the Pages or Stage view (a stored `split` and `wideView`) are gone
+        // (ADR 0003, Amendment 2): the Stream is one upright stack attached to the Dock, so there is nothing for
+        // either to choose. They are not read, and not written back.
+        return deviceClass to StreamLayout(sections, options)
     }
 
     private fun encodeSection(layout: StreamSectionLayout): StoredValue.Obj =

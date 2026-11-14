@@ -44,8 +44,8 @@ import org.junit.runner.RunWith
 /**
  * The Stream's pages on a real touch pipeline (ADR 0003, Views, Amendment 3; docs/product/gestures.md): a sideways swipe
  * changes the page and tells the Dock (which moves its ring), a vertical swipe moves the stack inside the page and never
- * the pager, the pager's accessibility actions are the non-gesture ways (the Dock's tiles are the other, tested with the
- * Dock), and the Stage view brings a rail stage to the centre. The stack is anchored to the Dock (dock modes slice 4a):
+ * the pager, and the pager's accessibility actions are the non-gesture ways (the Dock's tiles are the other, tested with
+ * the Dock). The stack is anchored to the Dock (dock modes slice 4a):
  * dragging down brings older cards (peeking above the front one) toward the front, a fling carries it on, a tap on a
  * peeking card brings it to the front and the stack's own Next and Previous card actions do the same without a drag.
  */
@@ -111,7 +111,6 @@ class StreamPagesInteractionTest {
 
     private fun show(
         layout: StreamLayout = StreamLayout.DEFAULT,
-        wide: Boolean = false,
         reduced: Boolean = true,
     ) {
         composeRule.setContent {
@@ -130,7 +129,6 @@ class StreamPagesInteractionTest {
                         ),
                     callbacks = StreamCallbacks(),
                     initialPageKey = chat,
-                    wideLayout = wide,
                     dockLink = dock,
                 )
             }
@@ -304,20 +302,6 @@ class StreamPagesInteractionTest {
         composeRule.onAllNodes(
             SemanticsMatcher.expectValue(SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Tab),
         ).assertCountEquals(0)
-    }
-
-    @Test
-    fun theStageBringsARailStageToTheCentre() {
-        show(layout = StreamLayout(wideView = com.riffle.core.domain.launcher.stream.StreamWideView.STAGE), wide = true)
-        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
-
-        composeRule.onNodeWithTag(streamStageThumbTestTag(mail)).performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithText("Only mail").assertIsDisplayed()
-        composeRule.onNode(
-            SemanticsMatcher.expectValue(SemanticsProperties.TestTag, streamStageThumbTestTag(chat)),
-        ).assertIsDisplayed()
     }
 
     private object NoIcons : AppIconLoader {

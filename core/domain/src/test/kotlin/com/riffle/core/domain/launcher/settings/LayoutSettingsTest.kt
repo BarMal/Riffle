@@ -134,4 +134,16 @@ class LayoutSettingsTest {
         assertNull(PageScrollDirection.fromStoredId(null))
         assertNull(PageIndicatorPlacement.fromStoredId("in_the_dock"))
     }
+
+    // App peek-through (Amendment 2, U2)
+
+    @Test
+    fun appPeekThroughIsOnByDefaultInBothPosturesAndIsSetPerPosture() {
+        assertTrue(LayoutSettings().folded.appPeekThrough)
+        assertTrue(LayoutSettings().unfolded.appPeekThrough)
+        val off = LayoutSettings().withAppPeekThrough(LayoutPosture.UNFOLDED, false)
+        assertFalse(off.unfolded.appPeekThrough)
+        assertTrue(off.folded.appPeekThrough)
+        assertEquals(PageScrollDirection.VERTICAL, off.unfolded.pageScroll)
+    }
 }

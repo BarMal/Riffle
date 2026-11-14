@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -412,6 +415,8 @@ internal fun DockSurfaceStrip(
             enabled = renderBackground,
         )
     val backgroundAlpha = LocalDockBackgroundAlpha.current
+    val bodyBoundsSink = LocalDockBodyBoundsSink.current
+    DisposableEffect(bodyBoundsSink) { onDispose { if (renderBackground) bodyBoundsSink(null) } }
 
     Box(
         modifier =
@@ -420,7 +425,9 @@ internal fun DockSurfaceStrip(
                 .height(if (runsHorizontally) crossAxisDp else mainAxisDp)
                 .then(
                     if (renderBackground) {
-                        Modifier.dockSurfaceAppearance(dock)
+                        Modifier
+                            .onGloballyPositioned { coordinates -> bodyBoundsSink(coordinates.boundsInRoot()) }
+                            .dockSurfaceAppearance(dock)
                     } else {
                         Modifier
                     },

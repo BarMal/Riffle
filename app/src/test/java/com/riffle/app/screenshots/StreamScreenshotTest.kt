@@ -353,7 +353,6 @@ class StreamScreenshotTest {
         initialPageKey: String? = null,
         reducedTransparency: Boolean = false,
         reducedMotion: Boolean = false,
-        wide: Boolean = false,
         paneWidth: Dp? = null,
         shortcutPages: List<StreamPage> = emptyList(),
         pinnedGroupKeys: List<String> = emptyList(),
@@ -377,7 +376,6 @@ class StreamScreenshotTest {
                         callbacks = StreamCallbacks(),
                         contentPadding = PaddingValues(top = 48.dp, bottom = 96.dp),
                         initialPageKey = initialPageKey,
-                        wideLayout = wide,
                         shortcutPages = shortcutPages,
                         pinnedGroupKeys = pinnedGroupKeys,
                     )

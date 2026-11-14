@@ -469,13 +469,14 @@ Riffle's own.
 
 ## Amendment 2 (owner, 2026-11-13): unfolded, and layout per posture
 
-Decided on the UX canvas. Part U1 is built (`docs/product/dock-modes-plan.md`, "U1: Layout per posture"): the
+Decided on the UX canvas. Both parts are built (`docs/product/dock-modes-plan.md`). **U1, "Layout per posture":** the
 layout per posture, the Dock edge, page scrolling, the page indicator and quick scroll as settings, Home, the paged
-Library and the App library Home following them, and the Layout page in Settings. Not built yet (U2): the upright
-card stack attached to a side Dock, the grid and cards ratio, the grid flowing and fading beneath the cards, app
-peek-through, and search as a panel attached to the Dock. The unfolded Pages and Stage views of the Stream and the Home
-and Stream split still stand until U2 replaces them. It replaces the unfolded "Pages or Stage" views and the Home and
-Stream split of the original decision (decision 13 and the Folded and unfolded rule). Motion is still open.
+Library and the App library Home following them, and the Layout page in Settings. **U2, "The stack attached to the
+Dock":** the upright card stack in a column attached to the Dock, the grid fading beneath it, app peek-through, and
+search as a panel in the same column. It replaces the unfolded "Pages or Stage" views and the Home and Stream split of
+the original decision (decision 13 and the Folded and unfolded rule); the split pane, its divider, the Stage view and
+the two-pages-side-by-side Pages view are removed, and a stored split or Stage choice still decodes and is ignored. Motion
+is Amendment 3's, on every posture. What differed from this text is listed under "U2" in the plan's "As built".
 
 ### Layout is a setting per posture
 

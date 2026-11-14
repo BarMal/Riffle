@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +35,7 @@ import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.AppListContext
@@ -53,6 +55,7 @@ import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.dock.DockSearchMotion
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
+import com.riffle.core.domain.launcher.home.DockPosition
 
 /**
  * Search, opened from the Dock (ADR 0003, Amendment 1, "Home, Library and search"): the field sits on the Dock's edge
@@ -66,6 +69,7 @@ import com.riffle.core.domain.launcher.dockpull.DockPullDirection
  * clears the text first. Launching a result is the caller's ([context]).
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun DockSearchSurface(
     state: LibraryState,
     context: AppListContext,
@@ -74,6 +78,13 @@ internal fun DockSearchSurface(
     tuning: DockMotionTuning,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Unfolded (ADR 0003, Amendment 2): the panel's width, the same column the Stream's cards stand in, and the Dock
+     * edge
+     * it is attached to, so the field and the results stand on the Dock's inner side as a card stack does. Null folded:
+     * the panel is as wide as the room, centred.
+     */
+    attach: SearchAttach? = null,
 ) {
     val motion = rememberDockSearchMotion(reducedMotion, tuning, onClosed = onClose)
     val onAction = context.onAction
@@ -104,10 +115,20 @@ internal fun DockSearchSurface(
         Column(
             modifier =
                 Modifier
-                    .align(Alignment.BottomCenter)
-                    .widthIn(max = SEARCH_MAX_WIDTH)
-                    .fillMaxWidth()
-                    .padding(horizontal = RiffleSpacing.s, vertical = RiffleSpacing.s)
+                    .align(attach?.alignment ?: Alignment.BottomCenter)
+                    .then(
+                        if (attach == null) {
+                            Modifier.widthIn(max = SEARCH_MAX_WIDTH).fillMaxWidth()
+                        } else {
+                            Modifier.width(attach.width)
+                        },
+                    )
+                    .padding(
+                        start = if (attach?.dockEdge == DockPosition.LEFT) 0.dp else RiffleSpacing.s,
+                        end = if (attach?.dockEdge == DockPosition.RIGHT) 0.dp else RiffleSpacing.s,
+                        top = RiffleSpacing.s,
+                        bottom = RiffleSpacing.s,
+                    )
                     .graphicsLayer {
                         val frame = DockSearchMotion.frame(motion.progress, reducedMotion)
                         alpha = frame.alpha
@@ -268,6 +289,20 @@ private fun DockPullDirection.dockEdgeOrigin(): TransformOrigin =
                 0.5f
             },
     )
+
+/** Where unfolded search is attached: the panel's [width] against the Dock's inner side at [dockEdge]. */
+internal class SearchAttach(
+    val width: Dp,
+    val dockEdge: DockPosition,
+) {
+    val alignment: Alignment
+        get() =
+            when (dockEdge) {
+                DockPosition.LEFT -> Alignment.BottomStart
+                DockPosition.RIGHT -> Alignment.BottomEnd
+                else -> Alignment.BottomCenter
+            }
+}
 
 private val SEARCH_MAX_WIDTH = 840.dp
 private const val NANOS_PER_SECOND = 1_000_000_000f

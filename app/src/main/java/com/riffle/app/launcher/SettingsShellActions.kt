@@ -122,6 +122,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectPageScroll,
         is LauncherShellAction.SelectPageIndicator,
         is LauncherShellAction.SetQuickScroll,
+        is LauncherShellAction.SetAppPeekThrough,
         is LauncherShellAction.SetFeatureEnabled,
         is LauncherShellAction.SetSimpleMode,
         LauncherShellAction.DismissDockPressHint,

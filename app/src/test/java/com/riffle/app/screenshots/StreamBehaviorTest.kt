@@ -23,17 +23,13 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.dp
-import com.riffle.app.launcher.stream.STREAM_OPTIONS_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
-import com.riffle.app.launcher.stream.STREAM_STAGE_MAIN_TEST_TAG
-import com.riffle.app.launcher.stream.STREAM_STAGE_RAIL_TEST_TAG
 import com.riffle.app.launcher.stream.StreamCallbacks
 import com.riffle.app.launcher.stream.StreamDockLink
 import com.riffle.app.launcher.stream.StreamFocusRequest
 import com.riffle.app.launcher.stream.StreamPageOption
 import com.riffle.app.launcher.stream.StreamSurface
 import com.riffle.app.launcher.stream.streamStackCardTag
-import com.riffle.app.launcher.stream.streamStageThumbTestTag
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
@@ -48,7 +44,6 @@ import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
 import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.stream.StreamView
-import com.riffle.core.domain.launcher.stream.StreamWideView
 import com.riffle.core.domain.launcher.stream.TaskContent
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
@@ -99,7 +94,6 @@ class StreamBehaviorTest {
         initialResults: Map<StreamSection, StreamSectionResult> = defaultResults(),
         focus: StreamFocusRequest? = null,
         initialPageKey: String? = null,
-        wide: Boolean = false,
     ) {
         results = initialResults
         composeRule.setContent {
@@ -123,7 +117,6 @@ class StreamBehaviorTest {
                     onFocusHandled = { id -> handledFocus += id },
                     initialPageKey = initialPageKey,
                     onPageChanged = { key -> pageChanges += key },
-                    wideLayout = wide,
                     dockLink = dock,
                 )
             }
@@ -841,99 +834,5 @@ class StreamBehaviorTest {
         goTo(StreamPageKeys.CHAT)
         composeRule.onAllNodesWithContentDescription("Dismiss").onFirst().performClick()
         assertEquals(listOf(StreamAction.Complete, StreamAction.Dismiss), actions.map { it.second })
-    }
-
-    // Unfolded: two pages and the Stage ----------------------------------------------------------------------------
-
-    @Test
-    @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
-    fun onAWideScreenTwoPagesShareTheWidth() {
-        show(initialPageKey = StreamPageKeys.CHAT, wide = true)
-        composeRule.waitForIdle()
-        // Chat and the page after it (Mail) are both on screen at once.
-        composeRule.onNodeWithText("Are we still on for lunch tomorrow?").assertIsDisplayed()
-        composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
-    }
-
-    @Test
-    fun onAPhoneOnePageShowsEvenWhenWideIsAsked() {
-        show(initialPageKey = StreamPageKeys.CHAT, wide = true)
-        composeRule.waitForIdle()
-        composeRule.onNodeWithText("Are we still on for lunch tomorrow?").assertIsDisplayed()
-        composeRule.onAllNodesWithText("Invoice 2026-114").assertCountEquals(0)
-    }
-
-    @Test
-    @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
-    fun theStageShowsOneStageLargeAndARailOfTheOthers() {
-        layout = StreamLayout(wideView = StreamWideView.STAGE)
-        show(initialPageKey = StreamPageKeys.CHAT, wide = true)
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(STREAM_STAGE_MAIN_TEST_TAG).assertIsDisplayed()
-        // The selected stage is not in the rail; every other page is.
-        composeRule.onAllNodesWithText("Are we still on for lunch tomorrow?").onFirst().assertIsDisplayed()
-        composeRule.onNodeWithTag(streamStageThumbTestTag(StreamPageKeys.CHAT)).assertDoesNotExist()
-        composeRule.onNodeWithTag(streamStageThumbTestTag(StreamPageKeys.MAIL)).assertIsDisplayed()
-        composeRule.onNodeWithTag(streamStageThumbTestTag(StreamPageKeys.NOW)).assertIsDisplayed()
-    }
-
-    @Test
-    @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
-    fun tappingARailStageBringsItToTheCentreAndSendsTheOtherBack() {
-        layout = StreamLayout(wideView = StreamWideView.STAGE)
-        show(initialPageKey = StreamPageKeys.CHAT, wide = true)
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag(streamStageThumbTestTag(StreamPageKeys.MAIL)).performClick()
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
-        composeRule.onNodeWithTag(streamStageThumbTestTag(StreamPageKeys.MAIL)).assertDoesNotExist()
-        composeRule.onNodeWithTag(streamStageThumbTestTag(StreamPageKeys.CHAT)).assertIsDisplayed()
-        // The stage just left is first in the rail.
-        val rail = composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).fetchSemanticsNode()
-        assertTrue(rail.children.isNotEmpty())
-        assertEquals(StreamPageKeys.MAIL, pageChanges.last())
-    }
-
-    @Test
-    @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
-    fun theStageAndItsMainStackStillTakeActions() {
-        layout = StreamLayout(wideView = StreamWideView.STAGE)
-        show(initialPageKey = StreamPageKeys.NOW, wide = true)
-        composeRule.waitForIdle()
-        composeRule.onNodeWithContentDescription("Pause").performClick()
-        assertEquals(listOf(StreamAction.Pause), actions.map { it.second })
-    }
-
-    @Test
-    @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
-    fun theStagesMenuShowsAsPagesOrStageAndUndoes() {
-        // The pager has no bar of its own to hold the Stream's menu any more (Settings > Stream chooses Pages or
-        // Stage);
-        // the Stage keeps its slim bar and its menu.
-        layout = StreamLayout(wideView = StreamWideView.STAGE)
-        show(wide = true)
-        composeRule.onNodeWithTag(STREAM_OPTIONS_TEST_TAG).performClick()
-        composeRule.onNodeWithText("Pages").performClick()
-        assertEquals(StreamWideView.PAGES, layout.wideView)
-        composeRule.onNodeWithText("Stream shown as Pages").assertIsDisplayed()
-        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertDoesNotExist()
-
-        composeRule.onNodeWithText("Undo").performClick()
-        composeRule.waitForIdle()
-        assertEquals(StreamWideView.STAGE, layout.wideView)
-        composeRule.onNodeWithTag(STREAM_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
-    }
-
-    @Test
-    fun aPhoneHasNoWideChoice() {
-        show(wide = false)
-        composeRule.onAllNodesWithContentDescription("Stream options").assertCountEquals(0)
-        composeRule.onAllNodes(
-            SemanticsMatcher.expectValue(SemanticsProperties.TestTag, STREAM_OPTIONS_TEST_TAG),
-        ).assertCountEquals(0)
     }
 }

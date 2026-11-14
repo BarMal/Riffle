@@ -53,8 +53,12 @@ internal class StreamPullInputs(
     val available: Boolean,
     /** Whether the Stream is showing now, counting a committed switch the shell has not shown yet. */
     val shown: Boolean,
-    /** Where a pull starts on an expanded posture (Home only, split, Stream only), read fresh; null on the phone. */
-    val split: (() -> SplitPullSetup?)? = null,
+    /**
+     * Whether Home stays on screen with the Stream open (unfolded: the Stream is a column attached to the Dock, with
+     * Home
+     * beneath and beside it, ADR 0003, Amendment 2). Home then never fades or scales with the trampoline.
+     */
+    val homeStays: Boolean = false,
     /** Where the Stream lands; a landing a pull asked for and that sprang back is dropped. */
     val focus: StreamFocusRequests? = null,
     /**
@@ -110,6 +114,8 @@ internal class HomeDockPullBinding(
     private val direction: DockPullDirection,
     /** What Home is drawn at once no pull runs: 0 where a committed switch left the Stream over it, else 1. */
     private val homeAlphaAtRest: () -> Float = { 1f },
+    /** Whether Home stays in place with the Stream open (see [StreamPullInputs.homeStays]); read fresh. */
+    private val homeStays: () -> Boolean = { false },
     /** What the Stream is drawn at once no pull runs: 1 where it is shown, else 0. */
     private val streamAlphaAtRest: () -> Float = { 1f },
 ) {
@@ -180,7 +186,7 @@ internal class HomeDockPullBinding(
             .testTag(STREAM_PULL_SURFACE_TEST_TAG)
             .semantics { drawnSurface = drawnStream(libraryShown) }
             .graphicsLayer {
-                if (dockPull.streamRunning && !dockPull.splitting) {
+                if (dockPull.streamRunning) {
                     val travel = streamTravel()
                     translationX = dockPull.direction.unitX * travel * size.width
                     translationY = dockPull.direction.unitY * travel * size.height
@@ -197,20 +203,24 @@ internal class HomeDockPullBinding(
      */
     private fun homeAlpha(libraryShown: Boolean): Float =
         when {
-            dockPull.streamRunning && !dockPull.splitting -> frame.value.homeAlpha
+            dockPull.streamRunning -> frame.value.homeAlpha
             dockPull.libraryRunning -> 1f - dockPull.progress.coerceIn(0f, 1f)
             libraryShown -> 0f
-            else -> motion.homeFrame()?.alpha ?: homeAlphaAtRest()
+            else -> if (homeStays()) 1f else motion.homeFrame()?.alpha ?: homeAlphaAtRest()
         }
 
     /** Home's size: it scales down a little as the trampoline fades it, and is full size otherwise. */
     private fun homeScale(libraryShown: Boolean): Float =
-        if (libraryShown || dockPull.streamRunning || dockPull.libraryRunning) 1f else motion.homeFrame()?.scale ?: 1f
+        when {
+            libraryShown || dockPull.streamRunning || dockPull.libraryRunning -> 1f
+            homeStays() -> 1f
+            else -> motion.homeFrame()?.scale ?: 1f
+        }
 
     /** What the Stream is drawn at right now: the mirror of [homeAlpha], so neither flashes as the pull ends. */
     private fun streamAlpha(libraryShown: Boolean): Float =
         when {
-            dockPull.streamRunning && !dockPull.splitting -> frame.value.streamAlpha
+            dockPull.streamRunning -> frame.value.streamAlpha
             dockPull.libraryRunning -> 1f - dockPull.progress.coerceIn(0f, 1f)
             libraryShown -> 0f
             // Composed only so the Dock has the Stream's pages to draw its tiles from: nothing of it shows.
@@ -231,8 +241,7 @@ internal class HomeDockPullBinding(
     }
 
     /** How far the Stream is from rest along the pull axis, as a fraction of the window (0 at rest). */
-    private fun streamTravel(): Float =
-        if (dockPull.streamRunning && !dockPull.splitting) frame.value.streamOffsetFraction else 0f
+    private fun streamTravel(): Float = if (dockPull.streamRunning) frame.value.streamOffsetFraction else 0f
 }
 
 @Composable
@@ -321,29 +330,30 @@ internal fun rememberHomeDockPullBinding(
         frame = frameState,
         direction = direction,
         homeAlphaAtRest = { restAlpha(dockPull, latestStream.value, streamSurface = false) },
+        homeStays = { latestStream.value.homeStays },
         streamAlphaAtRest = { restAlpha(dockPull, latestStream.value, streamSurface = true) },
     )
 }
 
 /**
  * What a surface is drawn at once no pull runs: Home gone behind the Stream and the Stream fully shown where a switch
- * to the Stream ended (a committed one counts at once), the other way round where it ended at Home. An expanded
- * posture rests in a split or Stream-only layout the split panes draw themselves, so both stay at 1 there.
+ * to the Stream ended (a committed one counts at once), the other way round where it ended at Home. Home stays at 1
+ * where it stays under the Stream's column ([StreamPullInputs.homeStays]).
  */
 private fun restAlpha(
     dockPull: DockPullState,
     stream: StreamPullInputs,
     streamSurface: Boolean,
 ): Float {
-    if (stream.split != null) return 1f
+    if (!streamSurface && stream.homeStays) return 1f
     val streamShown = dockPull.pendingStreamShown ?: stream.shown
     return if (streamShown == streamSurface) 1f else 0f
 }
 
 /**
  * Connects the pull's, the press's and the trampoline's ends to the shell: a commit sends its action, a spring-back
- * drops the landing it asked for, a press is drawn by the [motion] (the dip and Home's first fade) unless an expanded
- * posture settles it by the split, a committed press hands the entry it started on to the host, which opens or closes
+ * drops the landing it asked for, a press is drawn by the [motion] (the dip and Home's first fade), a committed
+ * press hands the entry it started on to the host, which opens or closes
  * the Stream, and a press that stopped short only bounces back. The motion tells the shell when an opening starts and
  * a closing has finished.
  */
@@ -361,7 +371,6 @@ private fun BindPullCallbacks(
 ) {
     val latestReduced = rememberUpdatedState(reducedMotion)
     SideEffect {
-        // An expanded posture settles a press by the split (the pull's own settle); there the press is not drawn.
         press.onBegan = {
             choice.prepare(fromContextual = latestStream.value.shown)
             diagnostics.value =
@@ -372,9 +381,7 @@ private fun BindPullCallbacks(
                     landingNearKey = press.startedNearKey,
                     landingEntryX = choice.entryX(press.startedNearKey),
                 )
-            if (latestStream.value.split == null) {
-                motion.beginPress(fromOpen = latestStream.value.shown, reducedMotion = latestReduced.value)
-            }
+            motion.beginPress(fromOpen = latestStream.value.shown, reducedMotion = latestReduced.value)
         }
         press.onMoved = { travelDp -> motion.updatePress(travelDp) }
         // Hold to choose: the Dock and Home hold where they are, Home dims further, and the selection takes over.
@@ -526,18 +533,17 @@ private fun dockPullActions(
             null
         }
     val open: (DockPullDestination) -> Boolean = { destination ->
-        val split = stream.split?.invoke()
         when {
             // With a card open this is the press: it closes the card, the Stream stays.
             destination == DockPullDestination.HOME && stream.shown && stream.openCard.close() -> true
             // The trampoline: the same change as the press, without a finger.
-            destination != DockPullDestination.LIBRARY && split == null -> {
+            destination != DockPullDestination.LIBRARY -> {
                 motion.run(open = destination == DockPullDestination.STREAM, reducedMotion, shown = stream.shown)
                 true
             }
             else -> {
                 motion.finishNow()
-                dockPull.open(destination, direction, reducedMotion, split)
+                dockPull.open(destination, direction, reducedMotion)
             }
         }
     }
@@ -608,8 +614,6 @@ private fun rememberDockPullGestureHost(
                 return extentPx / latestDensity.value
             }
 
-            override fun splitSetup(): SplitPullSetup? = latestStream.value.split?.invoke()
-
             override val press: DockPressState = press
 
             override fun settleMotion() = motion.finishNow()
@@ -617,9 +621,9 @@ private fun rememberDockPullGestureHost(
             override val canPress: Boolean
                 get() = latestStream.value.available && this.canPull
 
-            // Choosing draws the Dock's early extension and Home's dimming: folded phone only, like the fan.
+            // Choosing draws the Dock's early extension and Home's dimming.
             override val canChoose: Boolean
-                get() = latestStream.value.split == null
+                get() = true
 
             override val holdMillis: Long
                 get() = motion.tuning.holdMillis.toLong()

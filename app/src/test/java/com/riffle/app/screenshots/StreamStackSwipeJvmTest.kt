@@ -128,7 +128,6 @@ class StreamStackSwipeJvmTest {
                         ),
                     callbacks = StreamCallbacks(),
                     initialPageKey = chat,
-                    wideLayout = false,
                     dockLink = dock,
                 )
             }

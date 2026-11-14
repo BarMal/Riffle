@@ -23,7 +23,7 @@ Builds ADR 0003 Amendment 2 in two parts. Each part is one pull request that lea
 | Part | What it delivers | Depends on |
 | --- | --- | --- |
 | U1. Layout per posture | The layout as a setting per posture (Dock edge, which way the app pages scroll, the page indicator and quick scroll), Home, the paged Library and the App library Home following it, with the handle in front of a side Dock's middle, and the Layout page in Settings. **Built**, see "As built". | 7a, 7b |
-| U2. Stack attached to the Dock | The upright card stack attached to a side Dock, the third of the screen for cards and two thirds for the grid, the grid flowing and fading continuously beneath the cards from the screen edge, and app peek-through. **Next.** | U1 |
+| U2. Stack attached to the Dock | The upright card stack attached to a side Dock, the third of the screen for cards and two thirds for the grid, the grid flowing and fading continuously beneath the cards from the screen edge, and app peek-through. The Home and Stream split and the Stage view are replaced. **Built**, see "As built". | U1 |
 
 ## Rules for every slice
 
@@ -753,8 +753,82 @@ label legibility on a bright wallpaper rests on the labels' own shadow (`Wallpap
 desktop window the section edits the class being held (the phone's landscape layout has its own edge). The Library's Dock edge
 follows the Home edge when it is chosen (as it did). The first-run hint clears a vertical handle's length above a bottom Dock.
 
-**Left for U2.** The card stack attached to the Dock, the grid and cards ratio, the continuously flowing and fading grid, app
-peek-through, and search as a panel attached to the Dock. The Stage view of the Stream is untouched and still there.
+**Left for U2** (all built, see below). The card stack attached to the Dock, the grid and cards ratio, the continuously flowing and
+fading grid, app peek-through, and search as a panel attached to the Dock; the Stage view and the split are gone.
+
+### U2: The stack attached to the Dock (built)
+
+**Built.**
+
+- **One Stream, one motion.** Unfolded (a foldable opened flat, a tablet, a desktop window: `LayoutPosture.UNFOLDED`) the Stream is
+  the same contextual mode as folded: pressing the Dock toward its edge, a tap on a live icon or a tile, the accessibility
+  action and the keyboard all run the Dock's trampoline and the fan (`DockMotionState`, slice 6's tuning and reduced motion
+  apply), and closing is the opening reversed. What changed is where the cards stand and that **Home stays**: it is composed
+  and drawn at full opacity under and beside the Stream (`HomeDockPullBinding`, `StreamPullInputs.homeStays`; no fade or scale
+  with the trampoline, it still fades under the Library and under search as it does folded).
+- **The column** (`:core:domain` `launcher/stream/StreamColumn.kt`, pure; `StreamColumnHost.kt`). The reused `StreamSurface` (the
+  same pager of upright stacks, `StreamStack`, drag, fling, magnet, tints, images, the Dock's ringed icon, the open card) in a column
+  attached to the Dock's inner side: a third of the screen's width at rest (320 dp at least), up to half (440 dp at least) with a card
+  open; vertically its bottom is at the Dock's lower end (the live pages are there), 448 dp tall at rest (the tallest front card, the
+  cards peeking above it and the gap under it) and up to 480 dp with a card open. Beside a left or right Dock the column's inner edge
+  is the Dock body's inner edge (`LocalDockBodyBoundsSink`, `HomeDockHostState.bodyBounds`, captured at rest so a press's dip does
+  not move it; a 4 dp sliver and the Stream page's own 16 dp side padding are accounted for, so the cards stand against the glass);
+  above a bottom Dock it is centred on the Dock and stands on it. The column's rectangle is read in layout (`dpBounds`), so it
+  widening as a card opens relays out and recomposes nothing. It never crosses a vertical hinge (the open width is cut back).
+  It takes the touches of its own rectangle, under the Dock in the draw order.
+- **Opening a card.** The column eases (smooth spring, a snap under reduced motion) to its open size, the Dock side and the bottom
+  staying put, and the open card grows from where its browse card stood toward the middle of the screen (`OpenCardPlacement`
+  is read as "above the Dock" in the column whatever the setting says: it grows, it does not travel to the column's centre). A side Dock
+  holds no actions row, and a bottom Dock's would stand under the column, so the actions are on the card.
+- **The grid fades, it is never cut** (`StreamGridFade`, pure, tested; `GridFadeField`, `Modifier.gridFade`). Home's grid keeps its
+  full width. Each cell (the placed grid's and the paged Library's) reads its own opacity from where it stands: untouched beyond 144 dp
+  of the column, easing (a smoothstep, so no step) to 22% under it with peek-through, or to nothing without. Drawn as a per-cell
+  `graphicsLayer` alpha read in the draw phase: no blur, gradient, offscreen layer or blend mode. The fade comes in with the Stream, and the
+  22% goes out as a card opens (dense text over faint icons was unreadable). A cell exposes the opacity it is drawn at as a semantics
+  property (`GridFadeAlphaKey`), for tests.
+- **App peek-through** (`PostureLayoutSettings.appPeekThrough`, stored as `layout.<posture>.appPeekThrough`, **on by default**; Settings >
+  Layout > Unfolded > "Apps behind the cards"; `SettingKey.LAYOUT_UNFOLDED_APP_PEEK_THROUGH` for search). An old blob has no key and
+  decodes to on. Only the unfolded posture reads it.
+- **The handle** stays in front of the Dock's middle while the Stream is closed. While the column stands (Stream out) the pill is not
+  drawn and its room stays, so nothing moves: the column stands where the handle does, and folded the handle goes with Home when the
+  Stream is out. Pages still swipe with the Stream out; the handle's quick scroll and its "Page selector" actions are back with Home.
+- **Search** (`DockSearchSurface(attach)`) unfolded is the column's width, against the Dock's inner side, field at the bottom, results
+  above, rising from the Dock as folded (`StreamColumn.restWidthDp`).
+- **Replaced and removed.** The split pane (`SplitSurface`, `SplitPaneState`, the divider, `SplitMode`, `SplitGeometry`, `SplitSettle`,
+  `SplitReveal`, `StreamSplit` and `StreamLayoutAction.SetSplit`), the Stage view (`StreamStageView`, `StreamStage`, the rail, the
+  slim bar and the Stream's own menu `StreamMenu`) and the two-pages-side-by-side Pages view (`StreamPagesPerView`,
+  `StreamWideView`, `StreamLayoutAction.SetWideView`, the "Show the Stream as" row in Settings > Stream, the strings), and the Dock pull's
+  split settle (`SplitPullSetup`, `DockPullState.splitting`, `reveal`, `onSplitSettled`). Deleted, not left compiling.
+- **Stored data.** `StreamLayoutCodec` no longer reads or writes a posture's `split` and `wideView`: a layout stored with either decodes
+  with its sections and options intact (a Stage or Pages choice, a split fraction or a bad value of either is ignored) and is written
+  back without them. `StreamLayoutCodecTest.aLayoutStoredWithTheSplitAndTheStageViewStillDecodesAndTheyAreIgnored` pins it.
+- **Hold to choose and the press** are now on every posture, as the folded phone's: the unfolded press was the split's settle and is
+  the trampoline now.
+- **Tests.** `:core:domain`: `StreamColumnTest` (the width per ratio and floor, the column against a right, a left and a bottom Dock,
+  the measured Dock's bottom and the dip not moving the edge, opening, a short window, a hinge), `StreamGridFadeTest` (no column, under
+  it, clear of it, no step, above and below, peek-through against off, presence, an open card), `LayoutSettingsTest` (the setting),
+  `StreamLayoutCodecTest` (old data). `app` JVM: `LayoutSettingsCodecTest` (round trip, an old blob, a bad value). Robolectric through the
+  real shell content, `UnfoldedStreamColumnTest` (a press on a right Dock opens the stack attached to it, Home stays at full opacity and
+  its grid spans the width, the fade under the column and its absence clear of it, peek-through off, paging with the Stream out, the handle,
+  opening a card (wider, taller, actions on the card), closing by press, Back and the accessibility actions, a left Dock mirrored, a
+  bottom Dock, search in the column's width; screenshots dark and light of the stack with peek-through on and off, an open card, a left
+  Dock, a bottom Dock and search). Device: `UnfoldedStreamColumnInteractionTest` (compiled, not run).
+
+**What differed from the design.**
+
+- **The ratio is a constant, not a setting.** The owner wanted to experiment with ratios; the ADR lists no setting for it, so it is
+  `StreamColumn.REST_FRACTION` (a third) and `OPEN_FRACTION` (a half), with floors in dp so a card stays readable on a 840 dp window.
+- **The column holds a bounded height, not the whole edge.** A full-height column would have covered the handle and hidden the grid
+  where there are no cards; the stack's rest height is fixed instead, which also lets the fade stay under the cards.
+- **The handle is hidden while the Stream is out** (see above) instead of standing "below the dots": the amendment's picture has the
+  stack below the dots and an open card covering them, and a stack of one card plus three strips is taller than the Dock's lower half on
+  an 840 dp window. Hiding is deterministic and closest to folded.
+- **The press on a bottom Dock unfolded** has its card actions on the card, not in a Dock row (see above).
+- **Stage, two pages and the split are gone with no stored equivalent**: there is no unfolded view choice left.
+
+**Assumptions.** The column is anchored to the Dock's lower end rather than to its live icons exactly. A tablet or desktop window with a
+left Dock gets the same column. The grid cell of a wide widget fades by where its first cell is. Hinges are read from the window layout the
+activity already tracks (`adaptiveStageWindowLayout`); a horizontal (tabletop) hinge is not avoided.
 
 ### Glass and Dock sizing (after slice 4a)
 

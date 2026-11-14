@@ -164,6 +164,22 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
+    fun persistsAppPeekThroughPerPostureAndItIsOnByDefault() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val start = LauncherShellState()
+        assertEquals(true, start.launcherSettings.layout.unfolded.appPeekThrough)
+
+        val off = reducer.reduce(start, LauncherShellAction.SetAppPeekThrough(LayoutPosture.UNFOLDED, false))
+
+        assertEquals(false, off.launcherSettings.layout.unfolded.appPeekThrough)
+        assertEquals(true, off.launcherSettings.layout.folded.appPeekThrough)
+        assertEquals(off.launcherSettings, repository.savedSettings)
+        val on = reducer.reduce(off, LauncherShellAction.SetAppPeekThrough(LayoutPosture.UNFOLDED, true))
+        assertEquals(LayoutSettings(), on.launcherSettings.layout)
+    }
+
+    @Test
     fun persistsScreenContentProtectionAndDefaultsToOff() {
         val repository = FakeLauncherSettingsRepository()
         assertEquals(false, LauncherShellState().launcherSettings.privacy.protectScreenContent)

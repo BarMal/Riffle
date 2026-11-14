@@ -424,14 +424,25 @@ class UnfoldedLayoutTest {
         assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenAppDrawer), actions)
     }
 
-    // Hold to choose is the folded phone's (an expanded posture's press stays the split's settle, as it was), so it is
-    // checked on a folded phone with its Dock on the right edge.
+    // Hold to choose is every posture's (the unfolded press was the split's settle once, and is the trampoline now), so
+    // it is checked on a folded phone and on the unfolded foldable, each with its Dock on the right edge.
     @Test
     @Config(qualifiers = ScreenshotDevices.COMPACT_PHONE)
-    fun holdingAFoldedRightDockPressedChoosesInsteadOfToggling() {
+    fun holdingAFoldedRightDockPressedChoosesInsteadOfToggling() =
+        holdingARightDockChoosesInsteadOfToggling(
+            folded(dock = DockPosition.RIGHT),
+        )
+
+    @Test
+    fun holdingAnUnfoldedRightDockPressedChoosesInsteadOfToggling() =
+        holdingARightDockChoosesInsteadOfToggling(
+            unfolded(),
+        )
+
+    private fun holdingARightDockChoosesInsteadOfToggling(state: LauncherShellState) {
         val executor = Executors.newSingleThreadExecutor { Thread(it, "unfolded-choose").apply { isDaemon = true } }
         try {
-            show(folded(dock = DockPosition.RIGHT), stream = realWiringStreamHost(executor = executor))
+            show(state, stream = realWiringStreamHost(executor = executor))
             composeRule.pressDock(distancePx = PRESS_PX, edge = DockPosition.RIGHT, release = false, settle = false)
             composeRule.mainClock.advanceTimeBy(HOLD_MILLIS)
             composeRule.waitUntil(timeoutMillis = 5_000) {
