@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -97,7 +100,12 @@ internal fun NextEventCard(
                 sourceModifier
                     .fillMaxSize()
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
-                    .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
+                    .padding(
+                        start = RiffleSpacing.l,
+                        end = RiffleSpacing.l,
+                        top = StreamHeaderTopPadding,
+                        bottom = RiffleSpacing.s,
+                    ),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
         ) {
             Column(
@@ -108,23 +116,15 @@ internal fun NextEventCard(
                         .streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
                 verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-                ) {
-                    Text(
-                        text = eventSpanText(content, env),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f),
-                    )
-                    StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
-                }
+                StreamCardHeader(
+                    icon = { StreamGlyph(StreamIcons.Agenda) },
+                    title = eventTitle(content),
+                    trailing = { StreamHideMenuButton(hideChoices, content, groupKey, callbacks) },
+                )
                 Text(
-                    text = eventTitle(content),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    text = eventSpanText(content, env),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 (content.location ?: content.calendarName)?.takeIf { it.isNotBlank() }?.let { place ->
                     Text(
@@ -236,22 +236,31 @@ internal fun TodoCard(
                 sourceModifier
                     .fillMaxSize()
                     .testTag(TODAY_TODO_TEST_TAG)
-                    .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
+                    .padding(
+                        start = RiffleSpacing.l,
+                        end = RiffleSpacing.l,
+                        top = StreamHeaderTopPadding,
+                        bottom = RiffleSpacing.s,
+                    ),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.stream_today_todo_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f).semantics { heading() },
-                )
-                Text(
-                    text = todoCountsText(card),
-                    style = MaterialTheme.typography.labelLarge,
-                    color =
-                        if (card.overdue > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                )
-            }
+            StreamCardHeader(
+                icon = { StreamGlyph(Icons.Filled.CheckCircle) },
+                title = stringResource(R.string.stream_today_todo_title),
+                modifier = Modifier.semantics { heading() },
+                trailing = {
+                    Text(
+                        text = todoCountsText(card),
+                        style = MaterialTheme.typography.labelLarge,
+                        color =
+                            if (card.overdue > 0) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
+                    )
+                },
+            )
             if (card.tasks.isEmpty()) {
                 Text(
                     text = stringResource(R.string.stream_today_todo_nothing),
@@ -305,12 +314,17 @@ internal fun TomorrowCard(
                             Modifier
                         },
                     )
-                    .padding(RiffleSpacing.l),
+                    .padding(
+                        start = RiffleSpacing.l,
+                        end = RiffleSpacing.l,
+                        top = StreamHeaderTopPadding,
+                        bottom = RiffleSpacing.l,
+                    ),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
         ) {
-            Text(
-                text = stringResource(R.string.stream_today_tomorrow_title),
-                style = MaterialTheme.typography.titleMedium,
+            StreamCardHeader(
+                icon = { StreamGlyph(StreamIcons.Agenda) },
+                title = stringResource(R.string.stream_today_tomorrow_title),
                 modifier = Modifier.semantics { heading() },
             )
             Text(
@@ -345,12 +359,22 @@ internal fun NoticeCard(
         tint = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(RiffleSpacing.l),
+            modifier =
+                Modifier.fillMaxSize().padding(
+                    start = RiffleSpacing.l,
+                    end = RiffleSpacing.l,
+                    top = StreamHeaderTopPadding,
+                    bottom = RiffleSpacing.l,
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            // From the top: when the card is one behind the front, its strip shows the sentence.
+            // From the top: when the card is one behind the front, its strip shows its icon and its title.
             verticalArrangement = Arrangement.Top,
         ) {
             val action = noticeAction(notice, callbacks)
+            StreamCardHeader(
+                icon = { StreamGlyph(Icons.Filled.Info) },
+                title = noticeTitle(notice),
+            )
             Text(
                 text = noticeText(notice),
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
@@ -367,6 +391,19 @@ internal fun NoticeCard(
         }
     }
 }
+
+/** The one-line name of a notice, for the strip of its card: the sentence itself is the card's body. */
+@Composable
+internal fun noticeTitle(notice: Notice): String =
+    when (notice) {
+        Notice.ShortcutsNeedHome -> stringResource(R.string.stream_notice_shortcuts_title)
+        is Notice.Today ->
+            when (val today = notice.notice) {
+                is TodayNotice.Permission -> stringResource(R.string.stream_notice_permission_title)
+                is TodayNotice.TasksNotConnected -> stringResource(R.string.stream_notice_tasks_not_connected_title)
+                TodayNotice.TasksUnavailable -> stringResource(R.string.stream_notice_tasks_unavailable_title)
+            }
+    }
 
 @Composable
 internal fun noticeText(notice: Notice): String =

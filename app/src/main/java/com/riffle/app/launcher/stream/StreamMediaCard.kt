@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -66,27 +65,40 @@ internal fun MediaCard(
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     StreamCardSurface(content.id.value, content.app, content.icon, env, modifier) { sourceModifier ->
-        Box(modifier = sourceModifier.fillMaxSize(), contentAlignment = Alignment.BottomStart) {
+        Box(
+            modifier = sourceModifier.fillMaxSize().streamHideActions(hideChoices, content, groupKey, callbacks),
+        ) {
             StreamArtwork(
                 content.artwork,
                 env,
                 sizeHint = StreamCardHeights.media,
                 modifier = Modifier.matchParentSize(),
             )
-            GlassSurface(
-                modifier = Modifier.fillMaxWidth(),
-                weight = GlassWeight.Thick,
-                shape = RectangleShape,
-                tint = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
-                MediaDeck(content, env, callbacks, groupKey, hideChoices, onOpen)
+            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+                // The top of the card: the app's icon and the track, so the strip behind another card says what plays.
+                GlassSurface(
+                    modifier = Modifier.fillMaxWidth(),
+                    weight = GlassWeight.Thick,
+                    shape = RectangleShape,
+                    tint = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    MediaHeader(content, env, callbacks, groupKey, hideChoices, onOpen)
+                }
+                GlassSurface(
+                    modifier = Modifier.fillMaxWidth(),
+                    weight = GlassWeight.Thick,
+                    shape = RectangleShape,
+                    tint = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    MediaDeck(content, callbacks)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun MediaDeck(
+private fun MediaHeader(
     content: MediaContent,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
@@ -94,50 +106,38 @@ private fun MediaDeck(
     hideChoices: List<HideChoice>,
     onOpen: (() -> Unit)?,
 ) {
+    StreamCardHeader(
+        icon = { StreamIcon(content.icon, env, StreamHeaderIconSize, shape = RiffleShapes.small, lightsCard = true) },
+        title = content.title ?: stringResource(R.string.stream_hidden_content),
+        subtitle = content.artist,
+        modifier =
+            Modifier.padding(
+                start = RiffleSpacing.l,
+                end = RiffleSpacing.xs,
+                top = StreamHeaderTopPadding,
+                bottom = RiffleSpacing.xs,
+            ),
+        contentModifier =
+            Modifier.streamClickable(
+                onOpen ?: { callbacks.onAction(content, StreamAction.Open) },
+                stringResource(if (onOpen != null) R.string.stream_open_card else R.string.stream_media_open_player),
+            ),
+        trailing = { StreamHideMenuButton(hideChoices, content, groupKey, callbacks) },
+    )
+}
+
+@Composable
+private fun MediaDeck(
+    content: MediaContent,
+    callbacks: StreamCallbacks,
+) {
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .streamHideActions(hideChoices, content, groupKey, callbacks)
                 .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
         verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-        ) {
-            StreamIcon(content.icon, env, RiffleSpacing.xl, shape = RiffleShapes.small, lightsCard = true)
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .heightIn(min = StreamMinTarget)
-                        .streamClickable(
-                            onOpen ?: { callbacks.onAction(content, StreamAction.Open) },
-                            stringResource(
-                                if (onOpen != null) R.string.stream_open_card else R.string.stream_media_open_player,
-                            ),
-                        ),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = content.title ?: stringResource(R.string.stream_hidden_content),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                content.artist?.takeIf { it.isNotBlank() }?.let { artist ->
-                    Text(
-                        text = artist,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-            StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
-        }
         MediaScrubber(content, callbacks)
         MediaTransport(content, callbacks)
     }

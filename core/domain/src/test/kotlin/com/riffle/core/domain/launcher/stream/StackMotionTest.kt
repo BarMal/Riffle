@@ -356,6 +356,16 @@ class StackMotionTest {
         assertNull(StackSettle.step(0, 1, older = true))
     }
 
+    @Test
+    fun aStripAtRestShowsAtLeastTheStripHeightOfItsCardWhateverItsRank() {
+        // The header of every card (an icon and a one-line title) lies wholly inside this many dp of the card's top.
+        assertEquals(pitch - gap, StreamCardStackSpec.STRIP_HEIGHT_DP, eps)
+        for (r in 1..StreamCardStackSpec.VISIBLE_PEEKS) {
+            val clip = geometry.frame(r.toFloat()).clipHeightDp
+            assertTrue(clip >= StreamCardStackSpec.STRIP_HEIGHT_DP - eps, "rank $r clips the card at $clip dp")
+        }
+    }
+
     private companion object {
         const val FRAME = 1f / 60f
         const val MAX_FRAMES = 600

@@ -21,7 +21,7 @@ import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
 
-private val ShortcutIconSize = RiffleSpacing.xxxl
+private val ShortcutIconSize = StreamHeaderIconSize
 private const val DISABLED_ALPHA = 0.6f
 
 /** The test tag of a shortcut card's tap target, by the shortcut's id (empty for the app's own "Open" card). */
@@ -44,7 +44,7 @@ internal fun AppShortcutCard(
     val canLaunch = StreamActionPolicy.offers(content, StreamAction.Open)
     val launchLabel = stringResource(R.string.stream_shortcut_launch, title)
     StreamCardSurface(content.id.value, content.app, null, env, modifier) { sourceModifier ->
-        Row(
+        Column(
             modifier =
                 sourceModifier
                     .fillMaxSize()
@@ -57,28 +57,27 @@ internal fun AppShortcutCard(
                             Modifier
                         },
                     )
-                    .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
+                    .padding(
+                        start = RiffleSpacing.l,
+                        end = RiffleSpacing.l,
+                        top = StreamHeaderTopPadding,
+                        bottom = RiffleSpacing.s,
+                    ),
         ) {
-            StreamIcon(content.icon, env, ShortcutIconSize, lightsCard = true)
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
+            // From the top: the icon and the name are what the card's strip shows (the detail is under them).
+            StreamCardHeader(
+                icon = { StreamIcon(content.icon, env, ShortcutIconSize, lightsCard = true) },
+                title = title,
+            )
+            shortcutDetail(content)?.let { detail ->
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
+                    text = detail,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                shortcutDetail(content)?.let { detail ->
-                    Text(
-                        text = detail,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
             }
         }
     }
