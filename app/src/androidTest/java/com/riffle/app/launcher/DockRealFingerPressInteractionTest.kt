@@ -74,7 +74,7 @@ class DockRealFingerPressInteractionTest {
         val took = realPress(landingOn(tileNodes()))
         composeRule.runOnIdle {
             assertTrue("the press was not a real one: $took ms", took >= MIN_REAL_PRESS_MILLIS)
-            assertTrue("the Dock press did not return Home: $sent", LauncherShellAction.OpenHome in sent)
+            assertTrue("the Dock press did not return Home: $sent ${report()}", LauncherShellAction.OpenHome in sent)
         }
     }
 
@@ -89,7 +89,7 @@ class DockRealFingerPressInteractionTest {
             ).fetchSemanticsNodes()
         realPress(landingOn(pinned))
         composeRule.runOnIdle {
-            assertTrue("the Dock press did not return Home: $sent", LauncherShellAction.OpenHome in sent)
+            assertTrue("the Dock press did not return Home: $sent ${report()}", LauncherShellAction.OpenHome in sent)
         }
     }
 
@@ -98,10 +98,11 @@ class DockRealFingerPressInteractionTest {
         setContent(streamShown = true)
         realPress(landingOn(tileNodes()), dragMillis = 450L, restMillis = 600L)
         composeRule.runOnIdle {
-            assertTrue("an unhurried press did not return Home: $sent", LauncherShellAction.OpenHome in sent)
+            val message = "an unhurried press did not return Home: $sent ${report()}"
+            assertTrue(message, LauncherShellAction.OpenHome in sent)
         }
         assertTrue(
-            "the Dock was left choosing",
+            "the Dock was left choosing ${report()}",
             composeRule.onAllNodesWithTag(DOCK_CHOICE_LABEL_TEST_TAG).fetchSemanticsNodes().isEmpty(),
         )
     }
@@ -111,7 +112,7 @@ class DockRealFingerPressInteractionTest {
         setContent(streamShown = true)
         realPress(landingOn(tileNodes()), driftDp = 18f)
         composeRule.runOnIdle {
-            assertTrue("a drifting press did not return Home: $sent", LauncherShellAction.OpenHome in sent)
+            assertTrue("a drifting press did not return Home: $sent ${report()}", LauncherShellAction.OpenHome in sent)
         }
     }
 
@@ -135,8 +136,9 @@ class DockRealFingerPressInteractionTest {
         composeRule.waitForIdle()
         val moved =
             composeRule.onAllNodesWithTag(tile.config[SemanticsProperties.TestTag]).fetchSemanticsNodes().firstOrNull()
-        assertTrue("the row did not scroll: $before", moved == null || abs(moved.positionInRoot.x - tileX) > 20f)
-        composeRule.runOnIdle { assertTrue("a horizontal drag pressed the Dock: $sent", sent.isEmpty()) }
+        val scrolled = moved == null || abs(moved.positionInRoot.x - tileX) > 20f
+        assertTrue("the row did not scroll: $before ${report()}", scrolled)
+        composeRule.runOnIdle { assertTrue("a horizontal drag pressed the Dock: $sent ${report()}", sent.isEmpty()) }
     }
 
     @Test
@@ -145,6 +147,22 @@ class DockRealFingerPressInteractionTest {
         val dock = composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).fetchSemanticsNode()
         realPress(Offset(dock.positionInRoot.x + dock.size.width / 2f, dock.positionInRoot.y + dock.size.height / 2f))
         composeRule.runOnIdle { assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), sent) }
+    }
+
+    private var lastLanding: Offset? = null
+    private var rowProbeBefore: Float? = null
+    private var rowProbeAfter: Float? = null
+
+    /** Where the first contextual tile in view starts along the row: how far the row has scrolled, as a position. */
+    private fun rowProbeX(): Float? = tileNodes().firstOrNull()?.positionInRoot?.x
+
+    /** What the Dock decided (claimed or not, what started choosing, the selection, the outcome) and what moved. */
+    private fun report(): String {
+        val dock = composeRule.onAllNodesWithTag(HOME_DOCK_PULL_TEST_TAG).fetchSemanticsNodes().firstOrNull()
+        val decided = dock?.config?.getOrNull(DockPressDiagnosticsKey)?.describe() ?: "no Dock diagnostics"
+        val root = composeRule.onRoot().fetchSemanticsNode().size
+        return "[landing=$lastLanding root=${root.width}x${root.height} density=${composeRule.density.density} " +
+            "rowProbeX before=$rowProbeBefore after=$rowProbeAfter | $decided]"
     }
 
     private fun tileNodes(): List<SemanticsNode> =
@@ -180,6 +198,8 @@ class DockRealFingerPressInteractionTest {
         val rootHeight = composeRule.onRoot().fetchSemanticsNode().size.height
         val travelPx = min(WANT_DP * density, rootHeight - landing.y - SCREEN_EDGE_MARGIN_DP * density)
         assertTrue("no room for a real press: ${travelPx / density} dp", travelPx / density >= REACHABLE_DP)
+        lastLanding = landing
+        rowProbeBefore = rowProbeX()
         val random = Random(SEED)
         val started = composeRule.mainClock.currentTime
         composeRule.onRoot().performTouchInput { down(landing) }
@@ -202,6 +222,7 @@ class DockRealFingerPressInteractionTest {
         val took = composeRule.mainClock.currentTime - started
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         composeRule.waitForIdle()
+        rowProbeAfter = rowProbeX()
         return took
     }
 

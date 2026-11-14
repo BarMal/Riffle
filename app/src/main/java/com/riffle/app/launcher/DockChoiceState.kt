@@ -227,6 +227,13 @@ internal class DockChoiceState {
     ): Float = (if (alongRun) dock.height else dock.width) / env.density
 }
 
+/** Where the entry keyed [key] starts along the run in the root now, or null; for the test diagnostics. */
+internal fun DockChoiceState.entryX(key: String?): Float? {
+    val env = environment
+    val bounds = if (env == null || key == null) null else env.entryBounds()[key]
+    return bounds?.let { if (env?.pull?.unitY != 0f) it.left else it.top }
+}
+
 /** The choice the Dock's tiles and row read; null outside the launcher's Dock, where nothing is ever chosen. */
 internal val LocalDockChoice = staticCompositionLocalOf<DockChoiceState?> { null }
 

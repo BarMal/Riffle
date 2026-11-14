@@ -262,6 +262,26 @@ detector claims "the perpendicular axis ahead of a child scrollable"; the Initia
 primitive that does. Tests: `DockPressTest` (diagonals), `DockRealFingerPressTest` and the device
 `DockRealFingerPressInteractionTest` (a mostly horizontal drag scrolls the row and sends nothing).
 
+**Second follow-up: a thumb's drift never chooses in the open Stream.** CI still failed
+`DockRealFingerPressInteractionTest.aThumbThatDriftsAlongTheRowButStaysOnItsTileStillReturnsHome` after the Initial-pass claim
+(the slide-to-choose and the horizontal-scroll tests passed, so the press was being claimed). The press was therefore ending
+in the choice rules: 18 dp of drift is past the 14 dp slide that starts choosing, and the outcome then depends on the selection
+at the lift matching the item nearest the landing. I could not find from the code which part differed on the emulator (a
+neighbour's midpoint, the row moving under the finger, or the selection being null); no Robolectric run reproduces it. So the
+rule no longer leans on it:
+
+- With the Stream open choosing starts only on a deliberate slide, `DockMotionConstants.CHOOSE_SLIDE_FROM_OPEN_DP` = 36 dp
+  (Home keeps 14 dp, `CHOOSE_SLIDE_DP`); a thumb that drifts 18 dp or more is a plain press and closes. Because choosing
+  is what scrolls the row at its ends, a finger that has not slid that far never scrolls the row either.
+- A selection at the lift that is the item nearest the landing still closes, and now so does a committed press that has
+  nothing selectable (it was `Revert`; the test that asserted that was changed on purpose).
+- The Dock records what it decided (`DockPressDiagnostics`, a test-only semantics property `DockPressDiagnosticsKey` on the
+  Dock body, like `DockDipKey`): presses claimed, whether it began in the open Stream, the entry it started on, the selectable
+  item nearest the landing and where that item lay, what started choosing (slide or hold) and the travel and slide then, at
+  the lift the selection, whether it was cancelling, committed, the travel and where the landing item lay, and the outcome.
+  The real-finger device tests put it, the landing point, the screen size and density and the row's position before and after
+  in every failure message.
+
 ### Slice 4a: The stack (built)
 
 **Built.**

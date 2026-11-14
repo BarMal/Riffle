@@ -130,9 +130,9 @@ object DockChoice {
                     selectedKey == startedNearKey -> DockPressOutcome.Close
                     else -> DockPressOutcome.SwitchPage(selectedKey)
                 }
-            // Nothing selectable at all: Home falls back to the page a plain press opens; the open Stream has none to
-            // fall back to (a plain press closes it, which is not a choice), so nothing changes.
-            fromContextual -> DockPressOutcome.Revert
+            // Nothing selectable at all: Home falls back to the page a plain press opens; the open Stream closes as
+            // a plain press does when it went past the threshold (nothing was chosen), else nothing changes.
+            fromContextual -> if (committed) DockPressOutcome.Close else DockPressOutcome.Revert
             else -> DockPressOutcome.OpenPage(startedOnEntryKey)
         }
 }
@@ -167,8 +167,9 @@ sealed interface DockPressOutcome {
  * Once started it stays started: the press ends at the lift.
  *
  * Holding only chooses where the press started from Home. With the Stream already open ([next]'s `holdStarts` false) a
- * finger that rests, however long, is a person taking their time over the press that closes it: only sliding along the
- * run chooses there, so a press held for half a second still returns Home.
+ * finger that rests, however long, is a person taking their time over the press that closes it: only a deliberate slide
+ * along the run ([DockMotionConstants.CHOOSE_SLIDE_FROM_OPEN_DP], more than from Home) chooses there, so a press
+ * held for half a second, or one whose thumb drifts sideways, still returns Home.
  */
 data class DockChoiceStart(
     val choosing: Boolean = false,
@@ -192,13 +193,17 @@ data class DockChoiceStart(
         when {
             choosing -> this
             !DockPress.commits(travelDp) -> DockChoiceStart()
-            abs(alongDp) > DockMotionConstants.CHOOSE_SLIDE_DP -> copy(choosing = true)
+            abs(alongDp) > slideDp(holdStarts) -> copy(choosing = true)
             !holdStarts -> this
             restingSinceMillis == null || movedFromRest(travelDp, alongDp) ->
                 copy(restingSinceMillis = timeMillis, restTravelDp = travelDp, restAlongDp = alongDp)
             timeMillis - restingSinceMillis >= holdMillis -> copy(choosing = true)
             else -> this
         }
+
+    /** How far a slide along the run starts choosing: short from Home, deliberate with the Stream open. */
+    fun slideDp(holdStarts: Boolean): Float =
+        if (holdStarts) DockMotionConstants.CHOOSE_SLIDE_DP else DockMotionConstants.CHOOSE_SLIDE_FROM_OPEN_DP
 
     /** When choosing will start if the finger stays where it is, or null when it cannot (not resting, or started). */
     fun deadlineMillis(holdMillis: Long = DockMotionConstants.DEFAULT_HOLD_MILLIS.toLong()): Long? =

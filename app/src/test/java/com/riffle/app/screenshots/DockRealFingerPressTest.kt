@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import com.riffle.app.launcher.DOCK_CHOICE_LABEL_TEST_TAG
+import com.riffle.app.launcher.DockPressDiagnosticsKey
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
@@ -208,6 +209,20 @@ class DockRealFingerPressTest {
         // Past the slide distance (14 dp), so the press does turn into choosing; it ends on the tile it began on.
         realPress(tileCentre(), driftDp = 18f)
         assertTrue("a drifting press did not return Home: $sent", LauncherShellAction.OpenHome in sent)
+    }
+
+    @Test
+    fun theDockReportsWhatItDecidedForADriftingPressSoADeviceFailureExplainsItself() {
+        show(startShown = true)
+        realPress(tileCentre(), driftDp = 18f)
+        val decided =
+            composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).fetchSemanticsNode().config
+                .getOrNull(DockPressDiagnosticsKey)!!
+        assertEquals(1, decided.pressesClaimed)
+        assertTrue(decided.fromContextual)
+        assertTrue("a drift of 18 dp started choosing: ${decided.describe()}", decided.choosingTrigger == null)
+        assertTrue("no landing item: ${decided.describe()}", decided.landingNearKey != null)
+        assertEquals(decided.describe(), "DockPressOutcome.Close", "DockPressOutcome." + decided.outcome)
     }
 
     @Test

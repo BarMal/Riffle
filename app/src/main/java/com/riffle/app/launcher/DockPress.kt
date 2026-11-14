@@ -77,6 +77,7 @@ internal class DockPressState {
     ) {
         startedOnEntryKey = entryKey
         startedNearKey = nearestSelectableKey
+        choosingTrigger = null
         progress = 0f
         pressing = true
         onBegan()
@@ -88,9 +89,25 @@ internal class DockPressState {
         onMoved(travelDp)
     }
 
-    /** The press turns into a selection, the finger at [position]. */
-    fun beginChoosing(position: Offset) {
+    /** What started the press's choosing ("slide" or "hold"), and the travel and slide then in dp; for tests. */
+    var choosingTrigger: String? = null
+        private set
+    var choosingTravelDp: Float = 0f
+        private set
+    var choosingAlongDp: Float = 0f
+        private set
+
+    /** The press turns into a selection, the finger at [position]; [trigger] says what started it. */
+    fun beginChoosing(
+        position: Offset,
+        trigger: String = "",
+        travelDp: Float = 0f,
+        alongDp: Float = 0f,
+    ) {
         if (!pressing || choosing) return
+        choosingTrigger = trigger
+        choosingTravelDp = travelDp
+        choosingAlongDp = alongDp
         choosing = true
         onChoosingBegan(position)
     }

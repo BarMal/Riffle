@@ -174,6 +174,13 @@ object DockMotionConstants {
     /** Sliding the pressed finger this far along the Dock's run (dp) starts choosing at once. */
     const val CHOOSE_SLIDE_DP: Float = 14f
 
+    /**
+     * With the Stream already open, sliding along the run this far (dp) while pressed starts choosing: a deliberate
+     * slide, about two thirds of a tile, because a thumb pressing down drifts sideways and must still close the
+     * Stream.
+     */
+    const val CHOOSE_SLIDE_FROM_OPEN_DP: Float = 36f
+
     /** A finger that moves no more than this (dp) from where it rested still counts as holding still. */
     const val CHOOSE_STILL_DP: Float = 6f
 

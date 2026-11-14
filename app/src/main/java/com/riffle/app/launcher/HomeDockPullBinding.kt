@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -241,12 +242,14 @@ internal fun rememberHomeDockPullBinding(
         state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen && !state.destination.isLibrary
     val latestStream = rememberUpdatedState(stream)
     val press = remember { DockPressState() }
+    val diagnostics = remember { mutableStateOf(DockPressDiagnostics()) }
     val dockCoordinates = remember { DockCoordinates() }
     BindPullCallbacks(
         dockPull = dockPull,
         motion = motion,
         press = press,
         choice = choice,
+        diagnostics = diagnostics,
         latestOnAction = rememberUpdatedState(onAction),
         latestStream = latestStream,
         reducedMotion = reducedMotion,
@@ -273,7 +276,10 @@ internal fun rememberHomeDockPullBinding(
     val dockModifier =
         Modifier
             .testTag(HOME_DOCK_PULL_TEST_TAG)
-            .semantics { dockDip = if (motion.running) motion.dip else 0f }
+            .semantics {
+                dockDip = if (motion.running) motion.dip else 0f
+                pressDiagnostics = diagnostics.value
+            }
             .then(actions.modifier)
             .onGloballyPositioned { coordinates -> dockCoordinates.coordinates = coordinates }
             .dockPullInput(direction, host)
@@ -330,6 +336,7 @@ private fun BindPullCallbacks(
     motion: DockMotionState,
     press: DockPressState,
     choice: DockChoiceState,
+    diagnostics: MutableState<DockPressDiagnostics>,
     latestOnAction: State<(LauncherShellAction) -> Unit>,
     latestStream: State<StreamPullInputs>,
     reducedMotion: Boolean,
@@ -339,6 +346,14 @@ private fun BindPullCallbacks(
         // An expanded posture settles a press by the split (the pull's own settle); there the press is not drawn.
         press.onBegan = {
             choice.prepare(fromContextual = latestStream.value.shown)
+            diagnostics.value =
+                DockPressDiagnostics(
+                    pressesClaimed = diagnostics.value.pressesClaimed + 1,
+                    fromContextual = latestStream.value.shown,
+                    startedOnKey = press.startedOnEntryKey,
+                    landingNearKey = press.startedNearKey,
+                    landingEntryX = choice.entryX(press.startedNearKey),
+                )
             if (latestStream.value.split == null) {
                 motion.beginPress(fromOpen = latestStream.value.shown, reducedMotion = latestReduced.value)
             }
@@ -360,6 +375,19 @@ private fun BindPullCallbacks(
                     cancelling = choice.cancelling,
                     startedOnEntryKey = release.startedOnEntryKey,
                     startedNearKey = release.startedNearKey,
+                )
+            diagnostics.value =
+                diagnostics.value.copy(
+                    choosingTrigger = press.choosingTrigger,
+                    choosingAtTravelDp = press.choosingTravelDp,
+                    choosingAtAlongDp = press.choosingAlongDp,
+                    lifted = true,
+                    selectedKeyAtLift = choice.selectedKey,
+                    cancellingAtLift = choice.cancelling,
+                    committedAtLift = release.committed,
+                    travelDpAtLift = release.travelDp,
+                    entryXAtLift = choice.entryX(diagnostics.value.landingNearKey),
+                    outcome = outcome.toString(),
                 )
             choice.end()
             motion.endChoosing()
@@ -595,6 +623,8 @@ internal val DrawnSurfaceKey = SemanticsPropertyKey<DrawnSurface>("DrawnSurface"
 private var SemanticsPropertyReceiver.drawnSurface by DrawnSurfaceKey
 
 /** How far the Dock is pressed toward its edge right now, in dp, for tests (negative while it has sprung past rest). */
+private var SemanticsPropertyReceiver.pressDiagnostics by DockPressDiagnosticsKey
+
 internal val DockDipKey = SemanticsPropertyKey<Float>("DockDip")
 private var SemanticsPropertyReceiver.dockDip by DockDipKey
 

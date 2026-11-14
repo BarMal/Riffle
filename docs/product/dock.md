@@ -131,9 +131,9 @@ mode only adds tiles after them and scrolls the row along.
   `DockChoice.kt`):
   - *Start.* **From Home:** pressed past 28 dp and held still for the hold time (220 ms, `DockMotionTuning.holdMillis`,
     named so the settings slice can expose it; "still" is within 6 dp of where the finger came to rest, and moving restarts
-    the wait), or slid more than 14 dp along the run while pressed past the threshold. **With the Stream open:** only the
-    slide starts it; holding still never does, however long, because a person closing the Stream takes their time (a real
-    press lasts well over 220 ms) and a resting finger on a tile would just re-select the page already showing. Never
+    the wait), or slid more than 14 dp along the run while pressed past the threshold. **With the Stream open:** only a
+    deliberate slide (36 dp, `CHOOSE_SLIDE_FROM_OPEN_DP`) starts it; holding still never does, however long, because a
+    person closing the Stream takes their time (a real press lasts well over 220 ms) and a thumb drifts sideways and a resting finger on a tile would just re-select the page already showing. Never
     before the threshold; drawing the press back above it before choosing starts cancels as before. Once choosing, the
     lift always commits to the selection.
   - *While choosing from Home* the Dock extends early: it draws the contextual row (pinned icons, live apps, now playing,

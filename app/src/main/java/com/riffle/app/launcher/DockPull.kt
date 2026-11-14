@@ -40,6 +40,7 @@ import com.riffle.core.domain.launcher.split.SplitSettle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /**
  * What an expanded posture's pull needs to know where it starts (ADR 0003, Folded and unfolded): the mode it starts
@@ -585,7 +586,10 @@ private fun AwaitPointerEventScope.feedChoice(
     val travelDp = DockPress.travelDp(direction, drag.x / density, drag.y / density)
     val alongDp = (if (direction.unitY != 0f) drag.x else drag.y) / density
     val next = start.next(sample.timeMillis, travelDp, alongDp, timing.holdMillis, timing.holdStarts)
-    if (next.choosing) press.beginChoosing(sample.position)
+    if (next.choosing) {
+        val slid = abs(alongDp) > next.slideDp(timing.holdStarts)
+        press.beginChoosing(sample.position, if (slid) "slide" else "hold", travelDp, alongDp)
+    }
     return next
 }
 

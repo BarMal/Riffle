@@ -212,7 +212,10 @@ class DockChoiceTest {
 
     @Test
     fun withTheStreamOpenSlidingAlongTheRunStillChoosesAtTheSlideDistanceAndOnlyBeyondIt() {
-        val slide = DockMotionConstants.CHOOSE_SLIDE_DP
+        val slide = DockMotionConstants.CHOOSE_SLIDE_FROM_OPEN_DP
+        assertTrue(slide > DockMotionConstants.CHOOSE_SLIDE_DP)
+        // A thumb's drift (the Home slide distance and a good deal more) is not a choice with the Stream open.
+        assertFalse(DockChoiceStart().next(0, past, DockMotionConstants.CHOOSE_SLIDE_DP + 12f, hold, false).choosing)
         assertFalse(DockChoiceStart().next(0, past, slide, hold, holdStarts = false).choosing)
         assertTrue(DockChoiceStart().next(0, past, slide + 1f, hold, holdStarts = false).choosing)
         assertTrue(DockChoiceStart().next(0, past, -(slide + 1f), hold, holdStarts = false).choosing)
@@ -319,7 +322,9 @@ class DockChoiceTest {
     fun withNothingSelectableHomeFallsBackToAPlainPressAndTheOpenStreamChangesNothing() {
         assertEquals(DockPressOutcome.OpenPage(null), outcome(choosing = true))
         assertEquals(DockPressOutcome.OpenPage("now"), outcome(choosing = true, startedOn = "now"))
-        assertEquals(DockPressOutcome.Revert, outcome(fromContextual = true, choosing = true))
+        // Nothing was chosen in the open Stream: a press past the threshold closes it as a plain press does.
+        assertEquals(DockPressOutcome.Close, outcome(fromContextual = true, choosing = true))
+        assertEquals(DockPressOutcome.Revert, outcome(fromContextual = true, choosing = true, committed = false))
     }
 
     @Test
