@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A notification's own layout, for the unit tests that read and embed one (debug builds only). -->
+<!-- A notification's own layout, for the unit tests that read and embed one. Debug builds only, so the tests
+     that use it are in src/testDebug: the release unit tests do not see it. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"

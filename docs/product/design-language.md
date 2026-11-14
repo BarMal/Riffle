@@ -207,12 +207,14 @@ feature code still carries no literal surface alpha. The numbers are `core/domai
 ### Stream card geometry
 
 The Stream's stacks use one set of geometry tokens, taken from Calm's card pages and kept in
-`core/domain/.../launcher/stream/StreamCardStackSpec.kt` (never as literals in the UI): a **168 dp** card and **56 dp**
-between neighbouring cards' tops. The stack is **anchored to the Dock** (dock modes slice 4a): the front card sits just
-above the Dock, nearest the thumb, and older cards peek above it, three at most, each a strip of **52 dp** (the 56 dp step
-less a 4 dp gap) and each 4 percent smaller than the one in front of it. A peeking card is the real card clipped to its
-top strip (who or what it is, and when), and the clip is the part the card in front does not cover, so translucent fills
-never overlap and add up; as the card comes toward the front the clip opens and the rest of it is revealed. The card in
+`core/domain/.../launcher/stream/StreamCardStackSpec.kt` (never as literals in the UI): a card of at most **168 dp**
+(a notification is as tall as what it shows, from 88 dp; `BrowseCardHeight`) and **56 dp** between neighbouring cards'
+tops. The stack is **anchored to the Dock** (dock modes slice 4a): the front card sits just above the Dock, nearest the
+thumb, and older cards peek above it, three at most, each a strip of **56 dp** (the step; there is no gap) and each
+4 percent smaller than the one in front of it. A peeking card is the real card, and it **tucks under the card in front**:
+it is drawn down to and around that card's rounded top and clipped to its own outline less that card's outline, so the
+stack reads as overlapping cards while translucent fills never overlap and add up (device fixes, round 6); as the card
+comes toward the front the clip opens and the rest of it is revealed. The card in
 front sinks toward the Dock and fades (down to 92 percent of its size) as the next one is revealed above it. The layout
 is a pure function of one continuous position (`StackGeometry` in `StackMotion.kt`; `r = index - position`: 0 is the
 front card, -1 a card sunk and gone, 1 to 3 peeking, 4 and beyond hidden), so a drag, a coast and a settle all draw
