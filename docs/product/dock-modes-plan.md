@@ -14,7 +14,7 @@ Their spring, magnet and timing constants are the starting values; the settings 
 | 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet (**4a, built**, see "As built"); swiping left and right between stacks in Dock order (built in slice 1); shortcuts stacks for apps with nothing live, the Today page (agenda and tasks) and Recents as a stack (**4b, built**, see "As built"). | 1 |
 | 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. **Built**, see "As built". | 4 |
 | 6. Settings | Stream settings (open card position, actions position, tint, background, pinned apps), motion settings, the accessibility action and the first-run hint. **Built**, see "As built" (background and pinned apps deferred). | 2 to 5 |
-| 7. Home and Library | The combined search-and-page handle with quick-drag, search opening from the Dock (**7a, built**, see "As built"), the paged Library, Home mode (Placed items or App library) and the feature switches (7b, not started). | none |
+| 7. Home and Library | The combined search-and-page handle with quick-drag, search opening from the Dock (**7a, built**, see "As built"), the paged Library, Home mode (Placed items or App library) and the feature switches with Simple mode (**7b, built**, see "As built"). | none |
 
 ## Rules for every slice
 
@@ -581,6 +581,76 @@ composable and takes no position from the Dock).
 
 **Left for later (7b).** The paged Library, Home mode, the feature switches and Simple mode, and the hint's Simple mode exclusion.
 Keyboard behaviour is covered by layout (the surface is padded by the same insets as the Dock) and was not run on a device.
+
+### Slice 7b: Paged Library, Home mode and feature switches (built)
+
+**Built.**
+
+- **The paged Library View** (`library/LibraryPagedView.kt`; pure part `LibraryPaging` in `:core:domain`). `LibraryView.Paged`
+  (stored id `paged`, "Pages" in "Show as") draws every app as an icon on horizontal pages of the platform's `HorizontalPager`,
+  straight over the wallpaper with no sheet, header or search field behind it. Each page is Home's grid: the same columns and
+  rows (`homeLayout.selectedPage.grid`), margins, square cell size (`HomeGridLayoutMetrics`), icon size, notification badge and
+  label (`WallpaperReadableLabel`), so it reads as Home's sibling. Below the pages stands the one handle component, unchanged:
+  `HomeHandlePill` (a tap searches, dragging along the dots quick-drags between pages, "Previous page" and "Next page"
+  actions). Tapping an app launches it (and closes the Library, as before); long-press opens the Library's app menu. A
+  long-press on the empty space opens "Show as" with Undo (the sheet's own snackbar and `onShowAs`), and the same routes are
+  custom actions of the pages ("Close Library", "Show as <view>"). The Library keeps its pull away from the Dock's edge and
+  its motion (the same translating layer in `LibrarySheet`); a pull toward the Dock's edge on the pages (or, on a side Dock,
+  on the handle's row, so the pager keeps horizontal drags) closes it by the same thresholds as the header's. Search stays the
+  Dock's search: the handle opens it. The other Views are as they were and list "Pages" in "Show as" and Settings > Library.
+- **Home mode** (`HomeMode`, `HomeBehaviourSettings.mode`; `AppLibraryHome` in `LauncherHomeDestination.kt`). Placed items
+  (the default) or App library. In App library mode the Home surface is the paged View, laid out as Home is (inside the Dock's
+  room, under the Dock, inside the insets); the placed layout is not touched and is back when the mode is. Home's gestures
+  still work except the ones that act on the placed pages (`HomeGestureSettings.forAppLibraryHome`). Long-pressing the empty
+  space offers "Show placed items" and "Settings" (custom actions too). Settings > Home > "Home shows". Stored as
+  `home.mode`: an old blob has no such key and decodes to Placed items, as does any unknown value.
+- **Feature switches and Simple mode** (`FeatureSettings`, `EffectiveFeatures`; `settings/FeatureSettings.kt`). The ADR
+  lists three switches and Simple mode, and these are exactly what was built: **Stream** (Settings > Stream), **Show live
+  apps** on the Dock (Settings > Dock) and **Library** (Settings > Library), each on by default, and **Simple mode**
+  (Settings > Home), off by default. Simple mode is an override, not a copy: while it is on the effective features are Stream
+  off, live apps off, Library off and Home mode App library, and turning it off gives every stored switch and the Home mode
+  back untouched. Stored as a `features` section (an old blob decodes to the defaults).
+  - Off removes the entry points: the Stream is not handed to `HomeDestination` (no press, live pages, tiles, "Show live
+    pages" action, "Show <app> in Stream" action or hint); live apps off leaves the contextual tiles and the press but draws no
+    live app or now playing entry (`rememberDockDynamicSide(showLiveApps)`); Library off removes the pull away from the Dock
+    (`DockPullGestureHost.canOpenLibrary`; the single pointer loop is not otherwise changed), the Dock's "Open Library"
+    action and Ctrl + Shift + the arrow; the navigation reducer refuses `OpenStream` and `OpenAppDrawer` while off (so a
+    bound gesture, Glance or any other route changes nothing), and a Home gesture bound to "Open Stream" or "Open Library" is
+    not offered while its feature is off (`HomeGestureSettings.without`). Search is not the Library sheet and stays.
+  - The settings rows read the switch as off and disabled while Simple mode is on, and say so.
+  - The slice 6 first-run hint does not show in Simple mode (`shouldShowDockPressHint(simpleMode)`).
+- **Settings rows.** A switch row is now one toggle for the whole row (`SettingsRows.kt`), so a screen reader hears its state;
+  it looked the same before.
+- **Tests.** JVM, `core:domain`: `LibraryPagingTest`, `FeatureSettingsTest` (defaults, Simple mode overriding and giving
+  back, gesture unbinding, stored ids), the reducer's navigation refusals, `LibraryViewTest`. JVM, `app`: codec (home mode and
+  switches round trip, old blobs decode to today's behaviour, the paged view round trips), reducer, action domain and hint.
+  Robolectric through the real `HomeDestination` and `SettingsSurface`: `PagedLibraryTest` (no sheet or field, Home's icon size,
+  the handle, swipe, quick-drag, launching from either page, the app menu, "Show as" with Undo, the custom actions, the
+  dismiss pull; screenshots dark, light and the second page), `HomeModeTest` (the app library on Home, switching back
+  restores the untouched layout, Simple mode; screenshots dark and light), `FeatureSwitchesTest` (each switch's entry points
+  gone and the others kept, the hint, Simple mode and back), `FeatureSettingsPagesTest` (the rows and their actions; screenshots).
+  Device: `PagedLibraryInteractionTest` (compiled, not run).
+
+**What differed from the design.**
+
+- **Paged is not the new default.** Amendment 1 says the Library is pages of every app and the categories sheet is dropped,
+  but decision 8 made Categories the default, stored layouts keep their View, and nothing tells a new install from an old one
+  with no stored view. Paged is a View in "Show as" and the Settings > Library list; the default stays Categories and the
+  categories sheet is kept. Making Paged the new-install default needs a stored marker for "new install" and the Library
+  goldens and tests that rely on the default re-recorded.
+- **Simple mode is where the Home mode is** (Settings > Home, first), not a page of its own: settings are organised by Place and
+  the ADR names no place for it.
+- **The Stream switch takes the live apps with it** (they come from the Stream's sources), so "Show live apps" is only
+  meaningful while the Stream is on.
+
+**Assumptions.** Simple mode turns the Library sheet off, since the app library is Home there; search (the handle) stays, and
+Settings stays reachable by the Home gestures and the long-press menu. The paged View's grid follows the selected Home page's
+grid, as the Library's grid search results already do. The pull-away claim is dropped, not redirected, when the Library is off.
+
+**Left for later.** Making Paged the default for new installs; Simple mode's own first-run explanation; the "More apps" overflow
+button of a generated Home page still sends `OpenAppDrawer` (it does nothing while the Library is off); the unfolded layout
+(Amendment 2). The paged View was not run on a device: the handle sits over the wallpaper with no glass behind the grid, so
+label legibility on a bright wallpaper rests on the labels' own shadow (`WallpaperReadableLabel`).
 
 ### Glass and Dock sizing (after slice 4a)
 

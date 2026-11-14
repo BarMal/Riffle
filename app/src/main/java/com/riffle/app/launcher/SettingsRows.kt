@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -62,13 +63,14 @@ internal fun SettingsSwitchRow(
         modifier =
             modifier
                 .settingsRowModifier()
-                .clickable(enabled = enabled, role = Role.Switch) { onCheckedChange(!checked) },
+                // One toggle for the whole row, so a screen reader hears the state with the title.
+                .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange),
         title = title,
         subtitle = subtitle,
         trailingContent = {
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange,
+                onCheckedChange = null,
                 enabled = enabled,
             )
         },

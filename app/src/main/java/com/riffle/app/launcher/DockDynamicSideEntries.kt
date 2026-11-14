@@ -54,6 +54,8 @@ internal fun rememberDockDynamicSide(
     choosing: Boolean = false,
     /** The apps pinned in the Dock, in its order: each has a page, so each can be ringed and chosen. */
     pinnedApps: List<PinnedApp> = emptyList(),
+    /** The "Show live apps" switch: off, live apps and now playing are not drawn (the contextual tiles still are). */
+    showLiveApps: Boolean = true,
 ): HomeDockInterpreter {
     if (stream == null) {
         return modeInterpreter.copy(dynamicEntries = emptyList(), pinnedStream = null, cardActions = null)
@@ -61,7 +63,10 @@ internal fun rememberDockDynamicSide(
     // The provider reads the options of the posture on screen; keep it current even before the Stream has opened.
     SideEffect { stream.posture.deviceClass = deviceClass }
     val results = rememberStreamSectionResults(stream.provider, listOf(StreamSection.NOTIFICATIONS, StreamSection.NOW))
-    val live = remember(results, liveAppSlots) { results.dockLiveEntries(liveAppSlots) }
+    val live =
+        remember(results, liveAppSlots, showLiveApps) {
+            if (showLiveApps) results.dockLiveEntries(liveAppSlots) else emptyList()
+        }
     val link = stream.dock
     val layouts by stream.layouts.layouts.collectAsState()
     val layout = layouts.forPosture(deviceClass)

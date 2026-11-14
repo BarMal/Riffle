@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.coerced
+import com.riffle.core.domain.launcher.settings.with
 import com.riffle.core.domain.launcher.settings.withReducedTransparency
 
 internal class LauncherSettingsStateReducer(
@@ -140,6 +141,33 @@ internal class LauncherSettingsStateReducer(
                         settings =
                             state.launcherSettings.copy(
                                 motion = state.launcherSettings.motion.copy(dock = action.settings.coerced()),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectHomeMode ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                home = state.launcherSettings.home.copy(mode = action.mode),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SetFeatureEnabled ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                features = state.launcherSettings.features.with(action.feature, action.enabled),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SetSimpleMode ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                features = state.launcherSettings.features.copy(simpleMode = action.enabled),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )

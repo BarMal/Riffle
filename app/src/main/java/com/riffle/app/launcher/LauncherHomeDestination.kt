@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -34,6 +37,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.glance.GlanceHost
 import com.riffle.app.launcher.glance.LocalGlanceHost
+import com.riffle.app.launcher.library.LibraryPagedView
 import com.riffle.app.launcher.library.LibrarySheet
 import com.riffle.app.launcher.library.libraryState
 import com.riffle.app.launcher.search.DockSearchSurface
@@ -52,6 +56,7 @@ import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeHandle
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.ModeDockEdges
@@ -59,6 +64,12 @@ import com.riffle.core.domain.launcher.home.ModeSurface
 import com.riffle.core.domain.launcher.home.dockEdgeFor
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.home.modeSurface
+import com.riffle.core.domain.launcher.library.LibraryView
+import com.riffle.core.domain.launcher.settings.EffectiveFeatures
+import com.riffle.core.domain.launcher.settings.HomeMode
+import com.riffle.core.domain.launcher.settings.effectiveFeatures
+import com.riffle.core.domain.launcher.settings.forAppLibraryHome
+import com.riffle.core.domain.launcher.settings.without
 import com.riffle.core.domain.launcher.split.SplitMode
 import com.riffle.core.domain.launcher.split.SplitWindow
 import com.riffle.core.domain.launcher.split.supportsSplit
@@ -66,7 +77,10 @@ import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import kotlinx.coroutines.delay
 
-@Suppress("LongMethod", "CyclomaticComplexMethod")
+/**
+ * Home and what stands on it (the Dock, the Stream, the Library). The Stream switch (and Simple mode) is applied
+ * here: a Stream that is switched off is never handed on, so no press, live page, tile or hint is left to reach it.
+ */
 @Composable
 fun HomeDestination(
     state: LauncherShellState,
@@ -84,6 +98,40 @@ fun HomeDestination(
     onDockPressHintSeen: (() -> Unit)? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val streamOn = state.launcherSettings.effectiveFeatures().stream
+    HomeDestinationContent(
+        state = state,
+        appIconLoader = appIconLoader,
+        widgetRenderers = widgetRenderers,
+        haptics = haptics,
+        adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+        stream = stream.takeIf { streamOn },
+        streamShown = streamShown && streamOn,
+        onDockPressHintSeen = onDockPressHintSeen,
+        onAction = onAction,
+    )
+}
+
+@Suppress("LongMethod", "CyclomaticComplexMethod")
+@Composable
+private fun HomeDestinationContent(
+    state: LauncherShellState,
+    appIconLoader: AppIconLoader,
+    widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
+    haptics: LauncherHaptics = NoopLauncherHaptics,
+    adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
+    /** The Stream (ADR 0003); with [streamShown] it replaces the Home surface and the Dock stays under it. */
+    stream: StreamHost? = null,
+    streamShown: Boolean = false,
+    /**
+     * Where the first-run hint ("press the Dock down to see what's live") tells the shell it is done with, by its
+     * button or by the Stream having opened by any route. Null where the host shows no hint (the hint is not drawn).
+     */
+    onDockPressHintSeen: (() -> Unit)? = null,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    // The feature switches (Simple mode applied): a feature that is off is not offered, so it has no entry point left.
+    val features = state.launcherSettings.effectiveFeatures()
     val dockHost = rememberHomeDockHostState()
     val dockPull = rememberDockPullState()
     // The trampoline and the fan: the Dock's own motion between Home and the Stream (not on an expanded posture).
@@ -164,6 +212,7 @@ fun HomeDestination(
             appShortcuts = state.appShortcutsByApp,
             choosing = choice.choosing,
             pinnedApps = state.homeLayout.visibleTo(state.installedApps).pinnedApps(),
+            showLiveApps = features.dockLiveApps,
         )
     val pull =
         rememberHomeDockPullBinding(
@@ -239,6 +288,7 @@ fun HomeDestination(
             libraryShown = showLibrary,
             motionRunning = motion.running,
             choosing = choice.choosing,
+            simpleMode = features.simpleMode,
         )
     // The Stream opening by any route (the press, a tap on a live app, an accessibility action) means it was found.
     LaunchedEffect(shownStream, hintSeen) {
@@ -305,18 +355,33 @@ fun HomeDestination(
                 // Stream's cards rise out of the Dock over Home. Both stay direct siblings of the dock, so their zIndex
                 // ranks them against it (see HOME_CONTENT_Z_INDEX) and the dock keeps the touches where they overlap.
                 val homeContent: @Composable () -> Unit = {
-                    key(plan.currentMode) {
-                        ModeSurfaceContent(
-                            state = plan.stateFor(plan.currentMode),
-                            dockEdge = plan.edges.edgeFor(plan.currentMode.modeSurface),
-                            surfaceModifier = pull.homeModifier(libraryShown = shownLibrary).then(coveredSemantics),
-                            dockHost = dockHost,
-                            presentation = presentation,
-                            appIconLoader = appIconLoader,
-                            widgetRenderers = widgetRenderers,
-                            haptics = haptics,
-                            onAction = onAction,
-                        )
+                    key(plan.currentMode, features.homeMode) {
+                        if (features.homeMode == HomeMode.AppLibrary) {
+                            AppLibraryHome(
+                                state = plan.stateFor(plan.currentMode),
+                                features = features,
+                                dockHost = dockHost,
+                                dockPosition = plan.edges.edgeFor(plan.currentMode.modeSurface),
+                                surfaceModifier =
+                                    pull.homeModifier(libraryShown = shownLibrary).then(coveredSemantics),
+                                appIconLoader = appIconLoader,
+                                haptics = haptics,
+                                onAction = onAction,
+                            )
+                        } else {
+                            ModeSurfaceContent(
+                                state = plan.stateFor(plan.currentMode),
+                                dockEdge = plan.edges.edgeFor(plan.currentMode.modeSurface),
+                                surfaceModifier =
+                                    pull.homeModifier(libraryShown = shownLibrary).then(coveredSemantics),
+                                dockHost = dockHost,
+                                presentation = presentation,
+                                appIconLoader = appIconLoader,
+                                widgetRenderers = widgetRenderers,
+                                haptics = haptics,
+                                onAction = onAction,
+                            )
+                        }
                     }
                 }
                 if (splitting && stream != null) {
@@ -563,7 +628,13 @@ private fun LibraryHomeSurface(
                     ),
         )
         LibrarySheet(
-            modifier = Modifier.padding(insets).padding(RiffleSpacing.s),
+            // The paged View has no sheet to inset: its grid starts where Home's does.
+            modifier =
+                if (libraryState.view == LibraryView.Paged) {
+                    Modifier.padding(insets)
+                } else {
+                    Modifier.padding(insets).padding(RiffleSpacing.s)
+                },
             state = libraryState,
             context = context,
             reducedMotion = state.reducedMotion(),
@@ -571,6 +642,93 @@ private fun LibraryHomeSurface(
             awayFraction = pull::libraryAwayFraction,
             onClose = close,
         )
+    }
+}
+
+/**
+ * Home in the App library Home mode: the paged Library View in Home's place, laid out as Home is (inside what the Dock
+ * reserves, under it in the draw order, inside the system bar insets). The placed layout is untouched and comes back
+ * with the other mode. Home's gestures still work, except the ones that act on the placed pages. Long-pressing
+ * the empty space offers Settings and, outside Simple mode, a way back to the placed items.
+ */
+@Composable
+private fun AppLibraryHome(
+    state: LauncherShellState,
+    features: EffectiveFeatures,
+    dockHost: HomeDockHostState,
+    dockPosition: DockPosition,
+    surfaceModifier: Modifier,
+    appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
+    val dockExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
+    val insets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets().asPaddingValues()
+    val libraryState = remember(state) { state.libraryState() }
+    val latestOnAction = rememberUpdatedState(onAction)
+    val context =
+        AppListContext(
+            homeLayout = state.homeLayout,
+            overlayDock = state.launcherSettings.overlayDock,
+            notificationGroupsByApp = state.notificationGroupsByApp,
+            appShortcutsByApp = state.appShortcutsByApp,
+            appIconLoader = appIconLoader,
+            haptics = haptics,
+            onAction = { action -> latestOnAction.value(action) },
+        )
+    val placedLabel = stringResource(R.string.home_mode_show_placed)
+    val settingsLabel = stringResource(R.string.home_mode_settings)
+    val actions =
+        listOfNotNull(
+            CustomAccessibilityAction(placedLabel) {
+                onAction(LauncherShellAction.SelectHomeMode(HomeMode.PlacedItems))
+                true
+            }.takeIf { !features.simpleMode },
+            CustomAccessibilityAction(settingsLabel) {
+                onAction(LauncherShellAction.OpenSettings)
+                true
+            },
+        )
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .zIndex(HOME_CONTENT_Z_INDEX)
+                .then(surfaceModifier)
+                .dockInteractionPadding(dockPosition, dockExtent)
+                .homeGestureInput(
+                    enabled = state.homeLayout.editMode == HomeEditMode.Browsing,
+                    settings =
+                        state.launcherSettings.gestures.homeGestures.without(features).forAppLibraryHome(),
+                    onAction = onAction,
+                )
+                .padding(insets),
+    ) {
+        LibraryPagedView(
+            state = libraryState,
+            context = context,
+            reducedMotion = state.reducedMotion(),
+            onOpenSearch = { onAction(LauncherShellAction.OpenSearch) },
+            backgroundActions = actions,
+        ) { dismiss ->
+            if (!features.simpleMode) {
+                DropdownMenuItem(
+                    text = { Text(placedLabel) },
+                    onClick = {
+                        dismiss()
+                        onAction(LauncherShellAction.SelectHomeMode(HomeMode.PlacedItems))
+                    },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(settingsLabel) },
+                onClick = {
+                    dismiss()
+                    onAction(LauncherShellAction.OpenSettings)
+                },
+            )
+        }
     }
 }
 
@@ -770,7 +928,7 @@ private fun standardHomePresentation(
         notificationAccessStatus = state.notificationAccessStatus,
         installedApps = state.installedApps,
         appShortcutsByApp = state.appShortcutsByApp,
-        homeGestures = state.launcherSettings.gestures.homeGestures,
+        homeGestures = state.launcherSettings.gestures.homeGestures.without(state.launcherSettings.effectiveFeatures()),
         reducedMotion = state.launcherSettings.motion.reducedMotion,
         motionPerformanceTargetFps = state.launcherSettings.motion.performanceTargetFps,
         widgetViewFactory = widgetRenderers.viewFactory,

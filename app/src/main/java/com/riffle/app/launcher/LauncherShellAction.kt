@@ -43,7 +43,9 @@ import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
+import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
@@ -439,6 +441,22 @@ sealed interface LauncherShellAction {
     /** Settings > Motion: the Dock's and the Stream's adjustable motion (held to its ranges when saved). */
     data class SetDockMotion(
         val settings: DockMotionSettings,
+    ) : LauncherShellAction
+
+    /** Settings > Home: what Home shows. The placed layout is kept either way. */
+    data class SelectHomeMode(
+        val mode: HomeMode,
+    ) : LauncherShellAction
+
+    /** Settings: one feature switch (Stream, Dock live apps, Library) on or off. */
+    data class SetFeatureEnabled(
+        val feature: LauncherFeature,
+        val enabled: Boolean,
+    ) : LauncherShellAction
+
+    /** Settings: Simple mode, the preset that leaves only the app library as Home and the Dock. */
+    data class SetSimpleMode(
+        val enabled: Boolean,
     ) : LauncherShellAction
 
     /** The first-run hint for pressing the Dock down was shown and dismissed; it is not shown again. */

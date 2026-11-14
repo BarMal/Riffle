@@ -1,11 +1,16 @@
 package com.riffle.app.launcher.library
 
+import com.riffle.app.launcher.centered
+import com.riffle.app.launcher.nonNegative
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.matches
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridInsets
+import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.library.LibraryCategories
 import com.riffle.core.domain.launcher.library.LibraryHit
 import com.riffle.core.domain.launcher.library.LibrarySearch
@@ -33,6 +38,12 @@ internal data class LibraryState(
     val focusSearch: Boolean,
     /** Opened over the Stream: closing returns there. */
     val overStream: Boolean,
+    /** Home's grid (columns by rows) and its margins, icons and labels: the paged View is drawn the same way. */
+    val pagedGrid: GridDimensions = GridDimensions(columns = 4, rows = 5),
+    val pagedMargins: GridInsets = GridInsets(),
+    val labels: HomeLabelSettings = HomeLabelSettings.standard(),
+    /** The room between the grid and the handle (Home's own setting). */
+    val controlsSpacingDp: Int = 0,
 ) {
     val isSearching: Boolean get() = query.isNotBlank()
 }
@@ -59,4 +70,8 @@ internal fun LauncherShellState.libraryState(): LibraryState =
         searchGridColumns = homeLayout.selectedPage.grid.columns,
         focusSearch = destination == ShellDestination.SEARCH,
         overStream = libraryOverStream,
+        pagedGrid = homeLayout.selectedPage.grid,
+        pagedMargins = homeLayout.settings.grid.margin.centered().nonNegative(),
+        labels = homeLayout.settings.labels,
+        controlsSpacingDp = homeLayout.dock.homeControlsSpacingDp,
     )
