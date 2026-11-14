@@ -192,6 +192,7 @@ internal fun LibraryPagedView(
                 axis = axis,
                 showsDots = layout.showsDots,
                 dragEnabled = layout.dragsToScroll,
+                dock = state.dock,
             )
         }
     }

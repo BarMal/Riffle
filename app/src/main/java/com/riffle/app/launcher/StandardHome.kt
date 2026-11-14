@@ -62,6 +62,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -640,6 +641,7 @@ private fun StandardHomeColumn(
                         onPageSelected = onOpenPage,
                         onIndicatorScrub = onIndicatorScrub,
                         actions = actions,
+                        dock = state.visibleLayout.dock,
                         hidden = state.presentation.handleHidden,
                     )
                 }
@@ -812,6 +814,7 @@ private fun HomeBottomControls(
                         layout = handle,
                         axis = handleAxis,
                         actions = actions,
+                        dock = layout.dock,
                         hidden = handleHidden,
                     )
                 }
@@ -851,6 +854,7 @@ private fun HomeBottomSearchArea(
     layout: PostureLayoutSettings,
     axis: HandleAxis,
     actions: HomeWorkspaceActions,
+    dock: DockModel,
     hidden: Boolean = false,
 ) {
     val dots = layout.showsDots && HomeHandle.showsDots(pageCount)
@@ -879,6 +883,7 @@ private fun HomeBottomSearchArea(
                 axis = axis,
                 showsDots = layout.showsDots,
                 dragEnabled = layout.dragsToScroll,
+                dock = dock,
             )
         }
     }
@@ -900,6 +905,7 @@ private fun HomeHandleStrip(
     onPageSelected: (Int) -> Unit,
     onIndicatorScrub: (Int) -> Unit,
     actions: HomeWorkspaceActions,
+    dock: DockModel,
     hidden: Boolean = false,
 ) {
     val dots = layout.showsDots && HomeHandle.showsDots(pageCount)
@@ -929,6 +935,7 @@ private fun HomeHandleStrip(
                 axis = axis,
                 showsDots = layout.showsDots,
                 dragEnabled = layout.dragsToScroll,
+                dock = dock,
             )
         }
     }

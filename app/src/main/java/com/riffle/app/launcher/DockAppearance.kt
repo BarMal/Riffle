@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -67,8 +68,11 @@ internal val NoDockDip: () -> Float = { 0f }
 internal val LocalDockBackgroundAlpha = staticCompositionLocalOf { OpaqueDockBackground }
 
 @Composable
-internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
-    val shape = RoundedCornerShape(dock.cornerRadiusDp.dp)
+internal fun Modifier.dockSurfaceAppearance(
+    dock: DockModel,
+    /** The outline: the Dock's own corner by default; the page handle draws the same material in a pill. */
+    shape: Shape = RoundedCornerShape(dock.cornerRadiusDp.dp),
+): Modifier {
     val backgroundAlpha = LocalDockBackgroundAlpha.current
     // The dock's fill alpha is its own "Dock background" setting, exactly: 0% clear, 100% opaque.
     val color = dockSurfaceColor(dock)

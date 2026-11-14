@@ -884,3 +884,44 @@ the Dock with a plainer edge (a border and no hairline), which every probe survi
 **Search on Thick.** With the run completing, `LauncherSearchSurfaceTest` showed the search field and results
 (Regular glass) no longer contrast with a black wallpaper in the light theme. Both are dense text and are now
 Thick.
+
+## Device fixes, round 2
+
+Five things the owner found on a phone, each one commit.
+
+- **A pinned app that is also live is drawn once.** The Dock drew its pinned icon and a live entry for it. The live entry is
+  left out (`DockDynamicSide.entries(pinnedGroupKeys)`, so the pinned app does not use a live slot either; both Dock modes);
+  the pinned icon already carried the badge, the ring (`DockRing` falls back to it for a live page), the tap in the
+  contextual mode, the press start and hold-to-choose, and all of them land on the app's one page. Identity is
+  `package:profile`, as the Stream's pages, so a work-profile clone is a different app. That one page leads with the app's
+  notifications (newest in front, each opening in place with reply, dismiss and snooze) followed by its shortcut cards
+  (`StreamShortcutPages.merge`); an app with nothing live keeps its shortcuts page. `DockPageOrder` puts the page at the
+  pinned icon's place in the run. A request to open a pinned app's page waits while the Stream's notifications are still
+  loading rather than landing on the shortcuts page that the live page replaces. Now playing keeps its own entry: it stands
+  for the Now page, which is not the app's notifications page.
+- **The Dock no longer shifts when the open page changes.** The row's reveal of the ringed icon used computed geometry and
+  stopped on whole item starts, so an icon already in view could still move the row, a clipped one moved by more than
+  needed, and a ringed pinned icon was never revealed at all. `DockRunScroll.toReveal` (pure, tested for visible, clipped
+  at either end, off screen either side, first and last item) leaves the row alone for a wholly visible icon, else moves
+  by the least that shows it whole with a 24 dp peek of its neighbour on the side it came from. The row measures the icons
+  and its viewport (the ring is a border drawn over the icon, the selection scale a graphics layer, so no layout depends on
+  the selection) and reveals only when the ringed icon changes, on every edge. The old `toRevealWhole` and its stops are
+  gone.
+- **Cards have their spotlight back.** The harsh thing in the design canvas was a uniform app-coloured border, not the
+  spotlight. A card's icon or avatar now lights the nearby part of its edge, softly, falling off with distance
+  (`GlassSurface(spotlightLocal)`, `glassSpotlightLocalProfile`: a bell 72 dp either side of the source, nothing beyond),
+  over the tinted fill and with its text contrast unchanged; the rest of the edge is the neutral glass edge. The same baked
+  glow image as the Dock (no blur, offscreen layer or gradient stroke), halved under reduced transparency. The top-glow
+  setting is the edge tint strip along the top edge; it is drawn too, under the spotlight, so with both on the top edge has
+  the app's strip and the local light on it. A card with no app (Today's) has no source and so no light. The player's
+  card, whose artwork covers the glass, lights nothing a viewer can see.
+- **The page handle beside a side Dock is always a column in front of it.** With sideways pages the handle stayed a row at
+  the bottom of the page. `HomeHandleLayout.stripFor(edge)` is now the column for a left or right Dock, `axisFor` runs the
+  pill down it whichever way the pages scroll (a drag along it scrubs in page order; "Page dots: Off" leaves the glyph), and
+  its room comes out of the pages' margin on the Dock's side first (`remainingMarginDp`), so the grid gives up only what the
+  margin could not hold. The paged Library and the App library Home share it. Stored layouts decode to up and down pages
+  unfolded (`LayoutSettings.UNFOLDED_DEFAULT`; old blobs and unknown values read as the default): sideways pages unfolded
+  come only from a stored `layout.unfolded.pageScroll` of `horizontal`, that is the Layout setting, so nothing was changed.
+- **The handle is drawn as the Dock's material.** The pill uses the Dock's own `dockSurfaceAppearance` (its "Dock
+  background" fill and colour, clear at 0%, reduced transparency, the same edge lights) with the Dock's corner capped at the
+  pill's half height (a 32 dp Dock corner keeps it fully rounded).
