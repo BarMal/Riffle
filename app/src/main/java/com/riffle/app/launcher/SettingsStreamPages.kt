@@ -21,8 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -412,14 +410,12 @@ private fun TasksSaveButton(
     enabled: Boolean,
     onSave: () -> Unit,
 ) {
-    val keyboard = LocalSoftwareKeyboardController.current
-    val focus = LocalFocusManager.current
+    val dismissKeyboard = rememberKeyboardDismisser()
     TextButton(
         modifier = Modifier.testTag(TASKS_SAVE_TEST_TAG),
         enabled = enabled,
         onClick = {
-            focus.clearFocus()
-            keyboard?.hide()
+            dismissKeyboard()
             onSave()
         },
     ) { SettingsButtonText(stringResource(R.string.settings_tasks_save)) }
