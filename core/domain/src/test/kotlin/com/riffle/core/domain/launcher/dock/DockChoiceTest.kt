@@ -199,6 +199,34 @@ class DockChoiceTest {
         assertTrue(state.choosing)
     }
 
+    @Test
+    fun withTheStreamOpenHoldingStillNeverStartsChoosingHoweverLong() {
+        var state = DockChoiceStart().next(0, past, 0f, hold, holdStarts = false)
+        assertNull(state.restingSinceMillis)
+        assertNull(state.deadlineMillis(hold))
+        state = state.next(hold, past, 0f, hold, holdStarts = false)
+        state = state.next(10_000, past + 1f, 2f, hold, holdStarts = false)
+        assertFalse(state.choosing)
+        assertNull(state.deadlineMillis(hold))
+    }
+
+    @Test
+    fun withTheStreamOpenSlidingAlongTheRunStillChoosesAtTheSlideDistanceAndOnlyBeyondIt() {
+        val slide = DockMotionConstants.CHOOSE_SLIDE_DP
+        assertFalse(DockChoiceStart().next(0, past, slide, hold, holdStarts = false).choosing)
+        assertTrue(DockChoiceStart().next(0, past, slide + 1f, hold, holdStarts = false).choosing)
+        assertTrue(DockChoiceStart().next(0, past, -(slide + 1f), hold, holdStarts = false).choosing)
+        // Never before the threshold, here either.
+        val shortOf = DockPress.COMMIT_DP - 1f
+        assertFalse(DockChoiceStart().next(0, shortOf, 200f, hold, holdStarts = false).choosing)
+    }
+
+    @Test
+    fun holdingStillChoosesFromHomeByDefault() {
+        val state = DockChoiceStart().next(0, past, 0f, hold).next(hold, past, 0f, hold)
+        assertTrue(state.choosing)
+    }
+
     // What a release does ------------------------------------------------------------------------------------------
 
     private fun outcome(
@@ -208,7 +236,8 @@ class DockChoiceTest {
         selectedKey: String? = null,
         cancelling: Boolean = false,
         startedOn: String? = null,
-    ) = DockChoice.outcome(fromContextual, committed, choosing, selectedKey, cancelling, startedOn)
+        startedNear: String? = null,
+    ) = DockChoice.outcome(fromContextual, committed, choosing, selectedKey, cancelling, startedOn, startedNear)
 
     @Test
     fun aQuickPressFromHomeOpensTheLastPageOrTheOneItStartedOn() {
@@ -242,6 +271,47 @@ class DockChoiceTest {
         assertEquals(
             DockPressOutcome.SwitchPage("live:chat:p"),
             outcome(fromContextual = true, choosing = true, committed = false, selectedKey = "live:chat:p"),
+        )
+    }
+
+    @Test
+    fun aSelectionThatEndsOnTheItemThePressStartedNearClosesTheOpenStreamLikeAPlainPress() {
+        assertEquals(
+            DockPressOutcome.Close,
+            outcome(
+                fromContextual = true,
+                choosing = true,
+                selectedKey = "ctx:agenda",
+                startedOn = "ctx:agenda",
+                startedNear = "ctx:agenda",
+            ),
+        )
+        // The press started on a pinned app (no key of its own): what is nearest it counts.
+        assertEquals(
+            DockPressOutcome.Close,
+            outcome(
+                fromContextual = true,
+                choosing = true,
+                committed = false,
+                selectedKey = "live:chat:p",
+                startedNear = "live:chat:p",
+            ),
+        )
+    }
+
+    @Test
+    fun aSelectionThatMovedToAnotherItemStillSwitchesPagesFromTheOpenStream() {
+        assertEquals(
+            DockPressOutcome.SwitchPage("ctx:tasks"),
+            outcome(fromContextual = true, choosing = true, selectedKey = "ctx:tasks", startedNear = "ctx:agenda"),
+        )
+    }
+
+    @Test
+    fun startingNearTheSelectedItemMakesNoDifferenceFromHome() {
+        assertEquals(
+            DockPressOutcome.OpenPage("ctx:agenda"),
+            outcome(choosing = true, selectedKey = "ctx:agenda", startedNear = "ctx:agenda"),
         )
     }
 

@@ -122,15 +122,20 @@ mode only adds tiles after them and scrolls the row along.
   Home"** while the Stream shows) and "Open Library"; **Ctrl + the arrow of the pull direction** does the first, with Shift
   the second. In the Home mode a live app or now playing keeps "Show <app> in Stream" (the press that starts on the icon)
   and Shift + Enter. Every icon and tile is a focusable 48 dp target with a spoken label and a click action ("Show Agenda");
-  the ringed one is selected.
+  the ringed one is selected. **System Back** (the gesture or the button) while the Stream shows returns to Home
+  (`LauncherShellBackHandling`); a focused Stream card unwinds first by its own handler. It is the non-gesture way out on a
+  phone, next to the Home button.
 
 - **Hold to choose** (dock modes slice 3; ADR 0003, Amendment 3, One gesture, third depth). A press held past the
   threshold, or slid sideways, becomes a selection (the pure rules are `core/domain/.../dock/DockChoice.kt`, the UI
   `DockChoice.kt`):
-  - *Start.* Pressed past 28 dp and held still for the hold time (220 ms, `DockMotionTuning.holdMillis`, named so the
-    settings slice can expose it; "still" is within 6 dp of where the finger came to rest, and moving restarts the wait),
-    or slid more than 14 dp along the run while pressed past the threshold. Never before the threshold; drawing the press
-    back above it before choosing starts cancels as before. Once choosing, the lift always commits to the selection.
+  - *Start.* **From Home:** pressed past 28 dp and held still for the hold time (220 ms, `DockMotionTuning.holdMillis`,
+    named so the settings slice can expose it; "still" is within 6 dp of where the finger came to rest, and moving restarts
+    the wait), or slid more than 14 dp along the run while pressed past the threshold. **With the Stream open:** only the
+    slide starts it; holding still never does, however long, because a person closing the Stream takes their time (a real
+    press lasts well over 220 ms) and a resting finger on a tile would just re-select the page already showing. Never
+    before the threshold; drawing the press back above it before choosing starts cancels as before. Once choosing, the
+    lift always commits to the selection.
   - *While choosing from Home* the Dock extends early: it draws the contextual row (pinned icons, live apps, now playing,
     the tiles) scrolled so the live entries and tiles are in view, and Home is dimmed further (to 30% of its pre-fade;
     it lets go over 120 ms when the choice ends, not under reduced motion). The Dock and Home hold where they were when
@@ -155,6 +160,10 @@ mode only adds tiles after them and scrolls the row along.
   - *Haptics.* A light tick (`LauncherHapticEvent.DETENT`, which follows the launcher's haptic strength setting, off
     sounds nothing) when choosing begins and each time the selection lands on a different item; never on a move that
     keeps the same item.
+  - *With the Stream open, a selection that ends where the press began closes.* A thumb drifts along the run while it
+    presses, which can pass the 14 dp slide; if the selection at the lift is the item nearest where the finger landed
+    (`DockChoice.outcome`'s `startedNearKey`, which also covers a press that began on a pinned app, which has no page of
+    its own), the release is the plain press and returns Home. Only a selection on another item switches pages.
   - *Accessibility.* Choosing is a refinement of the gesture, nothing only works by it: TalkBack and switch users have
     "Show live pages" on the Dock, "Show <app> in Stream" on each live app in the Home mode, and a click action on each
     item in the contextual mode. The label above the Dock is not exposed to accessibility (it echoes the name the item
@@ -171,7 +180,9 @@ mode only adds tiles after them and scrolls the row along.
 | Press the Dock down and release (Home mode) | Stream, on the last page (on that icon's page when the press started on a live app) |
 | Press the Dock down and release (contextual mode) | Home |
 | Press the Dock down and hold (220 ms) or slide sideways, move to an icon, release (Home mode) | That icon's page (live app, now playing or tile), with the fan |
-| The same from the contextual mode | Switches to that icon's page; the Stream stays out |
+| Press the Dock down, slide sideways to another icon, release (contextual mode; holding still does not choose) | Switches to that icon's page; the Stream stays out |
+| Press the Dock down, hold as long as you like without sliding, release (contextual mode) | Home |
+| System Back (gesture or button) while the Stream shows | Home |
 | While choosing: hold near either end of the row | Scrolls the row |
 | While choosing: drag more than one Dock height above the Dock, release | Nothing changes |
 | Tap a live app (Home mode) | Launches the app (the same launch as a pinned icon, in its own profile) |

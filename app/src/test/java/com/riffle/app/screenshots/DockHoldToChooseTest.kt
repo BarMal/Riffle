@@ -232,8 +232,14 @@ class DockHoldToChooseTest {
     @Test
     fun choosingWhileTheStreamIsOutSwitchesPagesAndDoesNotClose() {
         show(startShown = true)
+        // With the Stream out holding still never chooses; sliding along the run does, at once.
         pressAndHold()
         composeRule.mainClock.advanceTimeBy(HOLD_PLUS_MILLIS)
+        composeRule.mainClock.advanceTimeByFrame()
+        assertNull("holding still chose in the open Stream", label())
+        composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).performTouchInput {
+            moveBy(Offset(SLIDE_PX, 0f), delayMillis = 16)
+        }
         composeRule.mainClock.advanceTimeByFrame()
         assertNotNull("no label while choosing from the open Stream", label())
         // Hold the finger at the row's end: it scrolls there (edge scrolling) and the last tile is under the finger.

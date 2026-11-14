@@ -32,6 +32,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.stream.StreamFocusRequests
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.dock.DockChoice
+import com.riffle.core.domain.launcher.dock.DockChoiceItem
 import com.riffle.core.domain.launcher.dock.DockPressOutcome
 import com.riffle.core.domain.launcher.dock.FanFrame
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
@@ -358,6 +359,7 @@ private fun BindPullCallbacks(
                     selectedKey = choice.selectedKey,
                     cancelling = choice.cancelling,
                     startedOnEntryKey = release.startedOnEntryKey,
+                    startedNearKey = release.startedNearKey,
                 )
             choice.end()
             motion.endChoosing()
@@ -549,6 +551,9 @@ private fun rememberDockPullGestureHost(
             override val holdMillis: Long
                 get() = motion.tuning.holdMillis.toLong()
 
+            override val holdChooses: Boolean
+                get() = !latestStream.value.shown
+
             override fun pressEntryAt(position: Offset): String? {
                 val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position
                 val alongRun = latestDirection.value.unitY != 0f
@@ -562,6 +567,22 @@ private fun rememberDockPullGestureHost(
                     }
                 // Only along the run: the section is as thick as its tiles, and a touch on it is on a tile or a gap.
                 return dockPullEntryAt(if (alongRun) inRoot.x else inRoot.y, entries)
+            }
+
+            override fun pressNearestSelectableAt(position: Offset): String? {
+                val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position
+                val alongRun = latestDirection.value.unitY != 0f
+                return DockChoice.nearestSelectable(
+                    positionPx = if (alongRun) inRoot.x else inRoot.y,
+                    items =
+                        hostState.dynamicEntryBounds.map { (key, bounds) ->
+                            DockChoiceItem(
+                                key = key,
+                                startPx = if (alongRun) bounds.left else bounds.top,
+                                endPx = if (alongRun) bounds.right else bounds.bottom,
+                            )
+                        },
+                )
             }
         }
     }

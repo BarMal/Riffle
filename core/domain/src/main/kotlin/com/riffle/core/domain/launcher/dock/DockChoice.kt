@@ -99,7 +99,10 @@ object DockChoice {
      * What a release does. [fromContextual]: the Stream was open under the finger. [committed]: the press went past the
      * threshold. [choosing]: it had turned into a selection, with [selectedKey] the item selected (null when none is
      * selectable) and [cancelling] the finger far enough away to cancel. [startedOnEntryKey] is the item the finger
-     * landed on, which a plain press opens from Home.
+     * landed on, which a plain press opens from Home. [startedNearKey] is the selectable item nearest where the finger
+     * landed (what [nearestSelectable] says of the landing): with the Stream open, a selection that ends on it is the
+     * press that never left where it started (a thumb drifts along the run while it presses), and closes like a plain
+     * one; only a selection that lands on another item switches pages.
      */
     @Suppress("LongParameterList")
     fun outcome(
@@ -109,6 +112,7 @@ object DockChoice {
         selectedKey: String?,
         cancelling: Boolean,
         startedOnEntryKey: String?,
+        startedNearKey: String? = null,
     ): DockPressOutcome =
         when {
             // A plain press: past the threshold it toggles the modes, short of it nothing changes.
@@ -121,7 +125,11 @@ object DockChoice {
             // Once choosing, lifting always commits to the selection, unless the finger was taken well away.
             cancelling -> DockPressOutcome.Revert
             selectedKey != null ->
-                if (fromContextual) DockPressOutcome.SwitchPage(selectedKey) else DockPressOutcome.OpenPage(selectedKey)
+                when {
+                    !fromContextual -> DockPressOutcome.OpenPage(selectedKey)
+                    selectedKey == startedNearKey -> DockPressOutcome.Close
+                    else -> DockPressOutcome.SwitchPage(selectedKey)
+                }
             // Nothing selectable at all: Home falls back to the page a plain press opens; the open Stream has none to
             // fall back to (a plain press closes it, which is not a choice), so nothing changes.
             fromContextual -> DockPressOutcome.Revert
@@ -157,6 +165,10 @@ sealed interface DockPressOutcome {
  * finger has rested for the hold time, or at once when it slides more than [DockMotionConstants.CHOOSE_SLIDE_DP]
  * along the run. Never before the threshold, and drawing the press back above it before choosing starts begins again.
  * Once started it stays started: the press ends at the lift.
+ *
+ * Holding only chooses where the press started from Home. With the Stream already open ([next]'s `holdStarts` false) a
+ * finger that rests, however long, is a person taking their time over the press that closes it: only sliding along the
+ * run chooses there, so a press held for half a second still returns Home.
  */
 data class DockChoiceStart(
     val choosing: Boolean = false,
@@ -167,18 +179,21 @@ data class DockChoiceStart(
 ) {
     /**
      * The state after the finger is at [travelDp] pressed down and [alongDp] along the run from where it landed
-     * (signed; only how far counts) at [timeMillis]. [holdMillis] is the hold time.
+     * (signed; only how far counts) at [timeMillis]. [holdMillis] is the hold time; [holdStarts] says whether resting
+     * for it chooses at all (from Home) or only a slide does (the open Stream).
      */
     fun next(
         timeMillis: Long,
         travelDp: Float,
         alongDp: Float,
         holdMillis: Long = DockMotionConstants.DEFAULT_HOLD_MILLIS.toLong(),
+        holdStarts: Boolean = true,
     ): DockChoiceStart =
         when {
             choosing -> this
             !DockPress.commits(travelDp) -> DockChoiceStart()
             abs(alongDp) > DockMotionConstants.CHOOSE_SLIDE_DP -> copy(choosing = true)
+            !holdStarts -> this
             restingSinceMillis == null || movedFromRest(travelDp, alongDp) ->
                 copy(restingSinceMillis = timeMillis, restTravelDp = travelDp, restAlongDp = alongDp)
             timeMillis - restingSinceMillis >= holdMillis -> copy(choosing = true)

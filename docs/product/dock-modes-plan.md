@@ -206,6 +206,41 @@ object is ready for slice 6), bottom-anchored stack behaviour, the unfolded layo
 **Left for later.** Shortcut stacks for pinned apps (slice 4 only has to make `DockChoice.pageFor` answer for them), the
 settings for hold time and haptics (slice 6; the tuning field is ready), the first-run hint, the unfolded layout.
 
+### Fix: closing by press on a device
+
+The owner, on a phone with gesture navigation: "I could only exit the context menu by using the home button, the dock
+gesture didn't work."
+
+**Cause.** Slice 3 turned a press that rests past the threshold into choosing after 220 ms, in both modes, and assumed that
+nothing selectable in the contextual mode changes nothing. A real press (a finger lands on a tile or an app icon, which fill
+the row edge to edge, drags 30 to 45 dp and lifts) lasts about half a second, so it almost always rested for 220 ms: it became
+a selection, the finger was over a tile, and the release switched to that page (the one already showing) instead of
+closing. Every test before this injected a press from the Dock's centre lasting 160 ms with no rest, so none of them could
+see it. Opening from Home was unaffected: there the same selection opens the Stream.
+
+**Ruled out, from the code.** The row's `horizontalScroll` and the tiles' `combinedClickable` do not take a mostly vertical
+drag (the scroll claims only the horizontal one; the click detectors consume the lift, and the press consumes it first on the
+Initial pass); the Dock's loop sits above both, observes on the Main pass after them, and a quick flick from a tile closes. The
+dip translates the Dock inside the gesture, so the finger is measured in resting coordinates. The room is there: a finger on a tile
+has about 54 dp below it in the fixture (more on a device, where the navigation bar's inset sits below the Dock), against the
+28 dp threshold, and the system's gesture area is only entered by touches that start in it. A system cancel is a cancel and
+was not seen to happen. Whether a particular phone's gesture navigation behaves differently cannot be settled without one.
+
+**Fix.** `DockChoiceStart.next(holdStarts)`: with the Stream open only a slide of more than 14 dp along the run chooses;
+holding never does. And `DockChoice.outcome(startedNearKey)`: a selection at the lift that is the item nearest where the
+finger landed closes like a plain press (a thumb drifts, and a press that began on a pinned app has no page of its own), so
+only a move onto another item switches pages. Holding still to choose from Home is unchanged. The UI feeds both
+(`DockPullGestureHost.holdChooses`, `pressNearestSelectableAt`). System Back while the Stream shows already returned Home
+(`LauncherShellBackHandling`, enabled for every destination but Home); a test now pins it.
+
+**Tests.** `DockChoiceTest` (hold never chooses with the Stream open, the slide still does, the near-start selection closes);
+Robolectric `DockRealFingerPressTest` (a press of about half a second landing on a tile, on a pinned app, held long, drifting
+along the row, quick, and from Home, through the real `HomeDestination`) and `StreamBackReturnsHomeTest`; device
+`DockRealFingerPressInteractionTest` and `StreamBackInteractionTest`. Rewritten on purpose because the behaviour changed:
+`DockHoldToChooseTest.choosingWhileTheStreamIsOutSwitchesPagesAndDoesNotClose` and the device
+`DockHoldToChooseInteractionTest.choosingWhileTheStreamIsOutSwitchesThePageAndKeepsTheStream` chose the open Stream's page by
+holding still; they now slide (and the JVM one asserts that holding does not choose).
+
 ### Slice 4a: The stack (built)
 
 **Built.**

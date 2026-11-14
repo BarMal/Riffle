@@ -11,13 +11,16 @@ import com.riffle.core.domain.launcher.dock.DockPress
 /**
  * How a Dock press ended (ADR 0003, Amendment 3): [committed] says it passed the threshold, so the mode toggles;
  * [choosing] says it had turned into a selection (the lift then chooses, whatever the travel); [startedOnEntryKey] is
- * the dynamic entry the finger landed on, null elsewhere; [travelDp] is how far it was pressed.
+ * the dynamic entry the finger landed on, null elsewhere; [startedNearKey] is the selectable item nearest where it
+ * landed (a pinned app's icon has no entry of its own, but something is nearest it); [travelDp] is how far it was
+ * pressed.
  */
 internal data class DockPressRelease(
     val committed: Boolean,
     val startedOnEntryKey: String?,
     val travelDp: Float,
     val choosing: Boolean = false,
+    val startedNearKey: String? = null,
 )
 
 /**
@@ -45,6 +48,10 @@ internal class DockPressState {
     var startedOnEntryKey: String? = null
         private set
 
+    /** The selectable item nearest where the running press landed, or null. */
+    var startedNearKey: String? = null
+        private set
+
     /** Called once when a press ends, whether it committed or not. */
     var onReleased: (DockPressRelease) -> Unit = {}
 
@@ -64,8 +71,12 @@ internal class DockPressState {
     /** Called with the finger's place at every move while choosing. */
     var onChoosingMoved: (position: Offset) -> Unit = {}
 
-    fun begin(entryKey: String?) {
+    fun begin(
+        entryKey: String?,
+        nearestSelectableKey: String? = null,
+    ) {
         startedOnEntryKey = entryKey
+        startedNearKey = nearestSelectableKey
         progress = 0f
         pressing = true
         onBegan()
@@ -92,7 +103,8 @@ internal class DockPressState {
     /** The finger lifted at [travelDp] down. */
     fun release(travelDp: Float) {
         if (!pressing) return
-        val release = DockPressRelease(DockPress.commits(travelDp), startedOnEntryKey, travelDp, choosing)
+        val release =
+            DockPressRelease(DockPress.commits(travelDp), startedOnEntryKey, travelDp, choosing, startedNearKey)
         reset()
         onReleased(release)
     }
@@ -101,7 +113,13 @@ internal class DockPressState {
     fun cancel() {
         if (!pressing) return
         // A gesture taken away never chooses, even from a selection: nothing changes.
-        val release = DockPressRelease(committed = false, startedOnEntryKey = startedOnEntryKey, travelDp = 0f)
+        val release =
+            DockPressRelease(
+                committed = false,
+                startedOnEntryKey = startedOnEntryKey,
+                travelDp = 0f,
+                startedNearKey = startedNearKey,
+            )
         reset()
         onReleased(release)
     }
@@ -111,5 +129,6 @@ internal class DockPressState {
         choosing = false
         progress = 0f
         startedOnEntryKey = null
+        startedNearKey = null
     }
 }

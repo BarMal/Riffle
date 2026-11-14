@@ -89,7 +89,10 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   past the 28 dp threshold the wait for the next event is bounded (`withTimeoutOrNull`) by the moment holding starts
   choosing, so a still finger gets there without events. It starts when the finger has rested for the hold time
   (`DockMotionTuning.holdMillis`, 220 ms; "rested" is within 6 dp, moving restarts it) or slides more than 14 dp along the
-  run past the threshold; never before the threshold, and drawing the press back above it first cancels the wait. From
+  run past the threshold; never before the threshold, and drawing the press back above it first cancels the wait. **Resting
+  only chooses from Home** (`DockChoiceStart.next(holdStarts)`, fed by `DockPullGestureHost.holdChooses`): with the Stream
+  open only the slide does, so a slow press that rests on a tile closes the Stream however long it is held (a real press
+  lasts about half a second, longer than the hold time; this was why the Dock did not return Home on a phone). From
   then on the press is a selection: the finger's place is what is followed, the lift commits to the selected item (any
   travel), and the release outcome is the one pure function `DockChoice.outcome`:
 
@@ -97,7 +100,7 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   | --- | --- | --- |
   | Quick press past the threshold | Opens the page of the icon the press started on, else the last page | Closes |
   | Short of the threshold | Nothing | Nothing |
-  | Choosing, an item selected | Opens that item's page, with the fan | Switches to that page; the Stream stays out |
+  | Choosing, an item selected | Opens that item's page, with the fan | Switches to that page; the Stream stays out, unless the item is the one nearest where the finger landed: then it closes |
   | Choosing, nothing selectable | The page a quick press opens | Nothing |
   | Choosing, finger more than one Dock thickness beyond the Dock's inner edge | Nothing (back to Home) | Nothing |
   | Gesture taken away (not a lift) | Nothing | Nothing |

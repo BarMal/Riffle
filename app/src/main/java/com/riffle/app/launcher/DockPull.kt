@@ -324,8 +324,17 @@ internal interface DockPullGestureHost {
     /** How long a press is held still past the threshold before it turns into choosing, in milliseconds. */
     val holdMillis: Long
 
+    /**
+     * Whether holding still past the threshold turns a press into choosing: from Home (the Stream is not out). With the
+     * Stream out a finger that rests is just a slow press that closes it, so only sliding along the run chooses.
+     */
+    val holdChooses: Boolean
+
     /** The dynamic entry a touch that landed at [position] (in the gesture's own coordinates) is on, or null. */
     fun pressEntryAt(position: Offset): String?
+
+    /** The selectable Dock item nearest a touch that landed at [position] (the gesture's coordinates), or null. */
+    fun pressNearestSelectableAt(position: Offset): String?
 
     /** A pull is taking over: whatever the trampoline is running goes to its end at once. */
     fun settleMotion() {}
@@ -422,7 +431,7 @@ private suspend fun AwaitPointerEventScope.awaitClaim(
                         change.consume()
                         claimed.position = change.position
                         claimed.timeMillis = change.uptimeMillis
-                        host.press.begin(host.pressEntryAt(down.position))
+                        host.press.begin(host.pressEntryAt(down.position), host.pressNearestSelectableAt(down.position))
                         host.press.update(DockPress.travelDp(direction, drag.x / density, drag.y / density))
                     }
                 }
@@ -467,11 +476,12 @@ private suspend fun AwaitPointerEventScope.trackPress(
 ) {
     val press = host.press
     val hold = host.holdMillis
+    val timing = ChoiceTiming(hold, host.holdChooses)
     var start = DockChoiceStart()
     var sample = claimed
     var finished = false
     try {
-        start = feedChoice(start, sample, down, direction, hold, press, host.canChoose)
+        start = feedChoice(start, sample, down, direction, timing, press, host.canChoose)
         while (!finished) {
             val deadline = start.deadlineMillis(hold)
             val first =
@@ -485,14 +495,14 @@ private suspend fun AwaitPointerEventScope.trackPress(
             if (first == null) {
                 // The finger rested for the hold time: it is a selection now.
                 sample = PressSample(sample.position, requireNotNull(deadline))
-                start = feedChoice(start, sample, down, direction, hold, press, host.canChoose)
+                start = feedChoice(start, sample, down, direction, timing, press, host.canChoose)
                 continue
             }
             first.changes.firstOrNull { it.id == down.id }?.consume()
             val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
             if (change != null) {
                 sample = PressSample(change.position, change.uptimeMillis)
-                start = feedChoice(start, sample, down, direction, hold, press, host.canChoose)
+                start = feedChoice(start, sample, down, direction, timing, press, host.canChoose)
             }
             finished = trackPressStep(change, down, direction, press)
         }
@@ -501,6 +511,12 @@ private suspend fun AwaitPointerEventScope.trackPress(
         if (!finished) press.cancel()
     }
 }
+
+/** How long a rest chooses, and whether it does at all (not with the Stream out, where only a slide chooses). */
+private class ChoiceTiming(
+    val holdMillis: Long,
+    val holdStarts: Boolean,
+)
 
 /**
  * Feeds the finger's [sample] to [start] and, when that turns the press into choosing, tells [press]. The lift is a
@@ -511,7 +527,7 @@ private fun AwaitPointerEventScope.feedChoice(
     sample: PressSample,
     down: PointerInputChange,
     direction: DockPullDirection,
-    hold: Long,
+    timing: ChoiceTiming,
     press: DockPressState,
     canChoose: Boolean,
 ): DockChoiceStart {
@@ -519,7 +535,7 @@ private fun AwaitPointerEventScope.feedChoice(
     val drag = sample.position - down.position
     val travelDp = DockPress.travelDp(direction, drag.x / density, drag.y / density)
     val alongDp = (if (direction.unitY != 0f) drag.x else drag.y) / density
-    val next = start.next(sample.timeMillis, travelDp, alongDp, hold)
+    val next = start.next(sample.timeMillis, travelDp, alongDp, timing.holdMillis, timing.holdStarts)
     if (next.choosing) press.beginChoosing(sample.position)
     return next
 }
