@@ -6,12 +6,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.AppListContext
@@ -45,6 +44,7 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.SearchResultList
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.dpBounds
 import com.riffle.app.launcher.launcherPanelContentColor
 import com.riffle.app.launcher.launcherPanelSurfaceColor
 import com.riffle.app.launcher.library.LibraryState
@@ -55,7 +55,8 @@ import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.dock.DockSearchMotion
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
-import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.stream.StreamColumn
+import com.riffle.core.domain.launcher.stream.StreamColumnRect
 
 /**
  * Search, opened from the Dock (ADR 0003, Amendment 1, "Home, Library and search"): the field sits on the Dock's edge
@@ -79,12 +80,17 @@ internal fun DockSearchSurface(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     /**
-     * Unfolded (ADR 0003, Amendment 2): the panel's width, the same column the Stream's cards stand in, and the Dock
-     * edge
-     * it is attached to, so the field and the results stand on the Dock's inner side as a card stack does. Null folded:
-     * the panel is as wide as the room, centred.
+     * The room the panel keeps clear of (the Dock's reserved room and the system bars and keyboard), folded: the panel
+     * stands in what is left, at the bottom, centred. Unfolded the panel's place is [column] instead.
      */
-    attach: SearchAttach? = null,
+    contentPadding: PaddingValues = PaddingValues(),
+    /**
+     * Unfolded (ADR 0003, Amendment 2): where the Stream's column stands at rest, in dp in this surface's coordinates
+     * (`StreamColumn.rect`: the same width, the same side against the Dock's inner edge, its bottom at the Dock's
+     * lower end and lifted above the keyboard). The field and the results stand in exactly that rectangle, the field
+     * at its bottom and the results growing up from it. Null folded.
+     */
+    column: (() -> StreamColumnRect?)? = null,
 ) {
     val motion = rememberDockSearchMotion(reducedMotion, tuning, onClosed = onClose)
     val onAction = context.onAction
@@ -93,18 +99,24 @@ internal fun DockSearchSurface(
     BackHandler(enabled = state.isSearching) { onAction(LauncherShellAction.SearchQueryChanged("")) }
     BackHandler(enabled = !state.isSearching) { motion.close() }
 
+    val frameAlpha = { DockSearchMotion.frame(motion.progress, reducedMotion).alpha }
     Box(
         modifier =
             modifier
                 .fillMaxSize()
                 .testTag(DOCK_SEARCH_SURFACE_TEST_TAG)
-                .semantics { dockSearchProgress = motion.progress },
+                .semantics {
+                    dockSearchProgress = motion.progress
+                    dockSearchAlpha = frameAlpha()
+                },
     ) {
-        // The room around the field and the results belongs to search: a tap there closes it instead of reaching Home.
+        // The room around the field and the results belongs to search, all the way to the screen's edges (the system
+        // bars and the keyboard's room included): a press there closes it instead of reaching Home.
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .testTag(DOCK_SEARCH_SCRIM_TEST_TAG)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -112,23 +124,24 @@ internal fun DockSearchSurface(
                         onClick = motion::close,
                     ),
         )
+        val panelModifier =
+            if (column == null) {
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(contentPadding)
+                    .widthIn(max = SEARCH_MAX_WIDTH)
+                    .fillMaxWidth()
+                    .padding(RiffleSpacing.s)
+            } else {
+                // The same rectangle the Stream's cards stand in; its cards keep the page's own inset from its edges.
+                Modifier
+                    .dpBounds(column)
+                    .testTag(DOCK_SEARCH_COLUMN_TEST_TAG)
+                    .padding(StreamColumn.PAGE_INSET_DP.dp)
+            }
         Column(
             modifier =
-                Modifier
-                    .align(attach?.alignment ?: Alignment.BottomCenter)
-                    .then(
-                        if (attach == null) {
-                            Modifier.widthIn(max = SEARCH_MAX_WIDTH).fillMaxWidth()
-                        } else {
-                            Modifier.width(attach.width)
-                        },
-                    )
-                    .padding(
-                        start = if (attach?.dockEdge == DockPosition.LEFT) 0.dp else RiffleSpacing.s,
-                        end = if (attach?.dockEdge == DockPosition.RIGHT) 0.dp else RiffleSpacing.s,
-                        top = RiffleSpacing.s,
-                        bottom = RiffleSpacing.s,
-                    )
+                panelModifier
                     .graphicsLayer {
                         val frame = DockSearchMotion.frame(motion.progress, reducedMotion)
                         alpha = frame.alpha
@@ -171,7 +184,8 @@ private fun DockSearchField(
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(state.focusSearch) {
         if (state.focusSearch) {
-            focusRequester.requestFocus()
+            // Whatever the panel's opacity: a field fading in takes focus and the keyboard at once.
+            runCatching { focusRequester.requestFocus() }
             keyboard?.show()
         }
     }
@@ -290,20 +304,6 @@ private fun DockPullDirection.dockEdgeOrigin(): TransformOrigin =
             },
     )
 
-/** Where unfolded search is attached: the panel's [width] against the Dock's inner side at [dockEdge]. */
-internal class SearchAttach(
-    val width: Dp,
-    val dockEdge: DockPosition,
-) {
-    val alignment: Alignment
-        get() =
-            when (dockEdge) {
-                DockPosition.LEFT -> Alignment.BottomStart
-                DockPosition.RIGHT -> Alignment.BottomEnd
-                else -> Alignment.BottomCenter
-            }
-}
-
 private val SEARCH_MAX_WIDTH = 840.dp
 private const val NANOS_PER_SECOND = 1_000_000_000f
 
@@ -311,5 +311,13 @@ private const val NANOS_PER_SECOND = 1_000_000_000f
 internal val DockSearchProgressKey = SemanticsPropertyKey<Float>("DockSearchProgress")
 private var SemanticsPropertyReceiver.dockSearchProgress by DockSearchProgressKey
 
+/** The surface's opacity as drawn (0 to 1; the spring's alpha), for a test to read at rest; not read by anything else. */
+internal val DockSearchAlphaKey = SemanticsPropertyKey<Float>("DockSearchAlpha")
+private var SemanticsPropertyReceiver.dockSearchAlpha by DockSearchAlphaKey
+
 internal const val DOCK_SEARCH_SURFACE_TEST_TAG = "dock-search-surface"
+
+/** The press catcher over the whole window, and the rectangle unfolded search stands in (the Stream column's). */
+internal const val DOCK_SEARCH_SCRIM_TEST_TAG = "dock-search-scrim"
+internal const val DOCK_SEARCH_COLUMN_TEST_TAG = "dock-search-column"
 internal const val DOCK_SEARCH_FIELD_TEST_TAG = "dock-search-field"

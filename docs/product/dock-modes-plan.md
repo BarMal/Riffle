@@ -939,3 +939,14 @@ Six things the owner found on a foldable (unfolded, Dock on the right edge), eac
   two fingers up goes with it (now unbound). Swipe down was never bound to notifications by default: it opens search
   (`OPEN_SEARCH`), which stays the default, and over vertically scrolling pages the pager already owns vertical drags
   (the arbiter's child axes), so nothing fires there from the page either. The overview surface itself is untouched.
+- **Unfolded search stands in the Stream column's rectangle.** `DockSearchSurface` is placed by `StreamColumn.rect` at
+  rest (`StreamColumnGeometry.restBounds`, from the same window, Dock bounds and insets as the column, so the keyboard
+  lifts it): the same width, the same side against the Dock's inner edge, its bottom at the Dock's lower end as it is in
+  the current mode (the Dock is shorter in the Home mode than while the Stream shows its tiles), growing up with the
+  results; the field and results keep the page's 16 dp inset from the rectangle's edges, as the cards do. The press
+  catcher covers the window. The field takes focus without waiting on layout. The surface exposes its drawn alpha
+  (`DockSearchAlphaKey`) and the tests assert it is 1 once the spring has ended, with the field focused, the panel
+  against a right and a left Dock, and above a simulated keyboard. The cause of the dim, detached panel on the device
+  was not reproduced: the geometry was the Home-sized reservation, not the column's, and the Thick glass over a Home
+  that fades out to the bare wallpaper is a 56% fill (reduced transparency makes it nearly opaque); nothing kept the
+  spring from arriving in any run here. Folded search is unchanged.

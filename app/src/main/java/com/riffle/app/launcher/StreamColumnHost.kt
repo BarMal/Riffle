@@ -138,6 +138,8 @@ internal fun rememberEasedFraction(
 internal class StreamColumnGeometry(
     val fade: GridFadeField,
     val bounds: () -> StreamColumnRect?,
+    /** The column as it stands at rest (no card open): where unfolded search stands, the same rectangle. */
+    val restBounds: () -> StreamColumnRect?,
 )
 
 private fun Rect.toDp(density: Float) =
@@ -187,6 +189,7 @@ internal fun rememberStreamColumnGeometry(
             )
         }
     val bounds: () -> StreamColumnRect? = remember(window) { { window?.let { StreamColumn.rect(it, open.value) } } }
+    val restBounds: () -> StreamColumnRect? = remember(window) { { window?.let { StreamColumn.rect(it, 0f) } } }
     val fade = remember { GridFadeField() }
     SideEffect {
         fade.column = bounds
@@ -195,5 +198,5 @@ internal fun rememberStreamColumnGeometry(
         fade.peekThrough = peekThrough
         fade.density = density
     }
-    return remember(fade, bounds) { StreamColumnGeometry(fade, bounds) }
+    return remember(fade, bounds, restBounds) { StreamColumnGeometry(fade, bounds, restBounds) }
 }

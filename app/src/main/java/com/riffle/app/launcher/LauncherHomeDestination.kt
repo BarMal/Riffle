@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,12 +25,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.app.R
@@ -40,7 +42,6 @@ import com.riffle.app.launcher.library.LibraryPagedView
 import com.riffle.app.launcher.library.LibrarySheet
 import com.riffle.app.launcher.library.libraryState
 import com.riffle.app.launcher.search.DockSearchSurface
-import com.riffle.app.launcher.search.SearchAttach
 import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -69,7 +70,6 @@ import com.riffle.core.domain.launcher.settings.effectiveFeatures
 import com.riffle.core.domain.launcher.settings.forAppLibraryHome
 import com.riffle.core.domain.launcher.settings.layoutPosture
 import com.riffle.core.domain.launcher.settings.without
-import com.riffle.core.domain.launcher.stream.StreamColumn
 import com.riffle.core.domain.launcher.stream.StreamColumnRect
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import kotlinx.coroutines.delay
@@ -287,7 +287,8 @@ private fun HomeDestinationContent(
     val covered = shownLibrary && !pull.isLibraryTransitioning
     val coveredSemantics = if (covered) Modifier.clearAndSetSemantics {} else Modifier
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
-    // The Stream's column and the fade of Home's grid beneath it (unfolded only; see StreamColumn and GridFadeField).
+    // The Stream's column and the fade of Home's grid beneath it (see StreamColumn and GridFadeField). Folded, the same
+    // rectangle stands for the stack when apps show behind the cards.
     // The Dock's body as it stands at rest: the column touches that edge, so a press's dip does not move it.
     val dockBodyNow = dockHost.bodyBounds.value
     val restDockBody = remember { mutableStateOf<Rect?>(null) }
@@ -421,13 +422,8 @@ private fun HomeDestinationContent(
                 if (showLibrary) {
                     LibraryHomeSurface(
                         search = searchOpen,
-                        searchAttach =
-                            if (unfolded && rootSize != IntSize.Zero) {
-                                val widthDp = rootSize.width / LocalDensity.current.density
-                                SearchAttach(StreamColumn.restWidthDp(widthDp).dp, plan.dockEdge)
-                            } else {
-                                null
-                            },
+                        // Unfolded, search stands in the Stream column's own rectangle (against the Dock's inner edge).
+                        searchColumn = if (unfolded && rootSize != IntSize.Zero) column.restBounds else null,
                         tuning = dockTuning,
                         state = dockHostState,
                         dockHost = dockHost,
@@ -546,7 +542,7 @@ private fun rememberLibraryShown(
 @Composable
 private fun LibraryHomeSurface(
     search: Boolean,
-    searchAttach: SearchAttach?,
+    searchColumn: (() -> StreamColumnRect?)?,
     tuning: DockMotionTuning,
     state: LauncherShellState,
     dockHost: HomeDockHostState,
@@ -579,6 +575,33 @@ private fun LibraryHomeSurface(
                 if (action.closesLibrary()) close()
             },
         )
+    if (search) {
+        // Search rises from the Dock (the handle above it, or the Dock's own action), field on the Dock's edge. Its
+        // press catcher covers the whole window; the panel keeps clear of the Dock's room and the insets itself.
+        val ltr = LayoutDirection.Ltr
+
+        fun extra(edge: DockPosition): Dp = if (dockPosition == edge) dockExtent else 0.dp
+        val room =
+            PaddingValues.Absolute(
+                left = insets.calculateLeftPadding(ltr) + extra(DockPosition.LEFT),
+                top = insets.calculateTopPadding() + extra(DockPosition.TOP),
+                right = insets.calculateRightPadding(ltr) + extra(DockPosition.RIGHT),
+                bottom = insets.calculateBottomPadding() + extra(DockPosition.BOTTOM),
+            )
+        Box(modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX)) {
+            DockSearchSurface(
+                state = libraryState,
+                context = context,
+                reducedMotion = state.reducedMotion(),
+                direction = dockPosition.pullDirection,
+                tuning = tuning,
+                onClose = close,
+                contentPadding = room,
+                column = searchColumn,
+            )
+        }
+        return
+    }
     Box(
         modifier =
             Modifier
@@ -586,20 +609,6 @@ private fun LibraryHomeSurface(
                 .zIndex(HOME_CONTENT_Z_INDEX)
                 .dockInteractionPadding(dockPosition, dockExtent),
     ) {
-        if (search) {
-            // Search rises from the Dock (the handle above it, or the Dock's own action), field on the Dock's edge.
-            DockSearchSurface(
-                modifier = Modifier.padding(insets),
-                state = libraryState,
-                context = context,
-                reducedMotion = state.reducedMotion(),
-                direction = dockPosition.pullDirection,
-                tuning = tuning,
-                onClose = close,
-                attach = searchAttach,
-            )
-            return@Box
-        }
         // The margin around the sheet belongs to it: a tap there closes the Library instead of reaching what is under.
         Box(
             modifier =
