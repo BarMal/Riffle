@@ -209,6 +209,14 @@ internal class HomeDockPullBinding(
             else -> if (homeStays()) 1f else motion.homeFrame()?.alpha ?: homeAlphaAtRest()
         }
 
+    /**
+     * Whether Home is drawn at (or near) nothing, so it must take no input either: it is gone behind the Stream, or
+     * under the Library or search ([libraryShown]). Unfolded Home stays at full opacity beside the column and is never
+     * blocked here (its cells fade and block one by one, see [GridFadeCell]).
+     */
+    fun homeInputBlocked(libraryShown: Boolean): Boolean =
+        libraryShown || homeAlpha(libraryShown) <= HOME_INPUT_ALPHA_FLOOR
+
     /** Home's size: it scales down a little as the trampoline fades it, and is full size otherwise. */
     private fun homeScale(libraryShown: Boolean): Float =
         when {
@@ -667,6 +675,9 @@ private fun rememberDockPullGestureHost(
 
 /** What a surface is drawn at, for tests: its opacity and how far it is from rest (fraction of the window). */
 internal data class DrawnSurface(val alpha: Float, val travelFraction: Float)
+
+/** Home drawn at or below this opacity takes no touches. */
+internal const val HOME_INPUT_ALPHA_FLOOR = 0.02f
 
 internal val DrawnSurfaceKey = SemanticsPropertyKey<DrawnSurface>("DrawnSurface")
 private var SemanticsPropertyReceiver.drawnSurface by DrawnSurfaceKey

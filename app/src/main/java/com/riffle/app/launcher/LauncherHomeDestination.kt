@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +25,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -266,6 +268,8 @@ private fun HomeDestinationContent(
     // Unfolded, Home stays under and beside the column whatever the Stream does.
     val showHome = columnMode || !shownStream || pull.isTransitioning || pull.motionShowsHome
     val showLibrary = shownLibrary || pull.isLibraryTransitioning
+    val searchOpenNow by rememberUpdatedState(state.destination == ShellDestination.SEARCH)
+    val shownLibraryNow by rememberUpdatedState(shownLibrary)
     // Search is its own surface, opened from the Dock: it is the Library's destination but not its sheet.
     val searchOpen = state.destination == ShellDestination.SEARCH
     val hintSeen = state.launcherSettings.hints.dockPressSeen
@@ -392,7 +396,14 @@ private fun HomeDestinationContent(
                         }
                     }
                 }
-                if (showHome) homeContent()
+                if (showHome) {
+                    // Home takes no input while it is drawn at nothing or covered by search or the Library: the gate
+                    // is a full-size sibling over it that swallows every touch.
+                    Box(modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX)) {
+                        homeContent()
+                        HomeInputGate(blocked = { searchOpenNow || pull.homeInputBlocked(shownLibraryNow) })
+                    }
+                }
                 if (showStream && stream != null) {
                     val streamSurfaceModifier =
                         pull.streamModifier(libraryShown = shownLibrary)
@@ -459,6 +470,36 @@ private fun HomeDestinationContent(
         }
     }
 }
+
+/**
+ * Home's input gate: while [blocked] it covers Home with a node that takes every touch (a tap, a press, a drag, a page
+ * swipe or a Home swipe all stop here), so a Home that is hidden under search or the Library, or drawn at nothing,
+ * cannot open a menu or launch an app. Over it, the surface that covers Home (search's room, the Library's sheet) and
+ * the Dock keep their own touches.
+ */
+@Composable
+private fun HomeInputGate(blocked: () -> Boolean) {
+    val isBlocked by remember { derivedStateOf(blocked) }
+    if (isBlocked) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .zIndex(HOME_INPUT_GATE_Z_INDEX)
+                    .testTag(HOME_INPUT_GATE_TEST_TAG)
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent().changes.forEach { change -> change.consume() }
+                            }
+                        }
+                    },
+        )
+    }
+}
+
+private const val HOME_INPUT_GATE_Z_INDEX = 1f
+internal const val HOME_INPUT_GATE_TEST_TAG = "home-input-gate"
 
 private fun LauncherShellState.reducedMotion(): Boolean = launcherSettings.motion.reducedMotion
 

@@ -950,3 +950,12 @@ Six things the owner found on a foldable (unfolded, Dock on the right edge), eac
   was not reproduced: the geometry was the Home-sized reservation, not the column's, and the Thick glass over a Home
   that fades out to the bare wallpaper is a 56% fill (reduced transparency makes it nearly opaque); nothing kept the
   spring from arriving in any run here. Folded search is unchanged.
+- **Home takes no input while it is hidden.** The Home surface is wrapped in a gate (`HomeInputGate`) that, while search
+  or the Library covers Home or Home is drawn at or below 2% (`HomeDockPullBinding.homeInputBlocked`), lays a full-size
+  node over it that takes every touch, so a tap, a long press, a drag, a page swipe or a Home swipe stops there. Search's
+  own press catcher used to be padded by the system bars and the keyboard's room (the surface was laid out inside those
+  insets), which left strips where Home still received touches; it now covers the whole window and only the panel
+  keeps clear of the insets (see the search item below). Cells of the grid that the Stream's fade has taken below 5%
+  (under the column with nothing peeking through, or behind an open card) take no input either
+  (`GridFadeCell.blocksInput`, `GridFadeInputBlock`, in Home's grid and the paged Library): a cell-sized node over the
+  cell that swallows taps and presses and consumes no movement, so a page's drag still reaches the pager.

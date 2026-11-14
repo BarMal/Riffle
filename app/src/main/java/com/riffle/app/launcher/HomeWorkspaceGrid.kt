@@ -187,13 +187,14 @@ private fun RowScope.HomeGridCell(
             modifier = Modifier.fillMaxSize(),
             onClick = actions.onBackgroundClick,
         )
+        val fade = rememberGridFadeCell()
         Box(
             modifier =
                 Modifier
                     .width(state.cellSize)
                     .fillMaxHeight()
-                    // Flows into the fade under the Stream's column when one stands (unfolded); otherwise nothing.
-                    .gridFade(),
+                    // Flows into the fade under the Stream's column when one stands; otherwise nothing.
+                    .gridFade(fade),
             contentAlignment = Alignment.Center,
         ) {
             if (activeDragSession?.projectedCell == state.cell) {
@@ -235,6 +236,8 @@ private fun RowScope.HomeGridCell(
                 ?.let { preview ->
                     WidgetPickerDragPlaceholder(preview = preview, cellSize = state.cellSize)
                 }
+            // A cell faded out under the column or behind an open card takes no input.
+            GridFadeInputBlock(fade, Modifier.matchParentSize())
         }
     }
 }
