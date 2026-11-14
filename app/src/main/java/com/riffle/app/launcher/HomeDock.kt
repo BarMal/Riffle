@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -30,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -39,11 +41,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -1114,6 +1122,7 @@ private fun DockFolder(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
+@Suppress("LongMethod")
 private fun DockShortcut(
     shortcut: AppShortcutItem,
     state: DockShortcutState,
@@ -1121,11 +1130,36 @@ private fun DockShortcut(
     appIconLoader: AppIconLoader,
 ) {
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
+    val pinned = LocalDockPinnedStream.current
+    val entryKey = remember(shortcut.appIdentity) { pinnedEntryKey(shortcut.appIdentity) }
+    val entryBoundsSink = LocalDockDynamicEntryBoundsSink.current
+    DisposableEffect(entryKey, entryBoundsSink) { onDispose { entryBoundsSink(entryKey, null) } }
+    val tileShape = RoundedCornerShape(DOCK_ICON_MASK_CORNER_RADIUS_DP.dp)
+    val isOpenPage = !state.isEditing && pinned?.selectedKey == entryKey
 
     Box(
         modifier =
             Modifier
-                .requiredSize(state.iconSizeDp.dp),
+                .requiredSize(state.iconSizeDp.dp)
+                // Where the icon lies, whole, so a press can start on it and a choice can select it (not editing).
+                .then(
+                    if (state.isEditing) {
+                        Modifier
+                    } else {
+                        Modifier
+                            .onGloballyPositioned { coordinates ->
+                                entryBoundsSink(entryKey, Rect(coordinates.positionInRoot(), coordinates.size.toSize()))
+                            }
+                            .dockChoiceMark(entryKey, tileShape, presentation.interactions.reducedMotion)
+                    },
+                )
+                .then(
+                    if (isOpenPage) {
+                        Modifier.border(SELECTED_ENTRY_RING_DP.dp, MaterialTheme.colorScheme.primary, tileShape)
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
         LauncherAppIcon(
             identity = shortcut.appIdentity,
@@ -1133,6 +1167,14 @@ private fun DockShortcut(
             iconLoader = appIconLoader,
             modifier =
                 Modifier.requiredSize(state.iconSizeDp.dp)
+                    // The contextual mode: the app whose page is open says so, as the dynamic tiles do.
+                    .then(
+                        if (pinned?.contextual == true && !state.isEditing) {
+                            Modifier.semantics { selected = isOpenPage }
+                        } else {
+                            Modifier
+                        },
+                    )
                     .then(
                         if (state.isEditing) {
                             Modifier.clickable(onClick = { isContextMenuExpanded.value = true })
@@ -1141,7 +1183,13 @@ private fun DockShortcut(
                                 onClick = {
                                     val override =
                                         presentation.interactions.staticItemTapOverride(shortcut.appIdentity)
-                                    presentation.interactions.onAction(override ?: shortcut.launchAction())
+                                    when {
+                                        // The contextual mode: a tap switches to the app's page, as on every icon.
+                                        pinned?.contextual == true && override == null ->
+                                            pinned.onShow(shortcut.appIdentity)
+                                        else ->
+                                            presentation.interactions.onAction(override ?: shortcut.launchAction())
+                                    }
                                 },
                                 onLongClick = {
                                     presentation.interactions.haptics.longPress()

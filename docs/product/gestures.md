@@ -107,15 +107,16 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   | Gesture taken away (not a lift) | Nothing | Nothing |
 
   The nearest selectable item is chosen by centre along the run, skipping items with no page (`DockChoice.pageFor`: live
-  apps, now playing and tiles have one, pinned apps do not yet); a finger within 15% of the row's length of an end (or
+  apps, now playing, tiles and (slice 4b) pinned apps have one); a finger within 15% of the row's length of an end (or
   beyond it) scrolls the row at 300 dp/s; a light haptic tick (`LauncherHapticEvent.DETENT`, honouring the haptics
   setting) sounds when choosing begins and when the selection lands on another item. The Dock draws it: the contextual row
   early (from Home), the ring and 14% growth on the selected tile, the name label above the Dock. Folded phone only for now.
 - **Starting on an icon.** The entry under the finger is read from where it landed (`dockPullEntryAt` against the bounds
-  each dynamic entry reports); only a live app or now playing has a page in this slice, so a press that starts on a pinned
-  app, a tile or the background opens the last page. The landing is asked for at the commit and dropped if nothing opens.
-- **Taps.** Home mode: a live app launches the app, now playing the player. Contextual mode: a live app, now playing or a
-  tile switches the Stream to that page; pinned apps still launch. The ringed icon is the open page's; swiping the Stream's
+  each dynamic entry reports, and each pinned icon: `pin:<package>:<profile>`); a live app, now playing, a pinned app (its
+  live page, else its shortcuts page) has a page, so a press that starts on one opens it; a press that starts on a tile
+  or the background opens the last page. The landing is asked for at the commit and dropped if nothing opens.
+- **Taps.** Home mode: a pinned app or a live app launches the app, now playing the player. Contextual mode: a pinned
+  app (slice 4b), a live app, now playing or a tile switches the Stream to that page. The ringed icon is the open page's; swiping the Stream's
   pager moves the ring (when the swipe passes halfway) and the Dock scrolls to keep it in view.
 - **Long-press.** Home mode: the app's menu with "Open in Stream". Contextual mode: the page options (Show as the other
   view, Move earlier / later on a tile, Hide section, Show <hidden section>), then the app's own items for a live app.
@@ -123,7 +124,7 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   live pages"** (or **"Back to Home"** while the Stream shows) and Ctrl + the arrow of the pull direction; press on an icon:
   the click action and the custom action "Show <app> in Stream", the menu's "Open in Stream", Shift + Enter. Pull: "Open
   Library" and Ctrl + Shift + the arrow. Switching page: the tiles are focusable 48 dp targets with a spoken name and a
-  click action ("Show Agenda"), and the pager's custom actions "Previous page" and "Next page". Page options: the tile's
+  click action ("Show Today"), and the pager's custom actions "Previous page" and "Next page". Page options: the tile's
   long-press menu (its own long-click action for assistive technology).
 - **Expanded postures (P6).** The split's divider and its actions are unchanged; the pull no longer settles among Home only,
   split and Stream only (it only opens the Library), the press and the divider reach them.
@@ -149,7 +150,7 @@ the Dock's accessibility actions.
   vertically scrolling stack or list ([places-views-plan.md](places-views-plan.md), P13). The pager is the platform
   `HorizontalPager` (`Orientation.Horizontal`, ADR 0002); a page's stack is `StreamStack`, bottom-anchored: the front card
   sits just above the Dock and older cards peek above it as the real card clipped to its top strip. Its drag is the
-  platform `scrollable` (`Orientation.Vertical`), a List or Tasks page is `verticalScroll`. The two never fight because
+  platform `scrollable` (`Orientation.Vertical`), a List page is `verticalScroll`. The two never fight because
   they take different axes and the platform decides from the first movement: a drag that leads sideways is the pager's,
   one that leads up or down is the page's. A stack with one card draws no stack (a lone card is drawn where the front card
   is, and owns no drag). Nothing in the Stream consumes a vertical drag the stack leaves over, so the stack takes all of

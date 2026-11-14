@@ -11,6 +11,12 @@ sealed interface StreamFocusTarget {
     /** The Notifications group [groupKey] (`package:profile`, the group's own key). */
     data class AppStack(val groupKey: String) : StreamFocusTarget
 
+    /**
+     * A pinned app's stack: its live page when it has one, else its shortcuts page. [appKey] is the app's key
+     * (`package:profile`, [StreamShortcutPages.appKeyOf]).
+     */
+    data class AppShortcuts(val appKey: String) : StreamFocusTarget
+
     /** One whole section: where a glance widget on Home lands (its Now, Agenda or Feeds section). */
     data class Section(val section: StreamSection) : StreamFocusTarget
 }
@@ -20,7 +26,8 @@ object StreamFocus {
      * The key of the page [target] lands on in [pages] (ADR 0003, Views), or null when the layout hides what it names
      * (the Stream just opens where it was).
      *
-     * - Now lands on the Now page; a Section on that section's first page.
+     * - Now lands on the Now page; a Section on that section's first page; a pinned app on its live page, else its
+     *   shortcuts page.
      * - An app's stack lands on that app's Notifications page; one whose notifications were cleared between the tap
      *   and the open lands on the Notifications section's first page.
      */
@@ -31,6 +38,11 @@ object StreamFocus {
         when (target) {
             is StreamFocusTarget.Section -> pages.firstOrNull { it.section == target.section }?.key
             StreamFocusTarget.Now -> pages.firstOrNull { it.section == StreamSection.NOW }?.key
+            is StreamFocusTarget.AppShortcuts ->
+                (
+                    pages.firstOrNull { it.section == StreamSection.NOTIFICATIONS && it.groupKey == target.appKey }
+                        ?: pages.firstOrNull { it.section == StreamSection.SHORTCUTS && it.groupKey == target.appKey }
+                )?.key
             is StreamFocusTarget.AppStack ->
                 (
                     pages.firstOrNull { it.section == StreamSection.NOTIFICATIONS && it.groupKey == target.groupKey }

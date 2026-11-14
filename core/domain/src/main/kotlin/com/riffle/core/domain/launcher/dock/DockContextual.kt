@@ -25,11 +25,10 @@ enum class DockMode {
 /**
  * The Stream's pages in the Dock's order (ADR 0003, Amendment 3: stacks are ordered as the Dock is).
  *
- * The Dock's order is: the live apps (newest first, the first `liveAppSlots` of them), now playing, then the contextual
- * tiles in the Stream layout's order. The pages that have an icon follow it, so swiping the pager walks the Dock
- * left to
- * right. Pages that have no icon of their own (a live app past the Dock's slots, the pages of a feed after the first)
- * stay next to the ones that do.
+ * The Dock's order is: the pinned apps (each one's shortcuts page, unless it has a live page), the live apps (newest
+ * first, the first `liveAppSlots` of them), now playing, then the contextual tiles in the Stream layout's order. The
+ * pages that have an icon follow it, so swiping the pager walks the Dock left to right. Pages that have no icon of
+ * their own (a live app past the Dock's slots, the pages of a feed after the first) stay next to the ones that do.
  */
 object DockPageOrder {
     /**
@@ -41,13 +40,16 @@ object DockPageOrder {
         pages: List<StreamPage>,
         liveGroupKeys: List<String>,
         nowPlaying: Boolean,
+        pinnedGroupKeys: List<String> = emptyList(),
     ): List<StreamPage> {
-        val appPages = pages.filter { page -> page.ref().isAppPage }
+        val shortcutPages = pages.filter { page -> page.ref().isShortcutsPage }
+        val pinned = pinnedGroupKeys.mapNotNull { key -> shortcutPages.firstOrNull { page -> page.groupKey == key } }
+        val appPages = pages.filter { page -> page.ref().isLiveAppPage }
         val live = liveGroupKeys.mapNotNull { key -> appPages.firstOrNull { page -> page.groupKey == key } }
         val otherApps = appPages - live.toSet()
         val now = if (nowPlaying) pages.filter { page -> page.section == StreamSection.NOW } else emptyList()
-        val rest = pages - appPages.toSet() - now.toSet()
-        return live + otherApps + now + rest
+        val rest = pages - appPages.toSet() - shortcutPages.toSet() - now.toSet()
+        return pinned + (shortcutPages - pinned.toSet()) + live + otherApps + now + rest
     }
 
     /** The keys of the live apps the Dock shows, in its order, from the entries of [DockDynamicSide.entries]. */
@@ -59,8 +61,9 @@ object DockPageOrder {
 object DockRing {
     /**
      * The key of the entry to ring while [current] is open, or null when no entry stands for it (a live app past the
-     * Dock's slots; nothing open). [entryKeys] are the keys of the entries the Dock draws. Now is the now playing entry
-     * while that is shown, else its tile. A pinned app with nothing live has no page, so is never ringed.
+     * Dock's slots; nothing open). [entryKeys] are the keys of the entries the Dock draws, the pinned apps' included
+     * ([DockDynamicSideEntry.pinnedAppKey]). Now is the now playing entry while that is shown, else its tile. A pinned
+     * app is ringed on its shortcuts page, and on its live page when no live entry stands for it.
      */
     fun entryKeyFor(
         current: StreamPageRef?,
@@ -69,8 +72,13 @@ object DockRing {
         if (current == null) return null
         val candidates =
             when {
-                current.isAppPage ->
-                    listOf(DockDynamicSideEntry.liveAppKey(requireNotNull(current.groupKey)))
+                current.isShortcutsPage ->
+                    listOf(DockDynamicSideEntry.pinnedAppKey(requireNotNull(current.groupKey)))
+                current.isLiveAppPage ->
+                    listOf(
+                        DockDynamicSideEntry.liveAppKey(requireNotNull(current.groupKey)),
+                        DockDynamicSideEntry.pinnedAppKey(requireNotNull(current.groupKey)),
+                    )
                 current.section == StreamSection.NOW ->
                     listOf(DockDynamicSideEntry.NOW_PLAYING_KEY, DockDynamicSideEntry.contextTileKey(current.section))
                 else -> listOf(DockDynamicSideEntry.contextTileKey(current.section))

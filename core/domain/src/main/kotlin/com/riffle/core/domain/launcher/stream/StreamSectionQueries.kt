@@ -10,8 +10,9 @@ package com.riffle.core.domain.launcher.stream
  *   then newest; limited to `maxApps` apps and `maxPerApp` each.
  * - Recents: not older than `maxAgeMillis`; one per app, most recently used first, `limit`; then up to
  *   `frequentLimit` other apps with the most foreground time, as a second group.
- * - Agenda: events not ended and starting within `daysAhead`; by start, `maxEvents`; grouped by day.
- * - Tasks: open ones (completed too if asked); open first, due soonest, no date last; `limit`.
+ * - Today: the agenda's groups (events not ended and starting within `daysAhead`; by start, `maxEvents`; grouped by
+ *   day) followed by the tasks' group (open ones, completed too if asked; open first, due soonest, no date last;
+ *   `limit`). The page draws them (see [TodayPlan]).
  * - Feeds: grouped by feed, the feed with the newest article first; newest article first; `maxFeeds`, `perFeed`.
  */
 internal object StreamSectionQueries {
@@ -26,9 +27,9 @@ internal object StreamSectionQueries {
             StreamSection.NOW -> now(content, context)
             StreamSection.NOTIFICATIONS -> notifications(content, context)
             StreamSection.RECENTS -> recents(content, context)
-            StreamSection.AGENDA -> agenda(content, context)
-            StreamSection.TASKS -> tasks(content, context)
+            StreamSection.TODAY -> agenda(content, context) + tasks(content, context)
             StreamSection.FEEDS -> feeds(content, context)
+            StreamSection.SHORTCUTS -> emptyList()
         }.filter { it.items.isNotEmpty() }
 
     fun now(

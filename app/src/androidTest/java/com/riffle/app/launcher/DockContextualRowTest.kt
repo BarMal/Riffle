@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,6 +14,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertWidthIsAtLeast
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -50,7 +54,7 @@ class DockContextualRowTest {
     val composeRule = createComposeRule()
 
     private val pins = List(6) { index -> shortcut("pin$index") }
-    private val sections = StreamSection.entries.filter { it != StreamSection.NOTIFICATIONS }
+    private val sections = StreamSection.layoutSections.filter { it != StreamSection.NOTIFICATIONS }
     private var openKey by mutableStateOf<String?>(null)
     private val delegated = mutableListOf<String>()
 
@@ -70,23 +74,29 @@ class DockContextualRowTest {
             appMenu = listOf(ShortcutContextMenuItem(label = "Show as List", onSelect = {})),
         )
 
+    /** What the pinned apps know of the Stream, or null (they only launch): set by the test before [show]. */
+    private var pinnedStream: DockPinnedStream? = null
+    private val launched = mutableListOf<LauncherShellAction>()
+
     private fun show(position: DockPosition = DockPosition.BOTTOM) {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.size(width = 360.dp, height = 420.dp)) {
-                    Dock(
-                        dock = DockModel(capacity = 6, items = pins, iconSizeDp = 56, itemSpacingDp = 10),
-                        isEditing = false,
-                        notificationGroupsByApp = emptyList(),
-                        appShortcutsByApp = emptyMap(),
-                        appIconLoader = EmptyAppIconLoader,
-                        widgetViewFactory = EmptyHomeWidgetViewFactory,
-                        position = position,
-                        interactions = DockInteractions(reducedMotion = true, onAction = {}),
-                        dynamicEntries = sections.map(::tileEntry),
-                        onDynamicEntryDelegated = { key -> delegated += key },
-                        contextual = true,
-                    )
+                    CompositionLocalProvider(LocalDockPinnedStream provides pinnedStream) {
+                        Dock(
+                            dock = DockModel(capacity = 6, items = pins, iconSizeDp = 56, itemSpacingDp = 10),
+                            isEditing = false,
+                            notificationGroupsByApp = emptyList(),
+                            appShortcutsByApp = emptyMap(),
+                            appIconLoader = EmptyAppIconLoader,
+                            widgetViewFactory = EmptyHomeWidgetViewFactory,
+                            position = position,
+                            interactions = DockInteractions(reducedMotion = true, onAction = { launched += it }),
+                            dynamicEntries = sections.map(::tileEntry),
+                            onDynamicEntryDelegated = { key -> delegated += key },
+                            contextual = true,
+                        )
+                    }
                 }
             }
         }
@@ -144,6 +154,43 @@ class DockContextualRowTest {
         assertTrue(SemanticsActions.OnLongClick in config)
         tile(first).performSemanticsAction(SemanticsActions.OnClick)
         composeRule.runOnIdle { assertEquals(listOf("ctx:${first.storedId}"), delegated) }
+    }
+
+    @Test
+    fun inTheContextualModeATapOnAPinnedAppShowsItsPageAndTheOpenOneIsSelected() {
+        val shown = mutableListOf<AppIdentity>()
+        pinnedStream =
+            DockPinnedStream(
+                contextual = true,
+                selectedKey = pinnedEntryKey(pins[1].appIdentity),
+                labels = pins.associate { pinnedEntryKey(it.appIdentity) to it.label },
+                onShow = { identity -> shown += identity },
+            )
+        show()
+        composeRule.onNodeWithTag(dockItemTestTag(pins[0].id)).performClick()
+        composeRule.runOnIdle {
+            assertEquals(listOf(pins[0].appIdentity), shown)
+            assertTrue("a tap in the contextual mode launched the app: $launched", launched.isEmpty())
+        }
+        // The app whose page is open says so, and the others do not.
+        composeRule.onNode(isSelected() and hasAnyAncestor(hasTestTag(dockItemTestTag(pins[1].id)))).assertExists()
+        composeRule.onNode(
+            isSelected() and hasAnyAncestor(hasTestTag(dockItemTestTag(pins[0].id))),
+        ).assertDoesNotExist()
+    }
+
+    @Test
+    fun withoutTheContextualModeATapOnAPinnedAppStillLaunchesIt() {
+        pinnedStream =
+            DockPinnedStream(
+                contextual = false,
+                selectedKey = null,
+                labels = emptyMap(),
+                onShow = { error("the Home mode launches pinned apps") },
+            )
+        show()
+        composeRule.onNodeWithTag(dockItemTestTag(pins[0].id)).performClick()
+        composeRule.runOnIdle { assertTrue("the tap did not launch: $launched", launched.isNotEmpty()) }
     }
 
     private fun shortcut(name: String): AppShortcutItem =

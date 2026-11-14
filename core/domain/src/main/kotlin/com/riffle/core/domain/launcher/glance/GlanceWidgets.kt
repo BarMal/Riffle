@@ -51,7 +51,7 @@ enum class GlanceWidgetKind(
     NEXT_EVENT(
         storedId = "next-event",
         storedClass = "glance.NextEvent",
-        section = StreamSection.AGENDA,
+        section = StreamSection.TODAY,
         defaultLabel = "Next event",
         minSpan = GridSpan(2, 1),
         defaultSpan = GridSpan(4, 2),
@@ -143,7 +143,8 @@ object GlanceWidgets {
 
     /**
      * What [kind] draws for [result], the Stream's result for [GlanceWidgetKind.section]:
-     * now playing is the newest media, next event the first upcoming event (the Agenda's order), top story the newest
+     * now playing is the newest media, next event the first upcoming event (the Today page's order), top story the
+     * newest
      * unread article. A section that is ready but holds nothing of the kind's type is [GlanceState.Empty].
      */
     fun stateFor(
@@ -154,7 +155,10 @@ object GlanceWidgets {
             null, StreamSectionResult.Loading -> GlanceState.Loading
             StreamSectionResult.Empty -> GlanceState.Empty
             is StreamSectionResult.PermissionRequired -> GlanceState.PermissionRequired(result.sources)
-            is StreamSectionResult.NotConnected, StreamSectionResult.Unavailable -> GlanceState.Unavailable
+            // The Today section also reads tasks: no task account says nothing about the next event.
+            is StreamSectionResult.NotConnected ->
+                if (kind == GlanceWidgetKind.NEXT_EVENT) GlanceState.Empty else GlanceState.Unavailable
+            StreamSectionResult.Unavailable -> GlanceState.Unavailable
             StreamSectionResult.Off -> GlanceState.Off
             is StreamSectionResult.Ready -> pick(kind, result.items)?.let(GlanceState::Showing) ?: GlanceState.Empty
         }

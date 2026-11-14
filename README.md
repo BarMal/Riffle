@@ -6,8 +6,9 @@ Riffle is an Android launcher (Kotlin, Jetpack Compose) with four fixed Places:
 - **Dock**: pinned favourites on one side; live apps and a Stream button on the other. Pulling it away from its
   edge opens the Library (pinned side) or the Stream (dynamic side).
 - **Library**: every installed app and search, shown as categories, an A-Z list or a grid.
-- **Stream**: the actions centre. Now playing, notifications (one page per app), recents, agenda, tasks from
-  Todoist and feeds, as pages you swipe sideways, each a vertical stack of cards or a list.
+- **Stream**: the actions centre. Now playing, notifications (one page per app), recents, today (your next event, your to-do list from
+  Todoist and tomorrow), the shortcuts of your pinned apps and feeds, as pages you swipe sideways, each a vertical stack of
+  cards or a list.
 
 Every surface uses one glass material in three weights, over a Material 3 component baseline. Riffle also ships
 three glance widgets (Now playing, Next event, Top story) for Home.

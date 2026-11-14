@@ -7,7 +7,10 @@ import com.riffle.app.launcher.rss.FeedArticleCacheRepository
 import com.riffle.app.launcher.workspace.ItemImageKeyParser
 import com.riffle.app.launcher.workspace.ItemLaunchPort
 import com.riffle.app.launcher.workspace.ParsedImageKey
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.EventKind
@@ -34,7 +37,7 @@ import com.riffle.core.domain.launcher.workspace.ItemTarget
  *
  * Hide is not an action here: it writes an exclusion rule from the user's explicit choice of what to hide.
  */
-@Suppress("LongParameterList") // One seam over the platform pieces the actions route to.
+@Suppress("LongParameterList", "TooManyFunctions") // One seam over the platform pieces the actions route to.
 internal class AndroidStreamActionGateway(
     private val notifications: NotificationStageActionGateway,
     private val replyActionId: (LauncherNotificationKey) -> String?,
@@ -64,6 +67,7 @@ internal class AndroidStreamActionGateway(
             is EventContent -> if (content.kind == EventKind.ALARM) openClock().result() else openTarget(content.target)
             is ArticleContent -> article(content, action)
             is RecentAppContent -> launchApp(content)
+            is AppShortcutContent -> appShortcut(content)
             is TaskContent -> task(content, action)
         }
 
@@ -140,6 +144,21 @@ internal class AndroidStreamActionGateway(
                 }
             }
         }
+
+    /** A shortcut launches through the platform's launcher shortcut path; the app's own "Open" card opens the app. */
+    private fun appShortcut(content: AppShortcutContent): StreamActionResult {
+        val id = content.shortcutId ?: return launch.launchActivity(content.appIdentity).result()
+        val shortcut =
+            AppShortcut(
+                id = AppShortcutId(id),
+                appIdentity = content.appIdentity,
+                shortLabel = content.shortLabel ?: id,
+                longLabel = content.longLabel,
+                enabled = content.enabled,
+                disabledMessage = content.disabledMessage,
+            )
+        return launch.launchShortcut(shortcut).result()
+    }
 
     private fun launchApp(content: RecentAppContent): StreamActionResult {
         val identity = (content.icon?.let(ItemImageKeyParser::parse) as? ParsedImageKey.ActivityIcon)?.identity

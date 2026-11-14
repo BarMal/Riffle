@@ -5,8 +5,11 @@ import com.riffle.app.launcher.notifications.NotificationStageActionGateway
 import com.riffle.app.launcher.notifications.NotificationStageActionResult
 import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
 import com.riffle.app.launcher.workspace.ItemLaunchPort
+import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.ArticleAction
 import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.MediaAction
@@ -63,7 +66,8 @@ class AndroidStreamActionGatewayTest {
 
                     override fun launchPackage(packageName: String) = true.also { calls += "package:$packageName" }
 
-                    override fun launchShortcut(shortcut: AppShortcut) = true
+                    override fun launchShortcut(shortcut: AppShortcut) =
+                        true.also { calls += "shortcut:${shortcut.id.value}" }
 
                     override fun openDeepLink(uri: String) = true.also { calls += "link:$uri" }
 
@@ -180,5 +184,37 @@ class AndroidStreamActionGatewayTest {
             StreamActionResult.NotOffered,
             gateway.perform(article.copy(actions = setOf(ArticleAction.OPEN)), StreamAction.MarkRead),
         )
+    }
+
+    private fun shortcutCard(
+        shortcutId: String?,
+        enabled: Boolean = true,
+    ) = AppShortcutContent(
+        id = StreamContentId("shortcut:files:personal/${shortcutId.orEmpty()}"),
+        app = StreamAppRef("files", "personal"),
+        appIdentity = AppIdentity(AppPackageName("files"), AppActivityName(".Main")),
+        appLabel = "Files",
+        shortcutId = shortcutId,
+        shortLabel = shortcutId ?: "Files",
+        longLabel = null,
+        icon = null,
+        enabled = enabled,
+    )
+
+    @Test
+    fun aShortcutCardLaunchesThatShortcutAndTheOpenCardLaunchesTheApp() {
+        assertEquals(StreamActionResult.Performed, gateway.perform(shortcutCard("recent"), StreamAction.Open))
+        assertEquals(StreamActionResult.Performed, gateway.perform(shortcutCard(null), StreamAction.Open))
+        assertEquals(listOf("shortcut:recent", "activity"), calls)
+    }
+
+    @Test
+    fun aDisabledShortcutIsNotLaunchedAndNothingButOpenIsOffered() {
+        assertEquals(
+            StreamActionResult.NotOffered,
+            gateway.perform(shortcutCard("scan", enabled = false), StreamAction.Open),
+        )
+        assertEquals(StreamActionResult.NotOffered, gateway.perform(shortcutCard("scan"), StreamAction.Dismiss))
+        assertTrue(calls.isEmpty())
     }
 }

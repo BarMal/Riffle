@@ -32,10 +32,12 @@ import com.riffle.app.launcher.stream.StreamDockLink
 import com.riffle.app.launcher.stream.StreamFocusRequest
 import com.riffle.app.launcher.stream.StreamPageOption
 import com.riffle.app.launcher.stream.StreamSurface
+import com.riffle.app.launcher.stream.streamStackCardTag
 import com.riffle.app.launcher.stream.streamStageThumbTestTag
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
+import com.riffle.core.domain.launcher.stream.StreamGap
 import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamGroupKeys
 import com.riffle.core.domain.launcher.stream.StreamLayout
@@ -44,8 +46,10 @@ import com.riffle.core.domain.launcher.stream.StreamLayoutReducer
 import com.riffle.core.domain.launcher.stream.StreamPrivacy
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
+import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.stream.StreamView
 import com.riffle.core.domain.launcher.stream.StreamWideView
+import com.riffle.core.domain.launcher.stream.TaskContent
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import org.junit.Assert.assertEquals
@@ -127,7 +131,7 @@ class StreamBehaviorTest {
     }
 
     private fun defaultResults(): Map<StreamSection, StreamSectionResult> =
-        StreamSection.entries.associateWith { StreamFixtures.ready(it) }
+        StreamSection.layoutSections.associateWith { StreamFixtures.ready(it) }
 
     /** The page in front is [key]: what the Dock rings. */
     private fun assertOpen(key: String) {
@@ -196,10 +200,10 @@ class StreamBehaviorTest {
 
     @Test
     fun aGlanceWidgetLandsOnItsSectionsPage() {
-        show(focus = StreamFocusRequest(11, StreamFocusTarget.Section(StreamSection.AGENDA)))
+        show(focus = StreamFocusRequest(11, StreamFocusTarget.Section(StreamSection.TODAY)))
         composeRule.waitForIdle()
 
-        assertOpen(StreamPageKeys.AGENDA)
+        assertOpen(StreamPageKeys.TODAY)
         assertEquals(listOf(11L), handledFocus)
     }
 
@@ -230,12 +234,12 @@ class StreamBehaviorTest {
 
     @Test
     fun theLastPageIsRememberedAndReturnedTo() {
-        show(initialPageKey = StreamPageKeys.TASKS)
+        show(initialPageKey = StreamPageKeys.RECENTS)
         composeRule.waitForIdle()
-        assertOpen(StreamPageKeys.TASKS)
+        assertOpen(StreamPageKeys.RECENTS)
 
-        goTo(StreamPageKeys.AGENDA)
-        assertEquals(StreamPageKeys.AGENDA, pageChanges.last())
+        goTo(StreamPageKeys.TODAY)
+        assertEquals(StreamPageKeys.TODAY, pageChanges.last())
     }
 
     @Test
@@ -268,8 +272,7 @@ class StreamBehaviorTest {
                 StreamPageKeys.MAIL,
                 StreamPageKeys.NOW,
                 StreamPageKeys.RECENTS,
-                StreamPageKeys.AGENDA,
-                StreamPageKeys.TASKS,
+                StreamPageKeys.TODAY,
                 StreamPageKeys.FEED_A,
                 StreamPageKeys.FEED_B,
             ),
@@ -378,7 +381,7 @@ class StreamBehaviorTest {
         composeRule.onNodeWithText("Invoice 2026-114").assertIsDisplayed()
         // The new app is the Dock's first live app, so its page leads the pager too.
         assertEquals("notifications/maps:personal", dock.pages.first().key)
-        assertEquals(9, dock.pages.size)
+        assertEquals(8, dock.pages.size)
     }
 
     @Test
@@ -451,24 +454,24 @@ class StreamBehaviorTest {
     @Test
     fun anOptionIsAppliedOnceAndTheRequestIsClearedAfterIt() {
         show(initialPageKey = StreamPageKeys.CHAT)
-        option(StreamPageOption.Hide(StreamSection.TASKS))
+        option(StreamPageOption.Hide(StreamSection.TODAY))
         assertEquals(null, dock.pendingOption)
         // Asking for the same option twice in a row is two requests: the second is a no-op on the layout.
-        option(StreamPageOption.Hide(StreamSection.TASKS))
+        option(StreamPageOption.Hide(StreamSection.TODAY))
         assertEquals(null, dock.pendingOption)
-        assertTrue(StreamSection.TASKS !in layout.enabledSections.map { it.section })
+        assertTrue(StreamSection.TODAY !in layout.enabledSections.map { it.section })
     }
 
     @Test
     fun hidingEverySectionLeavesAWayBack() {
         layout =
-            StreamSection.entries.fold(StreamLayout.DEFAULT) { acc, section ->
+            StreamSection.layoutSections.fold(StreamLayout.DEFAULT) { acc, section ->
                 StreamLayoutReducer.reduce(acc, StreamLayoutAction.SetEnabled(section, false))
             }
         show()
         composeRule.onNodeWithText("Every section is hidden. Show one to fill the Stream again.").assertIsDisplayed()
-        composeRule.onNodeWithText("Show Tasks").performClick()
-        assertTrue(layout.layoutOf(StreamSection.TASKS).enabled)
+        composeRule.onNodeWithText("Show Today").performClick()
+        assertTrue(layout.layoutOf(StreamSection.TODAY).enabled)
     }
 
     // States -------------------------------------------------------------------------------------------------------
@@ -495,10 +498,32 @@ class StreamBehaviorTest {
         assertEquals(listOf(StreamSection.FEEDS), enabled)
     }
 
+    private fun todayWith(
+        tasks: List<TaskContent>,
+        gaps: List<StreamGap> = emptyList(),
+    ) = StreamSectionResult.Ready(listOf(StreamGroup(StreamGroupKeys.TASKS, null, tasks)), gaps)
+
     @Test
-    fun tasksOfferToConnectWhenNoAccountIsConnected() {
-        show(defaultResults() + (StreamSection.TASKS to StreamSectionResult.NotConnected()), initialPageKey = "tasks")
+    fun todayOffersToConnectWhenNoAccountIsConnectedAndNothingElseIsThere() {
+        show(defaultResults() + (StreamSection.TODAY to StreamSectionResult.NotConnected()), initialPageKey = "today")
         composeRule.onNodeWithText("Todoist is not connected, so there are no tasks to show.").assertIsDisplayed()
+        composeRule.onNodeWithText("Connect Todoist").performClick()
+        assertEquals(1, connects)
+    }
+
+    @Test
+    fun todayShowsTheConnectCardAfterTheEventsNotAsAPageOfItsOwn() {
+        val events =
+            StreamSectionResult.Ready(
+                listOf(StreamGroup("2026-01-01", null, listOf(StreamFixtures.nextEvent))),
+                listOf(StreamGap(StreamSourceIds.TASKS, StreamSectionResult.NotConnected())),
+            )
+        show(defaultResults() + (StreamSection.TODAY to events), initialPageKey = "today")
+        // The event is the front card; the connect card is the one behind it, in the same stack.
+        composeRule.onNodeWithText("Design standup").assertIsDisplayed()
+        assertTrue("no page of its own", dock.pages.none { it.key == "tasks" })
+        composeRule.onNodeWithTag(streamStackCardTag("notice:today:1")).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Connect Todoist").performClick()
         assertEquals(1, connects)
     }
@@ -508,12 +533,12 @@ class StreamBehaviorTest {
         show(
             defaultResults() +
                 (
-                    StreamSection.TASKS to
+                    StreamSection.TODAY to
                         StreamSectionResult.NotConnected(
                             com.riffle.core.domain.launcher.stream.NotConnectedReason.TOKEN_REJECTED,
                         )
                 ),
-            initialPageKey = "tasks",
+            initialPageKey = "today",
         )
         composeRule.onNodeWithText("Todoist did not accept the saved token. Paste a new one in Settings.")
             .assertIsDisplayed()
@@ -522,12 +547,31 @@ class StreamBehaviorTest {
     }
 
     @Test
-    fun tickingATaskCompletesItAndTheTitleOpensIt() {
-        show(initialPageKey = StreamPageKeys.TASKS)
+    fun tickingATaskOnTheTodayCardCompletesItAndTheTitleOpensIt() {
+        show(defaultResults() + (StreamSection.TODAY to todayWith(StreamFixtures.tasks)), initialPageKey = "today")
+        composeRule.onNodeWithText("To do today").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Mark Send the invoice done").performClick()
         composeRule.onNodeWithText("Send the invoice").performClick()
         assertEquals(listOf(StreamAction.Complete, StreamAction.Open), actions.map { it.second })
         assertTrue(actions.all { it.first.id.value == "todoist:2" })
+    }
+
+    @Test
+    fun theTodoCardCountsWhatIsLeftAndWhatIsOverdue() {
+        show(defaultResults() + (StreamSection.TODAY to todayWith(StreamFixtures.tasks)), initialPageKey = "today")
+        // The fixtures: three open tasks, one of them overdue.
+        composeRule.onNodeWithText("3 left · 1 overdue").assertIsDisplayed()
+    }
+
+    @Test
+    fun theTodoCardIsReachableBehindTheNextEventAndTickingThereCompletesToo() {
+        show(initialPageKey = "today")
+        // Events are in front (the next one first), and the checklist is the card behind it.
+        composeRule.onNodeWithText("Design standup").assertIsDisplayed()
+        composeRule.onNodeWithTag(streamStackCardTag("today:todo")).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription("Mark Send the invoice done").performClick()
+        assertEquals(listOf(StreamAction.Complete), actions.map { it.second })
     }
 
     @Test
@@ -536,21 +580,14 @@ class StreamBehaviorTest {
             StreamFixtures.tasks.map {
                 it.copy(title = null, listName = null, privacy = StreamPrivacy.REDACTED, actions = emptySet())
             }
-        show(
-            defaultResults() +
-                (
-                    StreamSection.TASKS to
-                        StreamSectionResult.Ready(listOf(StreamGroup(StreamGroupKeys.TASKS, null, hidden)))
-                ),
-            initialPageKey = StreamPageKeys.TASKS,
-        )
+        show(defaultResults() + (StreamSection.TODAY to todayWith(hidden)), initialPageKey = StreamPageKeys.TODAY)
         composeRule.onAllNodesWithText("Hidden content").onFirst().assertIsDisplayed()
         composeRule.onNodeWithText("Renew passport").assertDoesNotExist()
     }
 
     @Test
-    fun quickAddSendsTheTextAndClearsTheField() {
-        show(initialPageKey = StreamPageKeys.TASKS)
+    fun quickAddFromTheTodayCardSendsTheTextAndClearsTheField() {
+        show(defaultResults() + (StreamSection.TODAY to todayWith(StreamFixtures.tasks)), initialPageKey = "today")
         composeRule.onNodeWithTag("stream-tasks-quick-add").performTextInput("Buy milk")
         composeRule.onNodeWithTag("stream-tasks-add").performClick()
         assertEquals(listOf("Buy milk"), added)
@@ -558,21 +595,55 @@ class StreamBehaviorTest {
     }
 
     @Test
-    fun aStaleListSaysSoAndRetryRefreshes() {
-        val stale =
-            StreamSectionResult.Ready(listOf(StreamGroup(StreamGroupKeys.TASKS, null, StreamFixtures.staleTasks)))
-        show(defaultResults() + (StreamSection.TASKS to stale), initialPageKey = StreamPageKeys.TASKS)
-        composeRule.onNodeWithText("Can't reach Todoist. Showing the tasks from the last refresh.").assertIsDisplayed()
-        composeRule.onNodeWithText("Retry").performClick()
+    fun aConnectedListWithNothingOnItStillOffersTheAddFieldAndRefresh() {
+        val empty =
+            StreamSectionResult.Ready(emptyList(), listOf(StreamGap(StreamSourceIds.TASKS, StreamSectionResult.Empty)))
+        show(defaultResults() + (StreamSection.TODAY to empty), initialPageKey = "today")
+        composeRule.onNodeWithText("Nothing left to do today.").assertIsDisplayed()
+        composeRule.onNodeWithTag("stream-tasks-quick-add").performTextInput("Buy milk")
+        composeRule.onNodeWithTag("stream-tasks-add").performClick()
+        assertEquals(listOf("Buy milk"), added)
+        composeRule.onNodeWithTag("stream-tasks-refresh").performClick()
         assertEquals(1, refreshes)
     }
 
     @Test
-    fun withNoDataAndNoConnectionTasksSayTheyCannotReachTodoist() {
-        show(defaultResults() + (StreamSection.TASKS to StreamSectionResult.Unavailable), initialPageKey = "tasks")
-        composeRule.onNodeWithText("Can't reach Todoist, and there are no saved tasks to show.").assertIsDisplayed()
-        composeRule.onNodeWithText("Retry").performClick()
+    fun aStaleListSaysSoAndRefreshStaysReachable() {
+        show(defaultResults() + (StreamSection.TODAY to todayWith(StreamFixtures.staleTasks)), initialPageKey = "today")
+        composeRule.onNodeWithText("Can't reach Todoist. Showing the tasks from the last refresh.").assertIsDisplayed()
+        composeRule.onNodeWithTag("stream-tasks-refresh").performClick()
         assertEquals(1, refreshes)
+    }
+
+    @Test
+    fun withNoDataAndNoConnectionTodayCannotBeShownAndOffersRetry() {
+        show(defaultResults() + (StreamSection.TODAY to StreamSectionResult.Unavailable), initialPageKey = "today")
+        composeRule.onNodeWithText("This can't be shown right now.").assertIsDisplayed()
+        composeRule.onNodeWithText("Retry").performClick()
+    }
+
+    @Test
+    fun todayInListFormIsTheAgendaThenTheTasksUnderHeadings() {
+        layout = StreamLayoutReducer.reduce(layout, StreamLayoutAction.SetView(StreamSection.TODAY, StreamView.LIST))
+        show(initialPageKey = "today")
+        composeRule.onNodeWithText("Agenda").assertIsDisplayed()
+        composeRule.onNodeWithText("Design standup").assertIsDisplayed()
+        composeRule.onNodeWithText("Tasks").assertIsDisplayed()
+        composeRule.onNodeWithTag("stream-tasks-quick-add").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Mark Send the invoice done").performClick()
+        assertEquals(listOf(StreamAction.Complete), actions.map { it.second })
+    }
+
+    @Test
+    fun tomorrowSummarisesTheDayAfterAndOpensItsFirstEvent() {
+        show(initialPageKey = "today")
+        composeRule.onNodeWithTag(streamStackCardTag("today:tomorrow")).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("1 event").assertIsDisplayed()
+        composeRule.onNodeWithText("First: Launch review at 02:00").assertIsDisplayed()
+        composeRule.onNodeWithTag("stream-today-tomorrow").performClick()
+        assertEquals("ics:launch", actions.last().first.id.value)
+        assertEquals(StreamAction.Open, actions.last().second)
     }
 
     // Cards --------------------------------------------------------------------------------------------------------
@@ -714,12 +785,17 @@ class StreamBehaviorTest {
         assertActionOn(StreamPageKeys.RECENTS, {
             composeRule.onAllNodesWithText("Chat").onFirst().performClick()
         }, StreamAction.Open)
-        assertActionOn(StreamPageKeys.AGENDA, {
+        assertActionOn(StreamPageKeys.TODAY, {
             composeRule.onNodeWithText("Design standup").performClick()
         }, StreamAction.Open)
         assertActionOn(
-            StreamPageKeys.TASKS,
-            { composeRule.onNodeWithContentDescription("Mark Send the invoice done").performClick() },
+            StreamPageKeys.TODAY,
+            {
+                // The checklist is the card behind the next event: bring it to the front, then tick a task.
+                composeRule.onNodeWithTag(streamStackCardTag("today:todo")).performClick()
+                composeRule.waitForIdle()
+                composeRule.onNodeWithContentDescription("Mark Send the invoice done").performClick()
+            },
             StreamAction.Complete,
         )
         assertActionOn(StreamPageKeys.FEED_A, {
@@ -729,8 +805,10 @@ class StreamBehaviorTest {
             composeRule.onNodeWithText("Notes from the desktop shell").performClick()
         }, StreamAction.Open)
         // The layout, add-task, refresh, access, enable and connect callbacks are covered by their own tests above; a
-        // tap on the Tasks page's quick-add proves the callbacks the surface rebuilt are still the host's.
-        goTo(StreamPageKeys.TASKS)
+        // tap on the Today checklist's quick-add proves the callbacks the surface rebuilt are still the host's.
+        goTo(StreamPageKeys.TODAY)
+        composeRule.onNodeWithTag(streamStackCardTag("today:todo")).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag("stream-tasks-quick-add").performTextInput("Water the ferns")
         composeRule.onNodeWithTag("stream-tasks-add").performClick()
         assertEquals(listOf("Water the ferns"), added)
@@ -739,11 +817,11 @@ class StreamBehaviorTest {
     @Test
     fun theSameControlsWorkInEveryPageInTheListView() {
         layout =
-            StreamSection.entries.fold(StreamLayout.DEFAULT) { acc, section ->
+            StreamSection.layoutSections.fold(StreamLayout.DEFAULT) { acc, section ->
                 StreamLayoutReducer.reduce(acc, StreamLayoutAction.SetView(section, StreamView.LIST))
             }
         show()
-        goTo(StreamPageKeys.TASKS)
+        goTo(StreamPageKeys.TODAY)
         composeRule.onNodeWithContentDescription("Mark Send the invoice done").performClick()
         goTo(StreamPageKeys.CHAT)
         composeRule.onAllNodesWithContentDescription("Dismiss").onFirst().performClick()

@@ -81,8 +81,9 @@ Not in this slice: deleting theme presets (P2); the adaptive stage card surface,
 
 - In `core/domain/.../launcher/stream/`: a sealed `StreamContent` with `NotificationContent`,
   `MediaContent` (with queue), `EventContent` (calendar, calendar feed, alarm), `ArticleContent`,
-  `TaskContent` and `RecentAppContent`, each carrying its own fields, actions and privacy level; and the
-  six `StreamSection` kinds (Now, Notifications, Recents, Agenda, Tasks, Feeds).
+  `TaskContent` and `RecentAppContent` (and, since dock modes slice 4b, `AppShortcutContent`), each carrying its own
+  fields, actions and privacy level; and the `StreamSection` kinds (Now, Notifications, Recents, Today, Feeds; Today
+  replaced the separate Agenda and Tasks in slice 4b, and the derived Shortcuts section holds a pinned app's page).
 - Mappers from the existing sources (`workspace/sources/*Mapper.kt`, `SharedSourceStream`) to these types,
   keeping one shared subscription per source and redaction before anything reaches the UI. `Item` and the
   lens pipeline stay for now; they are removed in P8.
@@ -241,8 +242,8 @@ section's result into the ordered pages. A page is one vertically scrolling stac
 | Now | one (media with its queue, next event, alarm) | `now` |
 | Notifications | one per app with notifications, newest app first; one empty-state page when none | `notifications/<package:profile>`, `notifications` |
 | Recents | one (recent apps, then "Often used") | `recents` |
-| Agenda | one (by day) | `agenda` |
-| Tasks | one (quick-add, then today's and overdue) | `tasks` |
+| Today | one (the next event with a countdown, "To do today", later events, tomorrow, notices; List: the agenda by day, then the tasks) | `today` |
+| Shortcuts (derived; not in the layout) | one per pinned app with nothing live (its launcher shortcuts, or one "Open <app>" card) | `shortcuts/<package:profile>` |
 | Feeds | one per feed with unread items, newest feed first; one empty-state page when none | `feeds/<feed id>`, `feeds` |
 
 Pages follow the layout's section order and a hidden section contributes none. Loading, no access, not connected,
@@ -266,8 +267,9 @@ apart. Since dock modes slice 4a the stack is bottom-anchored (see
 ones peeking above it as clipped strips, up to three, at most five cards composed. A pile is as tall as its tallest card so
 the strips line up; media, an article with a lead image and the tasks card are taller than 168 dp because they hold
 transport, an image or a checklist. The physics are the stack's own (platform `scrollable`, a spring with a magnet); a card that can expand (a notification's thread and reply, the queue)
-expands in place and Back collapses it. Recents are app tiles, so its Stack is a wrapping grid of tiles that scrolls with
-the page, and Tasks is one card under the quick-add row. A List is rows on one Thin glass panel per group. "Show as"
+expands in place and Back collapses it. Every Stack is cards of one pile (since slice 4b Recents is a pile of app cards,
+not a grid of tiles, and the tasks are the "To do today" card of the Today page, with the add field in it). A List is rows
+on one Thin glass panel per group. "Show as"
 applies to the page's whole section and offers Undo; it is the same stored value as Settings > Stream.
 
 **The spine** sits at the top of the Stream, above the page header, as Calm's does by default (the Dock owns the bottom

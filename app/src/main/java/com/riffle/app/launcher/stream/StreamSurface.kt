@@ -127,6 +127,10 @@ internal fun StreamSurface(
      * Where the Dock's contextual mode learns the pages and the open one, and asks for a page option; null in tests.
      */
     dockLink: StreamDockLink? = null,
+    /** The shortcuts pages of the Dock's pinned apps (see [StreamShortcutPages]), which are no part of the layout. */
+    shortcutPages: List<StreamPage> = emptyList(),
+    /** The pinned apps' keys in the Dock's order, which the order of their pages follows. */
+    pinnedGroupKeys: List<String> = emptyList(),
 ) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -189,11 +193,12 @@ internal fun StreamSurface(
 
     val dockEntries = remember(results, liveAppSlots) { results.dockLiveEntries(liveAppSlots) }
     val pages =
-        remember(layout, results, dockEntries) {
+        remember(layout, results, dockEntries, shortcutPages, pinnedGroupKeys) {
             DockPageOrder.order(
-                pages = StreamPagePlanner.plan(layout, results),
+                pages = shortcutPages + StreamPagePlanner.plan(layout, results),
                 liveGroupKeys = DockPageOrder.liveGroupKeys(dockEntries),
                 nowPlaying = dockEntries.any { entry -> entry is DockDynamicSideEntry.NowPlaying },
+                pinnedGroupKeys = pinnedGroupKeys,
             )
         }
     val state = rememberStreamPageState(pages, results, initialPageKey, focusRequest, onFocusHandled, env.reducedMotion)
@@ -303,7 +308,7 @@ private fun rememberStreamPageState(
                 // Land straight where a request or the last visit says, so the first frame is already there.
                 val landing =
                     request?.takeUnless { it.isWaiting(pages) }?.let { StreamFocus.resolvePage(it.target, pages) }
-                val key = landing ?: initialPageKey?.takeIf { it in keys } ?: keys.firstOrNull()
+                val key = landing ?: initialPageKey?.takeIf { it in keys } ?: defaultPageKey(pages)
                 initial.currentKey = key
                 initial.settledKey = key
                 initial.previousKeys = keys
@@ -332,6 +337,14 @@ private fun rememberStreamPageState(
     }
     return state
 }
+
+/**
+ * The page the Stream opens on when it has no landing and no page to return to: the first page that is not a pinned
+ * app's shortcuts (those come first, as the pinned icons do in the Dock, but the Stream is not an app launcher), else
+ * the first.
+ */
+private fun defaultPageKey(pages: List<StreamPage>): String? =
+    (pages.firstOrNull { it.section != StreamSection.SHORTCUTS } ?: pages.firstOrNull())?.key
 
 /** A request can only be placed once the section it names has delivered: its page is a loading page until then. */
 private fun StreamFocusRequest.isWaiting(pages: List<StreamPage>): Boolean {

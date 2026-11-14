@@ -96,10 +96,10 @@ class StreamRealWiringTest {
         seconds: Long = 3,
     ): Map<StreamSection, StreamSectionResult?> {
         val latest = ConcurrentHashMap<StreamSection, StreamSectionResult>()
-        val done = CountDownLatch(StreamSection.entries.size)
+        val done = CountDownLatch(StreamSection.layoutSections.size)
         val seen = ConcurrentHashMap.newKeySet<StreamSection>()
         val subscriptions =
-            StreamSection.entries.map { section ->
+            StreamSection.layoutSections.map { section ->
                 provider.observe(section) { result ->
                     latest[section] = result
                     if (result != StreamSectionResult.Loading && seen.add(section)) done.countDown()
@@ -107,7 +107,7 @@ class StreamRealWiringTest {
             }
         done.await(seconds, TimeUnit.SECONDS)
         subscriptions.forEach { it.cancel() }
-        return StreamSection.entries.associateWith { section ->
+        return StreamSection.layoutSections.associateWith { section ->
             latest[section]?.takeUnless { it == StreamSectionResult.Loading }
         }
     }
@@ -119,7 +119,7 @@ class StreamRealWiringTest {
     fun everySectionReachesAnAnswerWithEveryAccessGranted() {
         val results = settle(provider())
         assertAllTerminal(results)
-        assertTrue(results.getValue(StreamSection.AGENDA) is StreamSectionResult.Ready)
+        assertTrue(results.getValue(StreamSection.TODAY) is StreamSectionResult.Ready)
         assertEquals(StreamSectionResult.Empty, results.getValue(StreamSection.NOTIFICATIONS))
     }
 
@@ -129,7 +129,7 @@ class StreamRealWiringTest {
             settle(provider(SourceAccess.REQUIRED, NotificationAccessStatus.NOT_GRANTED, SourceAccess.REQUIRED))
         assertAllTerminal(results)
         assertTrue(results.getValue(StreamSection.NOTIFICATIONS) is StreamSectionResult.PermissionRequired)
-        assertTrue(results.getValue(StreamSection.AGENDA) is StreamSectionResult.PermissionRequired)
+        assertTrue(results.getValue(StreamSection.TODAY) is StreamSectionResult.PermissionRequired)
         assertTrue(results.getValue(StreamSection.RECENTS) is StreamSectionResult.PermissionRequired)
     }
 

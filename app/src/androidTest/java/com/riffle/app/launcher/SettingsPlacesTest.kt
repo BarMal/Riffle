@@ -128,19 +128,19 @@ class SettingsPlacesTest {
 
         composeRule.onNodeWithTag(settingsMainRowTestTag(SettingsPage.STREAM)).performScrollTo().performClick()
         composeRule.onNodeWithTag(
-            streamShowAsTestTag(StreamSection.AGENDA, StreamView.STACK),
+            streamShowAsTestTag(StreamSection.TODAY, StreamView.STACK),
         ).performScrollTo().performClick()
-        composeRule.onNodeWithTag(streamSectionTestTag(StreamSection.TASKS)).performScrollTo().performClick()
+        composeRule.onNodeWithTag(streamSectionTestTag(StreamSection.RECENTS)).performScrollTo().performClick()
         composeRule.onNodeWithTag(streamMoveTestTag(StreamSection.FEEDS, -1)).performScrollTo().performClick()
 
         composeRule.runOnIdle {
             val layout = repository.layoutFor(HomeLayoutDeviceClass.PHONE)
-            assertEquals(StreamView.STACK, layout.viewOf(StreamSection.AGENDA))
-            assertEquals(false, layout.layoutOf(StreamSection.TASKS).enabled)
-            assertEquals(StreamSection.FEEDS, layout.sections[StreamSection.entries.lastIndex - 1].section)
+            assertEquals(StreamView.STACK, layout.viewOf(StreamSection.TODAY))
+            assertEquals(false, layout.layoutOf(StreamSection.RECENTS).enabled)
+            assertEquals(StreamSection.FEEDS, layout.sections[StreamSection.layoutSections.lastIndex - 1].section)
         }
-        composeRule.onNodeWithTag(streamShowAsTestTag(StreamSection.AGENDA, StreamView.STACK)).assertIsSelected()
-        composeRule.onNodeWithTag(streamShowAsTestTag(StreamSection.AGENDA, StreamView.LIST)).assertIsNotSelected()
+        composeRule.onNodeWithTag(streamShowAsTestTag(StreamSection.TODAY, StreamView.STACK)).assertIsSelected()
+        composeRule.onNodeWithTag(streamShowAsTestTag(StreamSection.TODAY, StreamView.LIST)).assertIsNotSelected()
     }
 
     @Test

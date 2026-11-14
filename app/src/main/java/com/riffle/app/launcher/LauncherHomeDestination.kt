@@ -41,6 +41,7 @@ import com.riffle.app.launcher.split.rememberSplitPaneState
 import com.riffle.app.launcher.split.streamPaneInsets
 import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamHost
+import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
@@ -145,6 +146,7 @@ fun HomeDestination(
             modeInterpreter = HomeDockInterpreter(),
             appShortcuts = state.appShortcutsByApp,
             choosing = choice.choosing,
+            pinnedApps = state.homeLayout.visibleTo(state.installedApps).pinnedApps(),
         )
     val pull =
         rememberHomeDockPullBinding(
@@ -539,6 +541,9 @@ private fun StreamHomeSurface(
             contentPadding = insets,
             liveAppSlots = state.homeLayout.dock.liveAppSlots,
             onConnectTasks = onConnectTasks,
+            pinnedApps = visibleLayout.pinnedApps(),
+            appShortcuts = state.appShortcutsByApp,
+            launcherRole = state.homeRoleStatus != HomeRoleStatus.NOT_DEFAULT_HOME,
         )
     }
 }

@@ -14,13 +14,23 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.stream.StreamCallbacks
 import com.riffle.app.launcher.stream.StreamSurface
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
+import com.riffle.core.domain.launcher.stream.EventContent
+import com.riffle.core.domain.launcher.stream.PinnedApp
+import com.riffle.core.domain.launcher.stream.StreamGap
+import com.riffle.core.domain.launcher.stream.StreamGroup
+import com.riffle.core.domain.launcher.stream.StreamGroupKeys
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.stream.StreamLayoutReducer
+import com.riffle.core.domain.launcher.stream.StreamPage
 import com.riffle.core.domain.launcher.stream.StreamPagePlanner
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
+import com.riffle.core.domain.launcher.stream.StreamShortcutPages
+import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.stream.StreamView
+import com.riffle.core.domain.launcher.stream.TaskContent
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import org.junit.Rule
 import org.junit.Test
@@ -28,6 +38,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.time.Instant
+import java.time.ZoneOffset
 
 /**
  * The Stream (ADR 0003, Views; P13 and P14): the pager of pages on compact phones, every section's page in both views
@@ -69,16 +81,10 @@ class StreamScreenshotTest {
     fun recentsList() = page(StreamPageKeys.RECENTS, StreamView.LIST)
 
     @Test
-    fun agendaStack() = page(StreamPageKeys.AGENDA, StreamView.STACK)
+    fun todayStack() = page(StreamPageKeys.TODAY, StreamView.STACK)
 
     @Test
-    fun agendaList() = page(StreamPageKeys.AGENDA, StreamView.LIST)
-
-    @Test
-    fun tasksStack() = page(StreamPageKeys.TASKS, StreamView.STACK)
-
-    @Test
-    fun tasksList() = page(StreamPageKeys.TASKS, StreamView.LIST)
+    fun todayList() = page(StreamPageKeys.TODAY, StreamView.LIST)
 
     @Test
     fun feedsOneFeedStack() = page(StreamPageKeys.FEED_A, StreamView.STACK)
@@ -90,35 +96,80 @@ class StreamScreenshotTest {
     fun feedsAnotherFeedStack() = page(StreamPageKeys.FEED_B, StreamView.STACK)
 
     @Test
-    fun tasksNotConnected() = state(StreamSection.TASKS, StreamSectionResult.NotConnected())
+    fun todayNotConnected() = state(StreamSection.TODAY, StreamSectionResult.NotConnected())
 
     @Test
-    fun tasksEmpty() = state(StreamSection.TASKS, StreamSectionResult.Empty)
+    fun todayEmpty() = state(StreamSection.TODAY, StreamSectionResult.Empty)
 
     @Test
-    fun tasksTokenRejected() =
+    fun todayTokenRejected() =
         state(
-            StreamSection.TASKS,
+            StreamSection.TODAY,
             StreamSectionResult.NotConnected(com.riffle.core.domain.launcher.stream.NotConnectedReason.TOKEN_REJECTED),
         )
 
     @Test
-    fun tasksError() = state(StreamSection.TASKS, StreamSectionResult.Unavailable)
+    fun todayError() = state(StreamSection.TODAY, StreamSectionResult.Unavailable)
 
     @Test
-    fun tasksStale() =
+    fun todayOnlyTasksStale() = state(StreamSection.TODAY, todayOf(tasks = StreamFixtures.staleTasks))
+
+    @Test
+    fun todayOnlyTasksWithNoEvents() = state(StreamSection.TODAY, todayOf(tasks = StreamFixtures.tasks))
+
+    @Test
+    fun todayConnectedWithNothingOnIt() =
         state(
-            StreamSection.TASKS,
+            StreamSection.TODAY,
             StreamSectionResult.Ready(
+                emptyList(),
                 listOf(
-                    com.riffle.core.domain.launcher.stream.StreamGroup(
-                        com.riffle.core.domain.launcher.stream.StreamGroupKeys.TASKS,
-                        null,
-                        StreamFixtures.staleTasks,
-                    ),
+                    StreamGap(StreamSourceIds.TASKS, StreamSectionResult.Empty),
                 ),
             ),
         )
+
+    @Test
+    fun todayEventsWithNoTasksAccount() =
+        state(
+            StreamSection.TODAY,
+            todayOf(
+                events = listOf(StreamFixtures.nextEvent, StreamFixtures.lunchEvent),
+                gaps =
+                    listOf(
+                        StreamGap(
+                            StreamSourceIds.TASKS,
+                            StreamSectionResult.NotConnected(),
+                        ),
+                    ),
+            ),
+        )
+
+    @Test
+    fun todayNextEventUnderWayWithItsCountdown() =
+        state(
+            StreamSection.TODAY,
+            todayOf(
+                events =
+                    listOf(
+                        StreamFixtures.nextEvent.copy(
+                            startEpochMillis = StreamFixtures.NOW - 20 * 60_000L,
+                            endEpochMillis = StreamFixtures.NOW + 10 * 60_000L,
+                        ),
+                        StreamFixtures.lunchEvent,
+                    ),
+                tasks = StreamFixtures.tasks,
+            ),
+        )
+
+    @Test
+    fun shortcutsOfAPinnedApp() = shortcuts(StreamFixtures.shortcutsOf(ScreenshotFixtures.files))
+
+    @Test
+    fun shortcutsOfAPinnedAppWithNone() = shortcuts(emptyMap())
+
+    @Test
+    fun shortcutsOfAPinnedAppWithoutTheLauncherRole() = shortcuts(emptyMap(), launcherRole = false)
 
     @Test
     fun notificationsPermissionRequired() =
@@ -126,9 +177,6 @@ class StreamScreenshotTest {
 
     @Test
     fun notificationsEmpty() = state(StreamSection.NOTIFICATIONS, StreamSectionResult.Empty)
-
-    @Test
-    fun agendaEmpty() = state(StreamSection.AGENDA, StreamSectionResult.Empty)
 
     @Test
     fun feedsOff() = state(StreamSection.FEEDS, StreamSectionResult.Off)
@@ -154,12 +202,12 @@ class StreamScreenshotTest {
     }
 
     @Test
-    fun aPageLaterInTheDocksOrderWithNoSpineOrHeader() = surface(initialPageKey = StreamPageKeys.TASKS)
+    fun aPageLaterInTheDocksOrderWithNoSpineOrHeader() = surface(initialPageKey = StreamPageKeys.TODAY)
 
     @Test
     fun everySectionHiddenOffersThemBack() {
         val layout =
-            StreamSection.entries.fold(StreamLayout.DEFAULT) { acc, section ->
+            StreamSection.layoutSections.fold(StreamLayout.DEFAULT) { acc, section ->
                 StreamLayoutReducer.reduce(acc, StreamLayoutAction.SetEnabled(section, false))
             }
         surface(layout = layout)
@@ -182,7 +230,7 @@ class StreamScreenshotTest {
         val layout =
             listOf(
                 StreamLayoutAction.SetEnabled(StreamSection.FEEDS, false),
-                StreamLayoutAction.Move(StreamSection.AGENDA, -3),
+                StreamLayoutAction.Move(StreamSection.TODAY, -3),
                 StreamLayoutAction.SetView(StreamSection.NOTIFICATIONS, StreamView.LIST),
             ).fold(StreamLayout.DEFAULT, StreamLayoutReducer::reduce)
         surface(layout = layout)
@@ -193,10 +241,41 @@ class StreamScreenshotTest {
         view: StreamView,
     ) {
         val layout =
-            StreamSection.entries.fold(StreamLayout.DEFAULT) { acc, section ->
+            StreamSection.layoutSections.fold(StreamLayout.DEFAULT) { acc, section ->
                 StreamLayoutReducer.reduce(acc, StreamLayoutAction.SetView(section, view))
             }
         surface(layout = layout, initialPageKey = key)
+    }
+
+    /** Today with only what is given: events by day, tasks and the gaps. */
+    private fun todayOf(
+        events: List<EventContent> = emptyList(),
+        tasks: List<TaskContent> = emptyList(),
+        gaps: List<StreamGap> = emptyList(),
+    ): StreamSectionResult.Ready {
+        fun dayOf(event: EventContent) =
+            Instant.ofEpochMilli(event.startEpochMillis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+        val days = events.groupBy(::dayOf).toSortedMap().map { (day, items) -> StreamGroup(day, null, items) }
+        val taskGroup = tasks.takeIf { it.isNotEmpty() }?.let { StreamGroup(StreamGroupKeys.TASKS, null, it) }
+        return StreamSectionResult.Ready(days + listOfNotNull(taskGroup), gaps)
+    }
+
+    /** The shortcuts pages of two pinned apps (Files, then Maps), the first in front. */
+    private fun shortcuts(
+        shortcutsByApp: AppShortcutsByApp,
+        launcherRole: Boolean = true,
+    ) {
+        val pinned =
+            listOf(
+                PinnedApp(ScreenshotFixtures.files.identity, "Files"),
+                PinnedApp(ScreenshotFixtures.maps.identity, "Maps"),
+            )
+        val pages = StreamShortcutPages.plan(pinned, emptySet(), shortcutsByApp, launcherRole)
+        surface(
+            initialPageKey = pages.first().key,
+            shortcutPages = pages,
+            pinnedGroupKeys = pinned.map { StreamShortcutPages.appKeyOf(it.identity) },
+        )
     }
 
     private fun state(
@@ -207,8 +286,9 @@ class StreamScreenshotTest {
         surface(results = defaultResults() + (section to result), initialPageKey = key)
     }
 
-    private fun defaultResults() = StreamSection.entries.associateWith { StreamFixtures.ready(it) }
+    private fun defaultResults() = StreamSection.layoutSections.associateWith { StreamFixtures.ready(it) }
 
+    @Suppress("LongParameterList")
     private fun surface(
         layout: StreamLayout = StreamLayout.DEFAULT,
         results: Map<StreamSection, StreamSectionResult> = defaultResults(),
@@ -217,6 +297,8 @@ class StreamScreenshotTest {
         reducedMotion: Boolean = false,
         wide: Boolean = false,
         paneWidth: Dp? = null,
+        shortcutPages: List<StreamPage> = emptyList(),
+        pinnedGroupKeys: List<String> = emptyList(),
     ) {
         composeRule.setContent {
             ScreenshotBackdrop(reducedTransparency = reducedTransparency) {
@@ -238,6 +320,8 @@ class StreamScreenshotTest {
                         contentPadding = PaddingValues(top = 48.dp, bottom = 96.dp),
                         initialPageKey = initialPageKey,
                         wideLayout = wide,
+                        shortcutPages = shortcutPages,
+                        pinnedGroupKeys = pinnedGroupKeys,
                     )
                 }
             }
@@ -252,8 +336,7 @@ internal object StreamPageKeys {
     val CHAT = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "chat:personal")
     val MAIL = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "mail:personal")
     val RECENTS = StreamPagePlanner.keyOf(StreamSection.RECENTS)
-    val AGENDA = StreamPagePlanner.keyOf(StreamSection.AGENDA)
-    val TASKS = StreamPagePlanner.keyOf(StreamSection.TASKS)
+    val TODAY = StreamPagePlanner.keyOf(StreamSection.TODAY)
     val FEED_A = StreamPagePlanner.keyOf(StreamSection.FEEDS, "feed-a")
     val FEED_B = StreamPagePlanner.keyOf(StreamSection.FEEDS, "feed-b")
 }

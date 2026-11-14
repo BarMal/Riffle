@@ -8,7 +8,7 @@ placed from the widget picker like any other widget and live on Home pages as pl
 | Widget | Reads | Draws | Spans (min / default / max) | Full layout from |
 | --- | --- | --- | --- | --- |
 | Now playing | Stream section Now: the newest media | The Stream's media card (artwork, title, artist, transport) | 2x1 / 4x2 / 4x4 | 3x3 |
-| Next event | Stream section Agenda: the first upcoming event (alarms excluded) | The Stream's event card (time span, title, place, countdown) | 2x1 / 4x2 / 4x3 | 3x2 |
+| Next event | Stream section Today: the first upcoming event (alarms excluded; the tasks in the section are ignored) | The Stream's event card (time span, title, place, countdown) | 2x1 / 4x2 / 4x3 | 3x2 |
 | Top story | Stream section Feeds: the newest unread article | The Stream's article card (lead image, headline, feed, age) | 2x1 / 4x2 / 4x4 | 3x3 |
 
 The catalogue, spans, layout rule and the choice of what to show are in `core/domain/.../launcher/glance/GlanceWidgets.kt`
@@ -62,7 +62,8 @@ off ("Turn on") and unavailable. A redacted item shows "Hidden content"; media k
   the Stream on Now.
 - Next event, Top story: tapping the card performs the content's own action (open the event, open the article) through
   the gateway, as the exception to "the body opens the Stream" allows; "Open Stream" in the widget's menu lands on
-  Agenda or Feeds.
+  Today or Feeds. (Next event observes the whole Today section, so a Next event widget on Home also keeps the Todoist
+  source refreshing while it is on screen.)
 - Edit mode covers the widget with the usual gesture layer (drag, resize handles, remove). Outside it a long press
   still drags or opens the usual menu, and the release of that long press never also presses the control under it.
 

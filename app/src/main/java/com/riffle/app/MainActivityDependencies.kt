@@ -31,6 +31,7 @@ import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
 import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
 import com.riffle.app.launcher.apps.AndroidRecentAppRepository
+import com.riffle.app.launcher.apps.AndroidShortcutIcons
 import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
@@ -477,6 +478,7 @@ internal class MainActivityDependencies(
                         activeNotificationRepository.activeNotifications().largeIconBytesFor(handle)
                     },
                     feedArtwork = RepositoryFeedArtworkLoader(feedArticleCacheRepository)::artworkFor,
+                    shortcutIcon = AndroidShortcutIcons(activity)::iconFor,
                 ),
             requestAccess = requestAccess,
             enableSources = { ids -> ids.forEach { id -> enablement.setEnabled(id, true) } },

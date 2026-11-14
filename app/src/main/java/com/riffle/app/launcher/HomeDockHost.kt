@@ -147,6 +147,8 @@ internal data class HomeDockInterpreter(
      * never has to know this is a stage label, a pin toggle, or anything else "Cards" at all.
      */
     val dockEdgeCompanion: (@Composable () -> Unit)? = null,
+    /** What the pinned apps know of the Stream (their pages, and the tap in the contextual mode); null: they launch. */
+    val pinnedStream: DockPinnedStream? = null,
 )
 
 /**
@@ -248,6 +250,7 @@ internal fun HomeDockHost(
         ) {
             CompositionLocalProvider(
                 LocalDockChoice provides choice,
+                LocalDockPinnedStream provides interpreter.pinnedStream,
                 LocalDockBackgroundAlpha provides dockBackgroundAlpha,
                 LocalDockDynamicBoundsSink provides rememberDynamicBoundsSink(hostState),
                 LocalDockDynamicEntryBoundsSink provides rememberDynamicEntryBoundsSink(hostState),
@@ -275,7 +278,12 @@ internal fun HomeDockHost(
                 val entries = interpreter.dynamicEntries.orEmpty()
                 DockChoiceLabel(
                     choice = choice,
-                    labelFor = { key -> entries.firstOrNull { entry -> entry.key == key }?.label },
+                    labelFor = { key ->
+                        entries.firstOrNull {
+                                entry ->
+                            entry.key == key
+                        }?.label ?: interpreter.pinnedStream?.labels?.get(key)
+                    },
                     pull = pull,
                     modifier = Modifier.matchParentSize(),
                 )
