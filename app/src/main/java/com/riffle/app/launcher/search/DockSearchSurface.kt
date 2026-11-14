@@ -311,7 +311,7 @@ private const val NANOS_PER_SECOND = 1_000_000_000f
 internal val DockSearchProgressKey = SemanticsPropertyKey<Float>("DockSearchProgress")
 private var SemanticsPropertyReceiver.dockSearchProgress by DockSearchProgressKey
 
-/** The surface's opacity as drawn (0 to 1; the spring's alpha), for a test to read at rest; not read by anything else. */
+/** The surface's opacity as drawn (0 to 1; the spring's alpha), for a test to read; not read by anything else. */
 internal val DockSearchAlphaKey = SemanticsPropertyKey<Float>("DockSearchAlpha")
 private var SemanticsPropertyReceiver.dockSearchAlpha by DockSearchAlphaKey
 

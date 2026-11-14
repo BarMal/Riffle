@@ -392,8 +392,8 @@ class DockDynamicSectionMetricsTest {
             )!!
 
         assertEquals(2 * 48 + 10, metrics.dynamicSectionMainAxisDp)
-        // 404 - 106 - 17 = 281 dp is left, 253 dp inside the Dock's padding: four whole 56 dp icons at the compacted 8 dp
-        // gap (4 * 56 + 3 * 8 = 248 dp). The Dock is as long as those four, so no fifth icon is cut in half.
+        // 404 - 106 - 17 = 281 dp is left, 253 dp inside the Dock's padding: four whole 56 dp icons at the compacted
+        // 8 dp gap (4 * 56 + 3 * 8 = 248 dp). The Dock is as long as those four, so no fifth icon is cut in half.
         assertEquals(4 * 56 + 3 * DOCK_COMPACTED_SPACING_FLOOR_DP, metrics.contentViewportMainAxisDp)
         assertEquals(
             4 * 56 + 3 * DOCK_COMPACTED_SPACING_FLOOR_DP + 2 * DOCK_MAIN_AXIS_PADDING_DP,

@@ -164,12 +164,10 @@ object DockEdgeFade {
         viewportEnd: Float,
     ): Float {
         val extent = itemEnd - itemStart
-        if (extent <= 0f) return 1f
-        val visible = (minOf(itemEnd, viewportEnd) - maxOf(itemStart, viewportStart)).coerceIn(0f, extent)
-        // Sub-pixel rounding between the icon's and the viewport's edges is not a cut.
-        if (visible >= extent - WHOLE_TOLERANCE) return 1f
-        val fraction = visible / extent
-        return fraction * fraction
+        val visible = (minOf(itemEnd, viewportEnd) - maxOf(itemStart, viewportStart)).coerceIn(0f, maxOf(extent, 0f))
+        // An empty extent, and sub-pixel rounding between the icon's and the viewport's edges, are not a cut.
+        val whole = extent <= 0f || visible >= extent - WHOLE_TOLERANCE
+        return if (whole) 1f else (visible / extent) * (visible / extent)
     }
 
     private const val WHOLE_TOLERANCE = 1f

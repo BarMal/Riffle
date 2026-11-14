@@ -92,7 +92,7 @@ internal class OpenCardPress(
  * Every per-frame value (the Stream's slide, Home's fade) is read inside a graphics layer from [frame], so a pull
  * redraws without recomposing; composition only reads what changes at a pull's start and end ([isTransitioning]).
  */
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "TooManyFunctions")
 internal class HomeDockPullBinding(
     /** For the destination's root: measures the window, carries the keyboard shortcuts and accessibility actions. */
     val rootModifier: Modifier,

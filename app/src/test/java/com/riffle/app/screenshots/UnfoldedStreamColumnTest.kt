@@ -87,6 +87,7 @@ import kotlin.math.abs
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ScreenshotDevices.SDK], qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
+@Suppress("LargeClass")
 class UnfoldedStreamColumnTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()

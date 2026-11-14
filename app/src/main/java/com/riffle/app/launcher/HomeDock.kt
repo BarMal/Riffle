@@ -147,7 +147,7 @@ internal fun Dock(
     }
 }
 
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 internal fun DockSlotStrip(
     dock: DockModel,

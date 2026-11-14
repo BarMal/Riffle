@@ -153,7 +153,7 @@ private fun Rect.toDp(density: Float) =
 @Composable
 @Suppress("LongParameterList")
 internal fun rememberStreamColumnGeometry(
-    /** Whether Home stays behind the Stream, so its grid fades beneath the stack (unfolded, or folded with apps shown). */
+    /** Whether Home stays behind the Stream, so its grid fades under the stack (unfolded, or folded with apps on). */
     columnMode: Boolean,
     streamShown: Boolean,
     closing: Boolean,

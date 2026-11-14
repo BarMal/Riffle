@@ -43,6 +43,7 @@ internal fun SettingsStreamCardsPageContent(
 
 /** The page over plain [settings], so a screenshot test draws it without a shell. */
 @Composable
+@Suppress("LongMethod")
 internal fun SettingsStreamCards(
     settings: StreamSettings,
     onAction: (LauncherShellAction) -> Unit,

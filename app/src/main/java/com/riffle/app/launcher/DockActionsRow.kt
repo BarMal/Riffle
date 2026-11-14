@@ -111,7 +111,7 @@ internal fun DockActionsRowAt(
     cardActions: OpenCardActions?,
     layout: HomeLayout,
     presentation: StandardHomePresentation,
-    /** The row's height as it grows and goes (0 while none shows), so the room Home keeps for the Dock can leave it out. */
+    /** The row's height as it grows and goes (0 while none shows), so Home's room for the Dock can leave it out. */
     onRowHeightChanged: (Int) -> Unit = {},
 ) {
     if (position != at) return

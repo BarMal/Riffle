@@ -584,6 +584,7 @@ private fun rememberLibraryShown(
  * the field stays visible while typing). Launching an app from it closes it.
  */
 @Composable
+@Suppress("LongMethod")
 private fun LibraryHomeSurface(
     search: Boolean,
     searchColumn: (() -> StreamColumnRect?)?,

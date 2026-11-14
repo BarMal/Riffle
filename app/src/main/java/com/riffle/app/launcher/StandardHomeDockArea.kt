@@ -37,7 +37,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun StandardHomeDockArea(
     layout: HomeLayout,
     presentation: StandardHomePresentation,
