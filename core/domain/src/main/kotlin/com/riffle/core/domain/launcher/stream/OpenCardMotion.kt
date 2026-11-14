@@ -105,6 +105,18 @@ object OpenCardLayout {
         return Frame(topPx = browseTop + (openTop - browseTop) * p, heightPx = height)
     }
 
+    /**
+     * Whether [wantedStripsPx] of strips (the cards behind, peeking out above the open card) leave an open card at
+     * least [minCardPx] of room in an area [areaHeightPx] tall with [bottomInsetPx] kept under it. With the keyboard
+     * up, or in a short window, they do not: the strips are then not drawn at all, so they never overlap the open card.
+     */
+    fun stripsFit(
+        areaHeightPx: Float,
+        bottomInsetPx: Float,
+        wantedStripsPx: Float,
+        minCardPx: Float,
+    ): Boolean = areaHeightPx - bottomInsetPx - wantedStripsPx >= minCardPx
+
     /** The room the strips of the cards behind take above the open card: a pitch each, at most the visible peeks. */
     fun stripsPx(
         cardsBehind: Int,

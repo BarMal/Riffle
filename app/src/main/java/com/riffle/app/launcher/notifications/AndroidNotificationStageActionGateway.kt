@@ -34,6 +34,7 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
         val token = platformNotification.extras?.mediaSessionTokenExtraOrNull()
         targets[LauncherNotificationKey(notification.key)] =
             Targets(
+                context = context.applicationContext,
                 contentIntent = platformNotification.contentIntent,
                 providerActions = providerActions,
                 mediaController = token?.let { MediaController(context, it) },
@@ -101,6 +102,7 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
 }
 
 private data class Targets(
+    val context: Context,
     val contentIntent: PendingIntent?,
     val providerActions: Map<String, ProviderTarget>,
     val mediaController: MediaController?,
@@ -111,18 +113,16 @@ private data class ProviderTarget(
     val action: Notification.Action,
     val pendingIntent: PendingIntent,
 ) {
-    fun send(replyText: String?) {
-        if (replyText.isNullOrBlank() || action.remoteInputs.isNullOrEmpty()) {
-            pendingIntent.send()
-            return
-        }
+    /** The intent to merge into the action's own, or null when it carries no reply. */
+    fun fillIn(replyText: String?): Intent? {
+        if (replyText.isNullOrBlank() || action.remoteInputs.isNullOrEmpty()) return null
         val intent = Intent()
         val results = android.os.Bundle()
         action.remoteInputs.orEmpty().forEach { input ->
             results.putCharSequence(input.resultKey, replyText)
         }
         android.app.RemoteInput.addResultsToIntent(action.remoteInputs, intent, results)
-        pendingIntent.send(null, 0, intent)
+        return intent
     }
 }
 
@@ -131,7 +131,8 @@ private fun Targets.perform(
     action: NotificationStageAction,
 ): NotificationStageActionResult =
     when (action) {
-        NotificationStageAction.Open -> contentIntent?.sendResult() ?: NotificationStageActionResult.Unavailable
+        NotificationStageAction.Open ->
+            contentIntent?.let { sendResult(it, null) } ?: NotificationStageActionResult.Unavailable
         NotificationStageAction.Dismiss ->
             if (canDismiss && AndroidNotificationDismissalGateway.dismissNotifications(listOf(key))) {
                 NotificationStageActionResult.Performed
@@ -139,7 +140,8 @@ private fun Targets.perform(
                 NotificationStageActionResult.Failed
             }
         is NotificationStageAction.ProviderAction ->
-            providerActions[action.id]?.sendResult(action.replyText) ?: NotificationStageActionResult.Unavailable
+            providerActions[action.id]?.let { sendResult(it.pendingIntent, it.fillIn(action.replyText)) }
+                ?: NotificationStageActionResult.Unavailable
         is NotificationStageAction.MediaControl ->
             mediaController
                 ?.takeIf { controller ->
@@ -151,19 +153,14 @@ private fun Targets.perform(
                 ?: NotificationStageActionResult.Unavailable
     }
 
-private fun PendingIntent.sendResult(): NotificationStageActionResult =
-    runCatching { send() }
-        .fold(
-            onSuccess = { NotificationStageActionResult.Performed },
-            onFailure = { NotificationStageActionResult.Failed },
-        )
-
-private fun ProviderTarget.sendResult(replyText: String?): NotificationStageActionResult =
-    runCatching { send(replyText) }
-        .fold(
-            onSuccess = { NotificationStageActionResult.Performed },
-            onFailure = { NotificationStageActionResult.Failed },
-        )
+private fun Targets.sendResult(
+    pendingIntent: PendingIntent,
+    fillIn: Intent?,
+): NotificationStageActionResult =
+    PendingIntentSender.send(
+        PendingIntentSender.backgroundStartOptions(),
+        PendingIntentSender.dispatcher(context, pendingIntent, fillIn),
+    )
 
 private fun MediaController.sendResult(command: MediaCommand): NotificationStageActionResult =
     runCatching { perform(command) }

@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.apps.RecentAppUsage
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemExtValue
 import com.riffle.core.domain.launcher.workspace.ItemPrivacy
@@ -106,6 +107,47 @@ class StreamRealDataTest {
         assertEquals(emptyList(), content.thread)
         assertFalse(NotificationAction.REPLY in content.actions)
         assertFalse(NotificationAction.SNOOZE in content.actions)
+    }
+
+    @Test
+    fun `a message an app lists twice is one line of the thread, the same words at another time stay`() {
+        val echoed =
+            listOf(
+                message("Claude", "Old 80 width (+1 more)", 5),
+                message("Claude", "Old 80 width (+1 more)", 5),
+                message("Ann", "ok", 6),
+                message("Ann", "ok", 7),
+            )
+        val content =
+            assertIs<NotificationContent>(StreamContentMapper.map(notificationItems(messaging(echoed)).single()))
+        assertEquals(listOf("Old 80 width (+1 more)", "ok", "ok"), content.thread.map { it.text })
+
+        val onlyEchoes =
+            listOf(message("Claude", "Old 80 width (+1 more)", 5), message("Claude", "Old 80 width (+1 more)", 5))
+        val single =
+            assertIs<NotificationContent>(StreamContentMapper.map(notificationItems(messaging(onlyEchoes)).single()))
+        assertEquals(emptyList(), single.thread)
+    }
+
+    @Test
+    fun `only a conversation has a person to show, a promotion has none`() {
+        val promo = messaging(emptyList()).copy(title = "Perfect for you", text = "20% off")
+        val promoContent =
+            assertIs<NotificationContent>(StreamContentMapper.map(notificationItems(promo).single()))
+        assertFalse(promoContent.conversation)
+        assertFalse(promoContent.hasPerson)
+
+        val chat = assertIs<NotificationContent>(StreamContentMapper.map(notificationItems(messaging(thread)).single()))
+        assertTrue(chat.conversation)
+        assertTrue(chat.hasPerson)
+
+        val single = messaging(listOf(message("Ann", "one", 1)))
+        assertTrue(assertIs<NotificationContent>(StreamContentMapper.map(notificationItems(single).single())).hasPerson)
+
+        val byCategory = messaging(emptyList()).copy(category = NotificationCategory.MESSAGE)
+        assertTrue(
+            assertIs<NotificationContent>(StreamContentMapper.map(notificationItems(byCategory).single())).hasPerson,
+        )
     }
 
     @Test

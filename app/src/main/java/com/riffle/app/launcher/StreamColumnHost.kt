@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,10 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.designsystem.RiffleMotion
+import com.riffle.app.launcher.stream.STREAM_PAGES_TEST_TAG
 import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -36,8 +37,11 @@ import com.riffle.core.domain.launcher.stream.StreamColumn
 import com.riffle.core.domain.launcher.stream.StreamColumnRect
 import com.riffle.core.domain.launcher.stream.StreamColumnWindow
 
-/** The test tag of the Stream's column on an unfolded posture. */
-internal const val STREAM_COLUMN_TEST_TAG = "stream-column"
+/** The test tag of the Stream's column on an unfolded posture: its pages' rectangle, as wide as a resting stack. */
+internal const val STREAM_COLUMN_TEST_TAG = STREAM_PAGES_TEST_TAG
+
+/** The test tag of the column's host: the room an open card grows in. */
+internal const val STREAM_COLUMN_HOST_TEST_TAG = "stream-column-host"
 
 /**
  * The Stream on an unfolded posture (ADR 0003, Amendment 2): the same pager of upright card stacks as folded,
@@ -48,23 +52,36 @@ internal const val STREAM_COLUMN_TEST_TAG = "stream-column"
  * faded out beneath.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun StreamColumnSurface(
     stream: StreamHost,
     state: LauncherShellState,
     bounds: () -> StreamColumnRect?,
+    restBounds: () -> StreamColumnRect?,
+    onCloseStream: () -> Unit,
     appIconLoader: AppIconLoader,
     onConnectTasks: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
+    // The column's pages stand where the column does at rest, in the host's own coordinates.
+    val pageBounds: () -> StreamColumnRect? =
+        remember(bounds, restBounds) {
+            {
+                val host = bounds()
+                val rest = restBounds()
+                if (host == null || rest == null) {
+                    null
+                } else {
+                    StreamColumnRect(rest.left - host.left, 0f, rest.right - host.left, host.height)
+                }
+            }
+        }
     Box(modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX).then(modifier)) {
-        Box(
-            modifier =
-                Modifier
-                    .dpBounds(bounds)
-                    .testTag(STREAM_COLUMN_TEST_TAG)
-                    .pointerInput(Unit) { detectTapGestures { } },
-        ) {
+        // The host is as wide and tall as an open card may be and never changes size while a card opens or closes:
+        // nothing is relaid out per frame and nothing can clip the card. Its pages stand in the column's own
+        // rectangle ([pageBounds]); the rest of it takes no touches.
+        Box(modifier = Modifier.dpBounds(bounds).testTag(STREAM_COLUMN_HOST_TEST_TAG)) {
             StreamDestination(
                 host = stream,
                 deviceClass = state.homeLayoutSet.activeKey.deviceClass,
@@ -84,6 +101,8 @@ internal fun StreamColumnSurface(
                 // The actions sit on the card: a side Dock holds no row, and a bottom Dock's would stand under the
                 // column.
                 dockCanHoldActions = false,
+                pageBounds = pageBounds,
+                onEmptyTap = onCloseStream,
             )
         }
     }
@@ -137,6 +156,7 @@ internal fun rememberEasedFraction(
 @Stable
 internal class StreamColumnGeometry(
     val fade: GridFadeField,
+    /** The column's host: the room an open card grows in (constant while a card opens or closes). */
     val bounds: () -> StreamColumnRect?,
     /** The column as it stands at rest (no card open): where unfolded search stands, the same rectangle. */
     val restBounds: () -> StreamColumnRect?,
@@ -157,7 +177,8 @@ internal fun rememberStreamColumnGeometry(
     columnMode: Boolean,
     streamShown: Boolean,
     closing: Boolean,
-    cardOpen: Boolean,
+    /** How far the open card has grown, 0 to 1: the one motion the column's fade follows. Read in draw only. */
+    openProgress: () -> Float,
     peekThrough: Boolean,
     reducedMotion: Boolean,
     dockEdge: DockPosition,
@@ -169,7 +190,6 @@ internal fun rememberStreamColumnGeometry(
     rootSize: IntSize,
 ): StreamColumnGeometry {
     val density = LocalDensity.current.density
-    val open = rememberEasedFraction(columnMode && cardOpen, reducedMotion)
     val present = rememberEasedFraction(columnMode && streamShown && !closing, reducedMotion)
     val window =
         if (rootSize == IntSize.Zero) {
@@ -189,13 +209,25 @@ internal fun rememberStreamColumnGeometry(
                 verticalHingesDp = hinges,
             )
         }
-    val bounds: () -> StreamColumnRect? = remember(window) { { window?.let { StreamColumn.rect(it, open.value) } } }
+    // The host stands at the open size for good; the column the grid fades under grows with the card's own motion.
+    val bounds: () -> StreamColumnRect? = remember(window) { { window?.let { StreamColumn.rect(it, 1f) } } }
     val restBounds: () -> StreamColumnRect? = remember(window) { { window?.let { StreamColumn.rect(it, 0f) } } }
+    val latestProgress by rememberUpdatedState(openProgress)
+    val latestColumnMode by rememberUpdatedState(columnMode)
+    val visible: () -> StreamColumnRect? =
+        remember(window) {
+            {
+                val progress = if (latestColumnMode) latestProgress() else 0f
+                window?.let { StreamColumn.rect(it, progress) }
+            }
+        }
     val fade = remember { GridFadeField() }
+    val presence: () -> Float = remember(present) { { present.value } }
+    val open: () -> Float = remember { { if (latestColumnMode) latestProgress() else 0f } }
     SideEffect {
-        fade.column = bounds
-        fade.presence = { present.value }
-        fade.open = { open.value }
+        fade.column = visible
+        fade.presence = presence
+        fade.open = open
         fade.peekThrough = peekThrough
         fade.density = density
     }

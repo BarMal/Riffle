@@ -1267,6 +1267,20 @@ private fun DockShortcut(
                                     isContextMenuExpanded.value = true
                                 },
                                 onLongClickLabel = "Show ${shortcut.label} actions",
+                                // In the contextual mode a tap shows the page, and opens the app when it is showing.
+                                onClickLabel =
+                                    if (pinned?.contextual == true) {
+                                        stringResource(
+                                            if (isOpenPage) {
+                                                R.string.dock_live_app_open_action
+                                            } else {
+                                                R.string.dock_live_app_show_action
+                                            },
+                                            shortcut.label,
+                                        )
+                                    } else {
+                                        null
+                                    },
                             )
                         },
                     ),

@@ -30,13 +30,14 @@ class AndroidStreamActionGatewayTest {
     private val calls = mutableListOf<String>()
     private var feedChanged = 0
     private var replyTarget: String? = "provider:0"
+    private var notificationResult: NotificationStageActionResult = NotificationStageActionResult.Performed
 
     private val gateway =
         AndroidStreamActionGateway(
             notifications =
                 NotificationStageActionGateway { key, action ->
                     calls += "n:${key.value}:${action.describe()}"
-                    NotificationStageActionResult.Performed
+                    notificationResult
                 },
             replyActionId = { replyTarget },
             snooze = { key, ms ->
@@ -216,5 +217,27 @@ class AndroidStreamActionGatewayTest {
         )
         assertEquals(StreamActionResult.NotOffered, gateway.perform(shortcutCard("scan"), StreamAction.Dismiss))
         assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun openingANotificationSendsItsOwnContentIntentAndLaunchesNothingElse() {
+        assertEquals(StreamActionResult.Performed, gateway.perform(notification(), StreamAction.Open))
+        assertEquals(listOf("n:k1:Open"), calls)
+    }
+
+    @Test
+    fun aNotificationWhoseContentIntentIsGoneOrCancelledLaunchesTheApp() {
+        notificationResult = NotificationStageActionResult.Unavailable
+        assertEquals(StreamActionResult.Performed, gateway.perform(notification(), StreamAction.Open))
+        notificationResult = NotificationStageActionResult.Failed
+        assertEquals(StreamActionResult.Performed, gateway.perform(notification(), StreamAction.Open))
+        assertEquals(listOf("n:k1:Open", "package:chat", "n:k1:Open", "package:chat"), calls)
+    }
+
+    @Test
+    fun aNotificationWithNoKeyLaunchesTheAppWithoutAskingThePlatformForAnIntent() {
+        val keyless = notification().copy(notificationKey = null)
+        assertEquals(StreamActionResult.Performed, gateway.perform(keyless, StreamAction.Open))
+        assertEquals(listOf("package:chat"), calls)
     }
 }
