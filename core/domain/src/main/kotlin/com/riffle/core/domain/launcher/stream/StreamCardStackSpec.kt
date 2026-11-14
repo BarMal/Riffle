@@ -1,53 +1,32 @@
 package com.riffle.core.domain.launcher.stream
 
-import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
-
 /**
- * The geometry of a page's vertical card stack (ADR 0003, Views), taken from Calm's card pages: its `CalmCardSpec` is a
- * 168 dp card stacked with a 56 dp step, and its default tuning shows the focused card, two cards ahead and two
- * behind with the focused
- * card sitting high in the page (20 percent). Cards in front are the first (newest) item, as in Calm.
+ * The geometry of a page's card stack (ADR 0003, Amendment 1, "Browse", and Amendment 3, "Motion"), in dp. The stack is
+ * anchored to the Dock: the front card sits nearest the thumb and older cards peek above it, each one's top strip
+ * showing. The geometry as a function of position is [StackGeometry]; this holds the tokens it is built from, kept here
+ * and never as literals in the UI.
  *
- * Only a bounded number of cards is composed whatever the page holds ([MAX_COMPOSED_CARDS] at most).
+ * The card height and the pitch are Calm's card pages (`CalmCardSpec`: 168 dp cards, a 56 dp step).
  */
 object StreamCardStackSpec {
     /** The base card height; media, an article with a lead image and the tasks card are taller (their own content). */
     const val CARD_HEIGHT_DP = 168f
 
-    /** Distance between neighbouring cards' tops: how much of the next card peeks out below the focused one. */
+    /** Distance between neighbouring cards' tops: how much of the next card peeks out above the one in front. */
     const val PITCH_DP = 56f
 
-    /** How many cards stay visible after the focused one, and how many already scrolled past (Calm's defaults). */
-    const val VISIBLE_AHEAD = 2
-    const val VISIBLE_BEHIND = 2
+    /** The clear space between a peeking card's strip and the card in front of it, so the two fills never touch. */
+    const val GAP_DP = 4f
 
-    /**
-     * Where the focused card sits in the page's stack area, as a fraction of the free height. Calm uses 20 percent of
-     * the viewport; here it is 12 percent, because the page's own header already sits above.
-     */
-    const val PEAK_FRACTION = 0.12f
+    /** How many cards peek above the front one. One further is on its way out (fading) and is not drawn at rest. */
+    const val VISIBLE_PEEKS = 3
 
-    /** Cards past the visible range that are composed so the next one is already there while a drag is live. */
-    const val COMPOSED_MARGIN = 1
-
-    /** Each card behind the focused one is a little smaller and fainter (the existing stack defaults). */
+    /** Each peeking card is this much smaller than the one in front of it (width and height, from its top centre). */
     const val SCALE_STEP = 0.04f
-    const val ALPHA_STEP = 0.14f
 
-    /** The most cards one stack ever composes. */
-    const val MAX_COMPOSED_CARDS: Int = 1 + VISIBLE_AHEAD + VISIBLE_BEHIND + 2 * COMPOSED_MARGIN
+    /** The front card shrinks to this as it sinks into the Dock while it fades. */
+    const val SINK_SCALE = 0.92f
 
-    val policy: CardStackLayoutPolicy =
-        CardStackLayoutPolicy(
-            maxVisibleDepth = VISIBLE_AHEAD,
-            scaleStep = SCALE_STEP,
-            offsetStep = 0f,
-            offsetDirection = 0f,
-            alphaStep = ALPHA_STEP,
-            verticalOffsetStep = PITCH_DP,
-            reducedMotionScaleStep = 0f,
-            reducedMotionOffsetStep = 0f,
-            aboveFocusDepth = VISIBLE_BEHIND,
-            composedDepthMargin = COMPOSED_MARGIN,
-        )
+    /** The most cards one stack ever composes: the sinking card, the front card, the peeks and the one fading in. */
+    const val MAX_COMPOSED_CARDS: Int = 1 + 1 + VISIBLE_PEEKS + 1
 }

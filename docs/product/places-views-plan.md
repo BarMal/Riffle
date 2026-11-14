@@ -261,13 +261,11 @@ opens with no target, found again once its section has delivered.
 Only the sections' observation is shared: `StreamContentProvider` still has one upstream per source, not per page.
 
 **Stack geometry** (`StreamCardStackSpec`, from Calm's `CalmCardSpec` and default `CardStackTuning`): 168 dp cards, 56 dp
-apart, the focused card in front with the next ones peeking out below it as strips (each shows its icon and one line),
-two cards ahead and two behind visible, one more composed as a margin (at most seven cards composed whatever the page
-holds), each step 4 percent smaller and 14 percent fainter. Calm puts the focused card at 20 percent of the viewport; the
-Stream puts it at 12 percent of the free height because its header sits above. A pile is as tall as its tallest card so
+apart. Since dock modes slice 4a the stack is bottom-anchored (see
+[`dock-modes-plan.md`](dock-modes-plan.md), "As built"): the focused card in front just above the Dock with the older
+ones peeking above it as clipped strips, up to three, at most five cards composed. A pile is as tall as its tallest card so
 the strips line up; media, an article with a lead image and the tasks card are taller than 168 dp because they hold
-transport, an image or a checklist. The physics are the existing vertical `CardStack` (platform `scrollable`, spline
-fling, magnet settle), run vertically again; a card that can expand (a notification's thread and reply, the queue)
+transport, an image or a checklist. The physics are the stack's own (platform `scrollable`, a spring with a magnet); a card that can expand (a notification's thread and reply, the queue)
 expands in place and Back collapses it. Recents are app tiles, so its Stack is a wrapping grid of tiles that scrolls with
 the page, and Tasks is one card under the quick-add row. A List is rows on one Thin glass panel per group. "Show as"
 applies to the page's whole section and offers Undo; it is the same stored value as Settings > Stream.

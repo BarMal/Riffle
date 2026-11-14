@@ -64,6 +64,7 @@
     <string name="stream_previous_card">Previous card</string>
     <string name="stream_next_card">Next card</string>
     <string name="stream_open_card">Open card</string>
+    <string name="stream_bring_card_to_front">Bring to front</string>
     <string name="stream_action_failed">That did not work.</string>
 
     <!-- Media -->

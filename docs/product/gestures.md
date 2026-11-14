@@ -48,7 +48,8 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 | Recognizer | File | Primitive |
 | --- | --- | --- |
 | Home gestures (1/2/3-finger swipe, pinch) | `HomeGestureInput.kt`, `HomeSwipeGesture.kt` | Custom pointer loop (ADR 0002: no N-finger Foundation equivalent) + `nestedScroll` hand-off |
-| Card stack scroll/fling | `CardStack.kt` | `Modifier.scrollable` + custom `FlingBehavior` |
+| Card stack scroll/fling (the Notification overview prototype) | `CardStack.kt` | `Modifier.scrollable` + custom `FlingBehavior` |
+| The Stream's card stack (dock modes slice 4a) | `StreamStack.kt`, `StreamStackState.kt`, `StreamStackLayout.kt` | `Modifier.scrollable` (vertical; drag, slop, velocity and the axis decision are the platform's) + a custom `FlingBehavior` that hands the release to the stack's own spring. Custom where the platform has no notion: the float position rubber-banded past both ends, the magnetic spring, the tap on a peeking card. Decisions in `core/domain/.../stream/StackMotion.kt` |
 | Home page pager (Std/Lib) | `ImmediateHomePager.kt` | `HorizontalPager` |
 | Dock pull (Library) and Dock press (Home and contextual mode) | `DockPull.kt`, `DockPress.kt`, `HomeDockPullBinding.kt` | Custom pointer loop (ADR 0002: direction-selective claim in both directions); the one loop the Dock needs. Decisions (claim, commit, frame, press threshold) in `core/domain/.../dockpull/` and `.../dock/DockPress.kt` |
 | Contextual Dock row scroll | `DockContextualRow.kt` | `horizontalScroll`/`verticalScroll` with the platform fling (ADR 0002); the reveal of the ringed icon is `DockRunScroll` |
@@ -140,29 +141,47 @@ the Dock's accessibility actions.
 
 - **Close.** Back and the Home button (`OpenDefaultHome`) return to Home, as do the Dock press and "Back to Home". A focused card that is expanded (a notification's thread, now playing's queue) collapses on
   Back first.
-- **Inside the Stream (P13, P14).** The Stream is a horizontal pager of pages and each page is one vertically scrolling
-  stack or list ([places-views-plan.md](places-views-plan.md), P13). The pager is the platform `HorizontalPager`
-  (`Orientation.Horizontal`, ADR 0002); a page's stack is the existing `CardStack`, whose platform `scrollable` is
-  `Orientation.Vertical` with the spline fling and magnet settle, and a List or Tasks page is `verticalScroll`. The two
-  never fight because they take different axes: a drag that leads sideways is the pager's, one that leads up or down is the
-  page's, and the stack hands a drag that runs past its first or last card on (it owns a drag only while it has cards to
-  move: `cardStackOwnsDrag`). The Dock pull is claimed on the dock body only, so it never competes with either.
+- **Inside the Stream (P13, P14, dock modes slice 4a).** The Stream is a horizontal pager of pages and each page is one
+  vertically scrolling stack or list ([places-views-plan.md](places-views-plan.md), P13). The pager is the platform
+  `HorizontalPager` (`Orientation.Horizontal`, ADR 0002); a page's stack is `StreamStack`, bottom-anchored: the front card
+  sits just above the Dock and older cards peek above it as the real card clipped to its top strip. Its drag is the
+  platform `scrollable` (`Orientation.Vertical`), a List or Tasks page is `verticalScroll`. The two never fight because
+  they take different axes and the platform decides from the first movement: a drag that leads sideways is the pager's,
+  one that leads up or down is the page's. A stack with one card draws no stack (a lone card is drawn where the front card
+  is, and owns no drag). Nothing in the Stream consumes a vertical drag the stack leaves over, so the stack takes all of
+  it: past the first or last card it rubber-bands (a third of the finger's travel, back along the same path) instead of
+  handing the drag on. The Dock pull is claimed on the dock body only, so it never competes with either.
+  - **The drag follows the finger**: 90 dp of drag moves the stack one card; dragging down brings older cards toward the
+    front while the front card sinks toward the Dock, fading; dragging up brings the sunk card back out.
+  - **Release**: the stack coasts to the card it would reach (`position + velocity * 0.18 s * inertia`, held to the stack),
+    then a critically damped spring settles it on that whole card with a magnet that strengthens the pull within a quarter
+    of a card. A finger that lands mid-coast catches it where it is (a `scrollable` whose scroll is in progress starts
+    dragging at once and cancels the coast), and a move without a finger (a tap on a peeking card, the actions below) runs
+    inside the same scroll, so a touch catches that too. A light tick (`LauncherHapticEvent.DETENT`, through the haptic
+    strength setting) when it settles on a different card than it started on.
+  - **Reduced motion**: dragging still follows the finger; on release the stack jumps to the card nearest to where the
+    finger left it (no coast, spring or magnet) and fades from 40% to full opacity over the 80 ms reduced-motion fade.
+  - **Tap**: a peeking card is one 52 dp target that brings it to the front (the card's own buttons are out of reach until
+    it is in front); the front card keeps its own targets and opens as before. The card sunk before the front card is not a
+    strip, so it is reached with Previous card, a drag or the arrow keys.
   Every gesture has a non-gesture equivalent:
 
   | Gesture | Equivalent |
   | --- | --- |
   | Swipe to the next or previous page | Tap the page's tile or live app in the Dock (contextual mode); the pager's custom actions "Previous page" and "Next page" |
-  | Scroll a stack to another card | The "Previous card" and "Next card" buttons under it with "Card 2 of 3"; the focused card's custom actions "Previous card", "Next card" and "Open card"; the arrow keys |
+  | Scroll a stack to another card | The stack's own custom actions "Previous card" and "Next card" (Next is an older card, drawn above) and the front card's "Open card"; the arrow keys (up and Page Up: older; down and Page Down: newer); a tap on a peeking card. There is no on-screen stepper (the "Card 2 of 3" pill with arrows was removed in slice 4a); the front card's state description says "Card 2 of 3" |
   | Long-press a page's tile or icon in the Dock for Show as, Move and Hide, and Show for each hidden section | The long-click custom action of the tile (assistive technology), the same menu |
   | Long-press the Stage's bar for the Stream's own menu: Show as Pages or Stage | The options button at its end (Settings > Stream chooses Pages or Stage too) |
   | Tap a Stage rail thumbnail | It is a tab (a button named "Bring Chat to the front") |
 
   Each page is a labelled pane, the pager carries one custom-actions list, and no node carries two (the page actions are
-  on the pager, the card actions on the focused card, Hide on each card). The pages are in the Dock's order, and there is
-  no spine or page header: the Dock is the page indicator.
+  on the pager, Next and Previous card on the stack, Open card on the front card, Hide on each card). The cards are
+  individually focusable in order, the front card first; a peeking card is one node whose description reads the card's
+  whole text (what its strip hides) and whose click action is "Bring to front". The pages are in the Dock's order, and
+  there is no spine or page header: the Dock is the page indicator.
 - **The Stage (P14).** On an unfolded posture the Stage view has no swipes: the rail is a column of tabs that scrolls
-  vertically (`verticalScroll`) and a tap brings a stage to the centre; the selected stage's stack is the same vertical
-  `CardStack`. Two pages side by side (Pages on a wide screen) are one pager showing two, so a swipe still moves one
+  vertically (`verticalScroll`) and a tap brings a stage to the centre; the selected stage's stack is the same
+  bottom-anchored `StreamStack` (the Stage and the split keep no stack of their own). Two pages side by side (Pages on a wide screen) are one pager showing two, so a swipe still moves one
   page.
 
 ## Mode transitions (history; the Home/Library pull was retired by P5)
@@ -278,10 +297,10 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Dock background / icons | 1-finger toward edge while expanded | Shelf collapse (only reachable with shelf expansion on) | same |
 | Dock icons | long-press + drag | Reorder / drag out (owns) | same |
 | Dock | 1-finger along run, no scroll room | Home (Std/Lib only; dock is inside the home layer) | Nothing (dock is outside the stage surface) |
-| Card stack | 1-finger along stack axis | – | Stack scrolls; **past first/last card → handed to Home** (unbound by default) |
+| Card stack (Notification overview prototype only) | 1-finger along stack axis | – | Stack scrolls; **past first/last card → handed to Home** (unbound by default) |
 | Card stack with ≤1 card | 1-finger along stack axis | – | Home (stack does not claim) |
 | Card stack | 1-finger across stack axis | – | Stage pager (horizontal) |
-| Stream page (stack, list, tiles) | 1-finger vertical | Page scrolls: the stack moves a card (magnet settle) or the list scrolls; past the first or last card it hands on | same |
+| Stream page (stack, list, tiles) | 1-finger vertical | Page scrolls: the stack follows the finger (dragging down brings older cards forward), flings with light inertia and settles on a card with a magnet, rubber-banding past the first or last card; or the list scrolls | same |
 | Stream page | 1-finger horizontal | Stream pager (owns): next or previous page, the Dock's ring follows | same |
 | Stream Stage rail (unfolded) | tap a thumbnail / vertical drag | Brings that stage to the centre (shared-element transition) / scrolls the rail | same |
 | Card stack | 2-finger | – | Stack (first finger's drag wins; see limitations) |

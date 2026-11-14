@@ -131,6 +131,41 @@ object DockMotionConstants {
     /** Catching an animation with a finger: how long what was on screen takes to hand over to the press. */
     const val CATCH_BLEND_SECONDS: Float = 0.1f
 
+    // The card stack (ADR 0003, Amendment 3: it follows the finger, flings with light inertia and a slight magnet draws
+    // it onto a card; `launcher/stream/StackMotion.kt`). Positions are in cards, velocities in cards per second.
+
+    /** How far a finger drags (dp) to move the stack by one card. */
+    const val STACK_DRAG_DP_PER_CARD: Float = 90f
+
+    /** Dragging past the first or last card moves the stack this much of the finger's travel (the rubber band). */
+    const val STACK_RUBBER_BAND: Float = 0.35f
+
+    /** The default inertia (0 = none, 1 = the prototype's, up to [MAX_STACK_INERTIA]). */
+    const val DEFAULT_STACK_INERTIA: Float = 1f
+    const val MAX_STACK_INERTIA: Float = 2.5f
+
+    /** A release carries the stack on for this long at its release velocity (times the inertia) to pick its card. */
+    const val STACK_FLING_SECONDS: Float = 0.18f
+
+    /** The stack's spring is slower than the Dock's: a settle takes this many times the speed setting. */
+    const val STACK_SETTLE_TIME_FACTOR: Float = 2.2f
+
+    /** The stack's magnet works within this many cards of the card it settles on (a quarter of a card). */
+    const val STACK_MAGNET_RANGE: Float = 0.25f
+
+    /**
+     * A release moving away from the card it settles on (a push past the first or last card, or a slow one that rounds
+     * back) is turned round by the spring; its velocity is held to what carries the stack this far past the card.
+     */
+    const val STACK_MAX_AWAY_CARDS: Float = 0.25f
+
+    /** Where the stack's spring is considered at rest, in cards and cards per second. */
+    const val STACK_SETTLED_POSITION: Float = 0.002f
+    const val STACK_SETTLED_VELOCITY: Float = 0.02f
+
+    /** Under reduced motion the stack jumps to its card and fades from this opacity to full over the reduced fade. */
+    const val STACK_REDUCED_FADE_FROM: Float = 0.4f
+
     // Choosing (hold to choose, `DockChoice.kt`): a press held past the threshold, or slid, becomes a selection.
 
     /** The default hold time: how long a press held still past the threshold waits before it turns into choosing. */
@@ -174,6 +209,8 @@ data class DockMotionTuning(
     val magnet: Float = DockMotionConstants.DEFAULT_MAGNET,
     /** How long a press is held still past the threshold before it turns into choosing, in milliseconds (220). */
     val holdMillis: Int = DockMotionConstants.DEFAULT_HOLD_MILLIS,
+    /** How far a flung card stack coasts, 0 to 2.5 (default 1; the stack's own setting, with speed and magnet). */
+    val inertia: Float = DockMotionConstants.DEFAULT_STACK_INERTIA,
 ) {
     private val speed: Int get() = speedMillis.coerceAtLeast(MIN_SPEED_MILLIS)
 
@@ -185,6 +222,15 @@ data class DockMotionTuning(
 
     /** How much stronger the main spring pulls at its rest than away from it (1 = not at all). */
     val magnetGain: Float get() = magnet.coerceIn(0f, 1f) * DockMotionConstants.MAGNET_GAIN
+
+    /** The card stack's spring frequency, in radians per second: slower than the Dock's. */
+    val stackOmega: Float
+        get() =
+            DockMotionConstants.SETTLE_E_FOLDINGS /
+                (speed * DockMotionConstants.STACK_SETTLE_TIME_FACTOR / MILLIS_PER_SECOND)
+
+    /** The inertia kept in its range. */
+    val stackInertia: Float get() = inertia.coerceIn(0f, DockMotionConstants.MAX_STACK_INERTIA)
 
     /** The dip spring's frequency. */
     val dipOmega: Float get() = omega * DockMotionConstants.DIP_FREQUENCY_FACTOR
