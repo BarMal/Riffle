@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -103,12 +102,13 @@ class SettingsPageContentTest {
         }
 
         composeRule.onNodeWithText("Fullscreen home").assertDoesNotExist()
+        // The whole row is the switch: one node that carries the label and the state.
         composeRule
-            .onNode(isToggleable() and hasAnyAncestor(hasText("Hide status bar")))
+            .onNode(isToggleable() and hasText("Hide status bar"))
             .assertIsOn()
             .performSemanticsAction(SemanticsActions.OnClick) { onClick -> onClick() }
         composeRule
-            .onNode(isToggleable() and hasAnyAncestor(hasText("Hide navigation bar")))
+            .onNode(isToggleable() and hasText("Hide navigation bar"))
             .assertIsOn()
             .performSemanticsAction(SemanticsActions.OnClick) { onClick -> onClick() }
 
