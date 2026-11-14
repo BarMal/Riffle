@@ -22,6 +22,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -165,42 +166,33 @@ internal fun NotificationCard(
                     .fillMaxWidth()
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
                     .streamClickable(onOpen ?: { callbacks.onAction(content, StreamAction.Open) })
-                    .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
+                    .padding(
+                        start = RiffleSpacing.l,
+                        end = RiffleSpacing.l,
+                        top = StreamHeaderTopPadding,
+                        bottom = RiffleSpacing.s,
+                    ),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
-            ) {
-                StreamAvatar(
-                    content.avatar,
-                    content.icon,
-                    content.title ?: content.appLabel,
-                    env,
-                    BrowseAvatarSize,
-                    person = content.hasPerson,
-                )
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
-                    Text(
-                        text = content.title ?: hiddenText(),
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+            StreamCardHeader(
+                icon = {
+                    StreamAvatar(
+                        content.avatar,
+                        content.icon,
+                        content.title ?: content.appLabel,
+                        env,
+                        BrowseAvatarSize,
+                        person = content.hasPerson,
                     )
-                    Text(
-                        text =
-                            listOfNotNull(
-                                content.appLabel?.takeIf { it.isNotBlank() },
-                                env.formats.age(content.postedAtEpochMillis),
-                            ).joinToString(" · "),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
-            }
+                },
+                title = content.title ?: hiddenText(),
+                subtitle =
+                    listOfNotNull(
+                        content.appLabel?.takeIf { it.isNotBlank() },
+                        env.formats.age(content.postedAtEpochMillis),
+                    ).joinToString(" · "),
+                trailing = { StreamHideMenuButton(hideChoices, content, groupKey, callbacks) },
+            )
             Row(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
@@ -220,7 +212,7 @@ internal fun NotificationCard(
     }
 }
 
-private val BrowseAvatarSize = 48.dp
+private val BrowseAvatarSize = StreamHeaderIconSize
 private val BrowseThumbnailSize = 64.dp
 
 /** The message history of a messaging notification, oldest first. Nothing when the notification keeps none. */
@@ -265,26 +257,23 @@ internal fun EventCard(
                     .fillMaxWidth()
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
                     .streamClickable(onOpen ?: { callbacks.onAction(content, StreamAction.Open) })
-                    .padding(RiffleSpacing.l),
+                    .padding(
+                        start = RiffleSpacing.l,
+                        end = RiffleSpacing.l,
+                        top = StreamHeaderTopPadding,
+                        bottom = RiffleSpacing.l,
+                    ),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-            ) {
-                Text(
-                    text = eventSpanText(content, env).let { span -> if (caption == null) span else "$caption, $span" },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
-                StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
-            }
+            StreamCardHeader(
+                icon = { StreamGlyph(StreamIcons.Agenda) },
+                title = eventTitle(content),
+                trailing = { StreamHideMenuButton(hideChoices, content, groupKey, callbacks) },
+            )
             Text(
-                text = eventTitle(content),
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                text = eventSpanText(content, env).let { span -> if (caption == null) span else "$caption, $span" },
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
             )
             (content.location ?: content.calendarName)?.takeIf { it.isNotBlank() }?.let { place ->
                 Text(
@@ -377,22 +366,26 @@ internal fun ArticleCard(
                 sourceModifier
                     .fillMaxWidth()
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
-                    .padding(RiffleSpacing.l),
+                    .padding(
+                        start = RiffleSpacing.l,
+                        end = RiffleSpacing.l,
+                        top = StreamHeaderTopPadding,
+                        bottom = RiffleSpacing.s,
+                    ),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
-                verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-            ) {
-                StreamLeadImage(content.image, env, LeadImageHeight)
-                Text(
-                    text = content.title ?: hiddenText(),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = if (content.read) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
-                )
-            }
+            StreamCardHeader(
+                icon = { StreamGlyph(StreamIcons.Feeds) },
+                title = content.title ?: hiddenText(),
+                titleColor = if (content.read) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
+                contentModifier = Modifier.streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
+            )
+            StreamLeadImage(
+                content.image,
+                env,
+                LeadImageHeight,
+                modifier = Modifier.streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
+            )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
@@ -444,10 +437,19 @@ internal fun TasksCard(
 ) {
     StreamCardSurface("tasks", null, null, env, modifier) { sourceModifier ->
         Column(
-            modifier = sourceModifier.fillMaxWidth().padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.s),
+            modifier =
+                sourceModifier.fillMaxWidth().padding(
+                    start = RiffleSpacing.l,
+                    end = RiffleSpacing.l,
+                    top = StreamHeaderTopPadding,
+                    bottom = RiffleSpacing.s,
+                ),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
         ) {
-            tasks.take(MAX_TASKS_ON_CARD).forEach { task -> TaskLine(task, env, callbacks) }
+            // The first task is the card's header: its checkbox and title are what the card's strip shows.
+            tasks.take(MAX_TASKS_ON_CARD).forEachIndexed { index, task ->
+                TaskLine(task, env, callbacks, asHeader = index == 0)
+            }
         }
     }
 }
@@ -460,6 +462,8 @@ internal fun TaskLine(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     modifier: Modifier = Modifier,
+    /** The line a card's strip shows: its checkbox is the card's icon and its title the card's title. */
+    asHeader: Boolean = false,
 ) {
     val canComplete = StreamActionPolicy.offers(task, StreamAction.Complete)
     val canOpen = StreamActionPolicy.offers(task, StreamAction.Open)
@@ -474,7 +478,10 @@ internal fun TaskLine(
             checked = task.completed,
             onCheckedChange = { checked -> if (checked) callbacks.onAction(task, StreamAction.Complete) },
             enabled = canComplete,
-            modifier = Modifier.semantics { contentDescription = completeLabel },
+            modifier =
+                Modifier
+                    .semantics { contentDescription = completeLabel }
+                    .then(if (asHeader) Modifier.testTag(STREAM_CARD_ICON_TAG) else Modifier),
         )
         Column(
             modifier =
@@ -489,6 +496,7 @@ internal fun TaskLine(
                 textDecoration = if (task.completed) TextDecoration.LineThrough else null,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = if (asHeader) Modifier.testTag(STREAM_CARD_TITLE_TAG) else Modifier,
             )
             taskDueText(task, env)?.let { due ->
                 Text(

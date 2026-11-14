@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.stream
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.notifications.NotificationPriority
 import com.riffle.core.domain.launcher.workspace.Item
+import com.riffle.core.domain.launcher.workspace.ItemExtKey
 import com.riffle.core.domain.launcher.workspace.ItemExtValue
 import com.riffle.core.domain.launcher.workspace.ItemPrivacy
 import com.riffle.core.domain.launcher.workspace.ItemTarget
@@ -78,6 +79,44 @@ class StreamContentMapperTest {
                 as NotificationContent
         assertNull(sensitive.person)
         assertNull(sensitive.picture)
+    }
+
+    private fun withOwnActions(item: Item) =
+        item.copy(
+            ext =
+                item.ext +
+                    mapOf(
+                        NotificationItemMapper.OWN_COUNT_KEY to ItemExtValue.Number(2),
+                        ItemExtKey("notification.own0_id") to ItemExtValue.Text("provider:1"),
+                        ItemExtKey("notification.own0_title") to ItemExtValue.Text("Mark as read"),
+                        ItemExtKey("notification.own1_id") to ItemExtValue.Text("provider:2"),
+                        ItemExtKey("notification.own1_title") to ItemExtValue.Text("Archive"),
+                    ),
+        )
+
+    @Test
+    fun `a notification carries its own action buttons as ids and titles in order`() {
+        val content = StreamContentMapper.map(withOwnActions(notificationItem("a"))) as NotificationContent
+
+        assertEquals(
+            listOf(NotificationOwnAction("provider:1", "Mark as read"), NotificationOwnAction("provider:2", "Archive")),
+            content.ownActions,
+        )
+        assertEquals(emptyList(), (StreamContentMapper.map(notificationItem("a")) as NotificationContent).ownActions)
+    }
+
+    @Test
+    fun `the own action buttons follow the text, so hide text and sensitive items drop them`() {
+        val hidden =
+            StreamContentMapper.map(
+                withOwnActions(notificationItem("a")),
+                SourceContentLevels().with(SourceIds.NOTIFICATIONS, SourceContentLevel.HIDE_TEXT),
+            ) as NotificationContent
+        assertEquals(emptyList(), hidden.ownActions)
+        val sensitive =
+            StreamContentMapper.map(withOwnActions(notificationItem("a", privacy = ItemPrivacy.SENSITIVE)))
+                as NotificationContent
+        assertEquals(emptyList(), sensitive.ownActions)
     }
 
     @Test

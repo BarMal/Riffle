@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
+import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemSource
 import com.riffle.core.domain.launcher.workspace.SourceCapability
@@ -95,6 +96,8 @@ internal class NotificationSourceDependencies(
     /** Whether a live notification takes an inline reply / can be snoozed. Both are asked per notification. */
     val canReply: (LauncherNotificationKey) -> Boolean = { false },
     val canSnooze: (LauncherNotificationKey) -> Boolean = { false },
+    /** The live notification's own action buttons (ids and titles; the intents stay with the listener). */
+    val ownActions: (LauncherNotificationKey) -> List<NotificationOwnAction> = { emptyList() },
 )
 
 internal class CalendarSourceDependencies(
@@ -246,6 +249,7 @@ private fun notificationStream(
                     profileTypes = profileTypes,
                     canReply = notifications.canReply,
                     canSnooze = notifications.canSnooze,
+                    ownActions = notifications.ownActions,
                 ),
             )
         }

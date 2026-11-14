@@ -83,6 +83,11 @@ data class NotificationContent(
     val picture: ItemImageHandle? = null,
     /** The notification is a conversation with a person (a messaging style or the message category). */
     val conversation: Boolean = false,
+    /**
+     * The notification's own action buttons ("Mark as read", "Archive", "Like"): at most three, in its order, without
+     * the inline reply. Ids and titles only; the platform intents stay with the listener. Empty when redacted.
+     */
+    val ownActions: List<NotificationOwnAction> = emptyList(),
 ) : StreamContent {
     override val timeEpochMillis: Long get() = postedAtEpochMillis
 

@@ -18,6 +18,12 @@ object StreamCardStackSpec {
     /** The clear space between a peeking card's strip and the card in front of it, so the two fills never touch. */
     const val GAP_DP = 4f
 
+    /**
+     * How much of a card its strip shows: the pitch less the gap, from the card's top edge. Every card's header (an
+     * icon or avatar and a one-line title) lies wholly inside it, whatever the kind of card.
+     */
+    const val STRIP_HEIGHT_DP = PITCH_DP - GAP_DP
+
     /** How many cards peek above the front one. One further is on its way out (fading) and is not drawn at rest. */
     const val VISIBLE_PEEKS = 3
 

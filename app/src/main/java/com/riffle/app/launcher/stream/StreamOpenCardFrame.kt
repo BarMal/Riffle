@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
@@ -24,9 +26,12 @@ import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.dock.DockMotionConstants
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
+import com.riffle.core.domain.launcher.stream.OpenCardBlend
 import com.riffle.core.domain.launcher.stream.OpenCardLayout
 import com.riffle.core.domain.launcher.stream.OpenCardSpring
 import com.riffle.core.domain.launcher.stream.OpenCardSpringState
+import com.riffle.core.domain.launcher.stream.StackFling
+import com.riffle.core.domain.launcher.stream.StackGeometry
 import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamColumnRect
 import kotlin.math.roundToInt
@@ -101,16 +106,26 @@ internal class OpenCardMotionState {
 internal class OpenCardFrameGeometry {
     // State, so the stack's graphics layer (which reads the top) is redrawn when the open card's layout moves it.
     var topPx by mutableFloatStateOf(0f)
-    var heightPx by mutableFloatStateOf(0f)
 
     /** False while the room is too short for the cards behind to peek out above the open card: they are not drawn. */
     var stripsVisible by mutableStateOf(true)
 }
 
+/** One open card the layer draws: the card at stack position [index] (its id [id]) and how to compose it. */
+@Stable
+internal class OpenLayerCard(
+    val index: Int,
+    val id: String,
+    /** The card itself; [Modifier] carries the layout identity the layer needs and must be the root's modifier. */
+    val content: @Composable (Modifier) -> Unit,
+)
+
 /**
  * The open card as the Stream's one overlay: what the stack that has a card open hands to the surface to draw over the
  * whole of its area (see [OpenCardHolder.layer]). It is drawn outside the pager, so no page, column or host clips it:
- * the screen is the only edge it can meet.
+ * the screen is the only edge it can meet. [cards] are the open cards of the cards the stack's position lies between
+ * (one at rest, two while it moves from one to the next); each is drawn between its slot in the stack and its open
+ * frame by how near the front it is.
  */
 @Stable
 @Suppress("LongParameterList")
@@ -120,15 +135,22 @@ internal class OpenCardLayer(
     val browseHeight: Dp,
     val strips: Dp,
     val bottomInset: Dp,
+    /** The stack's position and fade, read in layout and draw so a drag moves the cards with no recomposition. */
+    val stack: StreamStackState,
+    val count: Int,
+    val reducedMotion: Boolean,
+    /** What moves the stack from the layer: the platform scrollable and the body's hand-off, on the layer's root. */
+    val dragModifier: Modifier,
     val onClose: () -> Unit,
     /** A tap on the strip of the card [rank] places behind the open one (1 is the nearest): open that card. */
     val onStripTap: (rank: Int) -> Unit,
-    val content: @Composable () -> Unit,
+    val cards: List<OpenLayerCard>,
 )
 
 /**
  * Draws [OpenCardHolder.layer], when a stack has published one: a scrim over the stack (a tap beside the card closes it
- * and the cards behind it are not tapped under it) and the card itself ([OpenCardFrame]).
+ * and the cards behind it are not tapped under it) and the open cards ([OpenCardFrames]). A vertical drag anywhere on
+ * it but in the card's scrolling body moves the stack ([OpenCardLayer.dragModifier]).
  */
 @Composable
 internal fun OpenCardLayerHost(
@@ -137,7 +159,7 @@ internal fun OpenCardLayerHost(
     modifier: Modifier = Modifier,
 ) {
     val layer = cards.layer ?: return
-    Box(modifier = modifier.fillMaxSize().padding(top = RiffleSpacing.s)) {
+    Box(modifier = modifier.fillMaxSize().padding(top = RiffleSpacing.s).then(layer.dragModifier)) {
         Box(
             modifier =
                 Modifier
@@ -160,16 +182,11 @@ internal fun OpenCardLayerHost(
                         }
                     },
         )
-        OpenCardFrame(
+        OpenCardFrames(
             motion = cards.motion,
-            geometry = layer.geometry,
-            placement = layer.placement,
+            layer = layer,
             restColumn = restColumn,
-            browseHeight = layer.browseHeight,
-            bottomInset = layer.bottomInset,
-            strips = layer.strips,
             modifier = Modifier.matchParentSize(),
-            content = layer.content,
         )
     }
 }
@@ -177,42 +194,47 @@ internal fun OpenCardLayerHost(
 /** The least height an open card is given before the cards behind it stop peeking out above it. */
 private val MinOpenCardHeight = 240.dp
 
-/** The content height of the open card, kept between frames so an animation measures the content once. */
+/** The content height of an open card, kept between frames so an animation measures the content once. */
 private class OpenCardNaturalHeight {
     var key = 0
     var px = 0
 }
 
 /**
- * Lays out the one child, an open card, in the Stream's area at the frame [OpenCardLayout] gives for the motion's
- * progress: where its browse card stands at 0, where [placement] puts it at 1, and the height in between. The card is
- * a whole card at every frame: its glass, edge and rounded corners are drawn at the size it has now, and its content
- * keeps its top inside it (it scrolls, as it does once open), so the card is never cut off by a clip, its own or its
- * parent's. Only the card is measured per frame; nothing around it is. It stands in the column [restColumn] widened
- * toward the whole area by the progress (the whole area when null), centred in it with the page's side padding.
- * [geometry] is told where it lies so the cards behind move out of its way.
+ * Lays out the layer's open cards in the Stream's area. Each is a whole card at every frame, positioned and sized from
+ * the stack's position and the open card's progress: where its slot in the stack stands when it is a card away from the
+ * front (a strip, or sinking into the Dock), where [OpenCardLayout] puts it when it is the front card (its browse place
+ * at progress 0, its open place at 1, the height in between), and blended by how near the front it is
+ * ([OpenCardBlend.openness]). So moving the stack from one card to the next is one motion: the card that arrives grows
+ * into its open card as the one that leaves shrinks back to its strip. The glass, edge and rounded corners are drawn at
+ * the size a card has now, so none is cut off by a clip. Only the cards are measured per frame, nothing around them.
+ * The cards stand in the column [restColumn] widened toward the whole area by the progress (the whole area when null),
+ * centred in it with the page's side padding. The stack beneath is told where the front card's top lies
+ * ([OpenCardFrameGeometry.topPx]) so the cards behind move out of its way.
  */
 @Composable
-@Suppress("LongParameterList")
-internal fun OpenCardFrame(
+@Suppress("LongMethod", "CyclomaticComplexMethod")
+internal fun OpenCardFrames(
     motion: OpenCardMotionState,
-    geometry: OpenCardFrameGeometry,
-    placement: OpenCardPlacement,
+    layer: OpenCardLayer,
     restColumn: (() -> StreamColumnRect?)?,
-    browseHeight: Dp,
-    bottomInset: Dp,
-    strips: Dp,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
 ) {
-    val natural = remember { OpenCardNaturalHeight() }
+    val naturals = remember(layer) { mutableMapOf<String, OpenCardNaturalHeight>() }
+    val stackGeometry = remember(layer.browseHeight) { StackGeometry(layer.browseHeight.value) }
+    val geometry = layer.geometry
     Layout(
-        content = content,
+        content = {
+            layer.cards.forEach { card ->
+                key(card.id) { card.content(Modifier.layoutId(card.index)) }
+            }
+        },
         modifier = modifier.graphicsLayer { alpha = motion.fade },
     ) { measurables, constraints ->
         val areaWidth = constraints.maxWidth
         val areaHeight = constraints.maxHeight
         val progress = motion.progress.coerceIn(0f, 1f)
+        val position = layer.stack.position
         val pad = RiffleSpacing.l.roundToPx()
         val readable = StreamMaxReadableWidth.roundToPx()
         val rest = restColumn?.invoke()
@@ -222,10 +244,10 @@ internal fun OpenCardFrame(
         val columnWidth = restWidth + ((areaWidth - restWidth) * progress).roundToInt()
         val cardWidth = (columnWidth - 2 * pad).coerceIn(0, readable)
         val finalWidth = (areaWidth - 2 * pad).coerceIn(0, readable)
-        val inset = bottomInset.roundToPx()
+        val inset = layer.bottomInset.roundToPx()
         // The cards behind peek out above the open card only while that leaves it room for its header, a little of its
         // thread and its actions (the keyboard is up, the window is short): else they are not drawn, never overlapped.
-        val wantedStrips = strips.roundToPx()
+        val wantedStrips = layer.strips.roundToPx()
         val stripsFit =
             OpenCardLayout.stripsFit(
                 areaHeight.toFloat(),
@@ -236,40 +258,95 @@ internal fun OpenCardFrame(
         val stripsPx = if (stripsFit) wantedStrips else 0
         geometry.stripsVisible = stripsFit
         val room = (areaHeight - inset - stripsPx).coerceAtLeast(0)
-        val measurable = measurables.firstOrNull()
-        // The height the card would have fully open: asked of its intrinsic height at its final width (once per
-        // animation: a child is measured only once per pass), and read off the card itself at every layout while it is
-        // settled, so content that changes is followed.
-        var settled: androidx.compose.ui.layout.Placeable? = null
+        val browsePx = layer.browseHeight.roundToPx().toFloat()
+        val bottom = areaHeight - inset
+        val browseTop = bottom - browsePx
         val key = finalWidth * 31 + room
-        if (measurable != null) {
-            if (progress >= 1f) {
-                val fully = measurable.measure(Constraints(finalWidth, finalWidth, 0, room))
-                natural.key = key
-                natural.px = fully.height
-                settled = fully
-            } else if (natural.key != key) {
-                natural.key = key
-                natural.px = measurable.maxIntrinsicHeight(finalWidth).coerceIn(0, room)
+        val nearest = StackFling.nearest(position, layer.count)
+
+        // Each open card: its place as the open card it is at this progress, and how near the front it is.
+        class Entry(
+            val measurable: androidx.compose.ui.layout.Measurable,
+            val index: Int,
+            val id: String,
+            val r: Float,
+            val openness: Float,
+        )
+        val entries =
+            measurables.mapNotNull { measurable ->
+                val index = measurable.layoutId as? Int ?: return@mapNotNull null
+                val r = index - position
+                // Reduced motion: no growth and no blend; the card nearest the front is the open one, and it fades.
+                val openness =
+                    if (layer.reducedMotion) {
+                        if (index == nearest) {
+                            1f
+                        } else {
+                            0f
+                        }
+                    } else {
+                        OpenCardBlend.openness(r)
+                    }
+                Entry(measurable, index, "$index", r, openness)
             }
+        // A card that stands whole in its open place is measured at the height its content has (once per layout pass: a
+        // child is measured only once), so content that changes is followed; the others are measured at the height the
+        // blend gives them, from the height their content would have.
+        val whole = HashMap<Int, androidx.compose.ui.layout.Placeable>()
+        entries.filter { progress >= 1f && it.openness >= 1f }.forEach { entry ->
+            val fully = entry.measurable.measure(Constraints(finalWidth, finalWidth, 0, room))
+            naturals.getOrPut(entry.id) { OpenCardNaturalHeight() }.also {
+                it.key = key
+                it.px = fully.height
+            }
+            whole[entry.index] = fully
         }
-        val frame =
-            OpenCardLayout.frame(
+
+        fun openFrameOf(entry: Entry): OpenCardLayout.Frame {
+            val natural = naturals.getOrPut(entry.id) { OpenCardNaturalHeight() }
+            if (natural.key != key) {
+                natural.key = key
+                natural.px = entry.measurable.maxIntrinsicHeight(finalWidth).coerceIn(0, room)
+            }
+            return OpenCardLayout.frame(
                 progress = progress,
                 areaHeightPx = areaHeight.toFloat(),
                 bottomInsetPx = inset.toFloat(),
-                browseHeightPx = browseHeight.roundToPx().toFloat(),
+                browseHeightPx = browsePx,
                 fullHeightPx = natural.px.toFloat(),
                 stripsPx = stripsPx.toFloat(),
-                placement = placement,
+                placement = layer.placement,
             )
-        geometry.topPx = frame.topPx
-        geometry.heightPx = frame.heightPx
-        val placeable =
-            settled ?: measurable?.measure(
-                Constraints.fixed(cardWidth, frame.heightPx.roundToInt().coerceAtLeast(0)),
-            )
-        val x = columnLeft + (columnWidth - (placeable?.width ?: cardWidth)) / 2
-        layout(areaWidth, areaHeight) { placeable?.place(x, frame.topPx.roundToInt()) }
+        }
+        // Where the front card's top lies, so the stack beneath can move its slots to it: between the two cards the
+        // position lies between, each at its open top, or at its browse top when it does not open.
+        val frames = entries.associate { it.index to openFrameOf(it) }
+        val frontTop =
+            if (layer.reducedMotion) {
+                frames[nearest]?.topPx ?: browseTop
+            } else {
+                OpenCardBlend.followTop(position) { index -> frames[index]?.topPx ?: browseTop }
+            }
+        geometry.topPx = frontTop
+        val shift = frontTop - browseTop
+        val placed =
+            entries.filter { it.openness > 0f }.sortedBy { it.openness }.map { entry ->
+                val open = frames.getValue(entry.index)
+                val slot = stackGeometry.frame(entry.r)
+                val w = if (layer.reducedMotion) 1f else entry.openness
+                val top = OpenCardBlend.lerp(bottom - slot.topDp * density + shift, open.topPx, w)
+                val height = OpenCardBlend.lerp(slot.visibleHeightDp * density, open.heightPx, w)
+                val alpha = if (layer.reducedMotion) 1f else slot.alpha
+                val placeable =
+                    whole[entry.index]
+                        ?: entry.measurable.measure(Constraints.fixed(cardWidth, height.roundToInt().coerceAtLeast(0)))
+                Triple(placeable, top, alpha)
+            }
+        layout(areaWidth, areaHeight) {
+            placed.forEach { (placeable, top, alpha) ->
+                val x = columnLeft + (columnWidth - placeable.width) / 2
+                placeable.placeWithLayer(x, top.roundToInt()) { this.alpha = alpha * layer.stack.fade }
+            }
+        }
     }
 }

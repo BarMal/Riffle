@@ -1,24 +1,17 @@
 package com.riffle.app.launcher.stream
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.stream.RecentAppContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 
-private val CardAppIconSize = RiffleSpacing.xxxl + RiffleSpacing.s
+private val CardAppIconSize = StreamHeaderIconSize
 
 /**
  * A recent app as a card of the Recents stack, like every other page's: its icon (in the app's own colour), its
@@ -37,44 +30,21 @@ internal fun RecentAppCard(
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     StreamCardSurface(content.id.value, content.app, content.icon, env, modifier) { sourceModifier ->
-        Row(
+        Column(
+            // From the top: the icon and the name are what the card's strip shows.
             modifier =
                 sourceModifier
                     .fillMaxSize()
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
-                    .padding(start = RiffleSpacing.l, top = RiffleSpacing.s, bottom = RiffleSpacing.s),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
+                    .padding(start = RiffleSpacing.l, top = StreamHeaderTopPadding, bottom = RiffleSpacing.s),
         ) {
-            Row(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
-            ) {
-                StreamIcon(content.icon, env, CardAppIconSize, lightsCard = true)
-                Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
-                    Text(
-                        text = content.label ?: stringResource(R.string.stream_hidden_content),
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    recentSubtitle(content, env, caption)?.let { subtitle ->
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-            StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
+            StreamCardHeader(
+                icon = { StreamIcon(content.icon, env, CardAppIconSize, lightsCard = true) },
+                title = content.label ?: stringResource(R.string.stream_hidden_content),
+                subtitle = recentSubtitle(content, env, caption),
+                contentModifier = Modifier.streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
+                trailing = { StreamHideMenuButton(hideChoices, content, groupKey, callbacks) },
+            )
         }
     }
 }

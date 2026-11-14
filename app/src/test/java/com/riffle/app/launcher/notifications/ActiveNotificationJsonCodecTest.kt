@@ -58,6 +58,33 @@ class ActiveNotificationJsonCodecTest {
     }
 
     @Test
+    fun storesNoTitleOrIntentOfTheNotificationsOwnActionButtons() {
+        // The own buttons ("Mark as read", "Archive") live in memory beside the listener; the snapshot has no field for
+        // them, so a snapshot holds the same keys it always did and nothing of theirs.
+        val notifications =
+            listOf(
+                LauncherNotification(
+                    key = LauncherNotificationKey("mail-1"),
+                    packageName = AppPackageName("com.riffle.mail"),
+                    title = "Invoice",
+                    text = "Ready",
+                    postedAtEpochMillis = 1_000L,
+                ),
+            )
+        val json = JSONArray(encodeActiveNotifications(notifications)).getJSONObject(0)
+        val keys = json.keys().asSequence().toSet()
+        assertEquals(
+            setOf(
+                "key", "packageName", "profileId", "category", "priority", "canDismiss", "isMediaSession", "title",
+                "text", "hasPersonIcon", "hasPicture", "messages", "postedAtEpochMillis",
+            ),
+            keys,
+        )
+        assertEquals(false, encodeActiveNotifications(notifications).contains("provider"))
+        assertEquals(false, encodeActiveNotifications(notifications).contains("Mark as read"))
+    }
+
+    @Test
     fun aSnapshotWrittenBeforeThoseFlagsExistedDecodesWithoutThem() {
         val old =
             """[{"key":"k","packageName":"p","profileId":"personal","category":"MESSAGE","priority":"HIGH",""" +

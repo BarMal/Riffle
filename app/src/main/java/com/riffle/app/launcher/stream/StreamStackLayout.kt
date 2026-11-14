@@ -28,6 +28,11 @@ internal fun StackLayout(
     cardWidth: Dp,
     bottomInset: Dp,
     modifier: Modifier = Modifier,
+    /**
+     * Whether another layer draws the card at an index ([r] cards from the front) in its place (the open card's layer):
+     * then the slot is left undrawn. Read when drawing, so it follows the open card's motion without a relayout.
+     */
+    covers: ((index: Int, r: Float) -> Boolean)? = null,
     content: @Composable () -> Unit,
 ) {
     Layout(content = content, modifier = modifier) { measurables, constraints ->
@@ -45,13 +50,15 @@ internal fun StackLayout(
                 val frame = geometry.frame(r)
                 if (!frame.isVisible) return@mapNotNull null
                 val clip = (frame.clipHeightDp * density).roundToInt().coerceAtLeast(1)
-                Triple(r, frame, measurable.measure(Constraints.fixed(slotWidth, clip)))
+                Slot(index, r, frame, measurable.measure(Constraints.fixed(slotWidth, clip)))
             }
         layout(width, height) {
             // The card furthest back is drawn first, so the front card is on top.
-            slots.sortedByDescending { it.first }.forEach { (_, frame, placeable) ->
+            slots.sortedByDescending { it.r }.forEach { slot ->
+                val (index, r, frame) = slot
+                val placeable = slot.placeable
                 placeable.placeWithLayer(left, bottom - (frame.topDp * density).roundToInt()) {
-                    alpha = frame.alpha * fade
+                    alpha = if (covers?.invoke(index, r) == true) 0f else frame.alpha * fade
                     scaleX = frame.scale
                     scaleY = frame.scale
                     transformOrigin = TransformOrigin(0.5f, 0f)
@@ -60,6 +67,13 @@ internal fun StackLayout(
         }
     }
 }
+
+private data class Slot(
+    val index: Int,
+    val r: Float,
+    val frame: com.riffle.core.domain.launcher.stream.StackCardFrame,
+    val placeable: androidx.compose.ui.layout.Placeable,
+)
 
 /** Tags a child of [StackLayout] as the slot of card [index]. */
 internal fun Modifier.stackSlot(index: Int): Modifier = layoutId(index)

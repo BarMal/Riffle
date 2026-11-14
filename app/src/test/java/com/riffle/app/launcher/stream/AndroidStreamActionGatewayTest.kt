@@ -16,6 +16,7 @@ import com.riffle.core.domain.launcher.stream.MediaAction
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.NotificationAction
 import com.riffle.core.domain.launcher.stream.NotificationContent
+import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionResult
 import com.riffle.core.domain.launcher.stream.StreamAppRef
@@ -133,6 +134,39 @@ class AndroidStreamActionGatewayTest {
         assertEquals(StreamActionResult.Performed, gateway.perform(notification(), StreamAction.Dismiss))
         assertEquals(StreamActionResult.Performed, gateway.perform(notification(), StreamAction.Snooze(5_000)))
         assertEquals(listOf("n:k1:Dismiss", "snooze:k1:5000"), calls)
+    }
+
+    private val ownActions =
+        listOf(NotificationOwnAction("provider:1", "Mark as read"), NotificationOwnAction("provider:2", "Archive"))
+
+    @Test
+    fun anOwnButtonIsSentByItsIdToTheLiveNotification() {
+        val content = notification().copy(ownActions = ownActions)
+        assertEquals(StreamActionResult.Performed, gateway.perform(content, StreamAction.OwnAction("provider:2")))
+        // By id and with the title the notification gave it; no reply text goes with it.
+        assertEquals(listOf("n:k1:provider:provider:2:null"), calls)
+    }
+
+    @Test
+    fun anOwnButtonTheNotificationDoesNotHaveIsNotOfferedAndSendsNothing() {
+        val content = notification().copy(ownActions = ownActions)
+        assertEquals(StreamActionResult.NotOffered, gateway.perform(content, StreamAction.OwnAction("provider:9")))
+        assertEquals(
+            StreamActionResult.NotOffered,
+            gateway.perform(notification(redacted = true), StreamAction.OwnAction("provider:1")),
+        )
+        assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun anOwnButtonOfANotificationThatHasGoneIsUnavailableAndOneWhoseIntentWasCancelledFails() {
+        val content = notification().copy(ownActions = ownActions)
+        notificationResult = NotificationStageActionResult.Unavailable
+        assertEquals(StreamActionResult.Unavailable, gateway.perform(content, StreamAction.OwnAction("provider:1")))
+        notificationResult = NotificationStageActionResult.Failed
+        assertEquals(StreamActionResult.Failed, gateway.perform(content, StreamAction.OwnAction("provider:1")))
+        // And nothing launched in their place: an own button is not "Open".
+        assertEquals(listOf("n:k1:provider:provider:1:null", "n:k1:provider:provider:1:null"), calls)
     }
 
     @Test

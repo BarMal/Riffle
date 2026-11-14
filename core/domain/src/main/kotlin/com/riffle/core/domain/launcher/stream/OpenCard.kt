@@ -37,6 +37,12 @@ sealed interface OpenCardEvent {
 
     /** The Stream left the screen. */
     data object StreamLeft : OpenCardEvent
+
+    /**
+     * The stack of [pageKey] came to rest on [cardId] while a card was open (a drag to the next card, Next or Previous
+     * card): that card is open in place when it [opensInPlace], else the stack returns to rest with nothing open.
+     */
+    data class Settled(val pageKey: String, val cardId: String, val opensInPlace: Boolean) : OpenCardEvent
 }
 
 object OpenCardReducer {
@@ -51,6 +57,12 @@ object OpenCardReducer {
             -> OpenCardState()
             is OpenCardEvent.PageChanged ->
                 if (state.pageKey == event.pageKey) state else OpenCardState()
+            is OpenCardEvent.Settled ->
+                when {
+                    !state.isOpen || state.pageKey != event.pageKey -> state
+                    event.opensInPlace -> OpenCardState(event.pageKey, event.cardId)
+                    else -> OpenCardState()
+                }
             is OpenCardEvent.CardsChanged ->
                 if (state.pageKey == event.pageKey && state.cardId !in event.cardIds) OpenCardState() else state
         }
