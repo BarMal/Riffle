@@ -284,25 +284,19 @@ class StreamPagesTest {
     }
 
     @Test
-    fun aStackNeverComposesMoreCardsThanItsDepthPolicyAllows() {
-        for (count in listOf(1, 2, 7, 50, 500)) {
-            for (active in listOf(0, count / 2, count - 1)) {
-                val composed = StreamCardStackSpec.policy.entries(count, active).size
-                val message = "$count cards at $active composed $composed"
-                assertTrue(composed <= StreamCardStackSpec.MAX_COMPOSED_CARDS, message)
-            }
-        }
+    fun theStackGeometryTokensAreCalmsCardAndStep() {
         assertEquals(168f, StreamCardStackSpec.CARD_HEIGHT_DP)
         assertEquals(56f, StreamCardStackSpec.PITCH_DP)
+        // The strip left by a peek is the pitch less the gap, so it stays a whole touch target (48 dp).
+        assertTrue(StreamCardStackSpec.PITCH_DP - StreamCardStackSpec.GAP_DP >= 48f)
     }
 
     @Test
-    fun aStacksNextCardsLieBelowTheFocusedOneAndThePassedOnesAbove() {
-        val entries = StreamCardStackSpec.policy.entries(5, 2)
-        val byIndex = entries.associateBy { it.cardIndex }
-        assertEquals(0f, byIndex.getValue(2).verticalOffset)
-        assertTrue(byIndex.getValue(3).verticalOffset > 0f)
-        assertTrue(byIndex.getValue(1).verticalOffset < 0f)
-        assertEquals(56f, byIndex.getValue(3).verticalOffset)
+    fun aStacksOlderCardsPeekAboveTheFrontOneAndTheNewerOneSinksBelowIt() {
+        val geometry = StackGeometry(StreamCardStackSpec.CARD_HEIGHT_DP)
+        val front = geometry.frame(0f)
+        assertTrue(geometry.frame(1f).topDp > front.topDp)
+        assertTrue(geometry.frame(-0.5f).topDp < front.topDp)
+        assertEquals(56f, geometry.frame(1f).topDp - front.topDp)
     }
 }

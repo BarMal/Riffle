@@ -35,6 +35,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -42,6 +44,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.GlassSurface
@@ -276,3 +279,12 @@ private fun StageThumb(
 }
 
 private fun StreamPage.stackSize(): Int = (body as? StreamPageBody.Content)?.items?.size ?: 0
+
+/**
+ * Draws only the bottom [strip] of this miniature: a thumbnail behind the front one in the rail is only ever seen as
+ * the strip below the one in front of it. (The stack proper clips the real card instead; see `StackLayout`.)
+ */
+private fun Modifier.showOnlyBottom(strip: Dp): Modifier =
+    drawWithContent {
+        clipRect(top = (size.height - strip.toPx()).coerceAtLeast(0f)) { this@drawWithContent.drawContent() }
+    }

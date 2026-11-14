@@ -136,13 +136,18 @@ alpha or blur radius. The numbers live in `core/domain/.../designsystem/GlassMat
 ### Stream card geometry
 
 The Stream's stacks use one set of geometry tokens, taken from Calm's card pages and kept in
-`core/domain/.../launcher/stream/StreamCardStackSpec.kt` (never as literals in the UI): a **168 dp** card, **56 dp**
-between neighbouring cards' tops (what peeks out below the focused card), the focused card in front, two cards ahead and
-two behind visible plus one composed as a margin (seven composed at most), each step 4 percent smaller and 14 percent
-fainter, and the focused card at 12 percent of the free height. Cards are `Regular` glass lit by the owning app's colour,
-page headers, the spine, the card position pill and rows' panels are `Thin`. Content that needs more than 168 dp
-(transport and scrubber, a lead image, a checklist) is taller, and a pile is as tall as its tallest card so the strips
-line up. The Stage rail's thumbnails are miniatures at 88 dp.
+`core/domain/.../launcher/stream/StreamCardStackSpec.kt` (never as literals in the UI): a **168 dp** card and **56 dp**
+between neighbouring cards' tops. The stack is **anchored to the Dock** (dock modes slice 4a): the front card sits just
+above the Dock, nearest the thumb, and older cards peek above it, three at most, each a strip of **52 dp** (the 56 dp step
+less a 4 dp gap) and each 4 percent smaller than the one in front of it. A peeking card is the real card clipped to its
+top strip (who or what it is, and when), and the clip is the part the card in front does not cover, so translucent fills
+never overlap and add up; as the card comes toward the front the clip opens and the rest of it is revealed. The card in
+front sinks toward the Dock and fades (down to 92 percent of its size) as the next one is revealed above it. The layout
+is a pure function of one continuous position (`StackGeometry` in `StackMotion.kt`; `r = index - position`: 0 is the
+front card, -1 a card sunk and gone, 1 to 3 peeking, 4 and beyond hidden), so a drag, a coast and a settle all draw
+from the same numbers and at most five cards are composed. Cards are `Regular` glass lit by the owning app's colour; rows' panels are `Thin`. Content that needs more than 168 dp (transport and scrubber, a lead
+image, a checklist) is taller, and a pile is as tall as its tallest card so the strips line up. The Stage rail's
+thumbnails are miniatures at 88 dp.
 
 Do
 - Express depth with one soft, single-source shadow and a tonal step; add a hairline highlight on

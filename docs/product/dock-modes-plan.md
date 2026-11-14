@@ -11,7 +11,7 @@ Their spring, magnet and timing constants are the starting values; the settings 
 | 1. Dock modes | The Dock's Home and contextual modes: contextual tiles appended after the live apps, the row scrolls in the contextual mode, the open icon is ringed. Press-down-and-release opens and closes. The Stream spine, page header and Stream button go. | none |
 | 2. Trampoline and fan | The dip under the finger, the bounce on release, cards fanning out in sequence, Home fading, and closing as the opening reversed. Reduced-motion fallback. **Built**, see "As built". | 1 |
 | 3. Hold to choose | Press and hold or slide while pressed: early extend, selection ring, name label, edge scrolling, haptic tick per icon. Starting a press on an icon opens that icon's stack. **Built**, see "As built". | 1, 2 |
-| 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet; swiping left and right between stacks in Dock order; shortcuts stacks for apps with nothing live; the Today page (agenda and tasks). | 1 |
+| 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet (**4a, built**, see "As built"); swiping left and right between stacks in Dock order (built in slice 1); shortcuts stacks for apps with nothing live and the Today page (agenda and tasks) (**4b**, not yet). | 1 |
 | 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. | 4 |
 | 6. Settings | Stream settings (open card position, actions position, tint, background, pinned apps), motion settings, the accessibility action and the first-run hint. | 2 to 5 |
 | 7. Home and Library | The combined search-and-page handle with quick-drag, search opening from the Dock, the paged Library, Home mode (Placed items or App library) and the feature switches. | none |
@@ -206,3 +206,55 @@ object is ready for slice 6), bottom-anchored stack behaviour, the unfolded layo
 **Left for later.** Shortcut stacks for pinned apps (slice 4 only has to make `DockChoice.pageFor` answer for them), the
 settings for hold time and haptics (slice 6; the tuning field is ready), the first-run hint, the unfolded layout.
 
+### Slice 4a: The stack (built)
+
+**Built.**
+
+- **Pure physics in `:core:domain`** (`launcher/stream/StackMotion.kt`; constants in `DockMotionConstants`, the inertia next to
+  speed and magnet in `DockMotionTuning`; geometry tokens in `StreamCardStackSpec`). One continuous position (a float card
+  index); `StackGeometry.frame(r)` with `r = index - position` is the layout (r = 0 front card, -1 sunk into the Dock and
+  gone, 1 to 3 peeking strips, 4 hidden; keyframes from the prototype, with a card's visible part clipped at the top of the
+  card in front plus a 4 dp gap so fills never overlap); `StackDrag` (90 dp per card, rubber band past both ends at 0.35,
+  both ways); `StackFling.target` (`pos + v * 0.18 s * inertia`, rounded, held to the stack); `StackSpring` (critically
+  damped, `STACK_SETTLE_TIME_FACTOR` 2.2, magnet within a quarter of a card, velocity held so it never overshoots);
+  `StackSettle` (rest on a whole card, tick only on a different card, the reduced-motion jump and fade, Next and Previous).
+- **UI** (`app/.../launcher/stream/`). `StreamStack.kt` (`FocusedStack`, `StackSlot`), `StreamStackLayout.kt` (a `Layout` that
+  reads the position while measuring, so a drag relays out and recomposes nothing), `StreamStackState.kt` (the position,
+  the spring loop and the reduced-motion jump). Bottom-anchored: the front card sits just above the Dock (a 16 dp inset),
+  older cards peek above it. A peeking card is the real card clipped by its slot (`clipToBounds` at the measured size), so
+  strip and card are the same pixels at every position. Drag and axis decision are the platform `scrollable`
+  (vertical) with a custom `FlingBehavior` (ADR 0002); a move without a finger runs inside the same scroll so a touch
+  catches it. `LocalLauncherHaptics` (new, provided by the Home destination) carries the haptic helper and its strength
+  setting to the stack: `DETENT` when it settles on another card.
+- **Fan**: ranks 0 to 2 from the front card fan as before (`dockFan` per slot, rank by distance from the front card).
+- **Accessibility.** "Next card" (older) and "Previous card" are custom actions of the stack itself, "Open card" of the front
+  card, whose state description is "Card 2 of 3"; every card is a node in order (front first); a peeking card is one node
+  with a content description that includes its hidden body text and the click action "Bring to front"; arrow keys and Page
+  Up/Down step. Reduced motion: dragging follows the finger; release jumps to the nearest card and fades from 40% over the
+  80 ms fade, no coast, spring or magnet.
+- **Tests.** `core:domain`: `StackMotionTest` (layout at whole and fractional positions: monotonic, no overlap, the clip
+  opens toward the front; drag; rubber band; fling target for slow, fast and no velocity; magnet; settle on a whole card;
+  reduced path; haptic rule). Robolectric: `StreamStackBehaviorTest` (which card is in front after a drag, a fling, a tap on
+  a peeking card, the actions; catching a coast; ticks; reduced motion). Device: `StreamPagesInteractionTest` (same outcomes).
+
+**What differed from the design.**
+
+- **The "Card N of M" stepper pill is gone** (the owner asked, from a device screenshot): the drag, the fling, a tap on a
+  peeking card and the stack's accessibility actions replace it.
+- **Placement.** The Stream has no placement settings yet, so the rule kept is "the stack fills the page": the front card is
+  now at its bottom instead of near its top; a lone card sits at the same place. An expanded card (the thread, the queue) is
+  not redesigned and still scrolls from the top (slice 5).
+- **The card before the front one is not a strip.** It has sunk into the Dock, so it is reached by dragging up, Previous
+  card or the arrow keys, not by a tap.
+- **Rubber band replaces the hand-off.** Past the first or last card the stack used to hand the drag on to the Home gesture
+  layer; nothing in the Stream consumed it, and the brief asks for a rubber band at both ends.
+- **Stage and split.** They draw pages with the same `StreamPageView`, so they get the same bottom-anchored stack; no
+  unfolded-layout work was done. The Stage rail's miniatures keep their own (decorative) clip.
+- **Peek scale** is 4% per card about the top centre (the prototype narrows the card by 14 dp per step) so the real card is
+  never reflowed during a drag.
+- Removed: the old stack's `CardStackLayoutPolicy` use, `peek` rows, the `hollow` card variant and `StreamCardStackSpec`'s
+  depth, offset and alpha tokens. `CardStack.kt` stays (the Notification overview prototype uses it).
+
+**Left for 4b and later.** Shortcut stacks for pinned apps (`DockChoice.pageFor` still answers null for them), the combined
+Today page, settings for inertia and magnet (slice 6; `DockMotionTuning.inertia` and `magnet` are ready), card tint and
+images, the opened-card redesign (slice 5).
