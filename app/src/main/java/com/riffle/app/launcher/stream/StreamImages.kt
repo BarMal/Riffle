@@ -183,9 +183,11 @@ internal fun StreamIcon(
     size: Dp,
     modifier: Modifier = Modifier,
     shape: Shape = RiffleShapes.small,
+    /** Set for the one icon that stands for the card it is on: its colour lights the card's nearby edge. */
+    lightsCard: Boolean = false,
 ) {
     val image = rememberStreamImage(handle, env.imageLoader, size)
-    val base = modifier.size(size).clip(shape)
+    val base = (if (lightsCard) modifier.cardSpotlightSource("icon") else modifier).size(size).clip(shape)
     val loaded = image.value
     if (loaded != null) {
         Image(bitmap = loaded, contentDescription = null, modifier = base, contentScale = ContentScale.Crop)

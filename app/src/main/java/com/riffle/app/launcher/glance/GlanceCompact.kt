@@ -73,6 +73,7 @@ internal fun CompactMedia(
             content.artwork ?: content.icon,
             env,
             if (layout == GlanceLayout.MINIMAL) MinimalThumb else CompactThumb,
+            lightsCard = true,
         )
         GlanceText(
             title = content.title ?: hiddenText(),

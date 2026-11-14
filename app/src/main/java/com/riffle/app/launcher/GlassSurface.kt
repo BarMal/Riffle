@@ -58,6 +58,8 @@ internal fun GlassSurface(
     tint: Color = MaterialTheme.colorScheme.surface,
     contentColor: Color = Color.Unspecified,
     spotlight: Boolean = false,
+    /** With [spotlight]: each thing lights only the rim near it (a card), the rest of the edge staying neutral. */
+    spotlightLocal: Boolean = false,
     edgeTint: Color = Color.Unspecified,
     cardTint: GlassCardTint? = null,
     content: @Composable () -> Unit = {},
@@ -65,7 +67,11 @@ internal fun GlassSurface(
     val reducedTransparency = LocalLiquidGlassSettings.current.reducedTransparency
     val card = cardTint?.let { spec -> resolveCardFill(spec, tint, reducedTransparency) }
     val fill = card?.fill ?: glassFillColor(weight, tint, reducedTransparency)
-    val spotlightState = rememberGlassSpotlightState(enabled = spotlight)
+    val spotlightState =
+        rememberGlassSpotlightState(
+            enabled = spotlight,
+            localReachDp = CARD_SPOTLIGHT_REACH_DP.takeIf { spotlightLocal },
+        )
     val resolvedContentColor = contentColor.takeOrElse { card?.ink ?: contentColorFor(tint) }
     // A card's coloured glow, when the setting asks for one, is the edge's tint light along the top edge only.
     val glow = if (cardTint?.topGlow == true && cardTint.appColor != null) cardTint.appColor else Color.Unspecified

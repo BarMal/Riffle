@@ -61,7 +61,7 @@ internal fun AppShortcutCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
         ) {
-            StreamIcon(content.icon, env, ShortcutIconSize)
+            StreamIcon(content.icon, env, ShortcutIconSize, lightsCard = true)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
                 Text(
                     text = title,

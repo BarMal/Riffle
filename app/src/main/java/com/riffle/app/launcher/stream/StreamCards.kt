@@ -14,9 +14,11 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,10 +33,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.GlassCardTint
+import com.riffle.app.launcher.GlassSpotlightState
 import com.riffle.app.launcher.GlassSurface
+import com.riffle.app.launcher.LocalGlassSpotlight
 import com.riffle.app.launcher.LocalLauncherCardShape
 import com.riffle.app.launcher.designsystem.RiffleSpacing
-import com.riffle.app.launcher.glassSpotlightSource
+import com.riffle.app.launcher.glassSpotlightSourceFor
 import com.riffle.app.launcher.rememberAppIconColor
 import com.riffle.app.launcher.rememberGlassSpotlightColor
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -102,14 +106,36 @@ internal fun StreamCardSurface(
         weight = weight,
         shape = LocalLauncherCardShape.current,
         tint = MaterialTheme.colorScheme.surfaceContainerHigh,
-        // The app's colour is in the fill (and, if the setting asks, a glow along the top edge): not also an edge glow,
-        // which read as a coloured outline. The content still reports its colour to a spotlit surface it sits in.
-        spotlight = false,
+        // The app's colour is in the fill; its icon (or avatar) also lights the part of the edge beside it, softly and
+        // falling off with distance (`spotlightLocal`), so the rest of the edge stays the neutral glass edge: a light
+        // from the content, not a coloured outline. The top-edge glow setting is the edge tint's strip, drawn too.
+        spotlight = true,
+        spotlightLocal = true,
         cardTint = GlassCardTint(appColor, env.cardSettings.cardTintPercent, env.cardSettings.cardTopGlow),
     ) {
         val color = rememberGlassSpotlightColor(identity = identity, appIconLoader = env.appIconLoader)
-        body(Modifier.glassSpotlightSource(key = key, color = color))
+        val source = CardSpotlightSource(LocalGlassSpotlight.current, key, color)
+        CompositionLocalProvider(LocalCardSpotlightSource provides source) { body(Modifier) }
     }
+}
+
+/** Where a card's content reports its light to: the card's own spotlight, which nested surfaces would hide. */
+internal class CardSpotlightSource(
+    val spotlight: GlassSpotlightState?,
+    val key: String,
+    val color: Color?,
+)
+
+internal val LocalCardSpotlightSource = staticCompositionLocalOf<CardSpotlightSource?> { null }
+
+/**
+ * Marks this node (a card's app icon, avatar or artwork) as a light source for the card around it: its colour lights
+ * the nearby part of the card's edge. [part] tells a card's sources apart; a no-op outside a card.
+ */
+@Composable
+internal fun Modifier.cardSpotlightSource(part: String = ""): Modifier {
+    val source = LocalCardSpotlightSource.current ?: return this
+    return glassSpotlightSourceFor(source.spotlight, source.key + part, source.color)
 }
 
 @Composable

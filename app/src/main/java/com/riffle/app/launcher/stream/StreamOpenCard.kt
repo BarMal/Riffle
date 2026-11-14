@@ -161,7 +161,7 @@ private fun OpenMedia(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
     ) {
-        StreamIcon(content.icon, env, RiffleSpacing.xl, shape = RiffleShapes.small)
+        StreamIcon(content.icon, env, RiffleSpacing.xl, shape = RiffleShapes.small, lightsCard = true)
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = content.title ?: stringResource(R.string.stream_hidden_content),
