@@ -42,6 +42,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -50,6 +51,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 
 /**
  * The dock's dynamic side: live apps (apps with something new), now playing while media is active and, in the
@@ -237,7 +239,12 @@ private fun DockDynamicSectionTile(
         modifier =
             Modifier
                 .requiredSize(iconSizeDp.dp)
-                .onGloballyPositioned { coordinates -> entryBoundsSink(entry.key, coordinates.boundsInRoot()) }
+                // Where the tile lies, whole: a scrolling row clips what is off its edge, and `boundsInRoot` with it.
+                .onGloballyPositioned { coordinates ->
+                    entryBoundsSink(entry.key, Rect(coordinates.positionInRoot(), coordinates.size.toSize()))
+                }
+                // Hold to choose: the tile the finger has selected is larger and ringed.
+                .dockChoiceMark(entry.key, tileShape, interactions.reducedMotion)
                 .glassSpotlightSource(key = "dynamic:${entry.key}", color = spotlightColor)
                 .testTag(dockDynamicSectionTileTestTag(label))
                 .dynamicEntryAccess(entry, isSelected, onShowInStream)

@@ -14,6 +14,7 @@ import com.riffle.app.launcher.stream.dockLiveEntries
 import com.riffle.app.launcher.stream.rememberStreamSectionResults
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.dock.DockChoice
 import com.riffle.core.domain.launcher.dock.DockDynamicSide
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.dock.DockRing
@@ -44,6 +45,11 @@ internal fun rememberDockDynamicSide(
     onOpenStream: (StreamFocusTarget?) -> Unit,
     modeInterpreter: HomeDockInterpreter,
     appShortcuts: AppShortcutsByApp = emptyMap(),
+    /**
+     * Whether a press on the Dock is choosing (hold to choose): from Home the Dock then extends early, drawing the
+     * contextual row and its tiles before the cards are out, and the open page's ring gives way to the selection's.
+     */
+    choosing: Boolean = false,
 ): HomeDockInterpreter {
     if (stream == null) return modeInterpreter.copy(dynamicEntries = emptyList())
     // The provider reads the options of the posture on screen; keep it current even before the Stream has opened.
@@ -55,8 +61,9 @@ internal fun rememberDockDynamicSide(
     val layout = layouts.forPosture(deviceClass)
     // The contextual tiles are the Stream's pages that are not apps, in the Dock's order; only the contextual mode
     // has them.
+    val extended = shown || choosing
     val tileSections =
-        if (shown) {
+        if (extended) {
             DockDynamicSide.contextSections(link.pages, nowPlaying = live.any { it is DockDynamicSideEntry.NowPlaying })
         } else {
             emptyList()
@@ -64,7 +71,7 @@ internal fun rememberDockDynamicSide(
     val side =
         remember(live, tileSections) { live + tileSections.map(DockDynamicSideEntry::ContextTile) }
     val ringed =
-        if (shown) {
+        if (shown && !choosing) {
             DockRing.entryKeyFor(link.pages.firstOrNull { page -> page.key == link.currentKey }, side.map { it.key })
         } else {
             null
@@ -88,7 +95,7 @@ internal fun rememberDockDynamicSide(
     val latestOpen = rememberUpdatedState(onOpenStream)
     return modeInterpreter.copy(
         dynamicEntries = entries,
-        contextual = shown,
+        contextual = extended,
         onDynamicEntryDelegated = { key -> dockDynamicEntryTarget(key)?.let { target -> latestOpen.value(target) } },
     )
 }
@@ -98,17 +105,7 @@ internal fun rememberDockDynamicSide(
  * app entry in the Home mode launches the app instead (see [toDockEntry]); landing on the page is the press that starts
  * on the icon, the long-press item, the accessibility action and, in the contextual mode, the tap.
  */
-internal fun dockDynamicEntryTarget(key: String): StreamFocusTarget? =
-    when {
-        key == DockDynamicSideEntry.NOW_PLAYING_KEY -> StreamFocusTarget.Now
-        key.startsWith(LIVE_APP_KEY_PREFIX) -> StreamFocusTarget.AppStack(key.removePrefix(LIVE_APP_KEY_PREFIX))
-        key.startsWith(CONTEXT_TILE_KEY_PREFIX) ->
-            StreamSection.fromStoredId(key.removePrefix(CONTEXT_TILE_KEY_PREFIX))?.let(StreamFocusTarget::Section)
-        else -> null
-    }
-
-private const val LIVE_APP_KEY_PREFIX = "live:"
-private const val CONTEXT_TILE_KEY_PREFIX = "ctx:"
+internal fun dockDynamicEntryTarget(key: String): StreamFocusTarget? = DockChoice.pageFor(key)
 
 @Suppress("LongParameterList")
 internal fun DockDynamicSideEntry.toDockEntry(

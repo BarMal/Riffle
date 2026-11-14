@@ -192,6 +192,8 @@ internal fun HomeDockHost(
      * resting coordinates.
      */
     dockDipDp: () -> Float = NoDockDip,
+    /** The selection while a press on the dock is choosing (hold to choose): the tiles ring it and a label names it. */
+    choice: DockChoiceState? = null,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
     val dockOnAction = interpreter.onAction ?: onAction
@@ -245,6 +247,7 @@ internal fun HomeDockHost(
                 },
         ) {
             CompositionLocalProvider(
+                LocalDockChoice provides choice,
                 LocalDockBackgroundAlpha provides dockBackgroundAlpha,
                 LocalDockDynamicBoundsSink provides rememberDynamicBoundsSink(hostState),
                 LocalDockDynamicEntryBoundsSink provides rememberDynamicEntryBoundsSink(hostState),
@@ -265,6 +268,16 @@ internal fun HomeDockHost(
                     staticItemMenuExtras = interpreter.staticItemMenuExtras,
                     staticItemTapOverride = interpreter.staticItemTapOverride,
                     isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,
+                )
+            }
+            if (choice != null) {
+                // Just above the dock (beyond it, away from its edge): the name of the item the finger has selected.
+                val entries = interpreter.dynamicEntries.orEmpty()
+                DockChoiceLabel(
+                    choice = choice,
+                    labelFor = { key -> entries.firstOrNull { entry -> entry.key == key }?.label },
+                    pull = pull,
+                    modifier = Modifier.matchParentSize(),
                 )
             }
         }

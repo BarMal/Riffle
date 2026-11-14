@@ -76,6 +76,8 @@ fun HomeDestination(
     val dockPull = rememberDockPullState()
     // The trampoline and the fan: the Dock's own motion between Home and the Stream (not on an expanded posture).
     val motion = rememberDockMotionState()
+    // Hold to choose: the selection while a press on the Dock is choosing.
+    val choice = remember { DockChoiceState() }
     // "Connect Todoist" in the Tasks section: Settings > Stream > Tasks.
     val openTasksSettings = { onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.STREAM_TASKS)) }
     val presentation = standardHomePresentation(state, widgetRenderers)
@@ -142,6 +144,7 @@ fun HomeDestination(
             },
             modeInterpreter = HomeDockInterpreter(),
             appShortcuts = state.appShortcutsByApp,
+            choosing = choice.choosing,
         )
     val pull =
         rememberHomeDockPullBinding(
@@ -175,17 +178,23 @@ fun HomeDestination(
                             )
                         }
                     },
+                    // Choosing while the Stream is out: it stays and lands on the chosen page, as a tap on a tile does.
+                    onSwitchPage = { entryKey -> dockInterpreter.onDynamicEntryDelegated(entryKey) },
                 ),
             dockPull = dockPull,
             motion = motion,
             hostState = dockHost,
+            choice = choice,
+            haptics = haptics,
             onAction = onAction,
         )
 
     // The dock draws from the same state the surfaces do; there is no longer a switch in flight between two of them.
     val dockHostState = plan.stateFor(plan.shownMode)
     val dockPresentation = standardHomePresentation(dockHostState, widgetRenderers)
-    val showStream = stream != null && (shownStream || pull.isTransitioning)
+    // Choosing from Home composes the Stream, unseen, so the Dock can draw a tile for each of its pages.
+    val streamForTiles = pull.isChoosingFromHome && !shownStream
+    val showStream = stream != null && (shownStream || pull.isTransitioning || streamForTiles)
     val showHome = !shownStream || pull.isTransitioning || pull.motionShowsHome
     val showLibrary = shownLibrary || pull.isLibraryTransitioning
     // Once the Library's sheet covers Home or the Stream they are invisible, so assistive technology skips them too.
@@ -238,6 +247,7 @@ fun HomeDestination(
                     haptics = haptics,
                     dockModifier = pull.dockModifier,
                     dockDipDp = pull::dockDipDp,
+                    choice = choice,
                 )
                 // Home first, then the Stream over it: while the Dock's change runs both are composed, and the
                 // Stream's cards rise out of the Dock over Home. Both stay direct siblings of the dock, so their zIndex
@@ -293,7 +303,9 @@ fun HomeDestination(
                             dockPosition = plan.dockEdge,
                             appIconLoader = appIconLoader,
                             onConnectTasks = openTasksSettings,
-                            modifier = pull.streamModifier(libraryShown = shownLibrary).then(coveredSemantics),
+                            modifier =
+                                pull.streamModifier(libraryShown = shownLibrary)
+                                    .then(if (streamForTiles) Modifier.clearAndSetSemantics {} else coveredSemantics),
                         )
                     }
                 }

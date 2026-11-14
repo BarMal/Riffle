@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.IntSize
 import com.riffle.app.R
 import com.riffle.app.launcher.stream.StreamFocusRequests
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.dock.DockChoice
+import com.riffle.core.domain.launcher.dock.DockPressOutcome
 import com.riffle.core.domain.launcher.dock.FanFrame
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
@@ -54,9 +56,12 @@ internal class StreamPullInputs(
     val focus: StreamFocusRequests? = null,
     /**
      * A committed press of the Dock (down, then release past the threshold): toggles the Home and the contextual mode.
-     * Called with the key of the dynamic entry the press started on, or null.
+     * Called with the key of the dynamic entry the press started on, or null; from Home, choosing ends here too, with
+     * the key of the entry chosen.
      */
     val onPress: (entryKey: String?) -> Unit = {},
+    /** A press that chose an entry while the Stream was out: the Stream stays and switches to that entry's page. */
+    val onSwitchPage: (entryKey: String) -> Unit = {},
 )
 
 /**
@@ -81,6 +86,8 @@ internal class HomeDockPullBinding(
     private val motion: DockMotionState,
     /** The press, for the gesture; the motion draws from it through callbacks. */
     val press: DockPressState,
+    /** The selection while a press is choosing: the tiles, the row and the label read it. */
+    val choice: DockChoiceState,
     private val frame: State<StreamPullFrame>,
     /** The direction the Dock is pulled in, away from its edge. */
     private val direction: DockPullDirection,
@@ -89,6 +96,9 @@ internal class HomeDockPullBinding(
     /** What the Stream is drawn at once no pull runs: 1 where it is shown, else 0. */
     private val streamAlphaAtRest: () -> Float = { 1f },
 ) {
+    /** Whether the Stream is, or is on its way to being, shown: a committed opening counts. */
+    private fun streamShownNow(): Boolean = dockPull.pendingStreamShown ?: (streamAlphaAtRest() > 0f)
+
     /** Whether the Stream is being pulled in or out (or is settling after it): both surfaces are composed then. */
     val isTransitioning: Boolean
         get() = dockPull.streamRunning
@@ -103,6 +113,13 @@ internal class HomeDockPullBinding(
      */
     val motionShowsHome: Boolean
         get() = motion.running && !motion.pressingFromOpen
+
+    /**
+     * Whether a press from Home is choosing: the Dock shows the contextual row early (its tiles come from the Stream's
+     * pages, so the Stream is composed, unseen) while Home is dimmed further.
+     */
+    val isChoosingFromHome: Boolean
+        get() = choice.choosing && !choice.fromContextual
 
     /** How far the dock is pressed toward its edge right now, in dp. Read it in a graphics layer. */
     fun dockDipDp(): Float = if (motion.running) motion.dip else 0f
@@ -179,6 +196,8 @@ internal class HomeDockPullBinding(
             dockPull.streamRunning && !dockPull.splitting -> frame.value.streamAlpha
             dockPull.libraryRunning -> 1f - dockPull.progress.coerceIn(0f, 1f)
             libraryShown -> 0f
+            // Composed only so the Dock has the Stream's pages to draw its tiles from: nothing of it shows.
+            isChoosingFromHome && !streamShownNow() -> 0f
             // The cards, or the page as one piece, fade themselves; the surface under them stays.
             motion.running -> 1f
             else -> streamAlphaAtRest()
@@ -208,6 +227,8 @@ internal fun rememberHomeDockPullBinding(
     dockPull: DockPullState,
     motion: DockMotionState,
     hostState: HomeDockHostState,
+    choice: DockChoiceState,
+    haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ): HomeDockPullBinding {
     val rootSize = remember { mutableStateOf(IntSize.Zero) }
@@ -219,12 +240,21 @@ internal fun rememberHomeDockPullBinding(
         state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen && !state.destination.isLibrary
     val latestStream = rememberUpdatedState(stream)
     val press = remember { DockPressState() }
-    BindPullCallbacks(dockPull, motion, press, rememberUpdatedState(onAction), latestStream, reducedMotion)
+    val dockCoordinates = remember { DockCoordinates() }
+    BindPullCallbacks(
+        dockPull = dockPull,
+        motion = motion,
+        press = press,
+        choice = choice,
+        latestOnAction = rememberUpdatedState(onAction),
+        latestStream = latestStream,
+        reducedMotion = reducedMotion,
+    )
+    BindChoice(choice, haptics, direction, hostState, dockCoordinates)
     val frameState =
         remember(dockPull, reducedMotion) {
             derivedStateOf { streamPullFrame(dockPull.progress, dockPull.opening, reducedMotion) }
         }
-    val dockCoordinates = remember { DockCoordinates() }
     val host =
         rememberDockPullGestureHost(
             dockPull = dockPull,
@@ -262,6 +292,7 @@ internal fun rememberHomeDockPullBinding(
         dockPull = dockPull,
         motion = motion,
         press = press,
+        choice = choice,
         frame = frameState,
         direction = direction,
         homeAlphaAtRest = { restAlpha(dockPull, latestStream.value, streamSurface = false) },
@@ -297,6 +328,7 @@ private fun BindPullCallbacks(
     dockPull: DockPullState,
     motion: DockMotionState,
     press: DockPressState,
+    choice: DockChoiceState,
     latestOnAction: State<(LauncherShellAction) -> Unit>,
     latestStream: State<StreamPullInputs>,
     reducedMotion: Boolean,
@@ -305,13 +337,40 @@ private fun BindPullCallbacks(
     SideEffect {
         // An expanded posture settles a press by the split (the pull's own settle); there the press is not drawn.
         press.onBegan = {
+            choice.prepare(fromContextual = latestStream.value.shown)
             if (latestStream.value.split == null) {
                 motion.beginPress(fromOpen = latestStream.value.shown, reducedMotion = latestReduced.value)
             }
         }
         press.onMoved = { travelDp -> motion.updatePress(travelDp) }
+        // Hold to choose: the Dock and Home hold where they are, Home dims further, and the selection takes over.
+        press.onChoosingBegan = { position ->
+            motion.beginChoosing()
+            choice.begin(position)
+        }
+        press.onChoosingMoved = { position -> choice.moved(position) }
         press.onReleased = { release ->
-            if (release.committed) latestStream.value.onPress(release.startedOnEntryKey) else motion.revert()
+            val outcome =
+                DockChoice.outcome(
+                    fromContextual = choice.fromContextual,
+                    committed = release.committed,
+                    choosing = release.choosing,
+                    selectedKey = choice.selectedKey,
+                    cancelling = choice.cancelling,
+                    startedOnEntryKey = release.startedOnEntryKey,
+                )
+            choice.end()
+            motion.endChoosing()
+            when (outcome) {
+                DockPressOutcome.Revert -> motion.revert()
+                is DockPressOutcome.OpenPage -> latestStream.value.onPress(outcome.entryKey)
+                DockPressOutcome.Close -> latestStream.value.onPress(null)
+                is DockPressOutcome.SwitchPage -> {
+                    // The cards stay out: the Dock springs back and the Stream lands on the chosen page.
+                    motion.revert()
+                    latestStream.value.onSwitchPage(outcome.entryKey)
+                }
+            }
         }
         motion.onOpening = {
             dockPull.pendingStreamShown = true
@@ -333,6 +392,35 @@ private fun BindPullCallbacks(
         // A pull that sprang back must not leave its landing behind for the next time the Stream opens.
         dockPull.onCancelled = { latestStream.value.focus?.cancel() }
     }
+}
+
+/**
+ * Gives the selection its place: where the Dock and its entries are, the light tick of each move, and the frames that
+ * scroll the row and keep the selection under a finger that holds still while the row moves.
+ */
+@Composable
+private fun BindChoice(
+    choice: DockChoiceState,
+    haptics: LauncherHaptics,
+    direction: DockPullDirection,
+    hostState: HomeDockHostState,
+    dockCoordinates: DockCoordinates,
+) {
+    val density = LocalDensity.current.density
+    val latestHaptics = rememberUpdatedState(haptics)
+    SideEffect {
+        choice.environment =
+            DockChoiceState.Environment(
+                toRoot = { position -> dockCoordinates.coordinates?.localToRoot(position) ?: position },
+                entryBounds = { hostState.dynamicEntryBounds },
+                dockBounds = { hostState.bounds.value },
+                pull = direction,
+                density = density,
+            )
+        // A light tick (the haptics setting applies: off sounds nothing): choosing began, or another item landed.
+        choice.onTick = { latestHaptics.value.perform(LauncherHapticEvent.DETENT) }
+    }
+    DockChoiceFrames(choice)
 }
 
 /** Where the Dock body is laid out, so a touch in its own coordinates can be placed against the dynamic section. */
@@ -453,6 +541,13 @@ private fun rememberDockPullGestureHost(
 
             override val canPress: Boolean
                 get() = latestStream.value.available && this.canPull
+
+            // Choosing draws the Dock's early extension and Home's dimming: folded phone only, like the fan.
+            override val canChoose: Boolean
+                get() = latestStream.value.split == null
+
+            override val holdMillis: Long
+                get() = motion.tuning.holdMillis.toLong()
 
             override fun pressEntryAt(position: Offset): String? {
                 val inRoot = dockCoordinates.coordinates?.localToRoot(position) ?: position

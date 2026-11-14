@@ -11,6 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,16 @@ internal fun DockContextualRow(
     val viewportDp = surfaceMetrics.contextualMainAxisDp - (DOCK_MAIN_AXIS_PADDING_DP * 2)
     val scrollState = rememberScrollState()
     val overflow = DockOverflowAffordance(scrollOffsetPx = scrollState.value, maxScrollOffsetPx = scrollState.maxValue)
+    val choice = LocalDockChoice.current
+    // Hold to choose: holding the finger near an end scrolls the row, and choosing from Home brings the live entries
+    // and tiles into view as the open mode would.
+    DockChoiceRowRegistration(choice) { deltaPx -> scrollState.dispatchRawDelta(deltaPx) }
+    RevealForChoosing(
+        choice = choice,
+        run = run,
+        scrollState = scrollState,
+        reducedMotion = presentation.interactions.reducedMotion,
+    )
     RevealOpenEntry(
         entries = dynamicEntries,
         run = run,
@@ -75,6 +87,7 @@ internal fun DockContextualRow(
                     },
                 )
                 .clipToBounds()
+                .onGloballyPositioned { coordinates -> choice?.rowViewport = coordinates.boundsInRoot() }
                 .dockOverflowMask(
                     runsHorizontally = runsHorizontally,
                     fadeStart = overflow.showStart,
@@ -110,6 +123,31 @@ internal fun DockContextualRow(
                 inline = true,
                 dividerBeforeIndex = dynamicEntries.indexOfFirst(DockDynamicEntry::isContextTile).takeIf { it > 0 },
             )
+        }
+    }
+}
+
+/**
+ * Choosing from Home extends the Dock early: the row scrolls so the first live entry (and the tiles after it) is at its
+ * start, as it would be when the cards are out. Not while choosing from the open Stream (the row stays where it is) and
+ * no more once holding near an end has scrolled it. Instant under reduced motion.
+ */
+@Composable
+private fun RevealForChoosing(
+    choice: DockChoiceState?,
+    run: DockRunGeometry.Run,
+    scrollState: ScrollState,
+    reducedMotion: Boolean,
+) {
+    if (choice == null) return
+    val density = LocalDensity.current.density
+    val reveal = choice.choosing && !choice.fromContextual && !choice.edgeScrolled
+    val first = run.entries.firstOrNull()
+    LaunchedEffect(reveal, first, scrollState.maxValue) {
+        if (!reveal || first == null) return@LaunchedEffect
+        val target = ((first.startDp - REVEAL_MARGIN_DP) * density).toInt().coerceIn(0, scrollState.maxValue)
+        if (target != scrollState.value) {
+            if (reducedMotion) scrollState.scrollTo(target) else scrollState.animateScrollTo(target)
         }
     }
 }
