@@ -41,6 +41,9 @@ sealed interface StreamAction {
     /** Tick a task off. */
     data object Complete : StreamAction
 
+    /** One of the notification's own action buttons, by its [NotificationOwnAction.id]. */
+    data class OwnAction(val id: String) : StreamAction
+
     companion object {
         const val DEFAULT_SNOOZE_MILLIS = 60L * 60L * 1000L
     }
@@ -137,6 +140,7 @@ object StreamActionPolicy {
             StreamAction.Dismiss -> keyed && NotificationAction.DISMISS in content.actions
             is StreamAction.Reply -> keyed && NotificationAction.REPLY in content.actions && action.text.isNotBlank()
             is StreamAction.Snooze -> keyed && NotificationAction.SNOOZE in content.actions
+            is StreamAction.OwnAction -> keyed && content.ownActions.any { it.id == action.id }
             else -> false
         }
     }

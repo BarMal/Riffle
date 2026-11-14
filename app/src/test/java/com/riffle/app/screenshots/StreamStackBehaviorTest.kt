@@ -424,12 +424,13 @@ class StreamStackBehaviorTest {
     }
 
     @Test
-    fun theFrontCardAlsoOffersOpenAndEveryCardIsOneNodeInOrder() {
+    fun theFrontCardAlsoOffersOpenAndDismissAndEveryCardIsOneNodeInOrder() {
         show(cards = 3)
         val labels =
             composeRule.onNodeWithTag(streamStackCardTag("n:chat:1")).fetchSemanticsNode()
                 .config[SemanticsActions.CustomActions].map { it.label }
-        assertEquals(listOf("Open card"), labels)
+        // A notification that can be dismissed also offers Dismiss without a swipe (device fixes, round 5, item 2).
+        assertEquals(listOf("Open card", "Dismiss"), labels)
         // Every card is a node of its own, in order: the front first (traversal index 0), then each peek.
         val order =
             (0..2).map { slotNode(it).config.getOrNull(SemanticsProperties.TraversalIndex) }

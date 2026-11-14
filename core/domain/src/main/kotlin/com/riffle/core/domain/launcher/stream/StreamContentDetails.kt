@@ -30,6 +30,16 @@ internal object StreamContentDetails {
         }
     }
 
+    /** The notification's own action buttons the mapper noted on [item] (ids and titles), in order. */
+    fun ownActions(item: Item): List<NotificationOwnAction> {
+        val count = (item.number(NotificationItemMapper.OWN_COUNT_KEY) ?: 0L).toInt()
+        return (0 until count.coerceAtMost(NotificationOwnActions.MAX)).mapNotNull { index ->
+            val id = item.text(ItemExtKey("notification.own${index}_id")) ?: return@mapNotNull null
+            val title = item.text(ItemExtKey("notification.own${index}_title")) ?: return@mapNotNull null
+            NotificationOwnAction(id, title)
+        }
+    }
+
     /** Whether the notification is a conversation with a person (a messaging style, or the message category). */
     fun isConversation(item: Item): Boolean =
         item.ext[NotificationItemMapper.CONVERSATION_KEY] == ItemExtValue.Flag(true)

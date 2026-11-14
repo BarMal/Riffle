@@ -159,6 +159,12 @@
     <string name="stream_shortcuts_need_home">Shortcuts need Riffle to be your Home app.</string>
     <string name="stream_shortcut_disabled">Not available right now</string>
 
+    <!-- The one-line names of the notice cards, shown on their strips -->
+    <string name="stream_notice_shortcuts_title">Shortcuts unavailable</string>
+    <string name="stream_notice_permission_title">Allow access</string>
+    <string name="stream_notice_tasks_not_connected_title">Tasks not connected</string>
+    <string name="stream_notice_tasks_unavailable_title">Tasks unavailable</string>
+
     <!-- Articles -->
     <string name="stream_article_mark_read">Mark as read</string>
     <string name="stream_article_read">Read</string>

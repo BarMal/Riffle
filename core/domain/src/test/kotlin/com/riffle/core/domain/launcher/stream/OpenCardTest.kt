@@ -53,6 +53,28 @@ class OpenCardTest {
     }
 
     @Test
+    fun aStackThatComesToRestOnAnotherCardOpensThatCardInPlaceWhenItOpens() {
+        assertEquals(
+            OpenCardState("page-a", "card-2"),
+            reduce(open, OpenCardEvent.Settled("page-a", "card-2", opensInPlace = true)),
+        )
+    }
+
+    @Test
+    fun aStackThatComesToRestOnACardWithNothingToOpenReturnsToRest() {
+        assertEquals(OpenCardState(), reduce(open, OpenCardEvent.Settled("page-a", "app-1", opensInPlace = false)))
+    }
+
+    @Test
+    fun comingToRestChangesNothingWhenNoCardIsOpenOrItIsAnotherPages() {
+        assertEquals(
+            OpenCardState(),
+            reduce(OpenCardState(), OpenCardEvent.Settled("page-a", "card-2", opensInPlace = true)),
+        )
+        assertEquals(open, reduce(open, OpenCardEvent.Settled("page-b", "card-2", opensInPlace = true)))
+    }
+
+    @Test
     fun theStreamLeavingClosesIt() {
         assertEquals(OpenCardState(), reduce(open, OpenCardEvent.StreamLeft))
     }

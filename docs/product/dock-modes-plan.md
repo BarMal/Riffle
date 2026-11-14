@@ -1078,3 +1078,108 @@ only partly done; 10 and 11 are **not done**: see the end.
 - **Fix 10, swipe a card sideways to dismiss it,** and **fix 11, the notification's own action buttons.** Neither was
   started: a half-built gesture or a half-plumbed pending-intent path is worse than none.
 - Fix 13's drag, nested scroll and accessibility actions.
+
+## Device fixes, round 5 (cards: gestures and actions)
+
+The four things round 4 left: strips that look like blank slabs, dragging from one open card to the next, swiping a
+notification away, and the notification's own buttons. Built in that order, one commit each; the tests are in the same
+commits. Nothing in this round is confirmed on a device.
+
+### Strips that look like blank slabs (item 4)
+
+- **Cause.** The owner's page is not four notifications: after the pinned and live merge an app's page is its notification
+  cards followed by its **shortcut cards**. A shortcut card, a recent app and the notice cards centred their icon and name in
+  the card (a 104 dp card, the icon at 32 to 72 dp), and a strip shows only the top 52 dp of its card (the pitch less the gap,
+  `StreamCardStackSpec.STRIP_HEIGHT_DP`), so their strips were empty glass. Now-playing kept its title in a deck at the
+  bottom; an event led with a time line, an article with its picture; the checklist, tomorrow and the notices had no icon.
+- **Rule.** Every card starts with a header (`StreamCardHeader`: an icon or avatar and a one-line title, 4 dp below the
+  card's top, at most 48 dp tall) that lies wholly inside the strip, whatever the kind. Notification: avatar and sender
+  (40 dp); event, next event, Today's checklist and tomorrow: a calendar or check glyph and the title; article: the feed glyph
+  and the headline above its picture; task: its checkbox and title; recent app and shortcut: the icon at the top, the
+  detail under it; now-playing: the app's icon and the track in a glass header at the top, the scrubber and transport in the
+  deck at the bottom; notices have a title of their own ("Shortcuts unavailable", "Allow access", "Tasks not connected",
+  "Tasks unavailable") over their sentence.
+- **Tests.** `StreamStripsTest`: one test per kind (and per notice) draws the real card clipped to a strip and asserts the
+  header's icon and title nodes (`stream-card-icon`, `stream-card-title`, in the unmerged tree) lie inside 52 dp; a merged
+  page (one notification and three shortcuts) through the real stack at rest and with the notification open, with a screenshot.
+  `StackMotionTest` pins the strip height against the geometry.
+
+### Dragging to the next card with a card open (item 1)
+
+- **The gesture.** While a card is open, a vertical drag that starts on a strip, on the open card's pinned header or actions
+  or on the room beside the card moves the stack by one card with the stack's own drag, fling and magnet (`StackMover`, one
+  platform `scrollable` shared by the resting stack and the open card's layer), and the card that arrives is open in place.
+  A drag that starts in the card's scrolling body scrolls it (platform nested scrolling): the body consumes first, and what it
+  cannot take at its top or bottom is accumulated by `OpenCardHandoff` (pure, tested); only past **56 dp** does the stack begin
+  to move, one to one by what exceeds the threshold, and a finger that comes back takes the stack back before the body scrolls.
+  Releasing before the threshold changes nothing. A body with nothing to scroll hands the drag over at once. A fling in the
+  body never turns a card: the stack's fling behaviour ignores a release with no drag of its own before it.
+- **The motion.** The open card's layer (`OpenCardFrames`) draws the open cards of the two cards the stack's position lies
+  between and blends each between its slot in the stack and its open frame by how near the front it is
+  (`OpenCardBlend.openness`): the card that arrives grows as the one that leaves shrinks to its strip (moving to the newer
+  neighbour) or sinks into the Dock (to the older one), one continuous motion read in layout and draw. The stack stays "open"
+  throughout; when it comes to rest on another card `OpenCardEvent.Settled` opens that card in place. Under reduced motion one
+  card is drawn at a time and the jump cross-fades.
+- **Other routes.** "Previous card" and "Next card" are custom actions of the open card; a tap outside still closes it; a tap
+  on a strip now glides to that card (and opens it); the Dock's press closes first.
+- **Cards that do not open in place** (a shortcut, a recent app, an article): if the neighbour is one of those the stack moves
+  to it and returns to the resting stack with nothing open.
+- **Tests.** `OpenCardDragScenarios` (folded and unfolded) through the real shell content: header and strip drags, a drag in
+  a long text that scrolls it, a short and a long overscroll at both edges, a fling, the accessibility actions, a tap outside
+  after a drag, continuity (two whole cards while moving), reduced motion, and no recomposition while dragging (the
+  `RecompositionProbe` now also counts the open cards); `OpenCardNeighbourWithNothingToOpenTest`.
+
+### Swiping a notification away (item 2)
+
+- **The gesture.** A horizontal swipe on the front card of a notification (the browse stack, a lone card, the open card's
+  header) dismisses it and the next card comes forward. The platform's `draggable` gives the drag and the velocity; the rules
+  are `SwipeDismiss` (pure, tested): past **40%** of the card's width, or a fling of **700 dp/s** after 24 dp of travel,
+  dismisses (either direction); anything else, and a flick back, settles back on a spring. The card follows the finger with a
+  slight fade (to 50% at a full width), flies off past the threshold and fades out in place under reduced motion. One light
+  tick on dismissal through the Stream's tick wrapper (the "light ticks" setting applies). A dismissal that does not take
+  brings the card back after two seconds.
+- **Which gesture wins** (the rule, `SwipeDismiss.claimsDrag`): a horizontal drag is the card's only where it starts **on the
+  front card of a notification that `StreamActionPolicy` offers Dismiss for**. On the strips, the empty room, a notification
+  that cannot be dismissed (ongoing or not clearable: no Dismiss action) and every other kind of card it is the pager's, so a
+  page whose front card is dismissible is still left by swiping on its strips or its room. The Dock's row, the tiles and
+  hold-to-choose are untouched.
+- **A decision to check.** The brief says a non-clearable notification "resists (rubber-band) and settles back" and also that
+  non-dismissible cards page. The second won: such a card has no swipe at all, so a drag on it pages like a drag anywhere else
+  (a card that resisted would be a dead zone for paging) and it is never dismissed.
+- **Non-gesture routes.** "Dismiss" stays on the open card (the Dock's button and a custom action) and is a custom action of
+  the browse card. Tasks, events, media, recents, shortcuts and articles have no swipe.
+- **Tests.** `SwipeDismissTest` (thresholds, fade, fly-off, the rule); `StreamSwipeDismissTest` through the real shell with a
+  gateway that removes what it dismisses (past the threshold either way, short and slow, a fast fling, motion on, a dismissal
+  that does not take, a non-clearable notification pages, strips and empty room page, the accessibility action, the open
+  card's header); `StreamSwipeDismissTickTest`.
+
+### The notification's own action buttons (item 3)
+
+- **What shows.** After Reply, Dismiss and Snooze the open card shows the notification's own actions (at most three, in its
+  order) as text buttons, each with a 48 dp target and its title (a long one ellipsizes, short ones keep their width), on a row
+  under the controls: in the Dock's row or on the card as the "actions position" setting says. Each is also a custom
+  accessibility action of the open card.
+- **What is captured** (memory only; the stored snapshot has no field for it, a test pins its keys): the listener's registry of
+  live notification handles notes each action's id and title when it registers the notification; `NotificationOwnActions`
+  (pure) leaves out the inline reply and anything that needs input (a remote input), a second "reply" and a "delete" (the
+  card's own controls), and an action with no title; "mark as read", "archive", "thumbs", "mute" and "call" stay.
+- **Typed.** `NotificationContent.ownActions` (ids and titles, via the item ext like the thread, empty when redacted),
+  `CardAction.Own`, `StreamAction.OwnAction`; the gateway sends it by id through `PendingIntentSender` (the Android 14
+  opt-in; a cancelled intent is a failure, a notification that has gone is unavailable: the usual failure message, no crash).
+  When the app removes the notification ("mark as read", "archive") the open card closes cleanly and the next card comes
+  forward.
+- **Tests.** `NotificationOwnActionsTest`, the mapper, `StreamCardActionsTest` and the policy (domain);
+  `NotificationOwnActionsCaptureTest` (real platform actions: reply skipped, cap, order; sent by id; cancelled; gone),
+  `AndroidStreamActionGatewayTest`, the codec; `OpenCardOwnActionsTest` at 320 dp (sizes, fit with Reply's field in the Dock's
+  row and on the card, tap, failure, closing when the notification goes, accessibility actions, no row without buttons).
+
+### Tests rewritten on purpose
+
+- `StreamStackBehaviorTest.theFrontCardAlsoOffersOpenAndEveryCardIsOneNodeInOrder` (now `...OpenAndDismiss...`): a
+  dismissible notification's front card now also offers "Dismiss" as a custom action.
+
+### Not confirmed without a device
+
+Every gesture here was driven with the Robolectric touch injector and the test clock, never a finger: the feel of the
+hand-off threshold, the blend between two open cards, the swipe's fly-off and the fit of three buttons on a real 320 dp
+screen. Device tests for the drag and the swipe were not added.

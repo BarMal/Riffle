@@ -128,6 +128,7 @@ object StreamContentMapper {
             privacy = privacy,
             notificationKey = (item.ext[NOTIFICATION_KEY] as? ItemExtValue.Text)?.value,
             thread = if (showBody) StreamContentDetails.thread(item) else emptyList(),
+            ownActions = if (showBody) StreamContentDetails.ownActions(item) else emptyList(),
             conversation = StreamContentDetails.isConversation(item),
             person =
                 if (showImages) {
