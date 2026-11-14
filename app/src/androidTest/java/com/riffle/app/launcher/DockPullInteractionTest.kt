@@ -149,7 +149,7 @@ class DockPullInteractionTest {
         pull(dyFraction = -0.6f, stepDelayMillis = FAST_STEP_MILLIS)
 
         // No Stream host here, so no "Show live pages"; and no "Workspace menu" any more.
-        assertEquals(listOf("Open Library"), labels)
+        assertEquals(listOf("Open Library", "Search"), labels)
         composeRule.runOnIdle { assertEquals(listOf(OPEN_LIBRARY), actions) }
     }
 

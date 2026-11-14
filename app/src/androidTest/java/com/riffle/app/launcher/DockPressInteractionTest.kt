@@ -104,7 +104,7 @@ class DockPressInteractionTest {
     fun theDockOffersShowLivePagesAndBackToHomeAsAccessibilityActions() {
         val open = setContent(streamShown = false)
         val labels = dockActionLabels()
-        assertEquals(listOf("Open Library", "Show live pages"), labels)
+        assertEquals(listOf("Open Library", "Show live pages", "Search"), labels)
         invoke("Show live pages")
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         composeRule.runOnIdle { assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenStream), open) }
@@ -113,7 +113,7 @@ class DockPressInteractionTest {
     @Test
     fun whileTheStreamShowsTheDockOffersBackToHome() {
         val actions = setContent(streamShown = true)
-        assertEquals(listOf("Open Library", "Back to Home"), dockActionLabels())
+        assertEquals(listOf("Open Library", "Back to Home", "Search"), dockActionLabels())
         invoke("Back to Home")
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         composeRule.runOnIdle { assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenHome), actions) }

@@ -14,7 +14,7 @@ Their spring, magnet and timing constants are the starting values; the settings 
 | 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet (**4a, built**, see "As built"); swiping left and right between stacks in Dock order (built in slice 1); shortcuts stacks for apps with nothing live, the Today page (agenda and tasks) and Recents as a stack (**4b, built**, see "As built"). | 1 |
 | 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. **Built**, see "As built". | 4 |
 | 6. Settings | Stream settings (open card position, actions position, tint, background, pinned apps), motion settings, the accessibility action and the first-run hint. **Built**, see "As built" (background and pinned apps deferred). | 2 to 5 |
-| 7. Home and Library | The combined search-and-page handle with quick-drag, search opening from the Dock, the paged Library, Home mode (Placed items or App library) and the feature switches. | none |
+| 7. Home and Library | The combined search-and-page handle with quick-drag, search opening from the Dock (**7a, built**, see "As built"), the paged Library, Home mode (Placed items or App library) and the feature switches (7b, not started). | none |
 
 ## Rules for every slice
 
@@ -530,6 +530,57 @@ unfolded layout.
 
 **Left for later.** Behind the cards, "Grows out of the Dock" as a real growth, a Simple mode exclusion for the hint, and a
 device test of the hint (the behaviour is covered on Robolectric).
+
+### Slice 7a: Home handle and search from the Dock (built)
+
+**Built.**
+
+- **One handle pill** (`HomeHandlePill.kt`; pure part in `:core:domain` `launcher/home/HomeHandle.kt`). The Home search pill and
+  the page indicator are one small Thin glass pill (36 dp drawn, a 48 dp touch target) in the row just above the Dock
+  (`HomeBottomSearchArea`): a search glyph, then the page dots when there is more than one page. A tap anywhere on it opens
+  search (the platform's `detectTapGestures`). Dragging along the dots is the old indicator's quick-drag unchanged
+  (`PageIndicator`: the roundel follows the finger, each page crossed is shown at once, release commits); the position to page
+  mapping now lives in `HomeHandle.pageAt` / `offsetOf` and `pageIndicatorDragTargetIndex` delegates to it. The indicator is
+  no longer shown only while a page gesture runs (its idle-hide timer is gone): the dots are always there. The Dock's own handle pill stays removed. Other Dock edges keep the row where it was; a first-run hint
+  above a bottom Dock now leaves the handle's row clear (`dockPressHintOffset(clearance)`).
+- **Search from the Dock** (`search/DockSearchSurface.kt`, `DockSearchMotion` in `:core:domain`). The shell's `SEARCH`
+  destination (the handle, the Dock's "Search" action, swipe down on Home and `OPEN_SEARCH` all reach it) is drawn by
+  `LibraryHomeSurface` as `DockSearchSurface` instead of the Library sheet: the field on its own Thick glass panel on the Dock's
+  edge, the results above it on a second Thick panel that is as tall as its content up to the room there is, the best match
+  nearest the field (`SearchResultList(growsUp = true)`: a reversed lazy list or grid), "Search web" between them. The surface
+  is laid out above the Dock, which stands above the keyboard, so the field and the results stay clear of it. It rises from the
+  Dock's edge on a critically damped spring at `DockMotionTuning.omega` (the opening speed setting applies), alpha first, a
+  36 dp rise and a 0.94 scale about the Dock's edge; closing (a tap on the room around it, Back with an empty field, the "Close
+  search" action) runs the same spring back and only then tells the shell. Reduced motion: the 80 ms fade
+  (`DockReducedTimeline`). Back with text clears the text first. Launching a result closes at once, as the Library does.
+- **Non-gesture routes.** Tap on the handle; the handle's "Search" button node (48 dp); "Search" as a custom action of the Dock
+  (last in its list, after "Open Library" and the Stream action); the page selector keeps its set-progress action and gains
+  "Previous page" and "Next page" (only where there is such a page).
+- **Tests.** `:core:domain`: `HomeHandleTest` (the track to page mapping and its inverse, left to right and right to left,
+  clamping, steps, sizes), `DockSearchMotionTest` (the spring never overshoots, closing mirrors opening, a caught opening, speed,
+  the frame, reduced motion). Robolectric: `HomeHandleBehaviorTest` (the pill, no old search pill, 48 dp, tap, the accessibility
+  routes, quick-drag, the Dock press still opens the Stream with the handle there, search from the handle, the field on the Dock's
+  edge, best match nearest, closing by action, tap and Back, over the Stream, the motion) and `HomeHandleScreenshotTest` (Home
+  with the handle, one page, a side Dock, beside the first-run hint; search empty, as a list, as icons, nothing found, large
+  type; dark and light). Device: `HomeHandleInteractionTest` (tap opens search, quick-drag, the search field).
+
+**What differed from the design.**
+
+- **Search is not inside the Dock.** The ADR says search "opens inside the Dock" (Amendment 1) and, unfolded, as a panel attached
+  to it. Folded it is a field panel and a results panel standing on the Dock's edge, rising from it; the Dock stays drawn and
+  tappable under it. "Inside" the Dock's own glass would mean growing the Dock past its size and its press gesture.
+- **Swipe down and `OPEN_SEARCH` now open the Dock's search**, not the Library sheet with its field focused (the ADR's first
+  table says Library; Amendment 1 says search from the Dock). The Library keeps its own search field when it is open.
+- **Home fades under search**, as it does under the Library, so the handle does not show through the glass.
+- **The Library's filters are not on the Dock's search** (the Library has none while searching either).
+
+**Assumptions.** The handle is also shown on a single page, as the glyph alone (nothing to scrub). A tap on the dots searches
+too. The pill sits where the old pill was, in the Home column above the Dock's reserved room, on every edge; "in front of the
+Dock's middle" on a side Dock is Amendment 2 and left for the unfolded slice (nothing here stops it: the pill is its own
+composable and takes no position from the Dock).
+
+**Left for later (7b).** The paged Library, Home mode, the feature switches and Simple mode, and the hint's Simple mode exclusion.
+Keyboard behaviour is covered by layout (the surface is padded by the same insets as the Dock) and was not run on a device.
 
 ### Glass and Dock sizing (after slice 4a)
 

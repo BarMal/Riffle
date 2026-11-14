@@ -195,6 +195,12 @@
     <string name="stream_dock_open_action">Show live pages</string>
     <string name="stream_dock_close_action">Back to Home</string>
     <string name="dock_open_library_action">Open Library</string>
+    <string name="dock_search_action">Search</string>
+    <string name="home_handle_search">Search</string>
+    <string name="home_handle_previous_page">Previous page</string>
+    <string name="home_handle_next_page">Next page</string>
+    <string name="dock_search_label">Search</string>
+    <string name="dock_search_close_action">Close search</string>
     <string name="split_divider_label">Divider between Home and Stream</string>
     <string name="split_state_home_only">Home only</string>
     <string name="split_state_split">Split, Stream %1$d percent</string>

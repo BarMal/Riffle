@@ -1,6 +1,7 @@
 package com.riffle.app.screenshots
 
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -25,6 +27,7 @@ import com.riffle.app.launcher.library.LIBRARY_ALPHA_LIST_TEST_TAG
 import com.riffle.app.launcher.library.LIBRARY_CATEGORIES_TEST_TAG
 import com.riffle.app.launcher.library.LIBRARY_SEARCH_FIELD_TEST_TAG
 import com.riffle.app.launcher.library.LIBRARY_SHEET_TEST_TAG
+import com.riffle.app.launcher.search.DOCK_SEARCH_FIELD_TEST_TAG
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -234,11 +237,21 @@ class LibraryScreenshotTest {
     }
 
     @Test
-    fun swipeDownOnHomeOpensTheLibraryWithTheSearchFieldFocused() {
+    fun swipeDownOnHomeOpensSearchFromTheDockWithTheFieldFocusedAndNotTheLibrarySheet() {
+        // Rewritten for slice 7a: the search destination (swipe down on Home, `OPEN_SEARCH`, the Home handle) is the
+        // Dock's search, no longer the Library's sheet; the Library keeps its own search field for when it is open.
         render(libraryState(LibraryView.Categories).copy(destination = ShellDestination.SEARCH))
 
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag(LIBRARY_SEARCH_FIELD_TEST_TAG).assertIsFocused()
+        composeRule.onNodeWithTag(DOCK_SEARCH_FIELD_TEST_TAG).assertIsFocused()
+        composeRule.onAllNodesWithTag(LIBRARY_SHEET_TEST_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun theLibrarysOwnSearchFieldStillTakesTheQueryWhileTheLibraryIsOpen() {
+        render(libraryState(LibraryView.Categories))
+
+        composeRule.onNodeWithTag(LIBRARY_SEARCH_FIELD_TEST_TAG).assertIsDisplayed()
     }
 
     @Test

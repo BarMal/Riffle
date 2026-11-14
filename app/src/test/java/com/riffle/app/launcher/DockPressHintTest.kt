@@ -51,6 +51,16 @@ class DockPressHintTest {
     }
 
     @Test
+    fun theHomeHandleAboveABottomDockIsLeftClear() {
+        val dock = Rect(100f, 1800f, 900f, 1960f)
+        val offset =
+            dockPressHintOffset(dock, size, DockPullDirection.UP, root, gap = 20, margin = 16, clearance = 144)
+
+        // The hint's bottom edge is the gap and the handle's room above the Dock's top.
+        assertEquals(IntOffset(300, 1800 - 20 - 144 - 120), offset)
+    }
+
+    @Test
     fun aTopDockPutsItBelowTheDock() {
         val dock = Rect(100f, 40f, 900f, 200f)
         val offset = dockPressHintOffset(dock, size, DockPullDirection.DOWN, root, gap = 20, margin = 16)

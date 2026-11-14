@@ -192,6 +192,7 @@ private fun SearchTopControls(
 }
 
 @Composable
+@Suppress("LongParameterList")
 internal fun SearchResultList(
     results: List<SearchGridResult>,
     appListContext: AppListContext,
@@ -200,6 +201,12 @@ internal fun SearchResultList(
     gridColumns: Int,
     webPreview: SearchWebPreview?,
     modifier: Modifier = Modifier,
+    /**
+     * Results growing up from the field under them (search from the Dock): the best match is at the bottom, the panel
+     * is as tall as its content up to the room it is given, and an empty answer sits on its own glass. Otherwise the
+     * panel fills what it is given and the first result is at the top.
+     */
+    growsUp: Boolean = false,
 ) {
     Column(
         modifier =
@@ -207,21 +214,38 @@ internal fun SearchResultList(
                 .widthIn(max = SEARCH_GRID_MAX_WIDTH_DP.dp)
                 .fillMaxWidth(),
     ) {
+        val panelModifier = if (growsUp) Modifier.weight(1f, fill = false) else Modifier.weight(1f)
         if (results.isEmpty()) {
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = emptyText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (growsUp) {
+                GlassSurface(
+                    modifier = Modifier.fillMaxWidth(),
+                    weight = GlassWeight.Thick,
+                    shape = LocalLauncherCardShape.current,
+                    tint = launcherPanelSurfaceColor(),
+                    contentColor = launcherPanelContentColor(),
+                ) {
+                    Text(
+                        text = emptyText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = emptyText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         } else {
             // The results panel: one glass surface lit by the colours of the apps it lists.
             GlassSurface(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = panelModifier.fillMaxWidth(),
                 // Results are a list of text rows: Thick, as above.
                 weight = GlassWeight.Thick,
                 shape = LocalLauncherCardShape.current,
@@ -235,14 +259,16 @@ internal fun SearchResultList(
                             results = results,
                             appListContext = appListContext,
                             gridColumns = gridColumns,
-                            modifier = Modifier.fillMaxSize(),
+                            reverse = growsUp,
+                            modifier = if (growsUp) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
                         )
 
                     SearchResultPresentation.LIST ->
                         SearchResultListItems(
                             results = results,
                             appListContext = appListContext,
-                            modifier = Modifier.fillMaxSize(),
+                            reverse = growsUp,
+                            modifier = if (growsUp) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
                         )
                 }
             }
@@ -261,10 +287,12 @@ internal fun SearchResultList(
 private fun SearchResultListItems(
     results: List<SearchGridResult>,
     appListContext: AppListContext,
+    reverse: Boolean,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxWidth().testTag(SEARCH_RESULT_LIST_TEST_TAG),
+        reverseLayout = reverse,
         contentPadding = searchResultContentPadding(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -279,11 +307,13 @@ private fun SearchResultIconGrid(
     results: List<SearchGridResult>,
     appListContext: AppListContext,
     gridColumns: Int,
+    reverse: Boolean,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(count = gridColumns.coerceAtLeast(1)),
         modifier = modifier.fillMaxWidth().testTag(SEARCH_RESULT_ICON_GRID_TEST_TAG),
+        reverseLayout = reverse,
         contentPadding = searchResultContentPadding(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
