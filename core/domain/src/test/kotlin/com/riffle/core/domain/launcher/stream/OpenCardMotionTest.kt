@@ -132,4 +132,15 @@ class OpenCardMotionTest {
         assertEquals(112f, OpenCardLayout.stripsPx(2, 56f))
         assertEquals(StreamCardStackSpec.VISIBLE_PEEKS * 56f, OpenCardLayout.stripsPx(9, 56f))
     }
+
+    @Test
+    fun theStripsStandOnlyWhereTheyLeaveTheOpenCardItsRoom() {
+        // A tall area: three strips (168) and a 240 card fit with room to spare.
+        assertTrue(OpenCardLayout.stripsFit(900f, 50f, 168f, 240f))
+        // The keyboard is up: 400 of area leaves 182 for the card under three strips, so they are not drawn.
+        assertEquals(false, OpenCardLayout.stripsFit(400f, 50f, 168f, 240f))
+        // Exactly enough is enough; with no strips wanted the card needs only its own room.
+        assertTrue(OpenCardLayout.stripsFit(458f, 50f, 168f, 240f))
+        assertTrue(OpenCardLayout.stripsFit(300f, 50f, 0f, 240f))
+    }
 }
