@@ -32,12 +32,16 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LayoutSettings
 import com.riffle.core.domain.launcher.settings.LiquidGlassSettings
 import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
+import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.PrivacySettings
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
@@ -62,6 +66,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("haptics", encodeHaptics(settings.haptics))
         .put("hints", encodeHints(settings.hints))
         .put("home", encodeHomeBehaviour(settings.home))
+        .put("layout", encodeLayoutSettings(settings.layout))
         .put("liquidGlass", encodeLiquidGlass(settings.liquidGlass))
         .put("motion", encodeMotionSettings(settings.motion))
         .put("notificationHiding", encodeNotificationHiding(settings.notificationHiding))
@@ -109,6 +114,7 @@ private fun decodeLauncherSections(
         haptics = json.guarded("haptics", defaults.haptics, JSONObject::toHaptics),
         hints = json.guarded("hints", defaults.hints, JSONObject::toHints),
         home = json.guarded("home", defaults.home, JSONObject::toHomeBehaviour),
+        layout = json.guarded("layout", defaults.layout, JSONObject::toLayoutSettings),
         liquidGlass = json.guarded("liquidGlass", defaults.liquidGlass, JSONObject::toLiquidGlass),
         motion = json.guarded("motion", defaults.motion, JSONObject::toMotionSettings),
         notificationHiding =
@@ -185,6 +191,40 @@ private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
     JSONObject()
         .put("returnBehavior", settings.returnBehavior.name)
         .put("mode", settings.mode.storedId)
+
+/*
+ * The layout per posture (ADR 0003, Amendment 2): `layout.folded` and `layout.unfolded`, each `pageScroll`,
+ * `indicator` and `quickScroll`. The Dock edge is not here: it is the Dock's own, stored per device class with the
+ * home layout. An old blob has no `layout` and decodes to each posture's default; a posture, a value or a type this
+ * build does not know reads as that posture's default, one field at a time.
+ */
+private fun encodeLayoutSettings(settings: LayoutSettings): JSONObject =
+    JSONObject()
+        .put("folded", encodePostureLayout(settings.folded))
+        .put("unfolded", encodePostureLayout(settings.unfolded))
+
+private fun encodePostureLayout(settings: PostureLayoutSettings): JSONObject =
+    JSONObject()
+        .put("pageScroll", settings.pageScroll.storedId)
+        .put("indicator", settings.indicator.storedId)
+        .put("quickScroll", settings.quickScroll)
+
+private fun JSONObject.toLayoutSettings(defaults: LayoutSettings): LayoutSettings =
+    LayoutSettings(
+        folded = guarded("folded", defaults.folded, JSONObject::toPostureLayout),
+        unfolded = guarded("unfolded", defaults.unfolded, JSONObject::toPostureLayout),
+    )
+
+private fun JSONObject.toPostureLayout(defaults: PostureLayoutSettings): PostureLayoutSettings =
+    PostureLayoutSettings(
+        pageScroll =
+            PageScrollDirection.fromStoredId(optString("pageScroll").takeIf(String::isNotEmpty))
+                ?: defaults.pageScroll,
+        indicator =
+            PageIndicatorPlacement.fromStoredId(optString("indicator").takeIf(String::isNotEmpty))
+                ?: defaults.indicator,
+        quickScroll = (opt("quickScroll") as? Boolean) ?: defaults.quickScroll,
+    )
 
 private fun encodeFeatures(settings: FeatureSettings): JSONObject =
     JSONObject()

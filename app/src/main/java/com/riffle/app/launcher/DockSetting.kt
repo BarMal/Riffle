@@ -32,6 +32,8 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 internal fun DockSetting(
     dock: DockModel,
     onAction: (LauncherShellAction) -> Unit,
+    /** The edge the layout's device class uses until one is chosen (ADR 0003, Amendment 2). */
+    defaultEdge: DockPosition = DockPosition.BOTTOM,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         DockSizeSummary(
@@ -43,7 +45,7 @@ internal fun DockSetting(
             onAction = onAction,
         )
         DockPositionSetting(
-            position = dock.position,
+            position = dock.position ?: defaultEdge,
             // One dock shared by every mode (#1205), so only the edges every mode can draw it on.
             placeablePositions = sharedDockPositions,
             onAction = onAction,

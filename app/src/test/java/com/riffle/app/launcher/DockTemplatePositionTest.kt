@@ -18,8 +18,9 @@ class DockTemplatePositionTest {
     }
 
     @Test
-    fun widePosturesDefaultToTheLeadingRail() {
-        assertEquals(DockPosition.LEFT, HomeLayoutDeviceClass.FOLDABLE.templateDockPosition)
+    fun anUnfoldedFoldableDefaultsToTheRightEdgeAndOtherWidePosturesToTheLeftRail() {
+        // ADR 0003, Amendment 2: unfolded, the Dock is on the right edge. (It was the left rail before.)
+        assertEquals(DockPosition.RIGHT, HomeLayoutDeviceClass.FOLDABLE.templateDockPosition)
         assertEquals(DockPosition.LEFT, HomeLayoutDeviceClass.TABLET.templateDockPosition)
         assertEquals(DockPosition.LEFT, HomeLayoutDeviceClass.DESKTOP.templateDockPosition)
     }

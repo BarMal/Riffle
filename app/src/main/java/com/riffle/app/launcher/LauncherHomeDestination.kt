@@ -58,15 +58,18 @@ import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeHandle
+import com.riffle.core.domain.launcher.home.HomeHandleLayout
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.ModeDockEdges
 import com.riffle.core.domain.launcher.home.ModeSurface
 import com.riffle.core.domain.launcher.home.dockEdgeFor
+import com.riffle.core.domain.launcher.home.handleAxis
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.home.modeSurface
 import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.settings.EffectiveFeatures
 import com.riffle.core.domain.launcher.settings.HomeMode
+import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.effectiveFeatures
 import com.riffle.core.domain.launcher.settings.forAppLibraryHome
 import com.riffle.core.domain.launcher.settings.without
@@ -447,7 +450,18 @@ private fun HomeDestinationContent(
                         pull = plan.dockEdge.pullDirection,
                         onDismiss = { onDockPressHintSeen?.invoke() },
                         // The Home handle stands just above a bottom Dock; the hint sits above the handle.
-                        clearance = if (plan.dockEdge == DockPosition.BOTTOM) HomeHandle.TOUCH_TARGET_DP.dp else 0.dp,
+                        clearance =
+                            if (plan.dockEdge == DockPosition.BOTTOM) {
+                                val layout = state.postureLayout()
+                                HomeHandleLayout.reservedDp(
+                                    DockPosition.BOTTOM,
+                                    layout.pageScroll.handleAxis,
+                                    state.homeLayout.pages.size,
+                                    layout.showsDots && HomeHandle.showsDots(state.homeLayout.pages.size),
+                                ).dp
+                            } else {
+                                0.dp
+                            },
                     )
                 }
             }
@@ -641,6 +655,7 @@ private fun LibraryHomeSurface(
             direction = dockPosition.pullDirection,
             awayFraction = pull::libraryAwayFraction,
             onClose = close,
+            dockEdge = dockPosition,
         )
     }
 }
@@ -711,6 +726,7 @@ private fun AppLibraryHome(
             reducedMotion = state.reducedMotion(),
             onOpenSearch = { onAction(LauncherShellAction.OpenSearch) },
             backgroundActions = actions,
+            dockEdge = dockPosition,
         ) { dismiss ->
             if (!features.simpleMode) {
                 DropdownMenuItem(
@@ -941,7 +957,12 @@ private fun standardHomePresentation(
                 isTargetingDockPanel = state.isWidgetPickerTargetingDockPanel,
             ),
         homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
+        layout = state.postureLayout(),
     )
+
+/** The layout of the posture the device is being held in (ADR 0003, Amendment 2). */
+internal fun LauncherShellState.postureLayout(): PostureLayoutSettings =
+    launcherSettings.layout.forDeviceClass(homeLayoutSet.activeKey.deviceClass)
 
 internal fun cardsPanelInsetPolicy(state: LauncherShellState): HomeInsetPolicy {
     return homeInsetPolicy(state.launcherSettings.appearance)

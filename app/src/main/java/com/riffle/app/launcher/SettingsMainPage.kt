@@ -22,7 +22,7 @@ internal fun settingsMainRowTestTag(page: SettingsPage): String = "settings-main
 internal fun settingsSearchResultTestTag(entry: SettingsSearchEntry): String = "settings-result-${entry.id}"
 
 /**
- * The main page: a search field and the ten places Settings is organised by. Typing searches every individual setting
+ * The main page: a search field and the places Settings is organised by. Typing searches every individual setting
  * and page (label, path and keywords); a result opens its page scrolled to that setting.
  */
 @Composable

@@ -84,9 +84,11 @@ import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.DockPullThresholds
 import com.riffle.core.domain.launcher.dockpull.SettleOutcome
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.library.LibraryCategories
 import com.riffle.core.domain.launcher.library.LibraryHit
 import com.riffle.core.domain.launcher.library.LibraryView
+import com.riffle.core.domain.launcher.settings.PageScrollDirection
 import kotlinx.coroutines.launch
 
 /**
@@ -109,6 +111,8 @@ internal fun LibrarySheet(
     awayFraction: () -> Float?,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The edge the Dock stands on: where the paged View puts its handle (ADR 0003, Amendment 2). */
+    dockEdge: DockPosition = DockPosition.BOTTOM,
 ) {
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -180,6 +184,8 @@ internal fun LibrarySheet(
             },
         )
     val paged = state.view == LibraryView.Paged && !state.isSearching
+    val pagesScrollVertically = state.pagedLayout.pageScroll == PageScrollDirection.VERTICAL
+    val pullSharesNoAxisWithPages = vertical != pagesScrollVertically
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Box(
             modifier =
@@ -210,8 +216,11 @@ internal fun LibrarySheet(
                     reducedMotion = reducedMotion,
                     onOpenSearch = { onAction(LauncherShellAction.OpenSearch) },
                     backgroundActions = actions,
-                    modifier = if (vertical) dismissDrag else Modifier,
-                    handleModifier = if (vertical) Modifier else dismissDrag,
+                    dockEdge = dockEdge,
+                    // The pull toward the Dock's edge takes the whole View unless the pages scroll along that very
+                    // axis (the pager would fight it); then it takes the handle's room only.
+                    modifier = if (pullSharesNoAxisWithPages) dismissDrag else Modifier,
+                    handleModifier = if (pullSharesNoAxisWithPages) Modifier else dismissDrag,
                 ) { dismiss ->
                     ShowAsMenuItems(
                         options = LibraryView.entries,

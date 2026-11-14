@@ -22,6 +22,8 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.ModeSurface
 import com.riffle.core.domain.launcher.home.dockEdgeFor
+import com.riffle.core.domain.launcher.home.dockFor
+import com.riffle.core.domain.launcher.settings.LayoutPosture
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -264,6 +266,75 @@ class LauncherDockEditReducerTest {
             DockPosition.RIGHT,
             checkNotNull(repository.savedLayoutSet).dockEdgeFor(deviceClass, ModeSurface.LIBRARY),
         )
+    }
+
+    @Test
+    fun theLayoutPageSetsAPosturesDockEdgeOnThatPosturesDeviceClassAndLeavesTheTabAlone() {
+        val phoneKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
+        val foldableKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.FOLDABLE)
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = phoneKey,
+                layouts =
+                    mapOf(
+                        phoneKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE),
+                        foldableKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE),
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository(savedLayoutSet = layoutSet)
+        val state =
+            LauncherShellState(
+                destination = ShellDestination.SETTINGS,
+                homeLayout = layoutSet.activeLayout,
+                homeLayoutSet = layoutSet,
+                settingsLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
+                availableLayoutDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            )
+
+        val unfolded =
+            reducer(repository).reduce(
+                state,
+                LauncherShellAction.SelectPostureDockEdge(LayoutPosture.UNFOLDED, DockPosition.LEFT),
+            )
+
+        val saved = checkNotNull(repository.savedLayoutSet)
+        assertEquals(DockPosition.LEFT, saved.dockFor(HomeLayoutDeviceClass.FOLDABLE).position)
+        assertEquals(null, saved.dockFor(HomeLayoutDeviceClass.PHONE).position)
+        // The Dock page's tab is where it was, and the layout in hand is the phone's, untouched.
+        assertEquals(HomeLayoutDeviceClass.PHONE, unfolded.settingsLayoutDeviceClass)
+        assertEquals(null, unfolded.homeLayout.dock.position)
+
+        val folded =
+            reducer(repository).reduce(
+                unfolded,
+                LauncherShellAction.SelectPostureDockEdge(LayoutPosture.FOLDED, DockPosition.RIGHT),
+            )
+        val savedAgain = checkNotNull(repository.savedLayoutSet)
+        assertEquals(DockPosition.RIGHT, savedAgain.dockFor(HomeLayoutDeviceClass.PHONE).position)
+        assertEquals(DockPosition.LEFT, savedAgain.dockFor(HomeLayoutDeviceClass.FOLDABLE).position)
+        assertEquals(DockPosition.RIGHT, folded.homeLayout.dock.position)
+    }
+
+    @Test
+    fun aPostureEdgeOutsideSettingsOnlyEditsTheLayoutBeingHeld() {
+        val repository = FakeHomeLayoutRepository()
+        val state = LauncherShellState()
+
+        // The phone is held, so the unfolded posture is not the one in hand: nothing changes.
+        val unfolded =
+            reducer(repository).reduce(
+                state,
+                LauncherShellAction.SelectPostureDockEdge(LayoutPosture.UNFOLDED, DockPosition.LEFT),
+            )
+        assertEquals(state.homeLayout, unfolded.homeLayout)
+        assertEquals(null, repository.savedLayoutSet)
+
+        val folded =
+            reducer(repository).reduce(
+                state,
+                LauncherShellAction.SelectPostureDockEdge(LayoutPosture.FOLDED, DockPosition.LEFT),
+            )
+        assertEquals(DockPosition.LEFT, folded.homeLayout.dock.position)
     }
 
     private fun reducer(repository: HomeLayoutRepository): LauncherDockEditReducer =

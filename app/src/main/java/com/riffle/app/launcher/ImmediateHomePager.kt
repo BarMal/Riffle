@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -155,20 +156,24 @@ internal fun ImmediateWorkspacePager(
     activeDragSession: HomeDragSession? = null,
     onDragPageTargetChanged: (com.riffle.core.domain.launcher.home.LauncherPageId) -> Unit = {},
     modifier: Modifier = Modifier,
+    /** Pages scroll up and down (the platform's vertical pager) rather than sideways (ADR 0003, Amendment 2). */
+    vertical: Boolean = false,
 ) {
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
-        val pageWidthPx = with(LocalDensity.current) { maxWidth.toPx() }
+        // The page's extent along the way the pages scroll: a drag held toward its far ends turns the page.
+        val pageExtentPx = with(LocalDensity.current) { (if (vertical) maxHeight else maxWidth).toPx() }
 
         val sourcePageIndex =
             activeDragSession?.let { session -> layout.pages.indexOfFirst { it.id == session.originPageId } }
                 ?: -1
         val nextTargetIndex =
             if (activeDragSession != null && sourcePageIndex >= 0) {
+                val dragOffset = if (vertical) activeDragSession.dragOffsetY else activeDragSession.dragOffsetX
                 when {
-                    activeDragSession.dragOffsetX <= -(pageWidthPx * DRAG_PAGE_EDGE_FRACTION) -> sourcePageIndex + 1
-                    activeDragSession.dragOffsetX >= pageWidthPx * DRAG_PAGE_EDGE_FRACTION -> sourcePageIndex - 1
+                    dragOffset <= -(pageExtentPx * DRAG_PAGE_EDGE_FRACTION) -> sourcePageIndex + 1
+                    dragOffset >= pageExtentPx * DRAG_PAGE_EDGE_FRACTION -> sourcePageIndex - 1
                     else -> -1
                 }
             } else {
@@ -184,33 +189,50 @@ internal fun ImmediateWorkspacePager(
             }
         }
 
-        HorizontalPager(
-            state = pagerState.foundationPagerState,
-            modifier = Modifier.fillMaxSize(),
-            userScrollEnabled = layout.pages.size > 1 && activeDragSession == null,
-            flingBehavior =
-                PagerDefaults.flingBehavior(
-                    state = pagerState.foundationPagerState,
-                    snapAnimationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(presentation.reducedMotion)),
-                    snapPositionalThreshold = PAGE_CHANGE_DISTANCE_THRESHOLD,
-                ),
-            key = { index -> layout.pages.getOrNull(index)?.id?.value ?: index },
-        ) { index ->
+        val pagerModifier = Modifier.fillMaxSize()
+        val userScrollEnabled = layout.pages.size > 1 && activeDragSession == null
+        val flingBehavior =
+            PagerDefaults.flingBehavior(
+                state = pagerState.foundationPagerState,
+                snapAnimationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(presentation.reducedMotion)),
+                snapPositionalThreshold = PAGE_CHANGE_DISTANCE_THRESHOLD,
+            )
+        val pageKey: (Int) -> Any = { index -> layout.pages.getOrNull(index)?.id?.value ?: index }
+        val pageContent: @Composable (Int) -> Unit = { index ->
             val pageModifier = Modifier.fillMaxSize().clipToBounds()
-            val page = layout.pages.getOrNull(index) ?: return@HorizontalPager
-            if (page.isNotificationCardsPage) {
-                // The Stream replaced the notification cards page; the stored page stays, and says where they went.
-                StreamRedirectPage(onAction = presentation.generatedPage.onAction, modifier = pageModifier)
-            } else {
-                WorkspaceGrid(
-                    page = page,
-                    gridState = gridState,
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                    actions = actions,
-                    modifier = pageModifier,
-                )
+            val page = layout.pages.getOrNull(index)
+            if (page != null) {
+                if (page.isNotificationCardsPage) {
+                    // The Stream replaced the notification cards page; the stored page stays, and says where they went.
+                    StreamRedirectPage(onAction = presentation.generatedPage.onAction, modifier = pageModifier)
+                } else {
+                    WorkspaceGrid(
+                        page = page,
+                        gridState = gridState,
+                        presentation = presentation,
+                        appIconLoader = appIconLoader,
+                        actions = actions,
+                        modifier = pageModifier,
+                    )
+                }
             }
+        }
+        if (vertical) {
+            VerticalPager(
+                state = pagerState.foundationPagerState,
+                modifier = pagerModifier,
+                userScrollEnabled = userScrollEnabled,
+                flingBehavior = flingBehavior,
+                key = pageKey,
+            ) { index -> pageContent(index) }
+        } else {
+            HorizontalPager(
+                state = pagerState.foundationPagerState,
+                modifier = pagerModifier,
+                userScrollEnabled = userScrollEnabled,
+                flingBehavior = flingBehavior,
+                key = pageKey,
+            ) { index -> pageContent(index) }
         }
     }
 }

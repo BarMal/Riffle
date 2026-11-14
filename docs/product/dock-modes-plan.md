@@ -1,7 +1,7 @@
 # Dock modes: build plan
 
 Builds ADR 0003 Amendments 1 to 3 on a folded phone. Each slice is one pull request that leaves the app
-working. The unfolded layout (Amendment 2) follows once folded is on a device.
+working. The unfolded layout (Amendment 2) follows in the parts under "Unfolded" below.
 
 The reference for behaviour and feel is the set of working prototypes on the UX canvas (boards M1 to M3).
 Their spring, magnet and timing constants are the starting values; the settings in slice 6 expose them.
@@ -15,6 +15,15 @@ Their spring, magnet and timing constants are the starting values; the settings 
 | 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. **Built**, see "As built". | 4 |
 | 6. Settings | Stream settings (open card position, actions position, tint, background, pinned apps), motion settings, the accessibility action and the first-run hint. **Built**, see "As built" (background and pinned apps deferred). | 2 to 5 |
 | 7. Home and Library | The combined search-and-page handle with quick-drag, search opening from the Dock (**7a, built**, see "As built"), the paged Library, Home mode (Placed items or App library) and the feature switches with Simple mode (**7b, built**, see "As built"). | none |
+
+## Unfolded
+
+Builds ADR 0003 Amendment 2 in two parts. Each part is one pull request that leaves the app working.
+
+| Part | What it delivers | Depends on |
+| --- | --- | --- |
+| U1. Layout per posture | The layout as a setting per posture (Dock edge, which way the app pages scroll, the page indicator and quick scroll), Home, the paged Library and the App library Home following it, with the handle in front of a side Dock's middle, and the Layout page in Settings. **Built**, see "As built". | 7a, 7b |
+| U2. Stack attached to the Dock | The upright card stack attached to a side Dock, the third of the screen for cards and two thirds for the grid, the grid flowing and fading continuously beneath the cards from the screen edge, and app peek-through. **Next.** | U1 |
 
 ## Rules for every slice
 
@@ -651,6 +660,101 @@ grid, as the Library's grid search results already do. The pull-away claim is dr
 button of a generated Home page still sends `OpenAppDrawer` (it does nothing while the Library is off); the unfolded layout
 (Amendment 2). The paged View was not run on a device: the handle sits over the wallpaper with no glass behind the grid, so
 label legibility on a bright wallpaper rests on the labels' own shadow (`WallpaperReadableLabel`).
+
+### U1: Layout per posture (built)
+
+**Built.**
+
+- **The settings** (`core/domain/.../launcher/settings/LayoutSettings.kt`, `LauncherSettings.layout`). `LayoutPosture` is folded or unfolded: the
+  phone (portrait and landscape) is folded; a foldable opened flat, a tablet and a desktop window are unfolded (a tablet is the
+  same kind of wide, flat screen). `PostureLayoutSettings` holds, per posture, the page scroll (`PageScrollDirection`:
+  sideways or up and down), the indicator (`PageIndicatorPlacement`: beside the Dock, or off) and quick scroll (on or off);
+  `LayoutSettings` holds both postures and a device class reads its posture's (`forDeviceClass`).
+
+  | Setting | Folded default | Unfolded default |
+  | --- | --- | --- |
+  | Dock edge | Bottom | Right (a tablet and a desktop window keep Left) |
+  | App pages scroll | Sideways | Up and down |
+  | Page indicator | Beside the Dock (above its middle) | Beside the Dock (in front of its middle) |
+  | Drag the dots to scroll quickly | On | On |
+
+- **The Dock edge is not copied.** It is still the Dock's own `DockModel.position`, stored per device class with the home layout,
+  and null means "no choice yet", which now resolves to the posture's default (`defaultDockEdge`; the unfolded foldable's was
+  Left and is Right). The Dock page and the Layout page write the same value: the Layout page runs the Dock page's own edit
+  (`SelectPostureDockEdge`, in `LauncherDockEditReducer`) against the posture's device class (`dockDeviceClass`: the class being held when it
+  is in the posture, else the phone for folded and the foldable for unfolded) and puts the Dock page's own tab back.
+- **Stored** as `layout.folded` and `layout.unfolded` in the settings blob (`pageScroll`, `indicator`, `quickScroll`; ids are
+  stable). An old blob has no `layout` and decodes to the defaults; a missing posture, an unknown value or a value of the wrong
+  type reads as that field's default. A stored Dock edge keeps winning over the new default.
+- **The handle** (`HomeHandlePill`, the same component, with an `axis`). It runs the way the pages scroll (Amendment 2: the
+  indicator always runs the way the pages scroll), so a quick-scroll drag never moves the pages at right angles to it: a row
+  for sideways pages (the glyph, then the dots), a column for pages that scroll up and down (the glyph on top, the dots
+  stacked, page 0 at the top). The dots' drag axis is the pages' axis (`PageIndicator(axis)`; `detectVerticalDragGestures` for a
+  column). Its size is fixed by `HomeHandleLayout.sizeDp`, so the glyph and the dots keep the same room at every page count.
+- **Where it stands** (`HomeHandleLayout.stripFor(edge, axis)`). Above a bottom Dock it is the row it always was. A column
+  of dots beside a left or right Dock stands in a column of its own between the Dock and the pages (`HomeHandleStrip` in
+  `StandardHome.kt`), as wide as the handle and centred vertically; the Dock is centred on its edge, so the handle is in
+  front of the Dock's middle, on Home's side of it, as the folded handle is above a bottom Dock's middle. A row beside a
+  side Dock (sideways pages with a side Dock) runs across the Dock's edge, so it keeps the row below the pages. The pages
+  give the room up, so the handle never covers an icon. While pages are edited there is no handle, as before.
+- **Vertical pages** are the platform's `VerticalPager` with the same page content (`ImmediateWorkspacePager(vertical)`); a drag
+  of an icon held toward the page's far ends turns the page along the same axis.
+- **Quick scroll off** keeps the dots as an indicator only: no drag, no set-page action on the page selector (no previous/next
+  page actions either), and a drag that lands on the dots is taken by the indicator (a no-op `draggable`), so it does not turn
+  into one of Home's swipes. A tap on the dots still opens search. **Indicator off** draws no dots; the pill is its glyph alone
+  and still opens search.
+- **The paged Library and the App library Home** reuse the same pager rules and the same handle placement
+  (`LibraryPagedView(dockEdge)`, `LibraryState.pagedLayout`). The Library's pull toward the Dock's edge takes the whole View
+  unless the pages scroll along that very axis, and then the handle's room only (as it did for a side Dock before).
+- **Search** keeps rising from the Dock's edge, as on a bottom Dock: the field and the results are laid out in the room beside a
+  side Dock, the field at the bottom, the results above, sliding in from the Dock's side. That stays readable and works on every
+  edge; the amendment's search panel attached to the Dock, with the field nearest the keyboard, goes with the card stack in U2.
+- **The Dock's gestures are untouched** (the single pointer loop in `DockPull.kt` is not changed): press toward the edge, pull away
+  to the Library and the contextual row's scrolling along the Dock work on every edge in both postures. Hold to choose stays
+  the folded phone's, as it was (an expanded posture's press stays the split's settle).
+- **Settings > Layout** (`SettingsPage.POSTURE_LAYOUT`, `SettingsLayoutPage.kt`; the enum is not `LAYOUT`, a name an earlier removed
+  page used and a test pins as gone). A Folded section and an Unfolded section, each with the Dock position (Bottom, Left,
+  Right), App pages scroll (Sideways, Up and down), Page dots (Beside the Dock, Off) and a Drag the dots to scroll switch
+  (off and disabled while the dots are off). Every row is a choice or a switch, so each has a route that needs no gesture, and
+  each is a `SettingKey` for search. It is the eleventh row of the main page, after the Dock.
+- **Two small fixes.** (1) In the handle pill the search glyph crowded the selected page dot with two or three pages (the paged
+  Library's golden shows three of its pages): the roundel was a 44 dp box that the indicator's tight constraints squeezed to the
+  length of a short track and then centred, which moved it left of its dot, onto the magnifier. It is now exactly as big as it
+  draws and rides the dots' centres, at every page count. (2) The "More apps" button of a generated Home page sent
+  `OpenAppDrawer`, which does nothing while the Library is off: it now opens search then (the Library is off in Simple mode and
+  with its switch; search stays on), which finds the rest of the apps.
+- **Tests.** `:core:domain`: `LayoutSettingsTest` (postures, defaults, independence, what the indicator and quick scroll do, the
+  device class edited for a Dock edge, stored ids), `HomeHandlePlacementTest` (the strip per Dock edge, the size and reserved
+  room per axis and page count, the drag-to-page mapping on a column). `app` JVM: `LayoutSettingsCodecTest` (round trip, old
+  blobs, bad values, a stored Dock edge winning over the new default, the Layout page's edges), the reducers, the action table,
+  the settings pages tests. Robolectric through the real `HomeDestination` and `SettingsSurface`: `UnfoldedLayoutTest` (each Dock
+  edge places the Dock and the handle, vertical paging by a swipe and by the handle, quick scroll off, indicator off, the Dock's
+  press, pull and hold on a right edge, the paged Library and the App library Home following the settings; screenshots of Home
+  with the right-edge Dock and of the Layout page, dark and light), `HomeHandleSpacingTest`, `GeneratedPageOverflowTest`. Device:
+  `UnfoldedLayoutInteractionTest` (compiled, not run).
+
+**What differed from the design.**
+
+- **"In the Dock" is not an indicator placement.** The amendment lists Beside the Dock, In the Dock and Off; Amendment 3 has one Dock
+  with no handle or marker row of its own, so there is nothing to put the dots into. The options are Beside the Dock and Off.
+- **Off keeps the search glyph.** The handle is the way into search as well as the dots; with the dots off the pill is its glyph.
+- **The indicator runs the way the pages scroll**, as the amendment says, so a column can stand above a bottom Dock and a row
+  beside a side Dock. A row beside a side Dock is not given a strip of its own: a strip as wide as the row (up to about 100 dp
+  with a few pages) squeezed the pages beside the Dock and clipped their labels in a screenshot, so it keeps the row below the
+  pages, where it was. A column above a bottom Dock stands in the row above it, which is as tall as the column is long (92 dp
+  with three pages).
+- **A tablet and a desktop window take the Unfolded settings** (and keep their left Dock); the amendment speaks of an unfolded
+  foldable only.
+- **Vertical one-finger swipes on Home scroll the pages** while the pages scroll up and down and there is more than one, as a
+  sideways swipe does for sideways pages (the pager takes the touch first). Search stays on the handle, the Dock's action and
+  the gesture settings.
+
+**Assumptions.** The Dock edge a posture's section edits is stored per device class, so on a landscape phone, a tablet or a
+desktop window the section edits the class being held (the phone's landscape layout has its own edge). The Library's Dock edge
+follows the Home edge when it is chosen (as it did). The first-run hint clears a vertical handle's length above a bottom Dock.
+
+**Left for U2.** The card stack attached to the Dock, the grid and cards ratio, the continuously flowing and fading grid, app
+peek-through, and search as a panel attached to the Dock. The Stage view of the Stream is untouched and still there.
 
 ### Glass and Dock sizing (after slice 4a)
 

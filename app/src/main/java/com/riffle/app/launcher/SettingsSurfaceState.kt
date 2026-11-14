@@ -5,12 +5,16 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.ModePair
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LayoutPosture
+import com.riffle.core.domain.launcher.settings.defaultDockEdge
+import com.riffle.core.domain.launcher.settings.layoutPosture
 import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
 
 data class SettingsSurfaceState(
@@ -31,4 +35,9 @@ data class SettingsSurfaceState(
     /** The Home ↔ Library pair of [selectedLayoutDeviceClass] (#1241). */
     val modePair: ModePair = ModePair.DEFAULT,
     val calendarAccessStatus: CalendarAccessStatus = CalendarAccessStatus.UNKNOWN,
+    /** Where each posture's Dock stands now (Settings > Layout): the stored edge, else the posture's default. */
+    val postureDockEdges: Map<LayoutPosture, DockPosition> =
+        LayoutPosture.entries.associateWith { posture ->
+            HomeLayoutDeviceClass.entries.first { it.layoutPosture() == posture }.defaultDockEdge
+        },
 )

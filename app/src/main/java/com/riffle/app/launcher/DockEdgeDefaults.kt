@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.settings.defaultDockEdge
 import kotlin.math.max
 
 /**
@@ -17,21 +18,12 @@ internal fun resolveDockPosition(
 
 /**
  * The dock edge a device class defaults to before the user picks one -- the [templateDockPosition] that
- * [resolveDockPosition] falls back to. Narrow postures keep the dock along the bottom; wide postures put it on the
- * left edge. Every class is mapped, so [resolveDockPosition]'s own `LEFT` fallback stays unreached.
+ * [resolveDockPosition] falls back to (ADR 0003, Amendment 2): the bottom folded, the right edge on an unfolded
+ * foldable, and the left edge on a tablet or a desktop window. Every class is mapped, so [resolveDockPosition]'s own
+ * `LEFT` fallback stays unreached.
  */
 internal val HomeLayoutDeviceClass.templateDockPosition: DockPosition
-    get() =
-        when (this) {
-            HomeLayoutDeviceClass.PHONE,
-            HomeLayoutDeviceClass.PHONE_LANDSCAPE,
-            -> DockPosition.BOTTOM
-
-            HomeLayoutDeviceClass.FOLDABLE,
-            HomeLayoutDeviceClass.TABLET,
-            HomeLayoutDeviceClass.DESKTOP,
-            -> DockPosition.LEFT
-        }
+    get() = defaultDockEdge
 
 /** The WCAG contrast ratio between two colours (1 to 21). */
 internal fun contrastRatio(

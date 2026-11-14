@@ -52,11 +52,14 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LayoutPosture
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
+import com.riffle.core.domain.launcher.settings.PageScrollDirection
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
@@ -539,6 +542,30 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data class SelectDockPosition(val position: DockPosition) : LauncherShellAction
+
+    /** Settings > Layout: the Dock edge of one posture (the same edge the Dock page sets for its device class). */
+    data class SelectPostureDockEdge(
+        val posture: LayoutPosture,
+        val position: DockPosition,
+    ) : LauncherShellAction
+
+    /** Settings > Layout: which way a posture's app pages scroll. */
+    data class SelectPageScroll(
+        val posture: LayoutPosture,
+        val direction: PageScrollDirection,
+    ) : LauncherShellAction
+
+    /** Settings > Layout: where a posture's page indicator sits (or that it is off). */
+    data class SelectPageIndicator(
+        val posture: LayoutPosture,
+        val placement: PageIndicatorPlacement,
+    ) : LauncherShellAction
+
+    /** Settings > Layout: whether dragging along a posture's dots scrolls quickly, or they only show where you are. */
+    data class SetQuickScroll(
+        val posture: LayoutPosture,
+        val enabled: Boolean,
+    ) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
 
