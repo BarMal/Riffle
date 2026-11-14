@@ -98,22 +98,12 @@ private fun SettingsPostureLayoutRows(
     settings: PostureLayoutSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsChoiceRow(
-        modifier = Modifier.settingAnchor(layoutSettingKey(posture, LayoutRow.DOCK_EDGE)),
-        title = stringResource(R.string.settings_layout_dock_edge_title),
-        subtitle = stringResource(R.string.settings_layout_dock_edge_subtitle),
-        options = layoutDockEdges,
-        selected = dockEdge,
+    // The Dock page's own row: the same label, subtitle and options, the same stored value.
+    SettingsDockPositionRow(
+        position = dockEdge,
+        placeablePositions = layoutDockEdges,
         onSelect = { edge -> onAction(LauncherShellAction.SelectPostureDockEdge(posture, edge)) },
-        label = { edge ->
-            stringResource(
-                when (edge) {
-                    DockPosition.LEFT -> R.string.settings_layout_edge_left
-                    DockPosition.RIGHT -> R.string.settings_layout_edge_right
-                    else -> R.string.settings_layout_edge_bottom
-                },
-            )
-        },
+        modifier = Modifier.settingAnchor(layoutSettingKey(posture, LayoutRow.DOCK_EDGE)),
         optionTag = { edge -> layoutOptionTestTag(posture, "dock", edge.name) },
     )
     SettingsChoiceRow(
@@ -170,22 +160,36 @@ private fun SettingsPostureLayoutRows(
         enabled = settings.showsDots,
         onCheckedChange = { on -> onAction(LauncherShellAction.SetQuickScroll(posture, on)) },
     )
-    // The same value Settings > Stream > Cards writes for this posture (one stored value, two entry points).
+    // The same value, label and subtitle Settings > Stream > Cards shows for this posture.
+    SettingsAppsBehindCardsRow(
+        posture = posture,
+        on = settings.appPeekThrough,
+        onAction = onAction,
+        modifier = Modifier.settingAnchor(layoutSettingKey(posture, LayoutRow.APPS_BEHIND)),
+        tag = layoutOptionTestTag(posture, "peek", "through"),
+    )
+}
+
+/**
+ * "Show apps behind the cards" for one [posture]: the one row both Settings > Layout and Settings > Stream > Cards
+ * draw, so the two entry points read identically and, being one stored value, always agree.
+ */
+@Composable
+internal fun SettingsAppsBehindCardsRow(
+    posture: LayoutPosture,
+    on: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier,
+    tag: String,
+) {
     SettingsSwitchRow(
-        modifier =
-            Modifier
-                .settingAnchor(layoutSettingKey(posture, LayoutRow.APPS_BEHIND))
-                .testTag(layoutOptionTestTag(posture, "peek", "through")),
+        modifier = modifier.testTag(tag),
         title = stringResource(R.string.settings_layout_peek_through_title),
         subtitle =
             stringResource(
-                if (settings.appPeekThrough) {
-                    R.string.settings_layout_peek_through_on
-                } else {
-                    R.string.settings_layout_peek_through_off
-                },
+                if (on) R.string.settings_layout_peek_through_on else R.string.settings_layout_peek_through_off,
             ),
-        checked = settings.appPeekThrough,
-        onCheckedChange = { on -> onAction(LauncherShellAction.SetAppPeekThrough(posture, on)) },
+        checked = on,
+        onCheckedChange = { enabled -> onAction(LauncherShellAction.SetAppPeekThrough(posture, enabled)) },
     )
 }

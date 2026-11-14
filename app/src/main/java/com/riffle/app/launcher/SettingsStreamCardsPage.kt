@@ -93,39 +93,33 @@ internal fun SettingsStreamCards(
             onCheckedChange = { enabled -> onAction(LauncherShellAction.SetStreamCardTopGlow(enabled)) },
         )
     }
-    SettingsSection(title = stringResource(R.string.setting_stream_apps_behind_cards)) {
-        // The same stored value as Settings > Layout: one per posture, two ways to reach it.
-        LayoutPosture.entries.forEachIndexed { index, posture ->
-            val on = layout.forPosture(posture).appPeekThrough
-            SettingsSwitchRow(
+    // The same stored value, label and subtitle as Settings > Layout: one per posture, two ways to reach it.
+    Text(
+        modifier = Modifier.padding(horizontal = 8.dp),
+        text = stringResource(R.string.settings_stream_apps_behind_cards_note),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    LayoutPosture.entries.forEachIndexed { index, posture ->
+        SettingsSection(
+            title =
+                stringResource(
+                    if (posture == LayoutPosture.FOLDED) {
+                        R.string.settings_layout_section_folded
+                    } else {
+                        R.string.settings_layout_section_unfolded
+                    },
+                ),
+        ) {
+            SettingsAppsBehindCardsRow(
+                posture = posture,
+                on = layout.forPosture(posture).appPeekThrough,
+                onAction = onAction,
                 modifier =
-                    Modifier
-                        .then(
-                            if (index == 0) Modifier.settingAnchor(SettingKey.STREAM_APPS_BEHIND_CARDS) else Modifier,
-                        )
-                        .testTag(streamAppsBehindTestTag(posture)),
-                title =
-                    stringResource(
-                        if (posture == LayoutPosture.FOLDED) {
-                            R.string.settings_stream_apps_behind_cards_folded
-                        } else {
-                            R.string.settings_stream_apps_behind_cards_unfolded
-                        },
-                    ),
-                subtitle =
-                    stringResource(
-                        if (on) R.string.settings_layout_peek_through_on else R.string.settings_layout_peek_through_off,
-                    ),
-                checked = on,
-                onCheckedChange = { enabled -> onAction(LauncherShellAction.SetAppPeekThrough(posture, enabled)) },
+                    if (index == 0) Modifier.settingAnchor(SettingKey.STREAM_APPS_BEHIND_CARDS) else Modifier,
+                tag = streamAppsBehindTestTag(posture),
             )
         }
-        Text(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            text = stringResource(R.string.settings_stream_apps_behind_cards_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
     SettingsSection(title = stringResource(R.string.stream_open_card)) {
         SettingsChoiceRow(

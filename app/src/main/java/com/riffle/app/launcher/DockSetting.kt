@@ -8,7 +8,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockModel
@@ -46,8 +48,9 @@ internal fun DockSetting(
         )
         DockPositionSetting(
             position = dock.position ?: defaultEdge,
-            // One dock shared by every mode (#1205), so only the edges every mode can draw it on.
-            placeablePositions = sharedDockPositions,
+            // One dock shared by every mode (#1205), so only the edges every mode can draw it on, in the order
+            // Settings > Layout offers them.
+            placeablePositions = layoutDockEdges.filter { it in sharedDockPositions },
             onAction = onAction,
         )
         DockIconSizeSetting(
@@ -302,26 +305,44 @@ private fun DockPositionSetting(
     placeablePositions: List<DockPosition>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsChoiceRow(
-        modifier = Modifier.settingAnchor(SettingKey.DOCK_POSITION),
-        title = SettingKey.DOCK_POSITION.label(),
-        subtitle = dockPositionSubtitle(position, placeablePositions),
-        options = placeablePositions,
-        selected = position?.takeIf { it in placeablePositions },
+    SettingsDockPositionRow(
+        position = position,
+        placeablePositions = placeablePositions,
         onSelect = { candidate -> onAction(LauncherShellAction.SelectDockPosition(candidate)) },
-        label = { candidate -> candidate.label() },
+        modifier = Modifier.settingAnchor(SettingKey.DOCK_POSITION),
         optionTag = { candidate -> "dock-position-${candidate.name}" },
     )
 }
 
 /**
- * What the control says the dock is doing, which is not always what is stored.
+ * The Dock position row, drawn identically (title, subtitle, options) by Settings > Dock and Settings > Layout: they
+ * are two ways to reach one stored value, so they read the same and always agree.
  *
- * A layout can hold an edge it cannot place -- the top edge was offered to every layout before the
- * home dock's three were separated from the rail's four -- and saying "Top edge" while the dock
- * sits at the bottom is the papercut this whole change is about. Naming the mismatch is the one
+ * What the subtitle says is not always what is stored. A layout can hold an edge it cannot place -- the top edge was
+ * offered to every layout before the home dock's three were separated from the rail's four -- and saying "Top edge"
+ * while the dock sits at the bottom is the papercut this whole change is about. Naming the mismatch is the one
  * honest option left, and tapping any offered edge leaves the state behind.
  */
+@Composable
+internal fun SettingsDockPositionRow(
+    position: DockPosition?,
+    placeablePositions: List<DockPosition>,
+    onSelect: (DockPosition) -> Unit,
+    modifier: Modifier = Modifier,
+    optionTag: ((DockPosition) -> String)? = null,
+) {
+    SettingsChoiceRow(
+        modifier = modifier,
+        title = stringResource(R.string.setting_dock_position),
+        subtitle = dockPositionSubtitle(position, placeablePositions),
+        options = placeablePositions,
+        selected = position?.takeIf { it in placeablePositions },
+        onSelect = onSelect,
+        label = { candidate -> stringResource(candidate.optionLabelRes()) },
+        optionTag = optionTag,
+    )
+}
+
 private fun dockPositionSubtitle(
     position: DockPosition?,
     placeablePositions: List<DockPosition>,
@@ -338,6 +359,14 @@ private fun DockPosition.label(): String =
         DockPosition.RIGHT -> "Right edge"
         DockPosition.TOP -> "Top edge"
         DockPosition.BOTTOM -> "Bottom edge"
+    }
+
+private fun DockPosition.optionLabelRes(): Int =
+    when (this) {
+        DockPosition.LEFT -> R.string.settings_layout_edge_left
+        DockPosition.RIGHT -> R.string.settings_layout_edge_right
+        DockPosition.TOP -> R.string.settings_layout_edge_top
+        DockPosition.BOTTOM -> R.string.settings_layout_edge_bottom
     }
 
 /**

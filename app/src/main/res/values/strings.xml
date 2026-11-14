@@ -727,9 +727,8 @@
     <string name="settings_layout_intro">Folded and unfolded each keep their own layout. A tablet or a desktop window uses the unfolded one.</string>
     <string name="settings_layout_section_folded">Folded</string>
     <string name="settings_layout_section_unfolded">Unfolded</string>
-    <string name="settings_layout_dock_edge_title">Dock position</string>
-    <string name="settings_layout_dock_edge_subtitle">Which edge of the screen the Dock stands on.</string>
     <string name="settings_layout_edge_bottom">Bottom</string>
+    <string name="settings_layout_edge_top">Top</string>
     <string name="settings_layout_edge_left">Left</string>
     <string name="settings_layout_edge_right">Right</string>
     <string name="settings_layout_page_scroll_title">App pages scroll</string>
@@ -745,8 +744,6 @@
     <string name="settings_layout_peek_through_title">Show apps behind the cards</string>
     <string name="settings_layout_peek_through_on">Home stays on screen and fades out under the Stream\'s cards.</string>
     <string name="settings_layout_peek_through_off">Nothing shows behind the Stream\'s cards.</string>
-    <string name="settings_stream_apps_behind_cards_folded">Show apps behind the cards, folded</string>
-    <string name="settings_stream_apps_behind_cards_unfolded">Show apps behind the cards, unfolded</string>
     <string name="settings_stream_apps_behind_cards_note">The same setting as in Layout: one value for each way you hold the device.</string>
     <string name="settings_layout_quick_scroll_off_subtitle">The page dots are off, so there is nothing to drag.</string>
 </resources>
