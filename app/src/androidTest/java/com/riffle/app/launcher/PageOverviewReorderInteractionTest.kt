@@ -6,11 +6,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -62,23 +62,24 @@ class PageOverviewReorderInteractionTest {
     }
 
     /**
-     * Brings the card on screen through the strip's own scroll semantics rather than by flinging it
-     * there.
+     * Brings the card on screen with one call of the strip's own scroll-to-index action rather than by flinging it
+     * there or by searching for it.
      *
-     * This used to dispatch eight synthetic swipes and wait for idle between each, and the comment
-     * where that boundary sat said why: rapid test input can overlap the previous layout
-     * observation. It did, intermittently, as a multithreaded-access failure inside
-     * SnapshotStateObserver. `performScrollToNode` drives the LazyRow through the scroll action
-     * already published in its semantics, which the test framework synchronises for us, so there is
-     * no gesture stream to overlap in the first place.
+     * Two earlier ways failed intermittently with a multithreaded-access error inside SnapshotStateObserver. Eight
+     * synthetic swipes overlapped the previous layout observation. `performScrollToNode` then scrolled index by
+     * index and fetched the strip's node after every step; each fetch prints the node's semantics on the test
+     * thread, and the lazy row is still laying out the items it prefetches on the main thread right after a scroll.
+     * One scroll to a known index reads the strip once, before anything moves.
      *
-     * Getting the card on screen was never what this test is about -- the drag and its resulting
-     * action are -- so nothing it asserts changes.
+     * Getting the card on screen was never what this test is about -- the drag and its resulting action are -- so
+     * nothing it asserts changes. The last page stops against the strip's end either way.
      */
     private fun scrollToPageOverviewCard(pageId: String) {
+        val index = pageOverviewLayout().pages.indexOfFirst { it.id.value == pageId }
         composeRule
             .onNodeWithTag(PAGE_OVERVIEW_STRIP_TEST_TAG)
-            .performScrollToNode(hasTestTag(pageOverviewCardTestTag(pageId)))
+            .performSemanticsAction(SemanticsActions.ScrollToIndex) { it(index) }
+        composeRule.waitForIdle()
 
         composeRule.onNodeWithTag(pageOverviewCardTestTag(pageId)).assertIsDisplayed()
     }
