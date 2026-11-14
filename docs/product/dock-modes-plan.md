@@ -975,3 +975,10 @@ Six things the owner found on a foldable (unfolded, Dock on the right edge), eac
   (`appsBehindCards`; unfolded keeps `appPeekThrough`) because earlier builds wrote a meaningless `true` for the folded
   posture, which would otherwise have turned it on for everyone. Card text stays readable over the faded grid through the
   card fill's contrast guarantee (screenshots, light and dark, of the stack and an open card).
+- **A crowded side Dock never rests with an icon cut in half.** The pinned run in the Home mode, when it still does not
+  fit after the gap has closed up, is now a whole number of icons long (`dockWholeIconsViewportMainAxisDp`; the Dock is
+  as long as what it shows) and scrolls by whole icons (it settles on the nearest whole icon), on every edge, as the
+  bottom Dock's crowded run does. The existing overflow fade at its edges stays as the cue. In the contextual row, which
+  scrolls by design and whose reveal leaves a 24 dp peek of the neighbour, an icon the viewport cuts is faded by how much
+  of it is in view (`DockEdgeFade`: the visible fraction squared; per-item opacity read in the draw layer, no mask,
+  gradient or offscreen layer), so the clipped end reads as "more this way" and not as a half icon.

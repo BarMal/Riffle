@@ -32,11 +32,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +48,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -83,7 +86,9 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 @Composable
 internal fun Dock(
@@ -180,6 +185,26 @@ internal fun DockSlotStrip(
                 ),
         )
     val previewItems = dock.items.dockItemsForPreview(dragState.value)
+    // A scrolling pinned run comes to rest on a whole icon, so neither end ever shows half of one (its viewport holds
+    // whole icons, see dockWholeIconsViewportMainAxisDp). Not while an icon is being dragged: that scrolls it itself.
+    val strideDensity = LocalDensity.current
+    val stridePx =
+        with(
+            strideDensity,
+        ) { (slotMetrics.iconSizeDp.dp.roundToPx() + slotMetrics.itemSpacingDp.dp.roundToPx()).toFloat() }
+    val reducedMotion = presentation.interactions.reducedMotion
+    LaunchedEffect(scrollState, stridePx, inline) {
+        if (inline || stridePx <= 0f) return@LaunchedEffect
+        snapshotFlow { scrollState.isScrollInProgress }.collect { scrolling ->
+            if (!scrolling && dragState.value == null) {
+                val stop = (scrollState.value / stridePx).roundToInt() * stridePx
+                val target = stop.roundToInt().coerceIn(0, scrollState.maxValue)
+                if (abs(target - scrollState.value) > SNAP_TOLERANCE_PX) {
+                    if (reducedMotion) scrollState.scrollTo(target) else scrollState.animateScrollTo(target)
+                }
+            }
+        }
+    }
     val overflowAffordance =
         DockOverflowAffordance(
             scrollOffsetPx = scrollState.value,
@@ -245,6 +270,7 @@ internal fun DockSlotStrip(
                             modifier =
                                 Modifier
                                     .requiredSize(slotMetrics.iconSizeDp.dp)
+                                    .dockEdgeFade()
                                     .glassSpotlightSource(key = slotKey, color = spotlightColor),
                             state =
                                 DockSlotState(
@@ -412,6 +438,7 @@ private const val DOCK_EDGE_AUTO_SCROLL_FRAME_DELAY_MILLIS = 16L
 private const val DOCK_DRAG_LIFT_SCALE = 1.08f
 private const val DOCK_DRAG_LIFT_ELEVATION = 12f
 private const val DOCK_DRAG_LIFT_ANIMATION_MILLIS = 120
+private const val SNAP_TOLERANCE_PX = 2
 internal const val HOME_DOCK_SURFACE_TEST_TAG = "home-dock-surface"
 internal const val WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG = "widget-picker-dock-preview"
 

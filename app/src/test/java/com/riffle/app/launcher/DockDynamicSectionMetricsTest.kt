@@ -126,7 +126,9 @@ class DockDynamicSectionMetricsTest {
         // 48dp/12dp) plus the
         // 17dp rule leaves 315dp for the static side -- less than capacity alone would draw for 10
         // icons at this icon size (10*48 + 9*12 = 588dp), so the static side is capped, not the
-        // dynamic one.
+        // dynamic one. The 315dp leaves 287dp for the icons: five whole ones at the compacted 8dp gap
+        // (5*48 + 4*8 = 272dp) and a sliver of a sixth. The pinned run shows the five whole icons only (it scrolls by
+        // whole icons for the rest), never a sixth cut in half, and the Dock is as long as what it shows.
         val surfaceMetrics =
             dockSurfaceMetrics(
                 dock =
@@ -144,7 +146,42 @@ class DockDynamicSectionMetricsTest {
             )
 
         assertEquals(228, surfaceMetrics?.dynamicSectionMainAxisDp)
-        assertEquals(315, surfaceMetrics?.containerMainAxisDp)
+        assertEquals(5 * 48 + 4 * DOCK_COMPACTED_SPACING_FLOOR_DP, surfaceMetrics?.contentViewportMainAxisDp)
+        assertEquals(
+            5 * 48 + 4 * DOCK_COMPACTED_SPACING_FLOOR_DP + 2 * DOCK_MAIN_AXIS_PADDING_DP,
+            surfaceMetrics?.containerMainAxisDp,
+        )
+    }
+
+    @Test
+    fun aCrowdedPinnedRunNeverRestsWithAnIconCutInHalfWhateverTheRoomLeft() {
+        // For every run a crowded side Dock may be given, the pinned viewport is a whole number of icons and gaps.
+        (200..700 step 7).forEach { available ->
+            val metrics =
+                dockSurfaceMetrics(
+                    dock =
+                        DockModel(
+                            capacity = 12,
+                            items = List(12) { index -> testDockShortcut("app-$index") },
+                            liveAppSlots = 3,
+                            iconSizeDp = 48,
+                            itemSpacingDp = 12,
+                        ),
+                    isEditing = false,
+                    availableMainAxisDp = available,
+                    runsHorizontally = false,
+                    dynamicEntryCount = 5,
+                ) ?: return@forEach
+            val viewport = metrics.contentViewportMainAxisDp
+            val stride = metrics.slotMetrics.iconSizeDp + metrics.slotMetrics.itemSpacingDp
+            if (dockPinnedRunScrolls(12, metrics.slotMetrics, viewport)) {
+                assertEquals(
+                    "a whole number of icons at $available dp",
+                    0,
+                    (viewport + metrics.slotMetrics.itemSpacingDp) % stride,
+                )
+            }
+        }
     }
 
     @Test
@@ -355,7 +392,13 @@ class DockDynamicSectionMetricsTest {
             )!!
 
         assertEquals(2 * 48 + 10, metrics.dynamicSectionMainAxisDp)
-        assertEquals(404 - 106 - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP, metrics.containerMainAxisDp)
+        // 404 - 106 - 17 = 281 dp is left, 253 dp inside the Dock's padding: four whole 56 dp icons at the compacted 8 dp
+        // gap (4 * 56 + 3 * 8 = 248 dp). The Dock is as long as those four, so no fifth icon is cut in half.
+        assertEquals(4 * 56 + 3 * DOCK_COMPACTED_SPACING_FLOOR_DP, metrics.contentViewportMainAxisDp)
+        assertEquals(
+            4 * 56 + 3 * DOCK_COMPACTED_SPACING_FLOOR_DP + 2 * DOCK_MAIN_AXIS_PADDING_DP,
+            metrics.containerMainAxisDp,
+        )
         assertEquals(56, metrics.slotMetrics.iconSizeDp)
         assertEquals(88, dockCrossAxisDp(metrics.slotMetrics.iconSizeDp))
         assertEquals(true, dockPinnedRunScrolls(6, metrics.slotMetrics, metrics.contentViewportMainAxisDp))
