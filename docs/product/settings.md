@@ -21,24 +21,30 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 
 | Page | Section | Settings |
 | --- | --- | --- |
-| **Home** | Grid | Columns, rows (a stepper), horizontal margin, vertical margin (per device class) |
-| | Icons and labels | Icon size, show labels, label background, label text size, label width, label sizing, label lines |
+| **Home** | Home screen | Simple mode (an override of Home shows, the Stream, live apps and the Library) and Home shows (Placed items or App library) |
+| | Grid | Columns, rows (a stepper), horizontal margin, vertical margin (per device class) |
+| | Icons and labels | Icon size, show labels, label background (with its strength while it is on), label text size, label width, label sizing, label lines |
 | | Behaviour | Returning to Home (restore, first page, start page) |
 | | Wallpaper | Wallpaper (system, solid), wallpaper motion, change wallpaper |
 | | Full screen | Hide status bar, hide navigation bar |
 | | Set up | Set up Riffle again |
-| **Dock** | Dock | Show dock, position, icon size, pinned icons, width, alignment, corner radius, background strength, spacing to the grid (per device class) |
-| | Dynamic side | Live apps |
+| **Dock** | Dock | Show the Dock, Dock position, icon size, pinned icons, Dock width, Dock alignment (along the top or bottom edge: left, middle, right; down a side: top, middle, bottom), Dock corner radius, Dock background strength, spacing to the grid (per device class) |
+| | Live apps | Show live apps (a switch), Number of live apps |
 | | Floating dock | Opens the sub-page |
 | Floating dock (under Dock) | | Floating dock on or off, apps, edge, handle thickness, size, position, opacity, expanded icon size, orientation, labels |
-| **Layout** | Folded, Unfolded | Per posture (a tablet and a desktop window use Unfolded): Dock position (Bottom, Left, Right), App pages scroll (Sideways, Up and down), Page dots (Beside the Dock, Off) and Drag the dots to scroll (a switch, disabled while the dots are off). Defaults: folded Bottom, Sideways; unfolded Right, Up and down; dots beside the Dock and quick scroll on in both. The Dock position is the Dock page's own value for the posture's device class. Stored in `LauncherSettings.layout` (`LayoutSettings`), reduced by `SelectPageScroll`, `SelectPageIndicator`, `SetQuickScroll` and `SelectPostureDockEdge`. See [dock-modes-plan.md](dock-modes-plan.md), "U1" |
-| **Library** | View | Show as (Categories, A-Z, Grid), grid columns (used by Grid) |
+| **Layout** | Folded, Unfolded | Per posture (a tablet and a desktop window use Unfolded): Dock position (Bottom, Left, Right), App pages scroll (Sideways, Up and down), Page dots (Beside the Dock, Off), Drag the dots to scroll (a switch, disabled while the dots are off) and Show apps behind the cards (a switch). Defaults: folded Bottom, Sideways, apps behind the cards off; unfolded Right, Up and down, apps behind the cards on; dots beside the Dock and quick scroll on in both. The Dock position and Show apps behind the cards are the same rows, with the same wording, as on the Dock page and the Stream cards page, and one stored value each. Stored in `LauncherSettings.layout` (`LayoutSettings`), reduced by `SelectPageScroll`, `SelectPageIndicator`, `SetQuickScroll` and `SelectPostureDockEdge`. See [dock-modes-plan.md](dock-modes-plan.md), "U1" |
+| **Library** | Features | Library (a switch; off in Simple mode) |
+| | View | Show as (Categories, A-Z, Grid, Pages), grid columns (used by Grid, disabled otherwise) |
 | | Search | Search results as icons or list |
 | | Apps | Hidden apps (opens the sub-page), refresh installed apps |
 | Hidden apps (under Library) | | The one list of hidden apps |
-| **Stream** | each of Now, Notifications, Recents, Today, Feeds | On or off, order (move up, move down), Show as (Stack, List: it applies to every page of the section); a row opening each of the section's sub-pages where it has them (Today has two: Agenda and Tasks) |
-| | Card colour, open cards (**stored since dock modes slice 5; the controls are slice 6**) | App tint strength (22%, 0 to 40%) and a coloured glow on the top edge (off); where an open card sits (centre of the screen, just above the Dock, grows out of the Dock: drawn as just above the Dock for now) and where its actions sit (in the Dock, on the card). Stored in `LauncherSettings.stream` (`StreamSettings`), reduced by `SelectStreamCardTint`, `SetStreamCardTopGlow`, `SelectOpenCardPlacement` and `SelectCardActionsPlacement`; an unknown stored placement reads as the default and the tint is held to its range |
-| | the whole Stream (unfolded, tablet and desktop postures only) | **Show the Stream as**: Pages (swipe sideways, two side by side on a wide screen) or Stage (a rail of every page beside the one in front). Stored per posture in the Stream layout (`wideView`, default Pages); the same value as "Show as" in the Stream's own menu (long-press the spine) |
+| **Stream** | Features | Stream (a switch; off in Simple mode) |
+| | Look | Opens the Stream cards sub-page |
+| | each of Now, Notifications, Recents, Today, Feeds | On or off, order (move up, move down), Show as (Stack, List: it applies to every page of the section); a row opening each of the section's sub-pages where it has them (Today has two: Agenda and Tasks). The whole section is the search target of its setting |
+| Stream cards (under Stream) | Preview | A sample card drawn with the same glass and tint a Stream card gets |
+| | Colour | Card colour strength (0 to 40%, 22%), Glow on the top edge (off): the app colour as a strip along the top edge, drawn with the spotlight |
+| | Folded, Unfolded | Show apps behind the cards, the same row as on the Layout page |
+| | Open card | Where an open card sits (Centre, Above the Dock): folded only; the unfolded column always grows the card from the Dock, and the row says so. Where its actions sit (In the Dock, On the card): "In the Dock" only where the Dock holds a row, which is folded with the Dock along the bottom; with the folded Dock on a side, only "On the card" is offered, with the reason. "Grows out of the Dock" is not offered until it is built (a stored one reads as Above the Dock) |
 | Notifications (under Stream) | | The notifications source (status, allow access, on or off); Hidden items |
 | Hidden items (under Notifications) | | The rules that hide items, per layout |
 | Agenda (under Stream; reached from Today) | | The device calendar source (status, allow access, on or off); include calendar feeds; Calendar feeds |
@@ -46,16 +52,17 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | Tasks (under Stream) | | Todoist: the connection status (Not connected, Connected, or rejected), a password-style API token field with Save and a "Where is my token?" link, and Remove token. See [stream-tasks.md](stream-tasks.md) |
 | Feeds (under Stream) | | The feeds source (on or off), background refresh, only on Wi-Fi, only while charging, refresh now, the feed list, add a feed |
 | **Appearance** | Colour | Colour mode, accent, custom accent |
-| | Glass | Reduced transparency, spotlight flow |
+| | Glass | Reduced transparency, spotlight flow (reduced transparency is read by every glass surface) |
 | | Shape and type | Corners (standard, compact, rounded), typography (standard, system, monospace) |
-| **Gestures** | One finger, Two fingers, Pinch, Three fingers | The 14 swipe and pinch bindings on Home. Actions: None, Open notifications, Open search, Open Library, Open Stream, Open settings, Edit Home, Page overview, Full-screen Home, Next page, Previous page, Launch app, Launch shortcut. Reset |
+| **Gestures** | One finger, Two fingers, Pinch, Three fingers | The 14 swipe and pinch bindings on Home. Actions: None, Open search, Open Library, Open Stream, Open settings, Edit Home, Page overview, Full-screen Home, Next page, Previous page, Launch app, Launch shortcut. Reset |
 | **Motion and haptics** | Motion | Animation performance, reduced motion, feedback strength (all choice rows) |
+| | Dock and Stream | Opening speed (also the grid fade under the stack, the Home entrance and a swiped card), Dock bounce, Card stack coasting, Card snapping, Hold time to choose, Light ticks |
 | **Privacy and access** | Access | Default home app, notification access, usage access, calendar, floating dock access, each with its state and a way to change it |
 | | Privacy | Hide launcher content in screenshots and recents; how much the Stream shows (content level) for each source that can show private content |
 | **Backup** | | Export, import. Includes calendar feeds and which Stream sections are on. Never content, never any token |
 | **About** | | Version and build. Diagnostics: **What apps publish** (opens a read-only sub-page listing what each app exposes to a launcher: shortcuts, notification shapes, media session, widgets, with a redacted Copy report; never notification text or contact names) |
 
-Removed pages: Workspaces, Sources and its nine source detail pages, Saved lenses, Contextual, Cards appearance
+Removed rows: "Show the Stream as" (Pages or Stage; removed with the split in dock modes U2), "Open notifications" as a Gestures action, "Grows out of the Dock" as an open card position. Removed pages: Workspaces, Sources and its nine source detail pages, Saved lenses, Contextual, Cards appearance
 (redirect), RSS feeds and Calendar feeds as top-level pages, Permissions and Privacy as two pages (merged), the
 Developer section, the old Layout (now Home) and App drawer (now Library). The Layout page of the table above is a different page: the layout per posture, with its page named `POSTURE_LAYOUT`.
 
@@ -63,6 +70,22 @@ Where "Show as" lives twice it is one stored value. The Stream page writes `Stre
 `CachedStreamLayoutRepository` the Stream's header menus use (`A/stream/StreamLayoutStore.kt`); Library > Show as
 dispatches `SelectLibraryView`, the action the Library's long-press dispatches. The Stream page and Library page are
 per device class, so both show the device tabs.
+
+## The settings audit (after dock modes U2 and the device fixes)
+
+Every control on every page was walked from the control to where its value is consumed, in both postures and on both
+Dock edges where that matters; the full inventory, what was wired, made truthful, removed until built or relabelled is
+the "Settings audit" section of [dock-modes-plan.md](dock-modes-plan.md). The rules it leaves behind:
+
+- A choice is never offered where it silently does nothing: it is wired, or the row says where it applies, or it is
+  not offered (`cardActionsRowPlan`, the open card row's subtitle, "Grows out of the Dock").
+- A setting reached from two pages is one stored value drawn by one composable, so the wording is identical and a change
+  on either page is read off the other (`SettingsDockPositionRow`, `SettingsAppsBehindCardsRow`; `SettingsSharedRowsTest`).
+- Every switch, option, slider, stepper and button on every page sits under a `SettingKey` anchor, or is one of the
+  listed exemptions (the way back, the device tabs, rows that only open a page, the gestures reset, the read-only
+  diagnostics page): `SettingsControlsHaveKeysTest`.
+- A section that is one setting's place (each Stream section, the Tasks form, the label background pair, the apps behind
+  the cards pair) is the anchor, so search scrolls to the whole of it.
 
 ## Naming
 
@@ -78,6 +101,10 @@ per device class, so both show the device tabs.
 | Calendar feeds | "Calendar feeds (ICS)", "Calendar feeds source" |
 | Library | "App drawer" |
 | Stream | "Cards", "Sources", "stages" |
+| Stream cards | "Cards" (the Stream's sub-page) |
+| Dock position | "Dock edge", "Overlay edge" (search still finds it by "edge") |
+| Show apps behind the cards | "Peek through" |
+| Live apps | "Dynamic side" |
 | Swipes and pinches on Home | "Home swipe actions" |
 
 ## What the audit found, and what happened to it

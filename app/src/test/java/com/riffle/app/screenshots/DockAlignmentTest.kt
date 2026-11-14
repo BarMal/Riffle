@@ -22,9 +22,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Settings > Dock > "Dock alignment" reaches every Dock edge. Along the bottom it places the Dock left, middle or right;
- * down a side (the unfolded default) it was ignored, and now places it at the top, the middle or the bottom of the
- * edge. The real [HomeDestination] is drawn with a Dock that does not fill its edge, and the Dock's bounds are read.
+ * Settings > Dock > "Dock alignment" reaches every Dock edge. Along the bottom it places the Dock left, middle or
+ * right; down a side (the unfolded default) it was ignored, and now places it at the top, the middle or the bottom of
+ * the edge. The real [HomeDestination] is drawn with a Dock that does not fill its edge, and the Dock's bounds are
+ * read.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)

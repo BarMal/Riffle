@@ -1183,3 +1183,139 @@ commits. Nothing in this round is confirmed on a device.
 Every gesture here was driven with the Robolectric touch injector and the test clock, never a finger: the feel of the
 hand-off threshold, the blend between two open cards, the swipe's fly-off and the fit of three buttons on a real 320 dp
 screen. Device tests for the drag and the swipe were not added.
+
+## Settings audit
+
+The owner asked for the settings to be walked: well grouped and labelled, and everything wired, "some of the card and
+dock options don't seem wired up yet". Every control on every page was followed from the control to where its value is
+consumed (the stored value, then the composable or logic that reads it, folded and unfolded, bottom and side Dock where
+that matters), and each one given a verdict. The rule for a setting that is not wired: wire it with a test that fails
+without the wiring; else make the row truthful (it says where it applies, or the choice is not offered where it would
+do nothing); else, for a design promise that is large, remove the option until it is built and let the stored value
+read as the nearest working one.
+
+"Wired before" is the state at the start of the audit: **yes** (the stored value reaches the feature in every posture
+and edge it names), **partly** (it did in some), **no**. Paths are under `app/src/main/java/com/riffle/app/launcher/`
+(`A/`). Tests are under `app/src/test/java/com/riffle/app/screenshots/` unless a package is named.
+
+### Inventory
+
+| Page | Setting (label) | Stored key | What it does | Wired before | Done |
+| --- | --- | --- | --- | --- | --- |
+| Home | Simple mode | `features.simpleMode` | Overrides Home shows, the Stream, live apps and the Library | yes (`effectiveFeatures`, `FeatureSwitchesTest`) | Grouped with Home shows in one "Home screen" section (two single-row sections before) |
+| Home | Home shows | `home.mode` | Placed items or the App library on Home | yes (`HomeModeTest`) | Grouping, above |
+| Home | Columns, Rows | per device class `grid.columns/rows` | The Home grid | yes (`HomeGridLayoutMetrics`) | nothing |
+| Home | Horizontal margin, Vertical margin | per device class `grid.margin` | Margins round the grid | yes | nothing |
+| Home | Icon size | per device class `labels.iconSizeDp` | Home icon size (also the paged Library) | yes | nothing |
+| Home | Show labels, Label background (and its strength), Label text size, Label width, Label sizing, Label lines | per device class `labels.*` | Label drawing (`WallpaperReadableLabel`, `HomeGridLayoutMetrics`) | yes | The strength slider was an unlabelled orphan of the switch: it is now "Label background strength" and under the same anchor; lines read "2 lines" |
+| Home | Returning to Home | `home.returnBehavior` | Restore, first page or start page (`HomeReturnEffect`) | yes | nothing |
+| Home | Wallpaper, Wallpaper motion, Change wallpaper | `appearance.wallpaper.*` | Wallpaper source and scrolling (`LauncherWallpaperSync`) | yes | nothing |
+| Home | Hide status bar, Hide navigation bar | `appearance` system bars | Full screen Home (`homeInsetPolicy`) | yes | nothing |
+| Home | Set up Riffle again | none (action) | Re-runs the walkthrough | yes | nothing |
+| Dock | Show the Dock | per device class `dock.isEnabled` | Draws the Dock (`shouldShowDock`) | yes | relabelled ("Show dock") |
+| Dock | Dock position | per device class `dock.position` | The Dock's edge | yes | The same stored value as Layout's: one shared row (`SettingsDockPositionRow`), same title, subtitle, options and order; `SettingsSharedRowsTest` changes one and reads the other |
+| Dock | Icon size, Pinned icons | `dock.iconSizeDp`, `dock.capacity` | Dock icon size and how many pins show before it scrolls | yes | nothing |
+| Dock | Dock width | `dock.backgroundSizing` | Fit content or full width | yes | nothing |
+| Dock | Dock alignment | `dock.alignment` | Where a Dock that does not fill its edge stands along it | **partly**: along the top or bottom edge only; down a side (the unfolded default) the area always centred it | **wired**: start, centre, end are top, middle, bottom of a side edge; `DockAlignmentTest` (each edge, each alignment); subtitle reworded |
+| Dock | Dock corner radius | `dock.cornerRadiusDp` | The Dock body, the actions row and the handle | yes | nothing |
+| Dock | Dock background strength | `dock.backgroundAlphaPercent` | The Dock's fill (`dockFillColor`) | yes | relabelled ("Background strength") |
+| Dock | Spacing to the grid | `dock.homeControlsSpacingDp` | The gap between the pages and the controls under them (Home and the paged Library) | yes | nothing |
+| Dock | Show live apps | `features.dockLiveApps` | The Dock's live entries and now playing | yes (`FeatureSwitchesTest`) | Section "Dynamic side" is "Live apps" |
+| Dock | Number of live apps | `dock.liveAppSlots` | How many live apps the Dock shows | yes | relabelled ("Live apps", which read as the switch's twin) |
+| Floating dock | Floating dock, Floating dock apps, Edge, Handle thickness, Handle size, Handle position, Handle opacity, Expanded icon size, Expanded orientation, Expanded labels | `overlayDock.*` | The overlay service's handle and tray (`overlay/OverlayDockViewFactory`, `...Layout`, `...Drawing`, `OverlayDockService`) | yes: every field has a reader | nothing (rendering is the overlay service's, which needs a device) |
+| Layout | Dock position, folded and unfolded | per device class `dock.position` | The posture's Dock edge | yes (`LauncherDockEditReducerTest`) | Shared row with the Dock page, above |
+| Layout | App pages scroll | `layout.<posture>.pageScroll` | The pager axis of Home, the paged Library and the App library Home | yes, both postures (`UnfoldedLayoutTest`) | nothing |
+| Layout | Page dots | `layout.<posture>.indicator` | The handle's dots or its glyph alone | yes | nothing |
+| Layout | Drag the dots to scroll | `layout.<posture>.quickScroll` | Quick scroll along the dots (disabled while the dots are off) | yes | nothing |
+| Layout | Show apps behind the cards, folded and unfolded | `layout.folded.appsBehindCards`, `layout.unfolded.appPeekThrough` | Home stays behind the stack and its grid fades cell by cell under it | yes, both postures (`FoldedAppsBehindCardsTest`, `UnfoldedStreamColumnTest`) | Shared row with the Stream cards page (`SettingsAppsBehindCardsRow`): identical title and subtitle on both, `SettingsSharedRowsTest` |
+| Library | Library | `features.library` | The Library sheet and its pull | yes (`FeatureSwitchesTest`) | nothing |
+| Library | Show as (Categories, A-Z, Grid, Pages) | per device class `appDrawer.libraryViews` | The Library's view, the same choice as its long-press | yes (`PagedLibraryTest`) | nothing |
+| Library | Grid columns | `appDrawer.iconGridColumns` | The Grid view's columns (disabled for other views, and says so) | yes | nothing |
+| Library | Search results | `search.resultPresentation` | Icons or list, in the Library and in the Dock's search | yes (`LibraryState`, `DockSearchSurface`) | nothing |
+| Library | Hidden apps, Refresh installed apps | app visibility store; action | The hidden list; a rescan | yes | nothing |
+| Stream | Stream | `features.stream` | The Stream, its press, live pages and shortcuts | yes (`FeatureSwitchesTest`) | nothing |
+| Stream | Now, Notifications, Recents, Today, Feeds: on or off, Order, Show as | per device class Stream layout | Which pages exist, their order and Stack or List | yes (`CachedStreamLayoutRepository`, the Stream surface) | Each section (all three rows) is now the setting's search anchor, not only the switch |
+| Stream | Look (row to Stream cards) | none | Opens the sub-page | n/a | the section was called "Stream cards" over a row of the same name; now "Look" |
+| Stream cards | Card colour strength | `stream.cardTintPercent` | The card fill's app colour (`CardTint`, `GlassSurface`), both postures | yes | `StreamCardLookSettingsTest`: a real card's fill moves with it (`GlassCardLookKey`) |
+| Stream cards | Glow on the top edge | `stream.cardTopGlow` | The app colour as a strip on the top edge, drawn with the restored local spotlight | yes | `StreamCardLookSettingsTest`: lit only with the switch, fill unchanged |
+| Stream cards | Show apps behind the cards (two rows) | see Layout | see Layout | yes | Two single-row sections "Folded" and "Unfolded" under one anchor |
+| Stream cards | Where an open card sits: Centre, Above the Dock | `stream.openCardPlacement` | Where the grown card stands (`OpenCardLayout.frame`) | **partly**: folded it differs (a card shorter than the room), unfolded the column forced Above the Dock | **made truthful**: the row says "Folded. On the unfolded stack an open card always grows from the Dock."; `OpenCardMotionTest` that the two differ |
+| Stream cards | Where an open card sits: Grows out of the Dock | `stream.openCardPlacement` | Was drawn as Above the Dock | **no** (stored, drawn as another option) | **removed until built**: not offered, enum value deleted, a stored one decodes as Above the Dock (`LauncherSettingsJsonCodecTest.aStoredGrowsOutOfTheDockPlacementReadsAsJustAboveTheDock`) |
+| Stream cards | Where its actions sit | `stream.cardActionsPlacement` | In the Dock's row or on the card | **partly**: In the Dock only folded with a Dock along the bottom; a side Dock and the unfolded column always use the card | **made truthful**: the subtitle says so, and with the folded Dock on a side only "On the card" is offered with the reason (`cardActionsRowPlan`, `CardActionsRowPlanTest`, `StreamAndMotionSettingsTest`) |
+| Notifications | Use notifications, Hidden items | source registry; exclusion rules | The source and what it hides | yes | nothing (needs the sources host: not drawn in the audit's page test) |
+| Agenda, Calendar feeds, Tasks, Feeds | Device calendar, Include calendar feeds, feeds (add, refresh, list), Task provider token, Feeds source, background refresh, Wi-Fi only, charging only | source registry; Stream layout options; feed stores; Todoist token store | The sources behind Today, Tasks and Feeds | yes | Tasks section is the Task provider's anchor (Save and "Where is my token?" were unkeyed) |
+| Appearance | Colour mode, Accent, Custom accent, Corners, Typography | `appearance.theme*` | The theme | yes | nothing |
+| Appearance | Reduced transparency | `appearance.reducedTransparency` | Every glass surface takes the Thick fill (`GlassSurface`) | yes | nothing |
+| Appearance | Spotlight flow | `liquidGlass.spotlightFlowMillis` | The pace of the Dock's spotlight | yes | nothing |
+| Gestures | The 14 swipe and pinch bindings, Reset | `gestures.homeGestures` | Home's gestures; "Open notifications" is gone | yes (the action list no longer has it; a stored name decodes to none) | nothing |
+| Motion | Animation performance | `motion.performanceTargetFps` | The preferred frame rate while the Dock animates | yes | nothing |
+| Motion | Reduced motion | `motion.reducedMotionPreference` | A short fade instead of every motion, resolved once (`reducedMotion()`) | yes (the open card, drag between cards, swipe-dismiss, the column, search and now the entrance all read it) | nothing |
+| Motion | Feedback strength | `haptics.feedbackStrength` | The haptic strength | yes | nothing |
+| Motion | Opening speed | `motion.dock.speedMillis` | The Dock's springs, the fan, the stack, search and the open card | **partly**: the grid fade under the stack ("apps behind the cards") and a swiped card's fly-off ran on fixed times | **wired**: both scale by it (`DockMotionTuning.stiffnessFor`, `millisFor`); `DockMotionSpeedReachTest`; the Home entrance uses it too |
+| Motion | Dock bounce | `motion.dock.trampolinePercent` | The dip spring's damping | yes (`DockMotionSettingsTest`) | nothing |
+| Motion | Card stack coasting, Card snapping | `motion.dock.inertiaPercent`, `magnetPercent` | The stack's fling and magnet, also the drag between open cards (one mover) | yes | nothing |
+| Motion | Hold time to choose | `motion.dock.holdMillis` | The press's hold in every posture (`HomeDockPullBinding`) | yes | nothing |
+| Motion | Light ticks | `motion.dock.ticks` | Wraps the haptics for the stack, choosing and swipe-dismiss | yes (`LauncherHapticsTicksTest`, `StreamSwipeDismissTickTest`) | nothing |
+| Privacy and access | Default home app, Notification access, Usage access, Calendar, Floating dock access | platform state | Each shows its state and opens the way to change it | yes | nothing |
+| Privacy and access | Hide launcher content in screenshots and recents | `privacy.protectScreenContent` | `FLAG_SECURE` (`LauncherScreenProtection`) | yes | nothing |
+| Privacy and access | How much the Stream shows (per source) | source content level store | The detail a source may show | yes | nothing |
+| Backup | Export backup, Import backup | the backup document | Settings, layouts and the enabled Stream sections; the new settings are in the settings blob, which the codec round-trips (`LauncherSettingsJsonCodecTest`, `LauncherBackupDocumentTest`) | yes | nothing |
+| About | Version, What apps publish | none | Read-only | n/a | exempt from the key rule (diagnostics) |
+
+Verified by reading the consumer rather than by a new behaviour test: the older Home, Dock (apart from alignment),
+Library, Appearance, Privacy, Floating dock and source rows above have existing reducer, codec and consumer tests and
+were not given new ones. Not looked at in depth: the feed, calendar and Todoist source controllers and the Hidden items
+rules (each routes to its own controller), and the overlay service's drawing, which needs a device.
+
+### Grouping and labels
+
+- Home: Simple mode and Home shows are one "Home screen" section. The label background strength sits under its switch.
+- Dock: "Show the Dock", "Dock background strength", "Number of live apps" (and the section "Live apps", not "Dynamic
+  side"), a Dock position with the same options in the same order as Layout.
+- Stream: the sub-page is "Stream cards", not "Cards"; its row sits in a section called "Look". Each section of the Stream
+  page is the search anchor of its setting.
+- Page summaries name the newer rows (Home: Simple mode; Stream: how cards look; Motion: opening speed; Cards: apps behind
+  the cards).
+- The main page keeps its eleven places in the order Home, Dock, Layout, Library, Stream, Appearance, Gestures, Motion
+  and haptics, Privacy and access, Backup, About: Layout follows the Dock it positions and nothing found a better order.
+- Reduced transparency stays under Appearance > Glass (it is a look of the material) and reduced motion under Motion.
+
+### The Home entrance (the Dock dropping from the top)
+
+The owner saw the Dock drop from the top when Home loads. The Dock itself has no entrance transition. The only things
+that animate the Dock's position or size are the Dock press (a dip toward its edge, zero at rest), the fan, and two
+stacked `animateContentSize` modifiers on the Dock area (`StandardHomeDockArea`: its own spring, and `dockShelfMotion`),
+which ease **any** size change from the first frame. Home's first frames are not final: the posture settles after the
+first frame (`WindowInfoTracker`), the insets and the apps arrive, and the live apps load, so the area's size or edge
+changes while it is already measured, and an easing size animation of a bottom-anchored or edge-centred area carries the
+Dock across the screen. This could not be reproduced in Robolectric (the first-frame bounds there are stable, and a
+posture change snaps in the test harness), so this is the cause found by reading, not one seen on a device.
+
+Fixed in two parts. (1) The area's size easing (both modifiers) applies only once the entrance has arrived and never on a
+change of edge (`rememberDockSizeEasing`), so on the first frames the Dock is laid out in its final place; a later change
+(the actions row, the icon size, a shelf) still eases. (2) Home plays an entrance on appearing (`HomeEntrance`,
+`HomeEntranceState`): the Dock and the page handle fade in and rise 14 dp from the Dock's own edge on the calm spring at
+the opening speed, a plain 80 ms fade under reduced motion, drawn by one progress read in a `graphicsLayer` (alpha and
+translation: no relayout, no recomposition per frame). It plays on a cold start and when the activity stops and starts
+again (another app, the lock screen); a configuration change does not replay it (the flag is saved and a stop caused by one
+does not reset it), nor does a sheet, search or the Stream over Home. `DockEntranceTest` steps the real Home frame by
+frame: the Dock's layout bounds are its final ones at every frame including the first (bottom, right and left), the drawn
+strip differs only by the translation toward the edge, the handle comes in with it, and the size easing is off on the first
+frames and on afterwards.
+
+### Tests rewritten on purpose
+
+- `LauncherSettingsJsonCodecTest.theDeferredGrowsOutOfTheDockPlacementIsStored` is now
+  `aStoredGrowsOutOfTheDockPlacementReadsAsJustAboveTheDock` (the option is removed; old data decodes as Above the Dock).
+- `StreamAndMotionSettingsTest.theDeferredGrowsOutOfTheDockChoiceIsOffered...` is now
+  `growsOutOfTheDockIsNotOfferedUntilItIsBuilt`; the placement test scrolls to its chips (the rows got a subtitle).
+- `OpenCardMotionTest` and `StreamCardActionsTest` no longer treat Grows out of the Dock as an input; the first now
+  asserts Centre and Above the Dock place a short card differently.
+- Search screenshots (`HomeHandleScreenshotTest.searchOpenFromTheDock*`, `searchResultsAsIcons*`) showed only the caret
+  blinking differently and were not re-recorded.
+
+### Not confirmed without a device
+
+The Home entrance and the Dock's drop (the cause above is read from the code, not seen), the feel of the opening-speed
+change on the grid fade and the swipe, a side Dock's alignment at the top and bottom of a real unfolded screen, and the
+overlay (Floating dock) rendering. Device tests were compiled, not run.

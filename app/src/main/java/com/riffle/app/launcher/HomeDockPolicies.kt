@@ -9,7 +9,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -21,7 +20,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleMotion
-import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import kotlin.math.abs
 
@@ -128,22 +126,6 @@ internal class DockShelfFrameRateGateway(
             }
         }
 }
-
-/**
- * Where a Dock down a side stands along its edge: "Dock alignment" Start, Centre or End are the top, the middle and the
- * bottom of the edge there (along the top or bottom edge they are the left, the middle and the right, as
- * [toHorizontalAlignment] has them).
- */
-internal fun DockAlignment.sideArrangement(runsAlongASide: Boolean): Arrangement.Vertical =
-    if (!runsAlongASide) {
-        Arrangement.Top
-    } else {
-        when (this) {
-            DockAlignment.START -> Arrangement.Top
-            DockAlignment.CENTER -> Arrangement.Center
-            DockAlignment.END -> Arrangement.Bottom
-        }
-    }
 
 internal fun Modifier.dockShelfMotion(policy: DockShelfMotionPolicy): Modifier =
     animateContentSize(animationSpec = dockShelfSizeAnimation(policy))
