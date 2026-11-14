@@ -52,11 +52,14 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.LayoutPosture
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
+import com.riffle.core.domain.launcher.settings.PageScrollDirection
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
@@ -277,6 +280,10 @@ class LauncherActionDomainTest {
                 ),
                 activity("SelectDockPanelEnabled", LauncherShellAction.SelectDockPanelEnabled(enabled = true)),
                 activity("SelectDockPosition", LauncherShellAction.SelectDockPosition(DockPosition.TOP)),
+                activity(
+                    "SelectPostureDockEdge",
+                    LauncherShellAction.SelectPostureDockEdge(LayoutPosture.UNFOLDED, DockPosition.RIGHT),
+                ),
                 activity("SelectDockCapacity", LauncherShellAction.SelectDockCapacity(capacity = 6)),
                 activity("SelectDockIconSize", LauncherShellAction.SelectDockIconSize(sizeDp = 52)),
                 activity("SelectDockBackgroundAlpha", LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 80)),
@@ -385,6 +392,15 @@ class LauncherActionDomainTest {
                 ),
                 settings("SetDockMotion", LauncherShellAction.SetDockMotion(DockMotionSettings(speedMillis = 300))),
                 settings("SelectHomeMode", LauncherShellAction.SelectHomeMode(HomeMode.AppLibrary)),
+                settings(
+                    "SelectPageScroll",
+                    LauncherShellAction.SelectPageScroll(LayoutPosture.FOLDED, PageScrollDirection.VERTICAL),
+                ),
+                settings(
+                    "SelectPageIndicator",
+                    LauncherShellAction.SelectPageIndicator(LayoutPosture.FOLDED, PageIndicatorPlacement.OFF),
+                ),
+                settings("SetQuickScroll", LauncherShellAction.SetQuickScroll(LayoutPosture.UNFOLDED, enabled = false)),
                 settings(
                     "SetFeatureEnabled",
                     LauncherShellAction.SetFeatureEnabled(LauncherFeature.STREAM, enabled = false),

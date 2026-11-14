@@ -15,7 +15,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * The shape of Settings (docs/product/settings.md): a tree of pages with the ten places at its first level, every
+ * The shape of Settings (docs/product/settings.md): a tree of pages with the eleven places at its first level, every
  * setting on a page that can be reached, every page and setting found by search, and the wording the document fixes.
  */
 class SettingsPagesTest {
@@ -30,11 +30,13 @@ class SettingsPagesTest {
     }
 
     @Test
-    fun theMainPageHasExactlyTheTenPlacesInOrder() {
+    fun theMainPageHasExactlyTheElevenPlacesInOrder() {
+        // Layout (per posture, ADR 0003 Amendment 2) joined the original ten places, after the Dock it positions.
         assertEquals(
             listOf(
                 "Home",
                 "Dock",
+                "Layout",
                 "Library",
                 "Stream",
                 "Appearance",

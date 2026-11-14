@@ -122,14 +122,33 @@ internal fun WorkspaceGrid(
                 }
             }
             if (page.hasGeneratedContentOverflowAffordance) {
-                TextButton(
-                    modifier = Modifier.fillMaxWidth().testTag(HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG),
-                    onClick = { actions.onAction(LauncherShellAction.OpenAppDrawer) },
-                ) {
-                    Text(text = "More apps (${page.generatedContentOverflowCount} more)")
-                }
+                GeneratedContentOverflowButton(
+                    overflowCount = page.generatedContentOverflowCount,
+                    libraryEnabled = presentation.libraryEnabled,
+                    onAction = actions.onAction,
+                )
             }
         }
+    }
+}
+
+/**
+ * "More apps" on a generated page. It opens the Library; with the Library off (Simple mode, or its switch) the drawer
+ * is not there to open, so it opens search, which finds the rest of the apps.
+ */
+@Composable
+private fun GeneratedContentOverflowButton(
+    overflowCount: Int,
+    libraryEnabled: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    TextButton(
+        modifier = Modifier.fillMaxWidth().testTag(HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG),
+        onClick = {
+            onAction(if (libraryEnabled) LauncherShellAction.OpenAppDrawer else LauncherShellAction.OpenSearch)
+        },
+    ) {
+        Text(text = "More apps ($overflowCount more)")
     }
 }
 

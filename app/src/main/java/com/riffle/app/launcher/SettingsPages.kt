@@ -28,6 +28,12 @@ enum class SettingsPage(
         R.string.settings_page_floating_dock_summary,
         R.string.settings_page_floating_dock_keywords,
     ),
+    POSTURE_LAYOUT(
+        MAIN,
+        R.string.settings_page_layout,
+        R.string.settings_page_layout_summary,
+        R.string.settings_page_layout_keywords,
+    ),
     LIBRARY(
         MAIN,
         R.string.settings_page_library,
@@ -132,11 +138,12 @@ enum class SettingsPage(
     ),
 }
 
-/** The rows of the main page, in order: the ten places Settings is organised by. */
+/** The rows of the main page, in order: the places Settings is organised by. */
 internal val settingsMainPageRows: List<SettingsPage> =
     listOf(
         SettingsPage.HOME,
         SettingsPage.DOCK,
+        SettingsPage.POSTURE_LAYOUT,
         SettingsPage.LIBRARY,
         SettingsPage.STREAM,
         SettingsPage.APPEARANCE,

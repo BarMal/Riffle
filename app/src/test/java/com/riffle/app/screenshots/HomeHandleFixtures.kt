@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.settings.LayoutSettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
@@ -37,3 +38,7 @@ internal fun LauncherShellState.withReducedMotion(): LauncherShellState =
                 motion = launcherSettings.motion.copy(reducedMotionPreference = ReducedMotionPreference.ON),
             ),
     )
+
+/** The fixture shell with [layout] as its layout per posture (ADR 0003, Amendment 2). */
+internal fun LauncherShellState.withLayoutSettings(layout: LayoutSettings): LauncherShellState =
+    copy(launcherSettings = launcherSettings.copy(layout = layout))

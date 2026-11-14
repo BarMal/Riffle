@@ -12,6 +12,7 @@ import com.riffle.app.launcher.onboarding.OnboardingText
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.workspaceGrid
 import com.riffle.core.domain.launcher.settings.LauncherFeature
+import com.riffle.core.domain.launcher.settings.defaultDockEdge
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 
 /**
@@ -48,6 +49,7 @@ internal fun SettingsPageContent(
                     onAction = onAction,
                 )
             SettingsPage.FLOATING_DOCK -> SettingsFloatingDockPageContent(state = state, onAction = onAction)
+            SettingsPage.POSTURE_LAYOUT -> SettingsLayoutPageContent(state = state, onAction = onAction)
             SettingsPage.LIBRARY ->
                 SettingsLibraryPageContent(state = state, onPageSelected = onPageSelected, onAction = onAction)
             SettingsPage.HIDDEN_APPS -> SettingsHiddenAppsPageContent(state = state, onAction = onAction)
@@ -201,6 +203,7 @@ private fun SettingsDockPageContent(
         DockSetting(
             dock = state.homeLayout.dock,
             onAction = onAction,
+            defaultEdge = state.selectedLayoutDeviceClass.defaultDockEdge,
         )
     }
     SettingsSection(title = stringResource(R.string.settings_section_dynamic_side)) {
