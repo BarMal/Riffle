@@ -118,8 +118,8 @@ class NotificationThreadSummaryTest {
     fun aMessageRepeatedWholeRightAfterItselfIsOneLine() {
         val messages =
             listOf(
-                message(sender = "Claude", text = "Old 80 width (+1 more)", at = 10),
-                message(sender = "Claude", text = "Old 80 width (+1 more)", at = 10),
+                message(sender = "Pilot", text = "Old 80 width (+1 more)", at = 10),
+                message(sender = "Pilot", text = "Old 80 width (+1 more)", at = 10),
             )
 
         assertEquals(1, NotificationThreadSummary.withoutEchoes(messages).size)

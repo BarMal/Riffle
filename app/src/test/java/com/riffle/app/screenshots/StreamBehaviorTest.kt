@@ -675,8 +675,10 @@ class StreamBehaviorTest {
         show(initialPageKey = StreamPageKeys.CHAT)
         // The browse card has no reply button: a tap opens the conversation, and its actions are on the card here (this
         // surface has no Dock to hold them).
-        composeRule.onAllNodesWithText("Sam: Morning! Got a minute?").assertCountEquals(0)
-        composeRule.onNodeWithText("Are we still on for lunch tomorrow?").performClick()
+        // The browse card shows the last messages (device fixes, round 6, item 4) and no reply field.
+        composeRule.onNodeWithText("Sam: Morning! Got a minute?").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Write a reply").assertCountEquals(0)
+        composeRule.onNodeWithText("Sam: Are we still on for lunch tomorrow?").performClick()
 
         composeRule.onNodeWithText("Sam: Morning! Got a minute?").assertIsDisplayed()
         composeRule.onNodeWithText("Write a reply").performTextInput("On my way")
@@ -727,9 +729,11 @@ class StreamBehaviorTest {
             ).fetchSemanticsNodes()
         assertTrue("the second card peeks", peeks.size == 1)
         val peek = peeks.single()
+        // The strip ends on the focused card's top with no gap now (it tucks under it), so this reads the strip as it
+        // is drawn (its bounds follow its scale; it is in view, so no parent clips them) and allows the shared pixel.
         assertTrue(
             "the peeking card is above the focused one",
-            peek.positionInRoot.y + peek.size.height <= focused.positionInRoot.y,
+            peek.boundsInRoot.bottom <= focused.positionInRoot.y + 1f,
         )
         assertTrue(
             "and in the same column",
@@ -777,7 +781,7 @@ class StreamBehaviorTest {
         }, StreamAction.Pause)
         // A notification's Dismiss is on its open card: a tap on the front card opens it, then the control acts.
         assertActionOn(StreamPageKeys.CHAT, {
-            composeRule.onNodeWithText("Are we still on for lunch tomorrow?").performClick()
+            composeRule.onNodeWithText("Sam: Are we still on for lunch tomorrow?").performClick()
             composeRule.waitForIdle()
             composeRule.onNodeWithContentDescription("Dismiss").performClick()
         }, StreamAction.Dismiss)

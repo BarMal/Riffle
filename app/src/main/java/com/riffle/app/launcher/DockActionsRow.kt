@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -116,12 +117,12 @@ internal fun DockActionsRowAt(
 ) {
     if (position != at) return
     if (at == DockPosition.TOP) Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
-    DockActionsRow(
-        cardActions,
-        layout.dock.cornerRadiusDp,
-        presentation.reducedMotion,
-        modifier = Modifier.onSizeChanged { size -> onRowHeightChanged(size.height) },
-    )
+    // Measured on a box that stays: the row itself leaves the composition once it has gone, and a node that is gone
+    // reports no size, so the last height would stand (and the room reported for the Dock would be short by it, which
+    // let the stack slide under the Dock after an open card closed).
+    Box(modifier = Modifier.onSizeChanged { size -> onRowHeightChanged(size.height) }) {
+        DockActionsRow(cardActions, layout.dock.cornerRadiusDp, presentation.reducedMotion)
+    }
 }
 
 private const val REDUCED_FADE_MILLIS = RiffleMotionTokens.DURATION_REDUCED_MOTION_MILLIS

@@ -74,6 +74,20 @@ object StreamCardActions {
             is ArticleContent, is RecentAppContent, is AppShortcutContent -> emptyList()
         }
 
+    /**
+     * The controls the browse card of [content] carries itself: the own action buttons of a live notification (a trip's
+     * "Next", a download's "Pause"), so they can be tapped without opening the card. Every other control, and every
+     * other notification's buttons, are on the open card.
+     */
+    fun onBrowseCard(content: StreamContent): List<CardAction.Own> =
+        if (content is NotificationContent && content.live) {
+            content.ownActions
+                .filter { StreamActionPolicy.offers(content, StreamAction.OwnAction(it.id)) }
+                .map { CardAction.Own(it.id, it.title) }
+        } else {
+            emptyList()
+        }
+
     private fun notification(content: NotificationContent): List<CardAction> =
         listOfNotNull(
             CardAction.Reply.takeIf { StreamActionPolicy.offers(content, StreamAction.Reply("x")) },

@@ -17,6 +17,8 @@ import androidx.core.app.NotificationCompat
 import com.riffle.app.launcher.apps.toUserHandle
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnection
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
+import com.riffle.app.launcher.notifications.customBigContent
+import com.riffle.app.launcher.notifications.customContent
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import kotlin.math.roundToInt
 
@@ -83,7 +85,16 @@ internal class AndroidAppPublishSource(
                 RiffleNotificationListenerConnection.activeNotifications()
                     ?: return PublishSection(problem = SectionProblem.NOTIFICATION_ACCESS_MISSING)
             PublishSection(
-                items = posted.filter { it.packageName == packageName }.map { it.toInput().toShape() },
+                items =
+                    posted.filter { it.packageName == packageName }.map { sbn ->
+                        val notification = sbn.notification
+                        sbn.toInput().copy(
+                            contentLayout =
+                                notification.customContent()?.let { LayoutOutlineReader.outlineOf(context, it) },
+                            bigContentLayout =
+                                notification.customBigContent()?.let { LayoutOutlineReader.outlineOf(context, it) },
+                        ).toShape()
+                    },
             )
         }.getOrElse { PublishSection(problem = SectionProblem.UNAVAILABLE) }
 

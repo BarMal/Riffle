@@ -76,12 +76,14 @@ internal fun CardActionControls(
 
 /** The notification's own action buttons, in its order: each a text button with its title, a 48 dp target. */
 @Composable
-private fun OwnActionRow(
+internal fun OwnActionRow(
     content: StreamContent,
     actions: List<CardAction.Own>,
     callbacks: StreamCallbacks,
+    modifier: Modifier = Modifier,
+    tag: String = CARD_OWN_ACTIONS_TEST_TAG,
 ) {
-    FitRow(modifier = Modifier.fillMaxWidth().testTag(CARD_OWN_ACTIONS_TEST_TAG)) {
+    FitRow(modifier = modifier.fillMaxWidth().testTag(tag)) {
         actions.forEach { action ->
             TextButton(
                 onClick = { callbacks.onAction(content, StreamAction.OwnAction(action.id)) },

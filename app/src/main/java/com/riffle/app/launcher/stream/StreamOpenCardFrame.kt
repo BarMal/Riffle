@@ -132,7 +132,8 @@ internal class OpenLayerCard(
 internal class OpenCardLayer(
     val geometry: OpenCardFrameGeometry,
     val placement: OpenCardPlacement,
-    val browseHeight: Dp,
+    /** The stack's layout: each card's browse height and where its slot stands at a position. */
+    val stackGeometry: StackGeometry,
     val strips: Dp,
     val bottomInset: Dp,
     /** The stack's position and fade, read in layout and draw so a drag moves the cards with no recomposition. */
@@ -221,7 +222,7 @@ internal fun OpenCardFrames(
     modifier: Modifier = Modifier,
 ) {
     val naturals = remember(layer) { mutableMapOf<String, OpenCardNaturalHeight>() }
-    val stackGeometry = remember(layer.browseHeight) { StackGeometry(layer.browseHeight.value) }
+    val stackGeometry = layer.stackGeometry
     val geometry = layer.geometry
     Layout(
         content = {
@@ -258,9 +259,12 @@ internal fun OpenCardFrames(
         val stripsPx = if (stripsFit) wantedStrips else 0
         geometry.stripsVisible = stripsFit
         val room = (areaHeight - inset - stripsPx).coerceAtLeast(0)
-        val browsePx = layer.browseHeight.roundToPx().toFloat()
         val bottom = areaHeight - inset
-        val browseTop = bottom - browsePx
+
+        // A card's browse height is its own: where it stands as the front card of the resting stack.
+        fun browsePxOf(index: Int): Float = stackGeometry.heightOf(index) * density
+
+        fun browseTopOf(index: Int): Float = bottom - browsePxOf(index)
         val key = finalWidth * 31 + room
         val nearest = StackFling.nearest(position, layer.count)
 
@@ -312,7 +316,7 @@ internal fun OpenCardFrames(
                 progress = progress,
                 areaHeightPx = areaHeight.toFloat(),
                 bottomInsetPx = inset.toFloat(),
-                browseHeightPx = browsePx,
+                browseHeightPx = browsePxOf(entry.index),
                 fullHeightPx = natural.px.toFloat(),
                 stripsPx = stripsPx.toFloat(),
                 placement = layer.placement,
@@ -323,16 +327,18 @@ internal fun OpenCardFrames(
         val frames = entries.associate { it.index to openFrameOf(it) }
         val frontTop =
             if (layer.reducedMotion) {
-                frames[nearest]?.topPx ?: browseTop
+                frames[nearest]?.topPx ?: browseTopOf(nearest)
             } else {
-                OpenCardBlend.followTop(position) { index -> frames[index]?.topPx ?: browseTop }
+                OpenCardBlend.followTop(position) { index -> frames[index]?.topPx ?: browseTopOf(index) }
             }
         geometry.topPx = frontTop
-        val shift = frontTop - browseTop
+        // How far the resting stack is moved so that its front slot's top (the front height at this position above
+        // the bottom) lies at the open frame's top.
+        val shift = frontTop - (bottom - stackGeometry.frontHeightAt(position) * density)
         val placed =
             entries.filter { it.openness > 0f }.sortedBy { it.openness }.map { entry ->
                 val open = frames.getValue(entry.index)
-                val slot = stackGeometry.frame(entry.r)
+                val slot = stackGeometry.frame(entry.index, position)
                 val w = if (layer.reducedMotion) 1f else entry.openness
                 val top = OpenCardBlend.lerp(bottom - slot.topDp * density + shift, open.topPx, w)
                 val height = OpenCardBlend.lerp(slot.visibleHeightDp * density, open.heightPx, w)

@@ -139,7 +139,7 @@ internal fun NotificationRow(
             }
         },
     ) {
-        RowTitle(content.title ?: stringResource(R.string.stream_hidden_content))
+        RowTitle(content.headline ?: stringResource(R.string.stream_hidden_content))
         content.text?.takeIf { it.isNotBlank() }?.let { RowSubtitle(it) }
     }
 }

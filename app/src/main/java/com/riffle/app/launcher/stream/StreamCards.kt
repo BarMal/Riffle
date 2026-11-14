@@ -4,7 +4,6 @@ package com.riffle.app.launcher.stream
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,7 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -48,10 +49,13 @@ import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.EventKind
 import com.riffle.core.domain.launcher.stream.EventTiming
+import com.riffle.core.domain.launcher.stream.NotificationBody
+import com.riffle.core.domain.launcher.stream.NotificationBrowseText
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
 import com.riffle.core.domain.launcher.stream.StreamAppRef
+import com.riffle.core.domain.launcher.stream.StreamCardActions
 import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamPrivacy
 import com.riffle.core.domain.launcher.stream.TaskContent
@@ -65,6 +69,9 @@ internal object StreamCardHeights {
     val article: Dp = 248.dp
     val articleWithoutImage: Dp = StreamCardStackSpec.CARD_HEIGHT_DP.dp
     val tasks: Dp = 232.dp
+
+    /** One task as a card of its own: its checkbox, title and due line, and nothing under them. */
+    val task: Dp = 72.dp
 
     /** An app (a recent app, a shortcut): icon and a line or two. */
     val app: Dp = 104.dp
@@ -83,7 +90,6 @@ internal object StreamCardHeights {
 }
 
 private val LeadImageHeight = 112.dp
-private const val BODY_LINES = 2
 
 /**
  * The glass every Stream card is drawn on: regular weight in the launcher's card shape, lit by the colour of the app
@@ -159,6 +165,7 @@ internal fun NotificationCard(
     onOpen: (() -> Unit)? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
+    val browseActions = remember(content) { StreamCardActions.onBrowseCard(content) }
     StreamCardSurface(content.id.value, content.app, content.icon, env, modifier) { sourceModifier ->
         Column(
             modifier =
@@ -179,41 +186,103 @@ internal fun NotificationCard(
                     StreamAvatar(
                         content.avatar,
                         content.icon,
-                        content.title ?: content.appLabel,
+                        content.headline,
                         env,
                         BrowseAvatarSize,
                         person = content.hasPerson,
                     )
                 },
-                title = content.title ?: hiddenText(),
+                title = content.headline ?: hiddenText(),
                 subtitle =
                     listOfNotNull(
-                        content.appLabel?.takeIf { it.isNotBlank() },
+                        content.secondaryLabel,
                         env.formats.age(content.postedAtEpochMillis),
                     ).joinToString(" · "),
                 trailing = { StreamHideMenuButton(hideChoices, content, groupKey, callbacks) },
             )
-            Row(
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
-            ) {
-                content.text?.takeIf { it.isNotBlank() }?.let { text ->
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = BODY_LINES,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                } ?: Box(Modifier.weight(1f))
-                StreamThumbnail(content.picture, content.title, env, BrowseThumbnailSize)
+            // Up to four lines of what the notification says and, at the trailing edge, its picture. The card is as
+            // tall as this needs (`BrowseCardHeight`), so nothing is left empty under a short message.
+            val thumbnail = content.browseThumbnail
+            if (content.body != NotificationBody.None || thumbnail != null) {
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
+                ) {
+                    NotificationBrowseBody(content, Modifier.weight(1f))
+                    StreamThumbnail(thumbnail, content.headline, env, BrowseThumbnailSize)
+                }
+            }
+            // A live notification (a trip, a download): its own buttons here too, so "Next" needs no opening. Each is a
+            // 48 dp button of its own (its tap is not the card's) and a custom action of the card.
+            if (browseActions.isNotEmpty()) {
+                OwnActionRow(
+                    content = content,
+                    actions = browseActions,
+                    callbacks = callbacks,
+                    tag = BROWSE_OWN_ACTIONS_TEST_TAG,
+                    modifier =
+                        Modifier.semantics {
+                            customActions =
+                                browseActions.map { action ->
+                                    CustomAccessibilityAction(action.title) {
+                                        callbacks.onAction(content, StreamAction.OwnAction(action.id))
+                                        true
+                                    }
+                                }
+                        },
+                )
             }
         }
     }
 }
 
+/**
+ * What a browse card draws under its header ([NotificationContent.body]): the text, or the lines read out of the
+ * notification's own layout, or, when that layout has no text, the layout itself.
+ */
+@Composable
+private fun NotificationBrowseBody(
+    content: NotificationContent,
+    modifier: Modifier = Modifier,
+) {
+    val body = content.body
+    if (body is NotificationBody.Custom && body.content.embed) {
+        EmbeddedNotificationLayout(
+            notificationKey = content.notificationKey.orEmpty(),
+            appLabel = content.appLabel,
+            big = false,
+            revision = body.content.revision,
+            maxHeight = EmbeddedBrowseMaxHeight,
+            interactive = false,
+            modifier = modifier,
+        )
+    } else {
+        val you = stringResource(R.string.stream_notification_you)
+        Column(modifier = modifier) {
+            NotificationBrowseText.blocks(content).forEach { block -> BrowseLine(block.written(you), block.maxLines) }
+        }
+    }
+}
+
+@Composable
+private fun BrowseLine(
+    text: String,
+    maxLines: Int,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
+}
+
+/** The tag of the row of a live notification's own buttons on its browse card (a test hook). */
+internal const val BROWSE_OWN_ACTIONS_TEST_TAG = "stream-browse-own-actions"
+
 private val BrowseAvatarSize = StreamHeaderIconSize
-private val BrowseThumbnailSize = 64.dp
 
 /** The message history of a messaging notification, oldest first. Nothing when the notification keeps none. */
 @Composable

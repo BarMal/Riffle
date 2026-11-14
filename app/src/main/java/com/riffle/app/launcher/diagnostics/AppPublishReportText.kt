@@ -45,6 +45,37 @@ fun NotificationShape.detailLines(): List<String> =
         } else {
             actions.forEach { add("Action: \"${it.title}\", remote input ${it.hasRemoteInput.yesNo()}") }
         }
+        addAll(layoutOutline("content", hasCustomContentView, contentLayout))
+        addAll(layoutOutline("big", hasCustomBigContentView, bigContentLayout))
+    }
+
+/**
+ * The outline of one of a notification's own layouts: a line per view in drawing order, indented by its depth, with
+ * its class, the name of its id, whether it takes a tap, its visibility and, for a text view, how long its text is and
+ * its size (never the text), for an image view the size of its picture. Nothing for a notification without the layout.
+ */
+private fun layoutOutline(
+    which: String,
+    present: Boolean,
+    views: List<LayoutViewShape>?,
+): List<String> =
+    when {
+        !present -> emptyList()
+        views == null -> listOf("Layout ($which): could not be read")
+        else -> listOf("Layout ($which): ${views.size} views") + views.map(LayoutViewShape::outlineLine)
+    }
+
+/** "    TextView #stops_away, clickable no, visible, text 12 chars, 14 sp". */
+fun LayoutViewShape.outlineLine(): String =
+    buildString {
+        append("  ".repeat(depth + 1))
+        append(className)
+        resourceEntryName?.let { append(" #").append(it) }
+        append(", clickable ").append(clickable.yesNo())
+        append(", ").append(visibility)
+        textLength?.let { append(", text ").append(it).append(" chars") }
+        textSizeSp?.let { append(", ").append(it).append(" sp") }
+        imageSize?.let { append(", image ").append(it) }
     }
 
 fun MediaShape.detailLines(): List<String> =

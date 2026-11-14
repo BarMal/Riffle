@@ -17,7 +17,9 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
+import com.riffle.core.domain.launcher.notifications.NotificationGroupSummaries
 import com.riffle.core.domain.launcher.notifications.NotificationThreadSummary
+import com.riffle.core.domain.launcher.notifications.NotificationTitleRule
 import java.io.ByteArrayOutputStream
 
 @Suppress("DEPRECATION")
@@ -34,12 +36,16 @@ fun StatusBarNotification.toLauncherNotification(
 
 internal class StatusBarNotificationMapper(
     private val profileIdForUser: (UserHandle) -> AppProfileId,
+    /** The app's own name, by package: a title that only repeats it is not a title (`NotificationTitleRule`). */
+    private val appLabelFor: (String) -> String? = { null },
 ) {
     constructor(
         currentUser: UserHandle = Process.myUserHandle(),
         userManager: UserManager? = null,
         launcherApps: LauncherApps? = null,
+        appLabelFor: (String) -> String? = { null },
     ) : this(
+        appLabelFor = appLabelFor,
         profileIdForUser = { user ->
             user.toAppProfile(
                 currentUser = currentUser,
@@ -61,6 +67,10 @@ internal class StatusBarNotificationMapper(
                 canDismiss = notification.isClearable,
                 isMediaSession = notification.notification.extras?.get(Notification.EXTRA_MEDIA_SESSION) != null,
                 title = notification.notification.titleText(),
+                titleBig = notification.notification.extraText(Notification.EXTRA_TITLE_BIG),
+                conversationTitle = notification.notification.extraText(Notification.EXTRA_CONVERSATION_TITLE),
+                messagingStyle = notification.notification.isMessagingStyle(),
+                appLabel = runCatching { appLabelFor(notification.packageName) }.getOrNull(),
                 text = notification.notification.bodyText(),
                 largeIconPngBase64 = notification.notification.largeIconPngBase64(),
                 messages = notification.notification.messagingStyleMessages(),
@@ -68,8 +78,45 @@ internal class StatusBarNotificationMapper(
             ),
         )
 
-    fun map(snapshot: StatusBarNotificationSnapshot): LauncherNotification =
-        LauncherNotification(
+    /**
+     * The posted notifications a launcher lists: every one but a group's summary that has children posted beside it
+     * (`NotificationGroupSummaries`), so a conversation is one card and its group's header is not a card of its own.
+     */
+    fun listed(posted: Array<StatusBarNotification>): List<StatusBarNotification> {
+        val redundant =
+            NotificationGroupSummaries.redundant(
+                posted.map { sbn ->
+                    NotificationGroupSummaries.Posted(
+                        key = sbn.key,
+                        groupKey = sbn.groupKey.takeIf { sbn.isGroup },
+                        isSummary = sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0,
+                    )
+                },
+            )
+        return posted.filter { it.key !in redundant }
+    }
+
+    fun map(snapshot: StatusBarNotificationSnapshot): LauncherNotification {
+        val resolved =
+            NotificationTitleRule.resolve(
+                NotificationTitleRule.Input(
+                    title = snapshot.title,
+                    titleBig = snapshot.titleBig,
+                    conversationTitle = snapshot.conversationTitle,
+                    messagingStyle = snapshot.messagingStyle || snapshot.messages.isNotEmpty(),
+                    lastSender = snapshot.messages.lastOrNull()?.sender,
+                    text = snapshot.text,
+                    appLabel = snapshot.appLabel,
+                ),
+            )
+        return snapshot.toLauncherNotification(resolved)
+    }
+
+    private fun StatusBarNotificationSnapshot.toLauncherNotification(
+        resolved: NotificationTitleRule.Resolved,
+    ): LauncherNotification {
+        val snapshot = this
+        return LauncherNotification(
             key = LauncherNotificationKey(snapshot.key),
             packageName = AppPackageName(snapshot.packageName),
             profileId = snapshot.profileId,
@@ -77,12 +124,13 @@ internal class StatusBarNotificationMapper(
             priority = snapshot.priority.toLauncherNotificationPriority(),
             canDismiss = snapshot.canDismiss,
             isMediaSession = snapshot.isMediaSession,
-            title = snapshot.title,
-            text = snapshot.text,
+            title = resolved.title,
+            text = resolved.text,
             largeIconPngBase64 = snapshot.largeIconPngBase64,
             messages = snapshot.messages,
             postedAtEpochMillis = snapshot.postedAtEpochMillis,
         )
+    }
 }
 
 internal data class StatusBarNotificationSnapshot(
@@ -94,6 +142,14 @@ internal data class StatusBarNotificationSnapshot(
     val canDismiss: Boolean = false,
     val isMediaSession: Boolean = false,
     val title: String = "",
+    /** `EXTRA_TITLE_BIG`: the title of the expanded form, which a style may set instead of the title. */
+    val titleBig: String? = null,
+    /** `EXTRA_CONVERSATION_TITLE`: a group conversation's name. */
+    val conversationTitle: String? = null,
+    /** The notification uses a messaging style: its title is a person or a group. */
+    val messagingStyle: Boolean = false,
+    /** The posting app's own name, when the launcher can read it. */
+    val appLabel: String? = null,
     val text: String = "",
     val largeIconPngBase64: String? = null,
     val messages: List<LauncherNotificationMessage> = emptyList(),
@@ -103,16 +159,36 @@ internal data class StatusBarNotificationSnapshot(
 @Suppress("DEPRECATION")
 private fun Notification.titleText(): String = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
 
+private fun Notification.extraText(key: String): String? =
+    runCatching { extras?.getCharSequence(key)?.toString()?.trim()?.takeIf(String::isNotBlank) }.getOrNull()
+
+private fun Notification.isMessagingStyle(): Boolean =
+    runCatching { extras?.getString(Notification.EXTRA_TEMPLATE)?.endsWith("MessagingStyle") == true }.getOrDefault(
+        false,
+    )
+
+/**
+ * The most the notification says: its big text, else an inbox style's lines (one per line), else its text. A card
+ * shows the first lines of it and the open card all of it.
+ */
 @Suppress("DEPRECATION")
 private fun Notification.bodyText(): String =
-    sequenceOf(
-        Notification.EXTRA_BIG_TEXT,
-        Notification.EXTRA_TEXT,
-        Notification.EXTRA_SUMMARY_TEXT,
-        Notification.EXTRA_SUB_TEXT,
-    ).mapNotNull { key ->
-        extras?.getCharSequence(key)?.toString()?.trim()?.takeIf(String::isNotBlank)
-    }.firstOrNull().orEmpty()
+    extraText(Notification.EXTRA_BIG_TEXT)
+        ?: inboxLines()
+        ?: sequenceOf(Notification.EXTRA_TEXT, Notification.EXTRA_SUMMARY_TEXT, Notification.EXTRA_SUB_TEXT)
+            .mapNotNull(::extraText)
+            .firstOrNull()
+            .orEmpty()
+
+/** `EXTRA_TEXT_LINES`: what an inbox style lists, joined one per line; null when the notification has none. */
+private fun Notification.inboxLines(): String? =
+    runCatching {
+        extras?.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+            ?.mapNotNull { line -> line?.toString()?.trim()?.takeIf(String::isNotBlank) }
+            ?.take(MAX_INBOX_LINES)
+            ?.takeIf { it.isNotEmpty() }
+            ?.joinToString("\n")
+    }.getOrNull()
 
 /**
  * Falls back to an empty list for notifications not posted with a messaging style (most
@@ -174,3 +250,4 @@ private fun Bitmap.pngBase64OrNull(): String? =
     }
 
 private const val MAX_MESSAGING_STYLE_MESSAGES = 3
+private const val MAX_INBOX_LINES = 8

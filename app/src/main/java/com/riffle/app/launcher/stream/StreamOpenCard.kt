@@ -27,6 +27,7 @@ import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.MediaContent
+import com.riffle.core.domain.launcher.stream.NotificationBody
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
@@ -146,20 +147,20 @@ private fun OpenNotificationHeader(
         StreamAvatar(
             content.avatar,
             content.icon,
-            content.title ?: content.appLabel,
+            content.headline,
             env,
             OpenAvatarSize,
             person = content.hasPerson,
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = content.title ?: hiddenText(),
+                text = content.headline ?: hiddenText(),
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
                 text =
                     listOfNotNull(
-                        content.appLabel?.takeIf { it.isNotBlank() },
+                        content.secondaryLabel,
                         env.formats.age(content.postedAtEpochMillis),
                     ).joinToString(" · "),
                 style = MaterialTheme.typography.labelMedium,
@@ -177,16 +178,30 @@ private fun OpenNotificationBody(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
 ) {
-    if (content.thread.isNotEmpty()) {
-        NotificationThread(content)
-    } else {
-        content.text?.takeIf { it.isNotBlank() }?.let { text ->
-            Text(text = text, style = MaterialTheme.typography.bodyLarge)
-        }
+    when (val body = content.body) {
+        is NotificationBody.Thread -> NotificationThread(content)
+        is NotificationBody.Text -> Text(text = body.text, style = MaterialTheme.typography.bodyLarge)
+        is NotificationBody.Custom ->
+            if (body.content.embed) {
+                // The app's own (expanded) layout: nothing in it could be drawn in the card's own style.
+                EmbeddedNotificationLayout(
+                    notificationKey = content.notificationKey.orEmpty(),
+                    appLabel = content.appLabel,
+                    big = true,
+                    revision = body.content.revision,
+                    maxHeight = EmbeddedOpenMaxHeight,
+                    interactive = true,
+                )
+            } else {
+                body.content.bigLines.ifEmpty { body.content.lines }.forEach { line ->
+                    Text(text = line, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        NotificationBody.None -> Unit
     }
     // The picture the app attached, across the card under the conversation it belongs to.
-    val sender = content.thread.lastOrNull()?.sender ?: content.title
-    StreamPicture(content.picture, sender, env, OpenPictureMaxHeight)
+    val sender = content.thread.lastOrNull()?.sender ?: content.headline
+    StreamPicture(content.picture ?: content.custom?.thumbnail, sender, env, OpenPictureMaxHeight)
     if (StreamActionPolicy.offers(content, StreamAction.Open)) {
         StreamTextButton(stringResource(R.string.stream_open), { callbacks.onAction(content, StreamAction.Open) })
     }

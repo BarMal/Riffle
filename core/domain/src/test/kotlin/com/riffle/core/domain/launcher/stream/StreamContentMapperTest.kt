@@ -38,6 +38,48 @@ class StreamContentMapperTest {
         assertEquals(StreamPrivacy.VISIBLE, content.privacy)
     }
 
+    @Test
+    fun `a notification with no title and no text is its app, never hidden content`() {
+        val bare = notificationItem("a", app = "Citymapper").copy(title = null, body = null)
+        val content = StreamContentMapper.map(bare) as NotificationContent
+
+        assertEquals(StreamPrivacy.VISIBLE, content.privacy)
+        assertEquals(false, content.hidden)
+        assertEquals("Citymapper", content.headline)
+        // The app's name is the title line, so it is not said again under it.
+        assertNull(content.secondaryLabel)
+    }
+
+    @Test
+    fun `the notification's own title leads and the app's name is the second line`() {
+        val content = StreamContentMapper.map(notificationItem("a", app = "Pilot")) as NotificationContent
+
+        assertEquals("Title a", content.headline)
+        assertEquals("Pilot", content.secondaryLabel)
+    }
+
+    @Test
+    fun `only the privacy content level or a quiet profile makes a notification hidden`() {
+        val levels = SourceContentLevels().with(SourceIds.NOTIFICATIONS, SourceContentLevel.HIDE_TEXT)
+        val byLevel = StreamContentMapper.map(notificationItem("a"), levels) as NotificationContent
+        assertEquals(true, byLevel.hidden)
+        assertNull(byLevel.headline)
+        val quiet =
+            StreamContentMapper.map(
+                notificationItem("a", privacy = ItemPrivacy.SENSITIVE),
+            ) as NotificationContent
+        assertEquals(true, quiet.hidden)
+        assertNull(quiet.headline)
+        // Hiding the body keeps the title: not hidden.
+        val bodyHidden =
+            StreamContentMapper.map(
+                notificationItem("a"),
+                SourceContentLevels().with(SourceIds.NOTIFICATIONS, SourceContentLevel.HIDE_BODY),
+            ) as NotificationContent
+        assertEquals(false, bodyHidden.hidden)
+        assertEquals("Title a", bodyHidden.headline)
+    }
+
     private fun withImages(item: Item) =
         item.copy(
             ext =

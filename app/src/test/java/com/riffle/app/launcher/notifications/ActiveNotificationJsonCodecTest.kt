@@ -85,6 +85,29 @@ class ActiveNotificationJsonCodecTest {
     }
 
     @Test
+    fun storesNothingReadOutOfANotificationsOwnLayout() {
+        // What is read out of a custom layout (its title, its lines, its picture, the layout itself) lives in memory
+        // beside the listener. A notification with no title and no text is stored with exactly the keys it always had.
+        val notifications =
+            listOf(
+                LauncherNotification(
+                    key = LauncherNotificationKey("nav-1"),
+                    packageName = AppPackageName("com.example.nav"),
+                    postedAtEpochMillis = 1_000L,
+                ),
+            )
+        val encoded = encodeActiveNotifications(notifications)
+        assertEquals(
+            setOf(
+                "key", "packageName", "profileId", "category", "priority", "canDismiss", "isMediaSession", "title",
+                "text", "hasPersonIcon", "hasPicture", "messages", "postedAtEpochMillis",
+            ),
+            JSONArray(encoded).getJSONObject(0).keys().asSequence().toSet(),
+        )
+        assertEquals(false, encoded.contains("custom"))
+    }
+
+    @Test
     fun aSnapshotWrittenBeforeThoseFlagsExistedDecodesWithoutThem() {
         val old =
             """[{"key":"k","packageName":"p","profileId":"personal","category":"MESSAGE","priority":"HIGH",""" +
