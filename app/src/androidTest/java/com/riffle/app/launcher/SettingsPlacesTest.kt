@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -94,6 +96,24 @@ class SettingsPlacesTest {
         composeRule.onNodeWithText(text).assertIsDisplayed()
     }
 
+    /**
+     * The node tagged [tag] exists and has stopped moving. Typing raises the keyboard, which resizes the page on the
+     * keyboard's own clock: a click sent while the page moves lands where the control was, and misses it.
+     */
+    private fun awaitHoldsStill(tag: String) {
+        var last: Rect? = null
+        var since = 0L
+        composeRule.waitUntil(timeoutMillis = SCROLL_TO_SETTING_TIMEOUT_MILLIS) {
+            val bounds = composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().singleOrNull()?.boundsInRoot
+            val now = SystemClock.uptimeMillis()
+            if (bounds == null || bounds != last) {
+                last = bounds
+                since = now
+            }
+            bounds != null && now - since >= HOLDS_STILL_MILLIS
+        }
+    }
+
     @Test
     fun theMainPageListsTheElevenPlacesAndNothingElse() {
         setSurface()
@@ -133,6 +153,7 @@ class SettingsPlacesTest {
         setSurface(height = 480)
 
         composeRule.onNodeWithTag(SETTINGS_SEARCH_FIELD_TEST_TAG).performTextInput("wifi")
+        awaitHoldsStill("settings-result-stream_feeds#FEEDS_WIFI_ONLY")
         composeRule.onNodeWithTag("settings-result-stream_feeds#FEEDS_WIFI_ONLY").performScrollTo().performClick()
 
         // Well down the Feeds page, and on screen because search scrolled to it. The scroll starts a couple of
@@ -197,6 +218,7 @@ class SettingsPlacesTest {
         assertSettlesOnScreen("Not connected")
 
         composeRule.onNodeWithTag(TASKS_TOKEN_FIELD_TEST_TAG).performScrollTo().performTextInput("fake-token-123")
+        awaitHoldsStill(TASKS_SAVE_TEST_TAG)
         composeRule.onNodeWithTag(TASKS_SAVE_TEST_TAG).performScrollTo().performClick()
 
         composeRule.waitForIdle()
@@ -214,3 +236,4 @@ class SettingsPlacesTest {
 
 private const val SCROLL_TO_SETTING_TIMEOUT_MILLIS = 5_000L
 private const val SETTLED_ON_SCREEN_MILLIS = 400L
+private const val HOLDS_STILL_MILLIS = 500L
