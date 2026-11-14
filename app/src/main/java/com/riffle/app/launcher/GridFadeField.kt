@@ -100,6 +100,7 @@ internal class GridFadeCell(
 /** The cell's place in the fade Home draws, or null (folded with nothing behind the cards, or no Stream). */
 @Composable
 internal fun rememberGridFadeCell(): GridFadeCell? {
+    CountRecomposition(GRID_CELL_PROBE_KEY)
     val field = LocalGridFade.current ?: return null
     return remember(field) { GridFadeCell(field) }
 }
@@ -144,6 +145,9 @@ internal fun GridFadeInputBlock(
         )
     }
 }
+
+/** What the recomposition probe counts a grid cell under. */
+internal const val GRID_CELL_PROBE_KEY = "grid-cell"
 
 internal const val GRID_FADE_BLOCK_TEST_TAG = "grid-fade-input-block"
 

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -13,6 +14,12 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpOffset
+
+/**
+ * What a tap on Home's empty room (the background under and between the apps, folders and widgets) does besides its own
+ * `onClick`: with the Stream standing beside Home it closes the Stream. Null leaves the tap as it was.
+ */
+internal val LocalHomeEmptyTap = staticCompositionLocalOf<(() -> Unit)?> { null }
 
 @Composable
 internal fun HomeBackgroundContextMenu(
@@ -26,6 +33,7 @@ internal fun HomeBackgroundContextMenu(
     val isMenuExpanded = remember { mutableStateOf(false) }
     val menuOffset = remember { mutableStateOf(DpOffset.Zero) }
     val density = LocalDensity.current
+    val emptyTap = LocalHomeEmptyTap.current
     val showMenu = { offset: DpOffset ->
         haptics.longPress()
         menuOffset.value = offset
@@ -36,9 +44,12 @@ internal fun HomeBackgroundContextMenu(
         modifier =
             modifier
                 .fillMaxSize()
-                .pointerInput(onClick, density) {
+                .pointerInput(onClick, density, emptyTap) {
                     detectTapGestures(
-                        onTap = { onClick() },
+                        onTap = {
+                            onClick()
+                            emptyTap?.invoke()
+                        },
                         onLongPress = { pressOffset ->
                             showMenu(
                                 DpOffset(

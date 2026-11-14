@@ -30,6 +30,10 @@ internal object StreamContentDetails {
         }
     }
 
+    /** Whether the notification is a conversation with a person (a messaging style, or the message category). */
+    fun isConversation(item: Item): Boolean =
+        item.ext[NotificationItemMapper.CONVERSATION_KEY] == ItemExtValue.Flag(true)
+
     /** What a notification offers: its own actions, reply and snooze where the platform allows them, and Hide. */
     fun notificationActions(item: Item): Set<NotificationAction> =
         buildSet {

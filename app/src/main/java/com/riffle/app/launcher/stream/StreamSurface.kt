@@ -2,6 +2,7 @@
 
 package com.riffle.app.launcher.stream
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -39,12 +41,15 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import com.riffle.app.R
 import com.riffle.app.launcher.LocalDockFan
+import com.riffle.app.launcher.LocalDockMotionTuning
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
+import com.riffle.app.launcher.dpBounds
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.dock.DockPageOrder
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.stream.OpenCardEvent
+import com.riffle.core.domain.launcher.stream.StreamColumnRect
 import com.riffle.core.domain.launcher.stream.StreamFocus
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamLayout
@@ -66,6 +71,9 @@ import kotlinx.coroutines.launch
 
 internal const val STREAM_SURFACE_TEST_TAG = "stream-surface"
 internal const val STREAM_PAGER_TEST_TAG = "stream-pager"
+
+/** The tag of the area the pages are laid out in beside a Dock: the column's rectangle (unfolded only). */
+internal const val STREAM_PAGES_TEST_TAG = "stream-pages"
 
 private const val CLOCK_TICK_MILLIS = 30_000L
 
@@ -116,8 +124,21 @@ internal fun StreamSurface(
      * the card. False wherever there is no Dock to hold them.
      */
     actionsInDock: Boolean = false,
+    /**
+     * Unfolded: where the stack's column stands inside this surface (dp, in its coordinates). The pages are laid out
+     * there and the surface itself is as wide and tall as an open card may be, so the card grows inside it, never
+     * clipped by the column. Null: the pages fill the surface.
+     */
+    pageBounds: (() -> StreamColumnRect?)? = null,
+    /** A tap on the Stream's own empty space (no card, no control) closes the Stream; null leaves it to do nothing. */
+    onEmptyTap: (() -> Unit)? = null,
 ) {
     val openCards = dockLink?.openCards ?: remember { OpenCardHolder() }
+    // The one motion of the open card (its growth, the column's and the grid's fade follow it), run here.
+    val latestReducedMotion by rememberUpdatedState(env.reducedMotion)
+    val latestTuning by rememberUpdatedState(LocalDockMotionTuning.current)
+    val cardOpen = openCards.state.isOpen
+    LaunchedEffect(cardOpen) { openCards.motion.animateTo(cardOpen, latestReducedMotion, latestTuning) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -194,19 +215,33 @@ internal fun StreamSurface(
     CompositionLocalProvider(LocalOpenCards provides openCards, LocalActionsInDock provides actionsInDock) {
         Box(modifier = modifier.fillMaxSize().testTag(STREAM_SURFACE_TEST_TAG)) {
             Box(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
-                if (pages.isEmpty()) {
-                    StreamAllHidden(hiddenSections) { section ->
-                        surfaceCallbacks.onLayoutAction(StreamLayoutAction.SetEnabled(section, true))
+                Box(
+                    modifier =
+                        (if (pageBounds != null) Modifier.dpBounds(pageBounds) else Modifier.fillMaxSize())
+                            .then(
+                                onEmptyTap?.let {
+                                        tap ->
+                                    Modifier.pointerInput(tap) { detectTapGestures { tap() } }
+                                } ?: Modifier,
+                            )
+                            .then(if (pageBounds != null) Modifier.testTag(STREAM_PAGES_TEST_TAG) else Modifier),
+                ) {
+                    if (pages.isEmpty()) {
+                        StreamAllHidden(hiddenSections) { section ->
+                            surfaceCallbacks.onLayoutAction(StreamLayoutAction.SetEnabled(section, true))
+                        }
+                    } else {
+                        StreamPagesMode(
+                            pages = pages,
+                            state = state,
+                            env = liveEnv,
+                            callbacks = surfaceCallbacks,
+                            dockLink = dockLink,
+                        )
                     }
-                } else {
-                    StreamPagesMode(
-                        pages = pages,
-                        state = state,
-                        env = liveEnv,
-                        callbacks = surfaceCallbacks,
-                        dockLink = dockLink,
-                    )
                 }
+                // The open card, over the pages and over the whole area, so no page or column clips it.
+                OpenCardLayerHost(openCards, pageBounds)
             }
             SnackbarHost(
                 hostState = snackbar,

@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
+import com.riffle.app.launcher.CountRecomposition
 import com.riffle.app.launcher.DockFanSource
 import com.riffle.app.launcher.LauncherHapticEvent
 import com.riffle.app.launcher.LocalDockFan
@@ -183,14 +184,17 @@ internal fun StreamStack(
     LaunchedEffect(stackKey, ids) { cards.dispatch(OpenCardEvent.CardsChanged(stackKey, ids)) }
     val openEntry =
         entries.firstOrNull { it.id == openState.cardId && openState.pageKey == stackKey && it.opensInPlace }
-    val motion = remember(stackKey) { OpenCardMotionState() }
+    // One motion for the Stream's open card (the holder's): the stack reads it only where it draws.
+    val motion = cards.motion
     val frameGeometry = remember(stackKey) { OpenCardFrameGeometry() }
     var lastOpen by remember(stackKey) { mutableStateOf<StackEntry?>(null) }
     SideEffect { if (openEntry != null) lastOpen = openEntry }
-    val latestReduced by rememberUpdatedState(env.reducedMotion)
-    val latestTuning by rememberUpdatedState(LocalDockMotionTuning.current)
-    LaunchedEffect(openEntry != null) { motion.animateTo(openEntry != null, latestReduced, latestTuning) }
-    val shown = openEntry ?: lastOpen.takeIf { motion.progress > 0f }
+    // The card stays drawn while it closes. Whether it is still there is read through a derived value, so the stack
+    // recomposes when the card appears and when it is gone, never once per frame of the growth in between.
+    val currentOpen by rememberUpdatedState(openEntry)
+    val shownState =
+        remember(stackKey) { derivedStateOf { currentOpen ?: lastOpen.takeIf { motion.progress > 0f } } }
+    val shown = shownState.value
     BackHandler(enabled = openEntry != null) { cards.dispatch(OpenCardEvent.CloseByBack) }
     var queueShown by remember(stackKey) { mutableStateOf(true) }
     val actionsOnCard = !LocalActionsInDock.current
@@ -246,51 +250,49 @@ internal fun StreamStack(
                 onCloseOpen = close,
             )
         }
-        if (shown != null) {
-            val cardHeight = entries.maxOf { it.height }.scaledForFont()
-            val behind = (entries.size - 1).coerceIn(0, StreamCardStackSpec.VISIBLE_PEEKS)
-            val strips = StreamCardStackSpec.PITCH_DP.dp * behind
-            // Beside the card: a tap there closes it, and keeps the cards behind from being tapped under it.
-            Box(
-                modifier =
-                    Modifier
-                        .matchParentSize()
-                        .clearAndSetSemantics {}
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = close,
-                        ),
-            )
-            BoxWithConstraints(modifier = Modifier.matchParentSize()) {
-                val cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth)
-                OpenCardFrame(
-                    motion = motion,
+    }
+    val cardHeight = entries.maxOf { it.height }.scaledForFont()
+    val behind = (entries.size - 1).coerceIn(0, StreamCardStackSpec.VISIBLE_PEEKS)
+    val strips = StreamCardStackSpec.PITCH_DP.dp * behind
+    val placement = StreamCardActions.effectiveCardPlacement(env.cardSettings.openCardPlacement)
+    val shownContent = (shown as? ContentEntry)?.content
+    // The open card is not drawn here: it is handed to the surface, which draws it over the whole of its area, outside
+    // the pager and the column, so nothing around it can clip it (see OpenCardLayerHost).
+    val layer =
+        remember(shownContent, env, callbacks, groupKey, actionsOnCard, queueShown, cardHeight, strips, placement) {
+            shownContent?.let { content ->
+                OpenCardLayer(
                     geometry = frameGeometry,
-                    placement = StreamCardActions.effectiveCardPlacement(env.cardSettings.openCardPlacement),
-                    cardWidth = cardWidth,
+                    placement = placement,
                     browseHeight = cardHeight,
-                    bottomInset = StackBottomInset,
                     strips = strips,
-                    modifier = Modifier.matchParentSize().testTag(STREAM_OPEN_CARD_TEST_TAG),
+                    bottomInset = StackBottomInset,
+                    onClose = close,
+                    onStripTap = { rank ->
+                        // The strips are the older cards above the front one: open the one that was tapped.
+                        val front = StackFling.nearest(stackState.position, entries.size)
+                        entries.getOrNull(front + rank)?.takeIf { it.opensInPlace }?.let { target ->
+                            stackState.snapTo(front + rank)
+                            open(target)
+                        } ?: close()
+                    },
                 ) {
-                    (shown as? ContentEntry)?.let { entry ->
-                        OpenStreamCard(
-                            content = entry.content,
-                            env = env,
-                            callbacks = callbacks,
-                            groupKey = groupKey,
-                            actionsOnCard = actionsOnCard,
-                            queueShown = queueShown,
-                            onQueueShownChange = { queueShown = it },
-                            onClose = close,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                    OpenStreamCard(
+                        content = content,
+                        env = env,
+                        callbacks = callbacks,
+                        groupKey = groupKey,
+                        actionsOnCard = actionsOnCard,
+                        queueShown = queueShown,
+                        onQueueShownChange = { queueShown = it },
+                        onClose = close,
+                        modifier = Modifier.fillMaxWidth().testTag(STREAM_OPEN_CARD_TEST_TAG),
+                    )
                 }
             }
         }
-    }
+    SideEffect { cards.publishLayer(layer) }
+    DisposableEffect(cards) { onDispose { cards.publishLayer(null) } }
 }
 
 /** The tag of the open card (a test hook). */
@@ -464,6 +466,8 @@ private fun FocusedStack(
                     .graphicsLayer {
                         val frontTop = areaHeightPx - bottomInsetPx - cardHeightPx
                         translationY = if (openActive) frameGeometry.topPx - frontTop else 0f
+                        // Too little room above the open card for the strips: they are not drawn, not overlapped.
+                        alpha = if (openActive && !frameGeometry.stripsVisible) 0f else 1f
                     }
                     .clipToBounds()
                     .scrollable(
@@ -549,6 +553,7 @@ private fun StackSlot(
     onBringToFront: () -> Unit,
     card: @Composable () -> Unit,
 ) {
+    CountRecomposition("stack-slot:$index")
     val semantics =
         if (isFront) {
             Modifier.semantics {

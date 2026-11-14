@@ -4,14 +4,16 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,9 +40,12 @@ import com.riffle.core.domain.launcher.workspace.ItemImageHandle
 private val BadgeBorder = 1.5.dp
 
 /**
- * A round avatar of [size]: [photo] when the app published one, else [name]'s initials, else the app's own icon. The
- * app's icon sits at the avatar's corner as a badge when there is a photo or initials for it to badge. Decorative: the
- * name is shown beside it, so it is no node for assistive technology.
+ * A round avatar of [size]. For a [person] (a conversation, or a contact photo): [photo] when the app published one,
+ * else [name]'s initials, with the app's icon badged at its corner. For anything else (a promotion, a download, a
+ * status) there is no person to show: the avatar is the app's own icon, with no initials and no badge. The badge is
+ * only for a person's photo or initials: it is not drawn on the app's own icon, nor on a photo that is the app's icon
+ * (a large icon an app sets to its own logo). Decorative: the name is shown beside it, so it is no node for assistive
+ * technology.
  */
 @Composable
 internal fun StreamAvatar(
@@ -50,22 +55,32 @@ internal fun StreamAvatar(
     env: StreamEnvironment,
     size: Dp,
     modifier: Modifier = Modifier,
+    person: Boolean = true,
 ) {
-    val image = rememberStreamImage(photo, env.imageLoader, size)
+    val image = rememberStreamImage(photo.takeIf { person }, env.imageLoader, size)
     val loaded = image.value
-    val initial = name?.trim()?.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()
-    // A badge only where there is something to badge: a photo, or initials. Without either the app icon is the avatar.
-    val badged = photo != null || initial != null
+    val appImage = rememberStreamImage(appIcon.takeIf { person && photo != null }, env.imageLoader, size).value
+    val initial = name?.trim()?.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.takeIf { person }
+    // A photo that is the app's own icon is the app's icon: it takes no badge of the app's icon.
+    val looksLikeAppIcon = remember(loaded, appImage) { IconLookalike.same(loaded, appImage) }
+    val plan =
+        AvatarPlanner.plan(
+            person = person,
+            hasPhoto = loaded != null,
+            hasInitial = initial != null,
+            hasAppIcon = appIcon != null,
+            photoIsAppIcon = looksLikeAppIcon,
+        )
     Box(modifier = modifier.size(size).cardSpotlightSource("avatar").clearAndSetSemantics {}) {
-        when {
-            loaded != null ->
+        when (plan.face) {
+            AvatarFace.PHOTO ->
                 Image(
-                    bitmap = loaded,
+                    bitmap = checkNotNull(loaded),
                     contentDescription = null,
                     modifier = Modifier.size(size).clip(CircleShape),
                     contentScale = ContentScale.Crop,
                 )
-            initial != null ->
+            AvatarFace.INITIALS ->
                 Box(
                     modifier =
                         Modifier
@@ -82,9 +97,9 @@ internal fun StreamAvatar(
                         overflow = TextOverflow.Clip,
                     )
                 }
-            else -> StreamIcon(appIcon, env, size, Modifier, CircleShape)
+            AvatarFace.APP_ICON -> StreamIcon(appIcon, env, size, Modifier, CircleShape)
         }
-        if (badged && appIcon != null) {
+        if (plan.badge && appIcon != null) {
             val badge = size * BADGE_FRACTION
             StreamIcon(
                 handle = appIcon,
@@ -128,7 +143,12 @@ internal fun StreamThumbnail(
     )
 }
 
-/** A picture in full width on an open card, at its own proportions up to [maxHeight]. */
+/**
+ * A picture across the open card's whole content width, at its own proportions: as tall as its width and its aspect
+ * ratio make it up to [maxHeight] (a taller one is cropped about its centre, never squeezed), with all four corners
+ * rounded to the card's inner radius (the card's corner less the padding the picture sits in), so it sits in the card
+ * like a part of it and leaves no empty room beside or below it.
+ */
 @Composable
 internal fun StreamPicture(
     picture: ItemImageHandle?,
@@ -141,18 +161,38 @@ internal fun StreamPicture(
     val image = rememberStreamImage(picture, env.imageLoader, StreamMaxReadableWidth)
     val loaded = image.value ?: return
     val description = pictureDescription(sender)
-    Image(
-        bitmap = loaded,
-        contentDescription = description,
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .heightIn(max = maxHeight)
-                .clip(RiffleShapes.medium)
-                .semantics { this.contentDescription = description },
-        contentScale = ContentScale.Fit,
-        alignment = Alignment.TopStart,
-    )
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val height = PictureLayout.heightFor(maxWidth, loaded.width, loaded.height, maxHeight)
+        Image(
+            bitmap = loaded,
+            contentDescription = description,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(height)
+                    .clip(PictureInnerShape)
+                    .semantics { this.contentDescription = description },
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.Center,
+        )
+    }
+}
+
+/** The picture's corners: the card's corner (24 dp) less the 16 dp of padding it sits in. */
+private val PictureInnerShape = RiffleShapes.small
+
+/** How tall a picture is drawn. Pure, so it is tested. */
+internal object PictureLayout {
+    /** The height of a [pixelWidth] x [pixelHeight] image drawn [width] wide: its own proportions, at most [max]. */
+    fun heightFor(
+        width: Dp,
+        pixelWidth: Int,
+        pixelHeight: Int,
+        max: Dp,
+    ): Dp {
+        if (pixelWidth <= 0 || pixelHeight <= 0) return 0.dp
+        return (width * (pixelHeight.toFloat() / pixelWidth)).coerceAtMost(max)
+    }
 }
 
 @Composable

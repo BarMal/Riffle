@@ -29,6 +29,7 @@ import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.stream.PinnedApp
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
+import com.riffle.core.domain.launcher.stream.StreamColumnRect
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamHideItems
@@ -149,6 +150,10 @@ internal fun StreamDestination(
     streamSettings: StreamSettings = StreamSettings(),
     /** Whether the Dock can hold an open card's actions row (a Dock along the top or bottom edge). */
     dockCanHoldActions: Boolean = false,
+    /** See [StreamSurface]: where the stack's column stands inside this surface (unfolded), null folded. */
+    pageBounds: (() -> StreamColumnRect?)? = null,
+    /** A tap on the Stream's empty space: closes the Stream. */
+    onEmptyTap: (() -> Unit)? = null,
 ) {
     LaunchedEffect(host) { host.layouts.initialize() }
     SideEffect { host.posture.deviceClass = deviceClass }
@@ -244,6 +249,8 @@ internal fun StreamDestination(
         pinnedGroupKeys = pinnedGroupKeys,
         actionsInDock =
             dockCanHoldActions && streamSettings.cardActionsPlacement == CardActionsPlacement.IN_DOCK,
+        pageBounds = pageBounds,
+        onEmptyTap = onEmptyTap,
     )
 }
 

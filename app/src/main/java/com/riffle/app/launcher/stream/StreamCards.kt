@@ -172,7 +172,14 @@ internal fun NotificationCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
             ) {
-                StreamAvatar(content.avatar, content.icon, content.title ?: content.appLabel, env, BrowseAvatarSize)
+                StreamAvatar(
+                    content.avatar,
+                    content.icon,
+                    content.title ?: content.appLabel,
+                    env,
+                    BrowseAvatarSize,
+                    person = content.hasPerson,
+                )
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
                     Text(
                         text = content.title ?: hiddenText(),

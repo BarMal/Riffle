@@ -60,6 +60,9 @@ internal fun OpenStreamCard(
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     val actions = StreamCardActions.forContent(content, queueShown)
     StreamCardSurface(content.id.value, content.appRef(), content.iconHandle(), env, modifier) { sourceModifier ->
+        // Three parts, so that a card that is shorter than its content (the keyboard is up, the window is short) gives
+        // up its middle and not its ends: the header stays at the top and the actions (the reply field) at the bottom,
+        // and the thread between them scrolls.
         Column(
             modifier =
                 sourceModifier
@@ -67,17 +70,22 @@ internal fun OpenStreamCard(
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
                     .cardActionAccessibility(content, actions, callbacks, onQueueShownChange)
                     .streamClickable(onClose, stringResource(R.string.stream_card_close))
-                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.m),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
         ) {
-            when (content) {
-                is NotificationContent -> OpenNotification(content, env, callbacks, groupKey, hideChoices)
-                is MediaContent ->
-                    OpenMedia(content, env, callbacks, groupKey, hideChoices, queueShown)
-                is EventContent -> OpenEvent(content, env, callbacks, groupKey, hideChoices)
-                is TaskContent -> OpenTask(content, env)
-                else -> Unit
+            if (content is NotificationContent) OpenNotificationHeader(content, env, groupKey, callbacks, hideChoices)
+            Column(
+                modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
+            ) {
+                when (content) {
+                    is NotificationContent -> OpenNotificationBody(content, env, callbacks)
+                    is MediaContent ->
+                        OpenMedia(content, env, callbacks, groupKey, hideChoices, queueShown)
+                    is EventContent -> OpenEvent(content, env, callbacks, groupKey, hideChoices)
+                    is TaskContent -> OpenTask(content, env)
+                    else -> Unit
+                }
             }
             if (actionsOnCard) {
                 CardActionControls(content, actions, callbacks, onQueueShownChange)
@@ -86,19 +94,27 @@ internal fun OpenStreamCard(
     }
 }
 
+/** The header of an open conversation: who, from which app and when. It stays put while the thread scrolls. */
 @Composable
-private fun OpenNotification(
+private fun OpenNotificationHeader(
     content: NotificationContent,
     env: StreamEnvironment,
-    callbacks: StreamCallbacks,
     groupKey: String?,
+    callbacks: StreamCallbacks,
     hideChoices: List<com.riffle.core.domain.launcher.workspace.settings.HideChoice>,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
     ) {
-        StreamAvatar(content.avatar, content.icon, content.title ?: content.appLabel, env, OpenAvatarSize)
+        StreamAvatar(
+            content.avatar,
+            content.icon,
+            content.title ?: content.appLabel,
+            env,
+            OpenAvatarSize,
+            person = content.hasPerson,
+        )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = content.title ?: hiddenText(),
@@ -116,6 +132,15 @@ private fun OpenNotification(
         }
         StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
     }
+}
+
+/** The body of an open conversation: its thread (or its text), the picture the app attached and "Open". */
+@Composable
+private fun OpenNotificationBody(
+    content: NotificationContent,
+    env: StreamEnvironment,
+    callbacks: StreamCallbacks,
+) {
     if (content.thread.isNotEmpty()) {
         NotificationThread(content)
     } else {
@@ -123,7 +148,7 @@ private fun OpenNotification(
             Text(text = text, style = MaterialTheme.typography.bodyLarge)
         }
     }
-    // The picture the app attached, in full under the conversation it belongs to.
+    // The picture the app attached, across the card under the conversation it belongs to.
     val sender = content.thread.lastOrNull()?.sender ?: content.title
     StreamPicture(content.picture, sender, env, OpenPictureMaxHeight)
     if (StreamActionPolicy.offers(content, StreamAction.Open)) {
