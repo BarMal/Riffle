@@ -12,7 +12,7 @@ Their spring, magnet and timing constants are the starting values; the settings 
 | 2. Trampoline and fan | The dip under the finger, the bounce on release, cards fanning out in sequence, Home fading, and closing as the opening reversed. Reduced-motion fallback. **Built**, see "As built". | 1 |
 | 3. Hold to choose | Press and hold or slide while pressed: early extend, selection ring, name label, edge scrolling, haptic tick per icon. Starting a press on an icon opens that icon's stack. **Built**, see "As built". | 1, 2 |
 | 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet (**4a, built**, see "As built"); swiping left and right between stacks in Dock order (built in slice 1); shortcuts stacks for apps with nothing live, the Today page (agenda and tasks) and Recents as a stack (**4b, built**, see "As built"). | 1 |
-| 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. | 4 |
+| 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. **Built**, see "As built". | 4 |
 | 6. Settings | Stream settings (open card position, actions position, tint, background, pinned apps), motion settings, the accessibility action and the first-run hint. | 2 to 5 |
 | 7. Home and Library | The combined search-and-page handle with quick-drag, search opening from the Dock, the paged Library, Home mode (Placed items or App library) and the feature switches. | none |
 
@@ -406,6 +406,75 @@ images, the opened-card redesign (slice 5).
 
 **Left for later.** Settings (slice 6), card tint and images and the opened-card redesign (slice 5), Tomorrow's tasks, the
 unfolded layout.
+
+### Slice 5: Cards (built)
+
+**Built.**
+
+- **App-tinted cards** (`core:domain` `designsystem/CardTint.kt`; `GlassSurface`'s `cardTint`). A card's fill is its app's main
+  icon colour (`rememberAppIconColor`, the same dominant colour the Dock's spotlight uses) at the tint strength, 22% by
+  default, mixed over the card's base colour: one solid colour, no gradient, blur or offscreen layer. The edge stays the
+  neutral glass edge. The text colour is computed from the resulting fill (white or black, whichever reads better) and
+  recolours the theme's `onSurface`, `onSurfaceVariant` and `primary` inside the card. `CardTintTest` asserts at least
+  4.5:1 over a black, a mid-grey and a white backdrop for very dark, very light, saturated and grey colours, at the default
+  and the maximum strength, in both themes.
+- **Open cards.** Tapping the front card of a conversation, the player, an event or a task opens it in place
+  (`StreamStack`, `OpenCardFrame`): it grows from its browse size to its full content with the critically damped
+  `OpenCardSpring` (constants in `DockMotionConstants`, frequency `DockMotionTuning.openCardOmega`), the cards behind stay as
+  peeking strips above it (the stack translates so its front slot sits at the open card's top), and the stack and the pager
+  take no drag while it is open. Closing: a tap on the card or beside it, a press of the Dock, Back, a change of page, the
+  card going away (`OpenCardReducer`, pure and tested). Reduced motion: no growth, an 80 ms fade.
+- **Actions in the Dock** (`DockActionsRow`, `CardActionControls`, `StreamCardActions`). While a card is open the Dock gains a
+  Thick-glass row above its icons (below them on a top Dock): a reply field with send, Dismiss and Snooze for a
+  conversation; previous, play or pause, next and the queue control for the player; "Open in calendar" for an event;
+  Complete for a task. The row is part of the Dock's area, so the Dock grows upward and the room the Stream sees shrinks with
+  it; it follows the window insets, so it and the open card stay above the keyboard. The same controls are the open card's
+  accessibility actions. "On the card" puts them under the content (also the fallback where the Dock cannot hold the row).
+  Pressing the Dock with a card open closes the card (the Dock dips and springs back, the Stream stays); Back and the Dock's
+  accessibility action ("Close card") do the same.
+- **Images.** The notification mapper now also captures a person icon (the newest message's sender photo) and the
+  big-picture of a notification, into `NotificationImageStore`: memory only, never written anywhere (the persisted
+  notification snapshot gains only two booleans, `hasPersonIcon` and `hasPicture`). They are bounded three ways: each is sized
+  down when captured (a picture to 512 px on its long side, a contact photo to 128), the whole set is held to 8 MB and 8
+  pictures by `NotificationImageBudget` (contact photos first, then the newest pictures), and the set is replaced at every
+  listener change and cleared when it disconnects, so nothing outlives its notification. A card then loads an image sized
+  to what it draws (`AndroidStreamImageLoader` never upscales) and holds it only while it is composed. Browse cards show the
+  avatar (photo, else the large icon, else the sender's initials, else the app's icon) with the app's icon badged at its
+  corner and one small thumbnail at the trailing edge; open cards show the picture in full under the thread and the artwork
+  large. Avatars are decorative; a picture is described "Picture from <sender>" and never by what it shows.
+- **Settings model** (`StreamSettings`, stored in `LauncherSettings.stream`; the settings page is slice 6): the tint strength
+  (22%), a coloured glow on the top edge (off), where an open card sits (centre, just above the Dock, grows out of the Dock) and
+  where its actions sit (in the Dock, on the card), with the reducer actions and the codec (`stream` section; old blobs
+  decode to the defaults, an unknown placement reads as the default, the tint is held to 0 to 40).
+
+**What differed from the design.**
+
+- **The alpha is not the weight's.** A card cannot meet 4.5:1 over a white or a black backdrop at Regular's 16%, so a card
+  takes Thick's colours (the dark theme's base a little deeper) and the lowest alpha at which its text passes, 60 to 80% in
+  the dark theme and 48 to 62% in the light one at the default strength (up to 97% for a white-ish app colour at 40%).
+  The tint is still the app colour at the strength mixed over that fill's colour. Cards, and so Glance widgets' cards,
+  Today's cards and the Stage's thumbnails, are heavier than before; Thin and Regular are untouched elsewhere.
+- **Cards no longer run the spotlight's edge glow.** It read as a coloured outline. The `edgeTint` strips and the spotlight
+  are unchanged for the Dock, folders, Library tiles and search; a card's content still reports its colour to a spotlit
+  surface it sits in. The optional top glow is the edge's tint strip along the top edge only.
+- **Browse cards lost their buttons.** A notification's Reply, Dismiss and Snooze, and its thread toggle, are on the open card
+  (the Dock's row, or the card); the player keeps its transport and scrubber on the browse card and gains the queue on the
+  open one. Tests that clicked those buttons now open the card first (see the report of this slice).
+- **Not every kind opens.** A recent app and a launcher shortcut have nothing more to show (a tap launches them) and an
+  article card already shows what it has (a tap opens the article); Today's next event keeps its inline actions. A
+  notification's tap used to launch the app; the open card has an "Open" button for that.
+- **Mark read** is not offered for a notification (the platform has no such action); it stays on articles in the List view.
+
+**Left for later.**
+
+- **"Grows out of the Dock"** is stored and drawn as just above the Dock.
+- **The media session's custom actions** ("where published") are not plumbed through the session snapshot, the item and the
+  action gateway, so the player's row has the transport and the queue only.
+- **A side Dock** (left or right) holds no row, and neither does the unfolded split: the actions are on the card there.
+  A row along a side Dock's inner edge needs its own layout.
+- **A person icon per message** (a thread with several senders' photos) and the conversation's own icon: the newest
+  message's sender photo is the avatar.
+- **The settings page** (slice 6): the tint, glow, open-card and actions controls.
 
 ### Glass and Dock sizing (after slice 4a)
 
