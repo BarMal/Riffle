@@ -959,3 +959,11 @@ Six things the owner found on a foldable (unfolded, Dock on the right edge), eac
   (under the column with nothing peeking through, or behind an open card) take no input either
   (`GridFadeCell.blocksInput`, `GridFadeInputBlock`, in Home's grid and the paged Library): a cell-sized node over the
   cell that swallows taps and presses and consumes no movement, so a page's drag still reaches the pager.
+- **Home ignores the keyboard.** Home laid out inside `WindowInsets.safeDrawing`, which includes the keyboard, so an
+  open card's reply field raised the keyboard and shrank Home's grid to a column of small icons. Home's frame and the
+  paged Library standing in for it now use `HomeInsetPolicy.contentInsets()` (system bars and cutout only). Only the
+  Stream's column, an open card, search and the Dock move for the keyboard. Found while proving it: with a card open
+  on a bottom Dock (folded) Home's grid also moved up, because the Dock's measured extent, which Home reserves, counted
+  the open card's actions row growing out of the Dock; the Dock area now reports its extent without that row
+  (`DockExtentReport`). `UnfoldedStreamColumnTest` and `FoldedAppsBehindCardsTest` assert every grid cell
+  (`home-grid-cell`) has the same bounds with the Stream closed, open, a card open and a simulated keyboard inset.

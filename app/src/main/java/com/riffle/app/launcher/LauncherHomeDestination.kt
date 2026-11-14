@@ -701,7 +701,8 @@ private fun AppLibraryHome(
 ) {
     val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
     val dockExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
-    val insets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets().asPaddingValues()
+    // Home ignores the keyboard: the system bars and the cutout only.
+    val insets = cardsPanelInsetPolicy(state).contentInsets().asPaddingValues()
     val libraryState = remember(state) { state.libraryState() }
     val latestOnAction = rememberUpdatedState(onAction)
     val context =

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -659,7 +662,7 @@ private fun StandardHomeColumn(
                     settings = state.presentation.homeGestures,
                     onAction = actions.onAction,
                 )
-                .windowInsetsPadding(state.presentation.homeInsetPolicy.safeDrawingInsets()),
+                .windowInsetsPadding(state.presentation.homeInsetPolicy.contentInsets()),
     ) {
         if (dockEdge == DockPosition.TOP) dockArea()
         ImmediateWorkspacePager(
@@ -1061,6 +1064,23 @@ internal fun homeInsetPolicy(appearance: AppearanceSettings): HomeInsetPolicy =
 @Composable
 internal fun HomeInsetPolicy.safeDrawingInsets(): WindowInsets {
     var insets = WindowInsets.safeDrawing
+    if (!reserveStatusBar) {
+        insets = insets.exclude(WindowInsets.statusBars)
+    }
+    if (!reserveNavigationBar) {
+        insets = insets.exclude(WindowInsets.navigationBars)
+    }
+    return insets
+}
+
+/**
+ * The insets Home's own content (its grid, its handle, the paged Library standing in for it) lays out against: the
+ * system bars and the cutout, never the keyboard. Home does not move, shrink or reflow for the keyboard: whatever the
+ * keyboard serves (a reply field in a card, search) is lifted by its own surface, and Home stays as it is behind it.
+ */
+@Composable
+internal fun HomeInsetPolicy.contentInsets(): WindowInsets {
+    var insets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
     if (!reserveStatusBar) {
         insets = insets.exclude(WindowInsets.statusBars)
     }

@@ -158,6 +158,9 @@ private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
 internal const val HOME_WORKSPACE_GRID_TEST_TAG = "home-workspace-grid"
 internal const val HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG = "home-workspace-grid-overflow"
 
+/** One cell of Home's placed grid (every cell, filled or not), for a test to measure the grid by. */
+internal const val HOME_GRID_CELL_TEST_TAG = "home-grid-cell"
+
 @Composable
 private fun RowScope.HomeGridCell(
     state: HomeGridCellState,
@@ -169,7 +172,8 @@ private fun RowScope.HomeGridCell(
         modifier =
             Modifier
                 .weight(1f)
-                .fillMaxHeight(),
+                .fillMaxHeight()
+                .testTag(HOME_GRID_CELL_TEST_TAG),
         contentAlignment = Alignment.Center,
     ) {
         val activeDragSession = state.activeDragSession
