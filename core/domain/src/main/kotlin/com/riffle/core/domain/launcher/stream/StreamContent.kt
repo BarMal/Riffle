@@ -81,8 +81,17 @@ data class NotificationContent(
     val person: ItemImageHandle? = null,
     /** The picture the notification carries (a big-picture style); null when it has none, and when redacted. */
     val picture: ItemImageHandle? = null,
+    /** The notification is a conversation with a person (a messaging style or the message category). */
+    val conversation: Boolean = false,
 ) : StreamContent {
     override val timeEpochMillis: Long get() = postedAtEpochMillis
+
+    /**
+     * Whether there is a person to show: a conversation, or a contact photo. Only then does a card draw a round avatar
+     * of a photo or initials with the app's icon badged on it; any other notification (a promotion, a download) has the
+     * app's icon and no initials.
+     */
+    val hasPerson: Boolean get() = conversation || person != null || thread.isNotEmpty()
 
     /**
      * The round avatar of a card: the contact photo, else the notification's large icon (which a messaging app sets to
