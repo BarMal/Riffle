@@ -267,7 +267,7 @@ private fun DockAlignmentSetting(
     SettingsChoiceRow(
         modifier = Modifier.settingAnchor(SettingKey.DOCK_ALIGNMENT),
         title = SettingKey.DOCK_ALIGNMENT.label(),
-        subtitle = "Places a content-sized dock on the home screen",
+        subtitle = "Where the Dock stands along its edge, when it does not fill it",
         options = DockAlignment.entries,
         selected = alignment,
         onSelect = { candidate -> onAction(LauncherShellAction.SelectDockAlignment(candidate)) },

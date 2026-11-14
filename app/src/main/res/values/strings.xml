@@ -595,6 +595,7 @@
     <string name="settings_section_view">View</string>
     <string name="settings_section_features">Features</string>
     <string name="settings_section_home_mode">Home screen</string>
+    <string name="settings_section_card_look">Look</string>
     <string name="settings_home_mode_subtitle">Placed items are the apps, folders and widgets you put on Home. App library shows every app on pages. Your placed items are kept.</string>
     <string name="settings_home_mode_placed">Placed items</string>
     <string name="settings_home_mode_app_library">App library</string>

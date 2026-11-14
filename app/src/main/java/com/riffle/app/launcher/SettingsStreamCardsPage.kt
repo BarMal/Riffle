@@ -93,13 +93,6 @@ internal fun SettingsStreamCards(
             onCheckedChange = { enabled -> onAction(LauncherShellAction.SetStreamCardTopGlow(enabled)) },
         )
     }
-    // The same stored value, label and subtitle as Settings > Layout: one per posture, two ways to reach it.
-    Text(
-        modifier = Modifier.padding(horizontal = 8.dp),
-        text = stringResource(R.string.settings_stream_apps_behind_cards_note),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
     // Both postures' rows are one setting's place: search scrolls to the pair.
     Column(
         modifier = Modifier.settingAnchor(SettingKey.STREAM_APPS_BEHIND_CARDS),
@@ -125,6 +118,13 @@ internal fun SettingsStreamCards(
                 )
             }
         }
+        // The same stored value, label and subtitle as Settings > Layout: one per posture, two ways to reach it.
+        Text(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            text = stringResource(R.string.settings_stream_apps_behind_cards_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
     SettingsSection(title = stringResource(R.string.stream_open_card)) {
         SettingsChoiceRow(

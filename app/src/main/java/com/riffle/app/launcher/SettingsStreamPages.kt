@@ -124,7 +124,7 @@ internal fun SettingsStreamSections(
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    SettingsSection(title = stringResource(R.string.settings_page_stream_cards)) {
+    SettingsSection(title = stringResource(R.string.settings_section_card_look)) {
         SettingsClickableRow(
             title = stringResource(SettingsPage.STREAM_CARDS.titleRes),
             subtitle = stringResource(SettingsPage.STREAM_CARDS.summaryRes),

@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.snap
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -128,7 +127,7 @@ internal fun StandardHomeDockArea(
                 .easeSizeWhen(easeSize) { dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion)) }
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),
-        verticalArrangement = if (runsAlongASide) Arrangement.Center else Arrangement.Top,
+        verticalArrangement = layout.dock.alignment.sideArrangement(runsAlongASide),
     ) {
         DockShelfExpandButton(interactions = dockInteractions)
         DockActionsRowAt(DockPosition.BOTTOM, position, cardActions, layout, presentation) { rowPx ->
