@@ -56,6 +56,7 @@ internal class DockMotionState(
     private var travelDp: Float = 0f
     private var caught: DockMotionFrame? = null
     private var blend: Float = 1f
+    private var dimJob: Job? = null
 
     /** Where the motion is. */
     var phase: DockMotionPhase by mutableStateOf(DockMotionPhase.REST)
@@ -71,6 +72,17 @@ internal class DockMotionState(
 
     /** How far the dock is pressed toward its edge, in dp (negative while it has sprung past rest). */
     var dip: Float by mutableFloatStateOf(0f)
+        private set
+
+    /**
+     * Whether the press has turned into a selection (hold to choose): the Dock and Home stay where they were when
+     * choosing began, and Home is dimmed further ([dim]) until it ends.
+     */
+    var choosing: Boolean by mutableStateOf(false)
+        private set
+
+    /** How much of Home's opacity is kept while choosing: 1 at all other times. Read it in a draw block. */
+    var dim: Float by mutableFloatStateOf(1f)
         private set
 
     /** Whether under reduced motion: a plain cross-fade. Set when a press or a run starts. */
@@ -103,7 +115,15 @@ internal class DockMotionState(
     fun fanFrame(index: Int): FanFrame? = if (running) DockFan.cardFrame(progress, index, reduced) else null
 
     /** Home as it is drawn now; null when nothing is under way. */
-    fun homeFrame(): HomeFrame? = if (running) DockFan.homeFrame(progress, reduced) else null
+    fun homeFrame(): HomeFrame? =
+        if (running) {
+            DockFan.homeFrame(progress, reduced).let {
+                    frame ->
+                frame.copy(alpha = frame.alpha * dim)
+            }
+        } else {
+            null
+        }
 
     /** The Dock's resting state is [open]: the shell showed it (or an external change took it back to Home). */
     fun syncShell(open: Boolean) {
@@ -123,6 +143,7 @@ internal class DockMotionState(
     ) {
         job?.cancel()
         job = null
+        stopChoosing(animated = false)
         caught = if (running) DockMotionFrame(progress, dip) else null
         blend = if (caught == null) 1f else 0f
         reduced = reducedMotion
@@ -135,9 +156,51 @@ internal class DockMotionState(
         if (caught != null) job = scope.launch { blendIn() }
     }
 
+    /**
+     * The press turned into a selection: everything holds where it is (the Dock stays dipped, Home as faded) and
+     * Home is dimmed further, at once (not animated, so reduced motion has nothing to skip).
+     */
+    fun beginChoosing() {
+        if (phase != DockMotionPhase.PRESSING || choosing) return
+        dimJob?.cancel()
+        choosing = true
+        dim = DockMotionConstants.CHOOSE_HOME_DIM
+    }
+
+    /**
+     * The selection ended, whatever it led to: Home's extra dimming lets go, over a moment (at once under reduced
+     * motion), so it does not blink as the fan or the bounce back starts.
+     */
+    fun endChoosing() = stopChoosing(animated = !reduced)
+
+    private fun stopChoosing(animated: Boolean) {
+        dimJob?.cancel()
+        dimJob = null
+        if (!choosing) {
+            dim = 1f
+            return
+        }
+        choosing = false
+        if (!animated) {
+            dim = 1f
+            return
+        }
+        val from = dim
+        dimJob =
+            scope.launch {
+                var start = -1L
+                while (dim < 1f) {
+                    val now = awaitFrameNanos()
+                    if (start < 0) start = now
+                    val t = ((now - start) / NANOS_PER_SECOND / DockMotionConstants.CHOOSE_DIM_RELEASE_SECONDS)
+                    dim = from + (1f - from) * t.coerceIn(0f, 1f)
+                }
+            }
+    }
+
     /** The finger is [travelDp] down. */
     fun updatePress(travelDp: Float) {
-        if (phase != DockMotionPhase.PRESSING) return
+        if (phase != DockMotionPhase.PRESSING || choosing) return
         this.travelDp = travelDp
         refreshPress()
     }
@@ -211,6 +274,7 @@ internal class DockMotionState(
     }
 
     private fun rest(open: Boolean) {
+        stopChoosing(animated = false)
         logicalOpen = open
         heading = null
         caught = null

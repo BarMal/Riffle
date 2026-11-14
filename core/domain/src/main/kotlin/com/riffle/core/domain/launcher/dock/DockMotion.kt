@@ -130,11 +130,40 @@ object DockMotionConstants {
 
     /** Catching an animation with a finger: how long what was on screen takes to hand over to the press. */
     const val CATCH_BLEND_SECONDS: Float = 0.1f
+
+    // Choosing (hold to choose, `DockChoice.kt`): a press held past the threshold, or slid, becomes a selection.
+
+    /** The default hold time: how long a press held still past the threshold waits before it turns into choosing. */
+    const val DEFAULT_HOLD_MILLIS: Int = 220
+
+    /** Sliding the pressed finger this far along the Dock's run (dp) starts choosing at once. */
+    const val CHOOSE_SLIDE_DP: Float = 14f
+
+    /** A finger that moves no more than this (dp) from where it rested still counts as holding still. */
+    const val CHOOSE_STILL_DP: Float = 6f
+
+    /** Holding the finger within this fraction of the row's length from either end scrolls the row that way. */
+    const val CHOOSE_EDGE_ZONE_FRACTION: Float = 0.15f
+
+    /** How fast the row scrolls while the finger holds in an end zone, in dp per second. */
+    const val CHOOSE_EDGE_SCROLL_DP_PER_SECOND: Float = 300f
+
+    /** A finger more than this many Dock thicknesses beyond the Dock's inner edge cancels the choice on release. */
+    const val CHOOSE_CANCEL_DOCK_HEIGHTS: Float = 1f
+
+    /** The selected item is drawn this much larger, with a ring. */
+    const val CHOOSE_SELECTED_SCALE: Float = 1.14f
+
+    /** Home is drawn at this share of its (already pre-faded) opacity while choosing from Home. */
+    const val CHOOSE_HOME_DIM: Float = 0.3f
+
+    /** When the choice ends, Home's extra dimming lets go over this long (not under reduced motion). */
+    const val CHOOSE_DIM_RELEASE_SECONDS: Float = 0.12f
 }
 
 /**
- * The three motion settings the settings slice exposes (ADR 0003, Amendment 3: speed, trampoline, magnet) and what
- * follows from them. The defaults are the prototype's.
+ * The motion settings the settings slice exposes (ADR 0003, Amendment 3: speed, trampoline, magnet and the hold time)
+ * and what follows from them. The defaults are the prototype's.
  */
 data class DockMotionTuning(
     /** How long a change takes, in milliseconds (default 200). */
@@ -143,6 +172,8 @@ data class DockMotionTuning(
     val trampoline: Float = DockMotionConstants.DEFAULT_TRAMPOLINE,
     /** How strongly the end of a movement is drawn in, 0 to 1 (default 0.4). */
     val magnet: Float = DockMotionConstants.DEFAULT_MAGNET,
+    /** How long a press is held still past the threshold before it turns into choosing, in milliseconds (220). */
+    val holdMillis: Int = DockMotionConstants.DEFAULT_HOLD_MILLIS,
 ) {
     private val speed: Int get() = speedMillis.coerceAtLeast(MIN_SPEED_MILLIS)
 

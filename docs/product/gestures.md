@@ -10,7 +10,8 @@ This page describes the behaviour after #1210, revised by the dock-pull decision
 
 > **Dock modes, slice 1 (2026-11-13, [ADR 0003 Amendment 3](../architecture/adr/0003-places-and-views.md)).** The Dock has
 > two modes. **Pressing the Dock down (toward its edge) past a short threshold and releasing** toggles Home and the
-> contextual mode (the Stream showing); a press that starts on a live app's icon opens that app's page. The pull away from
+> contextual mode (the Stream showing); a press that starts on a live app's icon opens that app's page; a press that is
+> held or slid chooses an icon (slice 3, "Hold to choose" below). The pull away from
 > the edge now opens the Library from anywhere on the Dock. The Stream button, the swipe up on a live app and the Stream
 > spine and page header are gone: in the contextual mode the Dock's row (scrolled sideways with fling) is the page
 > indicator, a tap on a tile switches page, and the page options are on a long-press of the tile. See ["The Dock press
@@ -79,8 +80,32 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   shallow press just bounces back; a finger landing mid-way catches it and the next release or press runs on from there.
   Under reduced motion it is one short cross-fade (no dip, bounce or fan). An expanded posture still opens the last-used
   shown state (split or Stream only) and returns to Home only, by the split's settle.
-- **What the press exposes**: `DockPressState.onBegan`, `onMoved(travelDp)` and `onReleased` (committed or not, and the
-  entry it started on), and `progress` (0 to 1, read it in a draw block). The Dock's motion draws from them.
+- **What the press exposes**: `DockPressState.onBegan`, `onMoved(travelDp)` and `onReleased` (committed or not, whether
+  it was choosing, and the entry it started on), `onChoosingBegan` and `onChoosingMoved` (hold to choose, below), and
+  `progress` (0 to 1, read it in a draw block). The Dock's motion draws from them.
+- **Hold to choose (dock modes slice 3).** The third depth of the one gesture, inside the same pointer loop (no new
+  detector; ADR 0002). Once claimed, every sample of the finger goes to the pure `DockChoiceStart`; while the finger rests
+  past the 28 dp threshold the wait for the next event is bounded (`withTimeoutOrNull`) by the moment holding starts
+  choosing, so a still finger gets there without events. It starts when the finger has rested for the hold time
+  (`DockMotionTuning.holdMillis`, 220 ms; "rested" is within 6 dp, moving restarts it) or slides more than 14 dp along the
+  run past the threshold; never before the threshold, and drawing the press back above it first cancels the wait. From
+  then on the press is a selection: the finger's place is what is followed, the lift commits to the selected item (any
+  travel), and the release outcome is the one pure function `DockChoice.outcome`:
+
+  | Release | Home mode | Contextual mode |
+  | --- | --- | --- |
+  | Quick press past the threshold | Opens the page of the icon the press started on, else the last page | Closes |
+  | Short of the threshold | Nothing | Nothing |
+  | Choosing, an item selected | Opens that item's page, with the fan | Switches to that page; the Stream stays out |
+  | Choosing, nothing selectable | The page a quick press opens | Nothing |
+  | Choosing, finger more than one Dock thickness beyond the Dock's inner edge | Nothing (back to Home) | Nothing |
+  | Gesture taken away (not a lift) | Nothing | Nothing |
+
+  The nearest selectable item is chosen by centre along the run, skipping items with no page (`DockChoice.pageFor`: live
+  apps, now playing and tiles have one, pinned apps do not yet); a finger within 15% of the row's length of an end (or
+  beyond it) scrolls the row at 300 dp/s; a light haptic tick (`LauncherHapticEvent.DETENT`, honouring the haptics
+  setting) sounds when choosing begins and when the selection lands on another item. The Dock draws it: the contextual row
+  early (from Home), the ring and 14% growth on the selected tile, the name label above the Dock. Folded phone only for now.
 - **Starting on an icon.** The entry under the finger is read from where it landed (`dockPullEntryAt` against the bounds
   each dynamic entry reports); only a live app or now playing has a page in this slice, so a press that starts on a pinned
   app, a tile or the background opens the last page. The landing is asked for at the commit and dropped if nothing opens.
@@ -221,6 +246,10 @@ constants at the 2.625x reference density (420dpi) they were tuned on.
 | Dock shelf toggle | 30.5 | 80px | Measured away from / toward the dock edge |
 | Dock pull commit | 30% of the travel (the window's extent along the pull); fling 600 dp/s once moved 8 dp | 40% / 600 dp/s, then 30% | `GestureThresholds.DOCK_PULL_*`; the Library pull |
 | Dock press commit | 28 | – | `GestureThresholds.DOCK_PRESS_COMMIT_DP`; measured toward the edge at the lift, no velocity rule |
+| Dock choose: hold | – | 220 ms | `DockMotionTuning.holdMillis` (slice 6 exposes it); the finger rests within 6 dp past the commit threshold |
+| Dock choose: slide | 14 | – | Along the run, past the commit threshold; starts choosing at once |
+| Dock choose: edge zone / speed | 15% of the row / 300 dp/s | – | `DockMotionConstants.CHOOSE_EDGE_*` |
+| Dock choose: cancel | 1 Dock thickness | – | Beyond the Dock's inner edge; lifting there changes nothing |
 | Dock shelf claim | 9 (never below touch slop) | 24px (9dp = 23.6px at 2.625×) | Must stay below the home swipe commit |
 | Card stack travel per card / fling | see `CardStackTravel` | 64px / 500px/s | Already dp since #1211 |
 | Multi-finger claim | 3 pointers | – | See rule 2 |
@@ -237,6 +266,7 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | --- | --- | --- | --- |
 | Dock body | 1-finger in the natural pull direction (away from the edge) | **Dock pull**: opens the Library, tracking the finger (claims past touch slop when the drag leads along the pull) | same |
 | Dock body | 1-finger toward the edge, then release past 28 dp | **Dock press**: toggles Home and the Stream (needs a Stream); a press that starts on a live app / now playing icon opens that page | same |
+| Dock body | the same press held 220 ms past 28 dp, or slid sideways more than 14 dp | **Hold to choose**: the selection follows the finger along the Dock; release opens (Home) or switches to (Stream out) the selected page; dragging more than a Dock thickness away cancels | same |
 | Dock, live app / now playing | tap | Home mode: launches the app (the player for now playing). Contextual mode: switches to its page | same |
 | Dock, contextual tile | tap | Switches the Stream to that page | same |
 | Dock, contextual row | 1-finger along the run | The row scrolls with fling (owns) | same |

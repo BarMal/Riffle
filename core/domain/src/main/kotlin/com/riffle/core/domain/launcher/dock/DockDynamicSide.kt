@@ -54,14 +54,20 @@ sealed interface DockDynamicSideEntry {
     }
 
     companion object {
+        /** What a live app's key starts with, then its notifications group's key. */
+        const val LIVE_APP_KEY_PREFIX: String = "live:"
+
+        /** What a contextual tile's key starts with, then its section's stored id. */
+        const val CONTEXT_TILE_KEY_PREFIX: String = "ctx:"
+
         /** The key of the live app whose notifications group is [groupKey]. */
-        fun liveAppKey(groupKey: String): String = "live:$groupKey"
+        fun liveAppKey(groupKey: String): String = "$LIVE_APP_KEY_PREFIX$groupKey"
 
         /** The key of the now playing entry. */
         const val NOW_PLAYING_KEY: String = "now"
 
         /** The key of the contextual tile of [section]. */
-        fun contextTileKey(section: StreamSection): String = "ctx:${section.storedId}"
+        fun contextTileKey(section: StreamSection): String = "$CONTEXT_TILE_KEY_PREFIX${section.storedId}"
     }
 }
 

@@ -5,16 +5,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import com.riffle.core.domain.launcher.dock.DockPress
 
 /**
  * How a Dock press ended (ADR 0003, Amendment 3): [committed] says it passed the threshold, so the mode toggles;
- * [startedOnEntryKey] is the dynamic entry the finger landed on, null elsewhere; [travelDp] is how far it was pressed.
+ * [choosing] says it had turned into a selection (the lift then chooses, whatever the travel); [startedOnEntryKey] is
+ * the dynamic entry the finger landed on, null elsewhere; [travelDp] is how far it was pressed.
  */
 internal data class DockPressRelease(
     val committed: Boolean,
     val startedOnEntryKey: String?,
     val travelDp: Float,
+    val choosing: Boolean = false,
 )
 
 /**
@@ -24,6 +27,9 @@ internal data class DockPressRelease(
  * ([DockPress]). What it gives whoever draws the press (the dip and the trampoline, `DockMotion.kt`) is [onBegan],
  * [onMoved] with the travel while it runs and [onReleased] when it ends, committed or not; [progress] (0 to 1, read it
  * in a draw block, not composition) is the same travel as a fraction of the threshold.
+ *
+ * A press held or slid becomes a selection ([beginChoosing]): from then on the finger's place is reported through
+ * [onChoosingMoved] instead of the travel, and the release carries [DockPressRelease.choosing].
  */
 @Stable
 internal class DockPressState {
@@ -48,6 +54,16 @@ internal class DockPressState {
     /** Called with how far the Dock is pressed, in dp, at the claim and at every move after it. */
     var onMoved: (travelDp: Float) -> Unit = {}
 
+    /** Whether the running press has turned into a selection. */
+    var choosing: Boolean by mutableStateOf(false)
+        private set
+
+    /** Called once when the press turns into a selection, with the finger's place in the gesture's coordinates. */
+    var onChoosingBegan: (position: Offset) -> Unit = {}
+
+    /** Called with the finger's place at every move while choosing. */
+    var onChoosingMoved: (position: Offset) -> Unit = {}
+
     fun begin(entryKey: String?) {
         startedOnEntryKey = entryKey
         progress = 0f
@@ -56,15 +72,27 @@ internal class DockPressState {
     }
 
     fun update(travelDp: Float) {
-        if (!pressing) return
+        if (!pressing || choosing) return
         progress = DockPress.progress(travelDp)
         onMoved(travelDp)
+    }
+
+    /** The press turns into a selection, the finger at [position]. */
+    fun beginChoosing(position: Offset) {
+        if (!pressing || choosing) return
+        choosing = true
+        onChoosingBegan(position)
+    }
+
+    /** The finger moved to [position] while choosing. */
+    fun choose(position: Offset) {
+        if (pressing && choosing) onChoosingMoved(position)
     }
 
     /** The finger lifted at [travelDp] down. */
     fun release(travelDp: Float) {
         if (!pressing) return
-        val release = DockPressRelease(DockPress.commits(travelDp), startedOnEntryKey, travelDp)
+        val release = DockPressRelease(DockPress.commits(travelDp), startedOnEntryKey, travelDp, choosing)
         reset()
         onReleased(release)
     }
@@ -72,6 +100,7 @@ internal class DockPressState {
     /** The gesture was taken away: no commit. */
     fun cancel() {
         if (!pressing) return
+        // A gesture taken away never chooses, even from a selection: nothing changes.
         val release = DockPressRelease(committed = false, startedOnEntryKey = startedOnEntryKey, travelDp = 0f)
         reset()
         onReleased(release)
@@ -79,6 +108,7 @@ internal class DockPressState {
 
     private fun reset() {
         pressing = false
+        choosing = false
         progress = 0f
         startedOnEntryKey = null
     }

@@ -23,6 +23,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import com.riffle.app.launcher.designsystem.RiffleMotion
+import com.riffle.core.domain.launcher.dock.DockChoiceStart
 import com.riffle.core.domain.launcher.dock.DockPress
 import com.riffle.core.domain.launcher.dockpull.DockPullClaim
 import com.riffle.core.domain.launcher.dockpull.DockPullDestination
@@ -317,6 +318,12 @@ internal interface DockPullGestureHost {
     /** Whether a press may start now: a Stream to toggle to or from, and a pull may start. */
     val canPress: Boolean
 
+    /** Whether a press may turn into choosing (the folded phone's Dock; an expanded posture settles by the split). */
+    val canChoose: Boolean
+
+    /** How long a press is held still past the threshold before it turns into choosing, in milliseconds. */
+    val holdMillis: Long
+
     /** The dynamic entry a touch that landed at [position] (in the gesture's own coordinates) is on, or null. */
     fun pressEntryAt(position: Offset): String?
 
@@ -358,9 +365,10 @@ internal fun Modifier.dockPullInput(
                 return@awaitEachGesture
             }
             if (!host.canPull) return@awaitEachGesture
-            when (awaitClaim(down, direction, tracker, host)) {
+            val claimed = PressSample(down.position, down.uptimeMillis)
+            when (awaitClaim(down, direction, tracker, host, claimed)) {
                 DockClaim.PULL -> trackPull(down.id, tracker, host.state)
-                DockClaim.PRESS -> trackPress(down, direction, host.press)
+                DockClaim.PRESS -> trackPress(down, direction, host, claimed)
                 DockClaim.NONE -> Unit
             }
         }
@@ -369,15 +377,25 @@ internal fun Modifier.dockPullInput(
 /** What a touch on the Dock turned out to be. */
 private enum class DockClaim { PULL, PRESS, NONE }
 
-/** Waits for the touch to become a pull or a press, or something else; starts the pull or the press on a claim. */
+/** Where the finger was, and when, at the latest event a press has seen. */
+private class PressSample(
+    var position: Offset,
+    var timeMillis: Long,
+)
+
+/**
+ * Waits for the touch to become a pull or a press, or something else; starts the pull or the press on a claim. The
+ * claiming event is left in [claimed].
+ */
 private suspend fun AwaitPointerEventScope.awaitClaim(
     down: PointerInputChange,
     direction: DockPullDirection,
     tracker: VelocityTracker,
     host: DockPullGestureHost,
+    claimed: PressSample,
 ): DockClaim {
     val touchSlopPx = viewConfiguration.touchSlop
-    val claimed =
+    val decided =
         withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
             var decision: DockClaim? = null
             while (decision == null) {
@@ -402,6 +420,8 @@ private suspend fun AwaitPointerEventScope.awaitClaim(
                         host.state.drag(drag.x / density, drag.y / density)
                     } else if (decision == DockClaim.PRESS) {
                         change.consume()
+                        claimed.position = change.position
+                        claimed.timeMillis = change.uptimeMillis
                         host.press.begin(host.pressEntryAt(down.position))
                         host.press.update(DockPress.travelDp(direction, drag.x / density, drag.y / density))
                     }
@@ -409,7 +429,7 @@ private suspend fun AwaitPointerEventScope.awaitClaim(
             }
             decision
         }
-    return claimed ?: DockClaim.NONE
+    return decided ?: DockClaim.NONE
 }
 
 /** What a drag of [drag] px from the landing is so far: undecided (null), a pull, a press, or neither. */
@@ -434,23 +454,74 @@ private fun claimFor(
  * Follows a claimed press until the finger lifts (release, committing when it passed the threshold) or goes away
  * (cancel). Each change is also consumed on the Initial pass, before the Dock's children see it, so a tile the press
  * started on cannot take the release for a tap.
+ *
+ * Also where a press turns into choosing (ADR 0003, Amendment 3, third depth): every sample goes to [DockChoiceStart],
+ * and while the finger rests past the threshold the wait for the next event is bounded by the moment holding starts
+ * choosing, so a finger that does not move still gets there. Once choosing, the finger's place is all that is followed.
  */
 private suspend fun AwaitPointerEventScope.trackPress(
     down: PointerInputChange,
     direction: DockPullDirection,
-    press: DockPressState,
+    host: DockPullGestureHost,
+    claimed: PressSample,
 ) {
+    val press = host.press
+    val hold = host.holdMillis
+    var start = DockChoiceStart()
+    var sample = claimed
     var finished = false
     try {
+        start = feedChoice(start, sample, down, direction, hold, press, host.canChoose)
         while (!finished) {
-            awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }?.consume()
+            val deadline = start.deadlineMillis(hold)
+            val first =
+                if (deadline == null) {
+                    awaitPointerEvent(PointerEventPass.Initial)
+                } else {
+                    withTimeoutOrNull((deadline - sample.timeMillis).coerceAtLeast(0L)) {
+                        awaitPointerEvent(PointerEventPass.Initial)
+                    }
+                }
+            if (first == null) {
+                // The finger rested for the hold time: it is a selection now.
+                sample = PressSample(sample.position, requireNotNull(deadline))
+                start = feedChoice(start, sample, down, direction, hold, press, host.canChoose)
+                continue
+            }
+            first.changes.firstOrNull { it.id == down.id }?.consume()
             val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
+            if (change != null) {
+                sample = PressSample(change.position, change.uptimeMillis)
+                start = feedChoice(start, sample, down, direction, hold, press, host.canChoose)
+            }
             finished = trackPressStep(change, down, direction, press)
         }
     } finally {
         // The gesture was torn down mid-press (the dock left composition): never leave the press stranded.
         if (!finished) press.cancel()
     }
+}
+
+/**
+ * Feeds the finger's [sample] to [start] and, when that turns the press into choosing, tells [press]. The lift is a
+ * sample too, so a finger that rested for the hold time and lifted in the same moment still has a selection to choose.
+ */
+private fun AwaitPointerEventScope.feedChoice(
+    start: DockChoiceStart,
+    sample: PressSample,
+    down: PointerInputChange,
+    direction: DockPullDirection,
+    hold: Long,
+    press: DockPressState,
+    canChoose: Boolean,
+): DockChoiceStart {
+    if (start.choosing || !canChoose) return start
+    val drag = sample.position - down.position
+    val travelDp = DockPress.travelDp(direction, drag.x / density, drag.y / density)
+    val alongDp = (if (direction.unitY != 0f) drag.x else drag.y) / density
+    val next = start.next(sample.timeMillis, travelDp, alongDp, hold)
+    if (next.choosing) press.beginChoosing(sample.position)
+    return next
 }
 
 /** One event of a tracked press; true once the press has ended. */
@@ -467,6 +538,7 @@ private fun AwaitPointerEventScope.trackPressStep(
     val drag = change.position - down.position
     val travelDp = DockPress.travelDp(direction, drag.x / density, drag.y / density)
     press.update(travelDp)
+    press.choose(change.position)
     change.consume()
     if (!change.pressed) press.release(travelDp)
     return !change.pressed
