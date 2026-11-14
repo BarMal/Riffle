@@ -85,8 +85,6 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
-private const val MAX_FONT_SCALE_FOR_CARDS = 1.8f
-
 private val StackMaxCardWidth = StreamMaxReadableWidth
 
 internal fun StreamContent.iconHandle(): ItemImageHandle? =
@@ -99,9 +97,10 @@ internal fun StreamContent.iconHandle(): ItemImageHandle? =
     }
 
 /**
- * The collapsed height each card type is drawn at in a stack. Calm's card is 168 dp tall ([StreamCardStackSpec]);
- * a notification, an event and an article without a lead image take that, and the ones that carry more (transport and
- * the scrubber, a lead image, a checklist) are taller.
+ * The collapsed height each card type is drawn at in a stack, at most. Calm's card is 168 dp tall
+ * ([StreamCardStackSpec]); an event and an article without a lead image take that, and the ones that carry more
+ * (transport and the scrubber, a lead image) are taller. A notification is as tall as what it shows, up to that
+ * ([rememberBrowseHeights]); each card of a stack is drawn at its own height.
  */
 internal fun StreamContent.cardHeight(): Dp =
     when (this) {
@@ -109,7 +108,7 @@ internal fun StreamContent.cardHeight(): Dp =
         is MediaContent -> StreamCardHeights.media
         is EventContent -> StreamCardHeights.event
         is ArticleContent -> if (image != null) StreamCardHeights.article else StreamCardHeights.articleWithoutImage
-        is TaskContent -> StreamCardHeights.tasks
+        is TaskContent -> StreamCardHeights.task
         is RecentAppContent -> StreamCardHeights.app
         is AppShortcutContent -> StreamCardHeights.app
     }
@@ -165,7 +164,7 @@ internal fun StreamCard(
  * card, and the keyboard.
  */
 @Composable
-@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
+@Suppress("LongParameterList")
 internal fun StreamStack(
     entries: List<StackEntry>,
     env: StreamEnvironment,
@@ -174,7 +173,37 @@ internal fun StreamStack(
     stackKey: String,
     modifier: Modifier = Modifier,
 ) {
+    // The width a card is drawn at decides how tall its text is, and so how tall the card is: known before anything
+    // of the stack is composed.
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        StreamStackContent(
+            entries = entries,
+            env = env,
+            callbacks = callbacks,
+            groupKey = groupKey,
+            stackKey = stackKey,
+            cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth),
+            areaHeight = maxHeight,
+        )
+    }
+}
+
+@Composable
+@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
+private fun StreamStackContent(
+    entries: List<StackEntry>,
+    env: StreamEnvironment,
+    callbacks: StreamCallbacks,
+    groupKey: String?,
+    stackKey: String,
+    cardWidth: Dp,
+    areaHeight: Dp,
+) {
     val cards = LocalOpenCards.current
+    // Each card is as tall as what it shows (a notification's text, its buttons); the stack's geometry is built from
+    // those heights, so the strips, the drag and the open card all work from the height the front card really has.
+    val heights = rememberBrowseHeights(entries, cardWidth)
+    val geometry = remember(heights) { StackGeometry(heightsDp = heights.map { it.value }) }
     val openState = cards.state
     val stackState = remember(stackKey) { StreamStackState() }
     val ids = remember(entries) { entries.map { it.id }.toSet() }
@@ -238,7 +267,7 @@ internal fun StreamStack(
     val covers: (Int, Float) -> Boolean = { index, r ->
         layerActive.value && OpenCardBlend.openness(r) > 0f && index in overlayIndices.value
     }
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         if (entries.size == 1) {
             val only = entries.single()
             val swipe = rememberSwipeDismissState(only.swipeableNotification(), callbacks, env.reducedMotion)
@@ -256,8 +285,7 @@ internal fun StreamStack(
                     callbacks = callbacks,
                     groupKey = groupKey,
                     onOpen = { open(only) },
-                    modifier =
-                        Modifier.fillMaxWidth().widthIn(max = StackMaxCardWidth).height(only.height.scaledForFont()),
+                    modifier = Modifier.fillMaxWidth().widthIn(max = StackMaxCardWidth).height(heights.first()),
                 )
             }
         } else {
@@ -267,7 +295,10 @@ internal fun StreamStack(
                 callbacks = callbacks,
                 groupKey = groupKey,
                 state = stackState,
-                modifier = Modifier,
+                heights = heights,
+                geometry = geometry,
+                cardWidth = cardWidth,
+                areaHeight = areaHeight,
                 openActive = layerActive.value,
                 mover = mover,
                 covers = covers,
@@ -277,7 +308,6 @@ internal fun StreamStack(
             )
         }
     }
-    val cardHeight = entries.maxOf { it.height }.scaledForFont()
     val behind = (entries.size - 1).coerceIn(0, StreamCardStackSpec.VISIBLE_PEEKS)
     val strips = StreamCardStackSpec.PITCH_DP.dp * behind
     val placement = env.cardSettings.openCardPlacement
@@ -323,7 +353,7 @@ internal fun StreamStack(
     SideEffect { if (openedHere) retained.cards = layerCards }
     val layer =
         remember(
-            drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, cardHeight, strips,
+            drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, geometry, strips,
             placement, dragModifier, entries.size, previous, next,
         ) {
             if (!layerActive.value) {
@@ -332,7 +362,7 @@ internal fun StreamStack(
                 OpenCardLayer(
                     geometry = frameGeometry,
                     placement = placement,
-                    browseHeight = cardHeight,
+                    stackGeometry = geometry,
                     strips = strips,
                     bottomInset = StackBottomInset,
                     stack = stackState,
@@ -470,9 +500,6 @@ private fun LoneCard(
     }
 }
 
-@Composable
-private fun Dp.scaledForFont(): Dp = this * LocalDensity.current.fontScale.coerceIn(1f, MAX_FONT_SCALE_FOR_CARDS)
-
 /**
  * Everything a stack leaves under the front card, in the order of the slots: used for the content description of a
  * peeking card, so assistive technology reads what the strip hides (the body, not only the line that shows).
@@ -528,7 +555,11 @@ private fun FocusedStack(
     callbacks: StreamCallbacks,
     groupKey: String?,
     state: StreamStackState,
-    modifier: Modifier,
+    /** How tall each card is drawn, and the stack's layout built from those heights. */
+    heights: List<Dp>,
+    geometry: StackGeometry,
+    cardWidth: Dp,
+    areaHeight: Dp,
     /** A card is open over the front card: the stack makes room for it and takes no input. */
     openActive: Boolean,
     mover: StackMover,
@@ -545,9 +576,6 @@ private fun FocusedStack(
     val step: (Boolean) -> Boolean = mover::step
     val latestOpenActive by rememberUpdatedState(openActive)
 
-    // Every card of a pile is as tall as the tallest, so the strips that peek out above the front one line up.
-    val cardHeight = items.maxOf { it.height }.scaledForFont()
-    val geometry = remember(cardHeight) { StackGeometry(cardHeight.value) }
     val frontIndex by remember(count) { derivedStateOf { StackFling.nearest(state.position, count) } }
     val composed by remember(count, geometry) { derivedStateOf { geometry.composedRange(state.position, count) } }
     val previous = stringResource(R.string.stream_previous_card)
@@ -556,12 +584,10 @@ private fun FocusedStack(
     val bringToFront = stringResource(R.string.stream_bring_card_to_front)
     val position = stringResource(R.string.stream_card_position, frontIndex + 1, count)
     val dismiss = stringResource(R.string.stream_notification_dismiss)
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth)
+    Box(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current.density
-        val cardHeightPx = cardHeight.value * density
         val bottomInsetPx = StackBottomInset.value * density
-        val areaHeightPx = maxHeight.value * density
+        val areaHeightPx = areaHeight.value * density
         StackLayout(
             state = state,
             geometry = geometry,
@@ -574,7 +600,10 @@ private fun FocusedStack(
                     // While a card is open the stack moves with it: the front card's place is where the open card's
                     // top is, so the cards behind peek out just above it.
                     .graphicsLayer {
-                        val frontTop = areaHeightPx - bottomInsetPx - cardHeightPx
+                        // Where the front card's top stands now: its own height above the bottom (read here, in
+                        // the draw phase, so a moving stack recomposes nothing).
+                        val frontTop =
+                            areaHeightPx - bottomInsetPx - geometry.frontHeightAt(state.position) * density
                         translationY = if (openActive) frameGeometry.topPx - frontTop else 0f
                         // Too little room above the open card for the strips: they are not drawn, not overlapped.
                         alpha = if (openActive && !frameGeometry.stripsVisible) 0f else 1f
@@ -642,7 +671,7 @@ private fun FocusedStack(
                             callbacks = callbacks,
                             groupKey = groupKey,
                             onOpen = { onOpen(item) },
-                            modifier = Modifier.size(width = cardWidth, height = cardHeight),
+                            modifier = Modifier.size(width = cardWidth, height = heights[index]),
                         )
                     }
                 }

@@ -167,16 +167,28 @@ private fun Notification.isMessagingStyle(): Boolean =
         false,
     )
 
+/**
+ * The most the notification says: its big text, else an inbox style's lines (one per line), else its text. A card
+ * shows the first lines of it and the open card all of it.
+ */
 @Suppress("DEPRECATION")
 private fun Notification.bodyText(): String =
-    sequenceOf(
-        Notification.EXTRA_BIG_TEXT,
-        Notification.EXTRA_TEXT,
-        Notification.EXTRA_SUMMARY_TEXT,
-        Notification.EXTRA_SUB_TEXT,
-    ).mapNotNull { key ->
-        extras?.getCharSequence(key)?.toString()?.trim()?.takeIf(String::isNotBlank)
-    }.firstOrNull().orEmpty()
+    extraText(Notification.EXTRA_BIG_TEXT)
+        ?: inboxLines()
+        ?: sequenceOf(Notification.EXTRA_TEXT, Notification.EXTRA_SUMMARY_TEXT, Notification.EXTRA_SUB_TEXT)
+            .mapNotNull(::extraText)
+            .firstOrNull()
+            .orEmpty()
+
+/** `EXTRA_TEXT_LINES`: what an inbox style lists, joined one per line; null when the notification has none. */
+private fun Notification.inboxLines(): String? =
+    runCatching {
+        extras?.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+            ?.mapNotNull { line -> line?.toString()?.trim()?.takeIf(String::isNotBlank) }
+            ?.take(MAX_INBOX_LINES)
+            ?.takeIf { it.isNotEmpty() }
+            ?.joinToString("\n")
+    }.getOrNull()
 
 /**
  * Falls back to an empty list for notifications not posted with a messaging style (most
@@ -238,3 +250,4 @@ private fun Bitmap.pngBase64OrNull(): String? =
     }
 
 private const val MAX_MESSAGING_STYLE_MESSAGES = 3
+private const val MAX_INBOX_LINES = 8

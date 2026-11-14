@@ -42,56 +42,120 @@ data class StackCardFrame(
 }
 
 /**
- * The stack's layout as a function of position. Every card is [cardHeightDp] tall (a pile is as tall as its tallest, so
- * the strips line up).
+ * The stack's layout as a function of position. A card is as tall as its content needs ([heightsDp], one per card;
+ * without them every card is [cardHeightDp] tall). The stack is anchored at its bottom: the front card stands on the
+ * bottom of the area and its top is its own height up, so a short front card leaves the strips of the cards behind it
+ * lower; every strip is a [pitchDp] above the one in front of it, so the strips line up whatever their cards' heights.
+ * Between two cards the front card's top moves from the one's height to the other's ([frontHeightAt]).
  *
- * The rules, which the tests pin: a card never overlaps the one in front of it (the clip's lower edge is the top of the
- * card in front plus a gap), so translucent fills never add up; the clip opens as a card moves toward the front (from a
- * strip of [pitchDp] minus the gap to the whole card); and the front card sinks into the Dock, fading, while the next
+ * The rules, which the tests pin: a card never overlaps the one in front of it (the slot's lower edge is the top of the
+ * card in front plus the gap, if there is one), so translucent fills never add up; the slot opens as a card moves
+ * toward the front (from a strip to the whole card); and the front card sinks into the Dock, fading, while the next
  * one is revealed above it.
  */
 class StackGeometry(
     val cardHeightDp: Float,
     val pitchDp: Float = StreamCardStackSpec.PITCH_DP,
     val gapDp: Float = StreamCardStackSpec.GAP_DP,
+    private val heightsDp: List<Float> = emptyList(),
 ) {
+    /** A stack whose cards each have their own height; [cardHeightDp] is then the tallest. */
+    constructor(heightsDp: List<Float>) : this(
+        cardHeightDp = heightsDp.maxOrNull() ?: StreamCardStackSpec.CARD_HEIGHT_DP,
+        heightsDp = heightsDp,
+    )
+
     private val peeks = StreamCardStackSpec.VISIBLE_PEEKS.toFloat()
 
-    /** The frame of the card at [r] cards behind the front (negative: in front of it, sinking). */
-    fun frame(r: Float): StackCardFrame =
+    /** How tall the card at [index] is; an index outside the stack is held to it. */
+    fun heightOf(index: Int): Float =
+        if (heightsDp.isEmpty()) cardHeightDp else heightsDp[index.coerceIn(0, heightsDp.size - 1)]
+
+    /**
+     * How high the front card's top stands at [position]: the front card's height at a whole position, and between
+     * two cards the one's height moving to the other's, so the strips rise or fall smoothly as the stack moves.
+     */
+    fun frontHeightAt(position: Float): Float {
+        if (heightsDp.isEmpty()) return cardHeightDp
+        val held = position.coerceIn(0f, (heightsDp.size - 1).toFloat())
+        val low = floor(held).toInt()
+        val fraction = held - low
+        return if (fraction <= 0f) heightOf(low) else heightOf(low) + (heightOf(low + 1) - heightOf(low)) * fraction
+    }
+
+    /** The frame of the card at [index] when the stack is at [position]. */
+    fun frame(
+        index: Int,
+        position: Float,
+    ): StackCardFrame =
+        frame(
+            r = index - position,
+            ownHeightDp = heightOf(index),
+            frontHeightDp = frontHeightAt(position),
+            inFrontHeightDp = heightOf(index - 1),
+        )
+
+    /** The frame of the card at [r] cards behind the front (negative: in front of it, sinking), all cards alike. */
+    fun frame(r: Float): StackCardFrame = frame(r, cardHeightDp, cardHeightDp, cardHeightDp)
+
+    private fun frame(
+        r: Float,
+        ownHeightDp: Float,
+        frontHeightDp: Float,
+        inFrontHeightDp: Float,
+    ): StackCardFrame =
         when {
-            r <= -1f || r >= peeks + 1f -> HIDDEN.copy(topDp = topDp(r.coerceIn(-1f, peeks + 1f)))
-            r < 0f -> sinking(r)
-            else -> behind(r)
+            r <= -1f || r >= peeks + 1f ->
+                HIDDEN.copy(topDp = topDp(r.coerceIn(-1f, peeks + 1f), ownHeightDp, frontHeightDp))
+            r < 0f -> sinking(r, ownHeightDp)
+            else -> behind(r, ownHeightDp, frontHeightDp, inFrontHeightDp)
         }
 
     /** The front card on its way into the Dock: the whole card, moving down, shrinking and fading. */
-    private fun sinking(r: Float): StackCardFrame {
+    private fun sinking(
+        r: Float,
+        ownHeightDp: Float,
+    ): StackCardFrame {
         val u = r + 1f
-        val top = topDp(r)
+        val top = ownHeightDp * u
         val scale = StreamCardStackSpec.SINK_SCALE + (1f - StreamCardStackSpec.SINK_SCALE) * u
-        return StackCardFrame(alpha = u, scale = scale, topDp = top, visibleBottomDp = top - cardHeightDp * scale)
+        return StackCardFrame(alpha = u, scale = scale, topDp = top, visibleBottomDp = top - ownHeightDp * scale)
     }
 
     /**
-     * The front card (r = 0) and the cards behind it. Below a card lies the card in front of it: nothing of it is drawn
+     * The front card (r = 0) and the cards behind it. Below a card lies the card in front of it: nothing of its slot is
      * lower than that card's top, plus a gap that opens over the first card's travel (the front card itself has no card
      * in front and shows whole).
      */
-    private fun behind(r: Float): StackCardFrame {
-        val top = topDp(r)
+    private fun behind(
+        r: Float,
+        ownHeightDp: Float,
+        frontHeightDp: Float,
+        inFrontHeightDp: Float,
+    ): StackCardFrame {
+        val top = topDp(r, ownHeightDp, frontHeightDp)
         val scale = 1f - StreamCardStackSpec.SCALE_STEP * minOf(r, peeks)
         val alpha = if (r <= peeks) 1f else peeks + 1f - r
-        val visibleBottom = topDp(r - 1f) + gapDp * minOf(r, 1f)
+        val visibleBottom = topDp(r - 1f, inFrontHeightDp, frontHeightDp) + gapDp * minOf(r, 1f)
         return StackCardFrame(alpha = alpha, scale = scale, topDp = top, visibleBottomDp = minOf(visibleBottom, top))
     }
 
-    /** The top edge of the card at [r]: the front card's top is the card height; each card behind is a pitch higher. */
-    fun topDp(r: Float): Float =
+    /** The top edge of the card at [r] in a stack whose cards are all [cardHeightDp] tall. */
+    fun topDp(r: Float): Float = topDp(r, cardHeightDp, cardHeightDp)
+
+    /**
+     * The top edge of a card [ownHeightDp] tall at [r]: the front card's top is the front height; each card behind is
+     * a pitch higher; a card sinking into the Dock comes down from its own height.
+     */
+    private fun topDp(
+        r: Float,
+        ownHeightDp: Float,
+        frontHeightDp: Float,
+    ): Float =
         when {
             r <= -1f -> 0f
-            r < 0f -> cardHeightDp * (r + 1f)
-            else -> cardHeightDp + pitchDp * r
+            r < 0f -> ownHeightDp * (r + 1f)
+            else -> frontHeightDp + pitchDp * r
         }
 
     /** The indices of the cards worth composing at [position]: those with something to show (`-1 < r < 4`). */

@@ -238,7 +238,9 @@ class StreamStackBehaviorTest {
         show()
         val front = slotNode(0)
         val peeks = (1..3).map { slotNode(it) }
-        peeks.forEach { assertTrue("a strip is shorter than the card", it.size.height < front.size.height / 2) }
+        // The front card is as tall as its one line of text now (88 dp), so a strip (52 dp) is no longer under half of
+        // it: it is shorter than the card, and exactly a strip tall.
+        peeks.forEach { assertTrue("a strip is shorter than the card", it.size.height < front.size.height) }
         // No card overlaps the one in front of it: each strip ends above the top of the one below it. (Bounds, which
         // follow the card's scale; all of these are in view, so no parent clips them.)
         val cards = listOf(front) + peeks

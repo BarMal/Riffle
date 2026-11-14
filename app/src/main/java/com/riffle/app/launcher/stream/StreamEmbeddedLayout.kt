@@ -38,7 +38,7 @@ internal val LocalNotificationEmbeds =
 internal const val STREAM_EMBEDDED_LAYOUT_TAG = "stream-embedded-layout"
 
 /** How tall an embedded layout may be on a browse card and on an open card. */
-internal val EmbeddedBrowseMaxHeight: Dp = 96.dp
+internal val EmbeddedBrowseMaxHeight: Dp = 64.dp
 internal val EmbeddedOpenMaxHeight: Dp = 256.dp
 
 /**

@@ -116,6 +116,23 @@ class NotificationTitleAndGroupMappingTest {
     }
 
     @Test
+    fun theBodyIsTheBigTextElseAnInboxStylesLinesElseTheText() {
+        val big =
+            builder().setContentText(
+                "Short",
+            ).setStyle(Notification.BigTextStyle().bigText("The long text")).build()
+        assertEquals("The long text", mapper("Mail").map(posted(1, big)).text)
+        val inbox =
+            builder().setContentTitle("3 new").setContentText("Collapsed")
+                .setStyle(
+                    Notification.InboxStyle().addLine("Sam: lunch?").addLine("Maya: photos").addLine("Bank: code"),
+                )
+                .build()
+        assertEquals("Sam: lunch?\nMaya: photos\nBank: code", mapper("Mail").map(posted(2, inbox)).text)
+        assertEquals("Plain", mapper("Mail").map(posted(3, builder().setContentText("Plain").build())).text)
+    }
+
+    @Test
     fun aGroupSummaryWithChildrenIsNotListedAndEachChildIs() {
         val summary = posted(1, builder().setContentTitle("Chat").setGroup("all").setGroupSummary(true).build())
         val maya = posted(2, builder().setContentTitle("Maya").setGroup("all").build())

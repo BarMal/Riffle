@@ -47,7 +47,7 @@ internal fun StackLayout(
             measurables.mapNotNull { measurable ->
                 val index = measurable.layoutId as? Int ?: return@mapNotNull null
                 val r = index - position
-                val frame = geometry.frame(r)
+                val frame = geometry.frame(index, position)
                 if (!frame.isVisible) return@mapNotNull null
                 val clip = (frame.clipHeightDp * density).roundToInt().coerceAtLeast(1)
                 Slot(index, r, frame, measurable.measure(Constraints.fixed(slotWidth, clip)))
