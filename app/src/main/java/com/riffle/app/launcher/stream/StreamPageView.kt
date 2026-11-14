@@ -44,8 +44,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import com.riffle.app.R
 import com.riffle.app.launcher.GlassSurface
+import com.riffle.app.launcher.LocalDockFan
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.dockFan
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.EventKind
@@ -160,8 +162,14 @@ internal fun StreamPageGlyph(
 /** A page's scroll area: a column that scrolls vertically (states, Lists, Recents and Tasks). */
 @Composable
 private fun PageScroll(content: @Composable ColumnScope.() -> Unit) {
+    // Rises out of the Dock as one piece, with the front card's timing, when the Dock's trampoline opens the Stream.
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = RiffleSpacing.l),
+        modifier =
+            Modifier
+                .dockFan(LocalDockFan.current)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = RiffleSpacing.l),
         verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         content = content,
     )

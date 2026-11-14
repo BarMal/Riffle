@@ -21,8 +21,9 @@ internal data class DockPressRelease(
  * The UI side of pressing the Dock down and releasing: holds the press while the finger is down and reports its end.
  *
  * Nothing here decides anything: whether a drag is a press and when a release commits are the domain's
- * ([DockPress]). What it gives a later slice to draw from is [progress] (0 to 1, read it in a draw block, not
- * composition) while the press runs, and [onReleased] when it ends, committed or not.
+ * ([DockPress]). What it gives whoever draws the press (the dip and the trampoline, `DockMotion.kt`) is [onBegan],
+ * [onMoved] with the travel while it runs and [onReleased] when it ends, committed or not; [progress] (0 to 1, read it
+ * in a draw block, not composition) is the same travel as a fraction of the threshold.
  */
 @Stable
 internal class DockPressState {
@@ -41,14 +42,23 @@ internal class DockPressState {
     /** Called once when a press ends, whether it committed or not. */
     var onReleased: (DockPressRelease) -> Unit = {}
 
+    /** Called when a press is claimed, before anything has moved: whoever draws it starts from here. */
+    var onBegan: () -> Unit = {}
+
+    /** Called with how far the Dock is pressed, in dp, at the claim and at every move after it. */
+    var onMoved: (travelDp: Float) -> Unit = {}
+
     fun begin(entryKey: String?) {
         startedOnEntryKey = entryKey
         progress = 0f
         pressing = true
+        onBegan()
     }
 
     fun update(travelDp: Float) {
-        if (pressing) progress = DockPress.progress(travelDp)
+        if (!pressing) return
+        progress = DockPress.progress(travelDp)
+        onMoved(travelDp)
     }
 
     /** The finger lifted at [travelDp] down. */

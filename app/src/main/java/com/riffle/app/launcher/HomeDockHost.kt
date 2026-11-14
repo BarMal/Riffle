@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -159,7 +160,7 @@ internal data class HomeDockInterpreter(
  * [HOME_CONTENT_Z_INDEX]. A folder opened from the dock is drawn here, above all of them.
  */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun HomeDockHost(
     layout: HomeLayout,
     installedApps: List<InstalledApp>,
@@ -185,6 +186,12 @@ internal fun HomeDockHost(
      * swaps the shown mode, so the freshly re-oriented dock doesn't pop into view under the frost.
      */
     dockContentRevealAlpha: () -> Float = FullyRevealedDockContent,
+    /**
+     * How far the dock is pressed toward its edge, in dp, read at draw time (the trampoline's dip, negative while it
+     * has sprung past rest). The translation sits after [dockModifier], so the press gesture is measured in the dock's
+     * resting coordinates.
+     */
+    dockDipDp: () -> Float = NoDockDip,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
     val dockOnAction = interpreter.onAction ?: onAction
@@ -217,6 +224,7 @@ internal fun HomeDockHost(
             onExtentChanged = onExtentChanged,
         )
 
+    val pull = position.pullDirection
     var hostBoxOriginInRoot by remember { mutableStateOf<Offset?>(null) }
     Box(
         modifier =
@@ -226,7 +234,16 @@ internal fun HomeDockHost(
                 .onGloballyPositioned { coordinates -> hostBoxOriginInRoot = coordinates.boundsInRoot().topLeft },
         contentAlignment = position.dockHostAlignment(LocalLayoutDirection.current),
     ) {
-        Box(modifier = dockModifier.graphicsLayer { alpha = dockContentRevealAlpha() }) {
+        Box(
+            modifier =
+                dockModifier.graphicsLayer {
+                    alpha = dockContentRevealAlpha()
+                    val dipPx = dockDipDp() * density
+                    // Toward the edge the dock stands on: down for a bottom dock, and so on.
+                    translationX = -pull.unitX * dipPx
+                    translationY = -pull.unitY * dipPx
+                },
+        ) {
             CompositionLocalProvider(
                 LocalDockBackgroundAlpha provides dockBackgroundAlpha,
                 LocalDockDynamicBoundsSink provides rememberDynamicBoundsSink(hostState),

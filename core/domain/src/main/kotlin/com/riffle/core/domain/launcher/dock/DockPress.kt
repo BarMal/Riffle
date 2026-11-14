@@ -11,8 +11,8 @@ import kotlin.math.hypot
  * that passes [COMMIT_DP], then release, toggles between the Home and the contextual mode. The way it moves is the
  * opposite of the pull ([DockPullDirection]), which still opens the Library.
  *
- * Pure, so the claim and the threshold are tested without a screen. The UI side exposes [progress] and the release so
- * a later slice can draw the dip and the bounce from them.
+ * Pure, so the claim and the threshold are tested without a screen. The dip under the finger, the bounce on release and
+ * the fan are [DockPressCurve], [DockSpring] and [DockFan] (`DockMotion.kt`).
  */
 object DockPress {
     /** How far the Dock has to be pressed down for a release to count, in dp. */

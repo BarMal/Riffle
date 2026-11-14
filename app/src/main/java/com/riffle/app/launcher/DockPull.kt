@@ -320,6 +320,9 @@ internal interface DockPullGestureHost {
     /** The dynamic entry a touch that landed at [position] (in the gesture's own coordinates) is on, or null. */
     fun pressEntryAt(position: Offset): String?
 
+    /** A pull is taking over: whatever the trampoline is running goes to its end at once. */
+    fun settleMotion() {}
+
     /** The split a pull on an expanded posture moves through, or null where the Stream and Home swap completely. */
     fun splitSetup(): SplitPullSetup? = null
 }
@@ -387,6 +390,7 @@ private suspend fun AwaitPointerEventScope.awaitClaim(
                     decision = claimFor(direction, drag, touchSlopPx, host)
                     if (decision == DockClaim.PULL) {
                         change.consume()
+                        host.settleMotion()
                         host.state.start(
                             destination = DockPullDestination.LIBRARY,
                             direction = direction,

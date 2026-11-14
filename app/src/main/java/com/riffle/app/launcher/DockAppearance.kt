@@ -30,6 +30,9 @@ internal fun dockSurfaceColor(dock: DockModel): Color {
 /** A dock background at its own alpha: what every dock outside a dock pull draws. */
 internal val OpaqueDockBackground: () -> Float = { 1f }
 
+/** The dock is not pressed down: it draws in place. */
+internal val NoDockDip: () -> Float = { 0f }
+
 /**
  * The multiplier the dock pull applies to the dock background's alpha (Decision 4), read at draw
  * time so a pull animates the background without recomposing the dock.

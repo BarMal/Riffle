@@ -70,6 +70,13 @@ resolves it once into `launcherSettings.motion.reducedMotion`, which is threaded
 a `reducedMotion: Boolean`. Every `RiffleMotion` helper takes it and returns `snap()` when it is on, so the end state
 is identical and only the travel is removed.
 
+**The one exception: the trampoline** (ADR 0003, Amendment 3; dock modes slice 2). The Dock's press dips the Dock
+and, on release, it springs back past rest with a visible bounce (damping ratio 0.675 at the default trampoline setting,
+i.e. below the 0.75 bounce limit below), while a critically damped spring with a slight magnet carries Home and the
+Stream's cards. These two springs, their constants and the reversed closing live in
+`core/domain/.../launcher/dock/DockMotion.kt` (`DockMotionConstants`, `DockMotionTuning`: speed 200 ms, trampoline,
+magnet), not in the three tokens above, and nothing else may bounce. The reduced-motion fade (80 ms) is the token's.
+
 Do
 - Track the finger 1:1 during a drag; hand off to a spring with the release velocity.
 - Keep animations interruptible: animate `Animatable`s / state, never fire-and-forget timers.
@@ -79,7 +86,7 @@ Do
 Don't
 - Don't call `spring(...)` with hand-tuned parameters. If none of the three fits, raise it in the
   design-language issue rather than adding a fourth.
-- Don't use visible bounce (`dampingRatio < 0.75`).
+- Don't use visible bounce (`dampingRatio < 0.75`), except the Dock's trampoline above.
 - Don't block input while something settles.
 
 ## 3. Material depth

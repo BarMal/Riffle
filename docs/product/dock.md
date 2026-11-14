@@ -7,7 +7,9 @@
 > releasing** toggles between them; there is **no Stream button** and the Stream has no spine or page header, so the Dock
 > is the only page indicator. See [The two modes](#the-two-modes-dock-modes-slice-1). The pull away from the edge now
 > opens the Library from anywhere on the Dock. Where the text below still describes the Stream button, the Stream pull,
-> a swipe up on a live app or the two sides, it is superseded by that section and kept as history.
+> a swipe up on a live app or the two sides, it is superseded by that section and kept as history. **Slice 2** draws the
+> press: the Dock dips under the finger, bounces on release, the Stream's cards fan out of it and closing plays the
+> opening backwards ("The trampoline and the fan" in that section).
 
 > **P5 (2026-11-12, [ADR 0003](../architecture/adr/0003-places-and-views.md)).** The Dock is the handle of the
 > Stream and the Library. Its two sides open their own worlds: the pinned side the static one (the Library), the dynamic
@@ -109,12 +111,12 @@ mode only adds tiles after them and scrolls the row along.
   section**, and a **Show <section>** for each hidden one; a live app's menu then continues with its shortcuts, App info
   and Hide app. The options are applied by the Stream, so each keeps its Undo.
 - **Press the Dock down and release** (a drag toward the Dock's own edge, past `DOCK_PRESS_COMMIT_DP` = 28 dp, then lift;
-  `DockPress`) toggles the modes, running the existing Home and Stream transition from rest. From Home it opens the
+  `DockPress`) toggles the modes with the trampoline and the fan (below). From Home it opens the
   Stream on the page of the icon the press started on when that is a live app or now playing, else the page it was last
   left on; from the contextual mode it returns to Home. A press that does not pass the threshold, or is drawn back before
-  the lift, does nothing. Only with a Stream; not while the layout is being edited or the Library shows. The press
-  exposes its progress (`DockPressState.progress`, 0 to 1) and its release (`onReleased`) for a later slice to draw the dip
-  and the bounce; this slice draws nothing for it.
+  the lift, bounces back and does nothing else. Only with a Stream; not while the layout is being edited or the Library
+  shows. The press reports its start, its travel and its release (`DockPressState.onBegan`, `onMoved`, `onReleased`) to
+  the Dock's motion (`DockMotionState`), which draws the dip and Home's first fade.
 - **Accessibility.** The Dock (and the surface root) offers the custom actions **"Show live pages"** (or **"Back to
   Home"** while the Stream shows) and "Open Library"; **Ctrl + the arrow of the pull direction** does the first, with Shift
   the second. In the Home mode a live app or now playing keeps "Show <app> in Stream" (the press that starts on the icon)
@@ -149,9 +151,25 @@ mode only adds tiles after them and scrolls the row along.
   release by travel (30% of the travel) or velocity (600 dp/s toward the interior, once it has moved 8 dp), otherwise
   springs back; both live in `GestureThresholds` (`DOCK_PULL_*`) and `DockPullThresholds`. A finger that lands on a settling
   pull catches it. Without a Stream the press is off, and the pull is the only gesture.
-- **The Stream transition** (press, accessibility action, shortcut) is the existing one run from rest: Home fades as the
-  Stream slides in from the dock's edge, or crossfades under reduced motion. The slice that follows replaces it with the
-  dip, bounce and card fan.
+- **The trampoline and the fan** (dock modes slice 2; ADR 0003, Amendment 3, Motion). Pressing dips the Dock under the
+  finger by `24 dp * (1 - exp(-travel / 60 dp))` (rising resistance) while Home begins to fade (to at most 30%); pressing
+  in the contextual mode only dips the Dock, the cards stay. Released past the threshold the Dock springs back past rest
+  and settles (under-damped), the progress spring (critically damped, with a slight magnet near its end) carries the
+  cards: they come out of the Dock one after the other, front card first, each rising, fading in and growing from 82% to
+  full size, and Home fades out with a slight scale-down. A page that is not a stack of cards (a List view, an empty or
+  state page) rises as one piece with the front card's timing; the first three cards of a stack fan, the rest use the
+  third's timing. **Closing is the opening played backwards in time**: the opening is simulated and its samples played
+  last to first, so the cards gather speed into the Dock, the card that came out last goes in first and the Dock's bounce
+  runs in reverse and ends in the dip; then the Dock rises to rest while Home fades back in (the shell is told to go
+  Home once Home is back). A press that stops short bounces back. The press, the accessibility actions, the shortcut and
+  a tap on a live app all run it (the actions from rest with a small dip and kick instead of a finger). It is
+  interruptible: a finger that claims the Dock while it runs catches it where it is (nothing snaps), and whatever
+  follows, a deep release, a shallow press or an action, runs on from there; what the shell has been told is always
+  consistent (opening: told at the release; closing: told when it has finished). Under reduced motion all of this is one
+  80 ms cross-fade: no dip, no pre-fade, no bounce, no fan. Physics, curves and constants (speed 200 ms, trampoline 50%,
+  magnet 40%, to be exposed by the settings slice) are `core/domain/.../dock/DockMotion.kt` and `DockClosing.kt`; the UI
+  is `DockMotion.kt`, `DockFanSource.kt` and the Stream's `dockFan` modifier. Expanded postures keep the split's settle
+  (below) until the unfolded layout is built.
 - **Expanded postures (P6).** On an unfolded foldable, a tablet or a desktop window Home and the Stream can share the
   screen (Home only, a split, the Stream only: `SplitMode`). The press (and the accessibility action) opens the last-used
   shown state and returns to Home only; the divider's own actions choose among the three. The pull no longer settles among
@@ -160,7 +178,7 @@ mode only adds tiles after them and scrolls the row along.
 - **The Library pull (P7)** raises the Library's sheet from the dock's edge, 1:1 with the finger, while Home or the Stream
   fades out under it; it commits by the same thresholds, can be caught mid-settle, and under reduced motion the sheet
   fades in. The Dock stays drawn and tappable under the sheet. See [The Library](gestures.md#the-library-p7).
-- The dock itself never moves, re-orients or fades with a pull.
+- The dock never moves, re-orients or fades with a pull; it dips and bounces with a press (above).
 - Home gestures can be bound to "Stream" (`OPEN_STREAM`) and "Library" (`OPEN_LIBRARY`); neither is bound by default.
   "Search" (`OPEN_SEARCH`, bound to swipe down by default) opens the Library with its field focused.
 - The workspace menu is no longer reached by the pull, and since P8 it and its "Workspace menu" accessibility action no
@@ -365,6 +383,7 @@ section does that job, so the rail is gone (#1159).
 | Dynamic side exists in every layout | **Done (P5)** — live apps and now playing (the Stream button went in dock modes slice 1); a dock with no Stream host has none |
 | Dynamic side means "something new and now playing" | **Done (P5)** — derived from the Stream's Notifications and Now sections (`DockDynamicSide`), so Hide rules and privacy already apply; not de-duplicated against pinned apps, because a live entry has a page and a pinned icon has none yet |
 | Two modes, one order of icons; contextual tiles; press to toggle | **Done (dock modes slice 1)** — `DockMode`, `DockPageOrder`, `DockRing`, `DockPress`, `DockContextualRow`; no spine, page header or Stream button |
+| The trampoline and the fan: dip, bounce, cards out of the Dock in sequence, closing reversed | **Done (dock modes slice 2)** — `DockMotion.kt` and `DockClosing.kt` (domain), `DockMotionState`, `DockFanSource`, the Stream's `dockFan`; see [The trampoline and the fan](#the-two-modes-dock-modes-slice-1) |
 | Static tap opens the app in every mode; Cards stage on long-press | Done (#1212) |
 | Cards dynamic section is the stage selector | **Removed (P5)** — the dynamic side is the same in every mode; Cards' stage chips are always drawn |
 | Static and dynamic sections are sized independently | Done — separate per-layout settings (capacity, live app slots); the dynamic side draws in full first, the static side is sized from what is left |

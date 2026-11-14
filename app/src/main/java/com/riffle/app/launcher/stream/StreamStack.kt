@@ -48,10 +48,12 @@ import com.riffle.app.launcher.CardStackInteraction
 import com.riffle.app.launcher.CardStackOrientation
 import com.riffle.app.launcher.CardStackScroll
 import com.riffle.app.launcher.GlassSurface
+import com.riffle.app.launcher.LocalDockFan
 import com.riffle.app.launcher.cardStackLiveActiveCardIndex
 import com.riffle.app.launcher.cardStackSettledCardIndex
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.dockFan
 import com.riffle.app.launcher.expressions.CardStackFocusState
 import com.riffle.app.launcher.rememberCardStackTravel
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
@@ -66,6 +68,7 @@ import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.TaskContent
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
+import kotlin.math.abs
 
 private const val MAX_FONT_SCALE_FOR_CARDS = 1.8f
 
@@ -246,8 +249,14 @@ private fun StackColumn(
     modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
+    // A lone or expanded card is the front card of the fan.
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = RiffleSpacing.l),
+        modifier =
+            modifier
+                .dockFan(LocalDockFan.current)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = RiffleSpacing.l),
         verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
     ) { content() }
 }
@@ -268,6 +277,7 @@ private fun FocusedStack(
     onExpand: (StreamContent) -> Unit,
 ) {
     val count = items.size
+    val dockFan = LocalDockFan.current
     val focus = remember(stackKey) { CardStackFocusState() }
     var liveScrollPx by remember { mutableStateOf<Float?>(null) }
     val travel = rememberCardStackTravel(renderedCardPitchDp = StreamCardStackSpec.PITCH_DP)
@@ -347,7 +357,12 @@ private fun FocusedStack(
                 onExpandedChange = { expand -> if (expand) onExpand(item) },
                 hollow = !isFocused,
                 caption = captions[item.id.value],
-                modifier = cardModifier.size(width = cardWidth, height = cardHeight).then(focusSemantics),
+                modifier =
+                    cardModifier
+                        // The cards come out of the Dock in sequence, the focused one first.
+                        .dockFan(dockFan, abs(entry.cardIndex - activeIndex))
+                        .size(width = cardWidth, height = cardHeight)
+                        .then(focusSemantics),
             )
         }
         StackPager(
@@ -356,7 +371,7 @@ private fun FocusedStack(
             previousLabel = previous,
             nextLabel = next,
             positionText = position,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = RiffleSpacing.s),
+            modifier = Modifier.align(Alignment.BottomCenter).dockFan(dockFan).padding(bottom = RiffleSpacing.s),
         ) { direction -> focus.step(direction, count) }
     }
 }
