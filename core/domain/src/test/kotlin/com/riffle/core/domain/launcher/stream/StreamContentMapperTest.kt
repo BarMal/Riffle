@@ -2,6 +2,8 @@ package com.riffle.core.domain.launcher.stream
 
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.notifications.NotificationPriority
+import com.riffle.core.domain.launcher.workspace.Item
+import com.riffle.core.domain.launcher.workspace.ItemExtValue
 import com.riffle.core.domain.launcher.workspace.ItemPrivacy
 import com.riffle.core.domain.launcher.workspace.ItemTarget
 import com.riffle.core.domain.launcher.workspace.SourceIds
@@ -9,6 +11,7 @@ import com.riffle.core.domain.launcher.workspace.lens.SourceContentLevel
 import com.riffle.core.domain.launcher.workspace.lens.SourceContentLevels
 import com.riffle.core.domain.launcher.workspace.sources.CalendarEvent
 import com.riffle.core.domain.launcher.workspace.sources.CalendarItemMapper
+import com.riffle.core.domain.launcher.workspace.sources.NotificationItemMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -32,6 +35,49 @@ class StreamContentMapperTest {
             content.actions,
         )
         assertEquals(StreamPrivacy.VISIBLE, content.privacy)
+    }
+
+    private fun withImages(item: Item) =
+        item.copy(
+            ext =
+                item.ext +
+                    mapOf(
+                        NotificationItemMapper.PERSON_ART_KEY to ItemExtValue.Text("notification-person:personal:a"),
+                        NotificationItemMapper.PICTURE_ART_KEY to ItemExtValue.Text("notification-picture:personal:a"),
+                    ),
+        )
+
+    @Test
+    fun `a notification carries its contact photo and picture, and the avatar is the photo before the large icon`() {
+        val content = StreamContentMapper.map(withImages(notificationItem("a"))) as NotificationContent
+
+        assertEquals("notification-person:personal:a", content.person?.key)
+        assertEquals("notification-picture:personal:a", content.picture?.key)
+        assertEquals(content.person, content.avatar)
+        // Without a contact photo the avatar is the large icon the app set.
+        val noPhoto =
+            StreamContentMapper.map(notificationItem("a")) as NotificationContent
+        assertNull(noPhoto.person)
+        assertNull(noPhoto.picture)
+        assertEquals("art:a", noPhoto.avatar?.key)
+    }
+
+    @Test
+    fun `the contact photo and picture follow the image field, so hide text and sensitive items drop them`() {
+        val hidden =
+            StreamContentMapper.map(
+                withImages(notificationItem("a")),
+                SourceContentLevels().with(SourceIds.NOTIFICATIONS, SourceContentLevel.HIDE_TEXT),
+            ) as NotificationContent
+        assertNull(hidden.person)
+        assertNull(hidden.picture)
+        assertNull(hidden.avatar)
+
+        val sensitive =
+            StreamContentMapper.map(withImages(notificationItem("a", privacy = ItemPrivacy.SENSITIVE)))
+                as NotificationContent
+        assertNull(sensitive.person)
+        assertNull(sensitive.picture)
     }
 
     @Test

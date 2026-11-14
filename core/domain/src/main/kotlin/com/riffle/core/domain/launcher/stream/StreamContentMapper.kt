@@ -35,8 +35,6 @@ object StreamContentMapper {
     private val AUTHOR = ItemExtKey("rss.author")
     private val STALE = ItemExtKey("rss.stale")
     private val NOTIFICATION_KEY = NotificationItemMapper.KEY_KEY
-    private val NOTIFICATION_REPLY = NotificationItemMapper.REPLY_KEY
-    private val NOTIFICATION_SNOOZE = NotificationItemMapper.SNOOZE_KEY
 
     /** Set by the platform RSS source: the opaque digest the cache keys read state by, and whether it was read. */
     val ARTICLE_DIGEST = ItemExtKey("rss.digest")
@@ -52,9 +50,12 @@ object StreamContentMapper {
             if (item.privacy == ItemPrivacy.SENSITIVE || hidden) StreamPrivacy.REDACTED else StreamPrivacy.VISIBLE
         // Message history and the queue are body text: they follow the BODY field, so "hide body" and sensitive
         // items drop them even though the ext map itself survives the hide-body level.
-        val showBody = ItemField.BODY in LensProjection.visibleFields(item, ItemField.ALL, levels)
+        val visible = LensProjection.visibleFields(item, ItemField.ALL, levels)
+        val showBody = ItemField.BODY in visible
+        // The contact photo and a message's picture are images: they follow the IMAGE field, as the large icon does.
+        val showImages = ItemField.IMAGE in visible
         return when (item.sourceId) {
-            SourceIds.NOTIFICATIONS -> notification(redacted, privacy, showBody)
+            SourceIds.NOTIFICATIONS -> notification(redacted, privacy, showBody, showImages)
             SourceIds.MEDIA -> media(redacted, privacy, showBody)
             SourceIds.CALENDAR -> event(redacted, privacy, EventKind.CALENDAR)
             SourceIds.ICS -> event(redacted, privacy, EventKind.CALENDAR_FEED)
@@ -105,6 +106,7 @@ object StreamContentMapper {
         item: Item,
         privacy: StreamPrivacy,
         showBody: Boolean,
+        showImages: Boolean,
     ): NotificationContent? {
         val app = item.appRef() ?: return null
         val category = (item.ext[CATEGORY] as? ItemExtValue.Text)?.value
@@ -122,24 +124,28 @@ object StreamContentMapper {
                 category?.let { name -> NotificationCategory.entries.firstOrNull { it.name.lowercase() == name } },
             priority = rank?.let { value -> NotificationPriority.entries.firstOrNull { it.rank.toLong() == value } },
             target = item.target,
-            actions =
-                buildSet {
-                    item.actions.forEach { action ->
-                        when (action) {
-                            is ItemAction.Open -> add(NotificationAction.OPEN)
-                            is ItemAction.Dismiss -> add(NotificationAction.DISMISS)
-                            is ItemAction.Reply -> add(NotificationAction.REPLY)
-                            is ItemAction.Snooze -> add(NotificationAction.SNOOZE)
-                            is ItemAction.Custom -> Unit
-                        }
-                    }
-                    if (item.ext[NOTIFICATION_REPLY] == ItemExtValue.Flag(true)) add(NotificationAction.REPLY)
-                    if (item.ext[NOTIFICATION_SNOOZE] == ItemExtValue.Flag(true)) add(NotificationAction.SNOOZE)
-                    add(NotificationAction.HIDE)
-                },
+            actions = StreamContentDetails.notificationActions(item),
             privacy = privacy,
             notificationKey = (item.ext[NOTIFICATION_KEY] as? ItemExtValue.Text)?.value,
             thread = if (showBody) StreamContentDetails.thread(item) else emptyList(),
+            person =
+                if (showImages) {
+                    StreamContentDetails.imageHandle(
+                        item,
+                        NotificationItemMapper.PERSON_ART_KEY,
+                    )
+                } else {
+                    null
+                },
+            picture =
+                if (showImages) {
+                    StreamContentDetails.imageHandle(
+                        item,
+                        NotificationItemMapper.PICTURE_ART_KEY,
+                    )
+                } else {
+                    null
+                },
         )
     }
 

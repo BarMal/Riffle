@@ -52,6 +52,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.ModeDockEdges
 import com.riffle.core.domain.launcher.home.ModeSurface
 import com.riffle.core.domain.launcher.home.dockEdgeFor
+import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.home.modeSurface
 import com.riffle.core.domain.launcher.split.SplitMode
 import com.riffle.core.domain.launcher.split.SplitWindow
@@ -163,11 +164,17 @@ fun HomeDestination(
                     // goes back to Home.
                     onPress = { entryKey ->
                         if (shownStream) {
-                            StreamSwitch(dockPull, motion).close(
-                                plan.dockEdge.pullDirection,
-                                state.reducedMotion(),
-                                splitSetup(),
-                            )
+                            // With a card open the press is the card's first: it closes and the Stream stays, the
+                            // Dock springing back from its dip without the Stream leaving.
+                            if (stream?.dock?.openCards?.closeByPress() == true) {
+                                motion.revert()
+                            } else {
+                                StreamSwitch(dockPull, motion).close(
+                                    plan.dockEdge.pullDirection,
+                                    state.reducedMotion(),
+                                    splitSetup(),
+                                )
+                            }
                         } else {
                             openStream(
                                 stream,
@@ -182,6 +189,12 @@ fun HomeDestination(
                     },
                     // Choosing while the Stream is out: it stays and lands on the chosen page, as a tap on a tile does.
                     onSwitchPage = { entryKey -> dockInterpreter.onDynamicEntryDelegated(entryKey) },
+                    // The press's accessible equivalents close an open card before they close the Stream.
+                    openCard =
+                        OpenCardPress(
+                            isOpen = stream?.dock?.openCards?.state?.isOpen == true,
+                            close = { stream?.dock?.openCards?.closeByPress() == true },
+                        ),
                 ),
             dockPull = dockPull,
             motion = motion,
@@ -288,6 +301,7 @@ fun HomeDestination(
                                 reducedMotion = state.reducedMotion(),
                                 onConnectTasks = openTasksSettings,
                                 liveAppSlots = dockHostState.homeLayout.dock.liveAppSlots,
+                                streamSettings = state.launcherSettings.stream,
                                 contentPadding =
                                     streamPaneInsets(
                                         insets =
@@ -544,6 +558,8 @@ private fun StreamHomeSurface(
             pinnedApps = visibleLayout.pinnedApps(),
             appShortcuts = state.appShortcutsByApp,
             launcherRole = state.homeRoleStatus != HomeRoleStatus.NOT_DEFAULT_HOME,
+            streamSettings = state.launcherSettings.stream,
+            dockCanHoldActions = dockPosition.isHorizontalEdge,
         )
     }
 }

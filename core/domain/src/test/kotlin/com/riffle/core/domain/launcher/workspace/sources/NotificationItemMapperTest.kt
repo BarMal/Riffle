@@ -85,6 +85,40 @@ class NotificationItemMapperTest {
     }
 
     @Test
+    fun `a contact photo and a picture are named by handles only when the app published them`() {
+        val items =
+            mapper.notificationItems(
+                input(
+                    notification("a").copy(hasPersonIcon = true, hasPicture = true),
+                    notification("b", pkg = "mail"),
+                ),
+            )
+
+        val chat = items.first { it.groupKey == "chat:personal" }
+        assertEquals(
+            ItemExtValue.Text("notification-person:personal:a"),
+            chat.ext[NotificationItemMapper.PERSON_ART_KEY],
+        )
+        assertEquals(
+            ItemExtValue.Text("notification-picture:personal:a"),
+            chat.ext[NotificationItemMapper.PICTURE_ART_KEY],
+        )
+        val mail = items.first { it.groupKey == "mail:personal" }
+        assertNull(mail.ext[NotificationItemMapper.PERSON_ART_KEY])
+        assertNull(mail.ext[NotificationItemMapper.PICTURE_ART_KEY])
+    }
+
+    @Test
+    fun `a media session carries no contact photo or picture handle`() {
+        val item =
+            mapper.mediaItems(input(notification("m", media = true).copy(hasPersonIcon = true, hasPicture = true)))
+                .single()
+
+        assertNull(item.ext[NotificationItemMapper.PERSON_ART_KEY])
+        assertNull(item.ext[NotificationItemMapper.PICTURE_ART_KEY])
+    }
+
+    @Test
     fun `undismissable notifications offer no dismiss action`() {
         val item = mapper.notificationItems(input(notification("a", dismiss = false))).single()
         assertEquals(listOf<ItemAction>(ItemAction.Open()), item.actions)

@@ -55,7 +55,9 @@ internal fun rememberDockDynamicSide(
     /** The apps pinned in the Dock, in its order: each has a page, so each can be ringed and chosen. */
     pinnedApps: List<PinnedApp> = emptyList(),
 ): HomeDockInterpreter {
-    if (stream == null) return modeInterpreter.copy(dynamicEntries = emptyList(), pinnedStream = null)
+    if (stream == null) {
+        return modeInterpreter.copy(dynamicEntries = emptyList(), pinnedStream = null, cardActions = null)
+    }
     // The provider reads the options of the posture on screen; keep it current even before the Stream has opened.
     SideEffect { stream.posture.deviceClass = deviceClass }
     val results = rememberStreamSectionResults(stream.provider, listOf(StreamSection.NOTIFICATIONS, StreamSection.NOW))
@@ -122,6 +124,8 @@ internal fun rememberDockDynamicSide(
         contextual = extended,
         onDynamicEntryDelegated = { key -> dockDynamicEntryTarget(key)?.let { target -> latestOpen.value(target) } },
         pinnedStream = pinnedStream,
+        // An open card's actions, while the Stream shows it: the Dock's row (the Dock reads, the Stream writes).
+        cardActions = link.openCards.shown.takeIf { shown },
     )
 }
 

@@ -4,9 +4,15 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import com.riffle.core.domain.launcher.dock.DockDynamicSide
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
+import com.riffle.core.domain.launcher.stream.CardAction
 import com.riffle.core.domain.launcher.stream.MediaContent
+import com.riffle.core.domain.launcher.stream.OpenCardEvent
+import com.riffle.core.domain.launcher.stream.OpenCardReducer
+import com.riffle.core.domain.launcher.stream.OpenCardState
+import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.StreamPageRef
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
@@ -25,6 +31,60 @@ internal sealed interface StreamPageOption {
 
 /** A request to apply [option]; [id] tells repeated requests for the same option apart. */
 internal class StreamPageOptionRequest(val id: Long, val option: StreamPageOption)
+
+/**
+ * The card that is open (ADR 0003, Amendment 1, "Stream: browse, then open"): which one ([state], moved only by the
+ * pure [OpenCardReducer]) and what the Dock needs to draw its actions row ([shown]: the open card's content and the
+ * way to act on it). The Stream's stacks write both; the Dock reads [shown] and closes the card by a press
+ * ([closeByPress]). Transient, never stored.
+ */
+@Stable
+internal class OpenCardHolder {
+    var state: OpenCardState by mutableStateOf(OpenCardState())
+        private set
+
+    /** What the Dock's actions row draws, or null while no card is open (or its actions sit on the card). */
+    var shown: OpenCardActions? by mutableStateOf(null)
+        private set
+
+    fun dispatch(event: OpenCardEvent) {
+        val next = OpenCardReducer.reduce(state, event)
+        if (next != state) state = next
+    }
+
+    /** A press of the Dock while a card is open closes it, and the Stream stays; false when none is open. */
+    fun closeByPress(): Boolean {
+        if (!OpenCardReducer.takesPressOrBack(state)) return false
+        dispatch(OpenCardEvent.CloseByPress)
+        return true
+    }
+
+    fun publish(actions: OpenCardActions?) {
+        if (shown != actions) shown = actions
+    }
+}
+
+/**
+ * What the Dock's actions row needs from the open card: the content, its controls, how to act and how to show or hide
+ * the player's queue. Equal only to itself: a new value is published whenever the card's content or queue changes, so
+ * the row redraws with it.
+ */
+@Stable
+internal class OpenCardActions(
+    val content: StreamContent,
+    val actions: List<CardAction>,
+    val callbacks: StreamCallbacks,
+    val onToggleQueue: (Boolean) -> Unit,
+)
+
+/**
+ * Whether the open card's actions sit in the Dock's row (the setting, where the Dock can hold one) rather than on the
+ * card. False (on the card) wherever there is no Dock to hold them: the Stream alone, in tests and previews.
+ */
+internal val LocalActionsInDock = staticCompositionLocalOf { false }
+
+/** The open card of the Stream composed here: a stack reads and writes it; the surface publishes it to the Dock. */
+internal val LocalOpenCards = staticCompositionLocalOf { OpenCardHolder() }
 
 /**
  * What the Stream and the Dock tell each other while the Dock is in the contextual mode (ADR 0003, Amendment 3): the
@@ -48,6 +108,9 @@ internal class StreamDockLink {
     var pendingOption: StreamPageOptionRequest? by mutableStateOf(null)
         private set
 
+    /** The card open on the page in front, which the Dock's actions row and its press read. */
+    val openCards: OpenCardHolder = OpenCardHolder()
+
     private var lastOptionId = 0L
 
     fun publishPages(pages: List<StreamPageRef>) {
@@ -63,6 +126,8 @@ internal class StreamDockLink {
         pages = emptyList()
         currentKey = null
         pendingOption = null
+        openCards.dispatch(OpenCardEvent.StreamLeft)
+        openCards.publish(null)
     }
 
     fun requestOption(option: StreamPageOption) {

@@ -77,8 +77,18 @@ data class NotificationContent(
     val notificationKey: String? = null,
     /** Message history of a messaging notification, oldest first; empty for anything else and when redacted. */
     val thread: List<NotificationMessage> = emptyList(),
+    /** The contact photo the app published (its person icon); null when it published none, and when redacted. */
+    val person: ItemImageHandle? = null,
+    /** The picture the notification carries (a big-picture style); null when it has none, and when redacted. */
+    val picture: ItemImageHandle? = null,
 ) : StreamContent {
     override val timeEpochMillis: Long get() = postedAtEpochMillis
+
+    /**
+     * The round avatar of a card: the contact photo, else the notification's large icon (which a messaging app sets to
+     * the conversation's photo); null when the app published neither (the card draws initials or the app's icon).
+     */
+    val avatar: ItemImageHandle? get() = person ?: image
 }
 
 enum class MediaAction {

@@ -32,6 +32,7 @@ import com.riffle.app.launcher.BoundedCache
 import com.riffle.app.launcher.apps.ShortcutIconKey
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
+import com.riffle.app.launcher.notifications.NotificationImageStore
 import com.riffle.app.launcher.workspace.ItemImageKeyParser
 import com.riffle.app.launcher.workspace.ParsedImageKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -60,6 +61,8 @@ internal class AndroidStreamImageLoader(
     private val feedArtwork: suspend (String) -> ImageBitmap? = { null },
     /** The icon of the launcher shortcut this handle names, or null (the app's icon is drawn instead). */
     private val shortcutIcon: (ItemImageHandle) -> Drawable? = { null },
+    /** The contact photo or picture of an active notification (held in memory by the listener), or null. */
+    private val notificationBitmap: (String) -> android.graphics.Bitmap? = NotificationImageStore::bitmapFor,
 ) : ExpressionImageLoader {
     private val cache = BoundedCache<String, ImageBitmap>(MAX_CACHED_IMAGES)
 
@@ -74,6 +77,9 @@ internal class AndroidStreamImageLoader(
             // that notification is active, so neither is cached here.
             key.startsWith(MediaArtworkStore.HANDLE_PREFIX) -> withContext(ioDispatcher) { artwork(handle, size) }
             key.startsWith(NOTIFICATION_ART_PREFIX) -> withContext(ioDispatcher) { notificationImage(handle) }
+            // A contact photo or a picture lives in memory while its notification is active: never cached here.
+            NotificationImageStore.holds(key) ->
+                withContext(ioDispatcher) { scaledTo(notificationBitmap(key), size) }
             else -> cachedImage(handle, size)
         }
     }
@@ -119,17 +125,23 @@ internal class AndroidStreamImageLoader(
     private fun artwork(
         handle: ItemImageHandle,
         size: Int,
+    ): ImageBitmap? = scaledTo(mediaArtwork(handle.key), size)
+
+    /** [bitmap] no larger than [size] px on its longest side (what the card draws, never more), or null. */
+    private fun scaledTo(
+        bitmap: android.graphics.Bitmap?,
+        size: Int,
     ): ImageBitmap? =
         runCatching {
-            mediaArtwork(handle.key)?.let { bitmap ->
-                val scale = size.toFloat() / maxOf(bitmap.width, bitmap.height)
+            bitmap?.let {
+                val scale = size.toFloat() / maxOf(it.width, it.height)
                 if (scale >= 1f) {
-                    bitmap
+                    it
                 } else {
                     android.graphics.Bitmap.createScaledBitmap(
-                        bitmap,
-                        (bitmap.width * scale).toInt().coerceAtLeast(1),
-                        (bitmap.height * scale).toInt().coerceAtLeast(1),
+                        it,
+                        (it.width * scale).toInt().coerceAtLeast(1),
+                        (it.height * scale).toInt().coerceAtLeast(1),
                         true,
                     )
                 }.asImageBitmap()

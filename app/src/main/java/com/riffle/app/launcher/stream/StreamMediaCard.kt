@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,9 +46,10 @@ private const val MAX_QUEUE_ROWS = 8
 private val QueueArtworkSize = RiffleSpacing.xxxl - RiffleSpacing.s
 
 /**
- * Now playing: the artwork is the card's surface, a thick glass deck over it holds the title, the scrubber and the
- * transport, and the queue expands under them. Every control is a plain button or slider (48 dp), so nothing here
- * needs a gesture.
+ * Now playing on a browse card: the artwork is the card's surface, a thick glass deck over it holds the title, the
+ * scrubber and the transport. Every control is a plain button or slider (48 dp), so nothing here needs a gesture. A tap
+ * on the title opens the player in place ([onOpen]: the queue and the large artwork are on the open card); without one
+ * (a widget) it opens the player app.
  */
 @Composable
 internal fun MediaCard(
@@ -58,9 +57,8 @@ internal fun MediaCard(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     groupKey: String?,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onOpen: (() -> Unit)? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     StreamCardSurface(content.id.value, content.app, content.icon, env, modifier) { sourceModifier ->
@@ -77,7 +75,7 @@ internal fun MediaCard(
                 shape = RectangleShape,
                 tint = MaterialTheme.colorScheme.surfaceContainerHigh,
             ) {
-                MediaDeck(content, env, callbacks, groupKey, hideChoices, expanded, onExpandedChange)
+                MediaDeck(content, env, callbacks, groupKey, hideChoices, onOpen)
             }
         }
     }
@@ -90,8 +88,7 @@ private fun MediaDeck(
     callbacks: StreamCallbacks,
     groupKey: String?,
     hideChoices: List<HideChoice>,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
+    onOpen: (() -> Unit)?,
 ) {
     Column(
         modifier =
@@ -112,8 +109,10 @@ private fun MediaDeck(
                         .weight(1f)
                         .heightIn(min = StreamMinTarget)
                         .streamClickable(
-                            { callbacks.onAction(content, StreamAction.Open) },
-                            stringResource(R.string.stream_media_open_player),
+                            onOpen ?: { callbacks.onAction(content, StreamAction.Open) },
+                            stringResource(
+                                if (onOpen != null) R.string.stream_open_card else R.string.stream_media_open_player,
+                            ),
                         ),
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -136,14 +135,13 @@ private fun MediaDeck(
             StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
         }
         MediaScrubber(content, callbacks)
-        MediaTransport(content, callbacks, expanded, onExpandedChange)
-        if (expanded) MediaQueue(content, env)
+        MediaTransport(content, callbacks)
     }
 }
 
 /** The position slider; read-only while the session offers no seeking, and absent without a duration. */
 @Composable
-private fun MediaScrubber(
+internal fun MediaScrubber(
     content: MediaContent,
     callbacks: StreamCallbacks,
 ) {
@@ -187,8 +185,6 @@ private fun MediaScrubber(
 private fun MediaTransport(
     content: MediaContent,
     callbacks: StreamCallbacks,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
 ) {
     val playing = content.isPlaying == true
     val toggle = if (playing) StreamAction.Pause else StreamAction.Play
@@ -212,13 +208,6 @@ private fun MediaTransport(
             stringResource(R.string.stream_media_next),
             StreamActionPolicy.offers(content, StreamAction.Next),
         ) { callbacks.onAction(content, StreamAction.Next) }
-        if (content.queue.isNotEmpty()) {
-            TransportButton(
-                if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                stringResource(if (expanded) R.string.stream_media_hide_queue else R.string.stream_media_show_queue),
-                true,
-            ) { onExpandedChange(!expanded) }
-        }
     }
 }
 
@@ -235,7 +224,7 @@ internal fun TransportButton(
 }
 
 @Composable
-private fun MediaQueue(
+internal fun MediaQueue(
     content: MediaContent,
     env: StreamEnvironment,
 ) {

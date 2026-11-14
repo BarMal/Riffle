@@ -27,6 +27,7 @@ class RiffleNotificationListenerService : NotificationListenerService() {
         ignoreNotificationListenerFailure {
             RiffleNotificationListenerConnection.disconnect(this)
             AndroidNotificationStageActionGateway.clear()
+            NotificationImageStore.clear()
             // The platform can unbind this listener outside a permission revocation (e.g. OEM battery
             // management). Ask the platform to retry the binding rather than staying silently dead.
             requestRebind(ComponentName(this, RiffleNotificationListenerService::class.java))
@@ -69,11 +70,58 @@ class RiffleNotificationListenerService : NotificationListenerService() {
      * currently active notification.
      */
     private fun saveActiveNotifications() {
+        val images = LinkedHashMap<String, NotificationImageBudget.Candidate>()
+        val bitmaps = HashMap<String, android.graphics.Bitmap>()
         activeNotifications
             ?.also { notifications ->
                 runCatching { AndroidNotificationStageActionGateway.replaceAll(this, notifications) }
-            }?.mapNotNull { notification -> runCatching { notificationMapper.map(notification) }.getOrNull() }
-            ?.let { list -> runCatching { repository.saveActiveNotifications(list) } }
+            }?.mapNotNull { notification ->
+                runCatching {
+                    val mapped = notificationMapper.map(notification)
+                    val captured = NotificationImageCapture.capture(this, notification.notification)
+                    val (personHandle, pictureHandle) =
+                        NotificationImageCapture.handlesOf(mapped.profileId, mapped.key.value)
+                    captured.person?.let { bitmap ->
+                        bitmaps[personHandle] = bitmap
+                        images[personHandle] =
+                            NotificationImageBudget.Candidate(
+                                personHandle,
+                                bitmap.allocationByteCount,
+                                isPicture = false,
+                                postedAtEpochMillis = mapped.postedAtEpochMillis,
+                            )
+                    }
+                    captured.picture?.let { bitmap ->
+                        bitmaps[pictureHandle] = bitmap
+                        images[pictureHandle] =
+                            NotificationImageBudget.Candidate(
+                                pictureHandle,
+                                bitmap.allocationByteCount,
+                                isPicture = true,
+                                postedAtEpochMillis = mapped.postedAtEpochMillis,
+                            )
+                    }
+                    mapped.copy(
+                        hasPersonIcon = captured.person != null,
+                        hasPicture = captured.picture != null,
+                    )
+                }.getOrNull()
+            }?.let { list ->
+                // What the store keeps is what the budget selects; the flags say only what is kept, so a card never
+                // asks for an image that is not there.
+                val kept = NotificationImageBudget.select(images.values.toList())
+                NotificationImageStore.replaceAll(bitmaps.filterKeys { it in kept })
+                val flagged =
+                    list.map { mapped ->
+                        val (personHandle, pictureHandle) =
+                            NotificationImageCapture.handlesOf(mapped.profileId, mapped.key.value)
+                        mapped.copy(
+                            hasPersonIcon = personHandle in kept,
+                            hasPicture = pictureHandle in kept,
+                        )
+                    }
+                runCatching { repository.saveActiveNotifications(flagged) }
+            }
     }
 }
 

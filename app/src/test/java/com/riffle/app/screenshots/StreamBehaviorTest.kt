@@ -664,18 +664,26 @@ class StreamBehaviorTest {
     }
 
     @Test
-    fun theQueueExpandsAndCollapses() {
+    fun theQueueIsOnTheOpenPlayerAndCollapses() {
         show(initialPageKey = StreamPageKeys.NOW)
-        composeRule.onNodeWithContentDescription("Show queue").performClick()
+        // The browse card has no queue; a tap on the player opens it, with the queue (and, with no Dock to hold them,
+        // its controls, one of which hides the queue).
+        composeRule.onAllNodesWithText("Reunion").assertCountEquals(0)
+        composeRule.onNodeWithText("Midnight City").performClick()
         composeRule.onNodeWithText("Reunion").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Hide queue").performClick()
         composeRule.onAllNodesWithText("Reunion").assertCountEquals(0)
+        composeRule.onNodeWithContentDescription("Show queue").performClick()
+        composeRule.onNodeWithText("Reunion").assertIsDisplayed()
     }
 
     @Test
-    fun aNotificationExpandsToItsThreadAndSendsAReply() {
+    fun aNotificationOpensToItsThreadAndSendsAReply() {
         show(initialPageKey = StreamPageKeys.CHAT)
-        composeRule.onAllNodesWithText("Reply").onFirst().performClick()
+        // The browse card has no reply button: a tap opens the conversation, and its actions are on the card here (this
+        // surface has no Dock to hold them).
+        composeRule.onAllNodesWithText("Sam: Morning! Got a minute?").assertCountEquals(0)
+        composeRule.onNodeWithText("Are we still on for lunch tomorrow?").performClick()
 
         composeRule.onNodeWithText("Sam: Morning! Got a minute?").assertIsDisplayed()
         composeRule.onNodeWithText("Write a reply").performTextInput("On my way")
@@ -774,12 +782,19 @@ class StreamBehaviorTest {
         assertActionOn(StreamPageKeys.NOW, {
             composeRule.onNodeWithContentDescription("Pause").performClick()
         }, StreamAction.Pause)
+        // A notification's Dismiss is on its open card: a tap on the front card opens it, then the control acts.
         assertActionOn(StreamPageKeys.CHAT, {
-            composeRule.onAllNodesWithText("Dismiss").onFirst().performClick()
+            composeRule.onNodeWithText("Are we still on for lunch tomorrow?").performClick()
+            composeRule.waitForIdle()
+            composeRule.onNodeWithContentDescription("Dismiss").performClick()
         }, StreamAction.Dismiss)
         assertActionOn(
             StreamPageKeys.MAIL,
-            { composeRule.onNodeWithText("Dismiss").performClick() },
+            {
+                composeRule.onNodeWithText("Invoice 2026-114").performClick()
+                composeRule.waitForIdle()
+                composeRule.onNodeWithContentDescription("Dismiss").performClick()
+            },
             StreamAction.Dismiss,
         )
         assertActionOn(StreamPageKeys.RECENTS, {

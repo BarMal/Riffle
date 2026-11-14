@@ -135,6 +135,14 @@ class NotificationItemMapper(
         if (notification.isMediaSession) return emptyMap()
         val ext = LinkedHashMap<ItemExtKey, ItemExtValue>()
         ext[KEY_KEY] = ItemExtValue.Text(notification.key.value)
+        if (notification.hasPersonIcon) {
+            ext[PERSON_ART_KEY] =
+                ItemExtValue.Text(ItemImageKeys.notificationPerson(notification.profileId, notification.key.value).key)
+        }
+        if (notification.hasPicture) {
+            ext[PICTURE_ART_KEY] =
+                ItemExtValue.Text(ItemImageKeys.notificationPicture(notification.profileId, notification.key.value).key)
+        }
         if (input.canReply(notification.key)) ext[REPLY_KEY] = ItemExtValue.Flag(true)
         if (notification.canDismiss && input.canSnooze(notification.key)) ext[SNOOZE_KEY] = ItemExtValue.Flag(true)
         val thread =
@@ -159,6 +167,8 @@ class NotificationItemMapper(
         val REPLY_KEY = ItemExtKey("notification.reply")
         val SNOOZE_KEY = ItemExtKey("notification.snooze")
         val THREAD_SIZE_KEY = ItemExtKey("notification.thread_size")
+        val PERSON_ART_KEY = ItemExtKey("notification.person_art")
+        val PICTURE_ART_KEY = ItemExtKey("notification.picture_art")
         private val CATEGORY_KEY = ItemExtKey("notification.category")
         private val PRIORITY_KEY = ItemExtKey("notification.priority")
         private val APP_KEY = ItemExtKey("notification.app")

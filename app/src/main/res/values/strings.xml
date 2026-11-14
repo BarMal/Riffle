@@ -68,6 +68,13 @@
     <string name="stream_open_card">Open card</string>
     <string name="stream_bring_card_to_front">Bring to front</string>
     <string name="stream_action_failed">That did not work.</string>
+    <string name="stream_card_close">Close card</string>
+    <string name="stream_card_actions">Card actions</string>
+    <string name="stream_dock_close_card_action">Close card</string>
+    <!-- Pictures a notification carries: a generic description, never the content of the picture. -->
+    <string name="stream_picture">Picture</string>
+    <string name="stream_picture_from">Picture from %1$s</string>
+    <string name="stream_artwork">Artwork</string>
 
     <!-- Media -->
     <string name="stream_media_play">Play</string>
@@ -100,6 +107,8 @@
     <string name="stream_event_all_day">All day</string>
     <string name="stream_event_alarm">Alarm</string>
     <string name="stream_event_untitled">Event</string>
+    <string name="stream_event_open_in_calendar">Open in calendar</string>
+    <string name="stream_event_open_clock">Open clock</string>
     <plurals name="stream_event_starts_in_minutes">
         <item quantity="one">Starts in %1$d minute</item>
         <item quantity="other">Starts in %1$d minutes</item>
@@ -165,6 +174,7 @@
 
     <!-- Tasks -->
     <string name="stream_task_complete">Mark %1$s done</string>
+    <string name="stream_task_complete_action">Complete</string>
     <string name="stream_task_overdue">Overdue, %1$s</string>
     <string name="stream_task_add_label">Add a task for today</string>
     <string name="stream_task_add">Add task</string>

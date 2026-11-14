@@ -7,6 +7,7 @@ import com.riffle.app.launcher.workspace.ItemImageKeyParser
 import com.riffle.app.launcher.workspace.ParsedImageKey
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.NotificationContent
@@ -82,6 +83,8 @@ internal data class StreamEnvironment(
     val formats: StreamFormats,
     /** The time countdowns count from; refreshed by the surface while [StreamFormats.live]. */
     val nowEpochMillis: Long,
+    /** How cards are drawn (the tint of their fill, the optional glow) and where an open card and its actions sit. */
+    val cardSettings: StreamSettings = StreamSettings(),
 )
 
 /**
