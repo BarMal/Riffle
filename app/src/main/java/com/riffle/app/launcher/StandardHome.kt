@@ -613,6 +613,7 @@ private fun StandardHomeColumn(
                         onPageSelected = onOpenPage,
                         onIndicatorScrub = onIndicatorScrub,
                         actions = actions,
+                        hidden = state.presentation.handleHidden,
                     )
                 }
             } else {
@@ -674,6 +675,7 @@ private fun StandardHomeColumn(
             reducedMotion = state.presentation.reducedMotion,
             onIndicatorScrub = onIndicatorScrub,
             handle = if (handleInStrip) null else layoutSettings,
+            handleHidden = state.presentation.handleHidden,
             handleAxis = handleAxis,
             appIconLoader = appIconLoader,
             widgetViewFactory = state.presentation.widgetViewFactory,
@@ -749,6 +751,7 @@ private fun HomeBottomControls(
     onIndicatorScrub: (Int) -> Unit,
     /** The layout the handle follows, or null when the handle is not in this row (it stands beside a side Dock). */
     handle: PostureLayoutSettings?,
+    handleHidden: Boolean,
     handleAxis: HandleAxis,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
@@ -782,6 +785,7 @@ private fun HomeBottomControls(
                         layout = handle,
                         axis = handleAxis,
                         actions = actions,
+                        hidden = handleHidden,
                     )
                 }
 
@@ -820,6 +824,7 @@ private fun HomeBottomSearchArea(
     layout: PostureLayoutSettings,
     axis: HandleAxis,
     actions: HomeWorkspaceActions,
+    hidden: Boolean = false,
 ) {
     val dots = layout.showsDots && HomeHandle.showsDots(pageCount)
     Box(
@@ -835,18 +840,20 @@ private fun HomeBottomSearchArea(
             modifier = Modifier.matchParentSize(),
             onClick = actions.onBackgroundClick,
         )
-        HomeHandlePill(
-            pageCount = pageCount,
-            selectedPageIndex = selectedPageIndex,
-            reducedMotion = reducedMotion,
-            haptics = actions.haptics,
-            onOpenSearch = { actions.onAction(LauncherShellAction.OpenSearch) },
-            onPageSelected = onPageSelected,
-            onLiveDragPageChanged = onIndicatorScrub,
-            axis = axis,
-            showsDots = layout.showsDots,
-            dragEnabled = layout.dragsToScroll,
-        )
+        if (!hidden) {
+            HomeHandlePill(
+                pageCount = pageCount,
+                selectedPageIndex = selectedPageIndex,
+                reducedMotion = reducedMotion,
+                haptics = actions.haptics,
+                onOpenSearch = { actions.onAction(LauncherShellAction.OpenSearch) },
+                onPageSelected = onPageSelected,
+                onLiveDragPageChanged = onIndicatorScrub,
+                axis = axis,
+                showsDots = layout.showsDots,
+                dragEnabled = layout.dragsToScroll,
+            )
+        }
     }
 }
 
@@ -866,6 +873,7 @@ private fun HomeHandleStrip(
     onPageSelected: (Int) -> Unit,
     onIndicatorScrub: (Int) -> Unit,
     actions: HomeWorkspaceActions,
+    hidden: Boolean = false,
 ) {
     val dots = layout.showsDots && HomeHandle.showsDots(pageCount)
     Box(
@@ -882,18 +890,20 @@ private fun HomeHandleStrip(
             modifier = Modifier.matchParentSize(),
             onClick = actions.onBackgroundClick,
         )
-        HomeHandlePill(
-            pageCount = pageCount,
-            selectedPageIndex = selectedPageIndex,
-            reducedMotion = reducedMotion,
-            haptics = actions.haptics,
-            onOpenSearch = { actions.onAction(LauncherShellAction.OpenSearch) },
-            onPageSelected = onPageSelected,
-            onLiveDragPageChanged = onIndicatorScrub,
-            axis = axis,
-            showsDots = layout.showsDots,
-            dragEnabled = layout.dragsToScroll,
-        )
+        if (!hidden) {
+            HomeHandlePill(
+                pageCount = pageCount,
+                selectedPageIndex = selectedPageIndex,
+                reducedMotion = reducedMotion,
+                haptics = actions.haptics,
+                onOpenSearch = { actions.onAction(LauncherShellAction.OpenSearch) },
+                onPageSelected = onPageSelected,
+                onLiveDragPageChanged = onIndicatorScrub,
+                axis = axis,
+                showsDots = layout.showsDots,
+                dragEnabled = layout.dragsToScroll,
+            )
+        }
     }
 }
 
@@ -985,6 +995,13 @@ internal data class StandardHomePresentation(
     val layout: PostureLayoutSettings = PostureLayoutSettings.FOLDED_DEFAULT,
     /** Whether the Library is on; a generated page's "More apps" opens it, or search while it is off. */
     val libraryEnabled: Boolean = true,
+    /**
+     * The Stream's column stands over the handle's place (unfolded, ADR 0003, Amendment 2): the pill is not drawn,
+     * so it
+     * cannot show through or collide with the cards, and its room stays so the grid does not move. Folded, Home is gone
+     * with the handle whenever the Stream is out.
+     */
+    val handleHidden: Boolean = false,
 )
 
 internal data class StandardHomeWidgetPickerState(

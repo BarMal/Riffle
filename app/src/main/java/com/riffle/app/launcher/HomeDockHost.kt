@@ -63,6 +63,12 @@ internal class HomeDockHostState {
     val bounds: MutableState<Rect?> = mutableStateOf(null)
 
     /**
+     * The Dock's own body (the glass the icons stand on, not the strip of room around it) in root coordinates, null
+     * while there is none. The Stream's column on an unfolded posture attaches to it.
+     */
+    val bodyBounds: MutableState<Rect?> = mutableStateOf(null)
+
+    /**
      * The dynamic section's bounds in root coordinates, null while there is none. An expanded posture reads it to tell
      * which end of the Dock the dynamic side is at.
      */
@@ -256,6 +262,7 @@ internal fun HomeDockHost(
                 LocalDockPinnedStream provides interpreter.pinnedStream,
                 LocalDockBackgroundAlpha provides dockBackgroundAlpha,
                 LocalDockDynamicBoundsSink provides rememberDynamicBoundsSink(hostState),
+                LocalDockBodyBoundsSink provides rememberDockBodyBoundsSink(hostState),
                 LocalDockDynamicEntryBoundsSink provides rememberDynamicEntryBoundsSink(hostState),
             ) {
                 StandardHomeDockArea(
@@ -445,7 +452,12 @@ internal const val HOME_CONTENT_Z_INDEX = -1f
 
 private const val HOME_DOCK_FOLDER_Z_INDEX = 1f
 
-/** Where the dynamic section reports its bounds, into [hostState], for the split to read. */
+/** Where the Dock's body reports its bounds, into [hostState], for the Stream's column to attach to. */
+@Composable
+private fun rememberDockBodyBoundsSink(hostState: HomeDockHostState): (Rect?) -> Unit =
+    remember(hostState) { { bounds -> hostState.bodyBounds.value = bounds } }
+
+/** Where the dynamic section reports its bounds, into [hostState]. */
 @Composable
 private fun rememberDynamicBoundsSink(hostState: HomeDockHostState): (Rect?) -> Unit =
     remember(hostState) { { bounds -> hostState.dynamicBounds.value = bounds } }

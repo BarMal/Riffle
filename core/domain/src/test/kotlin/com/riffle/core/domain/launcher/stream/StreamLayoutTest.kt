@@ -108,15 +108,4 @@ class StreamLayoutTest {
         assertTrue(StreamLayouts().isDefault)
         assertTrue(StreamLayouts().with(HomeLayoutDeviceClass.TABLET, StreamLayout.DEFAULT).isDefault)
     }
-
-    @Test
-    fun theWholeStreamShowsAsPagesByDefaultAndStageCanBeChosenAndUndone() {
-        assertEquals(StreamWideView.PAGES, StreamLayout.DEFAULT.wideView)
-        val staged =
-            StreamLayoutReducer.reduce(StreamLayout.DEFAULT, StreamLayoutAction.SetWideView(StreamWideView.STAGE))
-        assertEquals(StreamWideView.STAGE, staged.wideView)
-        assertEquals(StreamLayout.DEFAULT.sections, staged.sections)
-        val restored = StreamLayoutReducer.reduce(staged, StreamLayoutAction.Restore(StreamLayout.DEFAULT))
-        assertEquals(StreamLayout.DEFAULT, restored)
-    }
 }

@@ -194,7 +194,8 @@ private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
 
 /*
  * The layout per posture (ADR 0003, Amendment 2): `layout.folded` and `layout.unfolded`, each `pageScroll`,
- * `indicator` and `quickScroll`. The Dock edge is not here: it is the Dock's own, stored per device class with the
+ * `indicator`, `quickScroll` and `appPeekThrough`. The Dock edge is not here: it is the Dock's own, stored per
+ * device class with the
  * home layout. An old blob has no `layout` and decodes to each posture's default; a posture, a value or a type this
  * build does not know reads as that posture's default, one field at a time.
  */
@@ -208,6 +209,7 @@ private fun encodePostureLayout(settings: PostureLayoutSettings): JSONObject =
         .put("pageScroll", settings.pageScroll.storedId)
         .put("indicator", settings.indicator.storedId)
         .put("quickScroll", settings.quickScroll)
+        .put("appPeekThrough", settings.appPeekThrough)
 
 private fun JSONObject.toLayoutSettings(defaults: LayoutSettings): LayoutSettings =
     LayoutSettings(
@@ -224,6 +226,7 @@ private fun JSONObject.toPostureLayout(defaults: PostureLayoutSettings): Posture
             PageIndicatorPlacement.fromStoredId(optString("indicator").takeIf(String::isNotEmpty))
                 ?: defaults.indicator,
         quickScroll = (opt("quickScroll") as? Boolean) ?: defaults.quickScroll,
+        appPeekThrough = (opt("appPeekThrough") as? Boolean) ?: defaults.appPeekThrough,
     )
 
 private fun encodeFeatures(settings: FeatureSettings): JSONObject =

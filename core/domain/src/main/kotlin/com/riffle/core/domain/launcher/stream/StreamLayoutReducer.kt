@@ -1,7 +1,5 @@
 package com.riffle.core.domain.launcher.stream
 
-import com.riffle.core.domain.launcher.split.SplitMode
-
 /** Every change the user can make to a [StreamLayout]. */
 sealed interface StreamLayoutAction {
     /** "Show as": Stack or List for one section. */
@@ -13,12 +11,6 @@ sealed interface StreamLayoutAction {
     data class Move(val section: StreamSection, val delta: Int) : StreamLayoutAction
 
     data class SetOptions(val options: StreamSectionOptions) : StreamLayoutAction
-
-    /** The split's remembered state: the Stream's share of the room and the last-used shown state (P6). */
-    data class SetSplit(val fraction: Float, val lastShown: SplitMode) : StreamLayoutAction
-
-    /** "Show as" for the whole Stream on an expanded posture: Pages or Stage. */
-    data class SetWideView(val wideView: StreamWideView) : StreamLayoutAction
 
     /** Puts a previously held layout back (Undo). */
     data class Restore(val layout: StreamLayout) : StreamLayoutAction
@@ -40,8 +32,6 @@ object StreamLayoutReducer {
                 ) { it.copy(enabled = action.enabled) }
             is StreamLayoutAction.Move -> layout.move(action.section, action.delta)
             is StreamLayoutAction.SetOptions -> layout.copy(options = action.options)
-            is StreamLayoutAction.SetSplit -> layout.copy(split = StreamSplit.of(action.fraction, action.lastShown))
-            is StreamLayoutAction.SetWideView -> layout.copy(wideView = action.wideView)
             is StreamLayoutAction.Restore -> action.layout
             StreamLayoutAction.Reset -> StreamLayout.DEFAULT
         }

@@ -250,44 +250,6 @@ class StreamPagesTest {
     }
 
     @Test
-    fun theStageShowsTheSelectedStageAndAllTheOthersInTheRail() {
-        val model = StreamStage.model(pages, "notifications/mail:p")
-        assertEquals("notifications/mail:p", model.selected?.key)
-        assertEquals(pages.map { it.key } - "notifications/mail:p", model.rail.map { it.key })
-    }
-
-    @Test
-    fun theStageJustLeftComesFirstInTheRailThenTheRestInPageOrder() {
-        var recent = emptyList<String>()
-        recent = StreamStage.recentAfterSelecting(recent, "now", "recents")
-        recent = StreamStage.recentAfterSelecting(recent, "recents", "today")
-        assertEquals(listOf("recents", "now"), recent)
-        val model = StreamStage.model(pages, "today", recent)
-        assertEquals(listOf("recents", "now"), model.rail.take(2).map { it.key })
-        assertEquals(pages.size - 1, model.rail.size)
-        // Coming back to a stage that is in the memory takes it out of it.
-        assertEquals(listOf("today", "now"), StreamStage.recentAfterSelecting(recent, "today", "recents"))
-    }
-
-    @Test
-    fun aVanishedStageHandsOverToItsNearestAndNothingIsEmptyWhenThereAreNoPages() {
-        val without = pages.filter { it.key != "recents" }
-        val model = StreamStage.model(without, "recents", previousKeys = pages.map { it.key })
-        assertEquals("today", model.selected?.key)
-        assertTrue(model.rail.none { it.key == "today" })
-        assertEquals(StreamStageModel(null, emptyList()), StreamStage.model(emptyList(), "x"))
-    }
-
-    @Test
-    fun theRailCollapsesToIconsInANarrowPaneAndTwoPagesShowOnlyOnAWholeWideScreen() {
-        assertEquals(StreamRailMode.ICONS, StreamStage.railMode(StreamStage.RAIL_COLLAPSE_BELOW_DP - 1))
-        assertEquals(StreamRailMode.FULL, StreamStage.railMode(StreamStage.RAIL_COLLAPSE_BELOW_DP))
-        assertEquals(2, StreamPagesPerView.forWidth(900, wideView = true))
-        assertEquals(1, StreamPagesPerView.forWidth(900, wideView = false))
-        assertEquals(1, StreamPagesPerView.forWidth(700, wideView = true))
-    }
-
-    @Test
     fun theStackGeometryTokensAreCalmsCardAndStep() {
         assertEquals(168f, StreamCardStackSpec.CARD_HEIGHT_DP)
         assertEquals(56f, StreamCardStackSpec.PITCH_DP)

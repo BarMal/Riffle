@@ -59,6 +59,7 @@ import com.riffle.app.launcher.WallpaperReadableLabel
 import com.riffle.app.launcher.appListEmptyText
 import com.riffle.app.launcher.drawerKey
 import com.riffle.app.launcher.drawerRowState
+import com.riffle.app.launcher.gridFade
 import com.riffle.app.launcher.notificationCountFor
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -91,6 +92,8 @@ internal fun LibraryPagedView(
     handleModifier: Modifier = Modifier,
     /** The edge the Dock stands on: the handle stands just in from it (ADR 0003, Amendment 2). */
     dockEdge: DockPosition = DockPosition.BOTTOM,
+    /** The Stream's column stands over the handle (unfolded, the app library as Home): the pill is not drawn. */
+    handleHidden: Boolean = false,
     backgroundMenu: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit,
 ) {
     val columns = state.pagedGrid.columns.coerceAtLeast(1)
@@ -170,22 +173,24 @@ internal fun LibraryPagedView(
         }
     }
     val handle: @Composable () -> Unit = {
-        HomeHandlePill(
-            pageCount = pageCount,
-            selectedPageIndex = pagerState.currentPage,
-            reducedMotion = reducedMotion,
-            haptics = context.haptics,
-            onOpenSearch = onOpenSearch,
-            onPageSelected = { page ->
-                scope.launch {
-                    if (reducedMotion) pagerState.scrollToPage(page) else pagerState.animateScrollToPage(page)
-                }
-            },
-            onLiveDragPageChanged = { page -> scope.launch { pagerState.scrollToPage(page) } },
-            axis = axis,
-            showsDots = layout.showsDots,
-            dragEnabled = layout.dragsToScroll,
-        )
+        if (!handleHidden) {
+            HomeHandlePill(
+                pageCount = pageCount,
+                selectedPageIndex = pagerState.currentPage,
+                reducedMotion = reducedMotion,
+                haptics = context.haptics,
+                onOpenSearch = onOpenSearch,
+                onPageSelected = { page ->
+                    scope.launch {
+                        if (reducedMotion) pagerState.scrollToPage(page) else pagerState.animateScrollToPage(page)
+                    }
+                },
+                onLiveDragPageChanged = { page -> scope.launch { pagerState.scrollToPage(page) } },
+                axis = axis,
+                showsDots = layout.showsDots,
+                dragEnabled = layout.dragsToScroll,
+            )
+        }
     }
     val reserved = HomeHandleLayout.reservedDp(dockEdge, axis, pageCount, dots).dp
 
@@ -261,7 +266,7 @@ private fun LibraryPageGrid(
                         ) {
                             apps.getOrNull(row * state.pagedGrid.columns + column)?.let { app ->
                                 Box(
-                                    modifier = Modifier.width(cellSize).fillMaxHeight(),
+                                    modifier = Modifier.width(cellSize).fillMaxHeight().gridFade(),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     LibraryAppCell(app = app, state = state, context = context)

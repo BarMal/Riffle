@@ -456,6 +456,11 @@ enum class SettingKey(
         R.string.setting_layout_unfolded_quick_scroll,
         R.string.setting_layout_unfolded_quick_scroll_keywords,
     ),
+    LAYOUT_UNFOLDED_APP_PEEK_THROUGH(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_unfolded_peek_through,
+        R.string.setting_layout_unfolded_peek_through_keywords,
+    ),
 }
 
 /** The name this setting is shown under, the same string the search index uses. */

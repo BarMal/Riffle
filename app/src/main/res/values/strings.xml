@@ -2,7 +2,6 @@
     <string name="app_name">Riffle</string>
 
     <!-- The Stream (ADR 0003): sections -->
-    <string name="stream_title">Stream</string>
     <string name="stream_section_now">Now</string>
     <string name="stream_section_notifications">Notifications</string>
     <string name="stream_section_recents">Recents</string>
@@ -13,8 +12,6 @@
     <string name="stream_section_feeds">Feeds</string>
 
     <!-- Section header, Show as and layout edits -->
-    <string name="stream_section_options">%1$s options</string>
-    <string name="stream_header_long_press_label">Show options for this section</string>
     <string name="stream_show_as">Show as</string>
     <string name="stream_show_as_stack">Stack</string>
     <string name="stream_show_as_list">List</string>
@@ -34,11 +31,6 @@
     </plurals>
     <string name="stream_previous_page">Previous page</string>
     <string name="stream_next_page">Next page</string>
-    <string name="stream_wide_pages">Pages</string>
-    <string name="stream_wide_stage">Stage</string>
-    <string name="stream_shown_as_stream">Stream shown as %1$s</string>
-    <string name="stream_stage_thumb">%1$s, %2$s</string>
-    <string name="stream_stage_bring_forward">Bring %1$s to the front</string>
     <string name="stream_all_hidden">Every section is hidden. Show one to fill the Stream again.</string>
 
     <!-- Section states -->
@@ -201,13 +193,6 @@
     <string name="home_handle_next_page">Next page</string>
     <string name="dock_search_label">Search</string>
     <string name="dock_search_close_action">Close search</string>
-    <string name="split_divider_label">Divider between Home and Stream</string>
-    <string name="split_state_home_only">Home only</string>
-    <string name="split_state_split">Split, Stream %1$d percent</string>
-    <string name="split_state_stream_only">Stream only</string>
-    <string name="split_action_home_only">Home only</string>
-    <string name="split_action_split">Split</string>
-    <string name="split_action_stream_only">Stream only</string>
 
     <!-- The Dock's dynamic side: live apps, now playing and, in the contextual mode, a tile per Stream page (ADR 0003) -->
     <string name="dock_live_app_slots_title">Live apps</string>
@@ -394,6 +379,8 @@
     <string name="setting_layout_unfolded_indicator_keywords">layout unfolded tablet page dots indicator handle search off</string>
     <string name="setting_layout_unfolded_quick_scroll">Drag the dots to scroll, unfolded</string>
     <string name="setting_layout_unfolded_quick_scroll_keywords">layout unfolded tablet quick scroll drag dots scrub pages</string>
+    <string name="setting_layout_unfolded_peek_through">Apps behind the cards, unfolded</string>
+    <string name="setting_layout_unfolded_peek_through_keywords">layout unfolded tablet apps peek through behind cards stream fade grid</string>
     <string name="setting_dock_position">Dock position</string>
     <string name="setting_dock_position_keywords">dock edge left right bottom top</string>
     <string name="setting_dock_icon_size">Icon size</string>
@@ -660,9 +647,6 @@
     <string name="settings_stream_move_up_named">Move %1$s up</string>
     <string name="settings_stream_move_down_named">Move %1$s down</string>
     <string name="settings_stream_show_as_subtitle">Stack of cards or a List of rows</string>
-    <string name="settings_stream_wide_title">Show the Stream as</string>
-    <string name="settings_stream_wide_subtitle">Pages swipe sideways, two side by side on a wide screen. Stage keeps a rail of every page beside the one in front.</string>
-    <string name="settings_stream_wide_option">Stream shown as %1$s</string>
     <string name="settings_stream_show_as_option">%1$s shown as %2$s</string>
     <string name="settings_agenda_include_feeds_subtitle">Events from your calendar feeds join the device calendar in the Agenda</string>
     <string name="settings_tasks_intro">Riffle can show the tasks you have due today, and the ones that are overdue, from Todoist. In Todoist open Settings, Integrations, Developer, copy your API token and paste it here. The token is kept encrypted on this phone only.</string>
@@ -747,5 +731,8 @@
     <string name="settings_layout_indicator_off">Off</string>
     <string name="settings_layout_quick_scroll_title">Drag the dots to scroll</string>
     <string name="settings_layout_quick_scroll_subtitle">Drag along the dots to go to a page quickly. Off, the dots only show where you are, and a tap on them still opens search.</string>
+    <string name="settings_layout_peek_through_title">Apps behind the cards</string>
+    <string name="settings_layout_peek_through_on">Apps show faintly behind the Stream\'s cards.</string>
+    <string name="settings_layout_peek_through_off">Nothing shows behind the Stream\'s cards.</string>
     <string name="settings_layout_quick_scroll_off_subtitle">The page dots are off, so there is nothing to drag.</string>
 </resources>

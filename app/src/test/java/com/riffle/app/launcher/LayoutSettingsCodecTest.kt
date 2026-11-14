@@ -122,6 +122,36 @@ class LayoutSettingsCodecTest {
         assertEquals(PostureLayoutSettings.UNFOLDED_DEFAULT, decoded.unfolded)
     }
 
+    // App peek-through (U2): a stored boolean per posture, on unless it says otherwise
+
+    @Test
+    fun appPeekThroughRoundTripsAndIsStoredPerPosture() {
+        val off = LayoutSettings().withAppPeekThrough(LayoutPosture.UNFOLDED, false)
+        val settings = LauncherSettings(layout = off)
+        assertEquals(off, decodeLauncherSettings(encodeLauncherSettings(settings)).layout)
+        val stored = JSONObject(encodeLauncherSettings(settings)).getJSONObject("layout")
+        assertFalse(stored.getJSONObject("unfolded").getBoolean("appPeekThrough"))
+        assertTrue(stored.getJSONObject("folded").getBoolean("appPeekThrough"))
+    }
+
+    @Test
+    fun aLayoutStoredBeforePeekThroughDecodesToOnAndKeepsEverythingElse() {
+        val decoded =
+            decodeLayout(
+                """{"folded": {"pageScroll": "vertical", "indicator": "off", "quickScroll": false},
+                    "unfolded": {"pageScroll": "horizontal", "indicator": "beside_dock", "quickScroll": false}}""",
+            )
+        assertTrue(decoded.folded.appPeekThrough)
+        assertTrue(decoded.unfolded.appPeekThrough)
+        assertEquals(custom, decoded)
+    }
+
+    @Test
+    fun aMistypedPeekThroughReadsAsOn() {
+        assertTrue(decodeLayout("""{"unfolded": {"appPeekThrough": "no"}}""").unfolded.appPeekThrough)
+        assertFalse(decodeLayout("""{"unfolded": {"appPeekThrough": false}}""").unfolded.appPeekThrough)
+    }
+
     // The Dock edge: stored where it always was, so a stored choice wins over the new default
 
     @Test

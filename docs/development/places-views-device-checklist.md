@@ -44,8 +44,8 @@ Use a busy, bright wallpaper and then a dark one.
 - [ ] **Spotlight follows the rounded Dock**: the colour glow under pinned icons hugs the corners and moves when the
       icons change and stops (no idle animation, check with a profiler or battery drain overnight if in doubt).
       Folders and the Library search results panel also glow from their icons.
-- [ ] **Reduced motion** (system "Remove animations" or Settings > Motion): the spotlight snaps and every page,
-      split and Library change is a cut or a fade, never a slide.
+- [ ] **Reduced motion** (system "Remove animations" or Settings > Motion): the spotlight snaps and every page
+      and Library change is a cut or a fade, never a slide.
 
 ## Dock
 
@@ -171,14 +171,14 @@ verified against the reference. A mismatch is fixed in `TodoistApiMapping.kt`.
       The Stream takes the side nearer the Dock's dynamic side for a bottom or top Dock.
 - [ ] **Hinge snap.** Over a vertical hinge the divider snaps to it and no pane crosses it. **Tabletop** stacks the
       panes above and below it.
-- [ ] **The Dock press** opens the last-used Stream state (the split or the Stream only) and returns to Home only; the
-      divider's actions ("Home only", "Split", "Stream only") reach all three.
-- [ ] **Pages two-up.** With the Stream on the whole wide screen (840 dp or more), two pages show side by side and the
-      Dock's ring follows the first.
-- [ ] **Stage rail and transition.** Show as Stage (Settings > Stream; the Stage's own bar has the menu back to Pages): the rail lists the
-      other pages as live thumbnails, a tap brings one to the centre with the transition and sends the previous one back to
-      the rail. In a narrow pane (the Stream beside Home) the rail shows icons only. Under reduced motion it switches
-      without the transition.
+- [ ] **The unfolded Stream (dock modes U2).** On an unfolded foldable (and a tablet), pressing the Dock toward its edge runs
+      the trampoline and the cards fan out of the Dock into a column attached to its inner side, a third of the width; Home stays
+      beside and under it and its grid fades under the column from the screen's edge, with no hard cut along the Dock or the
+      column, also while paging. Opening a card widens and raises the column toward the middle with its actions on the card;
+      a press, Back and the "Close card" action close the card first and then the Stream. Settings > Layout > Unfolded >
+      "Apps behind the cards" shows the apps faintly or not at all behind the cards. A left Dock mirrors it and a bottom Dock
+      carries the column above itself. Search is a panel of the same width against the Dock. The page dots are not drawn
+      while the Stream is out. A fold in the middle of the screen is never crossed by a card.
 - [ ] **Fold and unfold** with the Stream open: the selected page and the layout survive.
 - [ ] **Rotation** keeps the page, the Library state and the Dock edge sensible, and nothing draws under the system bars
       or the cutout.

@@ -172,7 +172,7 @@ mode only adds tiles after them and scrolls the row along.
     item in the contextual mode. The label above the Dock is not exposed to accessibility (it echoes the name the item
     already speaks; it would otherwise be announced at every move). It exists in the tree only as a test tag and a
     `DockChoiceLabelKey` property.
-  - Folded phone only, like the fan: an expanded posture (split) does not turn a press into choosing.
+  - On every posture, like the fan (the unfolded split that once kept it to the folded phone is gone).
 
 ### The Dock's gestures
 
@@ -225,13 +225,11 @@ mode only adds tiles after them and scrolls the row along.
   consistent (opening: told at the release; closing: told when it has finished). Under reduced motion all of this is one
   80 ms cross-fade: no dip, no pre-fade, no bounce, no fan. Physics, curves and constants (speed 200 ms, trampoline 50%,
   magnet 40%, to be exposed by the settings slice) are `core/domain/.../dock/DockMotion.kt` and `DockClosing.kt`; the UI
-  is `DockMotion.kt`, `DockFanSource.kt` and the Stream's `dockFan` modifier. Expanded postures keep the split's settle
-  (below) until the unfolded layout is built.
-- **Expanded postures (P6).** On an unfolded foldable, a tablet or a desktop window Home and the Stream can share the
-  screen (Home only, a split, the Stream only: `SplitMode`). The press (and the accessibility action) opens the last-used
-  shown state and returns to Home only; the divider's own actions choose among the three. The pull no longer settles among
-  the three states, because it only opens the Library (the split's pull settle is no longer started by a gesture). See
-  [The split](#the-split-p6).
+  is `DockMotion.kt`, `DockFanSource.kt` and the Stream's `dockFan` modifier. Every posture runs it: unfolded the cards stand
+  in a column attached to the Dock over a Home that stays (dock-modes plan, "U2").
+- **Expanded postures.** The unfolded Home and Stream split (P6: Home only, a split, the Stream only, with a divider) was replaced
+  by the column (ADR 0003, Amendment 2; dock-modes plan, "U2"): the press, the accessibility action and the keyboard run the same
+  trampoline and fan as folded, and Home stays beside and under the stack.
 - **The Library pull (P7)** raises the Library's sheet from the dock's edge, 1:1 with the finger, while Home or the Stream
   fades out under it; it commits by the same thresholds, can be caught mid-settle, and under reduced motion the sheet
   fades in. The Dock stays drawn and tappable under the sheet. See [The Library](gestures.md#the-library-p7).
@@ -244,33 +242,11 @@ mode only adds tiles after them and scrolls the row along.
   new handle).
 - A Dock with no pinned apps and nothing live still has a body to press: it keeps one icon's length.
 
-### The split (P6)
+### The split (P6), replaced
 
-On expanded postures (an unfolded foldable, a tablet, a desktop window) Home and the Stream can share the screen with a
-movable divider (ADR 0003, Folded and unfolded). Three states: **Home only**, **split**, **Stream only**. The shell still
-knows only "Stream shown or not"; whether a shown Stream is a split or the Stream alone is the user's last choice on that
-posture (`StreamSplit.lastShown`), stored with the split's fraction in `StreamLayout` (per posture, with the rest of the
-Stream's layout and its backup; layouts stored before P6 read as a 40% split). The pure logic lives in
-`core/domain/.../launcher/split/`; the UI is `launcher/split/SplitSurface.kt`.
-
-- **Which side the Stream takes.** For a bottom or top dock, the side nearer the dock's dynamic side. For a side dock the Stream takes the side **away from** the dock,
-  so Home keeps the dock's edge. In a stacked (tabletop) split the Stream takes the pane nearer a bottom or top dock, and
-  the lower pane for a side dock.
-- **Room.** The divider moves in the window minus the system insets and the dock's room on the split axis. Each pane keeps
-  at least 280 dp and the Stream between 25% and 75% of the room; narrower than two panes and a gap, there is no split and
-  the press goes between Home only and Stream only. The Stream's surface stops at the dock's room (Home
-  pads for it itself), so what it draws is the same from a split to the Stream only.
-- **The hinge.** A vertical hinge splits side by side, a horizontal one (tabletop) stacks the panes. The divider snaps to
-  the hinge when within 32 dp of it, and a pane that would cover the hinge is cut back to its larger side, so content
-  never crosses it. Home only and the Stream only fill the window as they do on a flat screen.
-- **The divider.** A 48 dp target with a thin glass handle, moved with the platform `draggable` (ADR 0002). On release it
-  settles to the nearest of the three states by position and velocity; past the split's limits it goes to Home only
-  (which asks the shell for Home) or the Stream only. It is focusable with the spoken label "Divider between Home and
-  Stream" and a value ("Split, Stream 40 percent"); the arrow keys along the axis move it 5% (and past the end step to
-  the next state); the accessibility actions "Home only", "Split" (the default fraction, or the hinge) and "Stream only"
-  do the same without a gesture; it also exposes a progress value. Reduced motion snaps instead of animating.
-- **Equivalents.** The dock's "Show live pages" / "Back to Home" actions and Ctrl + the pull arrow open the last-used
-  shown state or return to Home only.
+The unfolded split pane with its movable divider, its hinge snapping and its three states was replaced in dock modes U2 by the
+Stream's column attached to the Dock (ADR 0003, Amendment 2). A `split` stored with a Stream layout still decodes and is ignored.
+See the dock-modes plan, "U2: The stack attached to the Dock".
 
 ### The dynamic side (P5)
 

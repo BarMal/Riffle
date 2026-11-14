@@ -89,6 +89,7 @@ private fun layoutSettingKey(
     }
 
 @Composable
+@Suppress("LongMethod")
 private fun SettingsPostureLayoutRows(
     posture: LayoutPosture,
     dockEdge: DockPosition,
@@ -167,4 +168,25 @@ private fun SettingsPostureLayoutRows(
         enabled = settings.showsDots,
         onCheckedChange = { on -> onAction(LauncherShellAction.SetQuickScroll(posture, on)) },
     )
+    // Only the unfolded posture keeps Home beside and beneath the Stream's stack, so only it has apps to show behind
+    // it.
+    if (posture == LayoutPosture.UNFOLDED) {
+        SettingsSwitchRow(
+            modifier =
+                Modifier
+                    .settingAnchor(SettingKey.LAYOUT_UNFOLDED_APP_PEEK_THROUGH)
+                    .testTag(layoutOptionTestTag(posture, "peek", "through")),
+            title = stringResource(R.string.settings_layout_peek_through_title),
+            subtitle =
+                stringResource(
+                    if (settings.appPeekThrough) {
+                        R.string.settings_layout_peek_through_on
+                    } else {
+                        R.string.settings_layout_peek_through_off
+                    },
+                ),
+            checked = settings.appPeekThrough,
+            onCheckedChange = { on -> onAction(LauncherShellAction.SetAppPeekThrough(posture, on)) },
+        )
+    }
 }

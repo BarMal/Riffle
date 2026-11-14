@@ -33,24 +33,10 @@ import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.DockPullDrag
 import com.riffle.core.domain.launcher.dockpull.SettleOutcome
 import com.riffle.core.domain.launcher.dockpull.dockPullClaimFor
-import com.riffle.core.domain.launcher.split.SplitMode
-import com.riffle.core.domain.launcher.split.SplitModes
-import com.riffle.core.domain.launcher.split.SplitReveal
-import com.riffle.core.domain.launcher.split.SplitSettle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.abs
-
-/**
- * What an expanded posture's pull needs to know where it starts (ADR 0003, Folded and unfolded): the mode it starts
- * from, the last-used shown mode a press settles at, and whether the screen has room for a split at all.
- */
-internal class SplitPullSetup(
-    val startMode: SplitMode,
-    val lastShown: SplitMode,
-    val splitAvailable: Boolean,
-)
 
 /**
  * The UI side of the Dock pull (ADR 0003, The Dock is the handle): holds a [DockPullDrag] while the finger is down,
@@ -71,7 +57,6 @@ internal class DockPullState(
     private var destination: DockPullDestination by mutableStateOf(DockPullDestination.LIBRARY)
     private var reducedMotion: Boolean = false
     private var settledTravelDp: Float = 1f
-    private var split: SplitPullSetup? = null
 
     /** Whether a pull is under way or settling after it. Changes at a pull's start and end. */
     var running: Boolean by mutableStateOf(false)
@@ -96,23 +81,6 @@ internal class DockPullState(
     /** The direction the running pull moves in: away from the Dock's edge. */
     var direction: DockPullDirection by mutableStateOf(DockPullDirection.UP)
         private set
-
-    /** Whether the running pull moves between Home only, a split and Stream only (an expanded posture). */
-    var splitting: Boolean by mutableStateOf(false)
-        private set
-
-    /**
-     * How much Stream a splitting pull shows, 0 (Home only) to 1 (Stream only), a split at half: the pull's progress
-     * mapped through where it started. Read it in layout and draw blocks, not composition.
-     */
-    val reveal: Float
-        get() = SplitReveal.reveal(progress, splitStartReveal, opening)
-
-    private val splitStartReveal: Float
-        get() = split?.let { SplitSettle.anchorOf(it.startMode) } ?: 0f
-
-    /** Called, before a splitting pull's surfaces rest, with the mode it settled in (even when it did not change). */
-    var onSplitSettled: (SplitMode) -> Unit = {}
 
     /**
      * A committed switch the shell has not shown yet: the Stream (true) or Home (false). While it is set it stands in
@@ -146,13 +114,10 @@ internal class DockPullState(
         direction: DockPullDirection,
         travelDp: Float,
         reducedMotion: Boolean,
-        split: SplitPullSetup? = null,
     ) {
         settleJob?.cancel()
         // Going to the Stream or Home supersedes a Library the shell has not shown yet.
         if (destination != DockPullDestination.LIBRARY) pendingLibraryShown = false
-        this.split = split.takeIf { destination != DockPullDestination.LIBRARY }
-        splitting = this.split != null
         this.destination = destination
         this.reducedMotion = reducedMotion
         this.direction = direction
@@ -179,31 +144,14 @@ internal class DockPullState(
     ) {
         val current = drag ?: return
         drag = null
-        val setup = split
-        if (setup == null || !running) {
-            settle(current.release(velocityXDpPerSecond, velocityYDpPerSecond))
-            return
-        }
-        // An expanded posture settles to the nearest of the three states by where it stopped and how fast it was going.
-        val startReveal = SplitSettle.anchorOf(setup.startMode)
-        val progressVelocity = current.direction.along(velocityXDpPerSecond, velocityYDpPerSecond) / current.travelDp
-        val mode =
-            SplitSettle.settlePull(
-                reveal = SplitReveal.reveal(current.progress, startReveal, opening),
-                revealVelocityPerSecond = SplitReveal.revealVelocity(progressVelocity, startReveal, opening),
-                gestureDistanceDp = current.gestureDistanceDp,
-                startMode = setup.startMode,
-                splitAvailable = setup.splitAvailable,
-            )
-        settleSplit(setup, mode)
+        settle(current.release(velocityXDpPerSecond, velocityYDpPerSecond))
     }
 
     /** The gesture was taken away: spring back. */
     fun cancel() {
         if (drag == null) return
         drag = null
-        val setup = split
-        if (setup != null && running) settleSplit(setup, setup.startMode) else settle(SettleOutcome.CANCEL)
+        settle(SettleOutcome.CANCEL)
     }
 
     /**
@@ -214,52 +162,14 @@ internal class DockPullState(
         destination: DockPullDestination,
         direction: DockPullDirection,
         reducedMotion: Boolean,
-        split: SplitPullSetup? = null,
     ): Boolean {
         val free = !running && drag == null && pendingStreamShown == null
         if (free) {
-            // The Library never splits: it is a sheet over whatever shows.
-            val setup = split.takeIf { destination != DockPullDestination.LIBRARY }
-            start(destination, direction, travelDp = 1f, reducedMotion = reducedMotion, split = setup)
+            start(destination, direction, travelDp = 1f, reducedMotion = reducedMotion)
             drag = null
-            if (setup == null) {
-                settle(SettleOutcome.COMMIT)
-            } else {
-                val mode =
-                    if (destination == DockPullDestination.STREAM) {
-                        SplitModes.shownMode(setup.lastShown, setup.splitAvailable)
-                    } else {
-                        SplitMode.HOME_ONLY
-                    }
-                settleSplit(setup, mode)
-            }
+            settle(SettleOutcome.COMMIT)
         }
         return free
-    }
-
-    /** Animates a splitting pull to the reveal that [mode] rests at, then tells the host where it ended. */
-    private fun settleSplit(
-        setup: SplitPullSetup,
-        mode: SplitMode,
-    ) {
-        val startReveal = SplitSettle.anchorOf(setup.startMode)
-        val target = SplitReveal.progressFor(SplitSettle.anchorOf(mode), startReveal, opening)
-        val shownChanges = mode.showsStream != setup.startMode.showsStream
-        settleJob?.cancel()
-        settleJob =
-            scope.launch {
-                animateProgressTo(target)
-                onSplitSettled(mode)
-                if (shownChanges) pendingStreamShown = mode.showsStream
-                running = false
-                splitting = false
-                progress = 0f
-                if (shownChanges) {
-                    onCommitted(if (mode.showsStream) DockPullDestination.STREAM else DockPullDestination.HOME)
-                } else {
-                    onCancelled()
-                }
-            }
     }
 
     /** The settle: the smooth spring, or under reduced motion an instant cut to the end (no frame in between). */
@@ -286,7 +196,6 @@ internal class DockPullState(
                     }
                 }
                 running = false
-                splitting = false
                 progress = 0f
                 if (outcome == SettleOutcome.COMMIT) onCommitted(destination) else onCancelled()
             }
@@ -324,7 +233,7 @@ internal interface DockPullGestureHost {
     /** Whether a press may start now: a Stream to toggle to or from, and a pull may start. */
     val canPress: Boolean
 
-    /** Whether a press may turn into choosing (the folded phone's Dock; an expanded posture settles by the split). */
+    /** Whether a press may turn into choosing (the Dock's hold to choose). */
     val canChoose: Boolean
 
     /** How long a press is held still past the threshold before it turns into choosing, in milliseconds. */
@@ -344,9 +253,6 @@ internal interface DockPullGestureHost {
 
     /** A pull is taking over: whatever the trampoline is running goes to its end at once. */
     fun settleMotion() {}
-
-    /** The split a pull on an expanded posture moves through, or null where the Stream and Home swap completely. */
-    fun splitSetup(): SplitPullSetup? = null
 }
 
 /**
@@ -483,7 +389,6 @@ private fun AwaitPointerEventScope.decideOnMain(
             direction = direction,
             travelDp = host.travelDp(direction),
             reducedMotion = host.reducedMotion,
-            split = null,
         )
         // From where the finger landed, so the sheet tracks it 1:1 from the start.
         host.state.drag(drag.x / density, drag.y / density)
