@@ -150,17 +150,14 @@ class DockContextualModeTest {
     }
 
     @Test
-    fun theRowStopsWithAWholeItemAtItsLeadingEdgeWhenItScrollsToTheOpenPage() {
+    fun theRowScrollsOnlyAsFarAsItTakesToShowTheOpenPagesTileWhole() {
         openKey = "ctx:${sections.last().storedId}"
         showRow()
-        val density = RuntimeEnvironment.getApplication().resources.displayMetrics.density
-        val rowLeft = composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).fetchSemanticsNode().boundsInRoot.left
-        tile(sections.last()).assertIsDisplayed()
-        val leading = visibleItemBounds().first()
-        assertTrue("a sliver at the leading edge: $leading", leading.width >= 47f * density)
-        assertEquals(rowLeft, leading.left, 1f)
-        // The last item of the row is whole too: the row ends on an item, not part-way through one.
-        assertTrue(tile(sections.last()).fetchSemanticsNode().boundsInRoot.width >= 47f * density)
+        val row = composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).fetchSemanticsNode()
+        val tile = tile(sections.last()).fetchSemanticsNode()
+        // Wholly in view (the row's own end padding may leave room after it).
+        assertTrue("the tile is clipped: ${tile.boundsInRoot} in ${row.boundsInRoot}", tile.boundsInRoot.width >= 47f)
+        assertTrue(tile.boundsInRoot.right <= row.boundsInRoot.right + 1f)
     }
 
     @Test

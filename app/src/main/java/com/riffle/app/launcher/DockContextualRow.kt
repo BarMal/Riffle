@@ -9,21 +9,35 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import com.riffle.core.domain.launcher.dock.DockRunGeometry
 import com.riffle.core.domain.launcher.dock.DockRunScroll
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockOverflowMode
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * The Dock in the contextual mode (ADR 0003, Amendment 3): one row that scrolls along the Dock's run, with fling,
@@ -37,7 +51,7 @@ import kotlin.math.min
  * press that toggles the mode (across the run) is left to the Dock's gesture.
  */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun DockContextualRow(
     dock: DockModel,
     surfaceMetrics: DockSurfaceMetrics,
@@ -64,10 +78,27 @@ internal fun DockContextualRow(
         scrollState = scrollState,
         reducedMotion = presentation.interactions.reducedMotion,
     )
+    // Where each icon and the row's viewport are on screen, so the ringed icon's reveal is measured, not computed.
+    val outerSink = LocalDockDynamicEntryBoundsSink.current
+    val iconBounds = remember { mutableStateMapOf<String, Rect>() }
+    val boundsSink: (String, Rect?) -> Unit =
+        remember(outerSink) {
+            { key, rect ->
+                if (rect == null) {
+                    iconBounds.remove(key)
+                } else if (iconBounds[key] != rect) {
+                    iconBounds[key] = rect
+                }
+                outerSink(key, rect)
+            }
+        }
+    var viewportBounds by remember { mutableStateOf<Rect?>(null) }
+    val pinnedSelected = LocalDockPinnedStream.current?.selectedKey
     RevealOpenEntry(
-        entries = dynamicEntries,
-        run = run,
-        viewportDp = viewportDp,
+        selectedKey = dynamicEntries.firstOrNull(DockDynamicEntry::isSelected)?.key ?: pinnedSelected,
+        bounds = iconBounds,
+        viewport = { viewportBounds },
+        runsHorizontally = runsHorizontally,
         scrollState = scrollState,
         reducedMotion = presentation.interactions.reducedMotion,
     )
@@ -88,7 +119,11 @@ internal fun DockContextualRow(
                     },
                 )
                 .clipToBounds()
-                .onGloballyPositioned { coordinates -> choice?.rowViewport = coordinates.boundsInRoot() }
+                .onGloballyPositioned { coordinates ->
+                    choice?.rowViewport = coordinates.boundsInRoot()
+                    val whole = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
+                    if (viewportBounds != whole) viewportBounds = whole
+                }
                 .dockOverflowMask(
                     runsHorizontally = runsHorizontally,
                     fadeStart = overflow.showStart,
@@ -96,35 +131,37 @@ internal fun DockContextualRow(
                 )
                 .testTag(DOCK_CONTEXTUAL_ROW_TEST_TAG),
     ) {
-        DockSectionRun(
-            runsHorizontally = runsHorizontally,
-            modifier = scrollModifier,
-        ) {
-            DockSlotStrip(
-                dock = dock,
-                renderedSlotCount = surfaceMetrics.renderedSlotCount,
-                contentViewportMainAxisDp = surfaceMetrics.contentViewportMainAxisDp,
-                slotMetrics = surfaceMetrics.contextualSlotMetrics,
-                isEditing = isEditing,
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-                position = position,
-                widgetPickerDockPreview = widgetPickerDockPreview,
-                inline = true,
-            )
-            DockSectionDivider(runsHorizontally = runsHorizontally)
-            DockDynamicSection(
-                entries = dynamicEntries,
-                slotMetrics = surfaceMetrics.contextualSlotMetrics,
-                mainAxisDp = run.contentDp,
+        CompositionLocalProvider(LocalDockDynamicEntryBoundsSink provides boundsSink) {
+            DockSectionRun(
                 runsHorizontally = runsHorizontally,
-                appIconLoader = appIconLoader,
-                interactions = presentation.interactions,
-                onEntryDelegated = onDynamicEntryDelegated,
-                inline = true,
-                dividerBeforeIndex = dynamicEntries.indexOfFirst(DockDynamicEntry::isContextTile).takeIf { it > 0 },
-            )
-            RunEndPadding(run.endPaddingDp, runsHorizontally)
+                modifier = scrollModifier,
+            ) {
+                DockSlotStrip(
+                    dock = dock,
+                    renderedSlotCount = surfaceMetrics.renderedSlotCount,
+                    contentViewportMainAxisDp = surfaceMetrics.contentViewportMainAxisDp,
+                    slotMetrics = surfaceMetrics.contextualSlotMetrics,
+                    isEditing = isEditing,
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                    position = position,
+                    widgetPickerDockPreview = widgetPickerDockPreview,
+                    inline = true,
+                )
+                DockSectionDivider(runsHorizontally = runsHorizontally)
+                DockDynamicSection(
+                    entries = dynamicEntries,
+                    slotMetrics = surfaceMetrics.contextualSlotMetrics,
+                    mainAxisDp = run.contentDp,
+                    runsHorizontally = runsHorizontally,
+                    appIconLoader = appIconLoader,
+                    interactions = presentation.interactions,
+                    onEntryDelegated = onDynamicEntryDelegated,
+                    inline = true,
+                    dividerBeforeIndex = dynamicEntries.indexOfFirst(DockDynamicEntry::isContextTile).takeIf { it > 0 },
+                )
+                RunEndPadding(run.endPaddingDp, runsHorizontally)
+            }
         }
     }
 }
@@ -165,31 +202,41 @@ private fun RevealForChoosing(
 }
 
 /**
- * Scrolls the row so the ringed entry is in view, whenever the ring moves (and once the row has been measured). The
- * scroll stops with a whole item at the leading edge, never a clipped sliver (`DockRunScroll.toRevealWhole`).
+ * Brings the ringed icon (a live entry, a tile or a pinned app) into view when the ring moves to it, and otherwise
+ * leaves the row alone: an icon that is already wholly in view never moves the row, and one that is clipped or off
+ * screen moves it by the least that shows it whole (`DockRunScroll.toReveal`). It works from where the icon and the
+ * row's viewport actually are on screen (measured, so no rounding or spacing difference can make a visible icon look
+ * clipped), and only when the ringed icon changes, so a row the user has scrolled elsewhere stays there.
  */
 @Composable
 private fun RevealOpenEntry(
-    entries: List<DockDynamicEntry>,
-    run: DockRunGeometry.Run,
-    viewportDp: Int,
+    selectedKey: String?,
+    bounds: Map<String, Rect>,
+    viewport: () -> Rect?,
+    runsHorizontally: Boolean,
     scrollState: ScrollState,
     reducedMotion: Boolean,
 ) {
     val density = LocalDensity.current.density
-    val index = entries.indexOfFirst(DockDynamicEntry::isSelected)
-    val itemIndex = if (index < 0) -1 else run.pinned.size + index
-    LaunchedEffect(index, run, viewportDp, scrollState.maxValue) {
-        if (itemIndex < 0 || itemIndex >= run.items.size) return@LaunchedEffect
+    val latestViewport = rememberUpdatedState(viewport)
+    LaunchedEffect(selectedKey) {
+        val key = selectedKey ?: return@LaunchedEffect
+        val (item, port) =
+            snapshotFlow { bounds[key]?.let { item -> latestViewport.value()?.let { port -> item to port } } }
+                .filterNotNull()
+                .first()
+        val itemStart = if (runsHorizontally) item.left - port.left else item.top - port.top
+        val itemEnd = if (runsHorizontally) item.right - port.left else item.bottom - port.top
+        val viewportPx = if (runsHorizontally) port.width else port.height
         val target =
-            DockRunScroll.toRevealWhole(
+            DockRunScroll.toReveal(
                 scrollPx = scrollState.value,
-                viewportPx = (viewportDp * density).toInt(),
+                viewportPx = viewportPx.roundToInt(),
                 maxScrollPx = scrollState.maxValue,
-                stopsPx = run.stopsDp.map { stop -> (stop * density).toInt() },
-                items = run.items,
-                itemIndex = itemIndex,
-                pxPerDp = density,
+                // The icon's place in the row's content: its place in the viewport plus how far the row is scrolled.
+                itemStartPx = scrollState.value + itemStart.roundToInt(),
+                itemEndPx = scrollState.value + itemEnd.roundToInt(),
+                marginPx = (DockRunScroll.PEEK_MARGIN_DP * density).roundToInt(),
             )
         if (target != scrollState.value) {
             if (reducedMotion) scrollState.scrollTo(target) else scrollState.animateScrollTo(target)

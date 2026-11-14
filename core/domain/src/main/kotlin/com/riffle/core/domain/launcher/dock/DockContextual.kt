@@ -119,12 +119,15 @@ object DockTileMoves {
 
 /** Where a Dock row's scroll goes to keep one item in view. Plain pixels along the row's axis. */
 object DockRunScroll {
+    /** How much of the neighbour the row leaves showing past an item it had to scroll to, in dp. */
+    const val PEEK_MARGIN_DP = 24
+
     /**
      * The scroll offset that brings the item spanning [itemStartPx]..[itemEndPx] (in the row's content) into the
-     * [viewportPx]-long viewport, leaving [marginPx] around it where there is room: [scrollPx] itself when it is
-     * already
-     * in view, the least move otherwise, never outside 0..[maxScrollPx]. An item longer than the viewport is aligned at
-     * its start.
+     * [viewportPx]-long viewport. An item that is already wholly in view leaves the row where it is ([scrollPx], never
+     * a nudge for the margin). Otherwise the row moves by the least that shows the item whole, plus [marginPx] on the
+     * side it came from (the side the move goes toward) so the neighbour peeks, where there is more to see there; the
+     * result is never outside 0..[maxScrollPx]. An item longer than the viewport is aligned at its start.
      */
     fun toReveal(
         scrollPx: Int,
@@ -134,86 +137,15 @@ object DockRunScroll {
         itemEndPx: Int,
         marginPx: Int = 0,
     ): Int {
+        if (itemStartPx >= scrollPx && itemEndPx <= scrollPx + viewportPx) return scrollPx
         val margin = marginPx.coerceIn(0, ((viewportPx - (itemEndPx - itemStartPx)) / 2).coerceAtLeast(0))
-        val wantedStart = itemStartPx - margin
-        val wantedEnd = itemEndPx + margin
         val target =
             when {
-                wantedEnd - wantedStart >= viewportPx -> wantedStart
-                wantedStart < scrollPx -> wantedStart
-                wantedEnd > scrollPx + viewportPx -> wantedEnd - viewportPx
-                else -> scrollPx
+                itemEndPx - itemStartPx >= viewportPx -> itemStartPx
+                itemStartPx < scrollPx -> itemStartPx - margin
+                else -> itemEndPx + margin - viewportPx
             }
         return target.coerceIn(0, maxScrollPx.coerceAtLeast(0))
-    }
-
-    /**
-     * Like [toReveal] but a scroll this code chooses always stops with a whole item at the leading edge, never a
-     * clipped sliver of one. [stopsPx] are the offsets at which an item begins at the leading edge (the starts of the
-     * row's items, in order, which include 0); [itemIndex] is the item to bring into view, [items] the row's items.
-     *
-     * The item is left where it is when it is already wholly in view. Otherwise the row scrolls to a stop that shows it
-     * whole: moving back (the item is before the viewport) to the stop one item earlier, so the row reads as one that
-     * goes on, else to the item's own; moving forward to the nearest stop that shows the item and the one after it,
-     * else the nearest that shows the item. A stop past [maxScrollPx] is never chosen (the row's own end is a stop,
-     * see [DockRunGeometry.contextual]'s trailing padding), and the result is always one of [stopsPx].
-     */
-    fun toRevealWhole(
-        scrollPx: Int,
-        viewportPx: Int,
-        maxScrollPx: Int,
-        stopsPx: List<Int>,
-        items: List<DockRunGeometry.Extent>,
-        itemIndex: Int,
-        pxPerDp: Float = 1f,
-    ): Int {
-        fun px(dp: Int?): Int? = dp?.let { (it * pxPerDp).toInt() }
-        val start = px(items.getOrNull(itemIndex)?.startDp)
-        val end = px(items.getOrNull(itemIndex)?.endDp)
-        val reachable = stopsPx.filter { stop -> stop in 0..maxScrollPx.coerceAtLeast(0) }.ifEmpty { listOf(0) }
-        return when {
-            start == null || end == null || viewportPx <= 0 || stopsPx.isEmpty() -> scrollPx
-            start >= scrollPx && end <= scrollPx + viewportPx -> scrollPx
-            start < scrollPx ->
-                stopBefore(
-                    reachable,
-                    viewportPx,
-                    start,
-                    end,
-                    previousStart = px(items.getOrNull(itemIndex - 1)?.startDp),
-                )
-            else -> stopAfter(reachable, viewportPx, start, end, nextEnd = px(items.getOrNull(itemIndex + 1)?.endDp))
-        }
-    }
-
-    /** Scrolling back: the stop one item earlier when the item is still whole from it, else the item's own. */
-    private fun stopBefore(
-        reachable: List<Int>,
-        viewportPx: Int,
-        start: Int,
-        end: Int,
-        previousStart: Int?,
-    ): Int {
-        val showing = reachable.filter { stop -> stop <= start && stop + viewportPx >= end }
-        return showing.lastOrNull { stop -> previousStart != null && stop <= previousStart }
-            ?: showing.lastOrNull()
-            ?: reachable.lastOrNull { stop -> stop <= start }
-            ?: reachable.first()
-    }
-
-    /** Scrolling forward: the nearest stop that shows the item and the one after it, else the item alone. */
-    private fun stopAfter(
-        reachable: List<Int>,
-        viewportPx: Int,
-        start: Int,
-        end: Int,
-        nextEnd: Int?,
-    ): Int {
-        val showing = reachable.filter { stop -> stop <= start && stop + viewportPx >= end }
-        return showing.firstOrNull { stop -> nextEnd != null && stop + viewportPx >= nextEnd }
-            ?: showing.firstOrNull()
-            ?: reachable.lastOrNull { stop -> stop <= start }
-            ?: reachable.first()
     }
 }
 
