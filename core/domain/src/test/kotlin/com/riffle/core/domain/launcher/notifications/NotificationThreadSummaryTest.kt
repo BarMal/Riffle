@@ -114,6 +114,43 @@ class NotificationThreadSummaryTest {
         )
     }
 
+    @Test
+    fun aMessageRepeatedWholeRightAfterItselfIsOneLine() {
+        val messages =
+            listOf(
+                message(sender = "Claude", text = "Old 80 width (+1 more)", at = 10),
+                message(sender = "Claude", text = "Old 80 width (+1 more)", at = 10),
+            )
+
+        assertEquals(1, NotificationThreadSummary.withoutEchoes(messages).size)
+        assertEquals("Old 80 width (+1 more)", NotificationThreadSummary.combinedText(messages, newestFirst = false))
+    }
+
+    @Test
+    fun theSameWordsSentTwiceAtDifferentTimesAreTwoMessages() {
+        val messages =
+            listOf(
+                message(sender = "Ekin", text = "ok", at = 1),
+                message(sender = "Ekin", text = "ok", at = 2),
+            )
+
+        assertEquals(messages, NotificationThreadSummary.withoutEchoes(messages))
+        assertEquals("ok\nok", NotificationThreadSummary.combinedText(messages, newestFirst = false))
+    }
+
+    @Test
+    fun onlyConsecutiveRepeatsAreEchoesAndAnotherSendersLineIsKept() {
+        val messages =
+            listOf(
+                message(sender = "Ekin", text = "ok", at = 5),
+                message(sender = "Sam", text = "ok", at = 5),
+                message(sender = "Ekin", text = "later", at = 6),
+                message(sender = "Ekin", text = "ok", at = 5),
+            )
+
+        assertEquals(messages, NotificationThreadSummary.withoutEchoes(messages))
+    }
+
     private fun message(
         sender: String,
         text: String,

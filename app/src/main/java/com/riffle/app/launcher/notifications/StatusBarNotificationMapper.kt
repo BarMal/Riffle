@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
+import com.riffle.core.domain.launcher.notifications.NotificationThreadSummary
 import java.io.ByteArrayOutputStream
 
 @Suppress("DEPRECATION")
@@ -129,19 +130,20 @@ private fun Notification.bodyText(): String =
  */
 private fun Notification.messagingStyleMessages(): List<LauncherNotificationMessage> =
     runCatching {
-        NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(this)
-            ?.messages
-            .orEmpty()
-            .takeLast(MAX_MESSAGING_STYLE_MESSAGES)
-            .map { message ->
-                LauncherNotificationMessage(
-                    sender =
-                        message.person?.name?.toString()?.takeIf(String::isNotBlank)
-                            ?: message.sender?.toString().orEmpty(),
-                    text = message.text?.toString().orEmpty(),
-                    timestampEpochMillis = message.timestamp,
-                )
-            }
+        NotificationThreadSummary.withoutEchoes(
+            NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(this)
+                ?.messages
+                .orEmpty()
+                .map { message ->
+                    LauncherNotificationMessage(
+                        sender =
+                            message.person?.name?.toString()?.takeIf(String::isNotBlank)
+                                ?: message.sender?.toString().orEmpty(),
+                        text = message.text?.toString().orEmpty(),
+                        timestampEpochMillis = message.timestamp,
+                    )
+                },
+        ).takeLast(MAX_MESSAGING_STYLE_MESSAGES)
     }.getOrDefault(emptyList())
 
 @Suppress("DEPRECATION")

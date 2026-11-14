@@ -44,14 +44,32 @@ object NotificationThreadSummary {
         val meaningful = messages.filter { message -> message.text.isNotBlank() }
         if (meaningful.isEmpty()) return ""
         val ordered =
-            meaningful
-                .sortedBy { message -> message.timestampEpochMillis }
+            withoutEchoes(meaningful.sortedBy { message -> message.timestampEpochMillis })
                 .let { sorted -> if (newestFirst) sorted.asReversed() else sorted }
         val attributesSenders = combinedTitle(meaningful) == null
         return ordered.joinToString(separator = "\n") { message ->
             val sender = message.sender.trim()
             if (attributesSenders && sender.isNotEmpty()) "$sender: ${message.text}" else message.text
         }
+    }
+
+    /**
+     * [messages] without the echoes some apps put in a thread: a message that is the same, sender, text and time, as the
+     * one just before it (an app that adds a message to both the style and its history, say) is one line, not two. Only
+     * consecutive, whole repeats go: the same words sent twice at different times are a conversation, and stay.
+     */
+    fun withoutEchoes(messages: List<LauncherNotificationMessage>): List<LauncherNotificationMessage> {
+        val kept = ArrayList<LauncherNotificationMessage>(messages.size)
+        messages.forEach { message ->
+            val previous = kept.lastOrNull()
+            val echo =
+                previous != null &&
+                    previous.sender.trim() == message.sender.trim() &&
+                    previous.text.trim() == message.text.trim() &&
+                    previous.timestampEpochMillis == message.timestampEpochMillis
+            if (!echo) kept += message
+        }
+        return kept
     }
 
     /**

@@ -7,9 +7,11 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleFilter
 import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
+import com.riffle.core.domain.launcher.notifications.NotificationThreadSummary
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemAction
 import com.riffle.core.domain.launcher.workspace.ItemExtKey
@@ -135,6 +137,9 @@ class NotificationItemMapper(
         if (notification.isMediaSession) return emptyMap()
         val ext = LinkedHashMap<ItemExtKey, ItemExtValue>()
         ext[KEY_KEY] = ItemExtValue.Text(notification.key.value)
+        if (notification.messages.isNotEmpty() || notification.category == NotificationCategory.MESSAGE) {
+            ext[CONVERSATION_KEY] = ItemExtValue.Flag(true)
+        }
         if (notification.hasPersonIcon) {
             ext[PERSON_ART_KEY] =
                 ItemExtValue.Text(ItemImageKeys.notificationPerson(notification.profileId, notification.key.value).key)
@@ -146,9 +151,9 @@ class NotificationItemMapper(
         if (input.canReply(notification.key)) ext[REPLY_KEY] = ItemExtValue.Flag(true)
         if (notification.canDismiss && input.canSnooze(notification.key)) ext[SNOOZE_KEY] = ItemExtValue.Flag(true)
         val thread =
-            notification.messages.filter { it.text.isNotBlank() }.sortedBy { it.timestampEpochMillis }.takeLast(
-                MAX_THREAD,
-            )
+            NotificationThreadSummary.withoutEchoes(
+                notification.messages.filter { it.text.isNotBlank() }.sortedBy { it.timestampEpochMillis },
+            ).takeLast(MAX_THREAD)
         if (thread.size > 1) {
             ext[THREAD_SIZE_KEY] = ItemExtValue.Number(thread.size.toLong())
             thread.forEachIndexed { index, message ->
@@ -166,6 +171,9 @@ class NotificationItemMapper(
         val KEY_KEY = ItemExtKey("notification.key")
         val REPLY_KEY = ItemExtKey("notification.reply")
         val SNOOZE_KEY = ItemExtKey("notification.snooze")
+
+        /** Set when the notification is a conversation with a person (a messaging style or the message category). */
+        val CONVERSATION_KEY = ItemExtKey("notification.conversation")
         val THREAD_SIZE_KEY = ItemExtKey("notification.thread_size")
         val PERSON_ART_KEY = ItemExtKey("notification.person_art")
         val PICTURE_ART_KEY = ItemExtKey("notification.picture_art")
