@@ -3,6 +3,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -72,6 +73,7 @@ import com.riffle.core.domain.launcher.settings.effectiveFeatures
 import com.riffle.core.domain.launcher.settings.forAppLibraryHome
 import com.riffle.core.domain.launcher.settings.layoutPosture
 import com.riffle.core.domain.launcher.settings.without
+import com.riffle.core.domain.launcher.stream.OpenCardEvent
 import com.riffle.core.domain.launcher.stream.StreamColumnRect
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import kotlinx.coroutines.delay
@@ -268,6 +270,8 @@ private fun HomeDestinationContent(
     // Choosing from Home composes the Stream, unseen, so the Dock can draw a tile for each of its pages.
     val streamForTiles = pull.isChoosingFromHome && !shownStream
     val showStream = stream != null && (shownStream || pull.isTransitioning || streamForTiles)
+    val cardOpen = stream?.dock?.openCards?.state?.isOpen == true
+    val closeStream = { StreamSwitch(motion).close(state.reducedMotion()) }
     // Unfolded, Home stays under and beside the column whatever the Stream does.
     val showHome = homeBehind || !shownStream || pull.isTransitioning || pull.motionShowsHome
     val showLibrary = shownLibrary || pull.isLibraryTransitioning
@@ -305,7 +309,7 @@ private fun HomeDestinationContent(
             columnMode = homeBehind,
             streamShown = shownStream,
             closing = motion.isClosing,
-            cardOpen = stream?.dock?.openCards?.state?.isOpen == true,
+            openProgress = { stream?.dock?.openCards?.motion?.progress ?: 0f },
             peekThrough = state.postureLayout().appPeekThrough,
             reducedMotion = state.reducedMotion(),
             dockEdge = plan.dockEdge,
@@ -402,9 +406,30 @@ private fun HomeDestinationContent(
                 if (showHome) {
                     // Home takes no input while it is drawn at nothing or covered by search or the Library: the gate
                     // is a full-size sibling over it that swallows every touch.
+                    // Unfolded with the Stream out, a tap on Home's empty room (not an app, a folder or a widget)
+                    // closes the Stream; the apps beside the column stay live.
+                    val emptyTapClosesStream = columnMode && shownStream && !cardOpen
+                    val latestCloseStream by rememberUpdatedState(closeStream)
+                    val emptyTap: (() -> Unit)? =
+                        if (emptyTapClosesStream) remember { { latestCloseStream() } } else null
                     Box(modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX)) {
-                        homeContent()
+                        CompositionLocalProvider(LocalHomeEmptyTap provides emptyTap) { homeContent() }
                         HomeInputGate(blocked = { searchOpenNow || pull.homeInputBlocked(shownLibraryNow) })
+                    }
+                    // A card open: a tap anywhere outside it closes it and does nothing else (the app grid, the room
+                    // beside the column, the wallpaper). Under the Stream and the Dock in the draw order, over Home.
+                    if (cardOpen && stream != null) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .zIndex(HOME_CONTENT_Z_INDEX)
+                                    .testTag(OPEN_CARD_SCRIM_TEST_TAG)
+                                    .clearAndSetSemantics {}
+                                    .pointerInput(Unit) {
+                                        detectTapGestures { stream.dock.openCards.dispatch(OpenCardEvent.CloseByTap) }
+                                    },
+                        )
                     }
                 }
                 if (showStream && stream != null) {
@@ -417,6 +442,8 @@ private fun HomeDestinationContent(
                             stream = stream,
                             state = dockHostState,
                             bounds = column.bounds,
+                            restBounds = column.restBounds,
+                            onCloseStream = closeStream,
                             appIconLoader = appIconLoader,
                             onConnectTasks = openTasksSettings,
                             modifier = streamSurfaceModifier,
@@ -429,6 +456,7 @@ private fun HomeDestinationContent(
                             dockPosition = plan.dockEdge,
                             appIconLoader = appIconLoader,
                             onConnectTasks = openTasksSettings,
+                            onCloseStream = closeStream,
                             modifier = streamSurfaceModifier,
                         )
                     }
@@ -502,6 +530,9 @@ private fun HomeInputGate(blocked: () -> Boolean) {
 }
 
 private const val HOME_INPUT_GATE_Z_INDEX = 1f
+
+/** The test tag of the scrim that takes a tap outside an open card. */
+internal const val OPEN_CARD_SCRIM_TEST_TAG = "open-card-scrim"
 internal const val HOME_INPUT_GATE_TEST_TAG = "home-input-gate"
 
 private fun LauncherShellState.reducedMotion(): Boolean = launcherSettings.motion.reducedMotion
@@ -795,6 +826,7 @@ private fun StreamHomeSurface(
     dockPosition: DockPosition,
     appIconLoader: AppIconLoader,
     onConnectTasks: () -> Unit,
+    onCloseStream: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
@@ -822,6 +854,8 @@ private fun StreamHomeSurface(
             launcherRole = state.homeRoleStatus != HomeRoleStatus.NOT_DEFAULT_HOME,
             streamSettings = state.launcherSettings.stream,
             dockCanHoldActions = dockPosition.isHorizontalEdge,
+            // A tap on the stack's empty room closes the Stream (folded, a tap on a card or a control is theirs).
+            onEmptyTap = onCloseStream,
         )
     }
 }

@@ -47,6 +47,17 @@ internal class OpenCardHolder {
     var shown: OpenCardActions? by mutableStateOf(null)
         private set
 
+    /** How far the open card has grown: one motion for the card, the column and the grid's fade (read in layout and draw). */
+    val motion: OpenCardMotionState = OpenCardMotionState()
+
+    /** The open card as an overlay the surface draws over its whole area, or null while none is shown. */
+    var layer: OpenCardLayer? by mutableStateOf(null)
+        private set
+
+    fun publishLayer(layer: OpenCardLayer?) {
+        if (this.layer !== layer) this.layer = layer
+    }
+
     fun dispatch(event: OpenCardEvent) {
         val next = OpenCardReducer.reduce(state, event)
         if (next != state) state = next

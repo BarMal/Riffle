@@ -66,6 +66,5 @@ internal object PendingIntentSender {
         context: Context,
         pendingIntent: PendingIntent,
         fillIn: Intent? = null,
-    ): (Bundle?) -> Unit =
-        { options -> pendingIntent.send(context, 0, fillIn, null, null, null, options) }
+    ): (Bundle?) -> Unit = { options -> pendingIntent.send(context, 0, fillIn, null, null, null, options) }
 }

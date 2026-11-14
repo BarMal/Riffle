@@ -4,8 +4,11 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -13,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import com.riffle.app.launcher.DrawnSurfaceKey
 import com.riffle.app.launcher.GridFadeAlphaKey
 import com.riffle.app.launcher.HOME_GRID_CELL_TEST_TAG
@@ -103,6 +107,7 @@ class FoldedAppsBehindCardsTest {
     private fun folded(
         destination: ShellDestination = ShellDestination.HOME,
         appsBehind: Boolean = false,
+        reducedMotion: Boolean = true,
     ): LauncherShellState {
         val base = ScreenshotFixtures.homeState().withHomePages(2).withManyApps().withAFullFirstPage()
         val settings = base.launcherSettings
@@ -112,7 +117,11 @@ class FoldedAppsBehindCardsTest {
             launcherSettings =
                 settings.copy(
                     layout = layout.copy(folded = layout.folded.copy(appPeekThrough = appsBehind)),
-                    motion = settings.motion.copy(reducedMotionPreference = ReducedMotionPreference.ON),
+                    motion =
+                        settings.motion.copy(
+                            reducedMotionPreference =
+                                if (reducedMotion) ReducedMotionPreference.ON else ReducedMotionPreference.OFF,
+                        ),
                 ),
         )
     }
@@ -179,6 +188,69 @@ class FoldedAppsBehindCardsTest {
             .map { it.config[GridFadeAlphaKey] }
 
     @Test
+    fun theOpenCardIsNeverClippedAtAnyFrameOfOpeningOrClosingFolded() {
+        show(folded(reducedMotion = false))
+        shell = folded(destination = ShellDestination.STREAM, reducedMotion = false)
+        waitForText("Sam")
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onNodeWithText("Sam").performClick()
+        var seen = 0
+        repeat(FRAMES) { frame ->
+            composeRule.mainClock.advanceTimeByFrame()
+            composeRule.openCardFrame()?.let {
+                it.assertWhole("opening frame $frame")
+                seen++
+            }
+        }
+        assertTrue("the card was there while opening: $seen", seen > FRAMES / 2)
+        composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        var closing = 0
+        repeat(FRAMES) { frame ->
+            composeRule.mainClock.advanceTimeByFrame()
+            composeRule.openCardFrame()?.let {
+                it.assertWhole("closing frame $frame")
+                closing++
+            }
+        }
+        assertTrue("the card was there while closing: $closing", closing > 3)
+    }
+
+    @Test
+    fun withTheKeyboardUpTheOpenCardKeepsItsHeaderAndTheReplyRowOnScreen() {
+        show(folded())
+        shell = folded(destination = ShellDestination.STREAM)
+        waitForText("Sam")
+        composeRule.onNodeWithText("Sam").performClick()
+        composeRule.waitForIdle()
+        composeRule.setImeInset((BIG_KEYBOARD_DP * dp).toInt())
+        composeRule.waitForIdle()
+        composeRule.openCardFrame()!!.assertWhole("keyboard up")
+        composeRule.onNodeWithText("Sam").assertIsDisplayed()
+        composeRule.onNodeWithText("Write a reply").assertIsDisplayed()
+    }
+
+    @Test
+    fun foldedATapOnTheStacksEmptySpaceClosesTheStreamAndATapOnTheCardDoesNot() {
+        show(folded())
+        shell = folded(destination = ShellDestination.STREAM)
+        waitForText("Sam")
+        // The card's own tap opens it (a conversation) and leaves the Stream where it is.
+        composeRule.onNodeWithText("Sam").performClick()
+        composeRule.waitForIdle()
+        assertTrue("the card opened", composeRule.openCardFrame() != null)
+        assertTrue("and the Stream stayed: $sent", sent.isEmpty())
+        // A tap beside the open card closes the card and leaves the Stream.
+        composeRule.onRoot().performTouchInput { click(Offset(20f * dp, 200f * dp)) }
+        composeRule.waitForIdle()
+        assertTrue("the card closed", composeRule.openCardFrame() == null)
+        assertTrue("the Stream stayed: $sent", sent.isEmpty())
+        // A tap on the empty space above the stack closes the Stream.
+        composeRule.onRoot().performTouchInput { click(Offset(width / 2f, 120f * dp)) }
+        composeRule.waitForIdle()
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenHome), sent)
+    }
+
+    @Test
     fun theDefaultIsOffAndHomeFadesOutWithTheStreamAsItAlwaysDid() {
         show(folded())
         shell = folded(destination = ShellDestination.STREAM)
@@ -204,7 +276,8 @@ class FoldedAppsBehindCardsTest {
             "cells under the stack fade to the peek: $fades",
             fades.any { abs(it - StreamGridFade.PEEK_ALPHA) < 0.01f },
         )
-        assertTrue("cells clear of it are untouched", fades.any { it == 1f })
+        // The fade is a long, soft falloff now: the cells farthest from the stack are close to untouched.
+        assertTrue("cells far from it are close to untouched: $fades", fades.any { it > 0.8f })
     }
 
     @Test
@@ -297,8 +370,12 @@ class FoldedAppsBehindCardsTest {
     }
 
     private companion object {
+        /** Frames of the test clock (16 ms each) that carry an open or close well past its end. */
+        const val FRAMES = 90
+
         const val MINUTE = 60_000L
         const val WAIT_MILLIS = 10_000L
         const val KEYBOARD_DP = 280
+        const val BIG_KEYBOARD_DP = 400
     }
 }

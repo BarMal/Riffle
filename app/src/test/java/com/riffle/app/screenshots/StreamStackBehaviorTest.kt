@@ -1,6 +1,10 @@
 package com.riffle.app.screenshots
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -117,6 +121,8 @@ class StreamStackBehaviorTest {
     private fun show(
         cards: Int = 6,
         reduced: Boolean = false,
+        /** A short area (a window with the keyboard up): the stack is given this much room, from the top. */
+        areaHeightDp: Int? = null,
     ) {
         val results: Map<StreamSection, StreamSectionResult> =
             StreamSection.layoutSections.associateWith<StreamSection, StreamSectionResult> {
@@ -137,22 +143,33 @@ class StreamStackBehaviorTest {
         composeRule.setContent {
             CompositionLocalProvider(LocalLauncherHaptics provides haptics) {
                 RiffleLauncherTheme {
-                    StreamSurface(
-                        layout = StreamLayout.DEFAULT,
-                        results = results,
-                        env =
-                            StreamEnvironment(
-                                imageLoader = NoExpressionImageLoader,
-                                appIconLoader = NoIcons,
-                                installedApps = emptyList(),
-                                reducedMotion = reduced,
-                                formats = SystemStreamFormats(),
-                                nowEpochMillis = NOW,
-                            ),
-                        callbacks = StreamCallbacks(onAction = { content, action -> actions += content to action }),
-                        initialPageKey = chat,
-                        dockLink = dock,
-                    )
+                    Box(
+                        modifier =
+                            if (areaHeightDp != null) {
+                                Modifier.height(
+                                    areaHeightDp.dp,
+                                )
+                            } else {
+                                Modifier.fillMaxSize()
+                            },
+                    ) {
+                        StreamSurface(
+                            layout = StreamLayout.DEFAULT,
+                            results = results,
+                            env =
+                                StreamEnvironment(
+                                    imageLoader = NoExpressionImageLoader,
+                                    appIconLoader = NoIcons,
+                                    installedApps = emptyList(),
+                                    reducedMotion = reduced,
+                                    formats = SystemStreamFormats(),
+                                    nowEpochMillis = NOW,
+                                ),
+                            callbacks = StreamCallbacks(onAction = { content, action -> actions += content to action }),
+                            initialPageKey = chat,
+                            dockLink = dock,
+                        )
+                    }
                 }
             }
         }
@@ -467,6 +484,41 @@ class StreamStackBehaviorTest {
         frontIs(2)
         stackAction("Previous card")()
         frontIs(1)
+    }
+
+    @Test
+    fun theCardsBehindAnOpenCardStayAsStripsWithTheirOwnTitles() {
+        show(cards = 4, reduced = true)
+        composeRule.onNodeWithText(titles[0]).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(STREAM_OPEN_CARD_TEST_TAG).assertExists()
+        // Each strip is one node that reads its whole card, and sits above the open card, never behind it.
+        val card = composeRule.onNodeWithTag(STREAM_OPEN_CARD_TEST_TAG).fetchSemanticsNode()
+        for (index in 1..3) {
+            val strip = slotNode(index)
+            assertTrue("strip $index is above the open card", strip.positionInRoot.y < card.positionInRoot.y)
+            val said = strip.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString().orEmpty()
+            assertTrue("strip $index says what its card is: $said", said.contains(titles[index]))
+        }
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun inAShortAreaTheOpenCardKeepsItsRoomAndTheStripsNeverOverlapIt() {
+        // With the keyboard up the room shrinks: three strips and a card no longer fit, so the strips give way.
+        show(cards = 4, reduced = true, areaHeightDp = 380)
+        composeRule.onNodeWithText(titles[0]).performClick()
+        composeRule.waitForIdle()
+        val card = composeRule.openCardFrame()!!
+        card.assertWhole("short area")
+        val density = composeRule.density.density
+        // Under three strips the room would be 188 dp: the card is not squeezed to it.
+        assertTrue(
+            "the card keeps its room: ${card.laidOut.height / density} dp",
+            card.laidOut.height >= 200f * density,
+        )
+        assertTrue("and stays inside the area", card.laidOut.top >= 0f && card.laidOut.bottom <= 380f * density + 1f)
+        composeRule.onNodeWithText(titles[0]).assertIsDisplayed()
     }
 
     private object NoIcons : AppIconLoader {

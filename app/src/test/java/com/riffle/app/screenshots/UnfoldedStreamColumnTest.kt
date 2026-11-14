@@ -1,6 +1,7 @@
 package com.riffle.app.screenshots
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -27,6 +28,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import com.riffle.app.launcher.DOCK_CARD_ACTIONS_TEST_TAG
 import com.riffle.app.launcher.DrawnSurfaceKey
+import com.riffle.app.launcher.GRID_CELL_PROBE_KEY
 import com.riffle.app.launcher.GridFadeAlphaKey
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
@@ -37,6 +39,9 @@ import com.riffle.app.launcher.HOME_SURFACE_TEST_TAG
 import com.riffle.app.launcher.HOME_WORKSPACE_GRID_TEST_TAG
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellContent
+import com.riffle.app.launcher.LocalRecompositionProbe
+import com.riffle.app.launcher.OPEN_CARD_SCRIM_TEST_TAG
+import com.riffle.app.launcher.RecompositionProbe
 import com.riffle.app.launcher.STREAM_COLUMN_TEST_TAG
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.search.DOCK_SEARCH_COLUMN_TEST_TAG
@@ -95,6 +100,7 @@ class UnfoldedStreamColumnTest {
     private val executor = Executors.newSingleThreadExecutor { Thread(it, "unfolded-column").apply { isDaemon = true } }
     private val sent = mutableListOf<LauncherShellAction>()
     private var shell by mutableStateOf(unfolded())
+    private val probe = RecompositionProbe()
 
     @After
     fun stop() {
@@ -185,22 +191,24 @@ class UnfoldedStreamColumnTest {
         shell = state
         val stream = host()
         composeRule.setContent {
-            ScreenshotBackdrop {
-                LauncherShellContent(
-                    state = shell,
-                    appIconLoader = SolidColorAppIconLoader(),
-                    stream = stream,
-                    onAction = { action ->
-                        sent += action
-                        shell =
-                            when (action) {
-                                LauncherShellAction.OpenStream -> shell.copy(destination = ShellDestination.STREAM)
-                                is LauncherShellAction.SelectHomePage -> shell.onPage(action.pageId)
-                                LauncherShellAction.OpenSearch -> shell.copy(destination = ShellDestination.SEARCH)
-                                else -> shell.answering(action)
-                            }
-                    },
-                )
+            CompositionLocalProvider(LocalRecompositionProbe provides probe) {
+                ScreenshotBackdrop {
+                    LauncherShellContent(
+                        state = shell,
+                        appIconLoader = SolidColorAppIconLoader(),
+                        stream = stream,
+                        onAction = { action ->
+                            sent += action
+                            shell =
+                                when (action) {
+                                    LauncherShellAction.OpenStream -> shell.copy(destination = ShellDestination.STREAM)
+                                    is LauncherShellAction.SelectHomePage -> shell.onPage(action.pageId)
+                                    LauncherShellAction.OpenSearch -> shell.copy(destination = ShellDestination.SEARCH)
+                                    else -> shell.answering(action)
+                                }
+                        },
+                    )
+                }
             }
         }
         composeRule.waitForIdle()
@@ -281,9 +289,10 @@ class UnfoldedStreamColumnTest {
             1,
             composeRule.onAllNodesWithTag(STREAM_SURFACE_TEST_TAG).fetchSemanticsNodes().size,
         )
-        // Its cards stand inside it, whichever page the press landed on.
-        val stack = composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        assertTrue("the Stream is the column's", stack.left >= column.left - 1f && stack.right <= column.right + 1f)
+        // Its cards stand inside the column's rectangle, which is on the Dock's side of the room an open card grows in.
+        val surface = composeRule.onNodeWithTag(STREAM_SURFACE_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        assertEquals("the room an open card grows in ends where the column does", column.right, surface.right, 1f)
+        assertTrue("and holds the column", surface.left <= column.left + 1f)
     }
 
     @Test
@@ -322,10 +331,7 @@ class UnfoldedStreamColumnTest {
         val cells = cells()
         assertTrue("the grid has cells", cells.size > 8)
         val clear = cells.filter { it.first < column.left - StreamGridFade.FEATHER_DP * dp - 2f }
-        val under =
-            cells.filter {
-                it.first > column.left && it.first < column.right && it.second > column.top && it.second < column.bottom
-            }
+        val under = cells.filter { underTheColumn(it, column) }
         assertTrue("some cells are clear of the column", clear.isNotEmpty())
         assertTrue("some cells are under it", under.isNotEmpty())
         assertTrue("clear cells are untouched", clear.all { it.third == 1f })
@@ -346,16 +352,23 @@ class UnfoldedStreamColumnTest {
         }
     }
 
+    /** A cell whose middle is deeper inside the column than the fade goes on for: it is at the floor. */
+    private fun underTheColumn(
+        cell: Triple<Float, Float, Float>,
+        column: Rect,
+    ): Boolean {
+        val margin = StreamGridFade.INNER_DP * dp
+        return cell.first > column.left + margin && cell.first < column.right - margin &&
+            cell.second > column.top + margin && cell.second < column.bottom - margin
+    }
+
     @Test
     fun withPeekThroughOffTheGridIsHiddenUnderTheColumnAndStillFadesSoftlyAtItsEdge() {
         showOpen(peekThrough = false)
         composeRule.waitForIdle()
         val column = column()
         val cells = cells()
-        val under =
-            cells.filter {
-                it.first > column.left && it.first < column.right && it.second > column.top && it.second < column.bottom
-            }
+        val under = cells.filter { underTheColumn(it, column) }
         assertTrue(under.isNotEmpty())
         assertTrue("nothing shows under the column", under.all { it.third == 0f })
         val clear = cells.filter { it.first < column.left - StreamGridFade.FEATHER_DP * dp - 2f }
@@ -423,7 +436,7 @@ class UnfoldedStreamColumnTest {
     // Opening a card
 
     @Test
-    fun openingACardGrowsTheColumnTowardTheCentreWithItsActionsOnTheCard() {
+    fun openingACardGrowsTheCardTowardTheCentreAndLeavesTheColumnWhereItIs() {
         showOpen()
         val rest = column()
         composeRule.onNodeWithText("Sam").performClick()
@@ -431,24 +444,179 @@ class UnfoldedStreamColumnTest {
 
         assertTrue("the card opened", theCardIsOpen())
         val open = column()
-        assertEquals("the Dock side stays put", rest.right, open.right, 1f)
+        // The column itself no longer resizes (nothing is relaid out while a card grows): the card does the growing.
+        assertEquals("the column's left", rest.left, open.left, 1f)
+        assertEquals("the column's right", rest.right, open.right, 1f)
+        assertEquals("the column's top", rest.top, open.top, 1f)
+        assertEquals("the column's bottom", rest.bottom, open.bottom, 1f)
+        val card = composeRule.openCardFrame()!!
+        card.assertWhole("settled")
         assertTrue(
-            "wider toward the middle: ${rest.width / dp} -> ${open.width / dp}",
-            open.width > rest.width + 40f * dp,
+            "wider toward the middle than a resting card (${(rest.width - 2 * RiffleSpacing.l.value * dp) / dp} dp): " +
+                "${card.laidOut.width / dp} dp",
+            card.laidOut.width > rest.width - 2 * RiffleSpacing.l.value * dp + 40f * dp,
         )
-        assertTrue("and taller", open.height > rest.height + 20f * dp)
-        assertTrue("about half the screen at most: ${open.width / dp}", open.width <= root().width * 0.55f)
+        assertTrue(
+            "about half the screen at most: ${card.laidOut.width / dp}",
+            card.laidOut.width <= root().width * 0.55f,
+        )
+        assertTrue("it stands against the Dock's side", card.laidOut.right <= rest.right + 1f)
         // A side Dock holds no actions row: they are on the card.
         composeRule.onAllNodesWithTag(DOCK_CARD_ACTIONS_TEST_TAG).assertCountEquals(0)
         composeRule.onNodeWithText("Write a reply").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Send reply").assertExists()
-        val card = composeRule.onNodeWithTag(STREAM_OPEN_CARD_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        assertTrue(
-            "the open card is inside the grown column",
-            card.left >= open.left - 1f && card.right <= open.right + 1f,
-        )
         // Home is still there.
         composeRule.onAllNodesWithTag(HOME_WORKSPACE_GRID_TEST_TAG).onFirst().assertExists()
+    }
+
+    // The open card is never cut off, at any frame of opening or closing
+
+    @Test
+    fun theOpenCardIsNeverClippedAtAnyFrameOfOpeningOrClosing() {
+        show(unfolded(destination = ShellDestination.STREAM, reducedMotion = false))
+        waitForText("Sam")
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onNodeWithText("Sam").performClick()
+        var seen = 0
+        var lastHeight = -1f
+        var grew = 0
+        repeat(OPEN_FRAMES) { frame ->
+            composeRule.mainClock.advanceTimeByFrame()
+            composeRule.openCardFrame()?.let {
+                it.assertWhole("opening frame $frame")
+                seen++
+                if (it.laidOut.height > lastHeight + 0.5f) grew++
+                lastHeight = it.laidOut.height
+            }
+        }
+        assertTrue("the card was there for most of the opening: $seen", seen > OPEN_FRAMES / 2)
+        assertTrue("and it grew over several frames, not in one: $grew", grew >= 4)
+
+        composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        var closing = 0
+        var shrank = 0
+        repeat(OPEN_FRAMES) { frame ->
+            composeRule.mainClock.advanceTimeByFrame()
+            composeRule.openCardFrame()?.let {
+                it.assertWhole("closing frame $frame")
+                closing++
+                if (it.laidOut.height < lastHeight - 0.5f) shrank++
+                lastHeight = it.laidOut.height
+            }
+        }
+        assertTrue("the card was there while closing: $closing", closing > 3)
+        assertTrue("and it shrank over several frames: $shrank", shrank >= 3)
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+        assertFalse("and it is gone", theCardIsOpen())
+    }
+
+    // The motion recomposes nothing
+
+    @Test
+    fun aFrameOfTheCardOpeningAndClosingRecomposesNeitherHomeNorTheStacksOtherCards() {
+        show(unfolded(destination = ShellDestination.STREAM, reducedMotion = false))
+        waitForText("Sam")
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onNodeWithText("Sam").performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.mainClock.advanceTimeByFrame()
+        val cells = probe.total(GRID_CELL_PROBE_KEY)
+        val others = probe.total("stack-slot:")
+        val height = composeRule.openCardFrame()?.laidOut?.height ?: 0f
+        repeat(MOTION_FRAMES) { composeRule.mainClock.advanceTimeByFrame() }
+        assertTrue(
+            "the card is still growing in the frames counted",
+            (composeRule.openCardFrame()?.laidOut?.height ?: 0f) > height + 1f,
+        )
+        assertEquals("Home's cells recomposed while the card opened", cells, probe.total(GRID_CELL_PROBE_KEY))
+        assertEquals("the stack's cards recomposed while the card opened", others, probe.total("stack-slot:"))
+
+        repeat(OPEN_FRAMES) { composeRule.mainClock.advanceTimeByFrame() }
+        composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.mainClock.advanceTimeByFrame()
+        val cellsClosing = probe.total(GRID_CELL_PROBE_KEY)
+        val othersClosing = probe.total("stack-slot:")
+        val closingHeight = composeRule.openCardFrame()?.laidOut?.height ?: 0f
+        repeat(MOTION_FRAMES) { composeRule.mainClock.advanceTimeByFrame() }
+        assertTrue(
+            "the card is still shrinking in the frames counted",
+            (composeRule.openCardFrame()?.laidOut?.height ?: 0f) < closingHeight - 1f,
+        )
+        assertEquals("Home's cells recomposed while the card closed", cellsClosing, probe.total(GRID_CELL_PROBE_KEY))
+        assertEquals("the stack's cards recomposed while it closed", othersClosing, probe.total("stack-slot:"))
+    }
+
+    // A tap outside an open card closes it, anywhere
+
+    private fun LauncherShellState.withEmptyPages(): LauncherShellState {
+        val layout = homeLayout.copy(pages = homeLayout.pages.map { it.copy(items = emptyList()) })
+        return copy(
+            homeLayout = layout,
+            homeLayoutSet = homeLayoutSet.copy(layouts = mapOf(homeLayoutSet.activeKey to layout)),
+        )
+    }
+
+    private fun tapAt(point: Offset) = composeRule.onRoot().performTouchInput { click(point) }
+
+    @Test
+    fun withACardOpenATapOnAnAppClosesTheCardAndLaunchesNothing() {
+        showOpen()
+        composeRule.onNodeWithText("Sam").performClick()
+        composeRule.waitForIdle()
+        assertTrue(theCardIsOpen())
+        val app = gridCells().first().center
+
+        tapAt(app)
+        composeRule.waitForIdle()
+        assertFalse("the card closed", theCardIsOpen())
+        assertTrue("the tap launched or changed nothing else: $sent", sent.isEmpty())
+        composeRule.onNodeWithTag(STREAM_COLUMN_TEST_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun withACardOpenATapOnTheColumnsRoomOrTheWallpaperClosesOnlyTheCard() {
+        show(unfolded(destination = ShellDestination.STREAM).withEmptyPages())
+        waitForText("Sam")
+        composeRule.onNodeWithText("Sam").performClick()
+        composeRule.waitForIdle()
+        assertTrue(theCardIsOpen())
+        // Above the open card, inside the room the column has.
+        val column = column()
+        val card = composeRule.openCardFrame()!!.laidOut
+        tapAt(Offset(card.center.x, (column.top + card.top) / 2f))
+        composeRule.waitForIdle()
+        assertFalse("a tap in the column's room closed the card", theCardIsOpen())
+        assertTrue("and did nothing else: $sent", sent.isEmpty())
+
+        composeRule.onNodeWithText("Sam").performClick()
+        composeRule.waitForIdle()
+        assertTrue(theCardIsOpen())
+        tapAt(Offset(40f * dp, 40f * dp))
+        composeRule.waitForIdle()
+        assertFalse("a tap on the wallpaper closed the card", theCardIsOpen())
+        assertTrue("and did nothing else: $sent", sent.isEmpty())
+        composeRule.onNodeWithTag(STREAM_COLUMN_TEST_TAG).assertIsDisplayed()
+        composeRule.onAllNodesWithTag(OPEN_CARD_SCRIM_TEST_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun withOnlyTheStackShowingATapOnAnAppLaunchesItAndATapOnEmptySpaceClosesTheStream() {
+        showOpen()
+        val app = gridCells().first().center
+        tapAt(app)
+        composeRule.waitForIdle()
+        assertTrue("the visible app launched: $sent", sent.any { it is LauncherShellAction.LaunchApp })
+        assertFalse("and the Stream stayed", sent.contains(LauncherShellAction.OpenHome))
+
+        sent.clear()
+        shell = unfolded(destination = ShellDestination.STREAM).withEmptyPages()
+        composeRule.waitForIdle()
+        waitForText("Sam")
+        tapAt(Offset(200f * dp, 300f * dp))
+        composeRule.waitForIdle()
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenHome), sent)
     }
 
     // Closing, by press, Back and the accessibility action
@@ -537,9 +705,14 @@ class UnfoldedStreamColumnTest {
         composeRule.onNodeWithText("Sam").assertIsDisplayed()
         composeRule.onNodeWithText("Sam").performClick()
         composeRule.waitForIdle()
-        val open = column()
-        assertEquals("the Dock side stays put", column.left, open.left, 1f)
-        assertTrue(open.width > column.width + 40f * dp)
+        val card = composeRule.openCardFrame()!!
+        card.assertWhole("settled")
+        assertEquals("the column stays put", column.left, column().left, 1f)
+        assertTrue("the card stands against the Dock's side", card.laidOut.left >= column.left - 1f)
+        assertTrue(
+            "and grows toward the middle: ${card.laidOut.width / dp} dp",
+            card.laidOut.width > column.width - 2 * RiffleSpacing.l.value * dp + 40f * dp,
+        )
     }
 
     @Test
@@ -616,7 +789,12 @@ class UnfoldedStreamColumnTest {
         // The Dock is shorter in the Home mode than while the Stream shows its tiles, so the two stand at the Dock's
         // lower end as it is in each mode: the size and the side are the same, the bottom is the Dock's.
         assertEquals("same width: stream $column, search $search", column.width, search.width, 1f)
-        assertEquals("same height: stream $column, search $search", column.height, search.height, 1f)
+        // The pages' rectangle is as tall as an open card's room (the stack stands at its bottom); search is as tall as
+        // the resting stack, which it grows from.
+        assertTrue(
+            "the pages' room holds search's: stream $column, search $search",
+            column.height >= search.height - 1f,
+        )
         assertEquals("its bottom is the Dock's lower end", body.bottom, search.bottom, 4f * dp)
         val reach =
             if (dockEdge == DockPosition.RIGHT) search.right - strip.left else strip.right - search.left
@@ -826,6 +1004,12 @@ class UnfoldedStreamColumnTest {
         const val WAIT_MILLIS = 10_000L
         const val PRESS_PX = 150f
         const val SWIPE_MILLIS = 200L
+
+        /** Frames of the test clock (16 ms each) that carry an open or close well past its end. */
+        const val OPEN_FRAMES = 90
+
+        /** Frames counted while the card is mid-way. */
+        const val MOTION_FRAMES = 8
         const val LONG_PRESS_MILLIS = 1_500L
 
         /** A keyboard's height for the simulated input method inset. */
