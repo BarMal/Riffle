@@ -292,12 +292,6 @@ internal fun ExpandedDockSurface(
                 // opens and closes.
                 dynamicEntryCount = dynamicEntryCount,
             ) ?: return@BoxWithConstraints
-        HomeBackgroundContextMenu(
-            haptics = interactions.haptics,
-            onAction = interactions.onAction,
-            modifier = Modifier.matchParentSize(),
-        )
-
         DockShelfArrangement(
             runsHorizontally = runsHorizontally,
             stripFirst = position.placedBeforeContent(LocalLayoutDirection.current),
