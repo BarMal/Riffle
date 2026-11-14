@@ -209,6 +209,7 @@ private fun HomeDestinationContent(
                     )
                 }
             },
+            onLaunchApp = { identity -> onAction(LauncherShellAction.LaunchApp(identity)) },
             modeInterpreter = HomeDockInterpreter(),
             appShortcuts = state.appShortcutsByApp,
             choosing = choice.choosing,

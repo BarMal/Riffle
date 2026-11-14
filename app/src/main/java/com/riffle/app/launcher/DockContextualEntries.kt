@@ -25,7 +25,15 @@ internal fun DockDynamicEntry.inMode(
     resources: android.content.res.Resources,
 ): DockDynamicEntry {
     if (!streamShown) return this
-    val showLabel = openLabelFor(resources)
+    // The ringed app's icon opens the app (a second tap); the other icons show their page.
+    val showLabel =
+        if (selected && identity != null && symbol == null) {
+            openAppLabelFor(
+                resources,
+            )
+        } else {
+            openLabelFor(resources)
+        }
     return copy(
         isSelected = selected,
         intent = DockDynamicEntryIntent.Delegate,
@@ -35,6 +43,9 @@ internal fun DockDynamicEntry.inMode(
         appMenu = pageMenu + appMenu,
     )
 }
+
+private fun DockDynamicEntry.openAppLabelFor(resources: android.content.res.Resources): String? =
+    resources.getString(R.string.dock_live_app_open_action, label)
 
 private fun DockDynamicEntry.openLabelFor(resources: android.content.res.Resources): String? =
     when (symbol) {

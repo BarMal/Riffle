@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertCountEquals
@@ -879,6 +880,51 @@ class UnfoldedStreamColumnTest {
         shell = unfolded()
         composeRule.waitForIdle()
         composeRule.onAllNodesWithTag(HOME_INPUT_GATE_TEST_TAG).assertCountEquals(0)
+    }
+
+    // A second tap on the ringed Dock icon opens its app
+
+    private fun clickLabelled(label: String) =
+        composeRule.onAllNodes(
+            SemanticsMatcher("clickable labelled $label") {
+                it.config.getOrNull(SemanticsActions.OnClick)?.label == label
+            },
+            useUnmergedTree = true,
+        )
+
+    @Test
+    fun aTapOnTheRingedLiveAppOpensItWhereTheFirstTapOnlyShowedItsPage() {
+        showOpen()
+        // Its page is showing, so its icon is ringed and says what a tap does now.
+        assertTrue("no Show label on the ringed icon", clickLabelled("Show Chat").fetchSemanticsNodes().isEmpty())
+        clickLabelled("Open Chat").onFirst().performClick()
+        composeRule.waitForIdle()
+        val launched = sent.filterIsInstance<LauncherShellAction.LaunchApp>()
+        assertEquals(listOf(chatPackage), launched.map { it.identity.packageName.value })
+    }
+
+    @Test
+    fun withACardOpenATapOnTheRingedIconOpensTheApp() {
+        showOpen()
+        composeRule.onNodeWithText("Sam").performClick()
+        composeRule.waitForIdle()
+        assertTrue(theCardIsOpen())
+        clickLabelled("Open Chat").onFirst().performClick()
+        composeRule.waitForIdle()
+        assertEquals(1, sent.filterIsInstance<LauncherShellAction.LaunchApp>().size)
+    }
+
+    @Test
+    fun aTapOnAnotherIconOnlySelectsItsPageAndATilesSecondTapLaunchesNothing() {
+        showOpen()
+        val others = clickLabelled("Show Today")
+        if (others.fetchSemanticsNodes().isNotEmpty()) {
+            others.onFirst().performClick()
+            composeRule.waitForIdle()
+            clickLabelled("Show Today").onFirst().performClick()
+            composeRule.waitForIdle()
+        }
+        assertTrue("no launch: $sent", sent.none { it is LauncherShellAction.LaunchApp })
     }
 
     // The grid never moves

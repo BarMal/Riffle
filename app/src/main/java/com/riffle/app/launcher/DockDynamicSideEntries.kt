@@ -12,6 +12,7 @@ import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.stream.StreamPageOption
 import com.riffle.app.launcher.stream.dockLiveEntries
 import com.riffle.app.launcher.stream.rememberStreamSectionResults
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.dock.DockChoice
@@ -45,6 +46,8 @@ internal fun rememberDockDynamicSide(
     installedApps: List<InstalledApp>,
     deviceClass: HomeLayoutDeviceClass,
     onOpenStream: (StreamFocusTarget?) -> Unit,
+    /** Launches an app: a tap on the icon that is already ringed (its page is showing) opens the app. */
+    onLaunchApp: (AppIdentity) -> Unit = {},
     modeInterpreter: HomeDockInterpreter,
     appShortcuts: AppShortcutsByApp = emptyMap(),
     /**
@@ -110,6 +113,10 @@ internal fun rememberDockDynamicSide(
             }
         }
     val latestOpen = rememberUpdatedState(onOpenStream)
+    val latestLaunch = rememberUpdatedState(onLaunchApp)
+    val latestRinged = rememberUpdatedState(ringed)
+    val latestSide = rememberUpdatedState(side)
+    val latestInstalled = rememberUpdatedState(installedApps)
     val pinnedLabels =
         remember(pinnedApps) {
             pinnedApps.associate {
@@ -123,13 +130,29 @@ internal fun rememberDockDynamicSide(
             selectedKey = ringed?.takeIf { key -> key.startsWith(DockDynamicSideEntry.PINNED_APP_KEY_PREFIX) },
             labels = pinnedLabels,
             onShow = { identity ->
-                latestOpen.value(StreamFocusTarget.AppShortcuts(StreamShortcutPages.appKeyOf(identity)))
+                // A tap on the pinned app whose page is already showing opens the app; any other tap shows its page.
+                if (latestRinged.value == pinnedEntryKey(identity)) {
+                    latestLaunch.value(identity)
+                } else {
+                    latestOpen.value(StreamFocusTarget.AppShortcuts(StreamShortcutPages.appKeyOf(identity)))
+                }
             },
         )
     return modeInterpreter.copy(
         dynamicEntries = entries,
         contextual = extended,
-        onDynamicEntryDelegated = { key -> dockDynamicEntryTarget(key)?.let { target -> latestOpen.value(target) } },
+        onDynamicEntryDelegated = { key ->
+            // The second tap on a live app (its icon is ringed) opens the app; tiles and now playing only show a page.
+            val live = latestSide.value.firstOrNull { entry -> entry.key == key } as? DockDynamicSideEntry.LiveApp
+            val launch =
+                live?.takeIf { key == latestRinged.value }
+                    ?.let { app -> latestInstalled.value.appFor(app.packageName, app.profileId)?.identity }
+            if (launch != null) {
+                latestLaunch.value(launch)
+            } else {
+                dockDynamicEntryTarget(key)?.let { target -> latestOpen.value(target) }
+            }
+        },
         pinnedStream = pinnedStream,
         // An open card's actions, while the Stream shows it: the Dock's row (the Dock reads, the Stream writes).
         cardActions = link.openCards.shown.takeIf { shown },
