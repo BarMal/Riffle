@@ -628,6 +628,12 @@ private fun StandardHomeColumn(
         }
     }
 
+    // Home's menu: the background opens it where the finger is, and so does a long-press on the handle.
+    val menuState = remember { PressMenuState() }
+    val onHandleLongPress: (Offset) -> Unit = { point ->
+        actions.haptics.longPress()
+        menuState.show(point)
+    }
     StandardHomeFrame(
         dockEdge = dockEdge,
         dockArea = dockArea,
@@ -643,6 +649,7 @@ private fun StandardHomeColumn(
                         reducedMotion = state.presentation.reducedMotion,
                         onPageSelected = onOpenPage,
                         onIndicatorScrub = onIndicatorScrub,
+                        onHandleLongPress = onHandleLongPress,
                         actions = actions,
                         dock = state.visibleLayout.dock,
                         hidden = state.presentation.handleHidden,
@@ -661,8 +668,18 @@ private fun StandardHomeColumn(
                     enabled = state.visibleLayout.editMode == HomeEditMode.Browsing,
                     settings = state.presentation.homeGestures,
                     onAction = actions.onAction,
-                )
-                .windowInsetsPadding(state.presentation.homeInsetPolicy.contentInsets()),
+                ),
+        insets = state.presentation.homeInsetPolicy.contentInsets(),
+        // The one empty-space handler of Home, under everything and as big as the window: the margins, the room the
+        // Dock and the handle reserve, the system bars and an empty page are all Home's background.
+        background = {
+            HomeBackgroundContextMenu(
+                haptics = actions.haptics,
+                onAction = actions.onAction,
+                onClick = actions.onBackgroundClick,
+                state = menuState,
+            )
+        },
     ) {
         if (dockEdge == DockPosition.TOP) dockArea()
         ImmediateWorkspacePager(
@@ -707,6 +724,7 @@ private fun StandardHomeColumn(
             reducedMotion = state.presentation.reducedMotion,
             onIndicatorScrub = onIndicatorScrub,
             handle = if (handleInStrip) null else layoutSettings,
+            onHandleLongPress = onHandleLongPress,
             handleHidden = state.presentation.handleHidden,
             handleAxis = handleAxis,
             appIconLoader = appIconLoader,
@@ -733,35 +751,42 @@ private fun StandardHomeFrame(
     dockArea: @Composable () -> Unit,
     handleStrip: (@Composable () -> Unit)?,
     modifier: Modifier,
+    /** The window the frame stands in, less the system bars: the frame's content lays out inside it. */
+    insets: WindowInsets,
+    /** Home's empty-space handler, drawn first and over the whole frame, including the room under [insets]. */
+    background: @Composable BoxScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    if (!dockEdge.isSideEdge) {
-        Column(
-            modifier = modifier,
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            content = content,
-        )
-        return
-    }
-
-    // The edges are physical, but a Row lays children start-to-end and mirrors in RTL. Placing the
-    // dock by physical side keeps a left dock on the left either way.
-    val dockLeadsRow = dockEdge.placedBeforeContent(LocalLayoutDirection.current)
-    Row(modifier = modifier) {
-        if (dockLeadsRow) {
-            dockArea()
-            handleStrip?.invoke()
-        }
-        Column(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            content = content,
-        )
-        if (!dockLeadsRow) {
-            handleStrip?.invoke()
-            dockArea()
+    Box(modifier = modifier) {
+        background()
+        val inner = Modifier.fillMaxSize().windowInsetsPadding(insets)
+        if (!dockEdge.isSideEdge) {
+            Column(
+                modifier = inner,
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                content = content,
+            )
+        } else {
+            // The edges are physical, but a Row lays children start-to-end and mirrors in RTL. Placing the
+            // dock by physical side keeps a left dock on the left either way.
+            val dockLeadsRow = dockEdge.placedBeforeContent(LocalLayoutDirection.current)
+            Row(modifier = inner) {
+                if (dockLeadsRow) {
+                    dockArea()
+                    handleStrip?.invoke()
+                }
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.Top,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    content = content,
+                )
+                if (!dockLeadsRow) {
+                    handleStrip?.invoke()
+                    dockArea()
+                }
+            }
         }
     }
 }
@@ -783,6 +808,7 @@ private fun HomeBottomControls(
     onIndicatorScrub: (Int) -> Unit,
     /** The layout the handle follows, or null when the handle is not in this row (it stands beside a side Dock). */
     handle: PostureLayoutSettings?,
+    onHandleLongPress: (Offset) -> Unit,
     handleHidden: Boolean,
     handleAxis: HandleAxis,
     appIconLoader: AppIconLoader,
@@ -814,6 +840,7 @@ private fun HomeBottomControls(
                             }
                         },
                         onIndicatorScrub = onIndicatorScrub,
+                        onHandleLongPress = onHandleLongPress,
                         layout = handle,
                         axis = handleAxis,
                         actions = actions,
@@ -845,7 +872,7 @@ private fun HomeBottomControls(
  * The Home handle's row (ADR 0003, Amendment 1) above a bottom Dock: one small pill that carries the page dots, is the
  * way into search and keeps the quick-drag along the dots. The row is as tall as the handle is across it (a column of
  * dots, for pages that scroll up and down, makes it taller). The empty room around the pill is Home's background (its
- * long-press menu and its tap).
+ * long-press menu and its tap), and a long-press on the pill opens the same menu.
  */
 @Composable
 private fun HomeBottomSearchArea(
@@ -854,6 +881,7 @@ private fun HomeBottomSearchArea(
     reducedMotion: Boolean,
     onPageSelected: (Int) -> Unit,
     onIndicatorScrub: (Int) -> Unit,
+    onHandleLongPress: (Offset) -> Unit,
     layout: PostureLayoutSettings,
     axis: HandleAxis,
     actions: HomeWorkspaceActions,
@@ -868,12 +896,6 @@ private fun HomeBottomSearchArea(
                 .height(HomeHandleLayout.reservedDp(DockPosition.BOTTOM, axis, pageCount, dots).dp),
         contentAlignment = Alignment.Center,
     ) {
-        HomeBackgroundContextMenu(
-            haptics = actions.haptics,
-            onAction = actions.onAction,
-            modifier = Modifier.matchParentSize(),
-            onClick = actions.onBackgroundClick,
-        )
         if (!hidden) {
             HomeHandlePill(
                 pageCount = pageCount,
@@ -881,6 +903,7 @@ private fun HomeBottomSearchArea(
                 reducedMotion = reducedMotion,
                 haptics = actions.haptics,
                 onOpenSearch = { actions.onAction(LauncherShellAction.OpenSearch) },
+                onLongPress = onHandleLongPress,
                 onPageSelected = onPageSelected,
                 onLiveDragPageChanged = onIndicatorScrub,
                 axis = axis,
@@ -907,6 +930,7 @@ private fun HomeHandleStrip(
     reducedMotion: Boolean,
     onPageSelected: (Int) -> Unit,
     onIndicatorScrub: (Int) -> Unit,
+    onHandleLongPress: (Offset) -> Unit,
     actions: HomeWorkspaceActions,
     dock: DockModel,
     hidden: Boolean = false,
@@ -920,12 +944,6 @@ private fun HomeHandleStrip(
                 .testTag(HOME_HANDLE_STRIP_TEST_TAG),
         contentAlignment = Alignment.Center,
     ) {
-        HomeBackgroundContextMenu(
-            haptics = actions.haptics,
-            onAction = actions.onAction,
-            modifier = Modifier.matchParentSize(),
-            onClick = actions.onBackgroundClick,
-        )
         if (!hidden) {
             HomeHandlePill(
                 pageCount = pageCount,
@@ -933,6 +951,7 @@ private fun HomeHandleStrip(
                 reducedMotion = reducedMotion,
                 haptics = actions.haptics,
                 onOpenSearch = { actions.onAction(LauncherShellAction.OpenSearch) },
+                onLongPress = onHandleLongPress,
                 onPageSelected = onPageSelected,
                 onLiveDragPageChanged = onIndicatorScrub,
                 axis = axis,

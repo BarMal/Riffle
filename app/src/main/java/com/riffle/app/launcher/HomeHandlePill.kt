@@ -18,9 +18,17 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -41,7 +49,8 @@ import com.riffle.core.domain.launcher.home.HomeHandleLayout
  * from the Dock, toward Home: above a bottom Dock, and in front of the middle of a side Dock (the caller places it).
  * It is drawn on Thin glass, [HomeHandle.PILL_HEIGHT_DP] thick, inside a [HomeHandle.TOUCH_TARGET_DP] target.
  *
- * - A tap anywhere on it opens search.
+ * - A tap anywhere on it opens search; a still long-press anywhere on it is [onLongPress] (Home's menu), given the
+ *   press point in root coordinates. Null: a long-press does nothing.
  * - With more than one page it shows the page dots, and dragging along them scrubs between pages exactly as the page
  *   indicator always did ([PageIndicator]: the handle follows the finger, each page crossed is shown at once, release
  *   commits). With [dragEnabled] off the dots only show where you are; with [showsDots] off there are none.
@@ -57,7 +66,7 @@ import com.riffle.core.domain.launcher.home.HomeHandleLayout
  * on the dots still searches.
  */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun HomeHandlePill(
     pageCount: Int,
     selectedPageIndex: Int,
@@ -67,6 +76,7 @@ internal fun HomeHandlePill(
     onPageSelected: (Int) -> Unit,
     onLiveDragPageChanged: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onLongPress: ((Offset) -> Unit)? = null,
     axis: HandleAxis = HandleAxis.HORIZONTAL,
     showsDots: Boolean = true,
     dragEnabled: Boolean = true,
@@ -80,6 +90,9 @@ internal fun HomeHandlePill(
     val searchLabel = stringResource(R.string.home_handle_search)
     val vertical = axis == HandleAxis.VERTICAL
     val size = HomeHandleLayout.sizeDp(axis, pageCount, dots)
+    var coordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val latestLongPress by rememberUpdatedState(onLongPress)
+    val hasLongPress = onLongPress != null
     Box(
         modifier =
             modifier
@@ -87,7 +100,23 @@ internal fun HomeHandlePill(
                 .homeEntranceLayer(LocalHomeEntrance.current)
                 .testTag(HOME_HANDLE_TEST_TAG)
                 .size(width = size.widthDp.dp, height = size.heightDp.dp)
-                .pointerInput(onOpenSearch) { detectTapGestures(onTap = { onOpenSearch() }) }
+                .onGloballyPositioned { coordinates = it }
+                .pointerInput(onOpenSearch, hasLongPress) {
+                    detectTapGestures(
+                        onTap = { onOpenSearch() },
+                        onLongPress =
+                            if (hasLongPress) {
+                                { local ->
+                                    val node = coordinates
+                                    latestLongPress?.invoke(
+                                        if (node != null && node.isAttached) node.localToRoot(local) else local,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                    )
+                }
                 // Any drag that starts on the handle is the handle's (the dots' own scrub takes the one along them
                 // first): it never reaches Home's swipes, which would turn a drag down the handle into a swipe down.
                 .pointerInput(Unit) { detectDragGestures(onDrag = { change, _ -> change.consume() }) },

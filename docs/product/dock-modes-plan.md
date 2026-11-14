@@ -1437,3 +1437,123 @@ out of the mapper; the page's promise is tested with secrets in the layout, on t
 - Unfolded, an open card is wider than the stack's column: the strip behind it is cut along the outline of the front
   card's slot, which is narrower than the open card, so the cut's corners sit inside the open card's width.
 - At the largest font sizes a strip (a fixed pitch) cuts the header's second line, as before this round.
+
+## Long-press coverage
+
+The owner's report: "everywhere should be long pressable, but currently there's large dead zones." The coverage was mapped
+before anything was changed, by long-pressing a grid of points across the whole window (every 48 dp, plus a point 2 dp
+inside each edge, skipping the points that land on an item, a Dock icon or the handle) with a 24 dp status bar and a 48 dp
+navigation bar simulated, and counting the points that played the menu's haptic tick. Folded is 411 by 914 dp, unfolded
+840 by 900 dp. The probe is `LongPressCoverageBase` and `LongPressProbe.kt` (Robolectric, through the real
+`HomeDestination`); it is kept, and now asserts there is no dead point.
+
+### The map before the change
+
+Dead points of the grid, and why:
+
+| Surface | Dead before | Cause |
+| --- | --- | --- |
+| Home, folded, bottom Dock | 104 of 210 | The menu was one `HomeBackgroundContextMenu` per grid cell, plus one on the handle's row. Everything outside a cell was dead: the page's four margins (the pager is padded), the controls gap between the grid and the handle row, the room under the status bar and the navigation bar (the frame is padded by the insets and the handler was inside it), the Dock's room beside and around its glass, the room between the Dock and the window's edge, and the handle itself (tap only). |
+| Home, folded, side Dock | 144 of 210 | The same, and the column the handle stands in held a handler only as wide as the handle's own strip. |
+| Home, unfolded, right Dock | 154 of 399 | The same; and the grid is square cells centred in a page that is much wider than it is tall, so the hundreds of dp on each side of the grid were dead. |
+| Home, unfolded, bottom Dock | 225 of 399 | The same. |
+| An empty page | 104 of 210 | Cell handlers only: the page's own room around the (empty) grid was dead. |
+| A generated page's "More apps" | 96 of 210 | The page's room beside and below the grid, and the button itself was as wide as the page, so no room was left beside it. |
+| The Dock's body between its icons | 3 of 13 probes | The icons' run is a scroll (`horizontalScroll` / `verticalScroll`), which takes the touches of its whole run: a handler under it is never reached, so the gaps between the icons were dead. The body's ends and its padding were live (a handler on the Dock's own box). The Dock's margin strip around the body was dead (its pull and press gesture hit-tests there, and nothing answers a still press). |
+| App library Home, folded and unfolded | 88 of 210, 170 of 399 | The pages had a handler, but the handle's row, the margins, the room under the bars and the Dock's reserve were outside it (the view is padded by the insets and the Dock's room, and the Home gestures wrapped it). |
+| Paged Library over Home | 88 of 210, 169 of 399 | The same, and the Library's scrim (the room around the sheet) was a plain `clickable`: a long-press and release was a click and closed the Library. |
+| Library sheet (Categories, A-Z, Grid) | 158, 102 and 92 of 210; 346 of 399 unfolded | The only menu was on the header: the sheet's glass between and under the rows and tiles, and the scrim around it, did nothing (and the scrim closed the Library on release: 50 `OpenHome` actions in the probe). |
+| Home with the Stream open, unfolded | 209 of 399 | Home's cells under the column are faded and block touches, the column's empty room only had a tap (close), and a long-press and release there closed the Stream (60 `OpenHome`). |
+| The Stream, folded | 195 of 210 | The same: the whole window was the Stream's empty room, which only had a tap, so a long-press closed it (150 `OpenHome`). |
+
+Two of those were worse than dead: a long-press that ends is a tap for a `clickable` or `detectTapGestures { }` that
+has no long-press handler, so holding on the Library's margin or the Stream's empty room closed it on release.
+
+### The rule now, per surface
+
+One empty-space handler per surface, under everything, as big as the surface's whole window (under the system bars and
+the Dock's reserve too); what is on top of it (an item, the Dock, the handle) takes its own presses first, and a press on
+nothing reaches it. It is `Modifier.pressMenu` (`PressMenuState.kt`): the platform's `detectTapGestures` (a tap, and a
+long-press on the platform's timeout), the light haptic through `LauncherHaptics.longPress`, and a long-click action for
+assistive technology. The menu hangs from an empty node at the finger (`PressMenuAnchor`), so it opens at the press and
+the platform's popup keeps it on screen. A finger that has left touch slop before the timeout is not a long-press (a
+small movement within slop is), and a drag, a swipe or a scroll that something consumes never reaches it.
+
+- **Home (Placed items).** One handler over the whole Home window (`StandardHomeFrame`'s background, under the inset
+  padding), and one per page behind its cells (the pager takes the touches of its whole page, so a page holds its own).
+  The cells no longer hold one each. Opens the Home menu (Create folder, Widgets, Settings, Edit page, Manage pages) at the
+  finger, so the margins, the strips the Dock and the handle reserve, the room under the bars, an empty page and the room
+  beside "More apps" (the button is now as wide as its label) all open it. A tap on it still dismisses the Dock's shelf
+  and, with the Stream out beside Home, closes the Stream (`LocalHomeEmptyTap`).
+- **Items** keep their own long-press (app, folder, widget menus, and the drag after the long-press); a long-press on an
+  item never opens Home's menu, and a long-press that becomes a drag still drags.
+- **The handle.** A tap is search and a drag is quick-scroll, as before. A still long-press on it is Home's menu (it had
+  none); on the paged Library and the App library Home it is that surface's menu. It never searches.
+- **The Dock.** See the rule below.
+- **App library Home and the paged Library.** One handler over the whole window (`LibraryPagedView`: under the bars and the
+  Dock's reserve, which the view is now padded by), one per page: the surface's own menu at the finger ("Show placed items"
+  and "Settings" on App library Home, "Show as" on the Library). On the Library the room around the pages still closes it
+  by a tap.
+- **The Library sheet (Categories, A-Z, Grid).** The sheet's glass is the handler (a parent: the rows, tiles, header and
+  search field take their own presses first), and the scrim around it, now window-wide, is another sharing the same menu:
+  "Show as" with Undo, at the finger. A tap on the scrim still closes the Library; a long-press never does. The header's
+  long-press and its options button open the same menu.
+- **Home with the Stream open.** Unfolded, Home is live beside the column and Home's rule above holds there (the faded
+  cells under the column take no input, as before); folded, "apps behind the cards" is the Stream's window, below.
+- **The Stream's empty room.** A tap closes the Stream, as before. A long-press opens the options of the page in front (the
+  menu the long-press of its Dock tile offers: Show as, Move earlier and later, Hide, and a Show for each hidden section) at
+  the finger, with the Undo the Stream already offers; a card, a control or the stack takes its own press first. Folded the
+  room is the whole window, under the bars and the Dock's reserve; unfolded it is the column's rectangle (beside it is
+  Home's). A pinned app's shortcuts page has no options, so there the long-press does nothing new and a tap still closes.
+- **Home hidden** (search or the Library over it, or drawn at nothing behind the Stream): nothing on Home responds. The
+  round 3 gate is unchanged and is above the handlers.
+
+### The Dock's rule
+
+A long-press on the Dock's room that is not an icon opens **Home's menu** (the Dock has no menu of its own, and none was
+invented): the body between its icons, its ends and padding, the margin strip around it, the shelf's gaps. The Dock area
+holds the handler as a parent, so the icons' run scroll, the icons' own long-press (their menus and the drag to reorder)
+and the Dock's pull and press take their presses first.
+
+It does not conflict with the press and hold-to-choose loop in `DockPull.kt`: that loop claims a press only when the
+finger leaves touch slop toward the Dock's edge before the platform's long-press timeout, on the Initial pass, and
+hold-to-choose is a timer that only runs after such a claim. A finger that has not left slop when the timeout expires is
+not claimed (`awaitClaim` ends with no claim) and is the menu; one that left slop before it is a press, a pull or a scroll
+and never reaches the menu (its changes are consumed, which cancels the long-press). Both are tested
+(`LongPressBehaviorTest.aStillLongPressOnTheDocksBodyIsTheMenuAndAPressTowardItsEdgeIsNot`). The two inner handlers the Dock
+had (one on the strip, one on the shelf) are gone for this one.
+
+### Accessibility
+
+Every handler is also a long-click action on its node (label: "Show home actions", "Show options for the Library", "Show
+options for this page"), opening the same menu, so the menus reach a screen reader from the regions that used to be dead
+(the Library's sheet and scrim, the Stream's room, the Dock). The existing custom actions stay: the Library's "Close
+Library" and "Show as <view>", the App library Home's actions, the Dock's.
+
+### Tests
+
+- Behaviour and coverage, Robolectric: `HomeLongPressCoverageTest`, `LibraryLongPressCoverageTest` and
+  `StreamLongPressCoverageTest` (17 probes, each fails with the map of its dead points), `LongPressBehaviorTest` (every kind
+  of press on Home: the margins, under the bars, beside the handle and the Dock, the Dock's gaps, the handle, an empty
+  page, "More apps", an app's own menu and never Home's, the menu hanging from the finger, a wobble within slop, a drag
+  that is not a long-press, the Dock's press against the still press, a hidden Home), `LibraryLongPressBehaviorTest` (the
+  Library's, App library Home's and the paged Library's own menus, and a tap that still closes the Library) and
+  `StreamEmptyRoomLongPressTest`.
+- Device (compiled, not run): `HomeMarginLongPressTest` long-presses Home's bottom margin and its side margin and expects
+  the Home menu.
+
+### Tests rewritten on purpose
+
+None. Every existing test passes unchanged; the cell handlers, the Dock's two inner handlers and the Library's `clickable`
+scrim were replaced, and nothing asserted them.
+
+### Not confirmed without a device
+
+- That the menu stays fully on screen near an edge: it is the platform's popup (it flips and slides to stay in the window);
+  Robolectric has no real window geometry, so the tests assert only where it hangs from (`PRESS_MENU_ANCHOR_TEST_TAG`).
+- The room the system keeps for itself: the back-gesture strips at the left and right edges and the gesture bar under the
+  navigation bar may take a touch before the launcher sees it, whatever Home draws there.
+- A long-press that lands exactly on the 1 px where the Dock's room meets the status bar's inset is dead in the probe; the
+  probe's grid is offset by 1 dp to stay off that line, and it was not found at any other point. It is likely a rounding
+  edge of the test's simulated inset and was not reproduced with a finger.
+- The feel of the slop rule and the haptic on a real panel.

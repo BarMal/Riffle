@@ -243,6 +243,9 @@ internal fun HomeDockHost(
         )
 
     val pull = position.pullDirection
+    // The Dock's own menu is Home's: a still long-press on the Dock's room that is not an icon (the body between its
+    // icons, the margin around it, the shelf's gaps) opens it where the finger is (see Modifier.pressMenu).
+    val dockMenu = remember { PressMenuState() }
     var hostBoxOriginInRoot by remember { mutableStateOf<Offset?>(null) }
     Box(
         modifier =
@@ -262,7 +265,7 @@ internal fun HomeDockHost(
                     // dock a little further that way and comes back; it moves nothing in layout.
                     translationX = -pull.unitX * dipPx + (arriving?.translationXDp ?: 0f) * density
                     translationY = -pull.unitY * dipPx + (arriving?.translationYDp ?: 0f) * density
-                },
+                }.pressMenu(dockMenu, haptics, longClickLabel = DOCK_MENU_LONG_CLICK_LABEL),
         ) {
             CompositionLocalProvider(
                 LocalDockChoice provides choice,
@@ -289,6 +292,14 @@ internal fun HomeDockHost(
                     staticItemTapOverride = interpreter.staticItemTapOverride,
                     isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,
                     cardActions = interpreter.cardActions,
+                )
+            }
+            PressMenuAnchor(dockMenu) {
+                ShortcutContextMenu(
+                    expanded = dockMenu.expanded,
+                    items = homeWorkspaceContextMenuItems(),
+                    onDismissRequest = dockMenu::dismiss,
+                    onAction = dockOnAction,
                 )
             }
             if (choice != null) {
@@ -449,6 +460,8 @@ private data class DockShelfController(
 private val FullyRevealedDockContent: () -> Float = { 1f }
 
 private const val UNMEASURED_DOCK_EXTENT_PX = -1
+
+private const val DOCK_MENU_LONG_CLICK_LABEL = "Show home actions"
 
 /**
  * Where a full-screen mode frame sits relative to its siblings: below the dock, which is composed

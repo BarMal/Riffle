@@ -1,10 +1,12 @@
 package com.riffle.app.launcher.stream
 
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
@@ -191,6 +193,26 @@ class StreamOpenCardInteractionTest {
         }
     }
 
+    /**
+     * The control described [description] is on screen and has stopped moving. Typing raises the keyboard, which lifts
+     * the Dock and the card on the keyboard's own clock: a click sent while they move lands where the control was, on
+     * the room beside the card, which closes the card instead.
+     */
+    private fun awaitHoldsStill(description: String) {
+        var last: Rect? = null
+        var since = 0L
+        composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) {
+            val nodes = composeRule.onAllNodesWithContentDescription(description).fetchSemanticsNodes()
+            val now = SystemClock.uptimeMillis()
+            val bounds = nodes.singleOrNull()?.boundsInRoot
+            if (bounds == null || bounds != last) {
+                last = bounds
+                since = now
+            }
+            bounds != null && now - since >= HOLDS_STILL_MILLIS
+        }
+    }
+
     private fun awaitPerformed(count: Int) {
         composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) { performed.size >= count }
     }
@@ -244,6 +266,7 @@ class StreamOpenCardInteractionTest {
         openTheChat()
 
         composeRule.onNodeWithText("Write a reply").performTextInput("On my way")
+        awaitHoldsStill("Send reply")
         composeRule.onNodeWithContentDescription("Send reply").performClick()
         awaitPerformed(1)
 
@@ -328,6 +351,7 @@ class StreamOpenCardInteractionTest {
         const val TWENTY_MINUTES = 20 * ONE_MINUTE
         const val DOCKED_COUNT = 4
         const val WAIT_MILLIS = 10_000L
+        const val HOLDS_STILL_MILLIS = 500L
         const val STEPS = 10
         const val STEP_MILLIS = 16L
         const val SETTLE_MILLIS = 1_000L

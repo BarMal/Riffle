@@ -47,6 +47,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.WidgetItem
 
+@Suppress("LongMethod")
 @Composable
 internal fun WorkspaceGrid(
     page: LauncherPage,
@@ -60,6 +61,17 @@ internal fun WorkspaceGrid(
     BoxWithConstraints(
         modifier = modifier,
     ) {
+        // Behind the cells and everything else on the page, as big as the page: the room between and around the icons,
+        // the page's own margins and an empty page are the background, whose long-press is the menu and tap the empty
+        // tap. (The pager takes the touches of its whole page, so the page holds the handler itself.)
+        HomeBackgroundContextMenu(
+            haptics = actions.haptics,
+            onAction = actions.onAction,
+            items = backgroundContextMenuItems(presentation.contextSurface),
+            longClickLabel = presentation.contextSurface.backgroundLongClickLabel,
+            modifier = Modifier.matchParentSize(),
+            onClick = actions.onBackgroundClick,
+        )
         Column(modifier = Modifier.fillMaxSize()) {
             BoxWithConstraints(
                 modifier = Modifier.fillMaxWidth().weight(1f),
@@ -123,6 +135,7 @@ internal fun WorkspaceGrid(
             }
             if (page.hasGeneratedContentOverflowAffordance) {
                 GeneratedContentOverflowButton(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
                     overflowCount = page.generatedContentOverflowCount,
                     libraryEnabled = presentation.libraryEnabled,
                     onAction = actions.onAction,
@@ -138,12 +151,14 @@ internal fun WorkspaceGrid(
  */
 @Composable
 private fun GeneratedContentOverflowButton(
+    modifier: Modifier,
     overflowCount: Int,
     libraryEnabled: Boolean,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    // As wide as its label, so the room beside it is the page's background.
     TextButton(
-        modifier = Modifier.fillMaxWidth().testTag(HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG),
+        modifier = modifier.testTag(HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG),
         onClick = {
             onAction(if (libraryEnabled) LauncherShellAction.OpenAppDrawer else LauncherShellAction.OpenSearch)
         },
@@ -183,14 +198,6 @@ private fun RowScope.HomeGridCell(
                 ?.item
         val visibleItem = activeDragSource ?: state.previewItems.itemAt(cell = state.cell)
 
-        HomeBackgroundContextMenu(
-            haptics = actions.haptics,
-            onAction = actions.onAction,
-            items = backgroundContextMenuItems(presentation.contextSurface),
-            longClickLabel = presentation.contextSurface.backgroundLongClickLabel,
-            modifier = Modifier.fillMaxSize(),
-            onClick = actions.onBackgroundClick,
-        )
         val fade = rememberGridFadeCell()
         Box(
             modifier =
