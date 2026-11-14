@@ -1319,3 +1319,121 @@ frames and on afterwards.
 The Home entrance and the Dock's drop (the cause above is read from the code, not seen), the feel of the opening-speed
 change on the grid fade and the swipe, a side Dock's alignment at the top and bottom of a real unfolded screen, and the
 overlay (Floating dock) rendering. Device tests were compiled, not run.
+
+## Device fixes, round 6 (cards: content and the stack's look)
+
+Six things from the owner's device about what a notification's card shows and how the stack looks. One commit per item,
+with its tests. Nothing in this round is confirmed on a device.
+
+### "Hidden content" and the title (item 1)
+
+- **Cause of "Hidden content".** The card's title was `title ?: "Hidden content"`: any notification without a title was
+  drawn as hidden. A navigation notification that draws itself with custom views fills in no title and no text, so it was
+  a card that said "Hidden content" and nothing else. Nothing reads the notification's lock-screen `visibility`, before or
+  now. The hidden state is now `NotificationContent.hidden`: the Privacy content level of the source hides text, or the
+  profile is quiet. A notification that is not hidden always has a title line (`headline`): its own title, else what was
+  read out of its layout (item 2), else its app's name; the app's name is the second line unless it already is the title.
+- **The title.** The listener's mapper read only `EXTRA_TITLE`. It now resolves the title with `NotificationTitleRule`
+  (pure): a messaging style takes the conversation's title (a group's name), else the title the platform wrote (the
+  sender), else the newest sender; anything else takes the title, else `EXTRA_TITLE_BIG`. A candidate that is only the
+  app's own name is passed over for the next one, and when there is no other the first short line of the text is the
+  title. So an app that posts as itself (a title or a messaging "person" that is the app's name) is titled with what it
+  says, and a real conversation keeps its person or group, whose name is not the app's. The exact shape of the owner's
+  notification is not known (it was not in the diagnostics), so both shapes that give that result are covered by tests.
+- **Group summaries.** Nothing left a group's summary out, so an app that posts a summary and children had a card for
+  the summary too. `NotificationGroupSummaries` (pure) drops a summary when a child of its group is posted beside it;
+  a summary on its own stays. Each child was and is one card.
+
+### Custom layouts (item 2)
+
+Three tiers, best first: the standard fields; **extraction**; **embedding**.
+
+- **Extraction.** For a notification with a `contentView` or `bigContentView` and no title or text,
+  `NotificationCustomContentStore` (memory only, beside the listener, like `NotificationImageStore`) has the layout read on
+  the main thread: `RemoteViewsReader` inflates the `RemoteViews` off-screen into a bounded box (never attached to a
+  window, every step in a try, at most 200 views), walks the views in drawing order and collects the visible text views'
+  texts with their size and weight, the largest picture above 32 dp (sized down to 128 px) and which views take a tap.
+  `CustomNotificationMapping` (pure, `:core:domain`) makes the title of the largest text (bold wins a tie, then the first)
+  and lines of the others (no repeats, no buttons' texts; three for the browse card from the compact layout, five for the
+  open card from the expanded one). The listener only hands the notification over; a notification posted again is read
+  again, at most twice a second, and one that is removed (or the listener disconnecting) drops its entry and any read
+  that was waiting. The card draws the result in its own style: the header, the lines, the thumbnail.
+- **Embedding.** When the layouts inflate but have no text, the card embeds the app's own layout
+  (`EmbeddedNotificationLayout`, an `AndroidView`): applied in a try, applied again in place (`reapply`) when the app posts
+  again, clipped to the card's inner corner, at most 64 dp tall on the browse card and 256 dp on the open card, described
+  as "Layout from <app>". On the browse card it takes no touch (the card's tap, the stack's drag and the pager are as on any
+  card); on the open card its own buttons work.
+- **Typed, not stored.** `NotificationContent.custom` (`CustomNotificationContent`) and `NotificationContent.body` (text,
+  thread, custom or none). It reaches the content through the item's ext, like the thread, so the content level applies:
+  hide text extracts and embeds nothing (the card is hidden), hide body keeps the title only. The stored snapshot has no
+  field for any of it (a codec test pins its keys).
+- **Not built.** A setting (none is needed); recipes per app (item 6 is for that).
+
+### Live notifications' buttons on the browse card (item 3)
+
+`LiveNotificationRule` (pure): ongoing, and custom views or a progress bar or the navigation, transport or progress
+category. The listener's registry reads the facts and answers per notification; nothing is stored. The front browse card of
+a live notification shows its own buttons (at most three) under its lines, each a 48 dp text button and a custom
+accessibility action of the card. A button's tap is its own; the card's tap still opens it; a vertical drag that starts on
+a button moves the stack; an ongoing notification has no swipe-dismiss, so nothing competes sideways. The buttons stay on
+the open card too.
+
+### The front card's content and height (item 4)
+
+- **What it shows.** Up to four lines: a conversation's last three messages as "Sender: text" (one line each), else the
+  text (the big text, or an inbox style's lines, which the mapper now reads) up to four lines, else the extracted lines;
+  the picture thumbnail stays at the trailing edge.
+- **Height.** `BrowseCardHeight` (pure): the header (52 dp), the body as measured, the thumbnail, the buttons' row and the
+  paddings, between 88 dp (the header and one line) and 168 dp (208 dp with buttons). The body is measured in composition
+  with a text measurer at the width it is written at (`rememberBrowseHeights`), so nothing waits for a layout pass.
+- **The stack.** Every card now has its own height (`StackGeometry(heightsDp)`); before, every card of a stack was as tall
+  as the tallest. The stack stays anchored at its bottom: the front card's top is its own height up, the strips sit on it
+  (lower behind a short card) a pitch apart, and between two cards the top moves from the one height to the other
+  (`frontHeightAt`). The drag, fling and magnet are unchanged (they work on the position); the open card grows from the
+  height the front card has, and the stack under it is moved from that height.
+- **Other kinds.** A shortcut and a recent app (104 dp: a header and a line or two) and the events have no large empty
+  area. A single task as its own card was drawn at the checklist's 232 dp with one line: it is 72 dp now. Today's next
+  event keeps its own layout (its countdown and action sit at the bottom of a 200 dp card).
+- **Also found.** The Dock's actions row left the composition when it had gone and so never reported a height of 0: the
+  room kept for the Dock was short by the row and the stack slid under the Dock after an open card closed. A tall card
+  hid this; a short one did not. The row is measured on a box that stays.
+
+### Strips that tuck under the card in front (item 5)
+
+A strip was the card clipped to its slot (a straight line) 4 dp above the next card. It is now drawn down to and around
+the rounded top of the card in front and clipped to its own outline less that card's outline (`Modifier.stripCut`:
+`Path.op(Difference)` used with `clipPath` in `drawWithContent`). No gap (`GAP_DP` is 0), a rounded cut, and the fills still
+never overlap, since it is one clip: no offscreen layer, blur or blend mode. The cut reads the stack's position while
+drawing, so it follows the neighbour during a drag or a coast with no recomposition (the `RecompositionProbe` tests pass
+unchanged). The front card at rest is not clipped. The slot (the tap target and what a screen reader finds) is still the
+strip's rectangle, a pitch tall. With a card open the stack is moved in whole pixels so the strip ends exactly on the open
+card's top.
+
+### Diagnostics: a layout's outline (item 6)
+
+"What apps publish" lists, for a notification with custom views, an outline of each layout (content, big): a line per view
+in drawing order, indented by depth, with its class's simple name, the entry name of its id, whether it takes a tap, its
+visibility, a text view's text length and size, an image view's picture size. The text goes into the input and never comes
+out of the mapper; the page's promise is tested with secrets in the layout, on the screen's lines and in the copied report.
+
+### Tests rewritten on purpose
+
+- `StreamBehaviorTest.aNotificationOpensToItsThreadAndSendsAReply` and `aControlOnEverySectionsPageReachesTheHost`,
+  `StreamScreenshotTest.notificationExpandedToItsThreadWithReply`: the browse card of a conversation shows its last
+  messages now, so they tap "Sam: Are we still on for lunch tomorrow?", and the first asserts the reply field is absent
+  before opening (it asserted the thread was).
+- `StreamStackBehaviorTest.aPeekingCardIsTheRealCardClippedToItsStripAndTheStripsNeverOverlap`: a strip is shorter than
+  the front card, no longer under half of it (the front card is as tall as its one line).
+- `StreamBehaviorTest.theNextCardsPeekOutAboveTheFocusedOneNotBesideIt`: reads the peeking card's drawn bounds (it ends
+  on the focused card's top, with no gap).
+
+### Not confirmed without a device
+
+- Reading and embedding a real app's `RemoteViews` from another package (the tests use this app's own layouts): package
+  contexts, an app's custom fonts and its click intents on the open card.
+- Whether the owner's two notifications are the shapes the tests cover.
+- The look of the cut over a real wallpaper with blur, and the seam between a strip and the card in front (two
+  anti-aliased edges meet there).
+- Unfolded, an open card is wider than the stack's column: the strip behind it is cut along the outline of the front
+  card's slot, which is narrower than the open card, so the cut's corners sit inside the open card's width.
+- At the largest font sizes a strip (a fixed pitch) cuts the header's second line, as before this round.
