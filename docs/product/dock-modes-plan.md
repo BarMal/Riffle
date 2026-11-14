@@ -10,7 +10,7 @@ Their spring, magnet and timing constants are the starting values; the settings 
 | --- | --- | --- |
 | 1. Dock modes | The Dock's Home and contextual modes: contextual tiles appended after the live apps, the row scrolls in the contextual mode, the open icon is ringed. Press-down-and-release opens and closes. The Stream spine, page header and Stream button go. | none |
 | 2. Trampoline and fan | The dip under the finger, the bounce on release, cards fanning out in sequence, Home fading, and closing as the opening reversed. Reduced-motion fallback. **Built**, see "As built". | 1 |
-| 3. Hold to choose | Press and hold or slide while pressed: early extend, selection ring, name label, edge scrolling, haptic tick per icon. Starting a press on an icon opens that icon's stack. | 1, 2 |
+| 3. Hold to choose | Press and hold or slide while pressed: early extend, selection ring, name label, edge scrolling, haptic tick per icon. Starting a press on an icon opens that icon's stack. **Built**, see "As built". | 1, 2 |
 | 4. Stacks | The bottom-anchored card stack with clipped peeking cards, drag, fling and magnet; swiping left and right between stacks in Dock order; shortcuts stacks for apps with nothing live; the Today page (agenda and tasks). | 1 |
 | 5. Cards | App-tinted cards, images in browse and open cards, a card growing in place when opened, and its actions in the Dock. | 4 |
 | 6. Settings | Stream settings (open card position, actions position, tint, background, pinned apps), motion settings, the accessibility action and the first-run hint. | 2 to 5 |
@@ -150,3 +150,59 @@ path in `DockPullState` can go when slice 2 rewrites the transition.
 
 **Left for later.** Haptics (slices 3 and 6), hold to choose, settings UI for speed, trampoline and magnet (the tuning
 object is ready for slice 6), bottom-anchored stack behaviour, the unfolded layout's fan.
+
+### Slice 3: Hold to choose (built)
+
+**Built.**
+
+- **Pure decisions in `:core:domain`** (`launcher/dock/DockChoice.kt`, constants in `DockMotionConstants`, the hold time in
+  `DockMotionTuning.holdMillis`). `DockChoiceStart` says when a press turns into choosing (past the 28 dp threshold and
+  resting for the hold time, 220 ms, or sliding more than 14 dp along the run; never before the threshold; moving more than
+  6 dp restarts the wait; drawing back above the threshold before it starts cancels it). `DockChoice.pageFor` is the one
+  decision of what is selectable and what page it opens (live apps, now playing, tiles; pinned apps return null, which is
+  the single line slice 4 changes), `nearestSelectable` snaps to the nearest selectable item by centre, skipping the rest,
+  `edgeDirection` and `edgeScrollDp` scroll the row when the finger is in the outer 15% (300 dp/s), `isCancelling` is the
+  cancel rule, `shouldTick` the haptic rule and `outcome` what a release does in every case (Home quick, Home choosing,
+  contextual quick, contextual choosing, cancel, nothing selectable). `dockDynamicEntryTarget` now delegates to `pageFor`.
+- **UI** (`app/.../launcher/`). `DockPull.kt`'s one pointer loop feeds every sample to `DockChoiceStart` and, while the
+  finger rests, bounds its wait for the next event by the moment holding starts choosing (`withTimeoutOrNull`), so a still
+  finger gets there; `DockPressState` gains `beginChoosing`, `choose`, `onChoosingBegan`, `onChoosingMoved` and
+  `DockPressRelease.choosing`. `DockChoiceState` (`DockChoice.kt`) holds the selection, the cancel state and the row's
+  scroll hook and applies the domain's rules; `DockMotionState.beginChoosing` / `endChoosing` freeze the dip and Home's
+  pre-fade and dim Home to 30% (letting go over 120 ms when the choice ends). The binding turns the release into a
+  `DockPressOutcome` and runs it: `OpenPage` and `Close` through the existing `onPress` (so the fan and the closing are
+  untouched), `SwitchPage` through the tile's own delegate (the Stream lands on the page and stays out), `Revert` the
+  existing bounce back.
+- **Early extend.** While choosing from Home the dynamic side behaves as in the contextual mode (`rememberDockDynamicSide`
+  `choosing`): the contextual row, the tiles, the row scrolled so the first live entry is at its start
+  (`RevealForChoosing`; instant under reduced motion). The tiles are the Stream's pages, which only a composed Stream
+  publishes, so `HomeDestination` composes the Stream unseen (alpha 0, no semantics) for the duration of a choice from Home.
+- **Selection UI.** `Modifier.dockChoiceMark` rings the selected tile (3 dp, primary) and draws it 14% larger (snapped under
+  reduced motion); `DockChoiceLabel` is a thin-glass chip just above the Dock on every edge. The label is hidden from
+  accessibility (`clearAndSetSemantics`, a test tag and `DockChoiceLabelKey` only): it echoes the name the item already
+  speaks, and a live region would announce it at every move. Entry bounds are now the tiles' whole extents
+  (`positionInRoot` and size) rather than `boundsInRoot`, which a parent's clip shrinks to nothing off-screen.
+- **Idle-friendly.** Frames run only while the finger holds in an end zone; otherwise the selection is looked at again when
+  a pointer event arrives or an entry moves (`snapshotFlow`), so a resting finger keeps the app idle.
+- **Haptics.** `LauncherHaptics.perform(DETENT)` (the repo's helper, which honours the haptic strength setting: off sounds
+  nothing) when choosing begins and when the selection lands on another item. Not asserted by a fake in any test; the rule is
+  `DockChoice.shouldTick`, tested on the JVM.
+- **Tests.** `core:domain`: `DockChoiceTest` (selectable, nearest with skipping, edge scroll, cancel, tick, when choosing
+  starts, every release outcome). JVM behaviour: `DockHoldToChooseTest` (hold, slide, cancel, from the contextual mode,
+  quick presses unchanged, edge scrolling, reduced motion). Device: `DockHoldToChooseInteractionTest`.
+
+**What differed from the design.**
+
+- **The cancel rule** is the lift, with the finger more than one Dock thickness beyond the Dock's inner edge (above a bottom
+  Dock); it is a state of where the finger is, so coming back over the Dock chooses again, and a system cancel never chooses.
+- **Choosing in the contextual mode with nothing selectable changes nothing** (the "page a plain press opens" there would be
+  Home, which is not a choice).
+- **The hold needs the finger still** (within 6 dp of where it came to rest, measured from there, not from the last sample),
+  so a press that keeps travelling is not a hold; the prototype only checked the time.
+- **A finger resting at the lift moment counts**: the lift is a sample, so choosing begins at it if the hold time has run.
+- **Folded phone only**, like the fan: an expanded posture's press stays the split's settle and never chooses.
+- **Pinned apps are not selectable** and so are never ringed; a press that starts on one still opens the last page.
+
+**Left for later.** Shortcut stacks for pinned apps (slice 4 only has to make `DockChoice.pageFor` answer for them), the
+settings for hold time and haptics (slice 6; the tuning field is ready), the first-run hint, the unfolded layout.
+

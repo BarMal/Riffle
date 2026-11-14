@@ -9,7 +9,8 @@
 > opens the Library from anywhere on the Dock. Where the text below still describes the Stream button, the Stream pull,
 > a swipe up on a live app or the two sides, it is superseded by that section and kept as history. **Slice 2** draws the
 > press: the Dock dips under the finger, bounces on release, the Stream's cards fan out of it and closing plays the
-> opening backwards ("The trampoline and the fan" in that section).
+> opening backwards ("The trampoline and the fan" in that section). **Slice 3** adds the third depth: **press, hold or
+> slide, then release** chooses an icon (see "Hold to choose" in that section).
 
 > **P5 (2026-11-12, [ADR 0003](../architecture/adr/0003-places-and-views.md)).** The Dock is the handle of the
 > Stream and the Library. Its two sides open their own worlds: the pinned side the static one (the Library), the dynamic
@@ -123,6 +124,44 @@ mode only adds tiles after them and scrolls the row along.
   and Shift + Enter. Every icon and tile is a focusable 48 dp target with a spoken label and a click action ("Show Agenda");
   the ringed one is selected.
 
+- **Hold to choose** (dock modes slice 3; ADR 0003, Amendment 3, One gesture, third depth). A press held past the
+  threshold, or slid sideways, becomes a selection (the pure rules are `core/domain/.../dock/DockChoice.kt`, the UI
+  `DockChoice.kt`):
+  - *Start.* Pressed past 28 dp and held still for the hold time (220 ms, `DockMotionTuning.holdMillis`, named so the
+    settings slice can expose it; "still" is within 6 dp of where the finger came to rest, and moving restarts the wait),
+    or slid more than 14 dp along the run while pressed past the threshold. Never before the threshold; drawing the press
+    back above it before choosing starts cancels as before. Once choosing, the lift always commits to the selection.
+  - *While choosing from Home* the Dock extends early: it draws the contextual row (pinned icons, live apps, now playing,
+    the tiles) scrolled so the live entries and tiles are in view, and Home is dimmed further (to 30% of its pre-fade;
+    it lets go over 120 ms when the choice ends, not under reduced motion). The Dock and Home hold where they were when
+    choosing began. Because the tiles are the Stream's pages, the Stream is composed (unseen, no semantics, alpha 0) while
+    a choice from Home runs. From the contextual mode the cards stay out and the row stays where it is.
+  - *The selection* follows the finger along the run: the nearest selectable item (by its centre) is ringed (3 dp, the
+    primary colour) and drawn 14% larger (no growth animation under reduced motion), and its name shows in a small glass
+    label just above the Dock (beyond it, away from the edge, on every edge). **Selectable** is every item that has a Stream
+    page: live apps, now playing and the tiles (`DockChoice.pageFor`, the one function a later slice extends to make pinned
+    apps selectable). Pinned apps have none yet, so the selection skips them (it snaps to the nearest selectable item)
+    and they are never ringed. The open page's own ring gives way to the selection's while choosing.
+  - *Edge scrolling.* A finger within 15% of the row's length from either end (or beyond it) scrolls the row that way at
+    300 dp/s, so off-screen items can be reached; the selection keeps following whatever is under the still finger.
+  - *Release.* From Home: the selected item's page opens with the normal fan; with nothing selectable, the page a plain
+    press opens (the page of the icon the press started on, else the last page). From the contextual mode: the Stream
+    switches to the selected page and stays out (the Dock springs back; no close); with nothing selectable, nothing
+    changes. A quick press-and-release in the contextual mode still closes.
+  - *Cancel.* Once choosing, drag the finger more than one Dock thickness beyond the Dock's inner edge (the edge away from
+    the screen's: above a bottom Dock) and the choice is cancelling: the ring and label go, and lifting there changes
+    nothing (back to the starting mode, with the Dock springing back). Coming back over the Dock chooses again. A gesture
+    taken away by the system (not a lift) also changes nothing.
+  - *Haptics.* A light tick (`LauncherHapticEvent.DETENT`, which follows the launcher's haptic strength setting, off
+    sounds nothing) when choosing begins and each time the selection lands on a different item; never on a move that
+    keeps the same item.
+  - *Accessibility.* Choosing is a refinement of the gesture, nothing only works by it: TalkBack and switch users have
+    "Show live pages" on the Dock, "Show <app> in Stream" on each live app in the Home mode, and a click action on each
+    item in the contextual mode. The label above the Dock is not exposed to accessibility (it echoes the name the item
+    already speaks; it would otherwise be announced at every move). It exists in the tree only as a test tag and a
+    `DockChoiceLabelKey` property.
+  - Folded phone only, like the fan: an expanded posture (split) does not turn a press into choosing.
+
 ### The Dock's gestures
 
 | Action on the dock | Result |
@@ -131,6 +170,10 @@ mode only adds tiles after them and scrolls the row along.
 | Pull away from the edge, anywhere on the Dock | Library, tracking the finger |
 | Press the Dock down and release (Home mode) | Stream, on the last page (on that icon's page when the press started on a live app) |
 | Press the Dock down and release (contextual mode) | Home |
+| Press the Dock down and hold (220 ms) or slide sideways, move to an icon, release (Home mode) | That icon's page (live app, now playing or tile), with the fan |
+| The same from the contextual mode | Switches to that icon's page; the Stream stays out |
+| While choosing: hold near either end of the row | Scrolls the row |
+| While choosing: drag more than one Dock height above the Dock, release | Nothing changes |
 | Tap a live app (Home mode) | Launches the app (the same launch as a pinned icon, in its own profile) |
 | Tap a live app or a tile (contextual mode) | Switches the Stream to its page |
 | Drag along the run (contextual mode) | Scrolls the row, with fling |
