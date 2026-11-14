@@ -25,7 +25,12 @@ import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.LayoutPosture
+import com.riffle.core.domain.launcher.settings.LayoutSettings
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
+import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
+import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
@@ -134,6 +139,28 @@ class LauncherSettingsStateReducerTest {
         val placed = reducer.reduce(off, LauncherShellAction.SelectHomeMode(HomeMode.PlacedItems))
         assertEquals(HomeMode.PlacedItems, placed.launcherSettings.home.mode)
         assertEquals(off.launcherSettings.features, placed.launcherSettings.features)
+    }
+
+    @Test
+    fun persistsEachPosturesLayoutOnItsOwn() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val start = LauncherShellState()
+        assertEquals(LayoutSettings(), start.launcherSettings.layout)
+
+        val vertical = LauncherShellAction.SelectPageScroll(LayoutPosture.FOLDED, PageScrollDirection.VERTICAL)
+        val off = LauncherShellAction.SelectPageIndicator(LayoutPosture.UNFOLDED, PageIndicatorPlacement.OFF)
+        val scrolled = reducer.reduce(start, vertical)
+        val hidden = reducer.reduce(scrolled, off)
+        val still = reducer.reduce(hidden, LauncherShellAction.SetQuickScroll(LayoutPosture.UNFOLDED, false))
+
+        assertEquals(PageScrollDirection.VERTICAL, scrolled.launcherSettings.layout.folded.pageScroll)
+        assertEquals(PostureLayoutSettings.UNFOLDED_DEFAULT, scrolled.launcherSettings.layout.unfolded)
+        assertEquals(PageIndicatorPlacement.OFF, hidden.launcherSettings.layout.unfolded.indicator)
+        assertEquals(PageScrollDirection.VERTICAL, hidden.launcherSettings.layout.folded.pageScroll)
+        assertEquals(false, still.launcherSettings.layout.unfolded.quickScroll)
+        assertEquals(true, still.launcherSettings.layout.folded.quickScroll)
+        assertEquals(still.launcherSettings, repository.savedSettings)
     }
 
     @Test

@@ -17,6 +17,7 @@ data class LauncherSettings(
     val haptics: HapticSettings = HapticSettings(),
     val hints: HintSettings = HintSettings(),
     val home: HomeBehaviourSettings = HomeBehaviourSettings(),
+    val layout: LayoutSettings = LayoutSettings(),
     val liquidGlass: LiquidGlassSettings = LiquidGlassSettings(),
     val motion: MotionSettings = MotionSettings(),
     val notificationHiding: NotificationHidingSettings = NotificationHidingSettings(),

@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.LayoutSettings
 import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.with
@@ -154,6 +155,21 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectPageScroll ->
+                    state.withLayoutSettings(launcherSettingsRepository) {
+                        it.withPageScroll(action.posture, action.direction)
+                    }
+
+                is LauncherShellAction.SelectPageIndicator ->
+                    state.withLayoutSettings(launcherSettingsRepository) {
+                        it.withIndicator(action.posture, action.placement)
+                    }
+
+                is LauncherShellAction.SetQuickScroll ->
+                    state.withLayoutSettings(launcherSettingsRepository) {
+                        it.withQuickScroll(action.posture, action.enabled)
+                    }
+
                 is LauncherShellAction.SetFeatureEnabled ->
                     state.withLauncherSettings(
                         settings =
@@ -292,5 +308,15 @@ private fun LauncherShellState.withStreamSettings(
 ): LauncherShellState =
     withLauncherSettings(
         settings = launcherSettings.copy(stream = change(launcherSettings.stream).coerced()),
+        launcherSettingsRepository = repository,
+    )
+
+/** The state with its layout-per-posture settings changed by [change] and saved. */
+private fun LauncherShellState.withLayoutSettings(
+    repository: LauncherSettingsRepository,
+    change: (LayoutSettings) -> LayoutSettings,
+): LauncherShellState =
+    withLauncherSettings(
+        settings = launcherSettings.copy(layout = change(launcherSettings.layout)),
         launcherSettingsRepository = repository,
     )

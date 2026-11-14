@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.library.LibraryCategories
 import com.riffle.core.domain.launcher.library.LibraryHit
 import com.riffle.core.domain.launcher.library.LibrarySearch
 import com.riffle.core.domain.launcher.library.LibraryView
+import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 
 /**
@@ -44,6 +45,8 @@ internal data class LibraryState(
     val labels: HomeLabelSettings = HomeLabelSettings.standard(),
     /** The room between the grid and the handle (Home's own setting). */
     val controlsSpacingDp: Int = 0,
+    /** The layout of the posture the Library is drawn in: which way the pages scroll and what the handle does. */
+    val pagedLayout: PostureLayoutSettings = PostureLayoutSettings.FOLDED_DEFAULT,
 ) {
     val isSearching: Boolean get() = query.isNotBlank()
 }
@@ -74,4 +77,5 @@ internal fun LauncherShellState.libraryState(): LibraryState =
         pagedMargins = homeLayout.settings.grid.margin.centered().nonNegative(),
         labels = homeLayout.settings.labels,
         controlsSpacingDp = homeLayout.dock.homeControlsSpacingDp,
+        pagedLayout = launcherSettings.layout.forDeviceClass(homeLayoutSet.activeKey.deviceClass),
     )

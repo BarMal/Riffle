@@ -44,6 +44,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -65,8 +66,11 @@ import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.HandleAxis
+import com.riffle.core.domain.launcher.home.HandleStrip
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeHandle
+import com.riffle.core.domain.launcher.home.HomeHandleLayout
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -74,11 +78,14 @@ import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.handleAxis
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
+import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlinx.coroutines.delay
@@ -577,9 +584,40 @@ private fun StandardHomeColumn(
         }
     }
 
+    val layoutSettings = state.presentation.layout
+    val handleAxis = layoutSettings.pageScroll.handleAxis
+    val browsing = state.visibleLayout.editMode == HomeEditMode.Browsing
+    // A column of dots beside a side Dock stands in a column of its own just in from the Dock, in front of its middle;
+    // a row stays in the row below the pages (above a bottom Dock), inside the bottom controls. While pages are being
+    // edited there is no handle.
+    val handleInStrip = browsing && HomeHandleLayout.stripFor(dockEdge, handleAxis) != HandleStrip.BOTTOM_ROW
+    val onOpenPage: (Int) -> Unit = { pageIndex ->
+        state.visibleLayout.pages.getOrNull(pageIndex)?.let { page ->
+            actions.onAction(LauncherShellAction.SelectHomePage(page.id))
+        }
+    }
+
     StandardHomeFrame(
         dockEdge = dockEdge,
         dockArea = dockArea,
+        handleStrip =
+            if (handleInStrip) {
+                {
+                    HomeHandleStrip(
+                        dockEdge = dockEdge,
+                        axis = handleAxis,
+                        pageCount = state.visibleLayout.pages.size,
+                        selectedPageIndex = pagerState.visualSelectedPageIndex,
+                        layout = layoutSettings,
+                        reducedMotion = state.presentation.reducedMotion,
+                        onPageSelected = onOpenPage,
+                        onIndicatorScrub = onIndicatorScrub,
+                        actions = actions,
+                    )
+                }
+            } else {
+                null
+            },
         modifier =
             Modifier
                 // Below the dock HomeDockHost draws over this frame, so the dock keeps its touches.
@@ -608,6 +646,7 @@ private fun StandardHomeColumn(
             presentation = state.homeGridPresentation(actions),
             appIconLoader = appIconLoader,
             actions = actions,
+            vertical = layoutSettings.pageScroll == PageScrollDirection.VERTICAL,
             activeDragSession = state.dragSession,
             onDragPageTargetChanged = { pageId ->
                 state.dragSession?.let { session ->
@@ -634,6 +673,8 @@ private fun StandardHomeColumn(
             selectedPageIndex = pagerState.visualSelectedPageIndex,
             reducedMotion = state.presentation.reducedMotion,
             onIndicatorScrub = onIndicatorScrub,
+            handle = if (handleInStrip) null else layoutSettings,
+            handleAxis = handleAxis,
             appIconLoader = appIconLoader,
             widgetViewFactory = state.presentation.widgetViewFactory,
             actions = actions,
@@ -656,6 +697,7 @@ private fun StandardHomeColumn(
 private fun StandardHomeFrame(
     dockEdge: DockPosition,
     dockArea: @Composable () -> Unit,
+    handleStrip: (@Composable () -> Unit)?,
     modifier: Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -673,14 +715,20 @@ private fun StandardHomeFrame(
     // dock by physical side keeps a left dock on the left either way.
     val dockLeadsRow = dockEdge.placedBeforeContent(LocalLayoutDirection.current)
     Row(modifier = modifier) {
-        if (dockLeadsRow) dockArea()
+        if (dockLeadsRow) {
+            dockArea()
+            handleStrip?.invoke()
+        }
         Column(
             modifier = Modifier.weight(1f).fillMaxHeight(),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally,
             content = content,
         )
-        if (!dockLeadsRow) dockArea()
+        if (!dockLeadsRow) {
+            handleStrip?.invoke()
+            dockArea()
+        }
     }
 }
 
@@ -699,6 +747,9 @@ private fun HomeBottomControls(
     selectedPageIndex: Int,
     reducedMotion: Boolean,
     onIndicatorScrub: (Int) -> Unit,
+    /** The layout the handle follows, or null when the handle is not in this row (it stands beside a side Dock). */
+    handle: PostureLayoutSettings?,
+    handleAxis: HandleAxis,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     actions: HomeWorkspaceActions,
@@ -717,18 +768,22 @@ private fun HomeBottomControls(
     ) { editMode ->
         when (editMode) {
             HomeEditMode.Browsing ->
-                HomeBottomSearchArea(
-                    pageCount = layout.pages.size,
-                    selectedPageIndex = selectedPageIndex,
-                    reducedMotion = reducedMotion,
-                    onPageSelected = { pageIndex ->
-                        layout.pages.getOrNull(pageIndex)?.let { page ->
-                            actions.onAction(LauncherShellAction.SelectHomePage(page.id))
-                        }
-                    },
-                    onIndicatorScrub = onIndicatorScrub,
-                    actions = actions,
-                )
+                if (handle != null) {
+                    HomeBottomSearchArea(
+                        pageCount = layout.pages.size,
+                        selectedPageIndex = selectedPageIndex,
+                        reducedMotion = reducedMotion,
+                        onPageSelected = { pageIndex ->
+                            layout.pages.getOrNull(pageIndex)?.let { page ->
+                                actions.onAction(LauncherShellAction.SelectHomePage(page.id))
+                            }
+                        },
+                        onIndicatorScrub = onIndicatorScrub,
+                        layout = handle,
+                        axis = handleAxis,
+                        actions = actions,
+                    )
+                }
 
             is HomeEditMode.EditingPage ->
                 PageEditControls(
@@ -750,8 +805,9 @@ private fun HomeBottomControls(
 }
 
 /**
- * The Home handle's row (ADR 0003, Amendment 1): one small pill just above the Dock that carries the page dots, is
- * the way into search and keeps the quick-drag along the dots. The empty room around it is Home's background (its
+ * The Home handle's row (ADR 0003, Amendment 1) above a bottom Dock: one small pill that carries the page dots, is the
+ * way into search and keeps the quick-drag along the dots. The row is as tall as the handle is across it (a column of
+ * dots, for pages that scroll up and down, makes it taller). The empty room around the pill is Home's background (its
  * long-press menu and its tap).
  */
 @Composable
@@ -761,13 +817,16 @@ private fun HomeBottomSearchArea(
     reducedMotion: Boolean,
     onPageSelected: (Int) -> Unit,
     onIndicatorScrub: (Int) -> Unit,
+    layout: PostureLayoutSettings,
+    axis: HandleAxis,
     actions: HomeWorkspaceActions,
 ) {
+    val dots = layout.showsDots && HomeHandle.showsDots(pageCount)
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(HOME_SEARCH_AREA_HEIGHT_DP.dp),
+                .height(HomeHandleLayout.reservedDp(DockPosition.BOTTOM, axis, pageCount, dots).dp),
         contentAlignment = Alignment.Center,
     ) {
         HomeBackgroundContextMenu(
@@ -784,9 +843,61 @@ private fun HomeBottomSearchArea(
             onOpenSearch = { actions.onAction(LauncherShellAction.OpenSearch) },
             onPageSelected = onPageSelected,
             onLiveDragPageChanged = onIndicatorScrub,
+            axis = axis,
+            showsDots = layout.showsDots,
+            dragEnabled = layout.dragsToScroll,
         )
     }
 }
+
+/**
+ * The Home handle beside a side Dock (ADR 0003, Amendment 2): a column between the Dock and the pages, as wide as the
+ * handle, with the pill centred in it. The Dock is centred on its edge, so the pill is in front of the Dock's middle,
+ * on Home's side of it, the way the folded handle stands above a bottom Dock. It runs the way the pages scroll.
+ */
+@Composable
+private fun HomeHandleStrip(
+    dockEdge: DockPosition,
+    axis: HandleAxis,
+    pageCount: Int,
+    selectedPageIndex: Int,
+    layout: PostureLayoutSettings,
+    reducedMotion: Boolean,
+    onPageSelected: (Int) -> Unit,
+    onIndicatorScrub: (Int) -> Unit,
+    actions: HomeWorkspaceActions,
+) {
+    val dots = layout.showsDots && HomeHandle.showsDots(pageCount)
+    Box(
+        modifier =
+            Modifier
+                .fillMaxHeight()
+                .width(HomeHandleLayout.reservedDp(dockEdge, axis, pageCount, dots).dp)
+                .testTag(HOME_HANDLE_STRIP_TEST_TAG),
+        contentAlignment = Alignment.Center,
+    ) {
+        HomeBackgroundContextMenu(
+            haptics = actions.haptics,
+            onAction = actions.onAction,
+            modifier = Modifier.matchParentSize(),
+            onClick = actions.onBackgroundClick,
+        )
+        HomeHandlePill(
+            pageCount = pageCount,
+            selectedPageIndex = selectedPageIndex,
+            reducedMotion = reducedMotion,
+            haptics = actions.haptics,
+            onOpenSearch = { actions.onAction(LauncherShellAction.OpenSearch) },
+            onPageSelected = onPageSelected,
+            onLiveDragPageChanged = onIndicatorScrub,
+            axis = axis,
+            showsDots = layout.showsDots,
+            dragEnabled = layout.dragsToScroll,
+        )
+    }
+}
+
+internal const val HOME_HANDLE_STRIP_TEST_TAG = "home-handle-strip"
 
 @Composable
 fun BoxScope.RemoveShortcutButton(
@@ -830,6 +941,7 @@ private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspace
         labelSettings = layout.settings.labels,
         reducedMotion = presentation.reducedMotion,
         widgetViewFactory = presentation.widgetViewFactory,
+        libraryEnabled = presentation.libraryEnabled,
         generatedPage =
             GeneratedPagePresentation(
                 notificationGroupsByApp = presentation.notificationGroupsByApp,
@@ -869,6 +981,10 @@ internal data class StandardHomePresentation(
     val widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     val widgetPicker: StandardHomeWidgetPickerState = StandardHomeWidgetPickerState(),
     val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
+    /** The layout of the posture Home is drawn in: which way the pages scroll and what the page dots do. */
+    val layout: PostureLayoutSettings = PostureLayoutSettings.FOLDED_DEFAULT,
+    /** Whether the Library is on; a generated page's "More apps" opens it, or search while it is off. */
+    val libraryEnabled: Boolean = true,
 )
 
 internal data class StandardHomeWidgetPickerState(
@@ -910,6 +1026,8 @@ internal data class HomeGridPresentation(
     val reducedMotion: Boolean = false,
     val widgetViewFactory: HomeWidgetViewFactory,
     val generatedPage: GeneratedPagePresentation = GeneratedPagePresentation(),
+    /** Whether the Library is on, for a generated page's "More apps" button (search stands in while it is off). */
+    val libraryEnabled: Boolean = true,
     /**
      * Which surface these cells belong to, so an item's own menu removes it from the right place.
      * The dock's panel renders through the same grid but is not one of the layout's pages.
@@ -945,7 +1063,6 @@ internal data class HomeWorkspaceActions(
     val onAction: (LauncherShellAction) -> Unit,
 )
 
-private const val HOME_SEARCH_AREA_HEIGHT_DP = HomeHandle.TOUCH_TARGET_DP
 private const val WIDGET_PICKER_EDGE_HOVER_ZONE_DP = 40
 private const val WIDGET_PICKER_EDGE_HOVER_DELAY_MILLIS = 650L
 

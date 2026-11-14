@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.home
 
+import com.riffle.core.domain.launcher.settings.PageScrollDirection
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -102,5 +103,129 @@ class HomeHandleTest {
         assertEquals(0, HomeHandle.trackWidthDp(0))
         assertEquals(6, HomeHandle.trackWidthDp(1))
         assertEquals(6 * 5 + 6 * 4, HomeHandle.trackWidthDp(5))
+    }
+}
+
+/** The handle's placement and size for each Dock edge and way of scrolling (ADR 0003, Amendment 2). */
+class HomeHandlePlacementTest {
+    @Test
+    fun theHandleRunsTheWayThePagesScroll() {
+        assertEquals(HandleAxis.HORIZONTAL, PageScrollDirection.HORIZONTAL.handleAxis)
+        assertEquals(HandleAxis.VERTICAL, PageScrollDirection.VERTICAL.handleAxis)
+    }
+
+    private fun strip(
+        edge: DockPosition,
+        axis: HandleAxis,
+    ) = HomeHandleLayout.stripFor(edge, axis)
+
+    @Test
+    fun aColumnBesideASideDockStandsInFrontOfItsMiddleOnHomesSide() {
+        assertEquals(HandleStrip.LEFT_COLUMN, strip(DockPosition.LEFT, HandleAxis.VERTICAL))
+        assertEquals(HandleStrip.RIGHT_COLUMN, strip(DockPosition.RIGHT, HandleAxis.VERTICAL))
+    }
+
+    @Test
+    fun aRowStaysInTheRowBelowThePagesWhateverTheDockEdge() {
+        // Above a bottom Dock it is just in from it. Beside a side Dock it would run across the Dock's edge, and a
+        // strip as wide as the row would squeeze the pages, so it keeps the row it always had.
+        HandleAxis.entries.forEach { axis ->
+            assertEquals(HandleStrip.BOTTOM_ROW, strip(DockPosition.BOTTOM, axis))
+            // A top Dock is not offered; a layout that still holds it keeps the handle where it always was.
+            assertEquals(HandleStrip.BOTTOM_ROW, strip(DockPosition.TOP, axis))
+        }
+        assertEquals(HandleStrip.BOTTOM_ROW, strip(DockPosition.LEFT, HandleAxis.HORIZONTAL))
+        assertEquals(HandleStrip.BOTTOM_ROW, strip(DockPosition.RIGHT, HandleAxis.HORIZONTAL))
+    }
+
+    @Test
+    fun aRowIsAsTallAsATouchTargetAndAColumnAsWide() {
+        val row = HomeHandleLayout.sizeDp(HandleAxis.HORIZONTAL, pageCount = 4)
+        val column = HomeHandleLayout.sizeDp(HandleAxis.VERTICAL, pageCount = 4)
+        // Glyph square, four dots (6 dp with 6 dp between) and the room after them.
+        assertEquals(HandleSize(widthDp = 48 + 42 + 14, heightDp = 48), row)
+        assertEquals(HandleSize(widthDp = 48, heightDp = 48 + 42 + 14), column)
+    }
+
+    @Test
+    fun aSinglePageOrNoDotsIsJustTheGlyphsSquare() {
+        assertEquals(HandleSize(48, 48), HomeHandleLayout.sizeDp(HandleAxis.HORIZONTAL, pageCount = 1))
+        assertEquals(HandleSize(48, 48), HomeHandleLayout.sizeDp(HandleAxis.VERTICAL, pageCount = 1))
+        assertEquals(HandleSize(48, 48), HomeHandleLayout.sizeDp(HandleAxis.VERTICAL, pageCount = 6, showsDots = false))
+    }
+
+    @Test
+    fun everyPageCountKeepsTheGlyphAndTheDotsTheSameRoomAroundThem() {
+        (2..8).forEach { pages ->
+            // The length is exactly the glyph's square, the dots and the fixed room after them: nothing depends on
+            // how many pages there are but the dots themselves.
+            assertEquals(
+                48 + HomeHandle.trackWidthDp(pages) + HomeHandle.TRAILING_PADDING_DP,
+                HomeHandleLayout.lengthDp(pages),
+            )
+        }
+    }
+
+    @Test
+    fun theRoomTheHandleTakesIsItsHeightInARowAndItsWidthInAColumnBesideASideDock() {
+        assertEquals(48, HomeHandleLayout.reservedDp(DockPosition.BOTTOM, HandleAxis.HORIZONTAL, pageCount = 5))
+        assertEquals(48, HomeHandleLayout.reservedDp(DockPosition.LEFT, HandleAxis.VERTICAL, pageCount = 5))
+        assertEquals(48, HomeHandleLayout.reservedDp(DockPosition.RIGHT, HandleAxis.VERTICAL, pageCount = 5))
+        // A row beside a side Dock stays in the row below the pages: its height, never a strip as wide as the row.
+        assertEquals(48, HomeHandleLayout.reservedDp(DockPosition.RIGHT, HandleAxis.HORIZONTAL, pageCount = 5))
+        // A column above a bottom Dock stands in the row above it, as tall as the column is long.
+        assertEquals(
+            HomeHandleLayout.lengthDp(5),
+            HomeHandleLayout.reservedDp(DockPosition.BOTTOM, HandleAxis.VERTICAL, pageCount = 5),
+        )
+    }
+
+    // The quick-drag on a column
+
+    @Test
+    fun aColumnReadsItsFingerAlongTheY() {
+        assertEquals(40f, HomeHandleLayout.alongAxis(HandleAxis.VERTICAL, x = 3f, y = 40f))
+        assertEquals(3f, HomeHandleLayout.alongAxis(HandleAxis.HORIZONTAL, x = 3f, y = 40f))
+    }
+
+    private fun down(
+        y: Float,
+        pages: Int,
+        x: Float = 0f,
+        trackPx: Float = 100f,
+    ): Int = HomeHandleLayout.pageAtPoint(HandleAxis.VERTICAL, x = x, y = y, trackLengthPx = trackPx, pageCount = pages)
+
+    @Test
+    fun theTopOfAColumnIsTheFirstPageAndTheBottomTheLast() {
+        // Five pages down a 100 px track: the dots are at 0, 25, 50, 75 and 100 from the top.
+        assertEquals(0, down(y = 0f, pages = 5, x = 70f))
+        assertEquals(2, down(y = 50f, pages = 5))
+        assertEquals(4, down(y = 100f, pages = 5))
+    }
+
+    @Test
+    fun aColumnChangesPageAtTheMidpointsAndStaysOnTheEndsPastThem() {
+        assertEquals(0, down(y = 12f, pages = 5))
+        assertEquals(1, down(y = 13f, pages = 5))
+        assertEquals(0, down(y = -50f, pages = 3))
+        assertEquals(2, down(y = 400f, pages = 3))
+    }
+
+    @Test
+    fun theHorizontalXDoesNotMoveAColumnsDrag() {
+        // A finger drifting sideways while it drags down the dots changes nothing.
+        assertEquals(1, down(y = 50f, pages = 3, x = 0f))
+        assertEquals(1, down(y = 50f, pages = 3, x = 999f))
+    }
+
+    private fun rtlPage(axis: HandleAxis): Int =
+        HomeHandleLayout.pageAtPoint(axis, x = 0f, y = 0f, trackLengthPx = 100f, pageCount = 5, rtl = true)
+
+    @Test
+    fun onlyARowMirrorsInRightToLeft() {
+        val row = rtlPage(HandleAxis.HORIZONTAL)
+        assertEquals(4, row)
+        // A column reads from the top in every language.
+        assertEquals(0, rtlPage(HandleAxis.VERTICAL))
     }
 }

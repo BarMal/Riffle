@@ -101,7 +101,7 @@ internal fun settingsSearchIndex(text: SettingsText): List<SettingsSearchEntry> 
 
 /**
  * The entries every token of [query] matches, those whose label matches first. A blank query matches nothing here:
- * the main page shows its ten rows then.
+ * the main page shows its rows then.
  */
 internal fun List<SettingsSearchEntry>.matching(query: String): List<SettingsSearchEntry> {
     val tokens = query.trim().lowercase().split(Regex("\\s+")).filter(String::isNotBlank)

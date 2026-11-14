@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -22,7 +24,7 @@ internal fun settingsMainRowTestTag(page: SettingsPage): String = "settings-main
 internal fun settingsSearchResultTestTag(entry: SettingsSearchEntry): String = "settings-result-${entry.id}"
 
 /**
- * The main page: a search field and the ten places Settings is organised by. Typing searches every individual setting
+ * The main page: a search field and the places Settings is organised by. Typing searches every individual setting
  * and page (label, path and keywords); a result opens its page scrolled to that setting.
  */
 @Composable
@@ -34,6 +36,8 @@ internal fun SettingsMainPageContent(
     val text = rememberSettingsText()
     val query = rememberSaveable { mutableStateOf("") }
     val index = remember(text) { settingsSearchIndex(text) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val focus = LocalFocusManager.current
 
     AppSearchField(
         modifier = Modifier.fillMaxWidth().testTag(SETTINGS_SEARCH_FIELD_TEST_TAG),
@@ -76,7 +80,13 @@ internal fun SettingsMainPageContent(
                         modifier = Modifier.testTag(settingsSearchResultTestTag(entry)),
                         title = entry.label,
                         subtitle = entry.path.ifEmpty { stringResource(R.string.settings_page_main) },
-                        onClick = { onSettingSelected(SettingsTarget(entry.page, entry.key)) },
+                        onClick = {
+                            // Put the keyboard away before the page opens. Left to the field leaving the
+                            // screen, a keyboard still on its way up stays up and covers the setting.
+                            focus.clearFocus()
+                            keyboard?.hide()
+                            onSettingSelected(SettingsTarget(entry.page, entry.key))
+                        },
                     )
                 }
             }

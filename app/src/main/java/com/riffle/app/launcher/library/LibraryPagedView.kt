@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,8 +61,13 @@ import com.riffle.app.launcher.drawerKey
 import com.riffle.app.launcher.drawerRowState
 import com.riffle.app.launcher.notificationCountFor
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.HandleStrip
 import com.riffle.core.domain.launcher.home.HomeHandle
+import com.riffle.core.domain.launcher.home.HomeHandleLayout
+import com.riffle.core.domain.launcher.home.handleAxis
 import com.riffle.core.domain.launcher.library.LibraryPaging
+import com.riffle.core.domain.launcher.settings.PageScrollDirection
 import kotlinx.coroutines.launch
 
 /**
@@ -83,6 +89,8 @@ internal fun LibraryPagedView(
     backgroundActions: List<CustomAccessibilityAction>,
     modifier: Modifier = Modifier,
     handleModifier: Modifier = Modifier,
+    /** The edge the Dock stands on: the handle stands just in from it (ADR 0003, Amendment 2). */
+    dockEdge: DockPosition = DockPosition.BOTTOM,
     backgroundMenu: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit,
 ) {
     val columns = state.pagedGrid.columns.coerceAtLeast(1)
@@ -95,83 +103,124 @@ internal fun LibraryPagedView(
     val emptyText = appListEmptyText(AppListSurface.DRAWER, query = "", profileFilter = state.profileFilter)
     val menuLabel = stringResource(R.string.library_paged_background_label)
     val margins = state.pagedMargins
+    // The pages scroll the way the posture says, and the handle follows them (ADR 0003, Amendment 2).
+    val layout = state.pagedLayout
+    val axis = layout.pageScroll.handleAxis
+    val verticalPages = layout.pageScroll == PageScrollDirection.VERTICAL
+    val strip = HomeHandleLayout.stripFor(dockEdge, axis)
+    val dots = layout.showsDots && HomeHandle.showsDots(pageCount)
 
-    Column(
+    val pageContent: @Composable (Int) -> Unit = { index ->
+        Box(modifier = Modifier.fillMaxSize().testTag("$LIBRARY_PAGE_TEST_TAG_PREFIX$index")) {
+            // Behind the icons, so the space between them is the Library's own: a long-press there is its menu.
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    context.haptics.longPress()
+                                    menuOpen = true
+                                },
+                            )
+                        }
+                        .semantics {
+                            onLongClick(label = menuLabel) {
+                                menuOpen = true
+                                true
+                            }
+                        },
+            )
+            if (pages.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = emptyText, style = MaterialTheme.typography.bodyLarge)
+                }
+            } else {
+                LibraryPageGrid(
+                    apps = pages.getOrElse(index) { emptyList() },
+                    state = state,
+                    context = context,
+                )
+            }
+        }
+    }
+    val pagerModifier =
+        Modifier
+            .fillMaxSize()
+            .padding(
+                start = margins.start.dp,
+                top = margins.top.dp,
+                end = margins.end.dp,
+                bottom = margins.bottom.dp,
+            )
+    val pager: @Composable (Modifier) -> Unit = { outer ->
+        if (verticalPages) {
+            VerticalPager(
+                state = pagerState,
+                modifier = outer.then(pagerModifier),
+                key = { index -> index },
+            ) { index -> pageContent(index) }
+        } else {
+            HorizontalPager(
+                state = pagerState,
+                modifier = outer.then(pagerModifier),
+                key = { index -> index },
+            ) { index -> pageContent(index) }
+        }
+    }
+    val handle: @Composable () -> Unit = {
+        HomeHandlePill(
+            pageCount = pageCount,
+            selectedPageIndex = pagerState.currentPage,
+            reducedMotion = reducedMotion,
+            haptics = context.haptics,
+            onOpenSearch = onOpenSearch,
+            onPageSelected = { page ->
+                scope.launch {
+                    if (reducedMotion) pagerState.scrollToPage(page) else pagerState.animateScrollToPage(page)
+                }
+            },
+            onLiveDragPageChanged = { page -> scope.launch { pagerState.scrollToPage(page) } },
+            axis = axis,
+            showsDots = layout.showsDots,
+            dragEnabled = layout.dragsToScroll,
+        )
+    }
+    val reserved = HomeHandleLayout.reservedDp(dockEdge, axis, pageCount, dots).dp
+
+    Box(
         modifier =
             modifier
                 .fillMaxSize()
                 .testTag(LIBRARY_PAGED_TEST_TAG)
                 .semantics { customActions = backgroundActions },
     ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(
-                        start = margins.start.dp,
-                        top = margins.top.dp,
-                        end = margins.end.dp,
-                        bottom = margins.bottom.dp,
-                    ),
-            key = { index -> index },
-        ) { index ->
-            Box(modifier = Modifier.fillMaxSize().testTag("$LIBRARY_PAGE_TEST_TAG_PREFIX$index")) {
-                // Behind the icons, so the space between them is the Library's own: a long-press there is its menu.
+        if (strip == HandleStrip.BOTTOM_ROW) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                pager(Modifier.weight(1f).fillMaxWidth())
+                Spacer(modifier = Modifier.height(state.controlsSpacingDp.coerceAtLeast(0).dp))
                 Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        context.haptics.longPress()
-                                        menuOpen = true
-                                    },
-                                )
-                            }
-                            .semantics {
-                                onLongClick(label = menuLabel) {
-                                    menuOpen = true
-                                    true
-                                }
-                            },
-                )
-                if (pages.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = emptyText, style = MaterialTheme.typography.bodyLarge)
-                    }
-                } else {
-                    LibraryPageGrid(
-                        apps = pages.getOrElse(index) { emptyList() },
-                        state = state,
-                        context = context,
-                    )
-                }
+                    modifier = Modifier.fillMaxWidth().height(reserved).then(handleModifier),
+                    contentAlignment = Alignment.Center,
+                ) { handle() }
+            }
+        } else {
+            // A column beside a side Dock: just in from the Dock, the handle centred in it, the pages the rest.
+            val handleColumn: @Composable () -> Unit = {
+                Box(
+                    modifier = Modifier.fillMaxHeight().width(reserved).then(handleModifier),
+                    contentAlignment = Alignment.Center,
+                ) { handle() }
+            }
+            Row(modifier = Modifier.fillMaxSize()) {
+                if (strip == HandleStrip.LEFT_COLUMN) handleColumn()
+                pager(Modifier.weight(1f).fillMaxHeight())
+                if (strip == HandleStrip.RIGHT_COLUMN) handleColumn()
             }
         }
-        Spacer(modifier = Modifier.height(state.controlsSpacingDp.coerceAtLeast(0).dp))
-        Box(
-            modifier = Modifier.fillMaxWidth().heightIn(min = HomeHandle.TOUCH_TARGET_DP.dp).then(handleModifier),
-            contentAlignment = Alignment.Center,
-        ) {
-            HomeHandlePill(
-                pageCount = pageCount,
-                selectedPageIndex = pagerState.currentPage,
-                reducedMotion = reducedMotion,
-                haptics = context.haptics,
-                onOpenSearch = onOpenSearch,
-                onPageSelected = { page ->
-                    scope.launch {
-                        if (reducedMotion) pagerState.scrollToPage(page) else pagerState.animateScrollToPage(page)
-                    }
-                },
-                onLiveDragPageChanged = { page -> scope.launch { pagerState.scrollToPage(page) } },
-            )
-        }
-        // The menu hangs off the column, not a page, so it survives the page changing under it.
-        Box {
+        // The menu hangs off the view, not a page, so it survives the page changing under it.
+        Box(modifier = Modifier.align(Alignment.BottomStart)) {
             RiffleContextMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 backgroundMenu { menuOpen = false }
             }

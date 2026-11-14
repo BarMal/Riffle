@@ -261,6 +261,9 @@
     <string name="settings_page_floating_dock">Floating dock</string>
     <string name="settings_page_floating_dock_summary">An edge handle over other apps</string>
     <string name="settings_page_floating_dock_keywords">floating dock overlay handle edge shortcuts</string>
+    <string name="settings_page_layout">Layout</string>
+    <string name="settings_page_layout_summary">Dock position, page scrolling and page dots, folded and unfolded</string>
+    <string name="settings_page_layout_keywords">layout posture folded unfolded fold dock edge side scroll direction vertical horizontal pages indicator dots</string>
     <string name="settings_page_library">Library</string>
     <string name="settings_page_library_summary">Show as, search results and hidden apps</string>
     <string name="settings_page_library_keywords">library app drawer all apps</string>
@@ -375,6 +378,22 @@
     <string name="setting_home_set_up_again_keywords">set up walkthrough onboarding tour first-time</string>
     <string name="setting_dock_show">Show dock</string>
     <string name="setting_dock_show_keywords">dock visible hide</string>
+    <string name="setting_layout_folded_dock_edge">Dock position, folded</string>
+    <string name="setting_layout_folded_dock_edge_keywords">layout folded phone dock edge bottom left right side</string>
+    <string name="setting_layout_folded_page_scroll">App pages scroll, folded</string>
+    <string name="setting_layout_folded_page_scroll_keywords">layout folded phone pages scroll sideways horizontal vertical up down direction</string>
+    <string name="setting_layout_folded_indicator">Page dots, folded</string>
+    <string name="setting_layout_folded_indicator_keywords">layout folded phone page dots indicator handle search off</string>
+    <string name="setting_layout_folded_quick_scroll">Drag the dots to scroll, folded</string>
+    <string name="setting_layout_folded_quick_scroll_keywords">layout folded phone quick scroll drag dots scrub pages</string>
+    <string name="setting_layout_unfolded_dock_edge">Dock position, unfolded</string>
+    <string name="setting_layout_unfolded_dock_edge_keywords">layout unfolded tablet dock edge bottom left right side</string>
+    <string name="setting_layout_unfolded_page_scroll">App pages scroll, unfolded</string>
+    <string name="setting_layout_unfolded_page_scroll_keywords">layout unfolded tablet pages scroll sideways horizontal vertical up down direction</string>
+    <string name="setting_layout_unfolded_indicator">Page dots, unfolded</string>
+    <string name="setting_layout_unfolded_indicator_keywords">layout unfolded tablet page dots indicator handle search off</string>
+    <string name="setting_layout_unfolded_quick_scroll">Drag the dots to scroll, unfolded</string>
+    <string name="setting_layout_unfolded_quick_scroll_keywords">layout unfolded tablet quick scroll drag dots scrub pages</string>
     <string name="setting_dock_position">Dock position</string>
     <string name="setting_dock_position_keywords">dock edge left right bottom top</string>
     <string name="setting_dock_icon_size">Icon size</string>
@@ -709,4 +728,24 @@
     <string name="glance_preview_event_time">09:00 to 09:30</string>
     <string name="glance_preview_story">A new look for the launcher</string>
     <string name="glance_preview_feed">Riffle blog</string>
+    <!-- Settings > Layout: one set per posture. -->
+    <string name="settings_layout_intro">Folded and unfolded each keep their own layout. A tablet or a desktop window uses the unfolded one.</string>
+    <string name="settings_layout_section_folded">Folded</string>
+    <string name="settings_layout_section_unfolded">Unfolded</string>
+    <string name="settings_layout_dock_edge_title">Dock position</string>
+    <string name="settings_layout_dock_edge_subtitle">Which edge of the screen the Dock stands on.</string>
+    <string name="settings_layout_edge_bottom">Bottom</string>
+    <string name="settings_layout_edge_left">Left</string>
+    <string name="settings_layout_edge_right">Right</string>
+    <string name="settings_layout_page_scroll_title">App pages scroll</string>
+    <string name="settings_layout_page_scroll_subtitle">Which way you swipe between pages of apps. The page dots run the same way.</string>
+    <string name="settings_layout_scroll_horizontal">Sideways</string>
+    <string name="settings_layout_scroll_vertical">Up and down</string>
+    <string name="settings_layout_indicator_title">Page dots</string>
+    <string name="settings_layout_indicator_subtitle">Stand just in from the Dock, in front of its middle, with the search button. Off hides the dots and keeps search.</string>
+    <string name="settings_layout_indicator_beside">Beside the Dock</string>
+    <string name="settings_layout_indicator_off">Off</string>
+    <string name="settings_layout_quick_scroll_title">Drag the dots to scroll</string>
+    <string name="settings_layout_quick_scroll_subtitle">Drag along the dots to go to a page quickly. Off, the dots only show where you are, and a tap on them still opens search.</string>
+    <string name="settings_layout_quick_scroll_off_subtitle">The page dots are off, so there is nothing to drag.</string>
 </resources>

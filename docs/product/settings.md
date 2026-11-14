@@ -16,7 +16,7 @@ label and its search keywords as string resources. `SettingsPagesTest` checks th
 reachable from the main page, that every setting is on a reachable page, indexed and anchored on its row, and that
 Back goes to the parent.
 
-The main page is a search field and exactly ten rows, in this order. Typing replaces the rows with matching pages and
+The main page is a search field and exactly eleven rows, in this order. Typing replaces the rows with matching pages and
 settings (label, path or keyword); a result opens its page scrolled to that setting.
 
 | Page | Section | Settings |
@@ -31,6 +31,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | | Dynamic side | Live apps |
 | | Floating dock | Opens the sub-page |
 | Floating dock (under Dock) | | Floating dock on or off, apps, edge, handle thickness, size, position, opacity, expanded icon size, orientation, labels |
+| **Layout** | Folded, Unfolded | Per posture (a tablet and a desktop window use Unfolded): Dock position (Bottom, Left, Right), App pages scroll (Sideways, Up and down), Page dots (Beside the Dock, Off) and Drag the dots to scroll (a switch, disabled while the dots are off). Defaults: folded Bottom, Sideways; unfolded Right, Up and down; dots beside the Dock and quick scroll on in both. The Dock position is the Dock page's own value for the posture's device class. Stored in `LauncherSettings.layout` (`LayoutSettings`), reduced by `SelectPageScroll`, `SelectPageIndicator`, `SetQuickScroll` and `SelectPostureDockEdge`. See [dock-modes-plan.md](dock-modes-plan.md), "U1" |
 | **Library** | View | Show as (Categories, A-Z, Grid), grid columns (used by Grid) |
 | | Search | Search results as icons or list |
 | | Apps | Hidden apps (opens the sub-page), refresh installed apps |
@@ -56,7 +57,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 
 Removed pages: Workspaces, Sources and its nine source detail pages, Saved lenses, Contextual, Cards appearance
 (redirect), RSS feeds and Calendar feeds as top-level pages, Permissions and Privacy as two pages (merged), the
-Developer section, Layout (now Home) and App drawer (now Library).
+Developer section, the old Layout (now Home) and App drawer (now Library). The Layout page of the table above is a different page: the layout per posture, with its page named `POSTURE_LAYOUT`.
 
 Where "Show as" lives twice it is one stored value. The Stream page writes `StreamLayoutAction`s through the same
 `CachedStreamLayoutRepository` the Stream's header menus use (`A/stream/StreamLayoutStore.kt`); Library > Show as

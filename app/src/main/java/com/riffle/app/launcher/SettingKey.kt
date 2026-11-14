@@ -416,6 +416,46 @@ enum class SettingKey(
     ),
     BACKUP_EXPORT(SettingsPage.BACKUP, R.string.setting_backup_export, R.string.setting_backup_export_keywords),
     BACKUP_IMPORT(SettingsPage.BACKUP, R.string.setting_backup_import, R.string.setting_backup_import_keywords),
+    LAYOUT_FOLDED_DOCK_EDGE(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_folded_dock_edge,
+        R.string.setting_layout_folded_dock_edge_keywords,
+    ),
+    LAYOUT_FOLDED_PAGE_SCROLL(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_folded_page_scroll,
+        R.string.setting_layout_folded_page_scroll_keywords,
+    ),
+    LAYOUT_FOLDED_INDICATOR(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_folded_indicator,
+        R.string.setting_layout_folded_indicator_keywords,
+    ),
+    LAYOUT_FOLDED_QUICK_SCROLL(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_folded_quick_scroll,
+        R.string.setting_layout_folded_quick_scroll_keywords,
+    ),
+    LAYOUT_UNFOLDED_DOCK_EDGE(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_unfolded_dock_edge,
+        R.string.setting_layout_unfolded_dock_edge_keywords,
+    ),
+    LAYOUT_UNFOLDED_PAGE_SCROLL(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_unfolded_page_scroll,
+        R.string.setting_layout_unfolded_page_scroll_keywords,
+    ),
+    LAYOUT_UNFOLDED_INDICATOR(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_unfolded_indicator,
+        R.string.setting_layout_unfolded_indicator_keywords,
+    ),
+    LAYOUT_UNFOLDED_QUICK_SCROLL(
+        SettingsPage.POSTURE_LAYOUT,
+        R.string.setting_layout_unfolded_quick_scroll,
+        R.string.setting_layout_unfolded_quick_scroll_keywords,
+    ),
 }
 
 /** The name this setting is shown under, the same string the search index uses. */

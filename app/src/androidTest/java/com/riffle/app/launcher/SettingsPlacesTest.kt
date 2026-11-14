@@ -40,7 +40,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Settings by Place (docs/product/settings.md): the ten rows of the main page, Back going to the parent page, search
+ * Settings by Place (docs/product/settings.md): the eleven rows of the main page, Back going to the parent page, search
  * opening a page scrolled to the setting, and the Stream page writing the layout the Stream's own menus write.
  */
 @RunWith(AndroidJUnit4::class)
@@ -95,7 +95,7 @@ class SettingsPlacesTest {
     }
 
     @Test
-    fun theMainPageListsTheTenPlacesAndNothingElse() {
+    fun theMainPageListsTheElevenPlacesAndNothingElse() {
         setSurface()
 
         settingsMainPageRows.forEach { page ->
@@ -105,7 +105,7 @@ class SettingsPlacesTest {
             SemanticsMatcher("is a main page row") { node ->
                 node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("settings-main-row-") == true
             }
-        assertEquals(10, composeRule.onAllNodes(mainRows).fetchSemanticsNodes().size)
+        assertEquals(11, composeRule.onAllNodes(mainRows).fetchSemanticsNodes().size)
         // The pages the document removed are not on the main page.
         composeRule.onNodeWithText("Sources").assertDoesNotExist()
         composeRule.onNodeWithText("Permissions").assertDoesNotExist()
