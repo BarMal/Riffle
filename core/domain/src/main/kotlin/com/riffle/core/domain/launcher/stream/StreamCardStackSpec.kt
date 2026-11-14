@@ -15,12 +15,17 @@ object StreamCardStackSpec {
     /** Distance between neighbouring cards' tops: how much of the next card peeks out above the one in front. */
     const val PITCH_DP = 56f
 
-    /** The clear space between a peeking card's strip and the card in front of it, so the two fills never touch. */
-    const val GAP_DP = 4f
+    /**
+     * The clear space between a peeking card's strip and the card in front of it: none. A strip tucks under the card
+     * in front (it is drawn down to and around that card's rounded top and cut along its outline), so the stack reads
+     * as overlapping cards and not as sliced slabs; the two fills still never overlap, since the cut is a clip.
+     */
+    const val GAP_DP = 0f
 
     /**
-     * How much of a card its strip shows: the pitch less the gap, from the card's top edge. Every card's header (an
-     * icon or avatar and a one-line title) lies wholly inside it, whatever the kind of card.
+     * How much of a card its strip shows down its middle: the pitch (less the gap), from the card's top edge. Every
+     * card's header (an icon or avatar and a one-line title) lies wholly inside it, whatever the kind of card. Beside
+     * the rounded top corners of the card in front a little more of the card shows.
      */
     const val STRIP_HEIGHT_DP = PITCH_DP - GAP_DP
 

@@ -729,9 +729,11 @@ class StreamBehaviorTest {
             ).fetchSemanticsNodes()
         assertTrue("the second card peeks", peeks.size == 1)
         val peek = peeks.single()
+        // The strip ends on the focused card's top with no gap now (it tucks under it), so this reads the strip as it
+        // is drawn (its bounds follow its scale; it is in view, so no parent clips them) and allows the shared pixel.
         assertTrue(
             "the peeking card is above the focused one",
-            peek.positionInRoot.y + peek.size.height <= focused.positionInRoot.y,
+            peek.boundsInRoot.bottom <= focused.positionInRoot.y + 1f,
         )
         assertTrue(
             "and in the same column",

@@ -84,6 +84,7 @@ import kotlinx.coroutines.flow.drop
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.roundToInt
 
 private val StackMaxCardWidth = StreamMaxReadableWidth
 
@@ -602,9 +603,12 @@ private fun FocusedStack(
                     .graphicsLayer {
                         // Where the front card's top stands now: its own height above the bottom (read here, in
                         // the draw phase, so a moving stack recomposes nothing).
+                        // In whole pixels, as the layout places the slots and the layer places the open card: the
+                        // strip behind ends exactly on the open card's top, with no row between them.
                         val frontTop =
-                            areaHeightPx - bottomInsetPx - geometry.frontHeightAt(state.position) * density
-                        translationY = if (openActive) frameGeometry.topPx - frontTop else 0f
+                            areaHeightPx.roundToInt() - bottomInsetPx.roundToInt() -
+                                (geometry.frontHeightAt(state.position) * density).roundToInt()
+                        translationY = if (openActive) (frameGeometry.topPx.roundToInt() - frontTop).toFloat() else 0f
                         // Too little room above the open card for the strips: they are not drawn, not overlapped.
                         alpha = if (openActive && !frameGeometry.stripsVisible) 0f else 1f
                     }
@@ -643,6 +647,7 @@ private fun FocusedStack(
                     val swipe = rememberSwipeDismissState(item.swipeableNotification(), callbacks, env.reducedMotion)
                     StackSlot(
                         index = index,
+                        cut = Modifier.stripCut(index, state, geometry, cardWidth),
                         isFront = isFront,
                         covered = isFront && openActive,
                         rank = abs(index - frontIndex),
@@ -689,6 +694,8 @@ private fun FocusedStack(
 @Suppress("LongParameterList")
 private fun StackSlot(
     index: Int,
+    /** Draws the card less the card in front of it, so it tucks under that card ([stripCut]). */
+    cut: Modifier,
     isFront: Boolean,
     /** The front card with a card open over it: the open card is drawn in its place, so this one is not. */
     covered: Boolean,
@@ -744,9 +751,11 @@ private fun StackSlot(
             Modifier
                 .stackSlot(index)
                 .dockFan(dockFan, rank)
-                // The swipe moves the whole slot, outside its clip, so the card is never cut off as it goes.
+                // The swipe moves the whole slot, outside its cut, so the card is never cut off as it goes.
                 .swipeLayer(swipe)
-                .clipToBounds()
+                // The slot is as tall as the part of the card that shows (its strip: what a tap and a screen reader
+                // find); the card is drawn past it, down to and around the rounded top of the card in front.
+                .then(cut)
                 .then(if (covered) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics {} else semantics)
                 .then(if (isFront && !covered) Modifier.frontCardKeys(onOpen).swipeToDismiss(swipe) else Modifier),
     ) {
