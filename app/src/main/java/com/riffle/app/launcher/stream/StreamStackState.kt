@@ -124,6 +124,12 @@ internal class StreamStackState {
         rest(target, onTick)
     }
 
+    /** Brings card [target] to the front at once (a tap on a strip behind an open card opens that card in place). */
+    fun snapTo(target: Int) {
+        position = StackSettle.restPosition(target)
+        heading = target
+    }
+
     /** Reduced motion: no coast, spring or magnet; the nearest card at once and a short fade. */
     private suspend fun jump(
         target: Int,

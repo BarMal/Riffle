@@ -15,6 +15,9 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -519,6 +522,21 @@ class StreamStackBehaviorTest {
         )
         assertTrue("and stays inside the area", card.laidOut.top >= 0f && card.laidOut.bottom <= 380f * density + 1f)
         composeRule.onNodeWithText(titles[0]).assertIsDisplayed()
+    }
+
+    @Test
+    fun aTapOnAStripBehindAnOpenCardOpensThatCardInPlace() {
+        show(cards = 4, reduced = true)
+        composeRule.onNodeWithText(titles[0]).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(STREAM_OPEN_CARD_TEST_TAG).assertExists()
+        slot(1).performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(STREAM_OPEN_CARD_TEST_TAG).assertExists()
+        composeRule.onNode(
+            hasText(titles[1]) and hasAnyAncestor(hasTestTag(STREAM_OPEN_CARD_TEST_TAG)),
+        ).assertExists()
+        assertTrue("the tap opened nothing in an app: $actions", actions.isEmpty())
     }
 
     private object NoIcons : AppIconLoader {

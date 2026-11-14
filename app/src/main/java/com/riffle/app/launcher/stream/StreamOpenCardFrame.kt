@@ -1,7 +1,6 @@
 package com.riffle.app.launcher.stream
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -15,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Constraints
@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.stream.OpenCardLayout
 import com.riffle.core.domain.launcher.stream.OpenCardSpring
 import com.riffle.core.domain.launcher.stream.OpenCardSpringState
+import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamColumnRect
 import kotlin.math.roundToInt
 
@@ -119,6 +120,8 @@ internal class OpenCardLayer(
     val strips: Dp,
     val bottomInset: Dp,
     val onClose: () -> Unit,
+    /** A tap on the strip of the card [rank] places behind the open one (1 is the nearest): open that card. */
+    val onStripTap: (rank: Int) -> Unit,
     val content: @Composable () -> Unit,
 )
 
@@ -139,11 +142,22 @@ internal fun OpenCardLayerHost(
                 Modifier
                     .matchParentSize()
                     .clearAndSetSemantics {}
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = layer.onClose,
-                    ),
+                    .pointerInput(layer) {
+                        detectTapGestures { tap ->
+                            // A tap on a strip behind the open card opens that card; anywhere else closes this one.
+                            val top = layer.geometry.topPx
+                            val pitch = StreamCardStackSpec.PITCH_DP * density
+                            val rank = if (tap.y < top) kotlin.math.ceil((top - tap.y) / pitch).toInt() else 0
+                            val strips = (layer.strips.toPx() / pitch).toInt()
+                            if (layer.geometry.stripsVisible && rank in 1..strips) {
+                                layer.onStripTap(
+                                    rank,
+                                )
+                            } else {
+                                layer.onClose()
+                            }
+                        }
+                    },
         )
         OpenCardFrame(
             motion = cards.motion,

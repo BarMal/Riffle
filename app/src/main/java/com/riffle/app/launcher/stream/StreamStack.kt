@@ -268,6 +268,14 @@ internal fun StreamStack(
                     strips = strips,
                     bottomInset = StackBottomInset,
                     onClose = close,
+                    onStripTap = { rank ->
+                        // The strips are the older cards above the front one: open the one that was tapped.
+                        val front = StackFling.nearest(stackState.position, entries.size)
+                        entries.getOrNull(front + rank)?.takeIf { it.opensInPlace }?.let { target ->
+                            stackState.snapTo(front + rank)
+                            open(target)
+                        } ?: close()
+                    },
                 ) {
                     OpenStreamCard(
                         content = content,
