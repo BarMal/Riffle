@@ -13,8 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,6 +45,8 @@ import com.riffle.core.domain.launcher.stream.StreamActionPolicy
 import com.riffle.core.domain.launcher.workspace.settings.HideChoice
 
 private const val MAX_QUEUE_ROWS = 8
+private const val SCRUBBER_ACTIVE_ALPHA = 0.7f
+private const val SCRUBBER_INACTIVE_ALPHA = 0.2f
 private val QueueArtworkSize = RiffleSpacing.xxxl - RiffleSpacing.s
 
 /**
@@ -169,6 +173,16 @@ internal fun MediaScrubber(
                 dragging = null
             },
             enabled = seekable,
+            // The card's ink, softened: the theme's accent (which the card's text takes as its ink) is too heavy here.
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = LocalContentColor.current,
+                    activeTrackColor = LocalContentColor.current.copy(alpha = SCRUBBER_ACTIVE_ALPHA),
+                    inactiveTrackColor = LocalContentColor.current.copy(alpha = SCRUBBER_INACTIVE_ALPHA),
+                    disabledThumbColor = LocalContentColor.current.copy(alpha = SCRUBBER_ACTIVE_ALPHA),
+                    disabledActiveTrackColor = LocalContentColor.current.copy(alpha = SCRUBBER_ACTIVE_ALPHA),
+                    disabledInactiveTrackColor = LocalContentColor.current.copy(alpha = SCRUBBER_INACTIVE_ALPHA),
+                ),
             modifier =
                 Modifier
                     .weight(1f)
