@@ -5,7 +5,6 @@ package com.riffle.app.launcher
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +27,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,12 +61,12 @@ import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeEditMode
+import com.riffle.core.domain.launcher.home.HomeHandle
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -567,12 +565,6 @@ private fun StandardHomeColumn(
         scrubTargetPageIndex.value = index
         scrubRequestId.value += 1
     }
-    // isPageGestureActive only pulses while a scrub jump is actually landing on a new page -- a
-    // finger held still mid-drag, between crossings, wouldn't otherwise count as "active" and could
-    // let the indicator's own idle-hide timer unmount it (pointerInput and all) out from under the
-    // still-down finger. This keeps it counted as active for exactly as long as the drag itself is.
-    val isIndicatorDragActive = remember { mutableStateOf(false) }
-    val onIndicatorDragActiveChanged: (Boolean) -> Unit = { active -> isIndicatorDragActive.value = active }
     val margins = state.visibleLayout.settings.grid.margin.centered()
     val dockEdge = state.dockPosition
     // The dock itself is drawn by HomeDockHost, over this frame and outside the mode surface
@@ -640,11 +632,8 @@ private fun StandardHomeColumn(
         HomeBottomControls(
             layout = state.visibleLayout,
             selectedPageIndex = pagerState.visualSelectedPageIndex,
-            showPageIndicator =
-                pagerState.rememberPageIndicatorVisible(isIndicatorDragActive = isIndicatorDragActive.value),
             reducedMotion = state.presentation.reducedMotion,
             onIndicatorScrub = onIndicatorScrub,
-            onIndicatorDragActiveChanged = onIndicatorDragActiveChanged,
             appIconLoader = appIconLoader,
             widgetViewFactory = state.presentation.widgetViewFactory,
             actions = actions,
@@ -708,10 +697,8 @@ private val DockPosition.isSideEdge: Boolean
 private fun HomeBottomControls(
     layout: HomeLayout,
     selectedPageIndex: Int,
-    showPageIndicator: Boolean,
     reducedMotion: Boolean,
     onIndicatorScrub: (Int) -> Unit,
-    onIndicatorDragActiveChanged: (Boolean) -> Unit,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     actions: HomeWorkspaceActions,
@@ -733,7 +720,6 @@ private fun HomeBottomControls(
                 HomeBottomSearchArea(
                     pageCount = layout.pages.size,
                     selectedPageIndex = selectedPageIndex,
-                    showPageIndicator = showPageIndicator,
                     reducedMotion = reducedMotion,
                     onPageSelected = { pageIndex ->
                         layout.pages.getOrNull(pageIndex)?.let { page ->
@@ -741,7 +727,6 @@ private fun HomeBottomControls(
                         }
                     },
                     onIndicatorScrub = onIndicatorScrub,
-                    onIndicatorDragActiveChanged = onIndicatorDragActiveChanged,
                     actions = actions,
                 )
 
@@ -764,15 +749,18 @@ private fun HomeBottomControls(
     }
 }
 
+/**
+ * The Home handle's row (ADR 0003, Amendment 1): one small pill just above the Dock that carries the page dots, is
+ * the way into search and keeps the quick-drag along the dots. The empty room around it is Home's background (its
+ * long-press menu and its tap).
+ */
 @Composable
 private fun HomeBottomSearchArea(
     pageCount: Int,
     selectedPageIndex: Int,
-    showPageIndicator: Boolean,
     reducedMotion: Boolean,
     onPageSelected: (Int) -> Unit,
     onIndicatorScrub: (Int) -> Unit,
-    onIndicatorDragActiveChanged: (Boolean) -> Unit,
     actions: HomeWorkspaceActions,
 ) {
     Box(
@@ -788,81 +776,16 @@ private fun HomeBottomSearchArea(
             modifier = Modifier.matchParentSize(),
             onClick = actions.onBackgroundClick,
         )
-        if (showPageIndicator) {
-            // The page indicator sits on Thin glass: chrome that stays out of the way of the wallpaper.
-            GlassSurface(
-                weight = GlassWeight.Thin,
-                shape = RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp),
-                tint = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ) {
-                PageIndicator(
-                    pageCount = pageCount,
-                    selectedPageIndex = selectedPageIndex,
-                    reducedMotion = reducedMotion,
-                    haptics = actions.haptics,
-                    onPageSelected = onPageSelected,
-                    onLiveDragPageChanged = onIndicatorScrub,
-                    onDragActiveChanged = onIndicatorDragActiveChanged,
-                    modifier =
-                        Modifier
-                            .height(HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP.dp)
-                            .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
-                            .padding(horizontal = HOME_SEARCH_HORIZONTAL_PADDING_DP.dp),
-                )
-            }
-        } else {
-            // The search pill: Regular glass, a translucent grey pill with a thin outline.
-            GlassSurface(
-                modifier =
-                    Modifier
-                        .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
-                        .border(
-                            HOME_SEARCH_OUTLINE_WIDTH_DP.dp,
-                            MaterialTheme.colorScheme.outline.copy(alpha = HOME_SEARCH_OUTLINE_ALPHA),
-                            RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp),
-                        )
-                        .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
-                        .clickable(onClick = { actions.onAction(LauncherShellAction.OpenSearch) }),
-                weight = GlassWeight.Regular,
-                shape = RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp),
-                tint = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .padding(horizontal = HOME_SEARCH_HORIZONTAL_PADDING_DP.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "Search",
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-        }
+        HomeHandlePill(
+            pageCount = pageCount,
+            selectedPageIndex = selectedPageIndex,
+            reducedMotion = reducedMotion,
+            haptics = actions.haptics,
+            onOpenSearch = { actions.onAction(LauncherShellAction.OpenSearch) },
+            onPageSelected = onPageSelected,
+            onLiveDragPageChanged = onIndicatorScrub,
+        )
     }
-}
-
-@Composable
-private fun ImmediateHomePagerState.rememberPageIndicatorVisible(isIndicatorDragActive: Boolean): Boolean {
-    val isVisible = remember { mutableStateOf(false) }
-
-    // isPageGestureActive alone only pulses while a scrub jump is landing on a newly-crossed page --
-    // isIndicatorDragActive covers the gaps, a finger held still mid-drag between crossings, so the
-    // indicator (and the pointerInput the finger is still down on) can't unmount itself mid-gesture.
-    LaunchedEffect(isPageGestureActive, isIndicatorDragActive, visualSelectedPageIndex) {
-        if (isPageGestureActive || isIndicatorDragActive) {
-            isVisible.value = true
-        } else {
-            delay(PAGE_INDICATOR_SETTLED_VISIBLE_MS)
-            isVisible.value = false
-        }
-    }
-
-    return isVisible.value
 }
 
 @Composable
@@ -1022,13 +945,7 @@ internal data class HomeWorkspaceActions(
     val onAction: (LauncherShellAction) -> Unit,
 )
 
-private const val HOME_SEARCH_AREA_HEIGHT_DP = 48
-private const val HOME_SEARCH_PILL_HEIGHT_DP = 30
-private const val HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
-private const val HOME_SEARCH_HORIZONTAL_PADDING_DP = 14
-private const val HOME_SEARCH_OUTLINE_WIDTH_DP = 1
-private const val HOME_SEARCH_OUTLINE_ALPHA = 0.38f
-private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 250L
+private const val HOME_SEARCH_AREA_HEIGHT_DP = HomeHandle.TOUCH_TARGET_DP
 private const val WIDGET_PICKER_EDGE_HOVER_ZONE_DP = 40
 private const val WIDGET_PICKER_EDGE_HOVER_DELAY_MILLIS = 650L
 

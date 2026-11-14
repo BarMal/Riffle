@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -50,7 +51,8 @@ internal fun shouldShowDockPressHint(
 /**
  * Where the hint's top-left lies: beyond the Dock ([dock], in root coordinates) toward the screen's interior ([pull] is
  * the way out of the Dock), centred along it and held inside a root of [root] with [margin] px to spare. [size] is the
- * hint's own.
+ * hint's own. [clearance] is further room to leave beside the Dock, along [pull], for something that stands there (the
+ * Home handle above a bottom Dock), so the hint never covers it.
  */
 internal fun dockPressHintOffset(
     dock: Rect,
@@ -59,7 +61,9 @@ internal fun dockPressHintOffset(
     root: IntSize,
     gap: Int,
     margin: Int,
+    clearance: Int = 0,
 ): IntOffset {
+    val gap = gap + clearance
     val centreX = dock.center.x + pull.unitX * (dock.width / 2f + gap + size.width / 2f)
     val centreY = dock.center.y + pull.unitY * (dock.height / 2f + gap + size.height / 2f)
     val x = (centreX - size.width / 2f).roundToInt()
@@ -81,6 +85,8 @@ internal fun DockPressHint(
     pull: DockPullDirection,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Room to leave between the Dock and the hint for what stands there: the Home handle above a bottom Dock. */
+    clearance: Dp = 0.dp,
 ) {
     if (dockBounds == null) return
     val gap = HINT_GAP_DP.dp
@@ -104,6 +110,7 @@ internal fun DockPressHint(
                 root = IntSize(constraints.maxWidth, constraints.maxHeight),
                 gap = gap.roundToPx(),
                 margin = margin.roundToPx(),
+                clearance = clearance.roundToPx(),
             )
         layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(offset) }
     }
