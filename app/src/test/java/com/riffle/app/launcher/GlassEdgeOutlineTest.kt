@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
@@ -99,6 +100,32 @@ class GlassEdgeOutlineTest {
             }
         assertTrue(outline(empty, Size(30f, 30f)) is Outline.Rectangle)
         assertEquals(Rect(0f, 0f, 30f, 30f), (outline(infinite, Size(30f, 30f)) as Outline.Rectangle).rect)
+    }
+
+    @Test
+    fun theBorderRampIsSolidBandsThatTileTheHeightAndFadeTowardTheBottom() {
+        val top = Color.White.copy(alpha = 0.55f)
+        val side = Color.White.copy(alpha = 0.14f)
+        val bottom = Color.White.copy(alpha = 0.06f)
+        val bands = borderBands(listOf(0f to top, 0.1f to side, 0.9f to side, 1f to bottom), height = 200f)
+
+        // Two changing stretches of four bands each, and one flat stretch that is a single band.
+        assertEquals(9, bands.size)
+        assertEquals(0f, bands.first().top, 0.001f)
+        assertEquals(200f, bands.last().bottom, 0.001f)
+        bands.zipWithNext().forEach { (above, below) -> assertEquals(above.bottom, below.top, 0.001f) }
+        bands.zipWithNext().forEach { (above, below) -> assertTrue(above.color.alpha >= below.color.alpha) }
+        assertTrue(bands.first().color.alpha > side.alpha && bands.first().color.alpha < top.alpha)
+        assertEquals(side.alpha, bands[4].color.alpha, 0.001f)
+    }
+
+    @Test
+    fun aBorderRampWithNothingToDrawHasNoBands() {
+        assertTrue(borderBands(emptyList(), height = 100f).isEmpty())
+        assertTrue(borderBands(listOf(0f to Color.White, 1f to Color.White), height = 0f).isEmpty())
+        assertTrue(borderBands(listOf(0f to Color.White, 1f to Color.White), height = Float.NaN).isEmpty())
+        // Stops that rounding left on top of each other make no band of zero height.
+        assertEquals(1, borderBands(listOf(0f to Color.White, 0f to Color.Black, 1f to Color.Black), 50f).size)
     }
 
     @Test

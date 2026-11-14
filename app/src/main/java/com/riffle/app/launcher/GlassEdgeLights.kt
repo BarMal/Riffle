@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Density
@@ -71,12 +72,7 @@ internal fun Modifier.glassEdgeLights(
     return drawWithCache {
         // A surface with no area to light (0 x 0 while it is laid out away, a collapsed row) draws
         // no edge: the fill and the content are unaffected.
-        val lights =
-            if (GlassDiagnostics.edgeLights && size.isDrawable()) {
-                bakeEdgeLights(shape, scale, shade, edgeTint)
-            } else {
-                null
-            }
+        val lights = if (size.isDrawable()) bakeEdgeLights(shape, scale, shade, edgeTint) else null
         onDrawWithContent {
             val fade = alphaProvider().finiteOr(1f).coerceIn(0f, 1f)
             if (lights != null && fade > 0f) lights.draw(this, fade)
@@ -153,12 +149,57 @@ private class Strip(
     val size: Size,
 )
 
+/**
+ * One band of the border, top to bottom: the outline stroked in one solid [color] between [top] and
+ * [bottom]. The border's vertical ramp (bright along the top, faint down the sides, fainter at the
+ * bottom) is a few of these rather than one stroke with a gradient brush: on CI's software-rendered
+ * emulator, a Dock holding icons whose edge lights drew the gradient stroke together with the
+ * hairline took the whole emulator down (found by drawing the pieces one at a time on the device
+ * job; each alone was harmless). Solid strokes draw the same ramp to within a step nobody can see.
+ */
+internal class BorderBand(
+    val top: Float,
+    val bottom: Float,
+    val color: Color,
+)
+
+/**
+ * The border ramp described by [stops] (fraction of [height] to colour, increasing) as solid bands:
+ * a stretch between two stops of the same colour is one band, a stretch that changes is
+ * [BORDER_RAMP_STEPS] bands, each the ramp's colour at its middle.
+ */
+internal fun borderBands(
+    stops: List<Pair<Float, Color>>,
+    height: Float,
+): List<BorderBand> {
+    if (stops.isEmpty() || !height.isFinite() || height <= 0f) return emptyList()
+    return buildList {
+        if (stops.size == 1) add(BorderBand(0f, height, stops[0].second))
+        for (index in 0 until stops.size - 1) {
+            val (fromFraction, fromColor) = stops[index]
+            val (toFraction, toColor) = stops[index + 1]
+            val from = fromFraction.coerceIn(0f, 1f) * height
+            val to = toFraction.coerceIn(0f, 1f) * height
+            if (to <= from) continue
+            val steps = if (fromColor == toColor) 1 else BORDER_RAMP_STEPS
+            for (step in 0 until steps) {
+                val top = from + (to - from) * step / steps
+                val bottom = from + (to - from) * (step + 1) / steps
+                add(BorderBand(top, bottom, lerp(fromColor, toColor, (step + 0.5f) / steps)))
+            }
+        }
+    }
+}
+
+/** Bands per changing stretch of the border ramp. */
+private const val BORDER_RAMP_STEPS = 4
+
 /** The edge lights as brushes over fixed rectangles and one outline, built once per size. */
 private class EdgeLights(
     val tintStrips: List<Strip>,
     val specular: Strip?,
     val border: Outline,
-    val borderBrush: Brush,
+    val borderBands: List<BorderBand>,
     val borderStroke: Stroke,
 ) {
     fun draw(
@@ -166,14 +207,13 @@ private class EdgeLights(
         fade: Float,
     ) = with(scope) {
         tintStrips.forEach { strip -> drawRect(strip.brush, strip.topLeft, strip.size, alpha = fade) }
-        if (GlassDiagnostics.specular) {
-            specular?.let { strip -> drawRect(strip.brush, strip.topLeft, strip.size, alpha = fade) }
-        }
-        when (GlassDiagnostics.border) {
-            GlassDiagnostics.BORDER_GRADIENT -> drawOutline(border, borderBrush, alpha = fade, style = borderStroke)
-            GlassDiagnostics.BORDER_SOLID ->
-                drawOutline(border, Color.White.copy(alpha = SOLID_PROBE_ALPHA), alpha = fade, style = borderStroke)
-            else -> Unit
+        specular?.let { strip -> drawRect(strip.brush, strip.topLeft, strip.size, alpha = fade) }
+        // The border's ramp is drawn as solid strokes, one per band: see [BorderBand].
+        val reach = borderStroke.width
+        borderBands.forEach { band ->
+            clipRect(left = -reach, top = band.top, right = size.width + reach, bottom = band.bottom) {
+                drawOutline(border, band.color, alpha = fade, style = borderStroke)
+            }
         }
     }
 }
@@ -251,34 +291,10 @@ private fun CacheDrawScope.bakeEdgeLights(
         tintStrips = tintStrips,
         specular = specular,
         border = safeEdgeOutline(shape, size, layoutDirection, this),
-        borderBrush = Brush.verticalGradient(colorStops = stopColors, startY = 0f, endY = size.height),
+        borderBands = borderBands(stopColors.toList(), size.height),
         borderStroke = Stroke(width = (2 * borderPx).coerceAtLeast(MIN_LIT_PX)),
     )
 }
 
 /** Gradient stops closer than this are pushed apart, so no two share a position. */
 private const val MIN_STOP_GAP = 1e-4f
-
-/**
- * TEMPORARY (remove with AaaGlassProbeTest): switches the device probe flips to find which part of
- * the glass CI's emulator dies on. Both are on in the app.
- */
-internal object GlassDiagnostics {
-    @Volatile
-    var edgeLights: Boolean = true
-
-    @Volatile
-    var spotlight: Boolean = true
-
-    @Volatile
-    var specular: Boolean = true
-
-    @Volatile
-    var border: Int = BORDER_GRADIENT
-
-    const val BORDER_NONE = 0
-    const val BORDER_SOLID = 1
-    const val BORDER_GRADIENT = 2
-}
-
-private const val SOLID_PROBE_ALPHA = 0.3f

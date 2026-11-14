@@ -306,7 +306,7 @@ internal fun rememberGlassSpotlightState(
     enabled: Boolean = true,
 ): GlassSpotlightState? {
     val glass = LocalLiquidGlassSettings.current
-    val active = enabled && GlassDiagnostics.spotlight
+    val active = enabled
     val state = remember(axis) { GlassSpotlightState(axis) }
     if (active) {
         LaunchedEffect(state, glass.reducedMotion, glass.spotlightFlowSeconds) {
