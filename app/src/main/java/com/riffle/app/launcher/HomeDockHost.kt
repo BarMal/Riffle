@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.riffle.app.launcher.stream.OpenCardActions
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.dockpull.pullDirection
@@ -149,6 +150,8 @@ internal data class HomeDockInterpreter(
     val dockEdgeCompanion: (@Composable () -> Unit)? = null,
     /** What the pinned apps know of the Stream (their pages, and the tap in the contextual mode); null: they launch. */
     val pinnedStream: DockPinnedStream? = null,
+    /** The card open in the Stream and what to do with it: the Dock draws a row of its actions; null: no row. */
+    val cardActions: OpenCardActions? = null,
 )
 
 /**
@@ -271,6 +274,7 @@ internal fun HomeDockHost(
                     staticItemMenuExtras = interpreter.staticItemMenuExtras,
                     staticItemTapOverride = interpreter.staticItemTapOverride,
                     isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,
+                    cardActions = interpreter.cardActions,
                 )
             }
             if (choice != null) {

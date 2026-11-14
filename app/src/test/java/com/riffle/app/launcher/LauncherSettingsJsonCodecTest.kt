@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.designsystem.CardTint
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -17,6 +18,7 @@ import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -46,6 +48,7 @@ import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_VERTICAL_OFFSET
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
+import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -54,6 +57,7 @@ import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
+import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
@@ -534,6 +538,65 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(settings.liquidGlass, decodedSettings.liquidGlass)
+    }
+
+    @Test
+    fun roundTripsStreamSettings() {
+        val settings =
+            LauncherSettings(
+                stream =
+                    StreamSettings(
+                        cardTintPercent = 36,
+                        cardTopGlow = true,
+                        openCardPlacement = OpenCardPlacement.ABOVE_DOCK,
+                        cardActionsPlacement = CardActionsPlacement.ON_CARD,
+                    ),
+            )
+
+        assertEquals(settings.stream, decodeLauncherSettings(encodeLauncherSettings(settings)).stream)
+    }
+
+    @Test
+    fun streamSettingsDefaultToTwentyTwoPercentNoGlowCentreAndActionsInTheDock() {
+        val defaults = decodeLauncherSettings("{}").stream
+
+        assertEquals(StreamSettings(), defaults)
+        assertEquals(22, defaults.cardTintPercent)
+        assertFalse(defaults.cardTopGlow)
+        assertEquals(OpenCardPlacement.CENTRE, defaults.openCardPlacement)
+        assertEquals(CardActionsPlacement.IN_DOCK, defaults.cardActionsPlacement)
+    }
+
+    @Test
+    fun aBlobSavedBeforeStreamSettingsExistedDecodesEverythingElseUnchanged() {
+        val decoded = decodeLauncherSettings("""{"version": 11, "liquidGlass": {"spotlightFlowMillis": 700}}""")
+
+        assertEquals(StreamSettings(), decoded.stream)
+        assertEquals(700, decoded.liquidGlass.spotlightFlowMillis)
+    }
+
+    @Test
+    fun streamSettingsHoldTheTintToItsRangeAndReadAnUnknownPlacementAsTheDefault() {
+        val json =
+            """{"stream": {"cardTintPercent": 400, "openCardPlacement": "FLOATING", """ +
+                """"cardActionsPlacement": "ON_CARD"}}"""
+        val decoded = decodeLauncherSettings(json).stream
+
+        assertEquals(CardTint.MAX_STRENGTH_PERCENT, decoded.cardTintPercent)
+        assertEquals(OpenCardPlacement.CENTRE, decoded.openCardPlacement)
+        assertEquals(CardActionsPlacement.ON_CARD, decoded.cardActionsPlacement)
+        assertEquals(StreamSettings(), decodeLauncherSettings("""{"stream": "broken"}""").stream)
+    }
+
+    @Test
+    fun theDeferredGrowsOutOfTheDockPlacementIsStored() {
+        val settings =
+            LauncherSettings(stream = StreamSettings(openCardPlacement = OpenCardPlacement.GROWS_OUT_OF_DOCK))
+
+        assertEquals(
+            OpenCardPlacement.GROWS_OUT_OF_DOCK,
+            decodeLauncherSettings(encodeLauncherSettings(settings)).stream.openCardPlacement,
+        )
     }
 
     @Test

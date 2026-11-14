@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.Dp
 import com.riffle.app.R
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.EventContent
+import com.riffle.core.domain.launcher.stream.StreamCardActions
 import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.StreamGap
 import com.riffle.core.domain.launcher.stream.TodayCard
@@ -28,6 +29,9 @@ internal sealed interface StackEntry {
 
     /** The content the card opens (the tap, the "Open card" action, Enter); null when the card opens nothing. */
     val openContent: StreamContent? get() = null
+
+    /** Whether a tap on the front card opens it in place (a conversation, the player, an event); else the tap acts. */
+    val opensInPlace: Boolean get() = false
 
     /** One line saying what the card is about, for the strip that peeks out. */
     @Composable
@@ -50,6 +54,9 @@ internal data class ContentEntry(
     override val id: String get() = content.id.value
     override val height: Dp get() = if (nextUp) StreamCardHeights.nextEvent else content.cardHeight()
     override val openContent: StreamContent get() = content
+
+    // Today's next event already shows its detail, its countdown and its actions: a tap on it acts, as it always did.
+    override val opensInPlace: Boolean get() = !nextUp && StreamCardActions.opensInPlace(content)
 
     @Composable
     override fun peekText(env: StreamEnvironment): String = content.peekText()
@@ -134,8 +141,7 @@ internal fun StackEntryCard(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     groupKey: String?,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
+    onOpen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (entry) {
@@ -148,10 +154,9 @@ internal fun StackEntryCard(
                     env = env,
                     callbacks = callbacks,
                     groupKey = groupKey,
-                    expanded = expanded,
-                    onExpandedChange = onExpandedChange,
                     modifier = modifier,
                     caption = entry.caption,
+                    onOpen = onOpen.takeIf { entry.opensInPlace },
                 )
             }
         is ToDoEntry -> TodoCard(entry.card, env, callbacks, modifier)

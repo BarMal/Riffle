@@ -11,7 +11,6 @@ import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -25,7 +24,9 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -37,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -44,6 +46,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -56,6 +59,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.DockFanSource
 import com.riffle.app.launcher.LauncherHapticEvent
@@ -68,10 +72,12 @@ import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.NotificationContent
+import com.riffle.core.domain.launcher.stream.OpenCardEvent
 import com.riffle.core.domain.launcher.stream.RecentAppContent
 import com.riffle.core.domain.launcher.stream.StackFling
 import com.riffle.core.domain.launcher.stream.StackGeometry
 import com.riffle.core.domain.launcher.stream.StreamAction
+import com.riffle.core.domain.launcher.stream.StreamCardActions
 import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.TaskContent
@@ -121,7 +127,10 @@ internal fun StreamContent.peekText(): String =
         is AppShortcutContent -> shortcutTitle(this)
     }
 
-/** The card for any content, so a Stack draws without knowing what is in it. */
+/**
+ * The card for any content, so a Stack draws without knowing what is in it. [onOpen] opens it in place when a tap on it
+ * should (a conversation, the player, an event); null leaves the tap to act on it, as in a widget.
+ */
 @Composable
 @Suppress("LongParameterList")
 internal fun StreamCard(
@@ -129,17 +138,15 @@ internal fun StreamCard(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     groupKey: String?,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     /** Said before an event's time: the day, in a pile that spans days. */
     caption: String? = null,
+    onOpen: (() -> Unit)? = null,
 ) {
     when (content) {
-        is NotificationContent ->
-            NotificationCard(content, env, callbacks, groupKey, expanded, onExpandedChange, modifier)
-        is MediaContent -> MediaCard(content, env, callbacks, groupKey, expanded, onExpandedChange, modifier)
-        is EventContent -> EventCard(content, env, callbacks, groupKey, modifier, caption)
+        is NotificationContent -> NotificationCard(content, env, callbacks, groupKey, modifier, onOpen)
+        is MediaContent -> MediaCard(content, env, callbacks, groupKey, modifier, onOpen)
+        is EventContent -> EventCard(content, env, callbacks, groupKey, modifier, caption, onOpen)
         is ArticleContent -> ArticleCard(content, env, callbacks, groupKey, modifier)
         is TaskContent -> TasksCard(listOf(content), env, callbacks, modifier)
         is RecentAppContent -> RecentAppCard(content, env, callbacks, groupKey, modifier, caption)
@@ -150,12 +157,15 @@ internal fun StreamCard(
 /**
  * One page's stack of cards (ADR 0003, Amendment 1, "Browse, then open"; Amendment 3, "Motion"): anchored to the Dock.
  * The front card sits just above the Dock, nearest the thumb, and older cards peek above it, each one the real card
- * clipped to its top strip ([FocusedStack]). A card that can expand (a notification's thread and reply, now playing's
- * queue) replaces the stack in place while expanded, and Back collapses it. A lone card is a stack of one, drawn at the
+ * clipped to its top strip ([FocusedStack]). Tapping the front card of a kind that opens in place (a conversation, the
+ * player, an event) opens it: it grows in place from its browse size into its full content ([OpenCardFrame]) and the
+ * cards behind stay as peeking strips above it. A tap on it again, a tap beside it, a press of the Dock and Back close
+ * it ([OpenCardHolder], which the Dock reads to draw the card's actions). A lone card is a stack of one, drawn at the
  * same place. Not gesture-only: Next and Previous card as accessibility actions and as buttons, a tap on a peeking
  * card, and the keyboard.
  */
 @Composable
+@Suppress("LongMethod", "LongParameterList")
 internal fun StreamStack(
     entries: List<StackEntry>,
     env: StreamEnvironment,
@@ -164,72 +174,143 @@ internal fun StreamStack(
     stackKey: String,
     modifier: Modifier = Modifier,
 ) {
-    var expandedId by remember(stackKey) { mutableStateOf<String?>(null) }
+    val cards = LocalOpenCards.current
+    val openState = cards.state
     val stackState = remember(stackKey) { StreamStackState() }
-    val expandedItem = entries.firstOrNull { it.id == expandedId }
-    if (expandedItem != null) {
-        BackHandler { expandedId = null }
-        StackColumn(modifier) {
-            StackEntryCard(
-                entry = expandedItem,
+    val ids = remember(entries) { entries.map { it.id }.toSet() }
+    // A card that goes away closes; a card open on another page is that page's.
+    LaunchedEffect(stackKey, ids) { cards.dispatch(OpenCardEvent.CardsChanged(stackKey, ids)) }
+    val openEntry =
+        entries.firstOrNull { it.id == openState.cardId && openState.pageKey == stackKey && it.opensInPlace }
+    val motion = remember(stackKey) { OpenCardMotionState() }
+    val frameGeometry = remember(stackKey) { OpenCardFrameGeometry() }
+    var lastOpen by remember(stackKey) { mutableStateOf<StackEntry?>(null) }
+    SideEffect { if (openEntry != null) lastOpen = openEntry }
+    val latestReduced by rememberUpdatedState(env.reducedMotion)
+    LaunchedEffect(openEntry != null) { motion.animateTo(openEntry != null, latestReduced) }
+    val shown = openEntry ?: lastOpen.takeIf { motion.progress > 0f }
+    BackHandler(enabled = openEntry != null) { cards.dispatch(OpenCardEvent.CloseByBack) }
+    var queueShown by remember(stackKey) { mutableStateOf(true) }
+    val actionsOnCard = !LocalActionsInDock.current
+    // The Dock's row: this card's content, its controls and how to act on them. Published while the card is open.
+    val openContent = (openEntry as? ContentEntry)?.content
+    val dockActions =
+        remember(openContent, queueShown, callbacks) {
+            openContent?.takeIf { !actionsOnCard }?.let {
+                OpenCardActions(
+                    content = it,
+                    actions = StreamCardActions.forContent(it, queueShown),
+                    callbacks = callbacks,
+                    onToggleQueue = { show -> queueShown = show },
+                )
+            }
+        }
+    SideEffect { cards.publish(dockActions) }
+    DisposableEffect(cards) { onDispose { cards.publish(null) } }
+
+    val open: (StackEntry) -> Unit = { entry ->
+        if (entry.opensInPlace) {
+            cards.dispatch(OpenCardEvent.Open(stackKey, entry.id))
+        } else {
+            entry.openContent?.let { callbacks.onAction(it, StreamAction.Open) }
+        }
+    }
+    val close = { cards.dispatch(OpenCardEvent.CloseByTap) }
+    Box(modifier = modifier.fillMaxSize()) {
+        if (entries.size == 1) {
+            val only = entries.single()
+            LoneCard(Modifier, hidden = shown != null) {
+                StackEntryCard(
+                    entry = only,
+                    env = env,
+                    callbacks = callbacks,
+                    groupKey = groupKey,
+                    onOpen = { open(only) },
+                    modifier =
+                        Modifier.fillMaxWidth().widthIn(max = StackMaxCardWidth).height(only.height.scaledForFont()),
+                )
+            }
+        } else {
+            FocusedStack(
+                items = entries,
                 env = env,
                 callbacks = callbacks,
                 groupKey = groupKey,
-                expanded = true,
-                onExpandedChange = { expand -> expandedId = if (expand) expandedItem.id else null },
-                modifier = Modifier.fillMaxWidth().widthIn(max = StackMaxCardWidth),
+                state = stackState,
+                modifier = Modifier,
+                openActive = shown != null,
+                frameGeometry = frameGeometry,
+                onOpen = open,
+                onCloseOpen = close,
             )
         }
-        return
-    }
-    if (entries.size == 1) {
-        val only = entries.single()
-        LoneCard(modifier) {
-            StackEntryCard(
-                entry = only,
-                env = env,
-                callbacks = callbacks,
-                groupKey = groupKey,
-                expanded = false,
-                onExpandedChange = { expand -> if (expand) expandedId = only.id },
+        if (shown != null) {
+            val cardHeight = entries.maxOf { it.height }.scaledForFont()
+            val behind = (entries.size - 1).coerceIn(0, StreamCardStackSpec.VISIBLE_PEEKS)
+            val strips = StreamCardStackSpec.PITCH_DP.dp * behind
+            // Beside the card: a tap there closes it, and keeps the cards behind from being tapped under it.
+            Box(
                 modifier =
-                    Modifier.fillMaxWidth().widthIn(
-                        max = StackMaxCardWidth,
-                    ).height(only.height.scaledForFont()),
+                    Modifier
+                        .matchParentSize()
+                        .clearAndSetSemantics {}
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = close,
+                        ),
             )
+            BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+                val cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth)
+                OpenCardFrame(
+                    motion = motion,
+                    geometry = frameGeometry,
+                    placement = StreamCardActions.effectiveCardPlacement(env.cardSettings.openCardPlacement),
+                    cardWidth = cardWidth,
+                    browseHeight = cardHeight,
+                    bottomInset = StackBottomInset,
+                    strips = strips,
+                    modifier = Modifier.matchParentSize().testTag(STREAM_OPEN_CARD_TEST_TAG),
+                ) {
+                    (shown as? ContentEntry)?.let { entry ->
+                        OpenStreamCard(
+                            content = entry.content,
+                            env = env,
+                            callbacks = callbacks,
+                            groupKey = groupKey,
+                            actionsOnCard = actionsOnCard,
+                            queueShown = queueShown,
+                            onQueueShownChange = { queueShown = it },
+                            onClose = close,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
         }
-        return
     }
-    FocusedStack(entries, env, callbacks, groupKey, stackState, modifier) { expandedId = it.id }
 }
 
-/** An expanded card: it can be taller than the page, so it scrolls. */
-@Composable
-private fun StackColumn(
-    modifier: Modifier,
-    content: @Composable () -> Unit,
-) {
-    // An expanded card is the front card of the fan.
-    Column(
-        modifier =
-            modifier
-                .dockFan(LocalDockFan.current)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = RiffleSpacing.l),
-        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
-    ) { content() }
-}
+/** The tag of the open card (a test hook). */
+internal const val STREAM_OPEN_CARD_TEST_TAG = "stream-open-card"
 
 /**
  * A lone card, where the front card of a stack is: just above the Dock (it scrolls only if it is taller than the page).
+ * [hidden] while it is open: the open card is drawn over its place.
  */
 @Composable
 private fun LoneCard(
     modifier: Modifier,
+    hidden: Boolean,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+    Box(
+        modifier =
+            modifier.fillMaxSize().then(
+                if (hidden) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics {} else Modifier,
+            ),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
         Column(
             modifier =
                 Modifier
@@ -291,7 +372,7 @@ internal fun StreamContent.spokenText(env: StreamEnvironment): String =
  * actions "Next card" (older, above) and "Previous card" are on the stack itself, so nothing depends on the drag.
  */
 @Composable
-@Suppress("LongMethod", "LongParameterList")
+@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 private fun FocusedStack(
     items: List<StackEntry>,
     env: StreamEnvironment,
@@ -299,7 +380,11 @@ private fun FocusedStack(
     groupKey: String?,
     state: StreamStackState,
     modifier: Modifier,
-    onExpand: (StackEntry) -> Unit,
+    /** A card is open over the front card: the stack makes room for it and takes no input. */
+    openActive: Boolean,
+    frameGeometry: OpenCardFrameGeometry,
+    onOpen: (StackEntry) -> Unit,
+    onCloseOpen: () -> Unit,
 ) {
     val count = items.size
     val dockFan = LocalDockFan.current
@@ -343,6 +428,7 @@ private fun FocusedStack(
         }
         moves
     }
+    val latestOpenActive by rememberUpdatedState(openActive)
     val step: (Boolean) -> Boolean = { older ->
         state.stepFromHeading(older, latestCount)?.let(goTo) ?: false
     }
@@ -359,6 +445,10 @@ private fun FocusedStack(
     val position = stringResource(R.string.stream_card_position, frontIndex + 1, count)
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth)
+        val density = LocalDensity.current.density
+        val cardHeightPx = cardHeight.value * density
+        val bottomInsetPx = StackBottomInset.value * density
+        val areaHeightPx = maxHeight.value * density
         StackLayout(
             state = state,
             geometry = geometry,
@@ -367,10 +457,17 @@ private fun FocusedStack(
             modifier =
                 Modifier
                     .matchParentSize()
+                    // While a card is open the stack moves with it: the front card's place is where the open card's
+                    // top is, so the cards behind peek out just above it.
+                    .graphicsLayer {
+                        val frontTop = areaHeightPx - bottomInsetPx - cardHeightPx
+                        translationY = if (openActive) frameGeometry.topPx - frontTop else 0f
+                    }
                     .clipToBounds()
                     .scrollable(
                         state = scrollable,
                         orientation = Orientation.Vertical,
+                        enabled = !openActive,
                         flingBehavior = flingBehavior,
                     )
                     .onPreviewKeyEvent { event ->
@@ -378,8 +475,8 @@ private fun FocusedStack(
                             false
                         } else {
                             when (event.key) {
-                                Key.DirectionUp, Key.PageUp -> step(true)
-                                Key.DirectionDown, Key.PageDown -> step(false)
+                                Key.DirectionUp, Key.PageUp -> !latestOpenActive && step(true)
+                                Key.DirectionDown, Key.PageDown -> !latestOpenActive && step(false)
                                 else -> false
                             }
                         }
@@ -401,6 +498,7 @@ private fun FocusedStack(
                     StackSlot(
                         index = index,
                         isFront = isFront,
+                        covered = isFront && openActive,
                         rank = abs(index - frontIndex),
                         dockFan = dockFan,
                         tag = streamStackCardTag(item.id),
@@ -408,16 +506,15 @@ private fun FocusedStack(
                         position = position,
                         open = open,
                         bringToFront = bringToFront,
-                        onOpen = { item.openContent?.let { callbacks.onAction(it, StreamAction.Open) } },
-                        onBringToFront = { goTo(index) },
+                        onOpen = { onOpen(item) },
+                        onBringToFront = { if (latestOpenActive) onCloseOpen() else goTo(index) },
                     ) {
                         StackEntryCard(
                             entry = item,
                             env = env,
                             callbacks = callbacks,
                             groupKey = groupKey,
-                            expanded = false,
-                            onExpandedChange = { expand -> if (expand) onExpand(item) },
+                            onOpen = { onOpen(item) },
                             modifier = Modifier.size(width = cardWidth, height = cardHeight),
                         )
                     }
@@ -437,6 +534,8 @@ private fun FocusedStack(
 private fun StackSlot(
     index: Int,
     isFront: Boolean,
+    /** The front card with a card open over it: the open card is drawn in its place, so this one is not. */
+    covered: Boolean,
     rank: Int,
     dockFan: DockFanSource?,
     tag: String,
@@ -480,8 +579,8 @@ private fun StackSlot(
                 .stackSlot(index)
                 .dockFan(dockFan, rank)
                 .clipToBounds()
-                .then(semantics)
-                .then(if (isFront) Modifier.frontCardKeys(onOpen) else Modifier),
+                .then(if (covered) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics {} else semantics)
+                .then(if (isFront && !covered) Modifier.frontCardKeys(onOpen) else Modifier),
     ) {
         Box(modifier = Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)) { card() }
         if (!isFront) {

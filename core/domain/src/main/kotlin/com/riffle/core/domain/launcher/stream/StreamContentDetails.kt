@@ -1,8 +1,10 @@
 package com.riffle.core.domain.launcher.stream
 
 import com.riffle.core.domain.launcher.workspace.Item
+import com.riffle.core.domain.launcher.workspace.ItemAction
 import com.riffle.core.domain.launcher.workspace.ItemExtKey
 import com.riffle.core.domain.launcher.workspace.ItemExtValue
+import com.riffle.core.domain.launcher.workspace.ItemImageHandle
 import com.riffle.core.domain.launcher.workspace.sources.MediaItemExt
 import com.riffle.core.domain.launcher.workspace.sources.NotificationItemMapper
 
@@ -27,6 +29,29 @@ internal object StreamContentDetails {
             )
         }
     }
+
+    /** What a notification offers: its own actions, reply and snooze where the platform allows them, and Hide. */
+    fun notificationActions(item: Item): Set<NotificationAction> =
+        buildSet {
+            item.actions.forEach { action ->
+                when (action) {
+                    is ItemAction.Open -> add(NotificationAction.OPEN)
+                    is ItemAction.Dismiss -> add(NotificationAction.DISMISS)
+                    is ItemAction.Reply -> add(NotificationAction.REPLY)
+                    is ItemAction.Snooze -> add(NotificationAction.SNOOZE)
+                    is ItemAction.Custom -> Unit
+                }
+            }
+            if (item.ext[NotificationItemMapper.REPLY_KEY] == ItemExtValue.Flag(true)) add(NotificationAction.REPLY)
+            if (item.ext[NotificationItemMapper.SNOOZE_KEY] == ItemExtValue.Flag(true)) add(NotificationAction.SNOOZE)
+            add(NotificationAction.HIDE)
+        }
+
+    /** The image handle an ext entry of [item] names (a contact photo, a picture), or null. */
+    fun imageHandle(
+        item: Item,
+        key: ItemExtKey,
+    ): ItemImageHandle? = item.text(key)?.takeIf(String::isNotBlank)?.let(::ItemImageHandle)
 
     private fun Item.text(key: ItemExtKey): String? = (ext[key] as? ItemExtValue.Text)?.value
 

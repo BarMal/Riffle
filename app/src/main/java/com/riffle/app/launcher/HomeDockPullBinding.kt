@@ -64,7 +64,21 @@ internal class StreamPullInputs(
     val onPress: (entryKey: String?) -> Unit = {},
     /** A press that chose an entry while the Stream was out: the Stream stays and switches to that entry's page. */
     val onSwitchPage: (entryKey: String) -> Unit = {},
+    /** The card open in the Stream, if any: the press, and its accessible equivalent, close it before the Stream. */
+    val openCard: OpenCardPress = OpenCardPress.NONE,
 )
+
+/** What the Dock's press needs to know of the card open in the Stream. */
+internal class OpenCardPress(
+    /** Whether a card is open now. */
+    val isOpen: Boolean,
+    /** Closes the open card, the Stream staying; false when none is open. */
+    val close: () -> Boolean,
+) {
+    companion object {
+        val NONE = OpenCardPress(isOpen = false, close = { false })
+    }
+}
 
 /**
  * How [HomeDestination] wires the Dock's pull (the Library) and press (Home and the contextual mode) into the Dock and
@@ -475,6 +489,14 @@ private class DockPullActions(
         }
 }
 
+/** The label of the Dock's accessibility action for the Stream: what pressing the Dock would do now. */
+private fun streamActionLabelRes(stream: StreamPullInputs): Int =
+    when {
+        stream.shown && stream.openCard.isOpen -> R.string.stream_dock_close_card_action
+        stream.shown -> R.string.stream_dock_close_action
+        else -> R.string.stream_dock_open_action
+    }
+
 @Composable
 private fun dockPullActions(
     dockPull: DockPullState,
@@ -485,8 +507,7 @@ private fun dockPullActions(
     reducedMotion: Boolean,
 ): DockPullActions {
     val libraryLabel = stringResource(R.string.dock_open_library_action)
-    val streamLabel =
-        stringResource(if (stream.shown) R.string.stream_dock_close_action else R.string.stream_dock_open_action)
+    val streamLabel = stringResource(streamActionLabelRes(stream))
     val streamDestination =
         if (stream.available) {
             if (stream.shown) DockPullDestination.HOME else DockPullDestination.STREAM
@@ -496,6 +517,8 @@ private fun dockPullActions(
     val open: (DockPullDestination) -> Boolean = { destination ->
         val split = stream.split?.invoke()
         when {
+            // With a card open this is the press: it closes the card, the Stream stays.
+            destination == DockPullDestination.HOME && stream.shown && stream.openCard.close() -> true
             // The trampoline: the same change as the press, without a finger.
             destination != DockPullDestination.LIBRARY && split == null -> {
                 motion.run(open = destination == DockPullDestination.STREAM, reducedMotion, shown = stream.shown)

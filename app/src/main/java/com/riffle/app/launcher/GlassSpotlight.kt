@@ -340,6 +340,28 @@ internal fun rememberGlassSpotlightColor(
 }
 
 /**
+ * The dominant colour of [identity]'s icon, the same one [rememberGlassSpotlightColor] lights the Dock with, for a
+ * caller that is not inside a spotlit surface (a card's tint is decided before its own glass is drawn). Null for a
+ * non-app, an icon with no vivid colour, or while it loads (cached colours are read at once).
+ */
+@Composable
+internal fun rememberAppIconColor(
+    identity: AppIdentity?,
+    appIconLoader: AppIconLoader,
+): Color? {
+    var color by remember(identity, appIconLoader) {
+        mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
+    }
+    LaunchedEffect(identity, appIconLoader) {
+        if (identity == null) return@LaunchedEffect
+        color =
+            appIconLoader.cachedColorFor(identity)
+                ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(identity) }
+    }
+    return color
+}
+
+/**
  * Reports the centre of this icon's visible part and its [color] to the enclosing surface's spotlight
  * -- null [color] for an icon with none, which still marks its place on the run as unlit. A no-op
  * outside a spotlit surface.

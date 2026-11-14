@@ -24,6 +24,7 @@ import com.riffle.app.launcher.LauncherHaptics
 import com.riffle.app.launcher.LocalLauncherHaptics
 import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.expressions.NoExpressionImageLoader
+import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
 import com.riffle.app.launcher.stream.StreamCallbacks
 import com.riffle.app.launcher.stream.StreamDockLink
@@ -360,11 +361,12 @@ class StreamStackBehaviorTest {
         slot(5).performClick()
         frontIs(5)
         assertTrue("the taps opened nothing", actions.isEmpty())
-        // The front card keeps what it did: its own title opens it.
+        // A tap on the front card of a conversation opens it in place (it no longer launches the app, which the open
+        // card's own "Open" does): the card grows, the cards behind stay as strips and nothing was sent to the app.
         composeRule.onNodeWithText("Sixth chat").performClick()
         composeRule.waitForIdle()
-        assertEquals(StreamAction.Open, actions.single().second)
-        assertEquals("n:chat:6", actions.single().first.id.value)
+        assertTrue("the tap launched something: $actions", actions.isEmpty())
+        composeRule.onNodeWithTag(STREAM_OPEN_CARD_TEST_TAG).assertExists()
     }
 
     // Accessibility -------------------------------------------------------------------------------------------------

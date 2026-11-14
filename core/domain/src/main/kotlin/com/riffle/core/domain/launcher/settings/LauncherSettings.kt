@@ -22,6 +22,7 @@ data class LauncherSettings(
     val privacy: PrivacySettings = PrivacySettings(),
     val rss: RssSettings = RssSettings(),
     val search: SearchSettings = SearchSettings(),
+    val stream: StreamSettings = StreamSettings(),
 )
 
 /**

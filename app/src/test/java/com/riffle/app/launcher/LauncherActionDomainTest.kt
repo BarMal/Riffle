@@ -39,6 +39,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
@@ -49,6 +50,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
+import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
@@ -367,6 +369,16 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectReturnBehavior",
                     LauncherShellAction.SelectReturnBehavior(ReturnBehavior.START_PAGE),
+                ),
+                settings("SelectStreamCardTint", LauncherShellAction.SelectStreamCardTint(percent = 30)),
+                settings("SetStreamCardTopGlow", LauncherShellAction.SetStreamCardTopGlow(enabled = true)),
+                settings(
+                    "SelectOpenCardPlacement",
+                    LauncherShellAction.SelectOpenCardPlacement(OpenCardPlacement.ABOVE_DOCK),
+                ),
+                settings(
+                    "SelectCardActionsPlacement",
+                    LauncherShellAction.SelectCardActionsPlacement(CardActionsPlacement.ON_CARD),
                 ),
                 settings(
                     "SetScreenContentProtection",

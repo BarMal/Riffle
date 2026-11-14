@@ -32,6 +32,9 @@ private fun encodeNotification(notification: LauncherNotification): JSONObject =
         .put("title", notification.title)
         .put("text", notification.text)
         .put("largeIconPngBase64", notification.largeIconPngBase64)
+        // Only whether there is a contact photo or a picture: the images are held in memory by the listener.
+        .put("hasPersonIcon", notification.hasPersonIcon)
+        .put("hasPicture", notification.hasPicture)
         .put("messages", JSONArray(notification.messages.map(::encodeMessage)))
         .put("postedAtEpochMillis", notification.postedAtEpochMillis)
 
@@ -54,6 +57,8 @@ private fun JSONObject.toNotificationOrNull(): LauncherNotification? =
             title = optString("title"),
             text = optString("text"),
             largeIconPngBase64 = optString("largeIconPngBase64").takeIf(String::isNotBlank),
+            hasPersonIcon = optBoolean("hasPersonIcon", false),
+            hasPicture = optBoolean("hasPicture", false),
             messages = optMessages(),
             postedAtEpochMillis = optLong("postedAtEpochMillis", 0L),
         )
