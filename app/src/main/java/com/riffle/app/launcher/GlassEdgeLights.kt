@@ -166,8 +166,15 @@ private class EdgeLights(
         fade: Float,
     ) = with(scope) {
         tintStrips.forEach { strip -> drawRect(strip.brush, strip.topLeft, strip.size, alpha = fade) }
-        specular?.let { strip -> drawRect(strip.brush, strip.topLeft, strip.size, alpha = fade) }
-        drawOutline(border, borderBrush, alpha = fade, style = borderStroke)
+        if (GlassDiagnostics.specular) {
+            specular?.let { strip -> drawRect(strip.brush, strip.topLeft, strip.size, alpha = fade) }
+        }
+        when (GlassDiagnostics.border) {
+            GlassDiagnostics.BORDER_GRADIENT -> drawOutline(border, borderBrush, alpha = fade, style = borderStroke)
+            GlassDiagnostics.BORDER_SOLID ->
+                drawOutline(border, Color.White.copy(alpha = SOLID_PROBE_ALPHA), alpha = fade, style = borderStroke)
+            else -> Unit
+        }
     }
 }
 
@@ -262,4 +269,16 @@ internal object GlassDiagnostics {
 
     @Volatile
     var spotlight: Boolean = true
+
+    @Volatile
+    var specular: Boolean = true
+
+    @Volatile
+    var border: Int = BORDER_GRADIENT
+
+    const val BORDER_NONE = 0
+    const val BORDER_SOLID = 1
+    const val BORDER_GRADIENT = 2
 }
+
+private const val SOLID_PROBE_ALPHA = 0.3f

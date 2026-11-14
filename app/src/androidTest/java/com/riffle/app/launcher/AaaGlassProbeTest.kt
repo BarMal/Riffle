@@ -26,10 +26,10 @@ import org.junit.runners.MethodSorters
 /**
  * TEMPORARY diagnostic (remove once the emulator crash is understood). With the flat glass, CI's
  * emulator goes away during the first test that composes the Dock. This class sorts first and draws
- * the same Dock with two pinned apps three times under each of four settings, in a fixed order:
- * neither edge lights nor spotlight, spotlight only, edge lights only, both. A Dock with pinned apps
- * killed the emulator as the very first test of a run, so the first group the run dies in names the
- * part responsible (the first group: neither of them).
+ * a Dock with two pinned apps under five settings of its edge lights, twice each, in a fixed order:
+ * nothing lit, the hairline only, a solid border only, the gradient border only, everything. The
+ * previous probe showed the spotlight is harmless and the edge lights on a Dock with pinned apps
+ * kill the emulator; the first group this run dies in names the drawing call.
  */
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -50,53 +50,49 @@ class AaaGlassProbeTest {
     }
 
     @Test
-    fun u11_noEdgeLightsNoSpotlight() = switched(edgeLights = false, spotlight = false, "noEdgeLightsNoSpotlight 1")
+    fun v11_nothingLit() = switched(false, GlassDiagnostics.BORDER_NONE, "nothingLit 1")
 
     @Test
-    fun u12_noEdgeLightsNoSpotlight() = switched(edgeLights = false, spotlight = false, "noEdgeLightsNoSpotlight 2")
+    fun v12_nothingLit() = switched(false, GlassDiagnostics.BORDER_NONE, "nothingLit 2")
 
     @Test
-    fun u13_noEdgeLightsNoSpotlight() = switched(edgeLights = false, spotlight = false, "noEdgeLightsNoSpotlight 3")
+    fun v21_hairlineOnly() = switched(true, GlassDiagnostics.BORDER_NONE, "hairlineOnly 1")
 
     @Test
-    fun u21_spotlightOnly() = switched(edgeLights = false, spotlight = true, "spotlightOnly 1")
+    fun v22_hairlineOnly() = switched(true, GlassDiagnostics.BORDER_NONE, "hairlineOnly 2")
 
     @Test
-    fun u22_spotlightOnly() = switched(edgeLights = false, spotlight = true, "spotlightOnly 2")
+    fun v31_solidBorderOnly() = switched(false, GlassDiagnostics.BORDER_SOLID, "solidBorderOnly 1")
 
     @Test
-    fun u23_spotlightOnly() = switched(edgeLights = false, spotlight = true, "spotlightOnly 3")
+    fun v32_solidBorderOnly() = switched(false, GlassDiagnostics.BORDER_SOLID, "solidBorderOnly 2")
 
     @Test
-    fun u31_edgeLightsOnly() = switched(edgeLights = true, spotlight = false, "edgeLightsOnly 1")
+    fun v41_gradientBorderOnly() = switched(false, GlassDiagnostics.BORDER_GRADIENT, "gradientBorderOnly 1")
 
     @Test
-    fun u32_edgeLightsOnly() = switched(edgeLights = true, spotlight = false, "edgeLightsOnly 2")
+    fun v42_gradientBorderOnly() = switched(false, GlassDiagnostics.BORDER_GRADIENT, "gradientBorderOnly 2")
 
     @Test
-    fun u33_edgeLightsOnly() = switched(edgeLights = true, spotlight = false, "edgeLightsOnly 3")
+    fun v51_everything() = switched(true, GlassDiagnostics.BORDER_GRADIENT, "everything 1")
 
     @Test
-    fun u41_both() = switched(edgeLights = true, spotlight = true, "both 1")
-
-    @Test
-    fun u42_both() = switched(edgeLights = true, spotlight = true, "both 2")
-
-    @Test
-    fun u43_both() = switched(edgeLights = true, spotlight = true, "both 3")
+    fun v52_everything() = switched(true, GlassDiagnostics.BORDER_GRADIENT, "everything 2")
 
     private fun switched(
-        edgeLights: Boolean,
-        spotlight: Boolean,
+        specular: Boolean,
+        border: Int,
         name: String,
     ) {
-        GlassDiagnostics.edgeLights = edgeLights
-        GlassDiagnostics.spotlight = spotlight
+        GlassDiagnostics.spotlight = false
+        GlassDiagnostics.specular = specular
+        GlassDiagnostics.border = border
         try {
             probe(name) { ProbeDock(items = listOf(camera, mail)) }
         } finally {
-            GlassDiagnostics.edgeLights = true
             GlassDiagnostics.spotlight = true
+            GlassDiagnostics.specular = true
+            GlassDiagnostics.border = GlassDiagnostics.BORDER_GRADIENT
         }
     }
 
