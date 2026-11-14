@@ -146,20 +146,20 @@ private fun OpenNotificationHeader(
         StreamAvatar(
             content.avatar,
             content.icon,
-            content.title ?: content.appLabel,
+            content.headline,
             env,
             OpenAvatarSize,
             person = content.hasPerson,
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = content.title ?: hiddenText(),
+                text = content.headline ?: hiddenText(),
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
                 text =
                     listOfNotNull(
-                        content.appLabel?.takeIf { it.isNotBlank() },
+                        content.secondaryLabel,
                         env.formats.age(content.postedAtEpochMillis),
                     ).joinToString(" · "),
                 style = MaterialTheme.typography.labelMedium,
@@ -185,7 +185,7 @@ private fun OpenNotificationBody(
         }
     }
     // The picture the app attached, across the card under the conversation it belongs to.
-    val sender = content.thread.lastOrNull()?.sender ?: content.title
+    val sender = content.thread.lastOrNull()?.sender ?: content.headline
     StreamPicture(content.picture, sender, env, OpenPictureMaxHeight)
     if (StreamActionPolicy.offers(content, StreamAction.Open)) {
         StreamTextButton(stringResource(R.string.stream_open), { callbacks.onAction(content, StreamAction.Open) })

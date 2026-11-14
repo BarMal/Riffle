@@ -179,16 +179,16 @@ internal fun NotificationCard(
                     StreamAvatar(
                         content.avatar,
                         content.icon,
-                        content.title ?: content.appLabel,
+                        content.headline,
                         env,
                         BrowseAvatarSize,
                         person = content.hasPerson,
                     )
                 },
-                title = content.title ?: hiddenText(),
+                title = content.headline ?: hiddenText(),
                 subtitle =
                     listOfNotNull(
-                        content.appLabel?.takeIf { it.isNotBlank() },
+                        content.secondaryLabel,
                         env.formats.age(content.postedAtEpochMillis),
                     ).joinToString(" · "),
                 trailing = { StreamHideMenuButton(hideChoices, content, groupKey, callbacks) },
@@ -206,7 +206,7 @@ internal fun NotificationCard(
                         modifier = Modifier.weight(1f),
                     )
                 } ?: Box(Modifier.weight(1f))
-                StreamThumbnail(content.picture, content.title, env, BrowseThumbnailSize)
+                StreamThumbnail(content.picture, content.headline, env, BrowseThumbnailSize)
             }
         }
     }

@@ -13,6 +13,9 @@ class RiffleNotificationListenerService : NotificationListenerService() {
         StatusBarNotificationMapper(
             userManager = getSystemService(UserManager::class.java),
             launcherApps = getSystemService(LauncherApps::class.java),
+            appLabelFor = { packageName ->
+                packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+            },
         )
     }
 
@@ -75,7 +78,8 @@ class RiffleNotificationListenerService : NotificationListenerService() {
         activeNotifications
             ?.also { notifications ->
                 runCatching { AndroidNotificationStageActionGateway.replaceAll(this, notifications) }
-            }?.mapNotNull { notification ->
+            }?.let { posted -> runCatching { notificationMapper.listed(posted) }.getOrDefault(posted.toList()) }
+            ?.mapNotNull { notification ->
                 runCatching {
                     val mapped = notificationMapper.map(notification)
                     val captured = NotificationImageCapture.capture(this, notification.notification)

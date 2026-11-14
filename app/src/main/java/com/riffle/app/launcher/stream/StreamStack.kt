@@ -118,7 +118,7 @@ internal fun StreamContent.cardHeight(): Dp =
 @Composable
 internal fun StreamContent.peekText(): String =
     when (this) {
-        is NotificationContent -> title ?: text ?: hiddenText()
+        is NotificationContent -> headline ?: hiddenText()
         is MediaContent -> title ?: stringResource(R.string.stream_media_unknown_title)
         is EventContent -> eventTitle(this)
         is ArticleContent -> title ?: hiddenText()
@@ -482,8 +482,8 @@ internal fun StreamContent.spokenText(env: StreamEnvironment): String =
     when (this) {
         is NotificationContent ->
             listOfNotNull(
-                appLabel,
-                title ?: hiddenText(),
+                secondaryLabel,
+                headline ?: hiddenText(),
                 text?.takeIf { it.isNotBlank() },
                 env.formats.age(postedAtEpochMillis),
             )
