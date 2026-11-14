@@ -11,6 +11,7 @@ import com.riffle.app.launcher.onboarding.LocalWalkthroughLauncher
 import com.riffle.app.launcher.onboarding.OnboardingText
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.workspaceGrid
+import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 
 /**
@@ -98,6 +99,7 @@ internal fun SettingsPostureTabs(
     onAction: (LauncherShellAction) -> Unit,
 ) = SettingsDeviceConfigurationTabs(state = state, onAction = onAction)
 
+@Suppress("LongMethod")
 @Composable
 private fun SettingsHomePageContent(
     state: SettingsSurfaceState,
@@ -106,6 +108,11 @@ private fun SettingsHomePageContent(
     val appearance = state.settings.appearance
     val homeSystemBars = appearance.homeSystemBars
 
+    SettingsHomeModeSections(
+        features = state.settings.features,
+        homeMode = state.settings.home.mode,
+        onAction = onAction,
+    )
     SettingsDeviceConfigurationTabs(state = state, onAction = onAction)
     SettingsSection(title = stringResource(R.string.settings_section_grid)) {
         HomeGridSetting(
@@ -197,6 +204,7 @@ private fun SettingsDockPageContent(
         )
     }
     SettingsSection(title = stringResource(R.string.settings_section_dynamic_side)) {
+        SettingsFeatureSwitchRow(LauncherFeature.DOCK_LIVE_APPS, state.settings.features, onAction)
         DockDynamicSideSetting(
             dock = state.homeLayout.dock,
             notificationAccessStatus = state.notificationAccessStatus,

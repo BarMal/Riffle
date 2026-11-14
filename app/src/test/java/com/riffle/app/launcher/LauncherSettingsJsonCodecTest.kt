@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
+import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -29,6 +30,7 @@ import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.HomeBehaviourSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
+import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -1431,5 +1433,59 @@ class LauncherSettingsJsonCodecTest {
         assertFalse(isNewerThanThisBuild("{}"))
         assertFalse(isNewerThanThisBuild("not json"))
         assertFalse(isNewerThanThisBuild(null))
+    }
+
+    @Test
+    fun roundTripsTheHomeModeAndOldBlobsDecodeToPlacedItems() {
+        HomeMode.entries.forEach { mode ->
+            val settings = LauncherSettings(home = HomeBehaviourSettings(mode = mode))
+            assertEquals(mode, decodeLauncherSettings(encodeLauncherSettings(settings)).home.mode)
+        }
+        // A blob from before Home mode has a home section with only the return behaviour (or none at all).
+        assertEquals(
+            HomeMode.PlacedItems,
+            decodeLauncherSettings("""{"version": 11, "home": {"returnBehavior": "RESTORE"}}""").home.mode,
+        )
+        assertEquals(HomeMode.PlacedItems, decodeLauncherSettings("""{"version": 11}""").home.mode)
+        assertEquals(HomeMode.PlacedItems, decodeLauncherSettings("""{"home": {"mode": "carousel"}}""").home.mode)
+        assertEquals(HomeMode.PlacedItems, decodeLauncherSettings("""{"home": {"mode": 4}}""").home.mode)
+        // The return behaviour next to it is not disturbed.
+        val both =
+            LauncherSettings(home = HomeBehaviourSettings(ReturnBehavior.START_PAGE, HomeMode.AppLibrary))
+        assertEquals(both.home, decodeLauncherSettings(encodeLauncherSettings(both)).home)
+    }
+
+    @Test
+    fun roundTripsTheFeatureSwitchesAndOldBlobsDecodeToTodaysBehaviour() {
+        val features = FeatureSettings(stream = false, dockLiveApps = false, library = false, simpleMode = true)
+        val settings = LauncherSettings(features = features)
+        assertEquals(features, decodeLauncherSettings(encodeLauncherSettings(settings)).features)
+        assertEquals(FeatureSettings(), decodeLauncherSettings(encodeLauncherSettings(LauncherSettings())).features)
+        assertEquals(FeatureSettings(), decodeLauncherSettings("""{"version": 11}""").features)
+        assertEquals(FeatureSettings(), decodeLauncherSettings("""{"features": "off"}""").features)
+        assertEquals(
+            FeatureSettings(library = false),
+            decodeLauncherSettings("""{"features": {"library": false, "stream": "no", "simpleMode": 1}}""").features,
+        )
+    }
+
+    @Test
+    fun theStoredPagedLibraryViewRoundTripsAndOtherViewsKeepTheirs() {
+        val settings =
+            LauncherSettings(
+                appDrawer =
+                    AppDrawerSettings(
+                        libraryViews =
+                            mapOf(
+                                HomeLayoutDeviceClass.PHONE to LibraryView.Paged,
+                                HomeLayoutDeviceClass.TABLET to LibraryView.AlphaList,
+                            ),
+                    ),
+            )
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+        assertEquals(LibraryView.Paged, decoded.appDrawer.libraryViewFor(HomeLayoutDeviceClass.PHONE))
+        assertEquals(LibraryView.AlphaList, decoded.appDrawer.libraryViewFor(HomeLayoutDeviceClass.TABLET))
+        // A blob that stored nothing for a class still draws the default.
+        assertEquals(LibraryView.Categories, decoded.appDrawer.libraryViewFor(HomeLayoutDeviceClass.FOLDABLE))
     }
 }

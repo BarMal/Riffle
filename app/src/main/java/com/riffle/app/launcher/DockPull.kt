@@ -315,6 +315,9 @@ internal interface DockPullGestureHost {
     /** The pull's full travel in dp: the window's extent along [direction]'s axis. */
     fun travelDp(direction: DockPullDirection): Float
 
+    /** Whether the pull away from the Dock's edge may open the Library (its switch; Simple mode turns it off). */
+    val canOpenLibrary: Boolean get() = true
+
     /** The press that toggles the Home and the contextual mode (a drag toward the Dock's edge, then release). */
     val press: DockPressState
 
@@ -502,7 +505,7 @@ private fun claimFor(
     val press =
         if (host.canPress) DockPress.claimFor(direction, drag.x, drag.y, touchSlopPx) else DockPullClaim.REJECT
     return when {
-        pull == DockPullClaim.CLAIM -> DockClaim.PULL
+        pull == DockPullClaim.CLAIM && host.canOpenLibrary -> DockClaim.PULL
         press == DockPullClaim.CLAIM -> DockClaim.PRESS
         pull == DockPullClaim.UNDECIDED -> null
         else -> DockClaim.NONE

@@ -1,5 +1,7 @@
 package com.riffle.core.domain.launcher
 
+import com.riffle.core.domain.launcher.settings.effectiveFeatures
+
 class LauncherShellStateReducer {
     fun homeRoleChanged(
         currentState: LauncherShellState,
@@ -49,6 +51,15 @@ class LauncherShellStateReducer {
         currentState: LauncherShellState,
         action: ShellNavigationAction,
     ): LauncherShellState {
+        // A switched-off feature has no way in: the action that would open it changes nothing.
+        val features = currentState.launcherSettings.effectiveFeatures()
+        val refused =
+            when (action) {
+                ShellNavigationAction.OpenStream -> !features.stream
+                ShellNavigationAction.OpenAppDrawer -> !features.library
+                else -> false
+            }
+        if (refused) return currentState
         val destination = action.destination
         // The Library rises over whatever showed when it opened, and closing it returns there.
         val overStream =

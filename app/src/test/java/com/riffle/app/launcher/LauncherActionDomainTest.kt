@@ -44,7 +44,9 @@ import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
+import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
@@ -382,6 +384,12 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectCardActionsPlacement(CardActionsPlacement.ON_CARD),
                 ),
                 settings("SetDockMotion", LauncherShellAction.SetDockMotion(DockMotionSettings(speedMillis = 300))),
+                settings("SelectHomeMode", LauncherShellAction.SelectHomeMode(HomeMode.AppLibrary)),
+                settings(
+                    "SetFeatureEnabled",
+                    LauncherShellAction.SetFeatureEnabled(LauncherFeature.STREAM, enabled = false),
+                ),
+                settings("SetSimpleMode", LauncherShellAction.SetSimpleMode(enabled = true)),
                 settings("DismissDockPressHint", LauncherShellAction.DismissDockPressHint),
                 settings(
                     "SetScreenContentProtection",

@@ -36,8 +36,8 @@ internal const val DOCK_PRESS_HINT_DISMISS_TEST_TAG = "dock-press-hint-dismiss"
  * Whether the first-run hint for pressing the Dock down is shown (ADR 0003, Amendment 3: the press "has no visible
  * affordance, so it needs a first-run hint and an accessibility action"). Once: until it is dismissed, or the Stream
  * has been opened by any route (the person has found it), it shows on Home when the Stream exists, and it is out of
- * the way of everything else: a running motion, a Library sheet, the Stream itself. (There is no reduced-interruption
- * mode yet to leave it out of; when Simple mode lands it joins this list.)
+ * the way of everything else: a running motion, a Library sheet, the Stream itself, and Simple mode (which has no
+ * Stream to find).
  */
 internal fun shouldShowDockPressHint(
     seen: Boolean,
@@ -46,7 +46,8 @@ internal fun shouldShowDockPressHint(
     libraryShown: Boolean,
     motionRunning: Boolean,
     choosing: Boolean,
-): Boolean = !seen && streamAvailable && !streamShown && !libraryShown && !motionRunning && !choosing
+    simpleMode: Boolean = false,
+): Boolean = !seen && !simpleMode && streamAvailable && !streamShown && !libraryShown && !motionRunning && !choosing
 
 /**
  * Where the hint's top-left lies: beyond the Dock ([dock], in root coordinates) toward the screen's interior ([pull] is

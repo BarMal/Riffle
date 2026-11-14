@@ -1,5 +1,7 @@
 package com.riffle.core.domain.launcher
 
+import com.riffle.core.domain.launcher.settings.FeatureSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -225,5 +227,52 @@ class LauncherShellStateReducerTest {
         assertFalse(overHome.libraryOverStream)
         assertTrue(ShellDestination.APP_DRAWER.isLibrary && ShellDestination.SEARCH.isLibrary)
         assertFalse(ShellDestination.STREAM.isLibrary)
+    }
+
+    private fun withFeatures(features: FeatureSettings) =
+        LauncherShellState(
+            launcherSettings = LauncherSettings(features = features),
+        )
+
+    @Test
+    fun theStreamHasNoWayInWhileItsSwitchIsOff() {
+        val state = withFeatures(FeatureSettings(stream = false))
+        val after = reducer.navigationActionSelected(state, ShellNavigationAction.OpenStream)
+        assertEquals(ShellDestination.HOME, after.destination)
+        assertEquals(state, after)
+        // The other places still open.
+        assertEquals(
+            ShellDestination.APP_DRAWER,
+            reducer.navigationActionSelected(state, ShellNavigationAction.OpenAppDrawer).destination,
+        )
+    }
+
+    @Test
+    fun theLibrarySheetHasNoWayInWhileItsSwitchIsOffButSearchStays() {
+        val state = withFeatures(FeatureSettings(library = false))
+        assertEquals(state, reducer.navigationActionSelected(state, ShellNavigationAction.OpenAppDrawer))
+        assertEquals(
+            ShellDestination.SEARCH,
+            reducer.navigationActionSelected(state, ShellNavigationAction.OpenSearch).destination,
+        )
+        assertEquals(
+            ShellDestination.STREAM,
+            reducer.navigationActionSelected(state, ShellNavigationAction.OpenStream).destination,
+        )
+    }
+
+    @Test
+    fun simpleModeClosesTheStreamAndTheLibraryButKeepsSearchAndSettings() {
+        val state = withFeatures(FeatureSettings(simpleMode = true))
+        assertEquals(state, reducer.navigationActionSelected(state, ShellNavigationAction.OpenStream))
+        assertEquals(state, reducer.navigationActionSelected(state, ShellNavigationAction.OpenAppDrawer))
+        assertEquals(
+            ShellDestination.SEARCH,
+            reducer.navigationActionSelected(state, ShellNavigationAction.OpenSearch).destination,
+        )
+        assertEquals(
+            ShellDestination.SETTINGS,
+            reducer.navigationActionSelected(state, ShellNavigationAction.OpenSettings).destination,
+        )
     }
 }

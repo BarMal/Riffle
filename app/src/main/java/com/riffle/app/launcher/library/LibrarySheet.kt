@@ -155,6 +155,31 @@ internal fun LibrarySheet(
             val toEdge = -delta * (if (vertical) direction.unitY else direction.unitX)
             dismissFraction = (dismissFraction + toEdge / extentPx).coerceIn(0f, 1f)
         }
+    // A pull toward the Dock's edge on the header (or, paged, on the pages or the handle) closes the Library.
+    val dismissDrag =
+        Modifier.draggable(
+            state = dragState,
+            orientation = if (vertical) Orientation.Vertical else Orientation.Horizontal,
+            onDragStopped = { velocityPxPerSecond ->
+                val axisUnit = if (vertical) direction.unitY else direction.unitX
+                val toEdgeVelocityDp = -velocityPxPerSecond * axisUnit / density
+                val outcome =
+                    DockPullThresholds().outcomeFor(
+                        progress = dismissFraction,
+                        gestureDistanceDp = dismissFraction * extentPx / density,
+                        velocityDpPerSecond = toEdgeVelocityDp,
+                    )
+                val target = if (outcome == SettleOutcome.COMMIT) 1f else 0f
+                scope.launch {
+                    Animatable(dismissFraction).animateTo(
+                        target,
+                        RiffleMotion.smooth(reducedMotion, ENTER_THRESHOLD),
+                    ) { dismissFraction = value }
+                    if (target == 1f) onClose()
+                }
+            },
+        )
+    val paged = state.view == LibraryView.Paged && !state.isSearching
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Box(
             modifier =
@@ -176,62 +201,64 @@ internal fun LibrarySheet(
                     }
                     .testTag(LIBRARY_SHEET_TEST_TAG),
         ) {
-            GlassSurface(
-                modifier = Modifier.fillMaxSize(),
-                weight = GlassWeight.Thick,
-                shape = RiffleShapes.extraLarge,
-                tint = launcherPanelSurfaceColor(),
-                contentColor = launcherPanelContentColor(),
-            ) {
-                Column(modifier = Modifier.fillMaxSize().padding(horizontal = RiffleSpacing.l)) {
-                    LibraryHeader(
-                        view = state.view,
-                        onShowAs = onShowAs,
-                        onClose = onClose,
-                        modifier =
-                            Modifier.draggable(
-                                state = dragState,
-                                orientation = if (vertical) Orientation.Vertical else Orientation.Horizontal,
-                                onDragStopped = { velocityPxPerSecond ->
-                                    val axisUnit = if (vertical) direction.unitY else direction.unitX
-                                    val toEdgeVelocityDp = -velocityPxPerSecond * axisUnit / density
-                                    val outcome =
-                                        DockPullThresholds().outcomeFor(
-                                            progress = dismissFraction,
-                                            gestureDistanceDp = dismissFraction * extentPx / density,
-                                            velocityDpPerSecond = toEdgeVelocityDp,
-                                        )
-                                    val target = if (outcome == SettleOutcome.COMMIT) 1f else 0f
-                                    scope.launch {
-                                        Animatable(dismissFraction).animateTo(
-                                            target,
-                                            RiffleMotion.smooth(reducedMotion, ENTER_THRESHOLD),
-                                        ) { dismissFraction = value }
-                                        if (target == 1f) onClose()
-                                    }
-                                },
-                            ),
+            if (paged) {
+                // No sheet: the pages are drawn straight over the wallpaper, Home's grid and Home's handle.
+                val actions = libraryAccessibilityActions(onClose = onClose, onShowAs = onShowAs)
+                LibraryPagedView(
+                    state = state,
+                    context = context,
+                    reducedMotion = reducedMotion,
+                    onOpenSearch = { onAction(LauncherShellAction.OpenSearch) },
+                    backgroundActions = actions,
+                    modifier = if (vertical) dismissDrag else Modifier,
+                    handleModifier = if (vertical) Modifier else dismissDrag,
+                ) { dismiss ->
+                    ShowAsMenuItems(
+                        options = LibraryView.entries,
+                        current = state.view,
+                        optionLabel = { option -> stringResource(option.titleRes()) },
+                        onSelect = { option ->
+                            dismiss()
+                            onShowAs(option)
+                        },
                     )
-                    LibrarySearchRow(state = state, onAction = onAction)
-                    if (!state.isSearching && openCategory == null) {
-                        AppProfileFilterChips(
-                            selectedFilter = state.profileFilter,
-                            onFilterSelected = { filter ->
-                                onAction(LauncherShellAction.AppDrawerProfileFilterSelected(filter))
-                            },
-                            apps = state.installedApps,
+                }
+            } else {
+                GlassSurface(
+                    modifier = Modifier.fillMaxSize(),
+                    weight = GlassWeight.Thick,
+                    shape = RiffleShapes.extraLarge,
+                    tint = launcherPanelSurfaceColor(),
+                    contentColor = launcherPanelContentColor(),
+                ) {
+                    Column(modifier = Modifier.fillMaxSize().padding(horizontal = RiffleSpacing.l)) {
+                        LibraryHeader(
+                            view = state.view,
+                            onShowAs = onShowAs,
+                            onClose = onClose,
+                            modifier = dismissDrag,
                         )
-                    }
-                    Spacer(modifier = Modifier.height(RiffleSpacing.s))
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        LibraryBody(
-                            state = state,
-                            context = context,
-                            categories = categories,
-                            openCategory = openCategory,
-                            onOpenCategory = { category -> openCategoryKey = category.key },
-                            onCloseCategory = { openCategoryKey = null },
-                        )
+                        LibrarySearchRow(state = state, onAction = onAction)
+                        if (!state.isSearching && openCategory == null) {
+                            AppProfileFilterChips(
+                                selectedFilter = state.profileFilter,
+                                onFilterSelected = { filter ->
+                                    onAction(LauncherShellAction.AppDrawerProfileFilterSelected(filter))
+                                },
+                                apps = state.installedApps,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(RiffleSpacing.s))
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                            LibraryBody(
+                                state = state,
+                                context = context,
+                                categories = categories,
+                                openCategory = openCategory,
+                                onOpenCategory = { category -> openCategoryKey = category.key },
+                                onCloseCategory = { openCategoryKey = null },
+                            )
+                        }
                     }
                 }
             }
@@ -302,7 +329,8 @@ private fun LibraryBody(
 
                 LibraryView.AlphaList -> LibraryAlphaListView(apps = state.apps, context = context)
 
-                LibraryView.Grid ->
+                // The paged View has no sheet to sit in; if it is asked for here (it is not) it reads as the grid.
+                LibraryView.Grid, LibraryView.Paged ->
                     AppIconGrid(
                         apps = state.apps,
                         columns = state.iconGridColumns,
@@ -358,16 +386,8 @@ private fun LibraryHeader(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val title = stringResource(R.string.library_title)
-    val close = stringResource(R.string.library_close_action)
     val resources = LocalContext.current.resources
-    val showAsActions =
-        LibraryView.entries.map { option ->
-            val label = resources.getString(R.string.stream_show_as) + " " + resources.getString(option.titleRes())
-            CustomAccessibilityAction(label) {
-                onShowAs(option)
-                true
-            }
-        }
+    val accessibilityActions = libraryAccessibilityActions(onClose = onClose, onShowAs = onShowAs)
     Box(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier =
@@ -378,14 +398,7 @@ private fun LibraryHeader(
                         onLongClick = { menuOpen = true },
                         onClick = {},
                     )
-                    .semantics {
-                        customActions = listOf(
-                            CustomAccessibilityAction(close) {
-                                onClose()
-                                true
-                            },
-                        ) + showAsActions
-                    },
+                    .semantics { customActions = accessibilityActions },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
@@ -425,11 +438,35 @@ private fun LibraryHeader(
     }
 }
 
+/** "Close Library" and "Show as <view>" for each view: the non-gesture routes of the header or the pages. */
+@Composable
+private fun libraryAccessibilityActions(
+    onClose: () -> Unit,
+    onShowAs: (LibraryView) -> Unit,
+): List<CustomAccessibilityAction> {
+    val close = stringResource(R.string.library_close_action)
+    val resources = LocalContext.current.resources
+    return listOf(
+        CustomAccessibilityAction(close) {
+            onClose()
+            true
+        },
+    ) +
+        LibraryView.entries.map { option ->
+            val label = resources.getString(R.string.stream_show_as) + " " + resources.getString(option.titleRes())
+            CustomAccessibilityAction(label) {
+                onShowAs(option)
+                true
+            }
+        }
+}
+
 internal fun LibraryView.titleRes(): Int =
     when (this) {
         LibraryView.Categories -> R.string.library_view_categories
         LibraryView.AlphaList -> R.string.library_view_alpha_list
         LibraryView.Grid -> R.string.library_view_grid
+        LibraryView.Paged -> R.string.library_view_paged
     }
 
 private val LibraryMaxWidth = 840.dp

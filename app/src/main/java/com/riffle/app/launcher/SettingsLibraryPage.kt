@@ -6,6 +6,7 @@ import androidx.compose.ui.res.stringResource
 import com.riffle.app.R
 import com.riffle.app.launcher.library.titleRes
 import com.riffle.core.domain.launcher.library.LibraryView
+import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.MAX_APP_DRAWER_ICON_GRID_COLUMNS
 import com.riffle.core.domain.launcher.settings.MIN_APP_DRAWER_ICON_GRID_COLUMNS
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
@@ -28,6 +29,9 @@ internal fun SettingsLibraryPageContent(
     val view = state.settings.appDrawer.libraryViewFor(deviceClass)
 
     SettingsPostureTabs(state = state, onAction = onAction)
+    SettingsSection(title = stringResource(R.string.settings_section_features)) {
+        SettingsFeatureSwitchRow(LauncherFeature.LIBRARY, state.settings.features, onAction)
+    }
     SettingsSection(title = stringResource(R.string.settings_section_view)) {
         SettingsChoiceRow(
             modifier = Modifier.settingAnchor(SettingKey.LIBRARY_SHOW_AS),

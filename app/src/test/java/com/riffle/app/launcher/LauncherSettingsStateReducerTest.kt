@@ -17,9 +17,12 @@ import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
+import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
+import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
+import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
@@ -101,6 +104,36 @@ class LauncherSettingsStateReducerTest {
         assertEquals(clamped.launcherSettings, repository.savedSettings)
         // Everything the earlier choices set is kept.
         assertEquals(OpenCardPlacement.ABOVE_DOCK, clamped.launcherSettings.stream.openCardPlacement)
+    }
+
+    @Test
+    fun persistsTheHomeModeTheFeatureSwitchesAndSimpleMode() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val start = LauncherShellState()
+        assertEquals(HomeMode.PlacedItems, start.launcherSettings.home.mode)
+        assertEquals(FeatureSettings(), start.launcherSettings.features)
+
+        val library = reducer.reduce(start, LauncherShellAction.SelectHomeMode(HomeMode.AppLibrary))
+        val noStream = reducer.reduce(library, LauncherShellAction.SetFeatureEnabled(LauncherFeature.STREAM, false))
+        val noLive =
+            reducer.reduce(noStream, LauncherShellAction.SetFeatureEnabled(LauncherFeature.DOCK_LIVE_APPS, false))
+        val noLibrary = reducer.reduce(noLive, LauncherShellAction.SetFeatureEnabled(LauncherFeature.LIBRARY, false))
+        val simple = reducer.reduce(noLibrary, LauncherShellAction.SetSimpleMode(true))
+
+        assertEquals(HomeMode.AppLibrary, library.launcherSettings.home.mode)
+        assertEquals(false, noStream.launcherSettings.features.stream)
+        assertEquals(false, noLive.launcherSettings.features.dockLiveApps)
+        assertEquals(false, noLibrary.launcherSettings.features.library)
+        assertEquals(true, simple.launcherSettings.features.simpleMode)
+        assertEquals(simple.launcherSettings, repository.savedSettings)
+
+        // Simple mode off gives every earlier choice back untouched, and a switch back on is just that switch.
+        val off = reducer.reduce(simple, LauncherShellAction.SetSimpleMode(false))
+        assertEquals(noLibrary.launcherSettings, off.launcherSettings)
+        val placed = reducer.reduce(off, LauncherShellAction.SelectHomeMode(HomeMode.PlacedItems))
+        assertEquals(HomeMode.PlacedItems, placed.launcherSettings.home.mode)
+        assertEquals(off.launcherSettings.features, placed.launcherSettings.features)
     }
 
     @Test

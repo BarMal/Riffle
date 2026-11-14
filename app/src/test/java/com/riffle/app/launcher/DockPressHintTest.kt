@@ -18,7 +18,14 @@ class DockPressHintTest {
         libraryShown: Boolean = false,
         motionRunning: Boolean = false,
         choosing: Boolean = false,
-    ) = shouldShowDockPressHint(seen, streamAvailable, streamShown, libraryShown, motionRunning, choosing)
+        simpleMode: Boolean = false,
+    ) = shouldShowDockPressHint(seen, streamAvailable, streamShown, libraryShown, motionRunning, choosing, simpleMode)
+
+    @Test
+    fun itNeverShowsInSimpleMode() {
+        assertFalse(show(simpleMode = true))
+        assertTrue(show(simpleMode = false))
+    }
 
     @Test
     fun itShowsOnHomeOnceThereIsAStreamAndItHasNotBeenSeen() {

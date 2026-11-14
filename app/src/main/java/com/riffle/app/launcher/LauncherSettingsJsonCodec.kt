@@ -20,10 +20,12 @@ import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.HomeBehaviourSettings
+import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
@@ -55,6 +57,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("version", LAUNCHER_SETTINGS_JSON_VERSION)
         .put("appDrawer", encodeAppDrawerSettings(settings.appDrawer))
         .put("appearance", encodeAppearance(settings.appearance))
+        .put("features", encodeFeatures(settings.features))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
         .put("hints", encodeHints(settings.hints))
@@ -101,6 +104,7 @@ private fun decodeLauncherSections(
     return defaults.copy(
         appDrawer = json.guarded("appDrawer", defaults.appDrawer, JSONObject::toAppDrawerSettings),
         appearance = json.guarded("appearance", defaults.appearance) { toAppearance(it, version) },
+        features = json.guarded("features", defaults.features, JSONObject::toFeatures),
         gestures = json.guarded("gestures", defaults.gestures, JSONObject::toGestures),
         haptics = json.guarded("haptics", defaults.haptics, JSONObject::toHaptics),
         hints = json.guarded("hints", defaults.hints, JSONObject::toHints),
@@ -178,7 +182,25 @@ private fun JSONObject.decodeLibraryViews(
 }
 
 private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
-    JSONObject().put("returnBehavior", settings.returnBehavior.name)
+    JSONObject()
+        .put("returnBehavior", settings.returnBehavior.name)
+        .put("mode", settings.mode.storedId)
+
+private fun encodeFeatures(settings: FeatureSettings): JSONObject =
+    JSONObject()
+        .put("stream", settings.stream)
+        .put("dockLiveApps", settings.dockLiveApps)
+        .put("library", settings.library)
+        .put("simpleMode", settings.simpleMode)
+
+// Absent (settings saved before the switches) or not a boolean: the default, today's behaviour.
+private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
+    FeatureSettings(
+        stream = (opt("stream") as? Boolean) ?: defaults.stream,
+        dockLiveApps = (opt("dockLiveApps") as? Boolean) ?: defaults.dockLiveApps,
+        library = (opt("library") as? Boolean) ?: defaults.library,
+        simpleMode = (opt("simpleMode") as? Boolean) ?: defaults.simpleMode,
+    )
 
 private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBehaviourSettings =
     HomeBehaviourSettings(
@@ -187,6 +209,8 @@ private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBeh
                 .takeIf(String::isNotEmpty)
                 ?.let { name -> ReturnBehavior.entries.firstOrNull { it.name == name } }
                 ?: defaults.returnBehavior,
+        // Absent (settings saved before Home mode) or a name this build does not know: Placed items.
+        mode = HomeMode.fromStoredId(optString("mode").takeIf(String::isNotEmpty)) ?: defaults.mode,
     )
 
 private fun encodePrivacy(settings: PrivacySettings): JSONObject =

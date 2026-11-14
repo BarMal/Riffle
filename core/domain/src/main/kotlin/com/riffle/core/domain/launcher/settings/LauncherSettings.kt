@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 data class LauncherSettings(
     val appDrawer: AppDrawerSettings = AppDrawerSettings(),
     val appearance: AppearanceSettings = AppearanceSettings(),
+    val features: FeatureSettings = FeatureSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
     val hints: HintSettings = HintSettings(),
@@ -32,6 +33,8 @@ data class LauncherSettings(
  */
 data class HomeBehaviourSettings(
     val returnBehavior: ReturnBehavior = ReturnBehavior.RESTORE,
+    /** What Home shows: the placed items (the default) or the app library pages. The placed layout is kept. */
+    val mode: HomeMode = HomeMode.DEFAULT,
 )
 
 /**

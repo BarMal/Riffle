@@ -16,13 +16,26 @@ class LibraryViewTest {
 
     @Test
     fun storedIdsRoundTripAndNeverChange() {
+        // Rewritten for slice 7b on purpose: the paged View is a new id; the three older ids are unchanged.
         assertEquals(
-            listOf("categories", "alpha_list", "grid"),
+            listOf("categories", "alpha_list", "grid", "paged"),
             LibraryView.entries.map { it.storedId },
         )
         LibraryView.entries.forEach { view -> assertEquals(view, LibraryView.fromStoredId(view.storedId)) }
         assertNull(LibraryView.fromStoredId("carousel"))
         assertNull(LibraryView.fromStoredId(null))
+    }
+
+    @Test
+    fun theStoredLayoutsKeepTheirViewAndPagedIsOnlyChosen() {
+        // Paged is a View in "Show as", not the new default: nobody's stored view or unstored default moves.
+        assertEquals(LibraryView.Paged, LibraryView.fromStoredId("paged"))
+        assertEquals(LibraryView.Categories, LibraryView.DEFAULT)
+        assertEquals(
+            LibraryView.Paged,
+            AppDrawerSettings().withLibraryView(HomeLayoutDeviceClass.PHONE, LibraryView.Paged)
+                .libraryViewFor(HomeLayoutDeviceClass.PHONE),
+        )
     }
 
     @Test

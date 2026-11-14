@@ -13,6 +13,8 @@ enum class SettingKey(
     @StringRes val labelRes: Int,
     @StringRes val keywordsRes: Int,
 ) {
+    SIMPLE_MODE(SettingsPage.HOME, R.string.setting_simple_mode, R.string.setting_simple_mode_keywords),
+    HOME_MODE(SettingsPage.HOME, R.string.setting_home_mode, R.string.setting_home_mode_keywords),
     HOME_GRID_COLUMNS(
         SettingsPage.HOME,
         R.string.setting_home_grid_columns,
@@ -96,6 +98,11 @@ enum class SettingKey(
         R.string.setting_dock_grid_spacing,
         R.string.setting_dock_grid_spacing_keywords,
     ),
+    FEATURE_DOCK_LIVE_APPS(
+        SettingsPage.DOCK,
+        R.string.setting_feature_dock_live_apps,
+        R.string.setting_feature_dock_live_apps_keywords,
+    ),
     DOCK_LIVE_APPS(SettingsPage.DOCK, R.string.setting_dock_live_apps, R.string.setting_dock_live_apps_keywords),
     FLOATING_ENABLED(
         SettingsPage.FLOATING_DOCK,
@@ -139,6 +146,11 @@ enum class SettingKey(
         R.string.setting_floating_labels,
         R.string.setting_floating_labels_keywords,
     ),
+    FEATURE_LIBRARY(
+        SettingsPage.LIBRARY,
+        R.string.setting_feature_library,
+        R.string.setting_feature_library_keywords,
+    ),
     LIBRARY_SHOW_AS(SettingsPage.LIBRARY, R.string.setting_library_show_as, R.string.setting_library_show_as_keywords),
     LIBRARY_GRID_COLUMNS(
         SettingsPage.LIBRARY,
@@ -154,6 +166,11 @@ enum class SettingKey(
         SettingsPage.LIBRARY,
         R.string.setting_library_refresh_apps,
         R.string.setting_library_refresh_apps_keywords,
+    ),
+    FEATURE_STREAM(
+        SettingsPage.STREAM,
+        R.string.setting_feature_stream,
+        R.string.setting_feature_stream_keywords,
     ),
     STREAM_SECTION_NOW(
         SettingsPage.STREAM,
