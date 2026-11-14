@@ -37,6 +37,7 @@ import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
 import com.riffle.app.launcher.stream.titleRes
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.app.launcher.stream.todoist.TasksSettingsState
+import com.riffle.core.domain.launcher.settings.LauncherFeature
 import com.riffle.core.domain.launcher.split.supportsSplit
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
@@ -95,6 +96,9 @@ internal fun SettingsStreamPageContent(
 ) {
     val repository = LocalStreamLayoutRepository.current
     SettingsPostureTabs(state = state, onAction = onAction)
+    SettingsSection(title = stringResource(R.string.settings_section_features)) {
+        SettingsFeatureSwitchRow(LauncherFeature.STREAM, state.settings.features, onAction)
+    }
     if (repository == null) {
         SettingsPreviewOffNote()
         return

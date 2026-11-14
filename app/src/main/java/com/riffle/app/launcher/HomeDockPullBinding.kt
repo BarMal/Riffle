@@ -45,6 +45,7 @@ import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.dockpull.streamPullFrame
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeEditMode
+import com.riffle.core.domain.launcher.settings.effectiveFeatures
 
 /** What [rememberHomeDockPullBinding] needs to know about the Stream. */
 internal class StreamPullInputs(
@@ -255,6 +256,7 @@ internal fun rememberHomeDockPullBinding(
     val canPull =
         state.homeLayout.editMode == HomeEditMode.Browsing && !state.isWidgetPickerOpen && !state.destination.isLibrary
     val latestStream = rememberUpdatedState(stream)
+    val libraryEnabled = state.launcherSettings.effectiveFeatures().library
     val press = remember { DockPressState() }
     val diagnostics = remember { mutableStateOf(DockPressDiagnostics()) }
     val dockCoordinates = remember { DockCoordinates() }
@@ -285,8 +287,10 @@ internal fun rememberHomeDockPullBinding(
             motion = motion,
             hostState = hostState,
             dockCoordinates = dockCoordinates,
+            libraryEnabled = libraryEnabled,
         )
-    val actions = dockPullActions(dockPull, motion, canPull, stream, direction, reducedMotion, onAction)
+    val actions =
+        dockPullActions(dockPull, motion, canPull, stream, direction, reducedMotion, libraryEnabled, onAction)
     val dockModifier =
         Modifier
             .testTag(HOME_DOCK_PULL_TEST_TAG)
@@ -480,10 +484,12 @@ private class DockPullActions(
     val modifier: Modifier,
     private val open: (DockPullDestination) -> Boolean,
     private val streamDestination: DockPullDestination?,
+    private val libraryEnabled: Boolean,
 ) {
     /** Ctrl + the pull arrow opens the Stream (or returns Home from it); with Shift, the Library. */
     fun openFromShortcut(libraryInstead: Boolean): Boolean =
         when {
+            (libraryInstead || streamDestination == null) && !libraryEnabled -> false
             libraryInstead || streamDestination == null -> open(DockPullDestination.LIBRARY)
             else -> open(streamDestination)
         }
@@ -498,6 +504,7 @@ private fun streamActionLabelRes(stream: StreamPullInputs): Int =
     }
 
 @Composable
+@Suppress("LongParameterList")
 private fun dockPullActions(
     dockPull: DockPullState,
     motion: DockMotionState,
@@ -505,6 +512,7 @@ private fun dockPullActions(
     stream: StreamPullInputs,
     direction: DockPullDirection,
     reducedMotion: Boolean,
+    libraryEnabled: Boolean,
     onAction: (LauncherShellAction) -> Unit,
 ): DockPullActions {
     val latestOnAction = rememberUpdatedState(onAction)
@@ -540,7 +548,7 @@ private fun dockPullActions(
                 customActions =
                     listOfNotNull(
                         CustomAccessibilityAction(libraryLabel) { open(DockPullDestination.LIBRARY) }
-                            .takeIf { canPull },
+                            .takeIf { canPull && libraryEnabled },
                         streamDestination?.takeIf { canPull }?.let { destination ->
                             CustomAccessibilityAction(streamLabel) { open(destination) }
                         },
@@ -555,7 +563,7 @@ private fun dockPullActions(
         } else {
             Modifier
         }
-    return DockPullActions(modifier, open, streamDestination)
+    return DockPullActions(modifier, open, streamDestination, libraryEnabled)
 }
 
 @Composable
@@ -571,12 +579,14 @@ private fun rememberDockPullGestureHost(
     motion: DockMotionState,
     hostState: HomeDockHostState,
     dockCoordinates: DockCoordinates,
+    libraryEnabled: Boolean,
 ): DockPullGestureHost {
     val latestCanPull = rememberUpdatedState(canPull)
     val latestReducedMotion = rememberUpdatedState(reducedMotion)
     val latestDensity = rememberUpdatedState(LocalDensity.current.density)
     val latestStream = rememberUpdatedState(stream)
     val latestDirection = rememberUpdatedState(direction)
+    val latestLibraryEnabled = rememberUpdatedState(libraryEnabled)
     return remember(dockPull, motion, rootSize, hostState, dockCoordinates) {
         object : DockPullGestureHost {
             override val state: DockPullState = dockPull
@@ -588,6 +598,9 @@ private fun rememberDockPullGestureHost(
 
             override val reducedMotion: Boolean
                 get() = latestReducedMotion.value
+
+            override val canOpenLibrary: Boolean
+                get() = latestLibraryEnabled.value
 
             override fun travelDp(direction: DockPullDirection): Float {
                 val window = rootSize.value

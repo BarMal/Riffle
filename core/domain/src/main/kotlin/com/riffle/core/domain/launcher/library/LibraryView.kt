@@ -14,6 +14,12 @@ enum class LibraryView(
     Categories("categories"),
     AlphaList("alpha_list"),
     Grid("grid"),
+
+    /**
+     * Every app as an icon grid on horizontal pages, drawn straight over the wallpaper with no sheet behind it and
+     * sized like Home's grid. The same pages are Home in the App library Home mode.
+     */
+    Paged("paged"),
     ;
 
     companion object {
