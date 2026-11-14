@@ -71,7 +71,8 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   along the pull direction (`dockPullClaimFor`) and a press when it leads the opposite way and more along that than across
   it (`DockPress.claimFor`); a drag along the run is the Dock's scroll (the contextual row scrolls, with fling), a held
   press is a long-press. The press is only claimed with a Stream, while the layout is browsed and the Library is not
-  showing. Once claimed, the press consumes its touches on the Initial pass, so a tile it started on never takes the
+  showing. The press is claimed on the Initial pass (ahead of the row's scroll and the tiles' handlers; the dominant axis when
+  the drag leaves slop decides, so a diagonal thumb is still a press); the pull is claimed on the Main pass. Once claimed, the press consumes its touches on the Initial pass, so a tile it started on never takes the
   release for a tap.
 - **Commit.** The release commits when the Dock is pressed down `DockPress.COMMIT_DP` = 28 dp (`GestureThresholds
   .DOCK_PRESS_COMMIT_DP`) at the moment of the lift, so a press drawn back before the lift does nothing. There is no

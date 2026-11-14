@@ -241,6 +241,27 @@ along the row, quick, and from Home, through the real `HomeDestination`) and `St
 `DockHoldToChooseInteractionTest.choosingWhileTheStreamIsOutSwitchesThePageAndKeepsTheStream` chose the open Stream's page by
 holding still; they now slide (and the JVM one asserts that holding does not choose).
 
+**Follow-up: the press is decided ahead of the row's scroll.** CI's emulator run failed two tests that move sideways
+(a thumb drifting 18 dp along the row while pressing; a press that slides to choose). Two causes, one in each:
+
+- The slide test (`choosingWhileTheStreamIsOutSwitchesThePageAndKeepsTheStream`) was my rewrite's fault: it moved to the
+  Dock's mid-height as well as along the run, which lifts the finger back above the 28 dp threshold, and choosing never
+  starts short of it. It now slides at the depth the press reached (the Robolectric twin already did).
+- The drift test is the real gap. The press was claimed on the Main pass, after the children, so the row's
+  `horizontalScroll` (which claims the first event where the sideways distance alone passes slop) and a tile's handlers saw a
+  diagonal thumb's events first; when the sideways part passed slop in the same event as the whole did, the scroll took and
+  consumed it and the Dock's loop abandoned the touch. Robolectric's fine-grained injected events rarely cross both in one
+  event; a device's do. Not confirmed on a device here; the code path is the evidence.
+
+The Dock now decides a press on the Initial pass (`DockPull.kt`, `awaitClaim`): the first event past slop that leads toward
+the Dock's edge and more along that than across (`DockPress.claimFor`, the dominant axis at that moment, so 35 dp down with
+18 sideways is a press) is consumed there, before the row or a tile sees it, and from then on `trackPress` consumes every
+event on Initial. Mostly horizontal drags are not claimed and the row scrolls and flings as the platform does. The pull
+(Library) is still claimed on the Main pass, after the children, so a child's own drag wins over it. ADR 0002: no platform
+detector claims "the perpendicular axis ahead of a child scrollable"; the Initial pass of the one custom pointer loop is the
+primitive that does. Tests: `DockPressTest` (diagonals), `DockRealFingerPressTest` and the device
+`DockRealFingerPressInteractionTest` (a mostly horizontal drag scrolls the row and sends nothing).
+
 ### Slice 4a: The stack (built)
 
 **Built.**

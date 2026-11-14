@@ -211,6 +211,31 @@ class DockRealFingerPressTest {
     }
 
     @Test
+    fun aMostlyHorizontalDragOnATileStillScrollsTheRowAndDoesNotPress() {
+        show(startShown = true)
+        val landing = tileCentre()
+        val node = composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Agenda")).fetchSemanticsNodes().first()
+        val before = node.positionInRoot.x
+        val density = composeRule.density.density
+        composeRule.onRoot().performTouchInput {
+            down(landing)
+            // 120 dp along the row with a little downward drift, well short of a press's 28 dp.
+            repeat(DRAG_STEPS) { step ->
+                val fraction = (step + 1) / DRAG_STEPS.toFloat()
+                moveTo(landing + Offset(-120f * density * fraction, 6f * density * fraction), delayMillis = 16L)
+            }
+            up()
+        }
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+        composeRule.waitForIdle()
+        val after =
+            composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Agenda")).fetchSemanticsNodes().first()
+                .positionInRoot.x
+        assertTrue("the row did not scroll: $before -> $after", kotlin.math.abs(after - before) > 20f)
+        assertTrue("a horizontal drag pressed the Dock: $sent", sent.isEmpty())
+    }
+
+    @Test
     fun aQuickFlickOnATileStillReturnsHome() {
         show(startShown = true)
         realPress(tileCentre(), dragMillis = 128L, restMillis = 0L)
@@ -230,6 +255,7 @@ class DockRealFingerPressTest {
     private companion object {
         val TILES = listOf("Now", "Recents", "Agenda", "Tasks", "Feeds")
         const val SEED = 17
+        const val DRAG_STEPS = 10
         const val STEP_MILLIS = 16L
         const val SETTLE_MILLIS = 1_000L
         const val WOBBLE_DP = 3f

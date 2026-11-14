@@ -116,6 +116,30 @@ class DockRealFingerPressInteractionTest {
     }
 
     @Test
+    fun aMostlyHorizontalDragOnATileScrollsTheRowAndDoesNotPress() {
+        setContent(streamShown = true)
+        val landing = landingOn(tileNodes())
+        val before = composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).fetchSemanticsNode().positionInRoot
+        val tile = tileNodes().minByOrNull { abs(it.positionInRoot.x + it.size.width / 2f - landing.x) }!!
+        val tileX = tile.positionInRoot.x
+        val density = composeRule.density.density
+        composeRule.onRoot().performTouchInput {
+            down(landing)
+            // 120 dp along the row with a little downward drift (well short of a press's 28 dp).
+            repeat(STEPS) { step ->
+                moveTo(landing + Offset(-120f * density * (step + 1) / STEPS, 6f * density * (step + 1) / STEPS), 16L)
+            }
+            up()
+        }
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+        composeRule.waitForIdle()
+        val moved =
+            composeRule.onAllNodesWithTag(tile.config[SemanticsProperties.TestTag]).fetchSemanticsNodes().firstOrNull()
+        assertTrue("the row did not scroll: $before", moved == null || abs(moved.positionInRoot.x - tileX) > 20f)
+        composeRule.runOnIdle { assertTrue("a horizontal drag pressed the Dock: $sent", sent.isEmpty()) }
+    }
+
+    @Test
     fun aRealPressFromHomeStillOpensTheStream() {
         setContent(streamShown = false)
         val dock = composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).fetchSemanticsNode()
@@ -264,6 +288,7 @@ class DockRealFingerPressInteractionTest {
         const val DOCKED_COUNT = 4
         const val DOCK_CAPACITY = 4
         const val SEED = 17
+        const val STEPS = 10
         const val STEP_MILLIS = 16L
         const val SETTLE_MILLIS = 1_000L
         const val WAIT_MILLIS = 5_000L

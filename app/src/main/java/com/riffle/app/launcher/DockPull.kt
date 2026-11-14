@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.animation.core.Animatable
@@ -408,37 +410,84 @@ private suspend fun AwaitPointerEventScope.awaitClaim(
         withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
             var decision: DockClaim? = null
             while (decision == null) {
-                val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
-                if (change == null || !change.pressed || change.isConsumed) {
-                    decision = DockClaim.NONE
+                // A press is decided ahead of the Dock's children, on the Initial pass: a drag that leads toward the
+                // Dock's edge is the press's from the moment it leaves slop, however far it also strays along the
+                // run, so the row's scroll (which claims along the run) and a tile's click cannot take it first.
+                val early = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }
+                if (early != null && claimsPress(direction, down, early, host)) {
+                    tracker.addPosition(early.uptimeMillis, early.position)
+                    early.consume()
+                    beginPress(early, down, direction, host, claimed)
+                    decision = DockClaim.PRESS
                 } else {
-                    tracker.addPosition(change.uptimeMillis, change.position)
-                    val drag = change.position - down.position
-                    decision = claimFor(direction, drag, touchSlopPx, host)
-                    if (decision == DockClaim.PULL) {
-                        change.consume()
-                        host.settleMotion()
-                        host.state.start(
-                            destination = DockPullDestination.LIBRARY,
-                            direction = direction,
-                            travelDp = host.travelDp(direction),
-                            reducedMotion = host.reducedMotion,
-                            split = null,
-                        )
-                        // From where the finger landed, so the sheet tracks it 1:1 from the start.
-                        host.state.drag(drag.x / density, drag.y / density)
-                    } else if (decision == DockClaim.PRESS) {
-                        change.consume()
-                        claimed.position = change.position
-                        claimed.timeMillis = change.uptimeMillis
-                        host.press.begin(host.pressEntryAt(down.position), host.pressNearestSelectableAt(down.position))
-                        host.press.update(DockPress.travelDp(direction, drag.x / density, drag.y / density))
-                    }
+                    val change = awaitPointerEvent().changes.firstOrNull { candidate -> candidate.id == down.id }
+                    decision = decideOnMain(change, down, direction, tracker, host, claimed, touchSlopPx)
                 }
             }
             decision
         }
     return decided ?: DockClaim.NONE
+}
+
+/** Whether [change] (the finger's latest place) makes the touch a press: it left slop toward the Dock's edge. */
+private fun AwaitPointerEventScope.claimsPress(
+    direction: DockPullDirection,
+    down: PointerInputChange,
+    change: PointerInputChange,
+    host: DockPullGestureHost,
+): Boolean {
+    if (!host.canPress || !change.pressed || change.isConsumed) return false
+    val drag = change.position - down.position
+    return DockPress.claimFor(direction, drag.x, drag.y, viewConfiguration.touchSlop) == DockPullClaim.CLAIM
+}
+
+/** Starts the press at [change]: the host and the press learn where it landed and how far it already went. */
+private fun AwaitPointerEventScope.beginPress(
+    change: PointerInputChange,
+    down: PointerInputChange,
+    direction: DockPullDirection,
+    host: DockPullGestureHost,
+    claimed: PressSample,
+) {
+    val drag = change.position - down.position
+    claimed.position = change.position
+    claimed.timeMillis = change.uptimeMillis
+    host.press.begin(host.pressEntryAt(down.position), host.pressNearestSelectableAt(down.position))
+    host.press.update(DockPress.travelDp(direction, drag.x / density, drag.y / density))
+}
+
+/** One event on the Main pass, after the children: a pull is claimed here (a child's own drag wins over it). */
+@Suppress("LongParameterList")
+private fun AwaitPointerEventScope.decideOnMain(
+    change: PointerInputChange?,
+    down: PointerInputChange,
+    direction: DockPullDirection,
+    tracker: VelocityTracker,
+    host: DockPullGestureHost,
+    claimed: PressSample,
+    touchSlopPx: Float,
+): DockClaim? {
+    if (change == null || !change.pressed || change.isConsumed) return DockClaim.NONE
+    tracker.addPosition(change.uptimeMillis, change.position)
+    val drag = change.position - down.position
+    val decision = claimFor(direction, drag, touchSlopPx, host)
+    if (decision == DockClaim.PULL) {
+        change.consume()
+        host.settleMotion()
+        host.state.start(
+            destination = DockPullDestination.LIBRARY,
+            direction = direction,
+            travelDp = host.travelDp(direction),
+            reducedMotion = host.reducedMotion,
+            split = null,
+        )
+        // From where the finger landed, so the sheet tracks it 1:1 from the start.
+        host.state.drag(drag.x / density, drag.y / density)
+    } else if (decision == DockClaim.PRESS) {
+        change.consume()
+        beginPress(change, down, direction, host, claimed)
+    }
+    return decision
 }
 
 /** What a drag of [drag] px from the landing is so far: undecided (null), a pull, a press, or neither. */
