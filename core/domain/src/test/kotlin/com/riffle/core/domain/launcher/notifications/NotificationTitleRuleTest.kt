@@ -9,9 +9,9 @@ class NotificationTitleRuleTest {
     fun theNotificationsOwnTitleIsItsTitle() {
         val resolved =
             NotificationTitleRule.resolve(
-                Input(title = "Claude has a question", text = "Tap to answer", appLabel = "Claude"),
+                Input(title = "Pilot has a question", text = "Tap to answer", appLabel = "Pilot"),
             )
-        assertEquals("Claude has a question", resolved.title)
+        assertEquals("Pilot has a question", resolved.title)
         assertEquals("Tap to answer", resolved.text)
     }
 
@@ -19,9 +19,9 @@ class NotificationTitleRuleTest {
     fun aTitleThatIsOnlyTheAppsNameGivesWayToTheBigTitle() {
         val resolved =
             NotificationTitleRule.resolve(
-                Input(title = "Claude", titleBig = "Claude has a question", appLabel = "Claude"),
+                Input(title = "Pilot", titleBig = "Pilot has a question", appLabel = "Pilot"),
             )
-        assertEquals("Claude has a question", resolved.title)
+        assertEquals("Pilot has a question", resolved.title)
     }
 
     @Test
@@ -37,14 +37,14 @@ class NotificationTitleRuleTest {
         val resolved =
             NotificationTitleRule.resolve(
                 Input(
-                    title = "Claude",
+                    title = "Pilot",
                     messagingStyle = true,
-                    lastSender = "Claude",
-                    text = "Claude has a question",
-                    appLabel = "Claude",
+                    lastSender = "Pilot",
+                    text = "Pilot has a question",
+                    appLabel = "Pilot",
                 ),
             )
-        assertEquals("Claude has a question", resolved.title)
+        assertEquals("Pilot has a question", resolved.title)
         // Not said twice.
         assertEquals("", resolved.text)
     }

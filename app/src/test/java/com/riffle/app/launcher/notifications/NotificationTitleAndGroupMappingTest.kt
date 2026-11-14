@@ -50,10 +50,10 @@ class NotificationTitleAndGroupMappingTest {
     @Test
     fun theNotificationsOwnTitleIsKeptWhenTheAppIsCalledSomethingElse() {
         val mapped =
-            mapper("Claude").map(
-                posted(1, builder().setContentTitle("Claude has a question").setContentText("Tap to answer").build()),
+            mapper("Pilot").map(
+                posted(1, builder().setContentTitle("Pilot has a question").setContentText("Tap to answer").build()),
             )
-        assertEquals("Claude has a question", mapped.title)
+        assertEquals("Pilot has a question", mapped.title)
         assertEquals("Tap to answer", mapped.text)
     }
 
@@ -61,12 +61,12 @@ class NotificationTitleAndGroupMappingTest {
     fun aBigTitleWinsOverATitleThatIsOnlyTheAppsName() {
         val notification =
             builder()
-                .setContentTitle("Claude")
+                .setContentTitle("Pilot")
                 .setStyle(
-                    Notification.BigTextStyle().setBigContentTitle("Claude has a question").bigText("Which file?"),
+                    Notification.BigTextStyle().setBigContentTitle("Pilot has a question").bigText("Which file?"),
                 )
                 .build()
-        assertEquals("Claude has a question", mapper("Claude").map(posted(1, notification)).title)
+        assertEquals("Pilot has a question", mapper("Pilot").map(posted(1, notification)).title)
     }
 
     @Test
@@ -86,8 +86,8 @@ class NotificationTitleAndGroupMappingTest {
             return builder().setStyle(style).build()
         }
         assertEquals(
-            "Claude has a question",
-            mapper("Claude").map(posted(1, messaging("Claude", "Claude has a question"))).title,
+            "Pilot has a question",
+            mapper("Pilot").map(posted(1, messaging("Pilot", "Pilot has a question"))).title,
         )
         assertEquals("Maya", mapper("WhatsApp").map(posted(2, messaging("Maya", "On my way"))).title)
         assertEquals(

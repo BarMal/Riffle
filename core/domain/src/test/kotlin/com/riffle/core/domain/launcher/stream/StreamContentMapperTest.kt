@@ -52,10 +52,10 @@ class StreamContentMapperTest {
 
     @Test
     fun `the notification's own title leads and the app's name is the second line`() {
-        val content = StreamContentMapper.map(notificationItem("a", app = "Claude")) as NotificationContent
+        val content = StreamContentMapper.map(notificationItem("a", app = "Pilot")) as NotificationContent
 
         assertEquals("Title a", content.headline)
-        assertEquals("Claude", content.secondaryLabel)
+        assertEquals("Pilot", content.secondaryLabel)
     }
 
     @Test

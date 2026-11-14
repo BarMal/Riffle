@@ -9,7 +9,7 @@ package com.riffle.core.domain.launcher.notifications
  * - Anything else: the title, else the big title (a big-text or big-picture style may set only that one).
  * - A candidate that is only the app's own name says nothing the card does not already say (the app's name is the
  *   card's second line): the next candidate is taken, and when there is none the first short line of the text is the
- *   title ("Claude has a question" and not "Claude").
+ *   title ("Pilot has a question" and not "Pilot").
  * - With no title at all the result is blank: the card then shows the app's name as its title, never a hidden state.
  */
 object NotificationTitleRule {
