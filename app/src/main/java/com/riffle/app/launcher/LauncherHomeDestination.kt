@@ -2,9 +2,7 @@
 
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.absolutePadding
@@ -537,6 +535,9 @@ private fun HomeInputGate(blocked: () -> Boolean) {
 
 private const val HOME_INPUT_GATE_Z_INDEX = 1f
 
+/** The Library's scrim: the room around the sheet, which a tap closes and a long-press opens its menu from. */
+internal const val LIBRARY_SCRIM_TEST_TAG = "library-scrim"
+
 /** The test tag of the scrim that takes a tap outside an open card. */
 internal const val OPEN_CARD_SCRIM_TEST_TAG = "open-card-scrim"
 internal const val HOME_INPUT_GATE_TEST_TAG = "home-input-gate"
@@ -684,41 +685,44 @@ private fun LibraryHomeSurface(
         }
         return
     }
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .zIndex(HOME_CONTENT_Z_INDEX)
-                .dockInteractionPadding(dockPosition, dockExtent),
-    ) {
-        // The margin around the sheet belongs to it: a tap there closes the Library instead of reaching what is under.
+    // The Library's one "Show as" menu: the sheet's own space opens it, and so does the margin around the sheet.
+    val showAs = remember { PressMenuState() }
+    Box(modifier = Modifier.fillMaxSize().zIndex(HOME_CONTENT_Z_INDEX)) {
+        // The room around the sheet belongs to it, all the way to the edges of the window (under the system bars and
+        // beside the Dock's own room too): a tap there closes the Library instead of reaching what is under, and a
+        // long-press there is the sheet's menu.
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
+                    .testTag(LIBRARY_SCRIM_TEST_TAG)
+                    .pressMenu(
+                        state = showAs,
+                        haptics = haptics,
+                        longClickLabel = stringResource(R.string.library_header_long_press_label),
+                        onTap = close,
                         onClickLabel = stringResource(R.string.library_close_action),
-                        onClick = close,
                     ),
         )
-        LibrarySheet(
-            // The paged View has no sheet to inset: its grid starts where Home's does.
-            modifier =
-                if (libraryState.view == LibraryView.Paged) {
-                    Modifier.padding(insets)
-                } else {
-                    Modifier.padding(insets).padding(RiffleSpacing.s)
-                },
-            state = libraryState,
-            context = context,
-            reducedMotion = state.reducedMotion(),
-            direction = dockPosition.pullDirection,
-            awayFraction = pull::libraryAwayFraction,
-            onClose = close,
-            dockEdge = dockPosition,
-        )
+        Box(modifier = Modifier.fillMaxSize().dockInteractionPadding(dockPosition, dockExtent)) {
+            LibrarySheet(
+                // The paged View has no sheet to inset: its grid starts where Home's does.
+                modifier =
+                    if (libraryState.view == LibraryView.Paged) {
+                        Modifier.padding(insets)
+                    } else {
+                        Modifier.padding(insets).padding(RiffleSpacing.s)
+                    },
+                state = libraryState,
+                context = context,
+                reducedMotion = state.reducedMotion(),
+                direction = dockPosition.pullDirection,
+                awayFraction = pull::libraryAwayFraction,
+                onClose = close,
+                dockEdge = dockPosition,
+                menu = showAs,
+            )
+        }
     }
 }
 
@@ -769,20 +773,30 @@ private fun AppLibraryHome(
                 true
             },
         )
+    // The view lays out inside the system bars and the Dock's reserve, like Home's grid; its empty-space handler (the
+    // menu) covers the whole window, under them too.
+    val ltr = LayoutDirection.Ltr
+
+    fun room(edge: DockPosition): Dp = if (dockPosition == edge) dockExtent else 0.dp
+    val contentPadding =
+        PaddingValues.Absolute(
+            left = insets.calculateLeftPadding(ltr) + room(DockPosition.LEFT),
+            top = insets.calculateTopPadding() + room(DockPosition.TOP),
+            right = insets.calculateRightPadding(ltr) + room(DockPosition.RIGHT),
+            bottom = insets.calculateBottomPadding() + room(DockPosition.BOTTOM),
+        )
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .zIndex(HOME_CONTENT_Z_INDEX)
                 .then(surfaceModifier)
-                .dockInteractionPadding(dockPosition, dockExtent)
                 .homeGestureInput(
                     enabled = state.homeLayout.editMode == HomeEditMode.Browsing,
                     settings =
                         state.launcherSettings.gestures.homeGestures.without(features).forAppLibraryHome(),
                     onAction = onAction,
-                )
-                .padding(insets),
+                ),
     ) {
         LibraryPagedView(
             state = libraryState,
@@ -792,6 +806,7 @@ private fun AppLibraryHome(
             backgroundActions = actions,
             dockEdge = dockPosition,
             handleHidden = handleHidden,
+            contentPadding = contentPadding,
         ) { dismiss ->
             if (!features.simpleMode) {
                 DropdownMenuItem(
@@ -838,13 +853,24 @@ private fun StreamHomeSurface(
     val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
     val dockExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
     val insets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets().asPaddingValues()
+    // The stack lays out inside the system bars and the Dock's reserve, but its empty room (a tap closes, a long-press
+    // is the page's options) is the whole window: the surface is not inset, its content is.
+    val ltr = LayoutDirection.Ltr
+
+    fun room(edge: DockPosition): Dp = if (dockPosition == edge) dockExtent else 0.dp
+    val contentPadding =
+        PaddingValues.Absolute(
+            left = insets.calculateLeftPadding(ltr) + room(DockPosition.LEFT),
+            top = insets.calculateTopPadding() + room(DockPosition.TOP),
+            right = insets.calculateRightPadding(ltr) + room(DockPosition.RIGHT),
+            bottom = insets.calculateBottomPadding() + room(DockPosition.BOTTOM),
+        )
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .zIndex(HOME_CONTENT_Z_INDEX)
-                .then(modifier)
-                .dockInteractionPadding(dockPosition, dockExtent),
+                .then(modifier),
     ) {
         StreamDestination(
             host = stream,
@@ -852,7 +878,7 @@ private fun StreamHomeSurface(
             installedApps = state.installedApps,
             appIconLoader = appIconLoader,
             reducedMotion = state.launcherSettings.motion.reducedMotion,
-            contentPadding = insets,
+            contentPadding = contentPadding,
             liveAppSlots = state.homeLayout.dock.liveAppSlots,
             onConnectTasks = onConnectTasks,
             pinnedApps = visibleLayout.pinnedApps(),

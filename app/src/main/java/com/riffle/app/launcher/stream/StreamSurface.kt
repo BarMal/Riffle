@@ -42,9 +42,17 @@ import androidx.compose.ui.semantics.semantics
 import com.riffle.app.R
 import com.riffle.app.launcher.LocalDockFan
 import com.riffle.app.launcher.LocalDockMotionTuning
+import com.riffle.app.launcher.LocalLauncherHaptics
+import com.riffle.app.launcher.PressMenuAnchor
+import com.riffle.app.launcher.PressMenuState
+import com.riffle.app.launcher.ShortcutContextMenu
+import com.riffle.app.launcher.ShortcutContextMenuItem
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
 import com.riffle.app.launcher.dpBounds
+import com.riffle.app.launcher.pageOptionMenu
+import com.riffle.app.launcher.pressMenu
+import com.riffle.core.domain.launcher.dock.DockDynamicSide
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.dock.DockPageOrder
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
@@ -212,20 +220,52 @@ internal fun StreamSurface(
         DockLinkEffects(dockLink, pages, surfaceCallbacks, onShowAs)
     }
     val hiddenSections = layout.sections.filter { !it.enabled }.map { it.section }
+    // A long-press on the stack's empty room opens the options of the page in front (Show as, Move, Hide: the ones a
+    // long-press of its Dock tile offers), where the finger is; a tap there closes the Stream.
+    val pageMenu = remember { PressMenuState() }
+    val pageMenuItems =
+        pageOptionsOf(
+            dockLink = dockLink,
+            pages = pages,
+            currentKey = state.currentKey,
+            layout = layout,
+            nowPlaying = dockEntries.any { entry -> entry is DockDynamicSideEntry.NowPlaying },
+            resources = context.resources,
+        )
+    val pageMenuLabel = stringResource(R.string.stream_page_options_label)
+    val haptics = LocalLauncherHaptics.current
+    // The stack's empty room: a tap closes the Stream and a long-press opens the page's options (or does nothing new
+    // when there are none). Folded, the room is the whole window, under the system bars too; beside a Dock it is the
+    // column's rectangle.
+    val emptyRoom: Modifier =
+        onEmptyTap?.let { tap ->
+            if (pageMenuItems.isEmpty()) {
+                Modifier.pointerInput(tap) { detectTapGestures { tap() } }
+            } else {
+                Modifier.pressMenu(pageMenu, haptics, pageMenuLabel, onTap = tap)
+            }
+        } ?: Modifier
     CompositionLocalProvider(LocalOpenCards provides openCards, LocalActionsInDock provides actionsInDock) {
-        Box(modifier = modifier.fillMaxSize().testTag(STREAM_SURFACE_TEST_TAG)) {
+        Box(
+            modifier =
+                modifier.fillMaxSize().testTag(STREAM_SURFACE_TEST_TAG)
+                    .then(if (pageBounds == null) emptyRoom else Modifier),
+        ) {
             Box(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
                 Box(
                     modifier =
                         (if (pageBounds != null) Modifier.dpBounds(pageBounds) else Modifier.fillMaxSize())
-                            .then(
-                                onEmptyTap?.let {
-                                        tap ->
-                                    Modifier.pointerInput(tap) { detectTapGestures { tap() } }
-                                } ?: Modifier,
-                            )
+                            .then(if (pageBounds != null) emptyRoom else Modifier)
                             .then(if (pageBounds != null) Modifier.testTag(STREAM_PAGES_TEST_TAG) else Modifier),
                 ) {
+                    PressMenuAnchor(pageMenu) {
+                        ShortcutContextMenu(
+                            expanded = pageMenu.expanded && pageMenuItems.isNotEmpty(),
+                            items = pageMenuItems,
+                            onDismissRequest = pageMenu::dismiss,
+                            onAction = {},
+                        )
+                    }
                     if (pages.isEmpty()) {
                         StreamAllHidden(hiddenSections) { section ->
                             surfaceCallbacks.onLayoutAction(StreamLayoutAction.SetEnabled(section, true))
@@ -254,6 +294,36 @@ internal fun StreamSurface(
             )
         }
     }
+}
+
+/**
+ * The options of the page in front, as the long-press of its Dock tile offers them (see [pageOptionMenu]); empty when
+ * there is no Dock to apply them, no page, or the page is a pinned app's shortcuts (which has no options).
+ */
+private fun pageOptionsOf(
+    dockLink: StreamDockLink?,
+    pages: List<StreamPage>,
+    currentKey: String?,
+    layout: StreamLayout,
+    nowPlaying: Boolean,
+    resources: android.content.res.Resources,
+): List<ShortcutContextMenuItem> {
+    val ref = pages.firstOrNull { page -> page.key == currentKey }?.ref()
+    if (dockLink == null || ref == null || ref.isShortcutsPage) return emptyList()
+    val entry =
+        if (ref.isLiveAppPage) {
+            DockDynamicSideEntry.LiveApp(
+                groupKey = requireNotNull(ref.groupKey),
+                packageName = "",
+                profileId = null,
+                label = null,
+                count = 0,
+            )
+        } else {
+            DockDynamicSideEntry.ContextTile(ref.section)
+        }
+    val tileSections = DockDynamicSide.contextSections(dockLink.pages, nowPlaying)
+    return pageOptionMenu(entry, layout, tileSections, resources, dockLink::requestOption)
 }
 
 /**

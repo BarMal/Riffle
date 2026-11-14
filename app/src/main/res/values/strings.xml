@@ -13,6 +13,7 @@
 
     <!-- Section header, Show as and layout edits -->
     <string name="stream_show_as">Show as</string>
+    <string name="stream_page_options_label">Show options for this page</string>
     <string name="stream_show_as_stack">Stack</string>
     <string name="stream_show_as_list">List</string>
     <string name="stream_shown_as">%1$s shown as %2$s</string>
