@@ -98,7 +98,8 @@ internal fun GlanceWidgetPreview(
                     modifier = Modifier.size(RiffleSpacing.xxxl),
                     weight = GlassWeight.Thin,
                     shape = RiffleShapes.small,
-                    tint = MaterialTheme.colorScheme.primaryContainer,
+                    tint = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    edgeTint = MaterialTheme.colorScheme.primary,
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
