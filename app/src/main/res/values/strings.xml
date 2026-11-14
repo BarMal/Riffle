@@ -645,8 +645,6 @@
     <string name="settings_stream_card_glow_off">Colour in the card only</string>
     <string name="settings_stream_open_centre">Centre</string>
     <string name="settings_stream_open_above_dock">Above the Dock</string>
-    <string name="settings_stream_open_grows_out">Grows out of the Dock</string>
-    <string name="settings_stream_open_grows_out_note">Grows out of the Dock is kept for later and looks like Above the Dock for now.</string>
     <string name="settings_stream_actions_in_dock">In the Dock</string>
     <string name="settings_stream_actions_on_card">On the card</string>
     <string name="settings_stream_intro">Choose which sections the Stream shows, in what order and how. These are the same choices as long-pressing a section header in the Stream.</string>

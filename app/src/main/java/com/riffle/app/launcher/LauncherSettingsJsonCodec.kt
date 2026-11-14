@@ -547,6 +547,19 @@ private fun JSONObject.toFeedProfile(): AppProfile? =
         }
     }
 
+/**
+ * "Grows out of the Dock" was offered, stored and drawn as just above the Dock until it was withdrawn (it is a real
+ * growth that is not built): a stored one reads as the placement it was drawn as. Any other unknown name is [default].
+ */
+private fun openCardPlacementOf(
+    stored: String,
+    default: OpenCardPlacement,
+): OpenCardPlacement =
+    when (stored) {
+        "GROWS_OUT_OF_DOCK" -> OpenCardPlacement.ABOVE_DOCK
+        else -> runCatching { OpenCardPlacement.valueOf(stored) }.getOrDefault(default)
+    }
+
 /** 11: P9 removed the stage cards settings, contextual behaviour, the after-leaving-Library target and fullscreenHome. */
 internal const val LAUNCHER_SETTINGS_JSON_VERSION = 11
 
@@ -567,9 +580,7 @@ private fun JSONObject.toStreamSettings(defaults: StreamSettings): StreamSetting
     StreamSettings(
         cardTintPercent = optInt("cardTintPercent", defaults.cardTintPercent),
         cardTopGlow = optBoolean("cardTopGlow", defaults.cardTopGlow),
-        openCardPlacement =
-            runCatching { OpenCardPlacement.valueOf(optString("openCardPlacement")) }
-                .getOrDefault(defaults.openCardPlacement),
+        openCardPlacement = openCardPlacementOf(optString("openCardPlacement"), defaults.openCardPlacement),
         cardActionsPlacement =
             runCatching { CardActionsPlacement.valueOf(optString("cardActionsPlacement")) }
                 .getOrDefault(defaults.cardActionsPlacement),

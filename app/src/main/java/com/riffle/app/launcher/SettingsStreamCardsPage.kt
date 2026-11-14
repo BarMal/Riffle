@@ -120,12 +120,6 @@ internal fun SettingsStreamCards(
         SettingsChoiceRow(
             modifier = Modifier.settingAnchor(SettingKey.STREAM_OPEN_CARD_POSITION),
             title = SettingKey.STREAM_OPEN_CARD_POSITION.label(),
-            subtitle =
-                if (settings.openCardPlacement == OpenCardPlacement.GROWS_OUT_OF_DOCK) {
-                    stringResource(R.string.settings_stream_open_grows_out_note)
-                } else {
-                    null
-                },
             options = OpenCardPlacement.entries,
             selected = settings.openCardPlacement,
             onSelect = { placement -> onAction(LauncherShellAction.SelectOpenCardPlacement(placement)) },
@@ -181,7 +175,6 @@ private fun OpenCardPlacement.labelRes(): Int =
     when (this) {
         OpenCardPlacement.CENTRE -> R.string.settings_stream_open_centre
         OpenCardPlacement.ABOVE_DOCK -> R.string.settings_stream_open_above_dock
-        OpenCardPlacement.GROWS_OUT_OF_DOCK -> R.string.settings_stream_open_grows_out
     }
 
 private fun CardActionsPlacement.labelRes(): Int =

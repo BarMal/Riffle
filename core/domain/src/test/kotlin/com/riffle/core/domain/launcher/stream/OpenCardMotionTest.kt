@@ -96,10 +96,18 @@ class OpenCardMotionTest {
     }
 
     @Test
-    fun openJustAboveTheDockItsBottomIsTheDocksGapAndGrowsOutOfTheDockIsTheSame() {
+    fun openJustAboveTheDockItsBottomIsTheDocksGap() {
         val above = frame(1f, OpenCardPlacement.ABOVE_DOCK)
         assertEquals(950f, above.topPx + above.heightPx)
-        assertEquals(above, frame(1f, OpenCardPlacement.GROWS_OUT_OF_DOCK))
+    }
+
+    @Test
+    fun centreAndAboveTheDockPutAShortOpenCardInDifferentPlaces() {
+        // The setting is real folded: a card shorter than the room sits higher at the centre than above the Dock.
+        val centre = frame(1f, OpenCardPlacement.CENTRE)
+        val above = frame(1f, OpenCardPlacement.ABOVE_DOCK)
+        assertEquals(centre.heightPx, above.heightPx)
+        assertTrue(centre.topPx < above.topPx)
     }
 
     @Test

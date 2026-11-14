@@ -98,9 +98,9 @@ object OpenCardLayout {
         val height = browse + (full - browse) * p
         val browseTop = bottom - browse
         val openTop =
-            when (StreamCardActions.effectiveCardPlacement(placement)) {
+            when (placement) {
                 OpenCardPlacement.CENTRE -> stripsPx + (room - full) / 2f
-                else -> bottom - full
+                OpenCardPlacement.ABOVE_DOCK -> bottom - full
             }
         return Frame(topPx = browseTop + (openTop - browseTop) * p, heightPx = height)
     }

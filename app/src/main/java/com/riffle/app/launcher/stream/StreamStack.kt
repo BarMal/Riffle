@@ -280,7 +280,7 @@ internal fun StreamStack(
     val cardHeight = entries.maxOf { it.height }.scaledForFont()
     val behind = (entries.size - 1).coerceIn(0, StreamCardStackSpec.VISIBLE_PEEKS)
     val strips = StreamCardStackSpec.PITCH_DP.dp * behind
-    val placement = StreamCardActions.effectiveCardPlacement(env.cardSettings.openCardPlacement)
+    val placement = env.cardSettings.openCardPlacement
     val density = LocalDensity.current.density
     val bodies = remember(stackKey) { OpenCardBodies() }
     val handoff =

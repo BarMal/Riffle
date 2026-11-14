@@ -594,14 +594,16 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun theDeferredGrowsOutOfTheDockPlacementIsStored() {
-        val settings =
-            LauncherSettings(stream = StreamSettings(openCardPlacement = OpenCardPlacement.GROWS_OUT_OF_DOCK))
+    fun aStoredGrowsOutOfTheDockPlacementReadsAsJustAboveTheDock() {
+        // Offered by earlier builds and drawn as just above the Dock all along; withdrawn until it is built.
+        val decoded = decodeLauncherSettings("""{"stream": {"openCardPlacement": "GROWS_OUT_OF_DOCK"}}""").stream
 
+        assertEquals(OpenCardPlacement.ABOVE_DOCK, decoded.openCardPlacement)
         assertEquals(
-            OpenCardPlacement.GROWS_OUT_OF_DOCK,
-            decodeLauncherSettings(encodeLauncherSettings(settings)).stream.openCardPlacement,
+            OpenCardPlacement.ABOVE_DOCK,
+            decodeLauncherSettings(encodeLauncherSettings(LauncherSettings(stream = decoded))).stream.openCardPlacement,
         )
+        assertEquals(listOf(OpenCardPlacement.CENTRE, OpenCardPlacement.ABOVE_DOCK), OpenCardPlacement.entries)
     }
 
     @Test

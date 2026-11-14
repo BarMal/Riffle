@@ -165,14 +165,12 @@ class StreamAndMotionSettingsTest {
     }
 
     @Test
-    fun theDeferredGrowsOutOfTheDockChoiceIsOfferedAndSaysItLooksLikeAboveTheDockForNow() {
+    fun growsOutOfTheDockIsNotOfferedUntilItIsBuilt() {
         showCards()
 
-        composeRule.onNodeWithTag(openCardPlacementTestTag(OpenCardPlacement.GROWS_OUT_OF_DOCK)).performClick()
-
-        assertEquals(OpenCardPlacement.GROWS_OUT_OF_DOCK, store.saved?.stream?.openCardPlacement)
-        composeRule.onNodeWithTag(openCardPlacementTestTag(OpenCardPlacement.GROWS_OUT_OF_DOCK)).assertIsSelected()
-        composeRule.onNodeWithText("Grows out of the Dock is kept for later", substring = true).assertExists()
+        composeRule.onNodeWithText("Grows out of the Dock").assertDoesNotExist()
+        composeRule.onNodeWithText("Above the Dock").assertExists()
+        composeRule.onNodeWithText("Centre").assertExists()
     }
 
     @Test

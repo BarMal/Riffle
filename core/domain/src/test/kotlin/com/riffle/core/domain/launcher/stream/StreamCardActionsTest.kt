@@ -2,7 +2,6 @@ package com.riffle.core.domain.launcher.stream
 
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
-import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.workspace.ItemTarget
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -252,19 +251,6 @@ class StreamCardActionsTest {
         assertEquals(
             CardActionsPlacement.ON_CARD,
             StreamCardActions.effectiveActionsPlacement(CardActionsPlacement.ON_CARD, DockPosition.BOTTOM),
-        )
-    }
-
-    @Test
-    fun growsOutOfTheDockIsDrawnAsJustAboveTheDockForNow() {
-        assertEquals(
-            OpenCardPlacement.ABOVE_DOCK,
-            StreamCardActions.effectiveCardPlacement(OpenCardPlacement.GROWS_OUT_OF_DOCK),
-        )
-        assertEquals(OpenCardPlacement.CENTRE, StreamCardActions.effectiveCardPlacement(OpenCardPlacement.CENTRE))
-        assertEquals(
-            OpenCardPlacement.ABOVE_DOCK,
-            StreamCardActions.effectiveCardPlacement(OpenCardPlacement.ABOVE_DOCK),
         )
     }
 }
