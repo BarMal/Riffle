@@ -39,6 +39,8 @@ internal class AndroidAppShortcutRepository(
             )
                 .orEmpty()
                 .map { shortcut -> mapper.map(identity = identity, shortcut = shortcut.toAndroidShortcut()) }
+                // The platform's rank order (lower first); equal ranks keep the order the platform answered in.
+                .sortedBy { shortcut -> shortcut.rank }
         }.getOrDefault(emptyList())
 
     private val InstalledApp.shortcutQuery: LauncherApps.ShortcutQuery
@@ -69,6 +71,7 @@ internal class AndroidAppShortcutMapper {
             longLabel = shortcut.longLabel.normalizedOptionalPlatformLabel(),
             enabled = shortcut.enabled,
             disabledMessage = shortcut.disabledMessage?.takeIf { message -> message.isNotBlank() },
+            rank = shortcut.rank,
         )
 }
 
@@ -78,6 +81,7 @@ internal data class AndroidAppShortcut(
     val longLabel: String?,
     val enabled: Boolean,
     val disabledMessage: String?,
+    val rank: Int = 0,
 )
 
 private fun ShortcutInfo.toAndroidShortcut(): AndroidAppShortcut =
@@ -87,6 +91,7 @@ private fun ShortcutInfo.toAndroidShortcut(): AndroidAppShortcut =
         longLabel = longLabel?.toString(),
         enabled = isEnabled,
         disabledMessage = disabledMessage?.toString(),
+        rank = rank,
     )
 
 private const val SHORTCUT_QUERY_FLAGS: Int =

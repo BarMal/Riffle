@@ -2,9 +2,12 @@ package com.riffle.app.launcher.stream
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Looper
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.test.core.app.ApplicationProvider
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -133,5 +136,42 @@ class StreamImageLoaderTest {
 
         assertNull(runBlocking { loader.load(ItemImageKeys.notificationArtwork(personal, "k"), 64) })
         assertNull(runBlocking { loader.load(ItemImageKeys.feedArtwork("d"), 64) })
+    }
+
+    private val files = AppIdentity(AppPackageName("com.files"), AppActivityName(".Main"))
+
+    @Test
+    fun aShortcutsIconComesFromItsResolverOffTheMainThread() {
+        val threads = mutableListOf<Thread>()
+        val handles = mutableListOf<ItemImageHandle>()
+        val loader =
+            AndroidStreamImageLoader(
+                context.packageManager,
+                shortcutIcon = { handle ->
+                    threads += Thread.currentThread()
+                    handles += handle
+                    ColorDrawable(Color.GREEN)
+                },
+            )
+        val handle = ItemImageKeys.shortcutIcon(files, "recent")
+
+        assertNotNull(runBlocking { loader.load(handle, 64) })
+        assertEquals(listOf(handle), handles)
+        assertTrue(threads.single() !== Looper.getMainLooper().thread)
+    }
+
+    @Test
+    fun aShortcutTheLauncherCannotReadDrawsItsAppsIconInstead() {
+        val loader = AndroidStreamImageLoader(context.packageManager, shortcutIcon = { null })
+        val handle = ItemImageKeys.shortcutIcon(files, "recent")
+        // An app that is not installed has no icon to fall back to: the card draws without one.
+        assertNull(runBlocking { loader.load(handle, 64) })
+
+        val installed = android.content.pm.PackageInfo().apply { packageName = "com.files" }
+        installed.applicationInfo = android.content.pm.ApplicationInfo().apply { packageName = "com.files" }
+        val shadow = org.robolectric.Shadows.shadowOf(context.packageManager)
+        shadow.installPackage(installed)
+        shadow.setApplicationIcon("com.files", ColorDrawable(Color.BLUE))
+        assertNotNull(runBlocking { loader.load(handle, 64) })
     }
 }

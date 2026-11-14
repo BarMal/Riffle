@@ -63,6 +63,7 @@ import com.riffle.app.launcher.LocalDockFan
 import com.riffle.app.launcher.LocalLauncherHaptics
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
+import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.MediaContent
@@ -87,6 +88,7 @@ internal fun StreamContent.iconHandle(): ItemImageHandle? =
         is NotificationContent -> icon
         is MediaContent -> icon
         is RecentAppContent -> icon
+        is AppShortcutContent -> icon
         else -> null
     }
 
@@ -102,7 +104,8 @@ internal fun StreamContent.cardHeight(): Dp =
         is EventContent -> StreamCardHeights.event
         is ArticleContent -> if (image != null) StreamCardHeights.article else StreamCardHeights.articleWithoutImage
         is TaskContent -> StreamCardHeights.tasks
-        is RecentAppContent -> StreamCardHeights.event
+        is RecentAppContent -> StreamCardHeights.app
+        is AppShortcutContent -> StreamCardHeights.app
     }
 
 /** One line saying what a card is about, for the strip of it that peeks out below the card in front. */
@@ -115,9 +118,10 @@ internal fun StreamContent.peekText(): String =
         is ArticleContent -> title ?: hiddenText()
         is TaskContent -> title ?: hiddenText()
         is RecentAppContent -> label ?: hiddenText()
+        is AppShortcutContent -> shortcutTitle(this)
     }
 
-/** The card for any content, so a Stack draws without knowing what is in it. Apps are tiles, not cards. */
+/** The card for any content, so a Stack draws without knowing what is in it. */
 @Composable
 @Suppress("LongParameterList")
 internal fun StreamCard(
@@ -138,7 +142,8 @@ internal fun StreamCard(
         is EventContent -> EventCard(content, env, callbacks, groupKey, modifier, caption)
         is ArticleContent -> ArticleCard(content, env, callbacks, groupKey, modifier)
         is TaskContent -> TasksCard(listOf(content), env, callbacks, modifier)
-        is RecentAppContent -> RecentAppTile(content, env, callbacks, groupKey, modifier)
+        is RecentAppContent -> RecentAppCard(content, env, callbacks, groupKey, modifier, caption)
+        is AppShortcutContent -> AppShortcutCard(content, env, callbacks, modifier)
     }
 }
 
@@ -152,53 +157,50 @@ internal fun StreamCard(
  */
 @Composable
 internal fun StreamStack(
-    items: List<StreamContent>,
+    entries: List<StackEntry>,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     groupKey: String?,
     stackKey: String,
     modifier: Modifier = Modifier,
-    captions: Map<String, String> = emptyMap(),
 ) {
     var expandedId by remember(stackKey) { mutableStateOf<String?>(null) }
     val stackState = remember(stackKey) { StreamStackState() }
-    val expandedItem = items.firstOrNull { it.id.value == expandedId }
+    val expandedItem = entries.firstOrNull { it.id == expandedId }
     if (expandedItem != null) {
         BackHandler { expandedId = null }
         StackColumn(modifier) {
-            StreamCard(
-                content = expandedItem,
+            StackEntryCard(
+                entry = expandedItem,
                 env = env,
                 callbacks = callbacks,
                 groupKey = groupKey,
                 expanded = true,
-                onExpandedChange = { expand -> expandedId = if (expand) expandedItem.id.value else null },
-                caption = captions[expandedItem.id.value],
+                onExpandedChange = { expand -> expandedId = if (expand) expandedItem.id else null },
                 modifier = Modifier.fillMaxWidth().widthIn(max = StackMaxCardWidth),
             )
         }
         return
     }
-    if (items.size == 1) {
-        val only = items.single()
+    if (entries.size == 1) {
+        val only = entries.single()
         LoneCard(modifier) {
-            StreamCard(
-                content = only,
+            StackEntryCard(
+                entry = only,
                 env = env,
                 callbacks = callbacks,
                 groupKey = groupKey,
                 expanded = false,
-                onExpandedChange = { expand -> if (expand) expandedId = only.id.value },
-                caption = captions[only.id.value],
+                onExpandedChange = { expand -> if (expand) expandedId = only.id },
                 modifier =
                     Modifier.fillMaxWidth().widthIn(
                         max = StackMaxCardWidth,
-                    ).height(only.cardHeight().scaledForFont()),
+                    ).height(only.height.scaledForFont()),
             )
         }
         return
     }
-    FocusedStack(items, env, callbacks, groupKey, stackState, captions, modifier) { expandedId = it.id.value }
+    FocusedStack(entries, env, callbacks, groupKey, stackState, modifier) { expandedId = it.id }
 }
 
 /** An expanded card: it can be taller than the page, so it scrolls. */
@@ -266,7 +268,8 @@ internal fun StreamContent.spokenText(env: StreamEnvironment): String =
         is ArticleContent ->
             listOfNotNull(feedName, title ?: hiddenText(), summary?.takeIf { it.isNotBlank() }, author)
         is TaskContent -> listOfNotNull(title ?: hiddenText(), listName)
-        is RecentAppContent -> listOfNotNull(label ?: hiddenText())
+        is RecentAppContent -> listOfNotNull(label ?: hiddenText(), lastUsedEpochMillis?.let(env.formats::age))
+        is AppShortcutContent -> listOfNotNull(shortcutTitle(this), longLabel, appLabel.takeIf { !opensApp })
     }.joinToString(". ")
 
 /**
@@ -290,14 +293,13 @@ internal fun StreamContent.spokenText(env: StreamEnvironment): String =
 @Composable
 @Suppress("LongMethod", "LongParameterList")
 private fun FocusedStack(
-    items: List<StreamContent>,
+    items: List<StackEntry>,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     groupKey: String?,
     state: StreamStackState,
-    captions: Map<String, String>,
     modifier: Modifier,
-    onExpand: (StreamContent) -> Unit,
+    onExpand: (StackEntry) -> Unit,
 ) {
     val count = items.size
     val dockFan = LocalDockFan.current
@@ -346,7 +348,7 @@ private fun FocusedStack(
     }
 
     // Every card of a pile is as tall as the tallest, so the strips that peek out above the front one line up.
-    val cardHeight = items.maxOf { it.cardHeight() }.scaledForFont()
+    val cardHeight = items.maxOf { it.height }.scaledForFont()
     val geometry = remember(cardHeight) { StackGeometry(cardHeight.value) }
     val frontIndex by remember(count) { derivedStateOf { StackFling.nearest(state.position, count) } }
     val composed by remember(count, geometry) { derivedStateOf { geometry.composedRange(state.position, count) } }
@@ -394,29 +396,28 @@ private fun FocusedStack(
         ) {
             for (index in composed) {
                 val item = items[index]
-                key(item.id.value) {
+                key(item.id) {
                     val isFront = index == frontIndex
                     StackSlot(
                         index = index,
                         isFront = isFront,
                         rank = abs(index - frontIndex),
                         dockFan = dockFan,
-                        tag = streamStackCardTag(item.id.value),
+                        tag = streamStackCardTag(item.id),
                         spoken = item.spokenText(env),
                         position = position,
                         open = open,
                         bringToFront = bringToFront,
-                        onOpen = { callbacks.onAction(item, StreamAction.Open) },
+                        onOpen = { item.openContent?.let { callbacks.onAction(it, StreamAction.Open) } },
                         onBringToFront = { goTo(index) },
                     ) {
-                        StreamCard(
-                            content = item,
+                        StackEntryCard(
+                            entry = item,
                             env = env,
                             callbacks = callbacks,
                             groupKey = groupKey,
                             expanded = false,
                             onExpandedChange = { expand -> if (expand) onExpand(item) },
-                            caption = captions[item.id.value],
                             modifier = Modifier.size(width = cardWidth, height = cardHeight),
                         )
                     }

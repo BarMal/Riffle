@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,6 +47,7 @@ import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
+import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.EventKind
 import com.riffle.core.domain.launcher.stream.StreamGroup
@@ -58,7 +57,7 @@ import com.riffle.core.domain.launcher.stream.StreamPageBody
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
 import com.riffle.core.domain.launcher.stream.StreamView
-import com.riffle.core.domain.launcher.stream.TaskContent
+import com.riffle.core.domain.launcher.workspace.sources.ItemImageKeys
 import java.time.LocalDate
 
 @StringRes
@@ -67,9 +66,9 @@ internal fun StreamSection.titleRes(): Int =
         StreamSection.NOW -> R.string.stream_section_now
         StreamSection.NOTIFICATIONS -> R.string.stream_section_notifications
         StreamSection.RECENTS -> R.string.stream_section_recents
-        StreamSection.AGENDA -> R.string.stream_section_agenda
-        StreamSection.TASKS -> R.string.stream_section_tasks
+        StreamSection.TODAY -> R.string.stream_section_today
         StreamSection.FEEDS -> R.string.stream_section_feeds
+        StreamSection.SHORTCUTS -> R.string.stream_section_shortcuts
     }
 
 @StringRes
@@ -78,9 +77,9 @@ private fun StreamSection.emptyRes(): Int =
         StreamSection.NOW -> R.string.stream_empty_now
         StreamSection.NOTIFICATIONS -> R.string.stream_empty_notifications
         StreamSection.RECENTS -> R.string.stream_empty_recents
-        StreamSection.AGENDA -> R.string.stream_empty_agenda
-        StreamSection.TASKS -> R.string.stream_empty_tasks
+        StreamSection.TODAY -> R.string.stream_empty_today
         StreamSection.FEEDS -> R.string.stream_empty_feeds
+        StreamSection.SHORTCUTS -> R.string.stream_empty_shortcuts
     }
 
 @StringRes
@@ -96,9 +95,9 @@ internal fun StreamSection.glyph(): ImageVector =
         StreamSection.NOW -> Icons.Filled.PlayArrow
         StreamSection.NOTIFICATIONS -> Icons.Filled.Notifications
         StreamSection.RECENTS -> StreamIcons.Recents
-        StreamSection.AGENDA -> StreamIcons.Agenda
-        StreamSection.TASKS -> Icons.Filled.CheckCircle
+        StreamSection.TODAY -> StreamIcons.Agenda
         StreamSection.FEEDS -> StreamIcons.Feeds
+        StreamSection.SHORTCUTS -> Icons.Filled.CheckCircle
     }
 
 /** The page's name: the app or feed, or its section. */
@@ -146,7 +145,9 @@ internal fun StreamPageGlyph(
     size: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
-    val handle = page.lead?.takeIf { page.isGroupPage && page.section == StreamSection.NOTIFICATIONS }?.iconHandle()
+    val handle =
+        (page.lead as? AppShortcutContent)?.let { ItemImageKeys.appIcon(it.appIdentity) }
+            ?: page.lead?.takeIf { page.isGroupPage && page.section == StreamSection.NOTIFICATIONS }?.iconHandle()
     if (handle != null) {
         StreamIcon(handle, env, size, modifier)
     } else {
@@ -159,9 +160,9 @@ internal fun StreamPageGlyph(
     }
 }
 
-/** A page's scroll area: a column that scrolls vertically (states, Lists, Recents and Tasks). */
+/** A page's scroll area: a column that scrolls vertically (states and Lists). */
 @Composable
-private fun PageScroll(content: @Composable ColumnScope.() -> Unit) {
+internal fun PageScroll(content: @Composable ColumnScope.() -> Unit) {
     // Rises out of the Dock as one piece, with the front card's timing, when the Dock's trampoline opens the Stream.
     Column(
         modifier =
@@ -184,13 +185,12 @@ private fun StreamPageBodyView(
     when (val body = page.body) {
         is StreamPageBody.State ->
             PageScroll {
-                if (page.section == StreamSection.TASKS) {
-                    TasksSectionBody(
-                        body.result,
-                        callbacks,
-                    ) { StreamStateBody(page.section, body.result, env, callbacks) }
+                val result = body.result
+                if (page.section == StreamSection.TODAY && result is StreamSectionResult.NotConnected) {
+                    // No task account and nothing else to show on Today: the connect state, as a card.
+                    TasksSectionBody(result, callbacks) {}
                 } else {
-                    StreamStateBody(page.section, body.result, env, callbacks)
+                    StreamStateBody(page.section, result, env, callbacks)
                 }
             }
         is StreamPageBody.Content -> StreamContentBody(page, body, env, callbacks)
@@ -270,8 +270,10 @@ internal fun StreamStateMessage(
 }
 
 /**
- * The page's content as its section's view. Stack: a vertical pile of cards (apps are tiles, so Recents is a grid of
- * them, and Tasks is one card under the quick-add row). List: rows on one thin glass panel per group.
+ * The page's content as its section's view. Stack: a vertical pile of cards, the same for every section (Today's
+ * cards are its next event, its checklist, later events and tomorrow; a pinned app's are its shortcuts; Recents' are
+ * its apps).
+ * List: rows on one thin glass panel per group (Today: the agenda, then the tasks).
  */
 @Composable
 private fun StreamContentBody(
@@ -284,45 +286,55 @@ private fun StreamContentBody(
     // Only a notification can be hidden by its app group; the rest carry no group for the exclusions flow.
     val hideGroupKey = page.groupKey.takeIf { section == StreamSection.NOTIFICATIONS }
     when {
-        section == StreamSection.TASKS ->
-            PageScroll {
-                TasksSectionBody(StreamSectionResult.Ready(body.groups), callbacks) {
-                    val tasks = body.items
-                    if (page.view == StreamView.LIST) {
-                        StreamRowsPanel(section, tasks, env, callbacks, hideGroupKey)
-                    } else {
-                        TasksCard(tasks.filterIsInstance<TaskContent>(), env, callbacks, Modifier.fillMaxWidth())
-                    }
-                }
-            }
+        section == StreamSection.TODAY && page.view == StreamView.LIST -> TodayListBody(body, env, callbacks)
+        section == StreamSection.TODAY ->
+            StreamStack(
+                entries = todayEntries(body, env),
+                env = env,
+                callbacks = callbacks,
+                groupKey = null,
+                stackKey = page.key,
+            )
         page.view == StreamView.LIST ->
             PageScroll {
                 body.groups.forEach { group ->
                     GroupHeading(section, group, env)
                     StreamRowsPanel(section, group.items, env, callbacks, hideGroupKey)
                 }
-            }
-        section == StreamSection.RECENTS ->
-            PageScroll {
-                body.groups.forEach { group ->
-                    GroupHeading(section, group, env)
-                    RecentAppsGrid(group.items, env, callbacks, hideGroupKey)
-                }
+                body.gaps.forEach { gap -> StreamShortcutsGap(gap) }
             }
         else ->
             StreamStack(
-                items = body.items,
+                entries = pageEntries(page, body),
                 env = env,
                 callbacks = callbacks,
                 groupKey = hideGroupKey,
                 stackKey = page.key,
-                captions = if (section == StreamSection.AGENDA) agendaCaptions(body.groups, env) else emptyMap(),
             )
     }
 }
 
+/** The cards of a page's stack: its content in order (each with its caption), then the notices of its gaps. */
 @Composable
-private fun StreamRowsPanel(
+private fun pageEntries(
+    page: StreamPage,
+    body: StreamPageBody.Content,
+): List<StackEntry> {
+    val captions = if (page.section == StreamSection.RECENTS) recentCaptions(body.groups) else emptyMap()
+    val content = body.items.map { item -> ContentEntry(item, caption = captions[item.id.value]) }
+    return content + body.gaps.shortcutNotices()
+}
+
+/** The explanation of a shortcuts page's gap in a List: the same sentence the stack's notice card says. */
+@Composable
+private fun StreamShortcutsGap(gap: com.riffle.core.domain.launcher.stream.StreamGap) {
+    if (gap.source == com.riffle.core.domain.launcher.stream.StreamSourceIds.SHORTCUTS) {
+        StreamStateMessage(noticeText(Notice.ShortcutsNeedHome))
+    }
+}
+
+@Composable
+internal fun StreamRowsPanel(
     section: StreamSection,
     items: List<com.riffle.core.domain.launcher.stream.StreamContent>,
     env: StreamEnvironment,
@@ -348,29 +360,9 @@ private fun StreamRowsPanel(
     }
 }
 
-/** Recents as tiles: a wrapping grid that scrolls with the page, since an app has no card. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun RecentAppsGrid(
-    items: List<com.riffle.core.domain.launcher.stream.StreamContent>,
-    env: StreamEnvironment,
-    callbacks: StreamCallbacks,
-    groupKey: String?,
-) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-    ) {
-        items.filterIsInstance<com.riffle.core.domain.launcher.stream.RecentAppContent>().forEach { app ->
-            RecentAppTile(app, env, callbacks, groupKey)
-        }
-    }
-}
-
 /** The small heading over a group of a page that holds several: a day of the agenda, "Often used". */
 @Composable
-private fun GroupHeading(
+internal fun GroupHeading(
     section: StreamSection,
     group: StreamGroup,
     env: StreamEnvironment,
@@ -401,10 +393,10 @@ private fun groupLabel(
     env: StreamEnvironment,
 ): String? =
     when (section) {
-        StreamSection.AGENDA -> runCatching { LocalDate.parse(group.key) }.getOrNull()?.let { dayLabel(it, env) }
+        StreamSection.TODAY -> runCatching { LocalDate.parse(group.key) }.getOrNull()?.let { dayLabel(it, env) }
         StreamSection.RECENTS ->
             if (group.key == StreamGroupKeys.FREQUENT) stringResource(R.string.stream_recents_frequent) else null
-        StreamSection.NOTIFICATIONS, StreamSection.FEEDS, StreamSection.NOW, StreamSection.TASKS -> null
+        StreamSection.NOTIFICATIONS, StreamSection.FEEDS, StreamSection.NOW, StreamSection.SHORTCUTS -> null
     }
 
 @Composable
@@ -420,15 +412,13 @@ private fun dayLabel(
     }
 }
 
-/** The day each agenda event is on, so a pile of cards that spans days still says which day a card is for. */
+/** "Often used" on the apps of Recents' second group, so a pile that holds both still says which are which. */
 @Composable
-private fun agendaCaptions(
-    groups: List<StreamGroup>,
-    env: StreamEnvironment,
-): Map<String, String> =
-    buildMap {
-        groups.forEach { group ->
-            val label = groupLabel(StreamSection.AGENDA, group, env) ?: return@forEach
-            group.items.forEach { put(it.id.value, label) }
+private fun recentCaptions(groups: List<StreamGroup>): Map<String, String> {
+    val often = stringResource(R.string.stream_recents_frequent)
+    return buildMap {
+        groups.filter { it.key == StreamGroupKeys.FREQUENT }.forEach { group ->
+            group.items.forEach { put(it.id.value, often) }
         }
     }
+}

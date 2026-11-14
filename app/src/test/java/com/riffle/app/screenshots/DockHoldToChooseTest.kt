@@ -92,7 +92,7 @@ class DockHoldToChooseTest {
             }
         }
         composeRule.waitForIdle()
-        if (startShown) waitForTile("Agenda")
+        if (startShown) waitForTile("Today")
     }
 
     private fun waitForTile(label: String) {
@@ -118,7 +118,7 @@ class DockHoldToChooseTest {
     }
 
     /** Waits (on the test clock) until choosing has begun and the Dock has its tiles. */
-    private fun awaitChoosing(tile: String = "Agenda") {
+    private fun awaitChoosing(tile: String = "Today") {
         composeRule.mainClock.advanceTimeBy(HOLD_PLUS_MILLIS)
         waitForTile(tile)
         composeRule.mainClock.advanceTimeByFrame()
@@ -170,7 +170,7 @@ class DockHoldToChooseTest {
     @Test
     fun holdingThePressedDockExtendsItEarlyAndLiftingOpensTheItemUnderTheFinger() {
         show()
-        assertTrue("the Home Dock already has tiles", !hasTile("Agenda"))
+        assertTrue("the Home Dock already has tiles", !hasTile("Today"))
         pressAndHold()
         awaitChoosing()
 
@@ -198,7 +198,7 @@ class DockHoldToChooseTest {
         composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).performTouchInput {
             moveBy(Offset(SLIDE_PX, 0f), delayMillis = 16)
         }
-        waitForTile("Agenda")
+        waitForTile("Today")
         composeRule.mainClock.advanceTimeByFrame()
         assertNotNull("sliding did not start choosing", label())
         lift()
@@ -225,7 +225,7 @@ class DockHoldToChooseTest {
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         composeRule.waitForIdle()
         assertTrue("a cancelled choice did something: $sent", sent.isEmpty())
-        assertTrue("the Dock stayed extended", !hasTile("Agenda"))
+        assertTrue("the Dock stayed extended", !hasTile("Today"))
         assertEquals("Home did not come back", 1f, homeAlpha() ?: 1f, 0.001f)
     }
 
@@ -307,7 +307,7 @@ class DockHoldToChooseTest {
             ?.positionInRoot?.x ?: Float.NEGATIVE_INFINITY
 
     private companion object {
-        val TILES = listOf("Now", "Recents", "Agenda", "Tasks", "Feeds")
+        val TILES = listOf("Now", "Recents", "Today", "Feeds")
         const val PRESS_PX = 150f
         const val SLIDE_PX = 120f
         const val EDGE_FRAMES = 60

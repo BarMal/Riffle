@@ -98,7 +98,7 @@ class StreamUnfoldedScreenshotTest {
                 ) {
                     StreamSurface(
                         layout = layout,
-                        results = StreamSection.entries.associateWith { StreamFixtures.ready(it) },
+                        results = StreamSection.layoutSections.associateWith { StreamFixtures.ready(it) },
                         env = StreamFixtures.environment(),
                         callbacks = StreamCallbacks(),
                         contentPadding = PaddingValues(top = 48.dp, bottom = 96.dp),

@@ -7,6 +7,7 @@ import com.riffle.app.launcher.workspace.ItemImageKeyParser
 import com.riffle.app.launcher.workspace.ParsedImageKey
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.RecentAppContent
@@ -43,10 +44,13 @@ internal interface StreamFormats {
     fun dayLabel(day: LocalDate): String
 
     fun today(): LocalDate
+
+    /** The zone days are counted in (the Today page's "tomorrow"). */
+    fun zone(): ZoneId = ZoneId.systemDefault()
 }
 
 internal class SystemStreamFormats(
-    private val zone: () -> ZoneId = ZoneId::systemDefault,
+    private val zoneProvider: () -> ZoneId = ZoneId::systemDefault,
     private val clock: () -> Long = System::currentTimeMillis,
 ) : StreamFormats {
     override fun now(): Long = clock()
@@ -65,6 +69,8 @@ internal class SystemStreamFormats(
     override fun dayLabel(day: LocalDate): String = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).format(day)
 
     override fun today(): LocalDate = Instant.ofEpochMilli(clock()).atZone(zone()).toLocalDate()
+
+    override fun zone(): ZoneId = zoneProvider()
 }
 
 /** What the renderers read besides the content itself. */
@@ -108,6 +114,7 @@ internal fun StreamContent.appRef(): StreamAppRef? =
         is NotificationContent -> app
         is MediaContent -> app
         is RecentAppContent -> app
+        is AppShortcutContent -> app
         else -> null
     }
 

@@ -1,108 +1,97 @@
 package com.riffle.app.launcher.stream
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.riffle.app.R
-import com.riffle.app.launcher.GlassSurface
-import com.riffle.app.launcher.LocalLauncherCardShape
 import com.riffle.app.launcher.designsystem.RiffleSpacing
-import com.riffle.app.launcher.glassSpotlightSource
-import com.riffle.app.launcher.rememberGlassSpotlightColor
-import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.stream.RecentAppContent
 import com.riffle.core.domain.launcher.stream.StreamAction
 
-private val TileWidth = 88.dp
-private val TileIconSize = RiffleSpacing.xxxl
+private val CardAppIconSize = RiffleSpacing.xxxl + RiffleSpacing.s
 
 /**
- * An app as a tile: its icon and name on regular glass lit by the app's own colour. Apps have no card (ADR 0003), so
- * Recents' Stack view is a row of these. A tap launches the app; long-press (or the accessibility actions) offers Hide.
+ * A recent app as a card of the Recents stack, like every other page's: its icon (in the app's own colour), its
+ * name and when it was last used ("Often used" first, for the apps used most). A tap launches the app; Hide is in
+ * the card's menu (and its accessibility actions).
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun RecentAppTile(
+internal fun RecentAppCard(
     content: RecentAppContent,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     groupKey: String?,
     modifier: Modifier = Modifier,
+    /** Said before when it was used ("Often used"), or null. */
+    caption: String? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
-    var menuOpen by remember { mutableStateOf(false) }
-    val identity = remember(content, env.installedApps) { env.identityFor(content.app, content.icon) }
-    Box(modifier = modifier) {
-        GlassSurface(
-            modifier = Modifier.width(TileWidth),
-            weight = GlassWeight.Regular,
-            shape = LocalLauncherCardShape.current,
-            tint = MaterialTheme.colorScheme.surfaceContainerHigh,
-            spotlight = identity != null,
+    StreamCardSurface(content.id.value, content.app, content.icon, env, modifier) { sourceModifier ->
+        Row(
+            modifier =
+                sourceModifier
+                    .fillMaxSize()
+                    .streamHideActions(hideChoices, content, groupKey, callbacks)
+                    .padding(start = RiffleSpacing.l, top = RiffleSpacing.s, bottom = RiffleSpacing.s),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
         ) {
-            val color = rememberGlassSpotlightColor(identity = identity, appIconLoader = env.appIconLoader)
-            Column(
+            Row(
                 modifier =
                     Modifier
+                        .weight(1f)
                         .fillMaxWidth()
-                        .glassSpotlightSource(key = content.id.value, color = color)
-                        .heightIn(min = StreamMinTarget)
-                        .combinedClickable(
-                            role = Role.Button,
-                            onLongClickLabel = stringResource(R.string.stream_hide),
-                            onLongClick = if (hideChoices.isEmpty()) null else ({ menuOpen = true }),
-                            onClick = { callbacks.onAction(content, StreamAction.Open) },
-                        )
-                        .streamHideActions(hideChoices, content, groupKey, callbacks)
-                        .padding(RiffleSpacing.s),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
+                        .streamClickable({ callbacks.onAction(content, StreamAction.Open) }),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
             ) {
-                StreamIcon(content.icon, env, TileIconSize)
-                Text(
-                    text = content.label ?: stringResource(R.string.stream_hidden_content),
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-        val onHide = callbacks.onHide
-        if (onHide != null) {
-            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                hideChoices.forEach { choice ->
-                    DropdownMenuItem(
-                        text = { Text(choice.label) },
-                        onClick = {
-                            menuOpen = false
-                            onHide(content, groupKey, choice.kind)
-                        },
+                StreamIcon(content.icon, env, CardAppIconSize)
+                Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs)) {
+                    Text(
+                        text = content.label ?: stringResource(R.string.stream_hidden_content),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
+                    recentSubtitle(content, env, caption)?.let { subtitle ->
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
+            StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
         }
     }
+}
+
+/** "Often used, 2 h. ago", "Last used 5 min. ago", or just one of them; null when the app has neither. */
+@Composable
+private fun recentSubtitle(
+    content: RecentAppContent,
+    env: StreamEnvironment,
+    caption: String?,
+): String? {
+    val used =
+        content.lastUsedEpochMillis?.let {
+            stringResource(
+                R.string.stream_recent_last_used,
+                env.formats.age(it),
+            )
+        }
+    return listOfNotNull(caption, used).joinToString(", ").ifEmpty { null }
 }

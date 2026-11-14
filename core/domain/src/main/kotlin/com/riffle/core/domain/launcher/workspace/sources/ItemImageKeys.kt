@@ -22,6 +22,16 @@ object ItemImageKeys {
         profileId: AppProfileId,
     ): ItemImageHandle = ItemImageHandle("package-icon:${profileId.value}:${packageName.value}")
 
+    /**
+     * The icon of one launcher shortcut of an app: `shortcut-icon:<profile>/<package>/<shortcut id>` (the id is the
+     * rest of the key, so it may contain anything, slashes included).
+     */
+    fun shortcutIcon(
+        identity: AppIdentity,
+        shortcutId: String,
+    ): ItemImageHandle =
+        ItemImageHandle("shortcut-icon:${identity.profile.id.value}/${identity.packageName.value}/$shortcutId")
+
     /** Cached artwork of one feed article, keyed by its opaque digest; resolving it never uses the network. */
     fun feedArtwork(digest: String): ItemImageHandle = ItemImageHandle("feed-art:$digest")
 

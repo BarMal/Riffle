@@ -315,7 +315,7 @@ class DockRealFingerPressInteractionTest {
         )
 
     private companion object {
-        val TILES = listOf("Now", "Recents", "Agenda", "Tasks", "Feeds")
+        val TILES = listOf("Now", "Recents", "Today", "Feeds")
         const val DOCKED_COUNT = 4
         const val DOCK_CAPACITY = 4
         const val SEED = 17

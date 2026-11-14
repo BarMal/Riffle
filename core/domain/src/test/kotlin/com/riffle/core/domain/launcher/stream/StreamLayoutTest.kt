@@ -12,9 +12,9 @@ class StreamLayoutTest {
     @Test
     fun defaultHoldsEverySectionOnInTheFixedOrder() {
         val layout = StreamLayout.DEFAULT
-        assertEquals(StreamSection.entries, layout.sections.map { it.section })
+        assertEquals(StreamSection.layoutSections, layout.sections.map { it.section })
         assertTrue(layout.sections.all { it.enabled })
-        assertEquals(StreamSection.entries, layout.enabledSections.map { it.section })
+        assertEquals(StreamSection.layoutSections, layout.enabledSections.map { it.section })
     }
 
     @Test
@@ -22,8 +22,7 @@ class StreamLayoutTest {
         assertEquals(StreamView.STACK, StreamLayout.DEFAULT.viewOf(StreamSection.NOW))
         assertEquals(StreamView.STACK, StreamLayout.DEFAULT.viewOf(StreamSection.NOTIFICATIONS))
         assertEquals(StreamView.STACK, StreamLayout.DEFAULT.viewOf(StreamSection.RECENTS))
-        assertEquals(StreamView.LIST, StreamLayout.DEFAULT.viewOf(StreamSection.AGENDA))
-        assertEquals(StreamView.LIST, StreamLayout.DEFAULT.viewOf(StreamSection.TASKS))
+        assertEquals(StreamView.STACK, StreamLayout.DEFAULT.viewOf(StreamSection.TODAY))
         assertEquals(StreamView.STACK, StreamLayout.DEFAULT.viewOf(StreamSection.FEEDS))
     }
 

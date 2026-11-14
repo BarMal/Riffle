@@ -149,14 +149,14 @@ class DockDynamicSideEntriesTest {
 
     @Test
     fun aContextualTileNamesItsSectionAndShowsItsPageOnATap() {
-        val tile = DockDynamicSideEntry.ContextTile(StreamSection.AGENDA)
+        val tile = DockDynamicSideEntry.ContextTile(StreamSection.TODAY)
         val open = tile.toDockEntry(emptyList(), streamShown = true, resources = resources, selected = true)
         val other = tile.toDockEntry(emptyList(), streamShown = true, resources = resources)
 
-        assertEquals("ctx:agenda", open.key)
-        assertEquals("Agenda", open.label)
-        assertEquals("Agenda", open.contentDescription)
-        assertEquals("Show Agenda", open.openLabel)
+        assertEquals("ctx:today", open.key)
+        assertEquals("Today", open.label)
+        assertEquals("Today", open.contentDescription)
+        assertEquals("Show Today", open.openLabel)
         assertEquals(DockDynamicEntryIntent.Delegate, open.intent)
         assertNull(open.identity)
         assertTrue(open.isContextTile)
@@ -171,6 +171,8 @@ class DockDynamicSideEntriesTest {
         assertEquals(StreamFocusTarget.Section(StreamSection.RECENTS), dockDynamicEntryTarget("ctx:recents"))
         assertNull(dockDynamicEntryTarget("ctx:nothing"))
         assertNull(dockDynamicEntryTarget("nothing"))
+        // A pinned app has a page too: its live page, else its shortcuts page.
+        assertEquals(StreamFocusTarget.AppShortcuts("files:personal"), dockDynamicEntryTarget("pin:files:personal"))
         // The Stream button is gone: its old key means nothing.
         assertNull(dockDynamicEntryTarget("stream"))
     }
@@ -183,7 +185,7 @@ class DockDynamicSideEntriesTest {
             StreamFocusTarget.Now,
             dockDynamicEntryTarget(DockDynamicSideEntry.NowPlaying("m", null, null, null).key),
         )
-        StreamSection.entries.forEach { section ->
+        StreamSection.layoutSections.forEach { section ->
             assertEquals(
                 StreamFocusTarget.Section(section),
                 dockDynamicEntryTarget(DockDynamicSideEntry.ContextTile(section).key),
@@ -195,7 +197,7 @@ class DockDynamicSideEntriesTest {
     fun aTilesPageOptionsOfferTheOtherViewMoveAndHide() {
         val requests = mutableListOf<StreamPageOption>()
         val layout = StreamLayout.DEFAULT
-        val tiles = listOf(StreamSection.NOW, StreamSection.RECENTS, StreamSection.AGENDA)
+        val tiles = listOf(StreamSection.NOW, StreamSection.RECENTS, StreamSection.TODAY)
         val items =
             pageOptionMenu(
                 DockDynamicSideEntry.ContextTile(StreamSection.RECENTS),

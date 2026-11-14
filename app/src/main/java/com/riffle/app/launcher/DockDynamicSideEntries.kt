@@ -19,8 +19,10 @@ import com.riffle.core.domain.launcher.dock.DockDynamicSide
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.dock.DockRing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.stream.PinnedApp
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamSection
+import com.riffle.core.domain.launcher.stream.StreamShortcutPages
 
 /**
  * The Dock's dynamic side as the dock draws it (ADR 0003, Amendment 3): the entries of [DockDynamicSide] over what the
@@ -50,8 +52,10 @@ internal fun rememberDockDynamicSide(
      * contextual row and its tiles before the cards are out, and the open page's ring gives way to the selection's.
      */
     choosing: Boolean = false,
+    /** The apps pinned in the Dock, in its order: each has a page, so each can be ringed and chosen. */
+    pinnedApps: List<PinnedApp> = emptyList(),
 ): HomeDockInterpreter {
-    if (stream == null) return modeInterpreter.copy(dynamicEntries = emptyList())
+    if (stream == null) return modeInterpreter.copy(dynamicEntries = emptyList(), pinnedStream = null)
     // The provider reads the options of the posture on screen; keep it current even before the Stream has opened.
     SideEffect { stream.posture.deviceClass = deviceClass }
     val results = rememberStreamSectionResults(stream.provider, listOf(StreamSection.NOTIFICATIONS, StreamSection.NOW))
@@ -70,9 +74,13 @@ internal fun rememberDockDynamicSide(
         }
     val side =
         remember(live, tileSections) { live + tileSections.map(DockDynamicSideEntry::ContextTile) }
+    val pinnedKeys = remember(pinnedApps) { pinnedApps.map { app -> pinnedEntryKey(app.identity) } }
     val ringed =
         if (shown && !choosing) {
-            DockRing.entryKeyFor(link.pages.firstOrNull { page -> page.key == link.currentKey }, side.map { it.key })
+            DockRing.entryKeyFor(
+                link.pages.firstOrNull { page -> page.key == link.currentKey },
+                side.map { it.key } + pinnedKeys,
+            )
         } else {
             null
         }
@@ -93,10 +101,27 @@ internal fun rememberDockDynamicSide(
             }
         }
     val latestOpen = rememberUpdatedState(onOpenStream)
+    val pinnedLabels =
+        remember(pinnedApps) {
+            pinnedApps.associate {
+                    app ->
+                pinnedEntryKey(app.identity) to app.label
+            }
+        }
+    val pinnedStream =
+        DockPinnedStream(
+            contextual = shown,
+            selectedKey = ringed?.takeIf { key -> key.startsWith(DockDynamicSideEntry.PINNED_APP_KEY_PREFIX) },
+            labels = pinnedLabels,
+            onShow = { identity ->
+                latestOpen.value(StreamFocusTarget.AppShortcuts(StreamShortcutPages.appKeyOf(identity)))
+            },
+        )
     return modeInterpreter.copy(
         dynamicEntries = entries,
         contextual = extended,
         onDynamicEntryDelegated = { key -> dockDynamicEntryTarget(key)?.let { target -> latestOpen.value(target) } },
+        pinnedStream = pinnedStream,
     )
 }
 

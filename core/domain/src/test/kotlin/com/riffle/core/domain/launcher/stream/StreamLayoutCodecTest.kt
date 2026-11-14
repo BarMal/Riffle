@@ -40,9 +40,8 @@ class StreamLayoutCodecTest {
                     listOf(
                         StreamSectionLayout(StreamSection.FEEDS, enabled = false, view = StreamView.LIST),
                         StreamSectionLayout(StreamSection.NOW, view = StreamView.LIST),
-                        StreamSectionLayout(StreamSection.TASKS),
+                        StreamSectionLayout(StreamSection.TODAY, view = StreamView.LIST),
                         StreamSectionLayout(StreamSection.NOTIFICATIONS),
-                        StreamSectionLayout(StreamSection.AGENDA, view = StreamView.STACK),
                         StreamSectionLayout(StreamSection.RECENTS),
                     ),
                 options =
@@ -96,11 +95,11 @@ class StreamLayoutCodecTest {
         assertTrue(layout.sections[0].enabled)
         assertEquals(StreamSection.NOW, layout.sections[1].section)
         assertEquals(false, layout.sections[1].enabled)
-        assertEquals(StreamSection.entries.toSet(), layout.sections.map { it.section }.toSet())
-        assertEquals(StreamSection.entries.size, layout.sections.size)
+        assertEquals(StreamSection.layoutSections.toSet(), layout.sections.map { it.section }.toSet())
+        assertEquals(StreamSection.layoutSections.size, layout.sections.size)
         // The ones the data lacked come last, on, with their default view.
         assertEquals(
-            listOf(StreamSection.NOTIFICATIONS, StreamSection.RECENTS, StreamSection.AGENDA, StreamSection.TASKS),
+            listOf(StreamSection.NOTIFICATIONS, StreamSection.RECENTS, StreamSection.TODAY),
             layout.sections.drop(2).map { it.section },
         )
         assertTrue(layout.sections.drop(2).all { it.enabled })
@@ -110,9 +109,9 @@ class StreamLayoutCodecTest {
     fun anUnknownViewFallsBackToTheSectionsDefault() {
         val layout =
             assertNotNull(
-                StreamLayoutCodec.decode(root(posture("PHONE", listOf(section("agenda", view = "carousel"))))),
+                StreamLayoutCodec.decode(root(posture("PHONE", listOf(section("today", view = "carousel"))))),
             ).forPosture(HomeLayoutDeviceClass.PHONE)
-        assertEquals(StreamView.LIST, layout.viewOf(StreamSection.AGENDA))
+        assertEquals(StreamView.STACK, layout.viewOf(StreamSection.TODAY))
     }
 
     @Test
@@ -165,6 +164,140 @@ class StreamLayoutCodecTest {
         assertEquals(AgendaOptions().maxEvents, layout.options.agenda.maxEvents)
         assertEquals(FeedsOptions(maxFeeds = 2, perFeed = 7), layout.options.feeds)
         assertEquals(NowOptions(), layout.options.now)
+    }
+
+    private fun decodeOrder(vararg sections: StoredValue): StreamLayout =
+        assertNotNull(StreamLayoutCodec.decode(root(posture("PHONE", sections.toList()))))
+            .forPosture(HomeLayoutDeviceClass.PHONE)
+
+    private fun StreamLayout.sectionOf(section: StreamSection) = sections.first { it.section == section }
+
+    @Test
+    fun aLayoutStoredWithAgendaAndTasksMapsToOneTodayAtAgendasPlace() {
+        // The six sections as the build before the Today page wrote them (its default order).
+        val layout =
+            decodeOrder(
+                section("now"),
+                section("notifications"),
+                section("recents"),
+                section("agenda", view = "list"),
+                section("tasks", view = "list"),
+                section("feeds"),
+            )
+        assertEquals(
+            listOf(
+                StreamSection.NOW,
+                StreamSection.NOTIFICATIONS,
+                StreamSection.RECENTS,
+                StreamSection.TODAY,
+                StreamSection.FEEDS,
+            ),
+            layout.sections.map { it.section },
+        )
+        // The view is Agenda's, and Today is shown.
+        assertEquals(StreamView.LIST, layout.viewOf(StreamSection.TODAY))
+        assertTrue(layout.sectionOf(StreamSection.TODAY).enabled)
+    }
+
+    @Test
+    fun todayTakesAgendasPlaceWhereverItWasMovedAndTasksGoes() {
+        val layout =
+            decodeOrder(
+                section("agenda", view = "stack"),
+                section("feeds"),
+                section("now"),
+                section("tasks", view = "list"),
+                section("recents"),
+                section("notifications"),
+            )
+        assertEquals(
+            listOf(
+                StreamSection.TODAY,
+                StreamSection.FEEDS,
+                StreamSection.NOW,
+                StreamSection.RECENTS,
+                StreamSection.NOTIFICATIONS,
+            ),
+            layout.sections.map { it.section },
+        )
+        // Agenda's view wins over Tasks'.
+        assertEquals(StreamView.STACK, layout.viewOf(StreamSection.TODAY))
+    }
+
+    @Test
+    fun todayIsHiddenOnlyWhenBothAgendaAndTasksWereHidden() {
+        fun enabledFor(
+            agenda: Boolean,
+            tasks: Boolean,
+        ) = decodeOrder(section("agenda", enabled = agenda), section("tasks", enabled = tasks))
+            .sectionOf(StreamSection.TODAY).enabled
+        assertEquals(false, enabledFor(agenda = false, tasks = false))
+        assertEquals(true, enabledFor(agenda = false, tasks = true))
+        assertEquals(true, enabledFor(agenda = true, tasks = false))
+        assertEquals(true, enabledFor(agenda = true, tasks = true))
+    }
+
+    @Test
+    fun aLayoutWithOnlyOneOfTheRetiredSectionsStillMapsToToday() {
+        val onlyTasks = decodeOrder(section("now"), section("tasks", enabled = false, view = "list"))
+        assertEquals(listOf(StreamSection.NOW, StreamSection.TODAY), onlyTasks.sections.take(2).map { it.section })
+        assertEquals(false, onlyTasks.sectionOf(StreamSection.TODAY).enabled)
+        assertEquals(StreamView.LIST, onlyTasks.viewOf(StreamSection.TODAY))
+
+        val onlyAgenda = decodeOrder(section("agenda", enabled = false, view = "stack"))
+        assertEquals(StreamSection.TODAY, onlyAgenda.sections.first().section)
+        assertEquals(false, onlyAgenda.sectionOf(StreamSection.TODAY).enabled)
+    }
+
+    @Test
+    fun aLayoutThatAlreadyNamesTodayKeepsItAndIgnoresTheRetiredEntries() {
+        val layout =
+            decodeOrder(
+                section("recents"),
+                section("agenda", enabled = false, view = "list"),
+                section("today", enabled = true, view = "stack"),
+                section("tasks", enabled = false),
+            )
+        assertEquals(StreamSection.RECENTS, layout.sections[0].section)
+        assertEquals(StreamSection.TODAY, layout.sections[1].section)
+        assertEquals(true, layout.sectionOf(StreamSection.TODAY).enabled)
+        assertEquals(StreamView.STACK, layout.viewOf(StreamSection.TODAY))
+        assertEquals(1, layout.sections.count { it.section == StreamSection.TODAY })
+    }
+
+    @Test
+    fun theRetiredStoredIdsAreKeptAndDerivedSectionsNeverReachALayout() {
+        assertEquals("agenda", LegacyStreamSections.AGENDA_ID)
+        assertEquals("tasks", LegacyStreamSections.TASKS_ID)
+        assertNull(StreamSection.fromStoredId("agenda"))
+        // A shortcuts page is derived from the Dock: a stored entry for it is dropped, never laid out.
+        val layout = decodeOrder(section("shortcuts"), section("now"))
+        assertEquals(StreamSection.layoutSections, layout.sections.map { it.section }.sortedBy { it.ordinal })
+        assertEquals(StreamSection.NOW, layout.sections.first().section)
+    }
+
+    @Test
+    fun theOptionsOfAgendaAndTasksStillDecodeUnderTheirOwnKeysAndTodayWritesNeitherRetiredSection() {
+        val options =
+            obj(
+                "agenda" to obj("daysAhead" to StoredValue.Num(3), "maxEvents" to StoredValue.Num(6)),
+                "tasks" to obj("limit" to StoredValue.Num(7), "showCompleted" to StoredValue.Bool(true)),
+            )
+        val decoded =
+            assertNotNull(
+                StreamLayoutCodec.decode(root(posture("PHONE", listOf(section("agenda"), section("tasks")), options))),
+            ).forPosture(HomeLayoutDeviceClass.PHONE)
+        assertEquals(3, decoded.options.agenda.daysAhead)
+        assertEquals(TasksOptions(limit = 7, showCompleted = true), decoded.options.tasks)
+        // Writing the migrated layout names today and neither retired id; reading that back is a no-op.
+        val written = StreamLayoutCodec.encode(StreamLayouts().with(HomeLayoutDeviceClass.PHONE, decoded))
+        val posture = (written.fields["postures"] as StoredValue.Arr).items.single() as StoredValue.Obj
+        val ids =
+            (posture.fields["sections"] as StoredValue.Arr).items
+                .map { ((it as StoredValue.Obj).fields["id"] as StoredValue.Str).value }
+        assertTrue("today" in ids)
+        assertTrue("agenda" !in ids && "tasks" !in ids)
+        assertEquals(StreamLayouts().with(HomeLayoutDeviceClass.PHONE, decoded), StreamLayoutCodec.decode(written))
     }
 
     @Test

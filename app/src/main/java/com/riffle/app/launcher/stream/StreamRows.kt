@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.ArticleAction
 import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
@@ -315,5 +316,6 @@ internal fun StreamRow(
         is ArticleContent -> ArticleRow(content, env, callbacks, groupKey)
         is TaskContent -> TaskRow(content, env, callbacks)
         is RecentAppContent -> RecentAppRow(content, env, callbacks, groupKey)
+        is AppShortcutContent -> AppShortcutRow(content, env, callbacks)
     }
 }

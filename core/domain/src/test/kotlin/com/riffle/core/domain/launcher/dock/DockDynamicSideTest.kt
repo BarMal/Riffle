@@ -96,7 +96,7 @@ class DockDynamicSideTest {
     fun theContextualModeKeepsTheHomeEntriesInPlaceAndAppendsOneTilePerSection() {
         val groups = listOf(group("mail", posted = 100), group("chat", posted = 300))
         val home = DockDynamicSide.entries(groups, media("music"), liveAppSlots = 3)
-        val sections = listOf(StreamSection.AGENDA, StreamSection.TASKS, StreamSection.RECENTS, StreamSection.FEEDS)
+        val sections = listOf(StreamSection.TODAY, StreamSection.RECENTS, StreamSection.FEEDS)
         val contextual = DockDynamicSide.entries(groups, media("music"), 3, sections)
 
         assertEquals(home, contextual.take(home.size))
@@ -105,8 +105,7 @@ class DockDynamicSideTest {
                 "live:chat:personal",
                 "live:mail:personal",
                 "now",
-                "ctx:agenda",
-                "ctx:tasks",
+                "ctx:today",
                 "ctx:recents",
                 "ctx:feeds",
             ),
@@ -116,7 +115,7 @@ class DockDynamicSideTest {
 
     @Test
     fun theTilesCanExceedTheLiveSlots() {
-        val sections = StreamSection.entries.filter { it != StreamSection.NOTIFICATIONS }
+        val sections = StreamSection.layoutSections.filter { it != StreamSection.NOTIFICATIONS }
         assertEquals(sections.size, DockDynamicSide.entries(emptyList(), null, 0, sections).size)
     }
 
@@ -126,27 +125,27 @@ class DockDynamicSideTest {
             listOf(
                 ref("notifications/chat:personal", StreamSection.NOTIFICATIONS, "chat:personal"),
                 ref("now", StreamSection.NOW),
-                ref("agenda", StreamSection.AGENDA),
+                ref("today", StreamSection.TODAY),
                 ref("feeds/a", StreamSection.FEEDS, "a"),
                 ref("feeds/b", StreamSection.FEEDS, "b"),
             )
         assertEquals(
-            listOf(StreamSection.NOW, StreamSection.AGENDA, StreamSection.FEEDS),
+            listOf(StreamSection.NOW, StreamSection.TODAY, StreamSection.FEEDS),
             DockDynamicSide.contextSections(pages, nowPlaying = false),
         )
     }
 
     @Test
     fun nowPlayingStandsForTheNowTile() {
-        val pages = listOf(ref("now", StreamSection.NOW), ref("agenda", StreamSection.AGENDA))
-        assertEquals(listOf(StreamSection.AGENDA), DockDynamicSide.contextSections(pages, nowPlaying = true))
+        val pages = listOf(ref("now", StreamSection.NOW), ref("today", StreamSection.TODAY))
+        assertEquals(listOf(StreamSection.TODAY), DockDynamicSide.contextSections(pages, nowPlaying = true))
     }
 
     @Test
     fun aNotificationsPageThatHoldsOnlyAStateGetsATileLikeAnyOtherNonAppPage() {
-        val pages = listOf(ref("notifications", StreamSection.NOTIFICATIONS), ref("agenda", StreamSection.AGENDA))
+        val pages = listOf(ref("notifications", StreamSection.NOTIFICATIONS), ref("today", StreamSection.TODAY))
         assertEquals(
-            listOf(StreamSection.NOTIFICATIONS, StreamSection.AGENDA),
+            listOf(StreamSection.NOTIFICATIONS, StreamSection.TODAY),
             DockDynamicSide.contextSections(pages, nowPlaying = false),
         )
     }

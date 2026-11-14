@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.drawable.toBitmap
 import com.riffle.app.launcher.BoundedCache
+import com.riffle.app.launcher.apps.ShortcutIconKey
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
 import com.riffle.app.launcher.workspace.ItemImageKeyParser
@@ -57,6 +58,8 @@ internal class AndroidStreamImageLoader(
     private val notificationArtwork: (ItemImageHandle) -> ByteArray? = { null },
     /** The cached image of the article this digest names, decoded; null when it is not in the offline cache. */
     private val feedArtwork: suspend (String) -> ImageBitmap? = { null },
+    /** The icon of the launcher shortcut this handle names, or null (the app's icon is drawn instead). */
+    private val shortcutIcon: (ItemImageHandle) -> Drawable? = { null },
 ) : ExpressionImageLoader {
     private val cache = BoundedCache<String, ImageBitmap>(MAX_CACHED_IMAGES)
 
@@ -82,16 +85,30 @@ internal class AndroidStreamImageLoader(
         val cacheKey = "${handle.key}@$size"
         return cache[cacheKey]
             ?: withContext(ioDispatcher) {
-                if (handle.key.startsWith(FEED_ART_PREFIX)) {
-                    feedImage(handle.key.removePrefix(FEED_ART_PREFIX))
-                } else {
-                    icon(handle, size)
+                when {
+                    handle.key.startsWith(FEED_ART_PREFIX) -> feedImage(handle.key.removePrefix(FEED_ART_PREFIX))
+                    ShortcutIconKey.isShortcutIcon(handle) -> shortcutImage(handle, size)
+                    else -> icon(handle, size)
                 }
             }?.also { cache[cacheKey] = it }
     }
 
     private suspend fun feedImage(digest: String): ImageBitmap? =
         runCatching { feedArtwork(digest) }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+
+    /** The shortcut's own icon, else its app's icon (a shortcut the launcher cannot read still has an app). */
+    private fun shortcutImage(
+        handle: ItemImageHandle,
+        size: Int,
+    ): ImageBitmap? =
+        runCatching {
+            (
+                shortcutIcon(handle)
+                    ?: ShortcutIconKey.parse(handle)?.let { (_, packageName, _) ->
+                        packageManager.getApplicationIcon(packageName)
+                    }
+            )?.toBitmap(size, size)?.asImageBitmap()
+        }.onFailure { if (it is CancellationException) throw it }.getOrNull()
 
     private fun notificationImage(handle: ItemImageHandle): ImageBitmap? =
         runCatching {

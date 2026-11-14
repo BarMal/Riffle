@@ -67,6 +67,21 @@ internal object StreamCardHeights {
     val article: Dp = 248.dp
     val articleWithoutImage: Dp = StreamCardStackSpec.CARD_HEIGHT_DP.dp
     val tasks: Dp = 232.dp
+
+    /** An app (a recent app, a shortcut): icon and a line or two. */
+    val app: Dp = 104.dp
+
+    /** Today's front card: the event, its countdown and its actions. */
+    val nextEvent: Dp = 200.dp
+
+    /** Today's checklist: a header, up to three tasks and the add field. */
+    val todo: Dp = 288.dp
+
+    /** Tomorrow's summary. */
+    val summary: Dp = 144.dp
+
+    /** A notice: one honest sentence and its action. */
+    val notice: Dp = 144.dp
 }
 
 private val CardIconSize = RiffleSpacing.xl

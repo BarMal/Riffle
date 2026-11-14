@@ -328,15 +328,16 @@ class StreamRealDataTest {
     // --- Agenda -------------------------------------------------------------------------------------------------
 
     @Test
-    fun `the agenda reads its own calendar source but reports the user-facing calendar as the missing permission`() {
+    fun `today reads its own calendar source but reports the user-facing calendar as the missing permission`() {
         val result =
             StreamSectionEvaluator.evaluate(
-                StreamSection.AGENDA,
+                StreamSection.TODAY,
                 StreamSectionInputs(
                     mapOf(
                         StreamSourceIds.AGENDA to SourceState.PermissionRequired,
                         SourceIds.ICS to SourceState.Ready(emptyList()),
                     ),
+                    tasks = TypedSourceState.Off,
                 ),
                 StreamContext(NOW),
             )
@@ -345,17 +346,18 @@ class StreamRealDataTest {
     }
 
     @Test
-    fun `the agenda lists many events across the week, not only the next few`() {
+    fun `today lists many events across the week, not only the next few`() {
         val day = 24 * HOUR
         val events = (1..12).map { eventItem("e$it", NOW + it * 12 * HOUR) }
         val result =
             StreamSectionEvaluator.evaluate(
-                StreamSection.AGENDA,
+                StreamSection.TODAY,
                 StreamSectionInputs(
                     mapOf(
                         StreamSourceIds.AGENDA to SourceState.Ready(events),
                         SourceIds.ICS to SourceState.Ready(emptyList()),
                     ),
+                    tasks = TypedSourceState.Off,
                 ),
                 StreamContext(NOW),
             )

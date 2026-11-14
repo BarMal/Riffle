@@ -47,7 +47,7 @@ class StreamSectionEvaluatorTest {
 
     @Test
     fun `what answered before the deadline still shows when its sibling did not`() {
-        val s = StreamSection.AGENDA
+        val s = StreamSection.TODAY
         val inputs = StreamSectionInputs(mapOf(SourceIds.ICS to ready(), StreamSourceIds.AGENDA to SourceState.Loading))
         assertEquals(StreamSectionResult.Loading, eval(s, inputs))
         // The ICS source answered (empty): Empty beats the one that never answered.
@@ -56,7 +56,7 @@ class StreamSectionEvaluatorTest {
 
     @Test
     fun `the typed inputs expire too, so Tasks and the alarm do not wait for good either`() {
-        val tasks = StreamSection.TASKS
+        val tasks = StreamSection.TODAY
         assertEquals(StreamSectionResult.Unavailable, eval(tasks, StreamSectionInputs().withLoadingExpired(tasks)))
         val now = StreamSection.NOW
         val answered = StreamSectionInputs(alarm = TypedSourceState.Ready(emptyList()))
@@ -317,7 +317,7 @@ class StreamSectionEvaluatorTest {
     // --- Agenda -----------------------------------------------------------------------------------------------
 
     @Test
-    fun `agenda groups upcoming events by day, ongoing ones under today, and limits`() {
+    fun `today groups upcoming events by day, ongoing ones under today, and limits`() {
         val day = 24 * HOUR
         val inputs =
             StreamSectionInputs(
@@ -332,7 +332,7 @@ class StreamSectionEvaluatorTest {
                     SourceIds.ICS to ready(eventItem("feed", NOW + 2 * HOUR, source = SourceIds.ICS, feed = "F")),
                 ),
             )
-        val result = eval(StreamSection.AGENDA, inputs) as StreamSectionResult.Ready
+        val result = eval(StreamSection.TODAY, inputs) as StreamSectionResult.Ready
 
         assertEquals(listOf("1970-01-11", "1970-01-12"), result.groups.map { it.key })
         assertEquals(listOf("calendar:ongoing", "ics:feed"), result.groups[0].items.map { it.id.value })
@@ -341,25 +341,75 @@ class StreamSectionEvaluatorTest {
         val noFeeds = StreamSectionOptions(agenda = AgendaOptions(includeCalendarFeeds = false, maxEvents = 1))
         assertEquals(
             listOf("calendar:ongoing"),
-            eval(StreamSection.AGENDA, inputs, context.copy(options = noFeeds)).ids(),
+            eval(StreamSection.TODAY, inputs, context.copy(options = noFeeds)).ids(),
         )
 
         val wide = StreamSectionOptions(agenda = AgendaOptions(daysAhead = 60))
-        assertEquals(true, "calendar:far" in eval(StreamSection.AGENDA, inputs, context.copy(options = wide)).ids())
+        assertEquals(true, "calendar:far" in eval(StreamSection.TODAY, inputs, context.copy(options = wide)).ids())
     }
 
-    // --- Tasks ------------------------------------------------------------------------------------------------
+    // --- Today's tasks and the gaps --------------------------------------------------------------------------
+
+    private val noCalendar = mapOf(StreamSourceIds.AGENDA to SourceState.Off, SourceIds.ICS to SourceState.Off)
 
     @Test
     fun `tasks are not connected until a provider says otherwise`() {
         assertEquals(
             StreamSectionResult.NotConnected(),
-            eval(StreamSection.TASKS, StreamSectionInputs(tasks = TypedSourceState.NotConnected())),
+            eval(StreamSection.TODAY, StreamSectionInputs(noCalendar, tasks = TypedSourceState.NotConnected())),
         )
-        assertEquals(StreamSectionResult.Loading, eval(StreamSection.TASKS, StreamSectionInputs()))
+        assertEquals(StreamSectionResult.Loading, eval(StreamSection.TODAY, StreamSectionInputs(noCalendar)))
+    }
+
+    @Test
+    fun `a connected task list with nothing on it is ready, so its add field stays`() {
+        val result =
+            eval(
+                StreamSection.TODAY,
+                StreamSectionInputs(noCalendar, tasks = TypedSourceState.Ready(emptyList())),
+            )
         assertEquals(
-            StreamSectionResult.Empty,
-            eval(StreamSection.TASKS, StreamSectionInputs(tasks = TypedSourceState.Ready(emptyList()))),
+            StreamSectionResult.Ready(
+                emptyList(),
+                listOf(StreamGap(StreamSourceIds.TASKS, StreamSectionResult.Empty)),
+            ),
+            result,
+        )
+    }
+
+    @Test
+    fun `nothing readable and nothing on it is the calm empty state`() {
+        val off = StreamSectionInputs(noCalendar, tasks = TypedSourceState.Off)
+        assertEquals(StreamSectionResult.Off, eval(StreamSection.TODAY, off))
+        val calendarEmpty =
+            StreamSectionInputs(
+                mapOf(StreamSourceIds.AGENDA to ready(), SourceIds.ICS to ready()),
+                tasks = TypedSourceState.Off,
+            )
+        assertEquals(StreamSectionResult.Empty, eval(StreamSection.TODAY, calendarEmpty))
+    }
+
+    @Test
+    fun `events show beside what the tasks and the calendar could not say`() {
+        val events = mapOf(StreamSourceIds.AGENDA to ready(eventItem("e", NOW + HOUR)), SourceIds.ICS to ready())
+        val notConnected =
+            eval(StreamSection.TODAY, StreamSectionInputs(events, tasks = TypedSourceState.NotConnected()))
+        val withEvents = assertIs<StreamSectionResult.Ready>(notConnected)
+        assertEquals(listOf("calendar:e"), withEvents.items.map { it.id.value })
+        assertEquals(listOf(StreamGap(StreamSourceIds.TASKS, StreamSectionResult.NotConnected())), withEvents.gaps)
+
+        val noPermission =
+            StreamSectionInputs(
+                noCalendar + (StreamSourceIds.AGENDA to SourceState.PermissionRequired),
+                tasks = TypedSourceState.Ready(listOf(TaskContent(StreamContentId("t"), "Pay rent"))),
+            )
+        val tasksOnly = assertIs<StreamSectionResult.Ready>(eval(StreamSection.TODAY, noPermission))
+        assertEquals(listOf("t"), tasksOnly.items.map { it.id.value })
+        assertEquals(
+            listOf(
+                StreamGap(StreamSourceIds.AGENDA, StreamSectionResult.PermissionRequired(listOf(SourceIds.CALENDAR))),
+            ),
+            tasksOnly.gaps,
         )
     }
 
@@ -372,20 +422,21 @@ class StreamSectionEvaluatorTest {
         ) = TaskContent(StreamContentId(id), id, dueEpochMillis = due, completed = done)
         val inputs =
             StreamSectionInputs(
+                noCalendar,
                 tasks =
                     TypedSourceState.Ready(
                         listOf(task("none"), task("later", 20), task("done", 1, done = true), task("soon", 10)),
                     ),
             )
 
-        assertEquals(listOf("soon", "later", "none"), eval(StreamSection.TASKS, inputs).ids())
+        assertEquals(listOf("soon", "later", "none"), eval(StreamSection.TODAY, inputs).ids())
         val withDone = StreamSectionOptions(tasks = TasksOptions(showCompleted = true, limit = 3))
         assertEquals(
             listOf("soon", "later", "none"),
-            eval(StreamSection.TASKS, inputs, context.copy(options = withDone)).ids(),
+            eval(StreamSection.TODAY, inputs, context.copy(options = withDone)).ids(),
         )
         val all = StreamSectionOptions(tasks = TasksOptions(showCompleted = true, limit = 10))
-        assertEquals("done", eval(StreamSection.TASKS, inputs, context.copy(options = all)).ids().last())
+        assertEquals("done", eval(StreamSection.TODAY, inputs, context.copy(options = all)).ids().last())
     }
 
     // --- Feeds ------------------------------------------------------------------------------------------------
@@ -417,6 +468,12 @@ class StreamSectionEvaluatorTest {
     @Test
     fun `every section has a stored id that round trips`() {
         StreamSection.entries.forEach { assertEquals(it, StreamSection.fromStoredId(it.storedId)) }
+        assertEquals(
+            listOf("now", "notifications", "recents", "today", "feeds"),
+            StreamSection.layoutSections.map {
+                it.storedId
+            },
+        )
         assertNull(StreamSection.fromStoredId("nope"))
     }
 

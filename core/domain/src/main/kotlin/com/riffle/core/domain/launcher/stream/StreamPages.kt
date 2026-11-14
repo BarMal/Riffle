@@ -2,8 +2,11 @@ package com.riffle.core.domain.launcher.stream
 
 /** What one Stream page draws. Transient, like the content in it: never persisted. */
 sealed interface StreamPageBody {
-    /** Content: one app's or feed's [group], or every group of a section that shows as one page. */
-    data class Content(val groups: List<StreamGroup>) : StreamPageBody {
+    /**
+     * Content: one app's or feed's [group], or every group of a section that shows as one page. [gaps] are what the
+     * inputs that gave none said (the Today page's calendar and tasks, see [StreamSectionResult.Ready]).
+     */
+    data class Content(val groups: List<StreamGroup>, val gaps: List<StreamGap> = emptyList()) : StreamPageBody {
         val items: List<StreamContent> get() = groups.flatMap(StreamGroup::items)
     }
 
@@ -46,7 +49,13 @@ data class StreamPageRef(
     val groupKey: String?,
 ) {
     /** True for a live app's page: a Notifications group page, which the Dock draws as that app's icon. */
-    val isAppPage: Boolean get() = section == StreamSection.NOTIFICATIONS && groupKey != null
+    val isLiveAppPage: Boolean get() = section == StreamSection.NOTIFICATIONS && groupKey != null
+
+    /** True for a pinned app's shortcuts page, which the Dock draws as that app's (pinned) icon. */
+    val isShortcutsPage: Boolean get() = section == StreamSection.SHORTCUTS && groupKey != null
+
+    /** True for a page that is an app's, live or shortcuts: it has an app's icon in the Dock, not a tile. */
+    val isAppPage: Boolean get() = isLiveAppPage || isShortcutsPage
 }
 
 /** The page as the Dock sees it. */
@@ -57,7 +66,7 @@ fun StreamPage.ref(): StreamPageRef = StreamPageRef(key = key, section = section
  *
  * - **Now**: one page (media with its queue, the next event, the alarm).
  * - **Notifications**: one page per app that has notifications, newest app first (the order the section delivers).
- * - **Recents**: one page. **Agenda**: one page. **Tasks**: one page.
+ * - **Recents**: one page. **Today** (the next event, "To do today", later events and tomorrow): one page.
  * - **Feeds**: one page per feed with unread items, the feed with the newest article first.
  * - A section with nothing to show (empty, loading, no access, not connected, unavailable, off) is one page holding
  *   that state, so the Stream is never an empty pager and every state keeps its action.
@@ -98,8 +107,8 @@ object StreamPagePlanner {
             }
             StreamSection.NOW,
             StreamSection.RECENTS,
-            StreamSection.AGENDA,
-            StreamSection.TASKS,
+            StreamSection.TODAY,
+            StreamSection.SHORTCUTS,
             -> listOf(sectionPage(section, view, result))
         }
     }
@@ -131,7 +140,7 @@ object StreamPagePlanner {
         label = null,
         count = result.groups.sumOf { it.totalCount },
         view = view,
-        body = StreamPageBody.Content(result.groups),
+        body = StreamPageBody.Content(result.groups, result.gaps),
         lead = result.items.firstOrNull(),
         activityEpochMillis = result.items.mapNotNull { it.timeEpochMillis }.maxOrNull(),
     )

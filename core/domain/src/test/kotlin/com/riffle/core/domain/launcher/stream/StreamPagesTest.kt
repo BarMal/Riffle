@@ -64,8 +64,13 @@ class StreamPagesTest {
             StreamSection.NOW to ready("now", task("media")),
             StreamSection.NOTIFICATIONS to notifications("chat:p", "mail:p", "maps:p"),
             StreamSection.RECENTS to ready("recents", task("r")),
-            StreamSection.AGENDA to ready("2026-01-01", task("e")),
-            StreamSection.TASKS to ready("tasks", task("a"), task("b")),
+            StreamSection.TODAY to
+                StreamSectionResult.Ready(
+                    listOf(
+                        StreamGroup("2026-01-01", null, listOf(task("e"))),
+                        StreamGroup(StreamGroupKeys.TASKS, null, listOf(task("a"), task("b"))),
+                    ),
+                ),
             StreamSection.FEEDS to
                 StreamSectionResult.Ready(
                     listOf(
@@ -85,8 +90,7 @@ class StreamPagesTest {
                 "notifications/mail:p",
                 "notifications/maps:p",
                 "recents",
-                "agenda",
-                "tasks",
+                "today",
                 "feeds/f1",
                 "feeds/f2",
             ),
@@ -99,10 +103,10 @@ class StreamPagesTest {
         val layout =
             listOf(
                 StreamLayoutAction.SetEnabled(StreamSection.NOW, false),
-                StreamLayoutAction.Move(StreamSection.TASKS, -4),
+                StreamLayoutAction.Move(StreamSection.TODAY, -3),
             ).fold(StreamLayout.DEFAULT, StreamLayoutReducer::reduce)
         val keys = StreamPagePlanner.plan(layout, everything).map { it.key }
-        assertEquals("tasks", keys.first())
+        assertEquals("today", keys.first())
         assertFalse("now" in keys)
     }
 
@@ -144,7 +148,7 @@ class StreamPagesTest {
     @Test
     fun aSectionNotObservedYetIsALoadingPage() {
         val pages = StreamPagePlanner.plan(StreamLayout.DEFAULT, emptyMap())
-        assertEquals(StreamSection.entries.size, pages.size)
+        assertEquals(StreamSection.layoutSections.size, pages.size)
         assertTrue(pages.all { it.body == StreamPageBody.State(StreamSectionResult.Loading) })
     }
 
@@ -229,7 +233,7 @@ class StreamPagesTest {
     fun focusLandsOnTheNamedPage() {
         assertEquals("now", StreamFocus.resolvePage(StreamFocusTarget.Now, pages))
         assertEquals("notifications/mail:p", StreamFocus.resolvePage(StreamFocusTarget.AppStack("mail:p"), pages))
-        assertEquals("agenda", StreamFocus.resolvePage(StreamFocusTarget.Section(StreamSection.AGENDA), pages))
+        assertEquals("today", StreamFocus.resolvePage(StreamFocusTarget.Section(StreamSection.TODAY), pages))
         val notifications = StreamFocusTarget.Section(StreamSection.NOTIFICATIONS)
         assertEquals("notifications/chat:p", StreamFocus.resolvePage(notifications, pages))
         assertEquals("feeds/f1", StreamFocus.resolvePage(StreamFocusTarget.Section(StreamSection.FEEDS), pages))
@@ -255,22 +259,22 @@ class StreamPagesTest {
     @Test
     fun theStageJustLeftComesFirstInTheRailThenTheRestInPageOrder() {
         var recent = emptyList<String>()
-        recent = StreamStage.recentAfterSelecting(recent, "now", "tasks")
-        recent = StreamStage.recentAfterSelecting(recent, "tasks", "agenda")
-        assertEquals(listOf("tasks", "now"), recent)
-        val model = StreamStage.model(pages, "agenda", recent)
-        assertEquals(listOf("tasks", "now"), model.rail.take(2).map { it.key })
+        recent = StreamStage.recentAfterSelecting(recent, "now", "recents")
+        recent = StreamStage.recentAfterSelecting(recent, "recents", "today")
+        assertEquals(listOf("recents", "now"), recent)
+        val model = StreamStage.model(pages, "today", recent)
+        assertEquals(listOf("recents", "now"), model.rail.take(2).map { it.key })
         assertEquals(pages.size - 1, model.rail.size)
         // Coming back to a stage that is in the memory takes it out of it.
-        assertEquals(listOf("agenda", "now"), StreamStage.recentAfterSelecting(recent, "agenda", "tasks"))
+        assertEquals(listOf("today", "now"), StreamStage.recentAfterSelecting(recent, "today", "recents"))
     }
 
     @Test
     fun aVanishedStageHandsOverToItsNearestAndNothingIsEmptyWhenThereAreNoPages() {
         val without = pages.filter { it.key != "recents" }
         val model = StreamStage.model(without, "recents", previousKeys = pages.map { it.key })
-        assertEquals("agenda", model.selected?.key)
-        assertTrue(model.rail.none { it.key == "agenda" })
+        assertEquals("today", model.selected?.key)
+        assertTrue(model.rail.none { it.key == "today" })
         assertEquals(StreamStageModel(null, emptyList()), StreamStage.model(emptyList(), "x"))
     }
 

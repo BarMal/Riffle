@@ -71,19 +71,19 @@ internal fun StreamSection.settingKey(): SettingKey =
         StreamSection.NOW -> SettingKey.STREAM_SECTION_NOW
         StreamSection.NOTIFICATIONS -> SettingKey.STREAM_SECTION_NOTIFICATIONS
         StreamSection.RECENTS -> SettingKey.STREAM_SECTION_RECENTS
-        StreamSection.AGENDA -> SettingKey.STREAM_SECTION_AGENDA
-        StreamSection.TASKS -> SettingKey.STREAM_SECTION_TASKS
+        StreamSection.TODAY -> SettingKey.STREAM_SECTION_TODAY
         StreamSection.FEEDS -> SettingKey.STREAM_SECTION_FEEDS
+        // Derived from the Dock's pinned apps: it is never listed in Settings, so it has no row to anchor.
+        StreamSection.SHORTCUTS -> SettingKey.STREAM_SECTION_NOW
     }
 
-/** The sub-page that holds a section's own settings, or null when it has none. */
-internal fun StreamSection.settingsPage(): SettingsPage? =
+/** The sub-pages that hold a section's own settings: Today has two (its calendar and its tasks). */
+internal fun StreamSection.settingsPages(): List<SettingsPage> =
     when (this) {
-        StreamSection.NOTIFICATIONS -> SettingsPage.STREAM_NOTIFICATIONS
-        StreamSection.AGENDA -> SettingsPage.STREAM_AGENDA
-        StreamSection.TASKS -> SettingsPage.STREAM_TASKS
-        StreamSection.FEEDS -> SettingsPage.STREAM_FEEDS
-        StreamSection.NOW, StreamSection.RECENTS -> null
+        StreamSection.NOTIFICATIONS -> listOf(SettingsPage.STREAM_NOTIFICATIONS)
+        StreamSection.TODAY -> listOf(SettingsPage.STREAM_AGENDA, SettingsPage.STREAM_TASKS)
+        StreamSection.FEEDS -> listOf(SettingsPage.STREAM_FEEDS)
+        StreamSection.NOW, StreamSection.RECENTS, StreamSection.SHORTCUTS -> emptyList()
     }
 
 /** Stream: the six sections, each on or off, in order, shown as a Stack or a List, then a sub-page where it has one. */
@@ -176,7 +176,7 @@ internal fun SettingsStreamSections(
                     stringResource(R.string.settings_stream_show_as_option, name, stringResource(view.titleRes()))
                 },
             )
-            section.settingsPage()?.let { page ->
+            section.settingsPages().forEach { page ->
                 SettingsClickableRow(
                     title = stringResource(page.titleRes),
                     subtitle = stringResource(page.summaryRes),

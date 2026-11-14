@@ -35,11 +35,11 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | | Search | Search results as icons or list |
 | | Apps | Hidden apps (opens the sub-page), refresh installed apps |
 | Hidden apps (under Library) | | The one list of hidden apps |
-| **Stream** | each of Now, Notifications, Recents, Agenda, Tasks, Feeds | On or off, order (move up, move down), Show as (Stack, List: it applies to every page of the section); a row opening the section's sub-page where it has one |
+| **Stream** | each of Now, Notifications, Recents, Today, Feeds | On or off, order (move up, move down), Show as (Stack, List: it applies to every page of the section); a row opening each of the section's sub-pages where it has them (Today has two: Agenda and Tasks) |
 | | the whole Stream (unfolded, tablet and desktop postures only) | **Show the Stream as**: Pages (swipe sideways, two side by side on a wide screen) or Stage (a rail of every page beside the one in front). Stored per posture in the Stream layout (`wideView`, default Pages); the same value as "Show as" in the Stream's own menu (long-press the spine) |
 | Notifications (under Stream) | | The notifications source (status, allow access, on or off); Hidden items |
 | Hidden items (under Notifications) | | The rules that hide items, per layout |
-| Agenda (under Stream) | | The device calendar source (status, allow access, on or off); include calendar feeds; Calendar feeds |
+| Agenda (under Stream; reached from Today) | | The device calendar source (status, allow access, on or off); include calendar feeds; Calendar feeds |
 | Calendar feeds (under Agenda) | | The calendar feeds source (on or off), refresh, the feed list, add a feed |
 | Tasks (under Stream) | | Todoist: the connection status (Not connected, Connected, or rejected), a password-style API token field with Save and a "Where is my token?" link, and Remove token. See [stream-tasks.md](stream-tasks.md) |
 | Feeds (under Stream) | | The feeds source (on or off), background refresh, only on Wi-Fi, only while charging, refresh now, the feed list, add a feed |

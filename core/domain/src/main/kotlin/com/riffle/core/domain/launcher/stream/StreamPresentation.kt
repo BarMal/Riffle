@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemAction
 import com.riffle.core.domain.launcher.workspace.ItemId
 import com.riffle.core.domain.launcher.workspace.ItemPrivacy
+import com.riffle.core.domain.launcher.workspace.ItemTarget
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import kotlin.math.abs
@@ -76,7 +77,8 @@ object MediaProgress {
  * built on, rebuilt from the typed content the Stream drew, so "Hide" in the Stream writes exactly the exclusion rules
  * the lens pages do (ADR 0003: Hide is not a stream action). Only identity, target, group and the text a rule can
  * match are carried; a redacted value carries none of its text (it is already null) and is marked sensitive.
- * Null for content with nothing to hide by (the next alarm, a task). [groupKey] is the notification group (the app)
+ * Null for content with nothing to hide by (the next alarm, a task, an app's shortcut). [groupKey] is the notification
+ * group (the app)
  * the content was drawn under; other types hide by app, feed or item only.
  */
 object StreamHideItems {
@@ -100,6 +102,7 @@ object StreamHideItems {
                 item(SourceIds.RSS, content, content.title, content.summary, content.feedId, content.feedName, privacy)
             is RecentAppContent -> item(SourceIds.RECENT_APPS, content, content.label, null, null, null, privacy)
             is TaskContent -> null
+            is AppShortcutContent -> null
         }
     }
 
@@ -120,6 +123,7 @@ object StreamHideItems {
                 is ArticleContent -> content.target
                 is RecentAppContent -> content.target
                 is TaskContent -> content.target
+                is AppShortcutContent -> ItemTarget.None
             }
         return Item(
             id = ItemId(content.id.value),

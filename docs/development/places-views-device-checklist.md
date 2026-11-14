@@ -75,7 +75,7 @@ Use a busy, bright wallpaper and then a dark one.
       page. From now playing: on Now. From anywhere else: where it opens today. A press that stops short leaves nothing
       behind (the next plain open is unaffected). Check a side Dock too.
 - [ ] **Contextual mode.** With the Stream open the Dock shows the same icons in the same order, then a divider and a tile
-      for each page that is not an app (Now unless it is playing, Recents, Agenda, Tasks, Feeds). The open page's icon is
+      for each page that is not an app (Now unless it is playing, Recents, Today, Feeds). The open page's icon is
       ringed. With many pins and apps the row scrolls sideways with a fling (vertically on a side Dock), and the ringed icon is
       always in view, also after a swipe of the Stream. A tap on a tile or a live app switches the page and never launches.
       Failure: tiles that do not scroll into view, a ring that lags a swipe by a page, a tile under 48 dp.
@@ -132,12 +132,22 @@ Use a busy, bright wallpaper and then a dark one.
       stale state, buttons that do nothing, a scrubber that jumps back.
 - [ ] **Notifications.** Reply from an expanded conversation, snooze, dismiss, Hide. Check the app's notification is
       actually dismissed or replied to. A sensitive notification shows hidden content and offers no reply or history.
+- [ ] **Today (slice 4b).** The Today page opens on the next event with a countdown that counts down by itself ("in 25 min",
+      "now", "ends in 10 min"); the "To do today" card is behind it (in front when there are no events), ticking a task
+      completes it (it is put back if Todoist refuses), the add field and refresh are on that card; later events and
+      a Tomorrow card follow. Without Todoist a "Todoist is not connected" card follows the events. Show as List draws the
+      agenda, then the tasks under "Tasks". A layout from before the change (Agenda and Tasks sections) shows one Today.
+- [ ] **Pinned apps' shortcuts (slice 4b).** In the Dock's contextual mode every pinned app has a page of its shortcuts
+      (long-press the app in the Home mode to compare), swipe the cards sideways through them, tap a card to launch the
+      shortcut; tap a pinned icon to switch to its page and see it ringed; an app with no shortcuts is one "Open <app>"
+      card; without the Home role a note says shortcuts need it. Hold-press the Dock and slide over a pinned icon: the
+      label names it, lifting opens its page.
 - [ ] **Agenda window.** Today and the next seven days show, by day; calendar feeds (Settings > Stream > Agenda) appear
       when included. Events past that window do not.
 - [ ] **Images.** Notification pictures, article lead images and app icons load without jank.
 - [ ] **Honest states.** Without notification, calendar or usage access each section says "Allow access to show this"
       with a working button; Tasks says "Connect Todoist" until a token is saved.
-- [ ] **Recents and Feeds.** Recents shows recent then "Often used" apps as tiles; Feeds has one page per feed with
+- [ ] **Recents and Feeds.** Recents shows recent then "Often used" apps as a pile of cards (icon, name, last used); Feeds has one page per feed with
       unread items; mark read works.
 
 ## Tasks (needs a real Todoist token)
