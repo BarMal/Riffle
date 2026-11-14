@@ -1,19 +1,11 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.onLongClick
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.DpOffset
 
 /**
  * What a tap on Home's empty room (the background under and between the apps, folders and widgets) does besides its own
@@ -21,6 +13,12 @@ import androidx.compose.ui.unit.DpOffset
  */
 internal val LocalHomeEmptyTap = staticCompositionLocalOf<(() -> Unit)?> { null }
 
+/**
+ * Home's empty-space handler (the existing long-press menu and tap) as a node that fills its parent. It is the layer
+ * under a surface: what is on top of it (an item, the Dock, the handle) takes its own presses, and a press on nothing
+ * reaches this and opens the menu where the finger is. Hand it a [state] that something else also opens (the handle's
+ * long-press) to share the one menu.
+ */
 @Composable
 internal fun HomeBackgroundContextMenu(
     haptics: LauncherHaptics,
@@ -29,61 +27,31 @@ internal fun HomeBackgroundContextMenu(
     items: List<ShortcutContextMenuItem> = homeWorkspaceContextMenuItems(),
     longClickLabel: String = "Show home actions",
     onClick: () -> Unit = {},
+    state: PressMenuState = remember { PressMenuState() },
 ) {
-    val isMenuExpanded = remember { mutableStateOf(false) }
-    val menuOffset = remember { mutableStateOf(DpOffset.Zero) }
-    val density = LocalDensity.current
     val emptyTap = LocalHomeEmptyTap.current
-    val showMenu = { offset: DpOffset ->
-        haptics.longPress()
-        menuOffset.value = offset
-        isMenuExpanded.value = true
-    }
-
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .pointerInput(onClick, density, emptyTap) {
-                    detectTapGestures(
-                        onTap = {
-                            onClick()
-                            emptyTap?.invoke()
-                        },
-                        onLongPress = { pressOffset ->
-                            showMenu(
-                                DpOffset(
-                                    x = with(density) { pressOffset.x.toDp() },
-                                    y = with(density) { pressOffset.y.toDp() },
-                                ),
-                            )
-                        },
-                    )
-                }
-                .semantics {
-                    onClick(action = {
+                .pressMenu(
+                    state = state,
+                    haptics = haptics,
+                    longClickLabel = longClickLabel,
+                    onTap = {
                         onClick()
-                        true
-                    })
-                    onLongClick(
-                        label = longClickLabel,
-                        action = {
-                            showMenu(DpOffset.Zero)
-                            true
-                        },
-                    )
-                },
+                        emptyTap?.invoke()
+                    },
+                ),
     ) {
-        ShortcutContextMenu(
-            expanded = isMenuExpanded.value,
-            items = items,
-            onDismissRequest = {
-                isMenuExpanded.value = false
-                menuOffset.value = DpOffset.Zero
-            },
-            onAction = onAction,
-            offset = menuOffset.value,
-        )
+        PressMenuAnchor(state) {
+            ShortcutContextMenu(
+                expanded = state.expanded,
+                items = items,
+                onDismissRequest = state::dismiss,
+                onAction = onAction,
+            )
+        }
     }
 }
 

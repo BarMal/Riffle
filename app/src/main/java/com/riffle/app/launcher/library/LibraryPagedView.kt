@@ -5,13 +5,13 @@ package com.riffle.app.launcher.library
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -36,13 +36,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
@@ -55,6 +53,8 @@ import com.riffle.app.launcher.HomeHandlePill
 import com.riffle.app.launcher.LauncherAppIcon
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.NotificationCountBadge
+import com.riffle.app.launcher.PressMenuAnchor
+import com.riffle.app.launcher.PressMenuState
 import com.riffle.app.launcher.RiffleContextMenu
 import com.riffle.app.launcher.WallpaperReadableLabel
 import com.riffle.app.launcher.appListEmptyText
@@ -62,6 +62,7 @@ import com.riffle.app.launcher.drawerKey
 import com.riffle.app.launcher.drawerRowState
 import com.riffle.app.launcher.gridFade
 import com.riffle.app.launcher.notificationCountFor
+import com.riffle.app.launcher.pressMenu
 import com.riffle.app.launcher.rememberGridFadeCell
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -95,6 +96,15 @@ internal fun LibraryPagedView(
     dockEdge: DockPosition = DockPosition.BOTTOM,
     /** The Stream's column stands over the handle (unfolded, the app library as Home): the pill is not drawn. */
     handleHidden: Boolean = false,
+    /**
+     * The room around the view that still belongs to it: the system bars and the Dock's reserve. The view's pages and
+     * handle lay out inside it; its empty-space handler (the menu) covers the whole window, under it too.
+     */
+    contentPadding: PaddingValues = PaddingValues(),
+    /** The one menu of this view, which a long-press on its empty space, its handle or its scrim opens. */
+    menu: PressMenuState = remember { PressMenuState() },
+    /** What a tap on the room around the pages does (the Library sheet closes); null leaves it as nothing. */
+    onEmptyTap: (() -> Unit)? = null,
     backgroundMenu: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit,
 ) {
     val columns = state.pagedGrid.columns.coerceAtLeast(1)
@@ -103,7 +113,6 @@ internal fun LibraryPagedView(
     val pageCount = LibraryPaging.pageCount(state.apps.size, columns, rows)
     val pagerState = rememberPagerState { pageCount }
     val scope = rememberCoroutineScope()
-    var menuOpen by remember { mutableStateOf(false) }
     val emptyText = appListEmptyText(AppListSurface.DRAWER, query = "", profileFilter = state.profileFilter)
     val menuLabel = stringResource(R.string.library_paged_background_label)
     val margins = state.pagedMargins
@@ -117,25 +126,7 @@ internal fun LibraryPagedView(
     val pageContent: @Composable (Int) -> Unit = { index ->
         Box(modifier = Modifier.fillMaxSize().testTag("$LIBRARY_PAGE_TEST_TAG_PREFIX$index")) {
             // Behind the icons, so the space between them is the Library's own: a long-press there is its menu.
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onLongPress = {
-                                    context.haptics.longPress()
-                                    menuOpen = true
-                                },
-                            )
-                        }
-                        .semantics {
-                            onLongClick(label = menuLabel) {
-                                menuOpen = true
-                                true
-                            }
-                        },
-            )
+            Box(modifier = Modifier.fillMaxSize().pressMenu(menu, context.haptics, menuLabel))
             if (pages.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(text = emptyText, style = MaterialTheme.typography.bodyLarge)
@@ -185,6 +176,10 @@ internal fun LibraryPagedView(
                 reducedMotion = reducedMotion,
                 haptics = context.haptics,
                 onOpenSearch = onOpenSearch,
+                onLongPress = { point ->
+                    context.haptics.longPress()
+                    menu.show(point)
+                },
                 onPageSelected = { page ->
                     scope.launch {
                         if (reducedMotion) pagerState.scrollToPage(page) else pagerState.animateScrollToPage(page)
@@ -200,40 +195,46 @@ internal fun LibraryPagedView(
     }
     val reserved = HomeHandleLayout.reservedDp(dockEdge, axis, pageCount, dots).dp
 
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .testTag(LIBRARY_PAGED_TEST_TAG)
-                .semantics { customActions = backgroundActions },
-    ) {
-        if (strip == HandleStrip.BOTTOM_ROW) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                pager(Modifier.weight(1f).fillMaxWidth())
-                Spacer(modifier = Modifier.height(state.controlsSpacingDp.coerceAtLeast(0).dp))
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(reserved).then(handleModifier),
-                    contentAlignment = Alignment.Center,
-                ) { handle() }
-            }
-        } else {
-            // A column beside a side Dock: just in from the Dock, the handle centred in it, the pages the rest.
-            val handleColumn: @Composable () -> Unit = {
-                Box(
-                    modifier = Modifier.fillMaxHeight().width(reserved).then(handleModifier),
-                    contentAlignment = Alignment.Center,
-                ) { handle() }
-            }
-            Row(modifier = Modifier.fillMaxSize()) {
-                if (strip == HandleStrip.LEFT_COLUMN) handleColumn()
-                pager(Modifier.weight(1f).fillMaxHeight())
-                if (strip == HandleStrip.RIGHT_COLUMN) handleColumn()
+    Box(modifier = modifier.fillMaxSize()) {
+        // The whole room, under the system bars and the Dock's reserve too: what no page, handle or app takes is the
+        // Library's background, and a long-press on it is the menu.
+        Box(modifier = Modifier.fillMaxSize().pressMenu(menu, context.haptics, menuLabel, onTap = onEmptyTap))
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+                    .testTag(LIBRARY_PAGED_TEST_TAG)
+                    .semantics { customActions = backgroundActions },
+        ) {
+            if (strip == HandleStrip.BOTTOM_ROW) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    pager(Modifier.weight(1f).fillMaxWidth())
+                    Spacer(modifier = Modifier.height(state.controlsSpacingDp.coerceAtLeast(0).dp))
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(reserved).then(handleModifier),
+                        contentAlignment = Alignment.Center,
+                    ) { handle() }
+                }
+            } else {
+                // A column beside a side Dock: just in from the Dock, the handle centred in it, the pages the rest.
+                val handleColumn: @Composable () -> Unit = {
+                    Box(
+                        modifier = Modifier.fillMaxHeight().width(reserved).then(handleModifier),
+                        contentAlignment = Alignment.Center,
+                    ) { handle() }
+                }
+                Row(modifier = Modifier.fillMaxSize()) {
+                    if (strip == HandleStrip.LEFT_COLUMN) handleColumn()
+                    pager(Modifier.weight(1f).fillMaxHeight())
+                    if (strip == HandleStrip.RIGHT_COLUMN) handleColumn()
+                }
             }
         }
-        // The menu hangs off the view, not a page, so it survives the page changing under it.
-        Box(modifier = Modifier.align(Alignment.BottomStart)) {
-            RiffleContextMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                backgroundMenu { menuOpen = false }
+        // The menu hangs from where the finger was, not from a page, so it survives the page changing under it.
+        PressMenuAnchor(menu) {
+            RiffleContextMenu(expanded = menu.expanded, onDismissRequest = menu::dismiss) {
+                backgroundMenu { menu.dismiss() }
             }
         }
     }

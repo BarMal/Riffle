@@ -7,7 +7,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -47,7 +46,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -67,17 +69,22 @@ import com.riffle.app.launcher.AppListSurface
 import com.riffle.app.launcher.AppProfileFilterChips
 import com.riffle.app.launcher.AppSearchField
 import com.riffle.app.launcher.GlassSurface
+import com.riffle.app.launcher.LauncherHaptics
 import com.riffle.app.launcher.LauncherShellAction
+import com.riffle.app.launcher.PressMenuAnchor
+import com.riffle.app.launcher.PressMenuState
 import com.riffle.app.launcher.RiffleContextMenu
 import com.riffle.app.launcher.SearchGridResult
 import com.riffle.app.launcher.SearchResultList
 import com.riffle.app.launcher.ShowAsMenuItems
 import com.riffle.app.launcher.appListEmptyText
+import com.riffle.app.launcher.centreInRoot
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.launcherPanelContentColor
 import com.riffle.app.launcher.launcherPanelSurfaceColor
+import com.riffle.app.launcher.pressMenu
 import com.riffle.app.launcher.searchEmptyText
 import com.riffle.app.launcher.searchWebPreview
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -113,6 +120,11 @@ internal fun LibrarySheet(
     modifier: Modifier = Modifier,
     /** The edge the Dock stands on: where the paged View puts its handle (ADR 0003, Amendment 2). */
     dockEdge: DockPosition = DockPosition.BOTTOM,
+    /**
+     * The sheet's one "Show as" menu, which a long-press opens wherever it lands: the header, the empty space of the
+     * sheet or its pages, the handle and (the caller's scrim) the margin around it.
+     */
+    menu: PressMenuState = remember { PressMenuState() },
 ) {
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -217,6 +229,9 @@ internal fun LibrarySheet(
                     onOpenSearch = { onAction(LauncherShellAction.OpenSearch) },
                     backgroundActions = actions,
                     dockEdge = dockEdge,
+                    menu = menu,
+                    // A tap on the room around the pages closes the Library, as it does on the margin around the sheet.
+                    onEmptyTap = onClose,
                     // The pull toward the Dock's edge takes the whole View unless the pages scroll along that very
                     // axis (the pager would fight it); then it takes the handle's room only.
                     modifier = if (pullSharesNoAxisWithPages) dismissDrag else Modifier,
@@ -233,8 +248,12 @@ internal fun LibrarySheet(
                     )
                 }
             } else {
+                // A long-press on the sheet where nothing else takes it (the room between the rows and the tiles, the
+                // padding, the gap under the last row) is the "Show as" menu, as it is on the header.
                 GlassSurface(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .pressMenu(menu, context.haptics, stringResource(R.string.library_header_long_press_label)),
                     weight = GlassWeight.Thick,
                     shape = RiffleShapes.extraLarge,
                     tint = launcherPanelSurfaceColor(),
@@ -242,9 +261,10 @@ internal fun LibrarySheet(
                 ) {
                     Column(modifier = Modifier.fillMaxSize().padding(horizontal = RiffleSpacing.l)) {
                         LibraryHeader(
-                            view = state.view,
                             onShowAs = onShowAs,
                             onClose = onClose,
+                            menu = menu,
+                            haptics = context.haptics,
                             modifier = dismissDrag,
                         )
                         LibrarySearchRow(state = state, onAction = onAction)
@@ -268,6 +288,21 @@ internal fun LibrarySheet(
                                 onCloseCategory = { openCategoryKey = null },
                             )
                         }
+                    }
+                }
+            }
+            if (!paged) {
+                PressMenuAnchor(menu) {
+                    RiffleContextMenu(expanded = menu.expanded, onDismissRequest = menu::dismiss) {
+                        ShowAsMenuItems(
+                            options = LibraryView.entries,
+                            current = state.view,
+                            optionLabel = { option -> stringResource(option.titleRes()) },
+                            onSelect = { option ->
+                                menu.dismiss()
+                                onShowAs(option)
+                            },
+                        )
                     }
                 }
             }
@@ -383,66 +418,54 @@ private fun LibrarySearchRow(
 }
 
 /**
- * The header: the title, an options button and, on long-press, the "Show as" menu; a pull toward the Dock's edge on it
- * closes the sheet. One custom-actions list carries "Close Library" and each view for assistive technology.
+ * The header: the title, an options button and, on long-press, the "Show as" menu ([menu], the sheet's one); a pull
+ * toward the Dock's edge on it closes the sheet. One custom-actions list carries "Close Library" and each view for
+ * assistive technology.
  */
 @Composable
 private fun LibraryHeader(
-    view: LibraryView,
     onShowAs: (LibraryView) -> Unit,
     onClose: () -> Unit,
+    menu: PressMenuState,
+    haptics: LauncherHaptics,
     modifier: Modifier = Modifier,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
     val title = stringResource(R.string.library_title)
     val resources = LocalContext.current.resources
     val accessibilityActions = libraryAccessibilityActions(onClose = onClose, onShowAs = onShowAs)
-    Box(modifier = modifier.fillMaxWidth()) {
-        Column(
+    var optionsButton by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .pressMenu(menu, haptics, stringResource(R.string.library_header_long_press_label))
+                .semantics(mergeDescendants = true) { customActions = accessibilityActions },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .combinedClickable(
-                        onLongClickLabel = stringResource(R.string.library_header_long_press_label),
-                        onLongClick = { menuOpen = true },
-                        onClick = {},
-                    )
-                    .semantics { customActions = accessibilityActions },
-            horizontalAlignment = Alignment.CenterHorizontally,
+                    .padding(top = RiffleSpacing.s)
+                    .size(width = LibraryHandleWidth, height = LibraryHandleHeight)
+                    .background(MaterialTheme.colorScheme.outline, RiffleShapes.full)
+                    .semantics { contentDescription = resources.getString(R.string.library_close_handle) },
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .padding(top = RiffleSpacing.s)
-                        .size(width = LibraryHandleWidth, height = LibraryHandleHeight)
-                        .background(MaterialTheme.colorScheme.outline, RiffleShapes.full)
-                        .semantics { contentDescription = resources.getString(R.string.library_close_handle) },
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(vertical = RiffleSpacing.s).semantics { heading() },
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+            IconButton(
+                onClick = { menu.show(optionsButton?.centreInRoot() ?: Offset.Zero) },
+                modifier = Modifier.size(LibraryMinTarget).onGloballyPositioned { optionsButton = it },
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(vertical = RiffleSpacing.s).semantics { heading() },
-                )
-                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(LibraryMinTarget)) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.library_options))
-                }
+                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.library_options))
             }
-        }
-        RiffleContextMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            ShowAsMenuItems(
-                options = LibraryView.entries,
-                current = view,
-                optionLabel = { option -> stringResource(option.titleRes()) },
-                onSelect = { option ->
-                    menuOpen = false
-                    onShowAs(option)
-                },
-            )
         }
     }
 }

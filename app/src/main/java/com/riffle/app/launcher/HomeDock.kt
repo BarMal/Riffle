@@ -124,11 +124,6 @@ internal fun Dock(
                 dynamicEntryCount = dynamicEntries.size,
                 contextualTileCount = if (contextual) dynamicEntries.count(DockDynamicEntry::isContextTile) else 0,
             ) ?: return@BoxWithConstraints
-        HomeBackgroundContextMenu(
-            haptics = interactions.haptics,
-            onAction = interactions.onAction,
-            modifier = Modifier.matchParentSize(),
-        )
         DockSurfaceStrip(
             modifier =
                 Modifier
