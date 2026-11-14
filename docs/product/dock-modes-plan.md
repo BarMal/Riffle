@@ -967,3 +967,11 @@ Six things the owner found on a foldable (unfolded, Dock on the right edge), eac
   the open card's actions row growing out of the Dock; the Dock area now reports its extent without that row
   (`DockExtentReport`). `UnfoldedStreamColumnTest` and `FoldedAppsBehindCardsTest` assert every grid cell
   (`home-grid-cell`) has the same bounds with the Stream closed, open, a card open and a simulated keyboard inset.
+- **"Show apps behind the cards", folded too.** The setting `layout.<posture>.appPeekThrough` now works in both postures
+  (default folded off, unfolded on; Settings > Layout in each section, and Settings > Stream > Cards with one switch per
+  posture, the same stored value). Folded with it on, Home stays on screen behind the stack (`homeBehind`: the handle
+  stands down, no fade or scale with the trampoline) and its grid fades under the same rectangle `StreamColumn.rect`
+  gives, cell by cell, no blur; off, Home fades out as before. The folded value is stored under its own key
+  (`appsBehindCards`; unfolded keeps `appPeekThrough`) because earlier builds wrote a meaningless `true` for the folded
+  posture, which would otherwise have turned it on for everyone. Card text stays readable over the faded grid through the
+  card fill's contrast guarantee (screenshots, light and dark, of the stack and an open card).

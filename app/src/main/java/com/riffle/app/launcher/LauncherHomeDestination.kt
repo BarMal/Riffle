@@ -150,11 +150,14 @@ private fun HomeDestinationContent(
     val deviceClass = state.homeLayoutSet.activeKey.deviceClass
     val unfolded = deviceClass.layoutPosture() == LayoutPosture.UNFOLDED
     val columnMode = stream != null && unfolded
+    // Home stays on screen behind the Stream: always unfolded (beside the column), and folded when "Show apps behind
+    // the cards" is on; its grid then fades under the stack cell by cell. Off folded, Home fades out as it always did.
+    val homeBehind = columnMode || (stream != null && state.postureLayout().appPeekThrough)
     val plan = rememberHomeSurfacePlan(state)
     // A committed pull stands in for the shell's answer until the shell shows it, so the surfaces do not flicker back.
     val shownStream = rememberStreamShown(dockPull, streamShown)
     // Unfolded with the Stream out, the column stands where the handle does: the handle is not drawn then.
-    val presentation = standardHomePresentation(state, widgetRenderers).copy(handleHidden = columnMode && shownStream)
+    val presentation = standardHomePresentation(state, widgetRenderers).copy(handleHidden = homeBehind && shownStream)
     // What the shell shows moving away from where the motion is heading (Home pressed, say) ends it where it is.
     LaunchedEffect(shownStream) { motion.syncShell(shownStream) }
     // The Library is a sheet over Home or the Stream; a committed pull to it stands in for the shell the same way.
@@ -218,7 +221,7 @@ private fun HomeDestinationContent(
                 StreamPullInputs(
                     available = stream != null,
                     shown = shownStream,
-                    homeStays = columnMode,
+                    homeStays = homeBehind,
                     focus = stream?.focus,
                     // Pressing the Dock down and releasing toggles the Home and the contextual mode: from Home it opens
                     // the Stream on the page of the icon the press started on (else the last page), from the Stream it
@@ -266,7 +269,7 @@ private fun HomeDestinationContent(
     val streamForTiles = pull.isChoosingFromHome && !shownStream
     val showStream = stream != null && (shownStream || pull.isTransitioning || streamForTiles)
     // Unfolded, Home stays under and beside the column whatever the Stream does.
-    val showHome = columnMode || !shownStream || pull.isTransitioning || pull.motionShowsHome
+    val showHome = homeBehind || !shownStream || pull.isTransitioning || pull.motionShowsHome
     val showLibrary = shownLibrary || pull.isLibraryTransitioning
     val searchOpenNow by rememberUpdatedState(state.destination == ShellDestination.SEARCH)
     val shownLibraryNow by rememberUpdatedState(shownLibrary)
@@ -299,7 +302,7 @@ private fun HomeDestinationContent(
     SideEffect { if (!motion.running) restDockBody.value = dockBodyNow }
     val column =
         rememberStreamColumnGeometry(
-            columnMode = columnMode,
+            columnMode = homeBehind,
             streamShown = shownStream,
             closing = motion.isClosing,
             cardOpen = stream?.dock?.openCards?.state?.isOpen == true,
@@ -364,7 +367,7 @@ private fun HomeDestinationContent(
                 // Stream's cards rise out of the Dock over Home. Both stay direct siblings of the dock, so their zIndex
                 // ranks them against it (see HOME_CONTENT_Z_INDEX) and the dock keeps the touches where they overlap.
                 val homeContent: @Composable () -> Unit = {
-                    CompositionLocalProvider(LocalGridFade provides column.fade.takeIf { columnMode }) {
+                    CompositionLocalProvider(LocalGridFade provides column.fade.takeIf { homeBehind }) {
                         key(plan.currentMode, features.homeMode) {
                             if (features.homeMode == HomeMode.AppLibrary) {
                                 AppLibraryHome(

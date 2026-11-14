@@ -379,7 +379,11 @@
     <string name="setting_layout_unfolded_indicator_keywords">layout unfolded tablet page dots indicator handle search off</string>
     <string name="setting_layout_unfolded_quick_scroll">Drag the dots to scroll, unfolded</string>
     <string name="setting_layout_unfolded_quick_scroll_keywords">layout unfolded tablet quick scroll drag dots scrub pages</string>
-    <string name="setting_layout_unfolded_peek_through">Apps behind the cards, unfolded</string>
+    <string name="setting_layout_folded_peek_through">Show apps behind the cards, folded</string>
+    <string name="setting_layout_folded_peek_through_keywords">layout folded phone apps peek through behind cards stream fade grid home</string>
+    <string name="setting_layout_unfolded_peek_through">Show apps behind the cards, unfolded</string>
+    <string name="setting_stream_apps_behind_cards">Show apps behind the cards</string>
+    <string name="setting_stream_apps_behind_cards_keywords">stream cards apps behind peek through fade grid home folded unfolded</string>
     <string name="setting_layout_unfolded_peek_through_keywords">layout unfolded tablet apps peek through behind cards stream fade grid</string>
     <string name="setting_dock_position">Dock position</string>
     <string name="setting_dock_position_keywords">dock edge left right bottom top</string>
@@ -731,8 +735,11 @@
     <string name="settings_layout_indicator_off">Off</string>
     <string name="settings_layout_quick_scroll_title">Drag the dots to scroll</string>
     <string name="settings_layout_quick_scroll_subtitle">Drag along the dots to go to a page quickly. Off, the dots only show where you are, and a tap on them still opens search.</string>
-    <string name="settings_layout_peek_through_title">Apps behind the cards</string>
-    <string name="settings_layout_peek_through_on">Apps show faintly behind the Stream\'s cards.</string>
+    <string name="settings_layout_peek_through_title">Show apps behind the cards</string>
+    <string name="settings_layout_peek_through_on">Home stays on screen and fades out under the Stream\'s cards.</string>
     <string name="settings_layout_peek_through_off">Nothing shows behind the Stream\'s cards.</string>
+    <string name="settings_stream_apps_behind_cards_folded">Show apps behind the cards, folded</string>
+    <string name="settings_stream_apps_behind_cards_unfolded">Show apps behind the cards, unfolded</string>
+    <string name="settings_stream_apps_behind_cards_note">The same setting as in Layout: one value for each way you hold the device.</string>
     <string name="settings_layout_quick_scroll_off_subtitle">The page dots are off, so there is nothing to drag.</string>
 </resources>
