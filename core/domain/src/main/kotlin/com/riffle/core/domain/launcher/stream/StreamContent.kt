@@ -54,9 +54,12 @@ enum class NotificationAction {
 
 /** One message of a notification thread. Transient and only present on content that is not redacted. */
 data class NotificationMessage(
+    /** Who wrote it; null: the user. */
     val sender: String?,
     val text: String,
     val timestampEpochMillis: Long,
+    /** False when saying [sender] would only repeat the card's title ([ConversationLines]): the text stands alone. */
+    val showSender: Boolean = true,
 )
 
 data class NotificationContent(
@@ -128,12 +131,18 @@ data class NotificationContent(
     val body: NotificationBody
         get() =
             when {
-                thread.isNotEmpty() -> NotificationBody.Thread(thread)
+                thread.isNotEmpty() -> NotificationBody.Thread(threadLines)
                 !text.isNullOrBlank() -> NotificationBody.Text(text)
                 custom != null && (custom.embed || custom.lines.isNotEmpty() || custom.bigLines.isNotEmpty()) ->
                     NotificationBody.Custom(custom)
                 else -> NotificationBody.None
             }
+
+    /**
+     * The message history as the card writes it: each line says who wrote it unless that would only repeat the card's
+     * title or the conversation's ([ConversationLines]).
+     */
+    val threadLines: List<NotificationMessage> get() = ConversationLines.resolve(thread, listOf(headline, title))
 
     /** The app's name as the card's second line; null when the title line already is the app's name. */
     val secondaryLabel: String? get() = appLabel?.takeIf { it.isNotBlank() && it != headline }

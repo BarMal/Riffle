@@ -40,6 +40,8 @@ object NotificationThreadSummary {
     fun combinedText(
         messages: List<LauncherNotificationMessage>,
         newestFirst: Boolean,
+        /** The card's title: a sender that is it is not said again on every line. */
+        title: String? = null,
     ): String {
         val meaningful = messages.filter { message -> message.text.isNotBlank() }
         if (meaningful.isEmpty()) return ""
@@ -49,7 +51,8 @@ object NotificationThreadSummary {
         val attributesSenders = combinedTitle(meaningful) == null
         return ordered.joinToString(separator = "\n") { message ->
             val sender = message.sender.trim()
-            if (attributesSenders && sender.isNotEmpty()) "$sender: ${message.text}" else message.text
+            val repeatsTitle = title != null && sender.equals(title.trim(), ignoreCase = true)
+            if (attributesSenders && sender.isNotEmpty() && !repeatsTitle) "$sender: ${message.text}" else message.text
         }
     }
 

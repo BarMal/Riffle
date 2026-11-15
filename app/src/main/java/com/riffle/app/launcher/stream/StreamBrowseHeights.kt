@@ -30,10 +30,6 @@ internal const val MAX_FONT_SCALE_FOR_CARDS = 1.8f
 /** The size of the picture thumbnail at the trailing edge of a notification's browse card. */
 internal val BrowseThumbnailSize: Dp = BrowseCardHeight.THUMBNAIL_DP.dp
 
-/** A block of a notification's browse text as it is written: a message says who wrote it first. */
-internal fun NotificationBrowseText.Block.written(you: String): String =
-    if (message) "${sender ?: you}: $text" else text
-
 /**
  * How tall each card of a stack is drawn, [cardWidth] wide. A notification is as tall as what it shows
  * ([BrowseCardHeight]: its text measured at the width it is written at, its thumbnail, a live notification's buttons),
