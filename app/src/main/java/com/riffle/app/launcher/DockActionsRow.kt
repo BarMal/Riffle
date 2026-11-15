@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -12,12 +13,16 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
@@ -39,24 +44,52 @@ import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.stream.CardActionControls
 import com.riffle.app.launcher.stream.LocalCardActionFieldColor
 import com.riffle.app.launcher.stream.OpenCardActions
+import com.riffle.app.launcher.stream.PageQuickActions
 import com.riffle.core.domain.launcher.designsystem.RiffleMotionTokens
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayout
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
 
 internal const val DOCK_CARD_ACTIONS_TEST_TAG = "dock-card-actions"
 
+/** The test tag of the Dock's row while it holds the page's quick actions. */
+internal const val DOCK_QUICK_ACTIONS_TEST_TAG = "dock-quick-actions"
+
 /**
- * What the Dock's body needs to hold the open card's actions (ADR 0003, Amendment 1, "Stream: browse, then open"): the
- * card's actions (null while none is open) and where to report the row's height to as it grows and goes, so Home's room
- * for the Dock can leave it out.
+ * What the Dock's body needs to hold its row (ADR 0003, Amendment 1, "Stream: browse, then open", and Amendment 3,
+ * "Quick actions"): the open card's actions (null while none is open), the quick actions of the page in front (null
+ * when it has none), and where to report the row's height to as it grows and goes, so Home's room for the Dock can
+ * leave it out. One row holds one of the two: an open card's own actions take it and the quick actions leave until the
+ * card closes.
  */
 @Stable
 internal class DockHeaderState(
     val actions: OpenCardActions?,
+    val quickActions: PageQuickActions?,
     val reducedMotion: Boolean,
     val onHeightChanged: (Int) -> Unit,
 )
+
+/** What the row holds now: the open card's actions or the page's quick actions, with the identity it fades on. */
+private sealed interface HeaderContent {
+    val identity: Any
+
+    data class Card(val actions: OpenCardActions) : HeaderContent {
+        override val identity: Any get() = "card:${actions.content.id.value}"
+    }
+
+    data class Quick(val quick: PageQuickActions) : HeaderContent {
+        override val identity: Any get() = "quick:${quick.pageKey}"
+    }
+}
+
+private fun DockHeaderState.wanted(): HeaderContent? =
+    when {
+        actions != null -> actions.takeIf { it.actions.isNotEmpty() }?.let(HeaderContent::Card)
+        quickActions != null && quickActions.actions.isNotEmpty() -> HeaderContent.Quick(quickActions)
+        else -> null
+    }
 
 /** The actions the Dock's body holds above (or, on a top Dock, below) its icons; null: it holds none. */
 internal val LocalDockHeader = compositionLocalOf<DockHeaderState?> { null }
@@ -104,63 +137,98 @@ internal fun DockBodyWithHeader(
 }
 
 /**
- * The row itself: the card's actions and a hairline between them and the icons. It grows in the Dock's one motion (its
- * spring at the opening speed, critically damped; a short fade under reduced motion), the controls fading in as the
- * body reaches them. The row's own box is its visible part, so its bounds are the room it takes at every frame.
+ * The row itself: the card's actions or the page's quick actions, and a hairline between them and the icons. It grows
+ * in the Dock's one motion (its spring at the opening speed, critically damped; a short fade under reduced motion),
+ * the controls fading in as the body reaches them. Changing what it holds (a card opens, a page changes) cross-fades
+ * the content and eases the height to the new content's on the same spring, so the body is one outline on one motion.
+ * The row's own box is its visible part, so its bounds are the room it takes at every frame.
  */
 @Composable
-@Suppress("CyclomaticComplexMethod")
+@Suppress("CyclomaticComplexMethod", "LongMethod")
 private fun DockActionsHeader(
     header: DockHeaderState,
     atEnd: Boolean,
 ) {
-    val actions = header.actions
-    // The content stays while the row leaves, so it does not blank before it has gone.
-    var last by remember { mutableStateOf<OpenCardActions?>(null) }
-    if (actions != null) last = actions
-    val shown = actions ?: last
-    val wanted = actions != null && actions.actions.isNotEmpty()
+    val target = header.wanted()
+    // What is drawn: the content stays while the row leaves, so it does not blank before it has gone.
+    var shown by remember { mutableStateOf<HeaderContent?>(null) }
+    val current = shown
+    if (target != null && (current == null || current.identity == target.identity)) shown = target
+    val latestTarget by rememberUpdatedState(target)
     val tuning = LocalDockMotionTuning.current
-    val progress by animateFloatAsState(
-        targetValue = if (wanted) 1f else 0f,
-        animationSpec =
-            if (header.reducedMotion) {
-                tween(RiffleMotionTokens.DURATION_REDUCED_MOTION_MILLIS)
-            } else {
-                RiffleMotion.smooth(tuning)
-            },
-        label = "dock-actions-row",
-    )
+    val spec: AnimationSpec<Float> =
+        if (header.reducedMotion) {
+            tween(
+                RiffleMotionTokens.DURATION_REDUCED_MOTION_MILLIS,
+            )
+        } else {
+            RiffleMotion.smooth(tuning)
+        }
+    // The content's own opacity: dips to 0 and back when the row holds something else.
+    val contentAlpha = remember { Animatable(1f) }
+    LaunchedEffect(target?.identity) {
+        val wanted = latestTarget ?: return@LaunchedEffect
+        if (shown?.identity != wanted.identity) {
+            contentAlpha.animateTo(0f, tween(CROSS_FADE_HALF_MILLIS))
+            shown = wanted
+            contentAlpha.animateTo(1f, tween(CROSS_FADE_HALF_MILLIS))
+        }
+    }
+    val presence = remember { Animatable(0f) }
+    LaunchedEffect(target != null) { presence.animateTo(if (target != null) 1f else 0f, spec) }
+    // The height the row eases to: the natural height of what it holds (measured below), or nothing.
+    val natural = remember { mutableIntStateOf(0) }
+    val height = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { if (latestTarget != null) natural.intValue else 0 }
+            .collectLatest { toPx ->
+                height.animateTo(toPx.toFloat(), spec)
+                if (toPx == 0 && latestTarget == null) shown = null
+            }
+    }
     val title = stringResource(R.string.stream_card_actions)
     val divider = MaterialTheme.colorScheme.onSurface.copy(alpha = HAIRLINE_ALPHA)
     val fieldColor = MaterialTheme.colorScheme.surface.copy(alpha = FIELD_BACKING_ALPHA)
-    val visible = shown != null && (wanted || progress > 0f)
+    val content = shown
+    val visible = content != null && (target != null || presence.value > 0f)
+    val tag =
+        when {
+            !visible -> null
+            content is HeaderContent.Quick -> DOCK_QUICK_ACTIONS_TEST_TAG
+            else -> DOCK_CARD_ACTIONS_TEST_TAG
+        }
     Layout(
         modifier =
             Modifier
                 .onSizeChanged { header.onHeightChanged(it.height) }
-                .then(if (visible) Modifier.testTag(DOCK_CARD_ACTIONS_TEST_TAG) else Modifier)
+                .then(if (tag != null) Modifier.reportsCardRect() else Modifier)
+                .then(if (tag != null) Modifier.testTag(tag) else Modifier)
                 .semantics {
                     isTraversalGroup = true
-                    paneTitle = title
+                    if (content !is HeaderContent.Quick) paneTitle = title
                 }
                 .clipToBounds()
-                .graphicsLayer { alpha = progress },
+                .graphicsLayer { alpha = presence.value * contentAlpha.value },
         content = {
-            if (visible && shown != null) {
+            if (visible && content != null) {
                 CompositionLocalProvider(
                     LocalCardActionFieldColor provides fieldColor,
                     LocalContentColor provides MaterialTheme.colorScheme.onSurface,
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         if (atEnd) Hairline(divider)
-                        CardActionControls(
-                            content = shown.content,
-                            actions = shown.actions,
-                            callbacks = shown.callbacks,
-                            onToggleQueue = shown.onToggleQueue,
-                            modifier = Modifier.padding(horizontal = RiffleSpacing.s, vertical = RiffleSpacing.xxs),
-                        )
+                        when (content) {
+                            is HeaderContent.Card ->
+                                CardActionControls(
+                                    content = content.actions.content,
+                                    actions = content.actions.actions,
+                                    callbacks = content.actions.callbacks,
+                                    onToggleQueue = content.actions.onToggleQueue,
+                                    modifier =
+                                        Modifier.padding(horizontal = RiffleSpacing.s, vertical = RiffleSpacing.xxs),
+                                )
+                            is HeaderContent.Quick -> QuickActionsRow(content.quick)
+                        }
                         if (!atEnd) Hairline(divider)
                     }
                 }
@@ -169,11 +237,12 @@ private fun DockActionsHeader(
     ) { measurables, constraints ->
         val open = constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity)
         val placeable = measurables.firstOrNull()?.measure(open)
-        val natural = placeable?.height ?: 0
-        val height = (natural * progress).roundToInt()
-        layout(constraints.maxWidth, height) {
+        val naturalPx = placeable?.height ?: 0
+        if (natural.intValue != naturalPx) natural.intValue = naturalPx
+        val heightPx = height.value.roundToInt().coerceAtLeast(0)
+        layout(constraints.maxWidth, heightPx) {
             // The row slides in from the icons' far side: the part nearest the icons shows first as the body grows.
-            placeable?.place(0, if (atEnd) 0 else height - natural)
+            placeable?.place(0, if (atEnd) 0 else heightPx - naturalPx)
         }
     }
 }
@@ -185,6 +254,9 @@ private fun Hairline(color: Color) {
 
 private const val HAIRLINE_ALPHA = 0.14f
 private const val FIELD_BACKING_ALPHA = 0.5f
+
+/** Half of the cross-fade when the row holds something else: out, then in. */
+private const val CROSS_FADE_HALF_MILLIS = 90
 
 /** [reservedExtent] with the open card's actions row in it: the room the Stream and its card leave for the Dock. */
 @Composable

@@ -39,6 +39,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
@@ -402,8 +403,8 @@ class LauncherActionDomainTest {
                 ),
                 settings("SetQuickScroll", LauncherShellAction.SetQuickScroll(LayoutPosture.UNFOLDED, enabled = false)),
                 settings(
-                    "SetAppPeekThrough",
-                    LauncherShellAction.SetAppPeekThrough(LayoutPosture.UNFOLDED, enabled = false),
+                    "SetAppsBehindCards",
+                    LauncherShellAction.SetAppsBehindCards(LayoutPosture.UNFOLDED, AppsBehindCards.AROUND),
                 ),
                 settings(
                     "SetFeatureEnabled",

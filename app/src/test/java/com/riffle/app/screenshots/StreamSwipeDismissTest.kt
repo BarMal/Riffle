@@ -24,6 +24,8 @@ import com.riffle.app.launcher.LauncherShellContent
 import com.riffle.app.launcher.sources.SourceChangeSource
 import com.riffle.app.launcher.stream.DismissArmedKey
 import com.riffle.app.launcher.stream.DismissCueAlphaKey
+import com.riffle.app.launcher.stream.ResistCueAlphaKey
+import com.riffle.app.launcher.stream.ResistCueLabelKey
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
 import com.riffle.app.launcher.stream.SwipeOffsetKey
@@ -373,6 +375,49 @@ class StreamSwipeDismissTest {
         }
         composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) { sent.isNotEmpty() }
         assertEquals(listOf("First" to StreamAction.Dismiss), sent)
+    }
+
+    @Test
+    fun aNotificationThatCannotBeClearedSaysOngoingWhileItIsDraggedAndNothingOnceItHasSettled() {
+        show(firstDismissible = false)
+        composeRule.onNodeWithText("First").performTouchInput {
+            down(center)
+            repeat(10) { moveBy(Offset(30f * dp, 0f), delayMillis = 16) }
+        }
+        composeRule.waitForIdle()
+        var slot = frontSlot()
+        assertEquals("Ongoing", slot.config.getOrNull(ResistCueLabelKey))
+        assertEquals(1f, slot.config.getOrNull(ResistCueAlphaKey) ?: 0f, 0.05f)
+        assertEquals(0f, slot.config.getOrNull(DismissCueAlphaKey))
+        composeRule.onNodeWithText("First").performTouchInput { up() }
+        composeRule.waitForIdle()
+        slot = frontSlot()
+        assertEquals("", slot.config.getOrNull(ResistCueLabelKey))
+        assertEquals(0f, slot.config.getOrNull(ResistCueAlphaKey) ?: -1f, 0.001f)
+    }
+
+    @Test
+    fun aStripShowsNoCueAndADismissibleFrontCardStillShowsDismissNotTheResistCue() {
+        show()
+        val strip = composeRule.onNode(hasContentDescription("Second", substring = true))
+        strip.performTouchInput {
+            down(center)
+            repeat(10) { moveBy(Offset(30f * dp, 0f), delayMillis = 16) }
+        }
+        composeRule.waitForIdle()
+        assertEquals(null, strip.fetchSemanticsNode().config.getOrNull(ResistCueAlphaKey))
+        strip.performTouchInput { up() }
+        composeRule.waitForIdle()
+        val width = composeRule.onNodeWithText("First").fetchSemanticsNode().size.width.toFloat()
+        composeRule.onNodeWithText("First").performTouchInput {
+            down(center)
+            repeat(10) { moveBy(Offset(width * 0.55f / 10f, 0f), delayMillis = 16) }
+        }
+        composeRule.waitForIdle()
+        val slot = frontSlot()
+        assertEquals(1f, slot.config.getOrNull(DismissCueAlphaKey) ?: 0f, 0.001f)
+        assertEquals(null, slot.config.getOrNull(ResistCueAlphaKey))
+        composeRule.onNodeWithText("First").performTouchInput { up() }
     }
 
     @Test

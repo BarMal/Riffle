@@ -65,6 +65,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.LayoutSettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.stream.StreamColumn
@@ -151,7 +152,7 @@ class UnfoldedStreamColumnTest {
     private fun unfolded(
         dock: DockPosition? = null,
         destination: ShellDestination = ShellDestination.HOME,
-        peekThrough: Boolean = true,
+        peekThrough: AppsBehindCards = AppsBehindCards.BEHIND_AND_AROUND,
         reducedMotion: Boolean = true,
         sizing: ScreenshotFixtures.HomeSizing = ScreenshotFixtures.HomeSizing(),
     ): LauncherShellState {
@@ -161,7 +162,7 @@ class UnfoldedStreamColumnTest {
                 .withManyApps()
                 .withAFullFirstPage()
                 .copy(destination = destination)
-        val unfolded = LayoutSettings().unfolded.copy(appPeekThrough = peekThrough)
+        val unfolded = LayoutSettings().unfolded.copy(appsBehind = peekThrough)
         val settings = base.launcherSettings
         return base.copy(
             launcherSettings =
@@ -237,7 +238,7 @@ class UnfoldedStreamColumnTest {
 
     private fun showOpen(
         dock: DockPosition? = null,
-        peekThrough: Boolean = true,
+        peekThrough: AppsBehindCards = AppsBehindCards.BEHIND_AND_AROUND,
     ) {
         show(unfolded(dock = dock, destination = ShellDestination.STREAM, peekThrough = peekThrough))
         waitForText("Sam")
@@ -382,7 +383,7 @@ class UnfoldedStreamColumnTest {
 
     @Test
     fun withPeekThroughOffTheGridIsHiddenUnderTheColumnAndStillFadesSoftlyAtItsEdge() {
-        showOpen(peekThrough = false)
+        showOpen(peekThrough = AppsBehindCards.HIDDEN)
         composeRule.waitForIdle()
         val column = column()
         val cells = cells()
@@ -742,7 +743,13 @@ class UnfoldedStreamColumnTest {
             "the column stands on the Dock: ${column.bottom} vs ${dock.top}",
             column.bottom - dock.top in 0f..MAX_REACH * dp,
         )
-        assertTrue("centred on it", abs(column.center.x - dock.center.x) < 2f * dp)
+        // The Dock's body is no longer centred on its edge while it is extended (the pinned run stays where it is and
+        // the body grows away from it), so the column is centred on the body's own rectangle, wherever that stands.
+        val body = bounds(HOME_DOCK_SURFACE_TEST_TAG)
+        assertTrue(
+            "centred on it: ${column.center.x} vs ${body.center.x}",
+            abs(column.center.x - body.center.x) < 2f * dp,
+        )
         assertEquals(
             "the unfolded column's width",
             StreamColumn.restWidthDp(root().width / dp, unfolded = true),
@@ -1128,10 +1135,62 @@ class UnfoldedStreamColumnTest {
             "at most 560 dp: ${column.height / dp}",
             column.height / dp <= StreamColumn.BOTTOM_DOCK_MAX_HEIGHT_DP + 1f,
         )
-        assertTrue("centred on the Dock", abs(column.center.x - dock.center.x) < 2f * dp)
+        // Centred on the Dock's body, which is off-centre on its edge while extended (see the test above).
+        val body = bounds(HOME_DOCK_SURFACE_TEST_TAG)
+        assertTrue("centred on the Dock", abs(column.center.x - body.center.x) < 2f * dp)
+    }
+
+    // "Apps behind the cards": the three choices
+
+    private fun cellRects(): List<Pair<Rect, Float>> =
+        composeRule.onAllNodes(SemanticsMatcher.keyIsDefined(GridFadeAlphaKey)).fetchSemanticsNodes()
+            .map { it.boundsInRoot to it.config[GridFadeAlphaKey] }
+
+    private fun stackCardBounds(): List<Rect> =
+        composeRule.onAllNodes(
+            SemanticsMatcher("a stack card") { node ->
+                node.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag)
+                    ?.startsWith("stream-stack-card:") == true
+            },
+        ).fetchSemanticsNodes().map { it.boundsInRoot }
+
+    @Test
+    fun aroundTheCardsHidesTheAppsUnderTheStackAndKeepsTheOnesBesideIt() {
+        showOpen(peekThrough = AppsBehindCards.AROUND)
+        val cards = stackCardBounds()
+        assertTrue(cards.isNotEmpty())
+        val cells = cellRects()
+        val under = cells.filter { (rect, _) -> cards.any { rect.overlaps(it) } }
+        assertTrue(under.isNotEmpty())
+        assertTrue("cells under a card are hidden: $under", under.all { it.second < 0.01f })
+        val clear =
+            cells.filter {
+                    (rect, _) ->
+                cards.none { rect.inflate(StreamGridFade.CARD_FEATHER_DP * dp).overlaps(it) }
+            }
+        assertTrue(clear.isNotEmpty())
+        assertTrue("cells beside the stack keep a fade: $clear", clear.any { it.second > 0.5f })
+    }
+
+    @Test
+    fun behindAndAroundShowsTheAppsUnderTheCardsFaintlyAndHiddenShowsNothingUnderTheColumn() {
+        showOpen(peekThrough = AppsBehindCards.BEHIND_AND_AROUND)
+        val cards = stackCardBounds()
+        val peek = cellRects().filter { (rect, _) -> cards.any { rect.overlaps(it) } }
+        assertTrue(peek.isNotEmpty() && peek.all { it.second > 0.1f })
     }
 
     // Screenshots
+
+    @Test
+    fun unfoldedStreamWithAppsAroundTheCardsLight() =
+        shoot(
+            showing = { showOpen(peekThrough = AppsBehindCards.AROUND) },
+        )
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun unfoldedStreamWithAppsAroundTheCardsDark() = shoot(showing = { showOpen(peekThrough = AppsBehindCards.AROUND) })
 
     @Test
     fun unfoldedStreamOnARightDockWithAppsPeekingThroughLight() = shoot(showing = { showOpen() })
@@ -1141,11 +1200,17 @@ class UnfoldedStreamColumnTest {
     fun unfoldedStreamOnARightDockWithAppsPeekingThroughDark() = shoot(showing = { showOpen() })
 
     @Test
-    fun unfoldedStreamOnARightDockWithPeekThroughOffLight() = shoot(showing = { showOpen(peekThrough = false) })
+    fun unfoldedStreamOnARightDockWithPeekThroughOffLight() =
+        shoot(showing = {
+            showOpen(peekThrough = AppsBehindCards.HIDDEN)
+        })
 
     @Test
     @Config(qualifiers = ScreenshotDevices.NIGHT)
-    fun unfoldedStreamOnARightDockWithPeekThroughOffDark() = shoot(showing = { showOpen(peekThrough = false) })
+    fun unfoldedStreamOnARightDockWithPeekThroughOffDark() =
+        shoot(showing = {
+            showOpen(peekThrough = AppsBehindCards.HIDDEN)
+        })
 
     @Test
     fun unfoldedOpenCardLight() = shoot(showing = { openCard() })

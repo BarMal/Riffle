@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.riffle.app.launcher.CardRects
 import com.riffle.core.domain.launcher.dock.DockDynamicSide
 import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.stream.CardAction
@@ -12,6 +13,7 @@ import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.OpenCardEvent
 import com.riffle.core.domain.launcher.stream.OpenCardReducer
 import com.riffle.core.domain.launcher.stream.OpenCardState
+import com.riffle.core.domain.launcher.stream.QuickAction
 import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.StreamPageRef
 import com.riffle.core.domain.launcher.stream.StreamSection
@@ -116,6 +118,28 @@ internal class OpenCardActions(
 )
 
 /**
+ * A page's quick actions as the row that offers them needs them (ADR 0003, Amendment 3, "Quick actions"): whose they
+ * are ([appLabel], for the row's spoken name), the actions in order, what draws their icons and how to launch one
+ * (through the one action gateway, so a profile's shortcut launches in its profile). Transient, never stored; equal
+ * only to itself, so a new value is published when the page, its actions or the way to draw them change.
+ */
+@Stable
+internal class PageQuickActions(
+    val pageKey: String,
+    val appLabel: String,
+    val actions: List<QuickAction>,
+    val env: StreamEnvironment,
+    val onLaunch: (QuickAction) -> Unit,
+)
+
+/**
+ * Whether the page's quick actions sit in the Dock's row (a Dock along the top or bottom edge, whichever posture)
+ * rather than in a strip under the stack inside the Stream (a side Dock). False wherever there is no Dock to hold
+ * them: the Stream alone, in tests and previews.
+ */
+internal val LocalQuickActionsInDock = staticCompositionLocalOf { false }
+
+/**
  * Whether the open card's actions sit in the Dock's row (the setting, where the Dock can hold one) rather than on the
  * card. False (on the card) wherever there is no Dock to hold them: the Stream alone, in tests and previews.
  */
@@ -142,6 +166,10 @@ internal class StreamDockLink {
     var currentKey: String? by mutableStateOf(null)
         private set
 
+    /** The quick actions of the page in front, for the Dock's row (null: none, or they sit under the stack). */
+    var quickActions: PageQuickActions? by mutableStateOf(null)
+        private set
+
     /** The page option the Dock asked for and the Stream has not applied yet. */
     var pendingOption: StreamPageOptionRequest? by mutableStateOf(null)
         private set
@@ -149,10 +177,17 @@ internal class StreamDockLink {
     /** The card open on the page in front, which the Dock's actions row and its press read. */
     val openCards: OpenCardHolder = OpenCardHolder()
 
+    /** Where the cards and the quick actions row stand, for Home's apps to keep clear of ("Around the cards"). */
+    val cardRects: CardRects = CardRects()
+
     private var lastOptionId = 0L
 
     fun publishPages(pages: List<StreamPageRef>) {
         if (this.pages != pages) this.pages = pages
+    }
+
+    fun publishQuickActions(actions: PageQuickActions?) {
+        if (quickActions !== actions) quickActions = actions
     }
 
     fun publishCurrent(key: String?) {
@@ -163,6 +198,8 @@ internal class StreamDockLink {
     fun clear() {
         pages = emptyList()
         currentKey = null
+        quickActions = null
+        cardRects.clear()
         pendingOption = null
         openCards.dispatch(OpenCardEvent.StreamLeft)
         openCards.clearPublished()

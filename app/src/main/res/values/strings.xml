@@ -156,7 +156,10 @@
 
     <!-- Shortcuts of a pinned app -->
     <string name="stream_shortcut_open_app">Open %1$s</string>
-    <string name="stream_shortcut_open_app_hint">Opens the app</string>
+    <string name="stream_nothing_new">Nothing new</string>
+    <string name="stream_swipe_ongoing">Ongoing</string>
+    <string name="stream_swipe_cant_dismiss">Can\'t dismiss</string>
+    <string name="stream_quick_actions_for">Quick actions for %1$s</string>
     <string name="stream_shortcut_launch">Launch %1$s</string>
     <string name="stream_shortcuts_need_home">Shortcuts need Riffle to be your Home app.</string>
     <string name="stream_shortcut_disabled">Not available right now</string>
@@ -765,9 +768,13 @@
     <string name="settings_layout_indicator_off">Off</string>
     <string name="settings_layout_quick_scroll_title">Drag the dots to scroll</string>
     <string name="settings_layout_quick_scroll_subtitle">Drag along the dots to go to a page quickly. Off, the dots only show where you are, and a tap on them still opens search.</string>
-    <string name="settings_layout_peek_through_title">Show apps behind the cards</string>
-    <string name="settings_layout_peek_through_on">Home stays on screen and fades out under the Stream\'s cards.</string>
-    <string name="settings_layout_peek_through_off">Nothing shows behind the Stream\'s cards.</string>
+    <string name="settings_layout_peek_through_title">Apps behind the cards</string>
+    <string name="settings_layout_apps_behind_hidden">Hidden</string>
+    <string name="settings_layout_apps_behind_around">Around the cards</string>
+    <string name="settings_layout_apps_behind_both">Behind and around</string>
+    <string name="settings_layout_apps_behind_hidden_subtitle">Hidden: Home fades out while the Stream shows.</string>
+    <string name="settings_layout_apps_behind_around_subtitle">Around the cards: Home stays, and an app under a card is hidden.</string>
+    <string name="settings_layout_apps_behind_both_subtitle">Behind and around: Home stays and fades out under the cards.</string>
     <string name="settings_stream_apps_behind_cards_note">The same setting as in Layout: one value for each way you hold the device.</string>
     <string name="settings_layout_quick_scroll_off_subtitle">The page dots are off, so there is nothing to drag.</string>
 </resources>

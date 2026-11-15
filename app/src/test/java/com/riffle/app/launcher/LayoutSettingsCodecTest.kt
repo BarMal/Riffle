@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.ModeSurface
 import com.riffle.core.domain.launcher.home.dockFor
 import com.riffle.core.domain.launcher.home.withDockEdge
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LayoutPosture
 import com.riffle.core.domain.launcher.settings.LayoutSettings
@@ -122,20 +123,20 @@ class LayoutSettingsCodecTest {
         assertEquals(PostureLayoutSettings.UNFOLDED_DEFAULT, decoded.unfolded)
     }
 
-    // "Show apps behind the cards": a stored boolean per posture (folded off, unfolded on, unless it says otherwise)
+    // "Apps behind the cards": a stored choice per posture; a boolean stored by the earlier build still decodes
 
     @Test
-    fun appsBehindTheCardsRoundTripsAndIsStoredPerPosture() {
+    fun appsBehindTheCardsRoundTripsAndIsStoredPerPostureByItsId() {
         val both =
             LayoutSettings()
-                .withAppPeekThrough(LayoutPosture.UNFOLDED, false)
-                .withAppPeekThrough(LayoutPosture.FOLDED, true)
+                .withAppsBehind(LayoutPosture.UNFOLDED, AppsBehindCards.AROUND)
+                .withAppsBehind(LayoutPosture.FOLDED, AppsBehindCards.BEHIND_AND_AROUND)
         val settings = LauncherSettings(layout = both)
         assertEquals(both, decodeLauncherSettings(encodeLauncherSettings(settings)).layout)
         val stored = JSONObject(encodeLauncherSettings(settings)).getJSONObject("layout")
         // Unfolded keeps the key it always had; folded has its own.
-        assertFalse(stored.getJSONObject("unfolded").getBoolean("appPeekThrough"))
-        assertTrue(stored.getJSONObject("folded").getBoolean("appsBehindCards"))
+        assertEquals("around", stored.getJSONObject("unfolded").getString("appPeekThrough"))
+        assertEquals("behindAndAround", stored.getJSONObject("folded").getString("appsBehindCards"))
         assertFalse(stored.getJSONObject("folded").has("appPeekThrough"))
     }
 
@@ -146,30 +147,52 @@ class LayoutSettingsCodecTest {
                 """{"folded": {"pageScroll": "vertical", "indicator": "off", "quickScroll": false},
                     "unfolded": {"pageScroll": "horizontal", "indicator": "beside_dock", "quickScroll": false}}""",
             )
-        assertFalse(decoded.folded.appPeekThrough)
-        assertTrue(decoded.unfolded.appPeekThrough)
-        assertEquals(custom.copy(folded = custom.folded.copy(appPeekThrough = false)), decoded)
+        assertEquals(AppsBehindCards.HIDDEN, decoded.folded.appsBehind)
+        assertEquals(AppsBehindCards.BEHIND_AND_AROUND, decoded.unfolded.appsBehind)
+        assertEquals(custom.copy(folded = custom.folded.copy(appsBehind = AppsBehindCards.HIDDEN)), decoded)
     }
 
     @Test
-    fun aFoldedPeekThroughOfTrueStoredByTheEarlierBuildIsIgnored() {
-        // The build before the folded setting existed wrote the (unused) value for both postures, true for folded.
-        // Reading it would turn "apps behind the cards" on for everyone's folded phone: it decodes to the default.
+    fun aStoredBooleanReadsTrueAsBehindAndAroundAndFalseAsHiddenForBothPostures() {
         val decoded =
             decodeLayout(
-                """{"folded": {"pageScroll": "horizontal", "appPeekThrough": true},
+                """{"folded": {"pageScroll": "horizontal", "appsBehindCards": true},
                     "unfolded": {"pageScroll": "vertical", "appPeekThrough": false}}""",
             )
-        assertFalse(decoded.folded.appPeekThrough)
-        assertFalse(decoded.unfolded.appPeekThrough)
+        assertEquals(AppsBehindCards.BEHIND_AND_AROUND, decoded.folded.appsBehind)
+        assertEquals(AppsBehindCards.HIDDEN, decoded.unfolded.appsBehind)
+    }
+
+    @Test
+    fun aFoldedPeekThroughOfTrueStoredByTheEarlierBuildIsStillIgnored() {
+        // The build before the folded setting existed wrote the (unused) value for both postures, true for folded.
+        // Reading it would turn "apps behind the cards" on for everyone's folded phone: it decodes to the default.
+        val decoded = decodeLayout("""{"folded": {"pageScroll": "horizontal", "appPeekThrough": true}}""")
+        assertEquals(AppsBehindCards.HIDDEN, decoded.folded.appsBehind)
     }
 
     @Test
     fun aMistypedSettingReadsAsThePosturesDefault() {
-        assertTrue(decodeLayout("""{"unfolded": {"appPeekThrough": "no"}}""").unfolded.appPeekThrough)
-        assertFalse(decodeLayout("""{"unfolded": {"appPeekThrough": false}}""").unfolded.appPeekThrough)
-        assertFalse(decodeLayout("""{"folded": {"appsBehindCards": "yes"}}""").folded.appPeekThrough)
-        assertTrue(decodeLayout("""{"folded": {"appsBehindCards": true}}""").folded.appPeekThrough)
+        assertEquals(
+            AppsBehindCards.BEHIND_AND_AROUND,
+            decodeLayout("""{"unfolded": {"appPeekThrough": "no"}}""").unfolded.appsBehind,
+        )
+        assertEquals(
+            AppsBehindCards.HIDDEN,
+            decodeLayout("""{"folded": {"appsBehindCards": "yes"}}""").folded.appsBehind,
+        )
+        assertEquals(
+            AppsBehindCards.AROUND,
+            decodeLayout("""{"folded": {"appsBehindCards": "around"}}""").folded.appsBehind,
+        )
+        assertEquals(
+            AppsBehindCards.HIDDEN,
+            decodeLayout("""{"unfolded": {"appPeekThrough": false}}""").unfolded.appsBehind,
+        )
+        assertEquals(
+            AppsBehindCards.BEHIND_AND_AROUND,
+            decodeLayout("""{"folded": {"appsBehindCards": true}}""").folded.appsBehind,
+        )
     }
 
     // The Dock edge: stored where it always was, so a stored choice wins over the new default

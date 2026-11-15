@@ -63,6 +63,7 @@ import com.riffle.core.domain.launcher.home.handleAxis
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.home.modeSurface
 import com.riffle.core.domain.launcher.library.LibraryView
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.EffectiveFeatures
 import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.LayoutPosture
@@ -314,6 +315,8 @@ private fun HomeDestinationContent(
             closing = motion.isClosing,
             openProgress = { stream?.dock?.openCards?.motion?.progress ?: 0f },
             peekThrough = state.postureLayout().appPeekThrough,
+            around = state.postureLayout().appsBehind == AppsBehindCards.AROUND,
+            cardRects = stream?.dock?.cardRects,
             reducedMotion = state.reducedMotion(),
             dockEdge = plan.dockEdge,
             dockExtent =
@@ -342,6 +345,7 @@ private fun HomeDestinationContent(
     // surface on Home floats above.
     CompositionLocalProvider(
         LocalGlanceHost provides glanceHost,
+        LocalCardRects provides stream?.dock?.cardRects,
         LocalDockFan provides pull.fanSource,
         LocalLauncherHaptics provides tickHaptics,
         LocalDockMotionTuning provides dockTuning,
@@ -453,6 +457,7 @@ private fun HomeDestinationContent(
                             onCloseStream = closeStream,
                             appIconLoader = appIconLoader,
                             onConnectTasks = openTasksSettings,
+                            quickActionsInDock = plan.dockEdge.isHorizontalEdge,
                             modifier = streamSurfaceModifier,
                         )
                     } else {
@@ -889,6 +894,7 @@ private fun StreamHomeSurface(
             launcherRole = state.homeRoleStatus != HomeRoleStatus.NOT_DEFAULT_HOME,
             streamSettings = state.launcherSettings.stream,
             dockCanHoldActions = dockPosition.isHorizontalEdge,
+            quickActionsInDock = dockPosition.isHorizontalEdge,
             // A tap on the stack's empty room closes the Stream (folded, a tap on a card or a control is theirs).
             onEmptyTap = onCloseStream,
         )

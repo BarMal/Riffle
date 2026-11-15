@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,6 +24,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -35,6 +37,7 @@ import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 private const val DOCK_SHELF_CONTENT_SPACING_DP = 6
 
@@ -50,7 +53,7 @@ internal data class DockSurfaceMetrics(
      */
     val contextualRun: DockRunGeometry.Run? = null,
     val contextualMainAxisDp: Int = 0,
-    /** The contextual row's item size and gap; the Home mode's [slotMetrics] otherwise. */
+    /** The contextual row's appended items' size and gap (the pinned icons keep [slotMetrics]). */
     val contextualSlotMetrics: DockSlotRenderMetrics = slotMetrics,
 ) {
     /**
@@ -148,14 +151,14 @@ internal fun dockSurfaceMetrics(
 
     val staticSide =
         dockStaticSideMetrics(dock, visibleSlotCount, availableMainAxisDp, runsHorizontally, staticMaxRunMainAxisDp)
-    val contextualMetrics = dockContextualSlotMetrics(dock, maxRunMainAxisDp)
+    val contextualMetrics = dockContextualSlotMetrics(staticSide.slotMetrics)
     val contextualRun =
         contextualTileCount.takeIf { it > 0 }?.let {
             dockContextualRun(
                 renderedSlotCount,
                 dynamicEntryCount,
                 contextualTileCount,
-                contextualMetrics,
+                staticSide.slotMetrics,
                 maxRunMainAxisDp,
             )
         }
@@ -439,6 +442,8 @@ internal fun DockSurfaceStrip(
      * contextual row is still drawn as the cards go back in (the Dock retracts with them). Null: the content's own.
      */
     sizeTargetMainAxisDp: Int? = null,
+    /** The pinned run's anchor while the Dock is extended (see [DockBodyAnchor]); null: the body is centred as ever. */
+    anchor: DockBodyAnchor? = null,
 ) {
     val runsHorizontally = position.isHorizontalEdge
     val showDynamicSection =
@@ -478,6 +483,21 @@ internal fun DockSurfaceStrip(
         Modifier.dockBodyLength(runsHorizontally, crossAxisDp, {
             bodyLength.dp
         }, targetMainAxisDp.toFloat(), easing)
+    // Extended, the body keeps its start where the Home mode's was and grows away from the pinned run.
+    val extended = anchor != null && surfaceMetrics.contextualRun != null
+    val anchorDensity = LocalDensity.current.density
+    val anchorShift: () -> Float = {
+        if (!extended || anchor == null) {
+            0f
+        } else {
+            anchor.shiftPx(if (easing) bodyLength.dp else targetMainAxisDp.toFloat(), anchorDensity)
+        }
+    }
+    val anchoring =
+        Modifier.absoluteOffset {
+            val shift = anchorShift().roundToInt()
+            if (runsHorizontally) IntOffset(shift, 0) else IntOffset(0, shift)
+        }
     val decor =
         Modifier
             .semantics { this[DockContentAlphaKey] = contentFade() }
@@ -487,8 +507,20 @@ internal fun DockSurfaceStrip(
                         .onGloballyPositioned { coordinates ->
                             // The body as it will stand once it has arrived (its middle stays where it is while
                             // it grows), so nothing that follows the Dock reads the motion frame by frame.
+                            val now = coordinates.boundsInRoot()
                             bodyBoundsSink(
-                                coordinates.boundsInRoot().withMainAxisPx(targetMainAxisPx, runsHorizontally),
+                                if (extended && anchor != null) {
+                                    // Anchored, the body arrives by growing toward its end, not about its middle.
+                                    now.anchoredArrival(
+                                        anchor,
+                                        if (easing) bodyLength.dp else targetMainAxisDp.toFloat(),
+                                        targetMainAxisDp.toFloat(),
+                                        anchorDensity,
+                                        runsHorizontally,
+                                    )
+                                } else {
+                                    now.withMainAxisPx(targetMainAxisPx, runsHorizontally)
+                                },
                             )
                         }
                         .dockSurfaceAppearance(dock)
@@ -542,7 +574,7 @@ internal fun DockSurfaceStrip(
     }
     if (header == null) {
         Box(
-            modifier = modifier.then(sizing).then(decor).then(padding),
+            modifier = anchoring.then(modifier).then(sizing).then(decor).then(padding),
             contentAlignment = Alignment.Center,
             content = { stripContent() },
         )
@@ -550,7 +582,7 @@ internal fun DockSurfaceStrip(
         DockBodyWithHeader(
             header = header,
             headerAtEnd = position == DockPosition.TOP,
-            modifier = modifier.then(decor),
+            modifier = anchoring.then(modifier).then(decor),
         ) {
             Box(
                 modifier = sizing.then(padding),

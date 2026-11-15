@@ -28,10 +28,10 @@ private const val DISABLED_ALPHA = 0.6f
 internal fun streamShortcutTag(content: AppShortcutContent): String = "stream-shortcut:${content.shortcutId.orEmpty()}"
 
 /**
- * One launcher shortcut of a pinned app as a card of its shortcuts stack (ADR 0003, Amendment 3, "Every icon has a
- * stack"): the shortcut's icon, its short label and, when it differs, its long label, lit by the app's colour. A tap
- * launches it; the app's own "Open <app>" card (for an app with no shortcuts) opens the app. A disabled shortcut says
- * so and does nothing.
+ * The quiet card of a pinned app with nothing live (ADR 0003, Amendment 3, "Every icon has a page"): the app's icon,
+ * its
+ * name and "Nothing new", lit by the app's colour; a tap opens the app. A shortcut is no longer a card (it is a quick
+ * action of the page, see `QuickActionsRow`), but the card still draws one when a List of shortcuts is asked for.
  */
 @Composable
 internal fun AppShortcutCard(
@@ -42,7 +42,12 @@ internal fun AppShortcutCard(
 ) {
     val title = shortcutTitle(content)
     val canLaunch = StreamActionPolicy.offers(content, StreamAction.Open)
-    val launchLabel = stringResource(R.string.stream_shortcut_launch, title)
+    val launchLabel =
+        if (content.opensApp) {
+            stringResource(R.string.stream_shortcut_open_app, title)
+        } else {
+            stringResource(R.string.stream_shortcut_launch, title)
+        }
     StreamCardSurface(content.id.value, content.app, null, env, modifier) { sourceModifier ->
         Column(
             modifier =
@@ -85,11 +90,11 @@ internal fun AppShortcutCard(
     }
 }
 
-/** The line under a shortcut's name: its long label, else why it is off, else (for the open card) what it does. */
+/** The line under a shortcut's name: its long label, else why it is off, else (for the quiet card) "Nothing new". */
 @Composable
 private fun shortcutDetail(content: AppShortcutContent): String? =
     when {
-        content.opensApp -> stringResource(R.string.stream_shortcut_open_app_hint)
+        content.opensApp -> stringResource(R.string.stream_nothing_new)
         !content.enabled -> content.disabledMessage ?: stringResource(R.string.stream_shortcut_disabled)
         else -> content.longLabel
     }

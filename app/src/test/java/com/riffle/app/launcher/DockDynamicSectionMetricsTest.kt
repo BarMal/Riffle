@@ -432,13 +432,13 @@ class DockDynamicSectionMetricsTest {
 
     @Test
     fun theContextualModeIsOneRowOfPinsEntriesAndTilesAsLongAsItsContentUpToTheRun() {
-        // 3 pins (drawn at the row's 48 dp item, 10 apart = 164), a rule (17), 2 live entries and 3 tiles (48 dp,
-        // 10 apart, a rule between groups). The Dock's 56 dp icon size is the Home mode's; the row has one item size.
+        // 3 pins (at the Dock's own 56 dp, 10 apart = 188), a rule (17), 2 live entries and 3 tiles (48 dp, 10 apart, a
+        // rule between groups). The pinned run is the Home mode's size and gap; only the appended items are 48 dp.
         val dock = phoneDock(pins = 3)
         val roomy = dockSurfaceMetrics(dock, false, 560, dynamicEntryCount = 5, contextualTileCount = 3)!!
         val run = requireNotNull(roomy.contextualRun)
 
-        assertEquals(164 + 17 + (5 * 48) + (3 * 10) + (17 + 2 * 10), run.contentDp)
+        assertEquals(188 + 17 + (5 * 48) + (3 * 10) + (17 + 2 * 10), run.contentDp)
         assertEquals(5, run.entries.size)
         // Everything fits in 560 dp, so the dock is as long as its row plus its padding and the row does not scroll.
         assertEquals(run.contentDp + 2 * DOCK_MAIN_AXIS_PADDING_DP, roomy.surfaceMainAxisDp)
@@ -460,28 +460,33 @@ class DockDynamicSectionMetricsTest {
     }
 
     @Test
-    fun theContextualRowDrawsPinsLiveAppsAndTilesAsOneRowOfEqualItemsAndHomeKeepsItsSize() {
+    fun theContextualRowKeepsThePinnedIconsAtTheHomeModesSizeAndGapAndAppendsItsItemsAtTheTouchTarget() {
         val dock = phoneDock(pins = 6)
+        // The Home mode with the same live entries (the tile is the contextual mode's only).
+        val home = dockSurfaceMetrics(dock, false, 404, dynamicEntryCount = 1)!!
         val metrics = dockSurfaceMetrics(dock, false, 404, dynamicEntryCount = 2, contextualTileCount = 1)!!
         val run = requireNotNull(metrics.contextualRun)
-        // 6 pins at the row's 48 dp item and the Dock's own 10 dp gap (6 * 48 + 5 * 10 = 338), a rule, then an entry.
+        // The pinned run is the Home mode's: the Dock's 56 dp and its gap, whatever room the row has.
+        assertEquals(56, home.slotMetrics.iconSizeDp)
+        assertEquals(home.slotMetrics, metrics.slotMetrics)
+        assertEquals(home.slotMetrics.itemSpacingDp, metrics.contextualSlotMetrics.itemSpacingDp)
+        // The six pins at the Home mode's size and gap, a rule, then the appended 48 dp items.
+        assertEquals(
+            dockSlotContentMainAxisDp(6, home.slotMetrics) + DOCK_SECTION_DIVIDER_MAIN_AXIS_DP,
+            run.entries.first().startDp,
+        )
         assertEquals(48, metrics.contextualSlotMetrics.iconSizeDp)
-        assertEquals(338 + DOCK_SECTION_DIVIDER_MAIN_AXIS_DP, run.entries.first().startDp)
-        assertEquals(listOf(48), (run.pinned + run.entries).map { it.endDp - it.startDp }.distinct())
-        // The Home mode is untouched: the pinned icons keep the Dock's 56 dp.
-        assertEquals(56, dockSurfaceMetrics(dock, false, 404)!!.slotMetrics.iconSizeDp)
+        assertEquals(listOf(48), run.entries.map { it.endDp - it.startDp }.distinct())
     }
 
     @Test
-    fun sixItemsAreWholeInTheViewportOfAnyPhoneWideDock() {
+    fun theContextualRowNeverShrinksTheIconsOrClosesTheGapUpOnAnyWidth() {
         listOf(320, 360, 392, 411, 480).forEach { width ->
             val dock = phoneDock(pins = 6)
+            val home = dockSurfaceMetrics(dock, false, width, dynamicEntryCount = 3)!!
             val metrics = dockSurfaceMetrics(dock, false, width, dynamicEntryCount = 8, contextualTileCount = 5)!!
-            val viewport = metrics.contextualMainAxisDp - 2 * DOCK_MAIN_AXIS_PADDING_DP
-            val pitch = 48 + metrics.contextualSlotMetrics.itemSpacingDp
-            // Whole items across the viewport: n * 48 + (n - 1) * gap <= viewport.
-            val whole = (viewport + metrics.contextualSlotMetrics.itemSpacingDp) / pitch
-            assertEquals("$width dp wide shows $whole items", true, whole >= 6 || width < 360)
+            assertEquals("$width dp: pinned size and gap", home.slotMetrics, metrics.slotMetrics)
+            assertEquals("$width dp: gap", home.slotMetrics.itemSpacingDp, metrics.contextualSlotMetrics.itemSpacingDp)
         }
     }
 

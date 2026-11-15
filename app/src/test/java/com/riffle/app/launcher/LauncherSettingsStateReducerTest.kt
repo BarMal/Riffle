@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeatureSettings
@@ -164,24 +165,33 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
-    fun persistsAppsBehindTheCardsPerPostureOnUnfoldedAndOffFoldedByDefault() {
+    fun persistsAppsBehindTheCardsPerPostureAsAChoiceBehindAndAroundUnfoldedAndHiddenFoldedByDefault() {
         val repository = FakeLauncherSettingsRepository()
         val reducer = reducer(launcherSettingsRepository = repository)
         val start = LauncherShellState()
-        assertEquals(true, start.launcherSettings.layout.unfolded.appPeekThrough)
-        assertEquals(false, start.launcherSettings.layout.folded.appPeekThrough)
+        assertEquals(AppsBehindCards.BEHIND_AND_AROUND, start.launcherSettings.layout.unfolded.appsBehind)
+        assertEquals(AppsBehindCards.HIDDEN, start.launcherSettings.layout.folded.appsBehind)
 
-        val off = reducer.reduce(start, LauncherShellAction.SetAppPeekThrough(LayoutPosture.UNFOLDED, false))
+        val around =
+            reducer.reduce(
+                start,
+                LauncherShellAction.SetAppsBehindCards(LayoutPosture.UNFOLDED, AppsBehindCards.AROUND),
+            )
 
-        assertEquals(false, off.launcherSettings.layout.unfolded.appPeekThrough)
-        assertEquals(false, off.launcherSettings.layout.folded.appPeekThrough)
-        assertEquals(off.launcherSettings, repository.savedSettings)
-        val on = reducer.reduce(off, LauncherShellAction.SetAppPeekThrough(LayoutPosture.UNFOLDED, true))
-        assertEquals(LayoutSettings(), on.launcherSettings.layout)
+        assertEquals(AppsBehindCards.AROUND, around.launcherSettings.layout.unfolded.appsBehind)
+        assertEquals(AppsBehindCards.HIDDEN, around.launcherSettings.layout.folded.appsBehind)
+        assertEquals(around.launcherSettings, repository.savedSettings)
+        val back =
+            reducer.reduce(
+                around,
+                LauncherShellAction.SetAppsBehindCards(LayoutPosture.UNFOLDED, AppsBehindCards.BEHIND_AND_AROUND),
+            )
+        assertEquals(LayoutSettings(), back.launcherSettings.layout)
 
-        val foldedOn = reducer.reduce(start, LauncherShellAction.SetAppPeekThrough(LayoutPosture.FOLDED, true))
-        assertEquals(true, foldedOn.launcherSettings.layout.folded.appPeekThrough)
-        assertEquals(true, foldedOn.launcherSettings.layout.unfolded.appPeekThrough)
+        val foldedOn =
+            reducer.reduce(start, LauncherShellAction.SetAppsBehindCards(LayoutPosture.FOLDED, AppsBehindCards.AROUND))
+        assertEquals(AppsBehindCards.AROUND, foldedOn.launcherSettings.layout.folded.appsBehind)
+        assertEquals(AppsBehindCards.BEHIND_AND_AROUND, foldedOn.launcherSettings.layout.unfolded.appsBehind)
         assertEquals(foldedOn.launcherSettings, repository.savedSettings)
     }
 

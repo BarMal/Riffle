@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.stream.OpenCardActions
+import com.riffle.app.launcher.stream.PageQuickActions
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.dockpull.pullDirection
@@ -172,6 +173,8 @@ internal data class HomeDockInterpreter(
     val pinnedStream: DockPinnedStream? = null,
     /** The card open in the Stream and what to do with it: the Dock draws a row of its actions; null: no row. */
     val cardActions: OpenCardActions? = null,
+    /** The quick actions of the page in front, which the same row holds while no card is open; null: none. */
+    val quickActions: PageQuickActions? = null,
 )
 
 /**
@@ -308,6 +311,7 @@ internal fun HomeDockHost(
                     staticItemTapOverride = interpreter.staticItemTapOverride,
                     isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,
                     cardActions = interpreter.cardActions,
+                    quickActions = interpreter.quickActions,
                 )
             }
             PressMenuAnchor(dockMenu) {

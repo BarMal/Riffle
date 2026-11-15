@@ -17,6 +17,7 @@ import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.app.launcher.expressions.NoExpressionImageLoader
 import com.riffle.app.launcher.notifications.NotificationStageActionGateway
 import com.riffle.app.launcher.notifications.NotificationStageActionResult
+import com.riffle.app.launcher.quickActionChipTag
 import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
 import com.riffle.app.launcher.workspace.ItemLaunchPort
 import com.riffle.core.domain.launcher.apps.AppActivityName
@@ -197,17 +198,20 @@ class StreamShortcutsTodayInteractionTest {
         composeRule.waitForIdle()
 
         assertEquals(filesPage, dock.currentKey)
-        composeRule.onNodeWithText("Recent").assertIsDisplayed()
+        // The app's shortcuts are quick actions now (a strip under the stack: there is no Dock here), the page is the
+        // quiet card.
+        composeRule.onNodeWithText("Nothing new").assertIsDisplayed()
+        composeRule.onNodeWithTag(quickActionChipTag("recent")).assertIsDisplayed()
     }
 
     @Test
-    fun tappingAShortcutCardLaunchesThatShortcutThroughTheFakeLauncher() {
+    fun tappingAQuickActionLaunchesThatShortcutThroughTheFakeLauncher() {
         show(
             emptyResults(),
             initialPageKey = filesPage,
             shortcutPages = shortcutPages(mapOf(files to listOf(shortcut("recent"), shortcut("search")))),
         )
-        composeRule.onNodeWithTag(streamShortcutTagFor("recent")).performClick()
+        composeRule.onNodeWithTag(quickActionChipTag("recent")).performClick()
         composeRule.waitForIdle()
 
         assertEquals(listOf("shortcut:recent"), launched)
@@ -215,9 +219,9 @@ class StreamShortcutsTodayInteractionTest {
     }
 
     @Test
-    fun anAppWithNoShortcutsIsOneOpenCardThatLaunchesTheApp() {
+    fun anAppWithNothingLiveIsOneQuietCardThatLaunchesTheApp() {
         show(emptyResults(), initialPageKey = filesPage, shortcutPages = shortcutPages(emptyMap()))
-        composeRule.onNodeWithText("Open Files").assertIsDisplayed()
+        composeRule.onNodeWithText("Nothing new").assertIsDisplayed()
         composeRule.onNodeWithTag(streamShortcutTagFor(null)).performClick()
         composeRule.waitForIdle()
 

@@ -194,12 +194,18 @@ class StreamFrontCardStaysTest {
 
     private val dock get() = com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
 
+    /** The front card of a stack, or the one card of a page that has only one (a lone card is no stack's slot). */
     private fun frontSlotOrNull() =
         composeRule.onAllNodes(
             androidx.compose.ui.test.SemanticsMatcher("the front card") { node ->
                 node.config.getOrNull(SemanticsProperties.StateDescription)?.startsWith("Card 1 of") == true
             },
         ).fetchSemanticsNodes().firstOrNull()
+            ?: composeRule.onAllNodes(
+                androidx.compose.ui.test.SemanticsMatcher("the lone card") { node ->
+                    node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("stream-stack-card:") == true
+                },
+            ).fetchSemanticsNodes().singleOrNull()
 
     private fun openCardNode() =
         composeRule.onAllNodes(hasTestTag(STREAM_OPEN_CARD_TEST_TAG)).fetchSemanticsNodes().firstOrNull()

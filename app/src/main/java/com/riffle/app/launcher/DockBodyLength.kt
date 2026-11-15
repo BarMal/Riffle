@@ -201,7 +201,17 @@ internal fun rememberDockContentFade(
             state.anim.snapTo(1f)
         }
     }
-    return { if (state.shown != state.wanted) 0f else state.anim.value }
+    // Only a reduced-motion change dips to nothing and fades back in. With the motion on the content is drawn on every
+    // frame of the change (a frame of an empty body, the effect not yet having run, was the blink the owner saw).
+    return {
+        if (!reducedMotion) {
+            1f
+        } else if (state.shown != state.wanted) {
+            0f
+        } else {
+            state.anim.value
+        }
+    }
 }
 
 @Stable
@@ -225,3 +235,68 @@ internal fun rememberDockContextualLengthSink(hostState: HomeDockHostState): (Fl
             if (hostState.contextualLengthDp.value != length) hostState.contextualLengthDp.value = length
         }
     }
+
+/**
+ * Where the Dock's body stands along its edge while it is extended for the contextual mode (ADR 0003, Amendment 3,
+ * "the pinned run stays where it is"): the body's start edge stays where the Home mode's body has it ([homePx] long,
+ * placed by [fraction] of the room: 0 start, a half centred, 1 end), so the pinned icons do not move, and the body
+ * grows away from it toward the end; only when the end reaches the edge's room ([runPx]) does it grow back the other
+ * way. Returns how far the body is from where its parent's alignment would put a body [lengthPx] long (px along the
+ * edge).
+ */
+internal fun dockAnchoredShiftPx(
+    runPx: Float,
+    homePx: Float,
+    lengthPx: Float,
+    fraction: Float,
+): Float {
+    val aligned = (runPx - lengthPx) * fraction
+    val atHome = (runPx - homePx) * fraction
+    val start = minOf(atHome, runPx - lengthPx).coerceAtLeast(0f)
+    return start - aligned
+}
+
+/** What the body's anchoring needs (see [dockAnchoredShiftPx]): the room along the edge, the Home length and the
+ * alignment. */
+internal class DockBodyAnchor(
+    val runDp: Float,
+    val homeDp: Int,
+    val fraction: Float,
+) {
+    fun shiftPx(
+        lengthDp: Float,
+        density: Float,
+    ): Float = dockAnchoredShiftPx(runDp * density, homeDp * density, lengthDp * density, fraction)
+}
+
+/**
+ * This body rectangle (now [nowLengthDp] long) as it will stand once it has arrived at [targetLengthDp], when the body
+ * is
+ * anchored: the start edge moves only as far as the anchor says ([DockBodyAnchor]), the length is the target.
+ */
+internal fun Rect.anchoredArrival(
+    anchor: DockBodyAnchor,
+    nowLengthDp: Float,
+    targetLengthDp: Float,
+    density: Float,
+    runsHorizontally: Boolean,
+): Rect {
+    val targetPx = targetLengthDp * density
+    val nowShift = anchor.shiftPx(nowLengthDp, density)
+    val targetShift = anchor.shiftPx(targetLengthDp, density)
+    // The rectangle stands where its parent's alignment put a body of its current length, shifted by [nowShift].
+    val nowPx = nowLengthDp * density
+    val aligned = (if (runsHorizontally) left else top) - nowShift
+    val alignedTarget = aligned + (nowPx - targetPx) * anchor.fraction
+    val start = alignedTarget + targetShift
+    return if (runsHorizontally) {
+        Rect(
+            start,
+            top,
+            start + targetPx,
+            bottom,
+        )
+    } else {
+        Rect(left, start, right, start + targetPx)
+    }
+}

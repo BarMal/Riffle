@@ -150,6 +150,8 @@ internal fun StreamDestination(
     streamSettings: StreamSettings = StreamSettings(),
     /** Whether the Dock can hold an open card's actions row (a Dock along the top or bottom edge). */
     dockCanHoldActions: Boolean = false,
+    /** Whether the Dock's row can hold the page's quick actions (a Dock along the top or bottom edge). */
+    quickActionsInDock: Boolean = false,
     /** See [StreamSurface]: where the stack's column stands inside this surface (unfolded), null folded. */
     pageBounds: (() -> StreamColumnRect?)? = null,
     /** A tap on the Stream's empty space: closes the Stream. */
@@ -249,6 +251,7 @@ internal fun StreamDestination(
         pinnedGroupKeys = pinnedGroupKeys,
         actionsInDock =
             dockCanHoldActions && streamSettings.cardActionsPlacement == CardActionsPlacement.IN_DOCK,
+        quickActionsInDock = quickActionsInDock,
         pageBounds = pageBounds,
         onEmptyTap = onEmptyTap,
     )

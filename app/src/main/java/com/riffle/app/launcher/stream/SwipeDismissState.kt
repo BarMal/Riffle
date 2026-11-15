@@ -7,6 +7,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.DraggableState
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -19,7 +21,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -93,6 +99,9 @@ internal class SwipeDismissState(
 
     /** The opacity of the "Dismiss" cue drawn in the space the card leaves. */
     fun cueAlpha(): Float = if (dismissing) SwipeDismiss.cueAlpha(offsetPx, widthPx) else 0f
+
+    /** The opacity of the cue of a card that resists (it says why), drawn where the "Dismiss" cue would be. */
+    fun resistCueAlpha(): Float = if (dismissing) 0f else SwipeDismiss.resistCueAlpha(offsetPx, density)
 
     val draggable: DraggableState =
         DraggableState { delta ->
@@ -224,13 +233,40 @@ internal val DismissCueAlphaKey = SemanticsPropertyKey<Float>("DismissCueAlpha")
 internal val SwipeOffsetKey = SemanticsPropertyKey<Float>("SwipeOffset")
 
 /** Publishes the swipe's armed state and cue opacity on a node (read when the tree is read, not per frame). */
-internal fun SemanticsPropertyReceiver.swipeSemantics(state: SwipeDismissState?) {
+internal fun SemanticsPropertyReceiver.swipeSemantics(
+    state: SwipeDismissState?,
+    resistLabel: String? = null,
+) {
     if (state != null) {
         this[DismissArmedKey] = state.armed()
         this[DismissCueAlphaKey] = state.cueAlpha()
         this[SwipeOffsetKey] = state.offsetPx
+        if (resistLabel != null) {
+            val alpha = state.resistCueAlpha()
+            this[ResistCueAlphaKey] = alpha
+            this[ResistCueLabelKey] = if (alpha > 0f) resistLabel else ""
+        }
     }
 }
+
+/** The semantics property of the opacity of the cue of a card that resists (0 when it is not shown; a test hook). */
+internal val ResistCueAlphaKey = SemanticsPropertyKey<Float>("ResistCueAlpha")
+
+/** The semantics property of the words of that cue while it shows, else empty (a test hook). */
+internal val ResistCueLabelKey = SemanticsPropertyKey<String>("ResistCueLabel")
+
+/**
+ * The words a card says when it resists a sideways drag, or null when it says nothing: a card that can be dismissed, or
+ * a strip (a card that is not in front). "Ongoing" for a notification that cannot be cleared, "Can't dismiss" for any
+ * other card.
+ */
+@Composable
+internal fun StackEntry.resistLabel(isFront: Boolean): String? =
+    when {
+        !isFront || swipeableNotification() != null -> null
+        openContent is NotificationContent -> stringResource(R.string.stream_swipe_ongoing)
+        else -> stringResource(R.string.stream_swipe_cant_dismiss)
+    }
 
 /**
  * The cue of a card about to be dismissed: the word "Dismiss" in the room the card leaves, on the side it came from,
@@ -238,14 +274,23 @@ internal fun SemanticsPropertyReceiver.swipeSemantics(state: SwipeDismissState?)
  * Nothing is drawn until the card is past the threshold, and never for a card that resists.
  */
 @Composable
-internal fun Modifier.swipeCue(state: SwipeDismissState?): Modifier {
+internal fun Modifier.swipeCue(
+    state: SwipeDismissState?,
+    /** The words a card that resists says why ("Ongoing"), after a small lock; null: it says nothing (a strip). */
+    resistLabel: String? = null,
+): Modifier {
     if (state == null) return this
     val label = stringResource(R.string.stream_notification_dismiss)
     val measurer = rememberTextMeasurer()
     val style = MaterialTheme.typography.labelLarge
     val color = MaterialTheme.colorScheme.onSurface
     val layout = remember(label, style) { measurer.measure(label, style, maxLines = 1) }
-    val inset = with(LocalDensity.current) { SwipeCueInset.toPx() }
+    val resistLayout = remember(resistLabel, style) { resistLabel?.let { measurer.measure(it, style, maxLines = 1) } }
+    val lock = rememberVectorPainter(Icons.Filled.Lock)
+    val density = LocalDensity.current
+    val inset = with(density) { SwipeCueInset.toPx() }
+    val lockSize = with(density) { ResistLockSize.toPx() }
+    val lockGap = with(density) { ResistLockGap.toPx() }
     return drawBehind {
         val alpha = state.cueAlpha()
         if (alpha > 0f) {
@@ -257,8 +302,24 @@ internal fun Modifier.swipeCue(state: SwipeDismissState?): Modifier {
                 alpha = alpha,
             )
         }
+        val resistAlpha = if (resistLayout != null) state.resistCueAlpha() else 0f
+        if (resistLayout != null && resistAlpha > 0f) {
+            // The same place, size and type as the "Dismiss" cue, with a small lock before the words.
+            val width = lockSize + lockGap + resistLayout.size.width
+            val x = if (state.offsetPx >= 0f) inset else size.width - inset - width
+            val y = (size.height - resistLayout.size.height) / 2f
+            translate(x, y + (resistLayout.size.height - lockSize) / 2f) {
+                with(
+                    lock,
+                ) { draw(Size(lockSize, lockSize), alpha = resistAlpha, colorFilter = ColorFilter.tint(color)) }
+            }
+            drawText(resistLayout, color = color, topLeft = Offset(x + lockSize + lockGap, y), alpha = resistAlpha)
+        }
     }
 }
+
+private val ResistLockSize = 16.dp
+private val ResistLockGap = 6.dp
 
 private val SwipeCueInset = 20.dp
 

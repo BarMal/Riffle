@@ -63,7 +63,12 @@ internal fun rememberDockDynamicSide(
     closing: Boolean = false,
 ): HomeDockInterpreter {
     if (stream == null) {
-        return modeInterpreter.copy(dynamicEntries = emptyList(), pinnedStream = null, cardActions = null)
+        return modeInterpreter.copy(
+            dynamicEntries = emptyList(),
+            pinnedStream = null,
+            cardActions = null,
+            quickActions = null,
+        )
     }
     // The provider reads the options of the posture on screen; keep it current even before the Stream has opened.
     SideEffect { stream.posture.deviceClass = deviceClass }
@@ -159,6 +164,8 @@ internal fun rememberDockDynamicSide(
         pinnedStream = pinnedStream,
         // An open card's actions, while the Stream shows it: the Dock's row (the Dock reads, the Stream writes).
         cardActions = link.openCards.shown.takeIf { shown },
+        // The page in front's quick actions: the same row, while no card's actions take it.
+        quickActions = link.quickActions.takeIf { shown },
     )
 }
 

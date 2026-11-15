@@ -7,9 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -20,6 +18,7 @@ import com.riffle.app.launcher.LauncherSettingsStateReducer
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.SettingsPage
 import com.riffle.app.launcher.SettingsPageContent
+import com.riffle.app.launcher.appsBehindOptionTestTag
 import com.riffle.app.launcher.layoutOptionTestTag
 import com.riffle.app.launcher.settingsSurfaceState
 import com.riffle.app.launcher.streamAppsBehindTestTag
@@ -30,6 +29,7 @@ import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.LayoutPosture
@@ -143,24 +143,46 @@ class SettingsSharedRowsTest {
     }
 
     @Test
-    fun showAppsBehindTheCardsReadsTheSameOnTheLayoutAndCardsPagesAndAgreesLive() {
+    fun appsBehindTheCardsReadsTheSameOnTheLayoutAndCardsPagesAndAgreesLive() {
         show(SettingsPage.POSTURE_LAYOUT, SettingsPage.STREAM_CARDS)
 
-        // The one title and the one subtitle, on both pages for each posture.
-        val title = composeRule.onAllNodesWithText("Show apps behind the cards").fetchSemanticsNodes()
-        assertEquals(4, title.size)
-        val offSubtitle = "Nothing shows behind the Stream's cards."
-        val onSubtitle = "Home stays on screen and fades out under the Stream's cards."
-        assertEquals(2, composeRule.onAllNodesWithText(offSubtitle).fetchSemanticsNodes().size)
-        assertEquals(2, composeRule.onAllNodesWithText(onSubtitle).fetchSemanticsNodes().size)
+        // The one title, on both pages for each posture; the subtitle states the current choice.
+        assertEquals(4, composeRule.onAllNodesWithText("Apps behind the cards").fetchSemanticsNodes().size)
+        val hidden = "Hidden: Home fades out while the Stream shows."
+        val around = "Around the cards: Home stays, and an app under a card is hidden."
+        val both = "Behind and around: Home stays and fades out under the cards."
+        assertEquals(2, composeRule.onAllNodesWithText(hidden).fetchSemanticsNodes().size)
+        assertEquals(2, composeRule.onAllNodesWithText(both).fetchSemanticsNodes().size)
+        assertTrue(composeRule.onAllNodesWithText(around).fetchSemanticsNodes().isEmpty())
 
-        // Folded, switched on on the Cards page, read off the Layout page.
-        composeRule.onNodeWithTag(streamAppsBehindTestTag(LayoutPosture.FOLDED)).performScrollTo().performClick()
-        assertTrue(state.launcherSettings.layout.folded.appPeekThrough)
-        composeRule.onNodeWithTag(layoutOptionTestTag(LayoutPosture.FOLDED, "peek", "through"))
+        // Folded, "Around the cards" picked on the Cards page, read off the Layout page.
+        composeRule.onNodeWithTag(
+            appsBehindOptionTestTag(streamAppsBehindTestTag(LayoutPosture.FOLDED), AppsBehindCards.AROUND),
+        )
             .performScrollTo()
-            .assert(hasText("Show apps behind the cards"))
-        assertEquals(4, composeRule.onAllNodesWithText(onSubtitle).fetchSemanticsNodes().size)
-        assertTrue(composeRule.onAllNodesWithText(offSubtitle).fetchSemanticsNodes().isEmpty())
+            .performClick()
+        assertEquals(AppsBehindCards.AROUND, state.launcherSettings.layout.folded.appsBehind)
+        composeRule.onNodeWithTag(
+            appsBehindOptionTestTag(
+                layoutOptionTestTag(LayoutPosture.FOLDED, "peek", "through"),
+                AppsBehindCards.AROUND,
+            ),
+        ).performScrollTo().assertIsSelected()
+        assertEquals(2, composeRule.onAllNodesWithText(around).fetchSemanticsNodes().size)
+        assertTrue(composeRule.onAllNodesWithText(hidden).fetchSemanticsNodes().isEmpty())
+
+        // And back from the Layout page, read off the Cards page.
+        composeRule.onNodeWithTag(
+            appsBehindOptionTestTag(
+                layoutOptionTestTag(LayoutPosture.FOLDED, "peek", "through"),
+                AppsBehindCards.HIDDEN,
+            ),
+        ).performScrollTo().performClick()
+        assertEquals(AppsBehindCards.HIDDEN, state.launcherSettings.layout.folded.appsBehind)
+        composeRule.onNodeWithTag(
+            appsBehindOptionTestTag(streamAppsBehindTestTag(LayoutPosture.FOLDED), AppsBehindCards.HIDDEN),
+        )
+            .performScrollTo()
+            .assertIsSelected()
     }
 }

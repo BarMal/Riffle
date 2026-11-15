@@ -142,7 +142,7 @@ internal fun DockContextualRow(
                     dock = dock,
                     renderedSlotCount = surfaceMetrics.renderedSlotCount,
                     contentViewportMainAxisDp = surfaceMetrics.contentViewportMainAxisDp,
-                    slotMetrics = surfaceMetrics.contextualSlotMetrics,
+                    slotMetrics = surfaceMetrics.slotMetrics,
                     isEditing = isEditing,
                     presentation = presentation,
                     appIconLoader = appIconLoader,
@@ -265,21 +265,15 @@ internal fun dockEmptyBodyMainAxisDp(
     }
 
 /**
- * How the contextual mode's one row is drawn: every item (pinned icon, live app, tile) is the 48 dp touch target,
- * the gap closed up from the Dock's own spacing until six whole items fit the Dock's run (see
- * [DockRunGeometry.contextualSpacingDp]). The Home mode's icon size and spacing are not touched.
+ * How the contextual mode's appended items (live apps, tiles) are drawn: the 48 dp touch target, with the same gap as
+ * the pinned icons, which keep the size and gap the Home mode gives them ([homeMetrics]): one size per Dock, so the
+ * pinned run does not change when the Dock extends. The row gains its items by growing the body and then by
+ * scrolling, never by closing the gap up or shrinking an icon.
  */
-internal fun dockContextualSlotMetrics(
-    dock: DockModel,
-    maxRunMainAxisDp: Int,
-): DockSlotRenderMetrics =
+internal fun dockContextualSlotMetrics(homeMetrics: DockSlotRenderMetrics): DockSlotRenderMetrics =
     DockSlotRenderMetrics(
         iconSizeDp = DockRunGeometry.CONTEXTUAL_ITEM_DP,
-        itemSpacingDp =
-            DockRunGeometry.contextualSpacingDp(
-                viewportDp = (maxRunMainAxisDp - (DOCK_MAIN_AXIS_PADDING_DP * 2)).coerceAtLeast(0),
-                preferredSpacingDp = dock.itemSpacingDp,
-            ),
+        itemSpacingDp = homeMetrics.itemSpacingDp,
         overflowMode = DockOverflowMode.Fits,
     )
 

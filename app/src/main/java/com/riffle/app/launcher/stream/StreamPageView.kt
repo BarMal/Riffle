@@ -27,14 +27,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
@@ -43,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import com.riffle.app.R
 import com.riffle.app.launcher.GlassSurface
 import com.riffle.app.launcher.LocalDockFan
+import com.riffle.app.launcher.QuickActionsStrip
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
@@ -121,8 +128,22 @@ internal fun StreamPageView(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     modifier: Modifier = Modifier,
+    /** The page's quick actions; drawn under the stack when no Dock holds them ([LocalQuickActionsInDock]). */
+    quick: PageQuickActions? = null,
 ) {
     val title = page.title()
+    val underStack = quick != null && !LocalQuickActionsInDock.current
+    // The same actions are custom accessibility actions of the page's front card (or the quiet card), wherever the row
+    // is.
+    val spokenActions =
+        remember(quick) {
+            quick?.actions.orEmpty().map { action ->
+                CustomAccessibilityAction(action.label) {
+                    quick?.onLaunch?.invoke(action)
+                    true
+                }
+            }
+        }
     Box(modifier = modifier.fillMaxSize().semantics { paneTitle = title }, contentAlignment = Alignment.TopCenter) {
         Column(
             modifier =
@@ -132,9 +153,42 @@ internal fun StreamPageView(
                     .padding(horizontal = RiffleSpacing.l),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         ) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) { StreamPageBodyView(page, env, callbacks) }
+            CompositionLocalProvider(LocalFrontCardQuickActions provides spokenActions) {
+                // The stack gives up the row's height: it is bottom-anchored in what is left above the row.
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) { StreamPageBodyView(page, env, callbacks) }
+            }
+            if (underStack) UnderStackQuickActions(quick)
         }
     }
+}
+
+/**
+ * The accessibility actions a page's quick actions add to its front card (and to the quiet card): the same actions as
+ * the row, so none depends on seeing or touching it. Empty for a page without quick actions.
+ */
+internal val LocalFrontCardQuickActions = compositionLocalOf<List<CustomAccessibilityAction>> { emptyList() }
+
+/**
+ * The quick actions under the stack (a side Dock; folded or unfolded): a Thin strip as wide as the cards at the bottom
+ * of
+ * the page, where the Dock's lower end is. It is part of the page, so it goes with the page on a swipe. While a card is
+ * open it is not drawn and takes no part in the tree: the open card grows over the room it keeps, so it is hidden
+ * rather
+ * than covered (a decision of the design: the open card needs the room).
+ */
+@Composable
+private fun UnderStackQuickActions(quick: PageQuickActions) {
+    val openCards = LocalOpenCards.current
+    val open = openCards.state.isOpen
+    QuickActionsStrip(
+        quick = quick,
+        modifier =
+            Modifier
+                .padding(bottom = RiffleSpacing.s)
+                .dockFan(LocalDockFan.current)
+                .graphicsLayer { alpha = 1f - openCards.motion.progress.coerceIn(0f, 1f) }
+                .then(if (open) Modifier.clearAndSetSemantics {} else Modifier),
+    )
 }
 
 /** The app's icon for an app page, else the section's glyph. Decorative: the title names the page. */

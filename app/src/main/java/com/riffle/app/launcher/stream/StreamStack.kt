@@ -72,6 +72,7 @@ import com.riffle.app.launcher.DockFanSource
 import com.riffle.app.launcher.LocalDockFan
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
+import com.riffle.app.launcher.reportsCardRect
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
@@ -339,7 +340,8 @@ private fun StreamStackContent(
                 )
             val dismissLabel = stringResource(R.string.stream_notification_dismiss)
             LoneCard(
-                Modifier,
+                streamStackCardTag(only.id),
+                resistLabel = only.resistLabel(isFront = true),
                 hidden = drawnByLayer,
                 swipe = swipe,
                 canDismiss = only.swipeableNotification() != null,
@@ -472,7 +474,10 @@ private fun StreamStackContent(
                                         } else {
                                             null
                                         },
-                                    modifier = cardModifier.fillMaxWidth().testTag(STREAM_OPEN_CARD_TEST_TAG),
+                                    modifier =
+                                        cardModifier.fillMaxWidth().reportsCardRect().testTag(
+                                            STREAM_OPEN_CARD_TEST_TAG,
+                                        ),
                                 )
                             }
                         },
@@ -530,8 +535,11 @@ internal const val STREAM_OPEN_CARD_TEST_TAG = "stream-open-card"
  * [hidden] while it is open: the open card is drawn over its place.
  */
 @Composable
+@Suppress("LongParameterList")
 private fun LoneCard(
-    modifier: Modifier,
+    tag: String,
+    /** The words the card says when it resists a sideways drag; null for a card that can be dismissed. */
+    resistLabel: String?,
     hidden: Boolean,
     swipe: SwipeDismissState?,
     canDismiss: Boolean,
@@ -539,9 +547,10 @@ private fun LoneCard(
     onDismiss: () -> Unit,
     content: @Composable () -> Unit,
 ) {
+    val quickActions = LocalFrontCardQuickActions.current
     Box(
         modifier =
-            modifier.fillMaxSize().then(
+            Modifier.fillMaxSize().then(
                 if (hidden) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics {} else Modifier,
             ),
         contentAlignment = Alignment.BottomCenter,
@@ -549,21 +558,26 @@ private fun LoneCard(
         Column(
             modifier =
                 Modifier
+                    .reportsCardRect()
                     .dockFan(LocalDockFan.current)
-                    .swipeCue(swipe)
+                    .swipeCue(swipe, resistLabel)
                     .swipeLayer(swipe)
                     .swipeToDismiss(swipe)
                     .semantics {
-                        swipeSemantics(swipe)
-                        if (canDismiss) {
-                            customActions =
+                        testTag = tag
+                        swipeSemantics(swipe, resistLabel)
+                        val dismiss =
+                            if (canDismiss) {
                                 listOf(
                                     CustomAccessibilityAction(dismissLabel) {
                                         onDismiss()
                                         true
                                     },
                                 )
-                        }
+                            } else {
+                                emptyList()
+                            }
+                        if (dismiss.isNotEmpty() || quickActions.isNotEmpty()) customActions = dismiss + quickActions
                     }
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = StackBottomInset),
@@ -747,6 +761,7 @@ private fun FocusedStack(
                         onOpen = { onOpen(item) },
                         onBringToFront = { if (latestOpenActive) onCloseOpen() else goTo(index) },
                         swipe = swipe,
+                        resistLabel = item.resistLabel(isFront),
                         canDismiss = item.swipeableNotification() != null,
                         dismissLabel = dismiss,
                         onDismiss = {
@@ -798,6 +813,8 @@ private fun StackSlot(
     onBringToFront: () -> Unit,
     /** The card's sideways drag: it dismisses the front card of a dismissible notification, else it resists. */
     swipe: SwipeDismissState?,
+    /** What the front card says when it resists ("Ongoing", "Can't dismiss"); null for a strip or a dismissible one. */
+    resistLabel: String?,
     /** Whether the card is a notification that offers Dismiss (its custom action, and the cue). */
     canDismiss: Boolean,
     /** The custom action that dismisses it without a gesture (its label), and what it does. */
@@ -806,13 +823,14 @@ private fun StackSlot(
     card: @Composable () -> Unit,
 ) {
     CountRecomposition("stack-slot:$index")
+    val quickActions = LocalFrontCardQuickActions.current
     val semantics =
         if (isFront) {
             Modifier.semantics {
                 testTag = tag
                 traversalIndex = 0f
                 stateDescription = position
-                swipeSemantics(swipe)
+                swipeSemantics(swipe, resistLabel)
                 customActions =
                     listOfNotNull(
                         CustomAccessibilityAction(open) {
@@ -823,7 +841,7 @@ private fun StackSlot(
                             onDismiss()
                             true
                         }.takeIf { canDismiss },
-                    )
+                    ) + quickActions
             }
         } else {
             // One node for the strip: the whole card's text, one action. The card's own controls are not reachable.
@@ -842,9 +860,10 @@ private fun StackSlot(
         modifier =
             Modifier
                 .stackSlot(index)
+                .reportsCardRect()
                 .dockFan(dockFan, rank)
                 // The cue is drawn where the card was, so it stays while the card goes (before the swipe's layer).
-                .swipeCue(swipe.takeIf { canDismiss })
+                .swipeCue(swipe.takeIf { canDismiss || resistLabel != null }, resistLabel)
                 // The swipe moves the whole slot, outside its cut, so the card is never cut off as it goes.
                 .swipeLayer(swipe)
                 // The slot is as tall as the part of the card that shows (its strip: what a tap and a screen reader

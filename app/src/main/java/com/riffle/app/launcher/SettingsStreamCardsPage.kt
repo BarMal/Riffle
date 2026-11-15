@@ -111,7 +111,7 @@ internal fun SettingsStreamCards(
             ) {
                 SettingsAppsBehindCardsRow(
                     posture = posture,
-                    on = layout.forPosture(posture).appPeekThrough,
+                    choice = layout.forPosture(posture).appsBehind,
                     onAction = onAction,
                     modifier = Modifier,
                     tag = streamAppsBehindTestTag(posture),

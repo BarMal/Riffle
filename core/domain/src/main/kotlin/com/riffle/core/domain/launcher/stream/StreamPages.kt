@@ -23,6 +23,8 @@ sealed interface StreamPageBody {
  * - [count] is how many items the page has, counting those a section limit left out of the group.
  * - [lead] is the first item, whose app gives the page its icon and colour.
  * - [activityEpochMillis] is when the page's newest item happened, which orders the Stage rail's recent app pages.
+ * - [quickActions] are a pinned app's launcher shortcuts: not cards of the stack but what the Dock's row (or the row
+ *   under the stack) offers while the page is showing. Empty for every other page.
  */
 data class StreamPage(
     val key: String,
@@ -34,6 +36,7 @@ data class StreamPage(
     val body: StreamPageBody,
     val lead: StreamContent? = null,
     val activityEpochMillis: Long? = null,
+    val quickActions: List<QuickAction> = emptyList(),
 ) {
     /** True for the pages of the sections that split into one page per app or feed. */
     val isGroupPage: Boolean get() = groupKey != null

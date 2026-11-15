@@ -1791,3 +1791,115 @@ Both came from the open card's overlay, and one commit fixes both.
   screen is the verdict. If only the first app opened, the second start was probably blocked.
 - **Known limits.** No public API chooses the ratio or the side; `ActivityOptions.setLaunchBounds` only applies in freeform windowing;
   `ActivityInfo.resizeMode` is not public, so resizability cannot be logged.
+
+## Quick actions, and apps behind the cards
+
+Two things the owner decided on the design canvas (boards QA, QA2, QA3 and QA-U1), one commit each.
+
+### Quick actions: an app's shortcuts leave the stack
+
+The owner: "once a pinned card is dismissed, the remaining items are the standard context actions; it'd be better to have
+these available as quick actions".
+
+- **The model** (`:core:domain` `StreamShortcutPages`, `QuickAction`, `StreamPage.quickActions`, tested in
+  `StreamShortcutPagesTest`). An app's page holds only its live content. Its launcher shortcuts are the page's
+  `quickActions`, a typed list over the existing `AppShortcutContent` (so the one action gateway launches them, profiles
+  included), in the platform's rank order, **at most eight** (`MAX_QUICK_ACTIONS`), **disabled shortcuts left out** (a chip
+  that does nothing is noise). Round 2's merge no longer interleaves cards: `merge` leaves a live page's cards as they are and
+  adds the actions. A pinned app with nothing live still has a page: **one quiet card** (its icon, its name, "Nothing new";
+  a tap opens the app) and its quick actions. An app with no shortcuts and nothing live is that card alone, as the old "Open
+  <app>" card was. Without the launcher role there are no quick actions and the existing "Shortcuts need Riffle to be your
+  Home app" notice stays behind the card (on a live page too), so the page says why there is no row. Recents, Today, Now and
+  Feeds have none.
+- **Folded, a Dock along the top or bottom edge** (`DockActionsRow.kt`, `QuickActionsRow.kt`). The chips are in the Dock's one
+  body above the icons with a hairline between, the same mechanism as the open card's actions row: the body's outline grows
+  with the row; the pinned run stays put. A chip is the shortcut's small icon and label, a 48 dp target; the row scrolls
+  sideways and a chip at a clipped end fades by how much shows (`dockEdgeFade`). A tap launches and the Stream closes as for any
+  launch from it. With a card open on the page the card's actions take the **same** row (a cross-fade; never two rows) and the
+  chips return when it closes; a change of page cross-fades the chips; a page without quick actions has no row. The row's
+  height now eases on the Dock's one spring to the height of what it holds (`DockHeaderState` holds either), so a swap of
+  content is one motion. With "Where its actions sit" on the card, the card's actions stay on it and the row still lives in
+  the Dock. Unfolded with a bottom Dock the row is in the Dock as folded.
+- **A side Dock, either posture** (`UnderStackQuickActions` in `StreamPageView`). The chips are a Thin glass strip under the
+  stack, as wide as the cards, at the bottom of the page (the column's lower end); the stack is bottom-anchored just above it,
+  so it gives up the row's height and the column's rectangle is unchanged. **While a card is open the strip is hidden** (it
+  fades with the open card's motion and leaves the tree): the open card grows over the room it keeps.
+- **Accessibility.** The row is a labelled group ("Quick actions for <app>"), each chip a button named by its shortcut; the
+  same actions are custom accessibility actions of the front card (and of the quiet card, a lone card).
+- **Where things moved.** `PageQuickActions` (the page's actions as a row needs them) is published by `StreamSurface` to
+  `StreamDockLink.quickActions` for the Dock; `LocalQuickActionsInDock` says which place a surface uses.
+- **Tests.** `StreamShortcutPagesTest` (rewritten: live cards only, the list, the cap and order, the quiet card, no role),
+  `QuickActionsTest` (Robolectric, through the real shell: folded the row inside the Dock's body above the icons, chips launch
+  through the gateway, a card replaces and then restores them, a change of page swaps them, the quiet card, accessibility;
+  unfolded the strip under the stack inside the column and hidden while a card is open; screenshots dark and light).
+- **Tests rewritten on purpose:** `StreamStripsTest` (a merged page of a notification and three shortcut cards; now a page of a
+  notification and cards of another kind, and a live page has no shortcut card), `OpenCardNeighbourWithNothingToOpenTest` (a
+  shortcut card was the neighbour with nothing to open; it is now a recent-app card), `StreamFrontCardStaysTest` (the
+  last card is now a lone card, which carries its stack-card tag so the helper finds it), the shortcuts goldens of
+  `StreamScreenshotTest`. Device: `StreamShortcutsTodayInteractionTest` taps shortcut cards and counts cards; see its notes.
+
+### Apps behind the cards: a choice of three per posture
+
+The owner: "make it configurable please, I like the choice". Per posture, in Settings > Layout and Settings > Stream > Cards
+(one shared row, `SettingsAppsBehindCardsRow`, one stored value; its subtitle states the choice):
+
+- **Hidden**: Home fades out when the Stream shows (unfolded, where Home always stays beside the column, nothing shows under
+  the column: as the old "off").
+- **Around the cards**: Home stays; any app that meets a card of the stack (front card, strips, an open card) or the quick
+  actions row is fully hidden, with a 24 dp feather (`StreamGridFade.aroundFactor`, pure) so an icon never pops; apps beside
+  and above the cards keep the distance fade at its floor.
+- **Behind and around**: the old "on": apps under the cards show at the floor.
+
+Stored data: `PostureLayoutSettings.appsBehind` (`AppsBehindCards`), stored by id under the same keys; an old boolean reads
+`true` as Behind and around and `false` as Hidden; unset: folded Hidden, unfolded Behind and around (`LayoutSettingsCodecTest`).
+The hiding follows the cards' real rectangles: every card reports its coordinates (`CardRects`, `reportsCardRect`) and a cell
+works its factor out **in the draw phase** (`GridFadeCell`, `GridFadeField.alphaAtPx`), so a moving stack redraws cells and
+recomposes nothing (the recomposition probe tests pass). A cell that is faded out takes no input by the existing alpha rule.
+Tests: `StreamGridFadeTest`, `LayoutSettingsTest`, the codec and reducer tests, `FoldedAppsBehindCardsTest` and
+`UnfoldedStreamColumnTest` (alphas under, beside and clear of the cards, per posture), `SettingsSharedRowsTest` (both entry
+points show and write the same value); screenshots dark and light of Around the cards, folded and unfolded.
+
+## The Dock's open and close: one size, one place, no blink
+
+The owner, from a recording of the unfolded Dock on the right edge: "the dock open/close still has jitter/icon size changes".
+A blank frame, the icons smaller in the contextual mode, and the pinned run sliding (and the first icon clipped at the top).
+
+- **Measured before** (the test clock, a frame at a time; px at 2.625): bottom Dock on a phone, the first pinned icon was
+  116 px in the Home mode and 126 px from frame 3 of the opening (the contextual row drew every item as a 48 dp target and
+  closed the gap up until six fitted), its x going 277, 277, 277, 277 to 241 within the body's own growth about its middle
+  (body 240..839 to 33..1046); right Dock on a foldable, the body went 660..1160 to 363..1457 about its middle and the first
+  pinned icon went from y 688 to y 391 (297 px, 113 dp) in about 15 frames, ending near the Dock's top end.
+- **After** (same frames): the pinned icon is 116 px (bottom) and 96 px (right) on every frame of opening and closing, the gap
+  between neighbours constant; on the right Dock the body is 660..1160 growing to 660..1754 and the first pinned icon stays at
+  y 688 on every frame; on the bottom Dock the body grows from 240..839 to the right and the first icon stays at x 277 until
+  the body's end reaches the edge's room (frame 8, x 1046), after which it also grows back to the left (277 to 70 at rest).
+- **The blank frame.** The Dock's content was drawn at opacity 0 for the frame in which the mode changed, in every motion
+  setting: `rememberDockContentFade` set the opacity to 0 the moment the mode changed and returned it to 1 in an effect that
+  runs after that frame (it was meant for reduced motion's cross-fade). Now only reduced motion dips and fades back; with the
+  motion on the content is drawn on every frame. **I could not reproduce the blank frame with the test clock** (the effect
+  runs before the frame is sampled), so this is the cause found by reading the code, not one seen failing.
+- **One size per Dock** (`dockContextualSlotMetrics`, `DockSurface.kt`). The pinned icons keep the Home mode's size and gap
+  (what its pinned run needs, whatever the Dock's setting and room) in the contextual mode. Only the appended live apps and tiles
+  are the 48 dp target, with the same gap. The row gains its items by growing the body and then by scrolling, never by shrinking
+  an icon or closing the gap up (the "six whole items" rule is gone).
+- **The pinned run stays where it is** (`dockAnchoredShiftPx`, `DockBodyAnchor`). Extended, the body keeps its start edge where
+  the Home mode's body had it and grows away from the pinned run (a side Dock: downward; a bottom Dock: toward the end of the
+  row), and only when its end reaches the edge's room does it also grow back the other way. So the Dock may be off-centre on its
+  edge while it is extended; the Home mode's body is centred as ever and the change is one continuous motion on the same spring.
+  The body reports its arrived rectangle (`anchoredArrival`) and **the Stream's column follows that rectangle**: it spans the
+  body's actual top and bottom (side Dock) or is centred on the body (bottom Dock), wherever the body stands, not the edge's middle.
+  Left to right text direction is assumed for a bottom Dock's "end".
+- **The page handle** (`FadingHandle`, `StandardHome.kt`): unfolded, where it is hidden while the column stands, it fades on the
+  Dock's own spring (a snap under reduced motion) instead of popping out and in in the frame the mode changes.
+- **Tests** (`DockResizeMotionTest`, Robolectric, the test clock stepped by hand through the real `HomeDestination`, a right Dock
+  unfolded and a bottom Dock folded, opening and closing): on every frame every pinned icon is placed, has a size, is drawn and the
+  content is not blanked; each pinned icon's size and the gap are equal on every frame; the start edge stays until the end has
+  reached the room. `DockDynamicSectionMetricsTest` (the pinned run is the Home mode's on every width) and
+  `DockContextualModeTest`.
+- **Tests rewritten on purpose:** `DockResizeMotionTest.assertTheBodyExtends` asserted the body stays centred on its edge (now: it
+  grows away from the pinned run); `DockContextualModeTest.aPhoneWideRowShowsSixWholeItemsOfOneSizeAndTheRestScrollsAway` asserted
+  the 48 dp item and six whole items (now the pinned size and gap are the Dock's); `DockDynamicSectionMetricsTest` (the run's
+  length and the six-whole-items test); `UnfoldedStreamColumnTest` (two tests asserted a bottom Dock's column centred on the Dock's
+  strip; now on the body). **Not confirmed without a device:** that the owner's blank frame was this cause, the look of an
+  off-centre Dock on a real foldable, a Dock with a very long run of live apps, and a right-to-left layout.
+
