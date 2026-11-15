@@ -149,14 +149,28 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsSearchResultPresentationAndDefaultsMissingValuesToIcons() {
-        val settings = LauncherSettings(search = SearchSettings(SearchResultPresentation.LIST))
+    fun roundTripsSearchResultPresentationAndDefaultsMissingValuesToTheCardStack() {
+        SearchResultPresentation.entries.forEach { presentation ->
+            val settings = LauncherSettings(search = SearchSettings(presentation))
 
-        assertEquals(settings.search, decodeLauncherSettings(encodeLauncherSettings(settings)).search)
-        assertEquals(SearchResultPresentation.ICONS, decodeLauncherSettings("{}").search.resultPresentation)
+            assertEquals(settings.search, decodeLauncherSettings(encodeLauncherSettings(settings)).search)
+        }
+        assertEquals(SearchResultPresentation.STACK, decodeLauncherSettings("{}").search.resultPresentation)
+        assertEquals(
+            SearchResultPresentation.STACK,
+            decodeLauncherSettings("{\"search\": {\"resultPresentation\": \"UNKNOWN\"}}").search.resultPresentation,
+        )
+    }
+
+    @Test
+    fun aStoredSearchResultChoiceKeepsItsValueWhenTheCardStackBecomesTheDefault() {
         assertEquals(
             SearchResultPresentation.ICONS,
-            decodeLauncherSettings("{\"search\": {\"resultPresentation\": \"UNKNOWN\"}}").search.resultPresentation,
+            decodeLauncherSettings("{\"search\": {\"resultPresentation\": \"ICONS\"}}").search.resultPresentation,
+        )
+        assertEquals(
+            SearchResultPresentation.LIST,
+            decodeLauncherSettings("{\"search\": {\"resultPresentation\": \"LIST\"}}").search.resultPresentation,
         )
     }
 

@@ -265,7 +265,11 @@ internal fun SearchResultList(
             ) {
                 Column {
                     when (presentation) {
-                        SearchResultPresentation.ICONS ->
+                        // The card stack is the Dock's search (`SearchResultStack`); a list that is asked to show it
+                        // (the Library's own search field) draws the icon grid, as it did before the stack existed.
+                        SearchResultPresentation.STACK,
+                        SearchResultPresentation.ICONS,
+                        ->
                             SearchResultIconGrid(
                                 results = results,
                                 appListContext = appListContext,

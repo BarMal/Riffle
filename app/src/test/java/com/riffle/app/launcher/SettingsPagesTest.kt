@@ -230,6 +230,14 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun theCardStackOptionIsFoundThroughTheSearchResultsSetting() {
+        val index = settingsSearchIndex(text)
+
+        assertTrue(index.matching("card stack").any { it.key == SettingKey.LIBRARY_SEARCH_RESULTS })
+        assertTrue(index.matching("search results").any { it.key == SettingKey.LIBRARY_SEARCH_RESULTS })
+    }
+
+    @Test
     fun theAliasThatMatchedNothingIsGone() {
         // "double tap" was an alias of Gestures although no gesture is a double tap.
         val index = settingsSearchIndex(text)
