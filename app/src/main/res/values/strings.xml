@@ -156,7 +156,8 @@
 
     <!-- Shortcuts of a pinned app -->
     <string name="stream_shortcut_open_app">Open %1$s</string>
-    <string name="stream_shortcut_open_app_hint">Opens the app</string>
+    <string name="stream_nothing_new">Nothing new</string>
+    <string name="stream_quick_actions_for">Quick actions for %1$s</string>
     <string name="stream_shortcut_launch">Launch %1$s</string>
     <string name="stream_shortcuts_need_home">Shortcuts need Riffle to be your Home app.</string>
     <string name="stream_shortcut_disabled">Not available right now</string>

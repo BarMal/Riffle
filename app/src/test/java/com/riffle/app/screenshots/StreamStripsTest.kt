@@ -40,6 +40,7 @@ import com.riffle.core.domain.launcher.stream.NotConnectedReason
 import com.riffle.core.domain.launcher.stream.PinnedApp
 import com.riffle.core.domain.launcher.stream.StreamAppRef
 import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
+import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.StreamContentId
 import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamLayout
@@ -283,34 +284,13 @@ class StreamStripsTest {
         assertStripShowsIconAndTitle("tasks unavailable notice")
     }
 
-    // A merged page, through the real stack --------------------------------------------------------------------------
+    // A page of live cards and cards of other kinds, through the real stack ----------------------------------------------
 
     private val chatGroup = StreamShortcutPages.appKeyOf(ScreenshotFixtures.chat.identity)
     private val chat = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, chatGroup)
 
-    private fun shortcut(
-        id: String?,
-        short: String?,
-        long: String?,
-        enabled: Boolean = true,
-    ): AppShortcutContent {
-        val app = ScreenshotFixtures.chat
-        return AppShortcutContent(
-            id = StreamContentId("shortcut:chat:${id ?: "app"}"),
-            app = StreamAppRef(app.identity.packageName.value, "personal"),
-            appIdentity = app.identity,
-            appLabel = "Chat",
-            shortcutId = id,
-            shortLabel = short,
-            longLabel = long,
-            icon = com.riffle.core.domain.launcher.workspace.ItemImageHandle("icon"),
-            enabled = enabled,
-            disabledMessage = null.takeIf { enabled } ?: "Camera access is off",
-        )
-    }
-
-    /** One notification of Chat followed by its three shortcuts: a pinned app that is also live. */
-    private fun showMergedPage() {
+    /** One notification of Chat followed by [others] (cards of another kind), with Chat's shortcuts known. */
+    private fun showPage(others: List<StreamContent>) {
         val results: Map<StreamSection, StreamSectionResult> =
             StreamSection.layoutSections.associateWith<StreamSection, StreamSectionResult> {
                 StreamSectionResult.Empty
@@ -318,7 +298,7 @@ class StreamStripsTest {
                 (
                     StreamSection.NOTIFICATIONS to
                         StreamSectionResult.Ready(
-                            listOf(StreamGroup(chatGroup, "Chat", listOf(StreamFixtures.chatNotification))),
+                            listOf(StreamGroup(chatGroup, "Chat", listOf(StreamFixtures.chatNotification) + others)),
                         )
                 )
         val pinned = listOf(PinnedApp(ScreenshotFixtures.chat.identity, "Chat"))
@@ -350,41 +330,60 @@ class StreamStripsTest {
         composeRule.waitForIdle()
     }
 
-    private val shortcutSlots =
-        listOf("recent", "search", "scan").map {
-            streamStackCardTag("shortcut:${StreamShortcutPages.appKeyOf(ScreenshotFixtures.chat.identity)}/$it")
-        }
+    private fun shortcut(
+        id: String?,
+        short: String?,
+        long: String?,
+        enabled: Boolean = true,
+    ): AppShortcutContent {
+        val app = ScreenshotFixtures.chat
+        return AppShortcutContent(
+            id = StreamContentId("shortcut:chat:${id ?: "app"}"),
+            app = StreamAppRef(app.identity.packageName.value, "personal"),
+            appIdentity = app.identity,
+            appLabel = "Chat",
+            shortcutId = id,
+            shortLabel = short,
+            longLabel = long,
+            icon = com.riffle.core.domain.launcher.workspace.ItemImageHandle("icon"),
+            enabled = enabled,
+            disabledMessage = null.takeIf { enabled } ?: "Camera access is off",
+        )
+    }
+
+    private val others = StreamFixtures.recents.take(2)
+    private val otherSlots = others.map { streamStackCardTag(it.id.value) }
 
     @Test
-    fun theStripsOfAMergedPageEachShowAnIconAndATitleAtRest() {
-        showMergedPage()
-        shortcutSlots.forEach { assertStripShowsIconAndTitle("merged page, at rest: $it", it) }
+    fun theStripsOfACardOfAnotherKindEachShowAnIconAndATitleAtRest() {
+        showPage(others)
+        otherSlots.forEach { assertStripShowsIconAndTitle("mixed page, at rest: $it", it) }
     }
 
     @Test
-    fun theStripsOfAMergedPageEachShowAnIconAndATitleWithTheNotificationOpen() {
-        showMergedPage()
+    fun theStripsOfACardOfAnotherKindEachShowAnIconAndATitleWithTheNotificationOpen() {
+        showPage(others)
         composeRule.onNodeWithTag(streamStackCardTag(StreamFixtures.chatNotification.id.value)).performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(STREAM_OPEN_CARD_TEST_TAG).assertExists()
-        shortcutSlots.forEach { tag ->
+        otherSlots.forEach { tag ->
             val strip = composeRule.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
             assertTrue("$tag stands above the open card", strip.size.height > 0)
-            assertStripShowsIconAndTitle("merged page, notification open: $tag", tag)
+            assertStripShowsIconAndTitle("mixed page, notification open: $tag", tag)
         }
         composeRule.captureScreen()
     }
 
     @Test
-    fun theMergedPageHasOneNotificationAndThreeShortcutCards() {
-        showMergedPage()
+    fun aPinnedAppsLivePageHasOnlyItsLiveCardsItsShortcutsAreNotCards() {
+        showPage(emptyList())
         val slots =
             composeRule.onAllNodes(
                 SemanticsMatcher("a card slot") { node ->
                     node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("stream-stack-card:") == true
                 },
             ).fetchSemanticsNodes()
-        assertEquals(4, slots.size)
+        assertEquals(1, slots.size)
     }
 
     private companion object {

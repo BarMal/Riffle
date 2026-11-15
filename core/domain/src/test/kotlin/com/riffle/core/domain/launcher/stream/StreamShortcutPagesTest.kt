@@ -58,12 +58,13 @@ class StreamShortcutPagesTest {
     }
 
     @Test
-    fun theCardsAreTheAppsShortcutsInRankOrderEachWithItsLabelsAndAnIconHandle() {
+    fun theQuickActionsAreTheAppsEnabledShortcutsInRankOrderEachWithItsLabelAndAnIconHandle() {
         val shortcuts =
             listOf(
                 shortcut(files, "recent", "Recent", long = "Recent files", rank = 2),
                 shortcut(files, "search", "Search", long = "Search", rank = 0),
                 shortcut(files, "new", "New", rank = 1, enabled = false),
+                shortcut(files, "star", "Starred", rank = 1),
             )
         val page =
             StreamShortcutPages.plan(
@@ -72,30 +73,49 @@ class StreamShortcutPagesTest {
                 mapOf(files.identity to shortcuts),
                 true,
             ).single()
-        val cards = cards(page)
-        assertEquals(listOf("search", "new", "recent"), cards.map { it.shortcutId })
-        assertEquals(3, page.count)
-        // A long label that repeats the short one is not shown twice; one that differs is kept.
-        assertNull(cards[0].longLabel)
-        assertEquals("Recent files", cards[2].longLabel)
-        assertFalse(cards[1].enabled)
-        assertEquals("shortcut-icon:personal/com.files/search", cards[0].icon?.key)
-        assertTrue(cards.none { it.opensApp })
-        assertEquals(StreamContentId("shortcut:com.files:personal/search"), cards[0].id)
+        // The page's stack is the quiet card alone: no shortcut is a card.
+        assertEquals(1, page.count)
+        assertTrue(cards(page).single().opensApp)
+        // A disabled shortcut would be a chip that does nothing, so it is left out; the rest are in the platform's order.
+        val actions = page.quickActions
+        assertEquals(listOf("search", "star", "recent"), actions.map { it.id })
+        assertEquals(listOf("Search", "Starred", "Recent"), actions.map { it.label })
+        assertEquals("shortcut-icon:personal/com.files/search", actions[0].icon?.key)
+        assertEquals(StreamContentId("shortcut:com.files:personal/search"), actions[0].shortcut.id)
+        assertTrue(actions.none { it.shortcut.opensApp })
     }
 
     @Test
-    fun anAppWithNoShortcutsIsOneCardThatOpensTheApp() {
+    fun quickActionsAreCappedAtEightAndKeepTheFirstEightByRank() {
+        val many = (0 until 12).map { shortcut(files, "s$it", rank = 11 - it) }
+        val page = StreamShortcutPages.plan(listOf(files), emptySet(), mapOf(files.identity to many), true).single()
+        assertEquals(StreamShortcutPages.MAX_QUICK_ACTIONS, page.quickActions.size)
+        assertEquals((11 downTo 4).map { "s$it" }, page.quickActions.map { it.id })
+    }
+
+    @Test
+    fun anAppWithNothingLiveIsOneQuietCardThatOpensTheAppWhateverItsShortcuts() {
         val page = StreamShortcutPages.plan(listOf(files), emptySet(), emptyMap(), launcherRole = true).single()
         val card = cards(page).single()
         assertTrue(card.opensApp)
         assertEquals("Files", card.shortLabel)
+        assertTrue(card.icon != null)
         assertEquals(1, page.count)
+        assertTrue(page.quickActions.isEmpty())
         assertTrue((page.body as StreamPageBody.Content).gaps.isEmpty())
+        val withShortcuts =
+            StreamShortcutPages.plan(
+                listOf(files),
+                emptySet(),
+                mapOf(files.identity to listOf(shortcut(files, "a"))),
+                true,
+            ).single()
+        assertEquals(card, cards(withShortcuts).single())
+        assertEquals(listOf("a"), withShortcuts.quickActions.map { it.id })
     }
 
     @Test
-    fun withoutTheLauncherRoleThePageIsTheOpenCardAndAnExplainingGapEvenIfShortcutsWereKnown() {
+    fun withoutTheLauncherRoleThePageIsTheQuietCardAndAnExplainingGapWithNoQuickActions() {
         val page =
             StreamShortcutPages.plan(
                 listOf(files),
@@ -104,6 +124,7 @@ class StreamShortcutPagesTest {
                 launcherRole = false,
             ).single()
         assertTrue(cards(page).single().opensApp)
+        assertTrue(page.quickActions.isEmpty())
         val gaps = (page.body as StreamPageBody.Content).gaps
         assertEquals(
             listOf(
@@ -124,21 +145,19 @@ class StreamShortcutPagesTest {
     }
 
     @Test
-    fun theOpenCardLaunchesAndAShortcutCardLaunchesButNothingElseIsOffered() {
+    fun theQuietCardLaunchesAndAQuickActionLaunchesButNothingElseIsOffered() {
         val page =
             StreamShortcutPages.plan(
                 listOf(files),
                 emptySet(),
-                mapOf(files.identity to listOf(shortcut(files, "a"), shortcut(files, "b", enabled = false))),
+                mapOf(files.identity to listOf(shortcut(files, "a"))),
                 true,
             ).single()
-        val (a, b) = cards(page)
+        val a = page.quickActions.single().shortcut
         assertTrue(StreamActionPolicy.offers(a, StreamAction.Open))
         assertFalse(StreamActionPolicy.offers(a, StreamAction.Dismiss))
-        // A disabled shortcut cannot be launched; the app's own open card always can.
-        assertFalse(StreamActionPolicy.offers(b, StreamAction.Open))
-        val open = cards(StreamShortcutPages.plan(listOf(files), emptySet(), emptyMap(), true).single()).single()
-        assertTrue(StreamActionPolicy.offers(open.copy(enabled = false), StreamAction.Open))
+        val quiet = cards(page).single()
+        assertTrue(StreamActionPolicy.offers(quiet, StreamAction.Open))
         assertNull(StreamHideItems.itemFor(a))
     }
 
@@ -221,7 +240,7 @@ class StreamShortcutPagesTest {
     }
 
     @Test
-    fun aPinnedAppThatIsLiveHasOnePageLeadingWithItsNotificationsThenItsShortcutCards() {
+    fun aPinnedAppThatIsLiveHasOnePageOfItsLiveCardsOnlyAndItsShortcutsAreItsQuickActions() {
         val shortcuts =
             StreamShortcutPages.plan(
                 listOf(chat, files),
@@ -235,16 +254,28 @@ class StreamShortcutPagesTest {
         val live = liveChatPage("Sam", "Priya")
         val pages = StreamShortcutPages.merge(listOf(live), shortcuts)
 
-        // Files has nothing live: its shortcuts page stays. Chat has one page, the live one: no shortcuts page too.
+        // Files has nothing live: its quiet page stays. Chat has one page, the live one: no second page.
         assertEquals(listOf("shortcuts/com.files:personal", "notifications/com.chat:personal"), pages.map { it.key })
         val merged = pages.last()
         assertEquals(StreamSection.NOTIFICATIONS, merged.section)
         val items = (merged.body as StreamPageBody.Content).items
-        // The notifications lead, newest first (the live page's own order), the shortcut cards follow in rank order.
-        assertEquals(listOf("Sam", "Priya"), items.take(2).map { assertIs<NotificationContent>(it).title })
-        assertEquals(listOf("Compose", "Scan"), items.drop(2).map { assertIs<AppShortcutContent>(it).shortLabel })
-        assertEquals(4, merged.count)
-        assertIs<NotificationContent>(merged.lead)
+        // Only the live cards, newest first (the live page's own order); the shortcuts are not cards.
+        assertEquals(listOf("Sam", "Priya"), items.map { assertIs<NotificationContent>(it).title })
+        assertEquals(live.count, merged.count)
+        assertEquals(live.lead, merged.lead)
+        assertEquals(listOf("compose", "scan"), merged.quickActions.map { it.id })
+        // The quiet page has the quiet card and no quick actions of its own here.
+        assertTrue(pages.first().quickActions.isEmpty())
+    }
+
+    @Test
+    fun aLivePageWithoutTheRoleKeepsItsCardsAndTheGapThatSaysWhyThereAreNoQuickActions() {
+        val shortcuts = StreamShortcutPages.plan(listOf(chat), emptySet(), emptyMap(), launcherRole = false)
+        val merged = StreamShortcutPages.merge(listOf(liveChatPage("Sam")), shortcuts).single()
+        assertTrue(merged.quickActions.isEmpty())
+        val body = merged.body as StreamPageBody.Content
+        assertEquals(1, body.items.size)
+        assertEquals(1, body.gaps.size)
     }
 
     @Test
@@ -254,5 +285,6 @@ class StreamShortcutPagesTest {
         val pages = StreamShortcutPages.merge(listOf(live), shortcuts)
         assertEquals(listOf("shortcuts/com.files:personal", "notifications/com.chat:personal"), pages.map { it.key })
         assertEquals(live, pages.last())
+        assertTrue(pages.last().quickActions.isEmpty())
     }
 }

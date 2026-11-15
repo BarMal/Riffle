@@ -63,6 +63,8 @@ internal fun StreamColumnSurface(
     onCloseStream: () -> Unit,
     appIconLoader: AppIconLoader,
     onConnectTasks: () -> Unit,
+    /** Whether a Dock along the top or bottom edge holds the page's quick actions (else a strip under the stack). */
+    quickActionsInDock: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
@@ -108,6 +110,7 @@ internal fun StreamColumnSurface(
                     // The actions sit on the card: a side Dock holds no row, and a bottom Dock's would stand under the
                     // column.
                     dockCanHoldActions = false,
+                    quickActionsInDock = quickActionsInDock,
                     pageBounds = pageBounds,
                     onEmptyTap = onCloseStream,
                 )

@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.stream.OpenCardActions
+import com.riffle.app.launcher.stream.PageQuickActions
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -56,6 +57,8 @@ internal fun StandardHomeDockArea(
     isDraggedItemOverDock: Boolean = false,
     /** The open card's actions: a row on the inner side of the Dock's icons; null while no card is open. */
     cardActions: OpenCardActions? = null,
+    /** The quick actions of the page in front: the same row holds them while no card is open; null: none. */
+    quickActions: PageQuickActions? = null,
 ) {
     if (!layout.shouldShowDock()) return
 
@@ -96,7 +99,7 @@ internal fun StandardHomeDockArea(
     val latestActions by rememberUpdatedState(actions)
     val headerState =
         if (position.isHorizontalEdge) {
-            DockHeaderState(cardActions, presentation.reducedMotion) { rowPx ->
+            DockHeaderState(cardActions, quickActions, presentation.reducedMotion) { rowPx ->
                 extent.rowPx = rowPx
                 latestActions.onDockInteractionExtentChanged(extent.reservedPx())
             }

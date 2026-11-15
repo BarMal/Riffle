@@ -57,6 +57,7 @@ import com.riffle.core.domain.launcher.dock.DockDynamicSideEntry
 import com.riffle.core.domain.launcher.dock.DockPageOrder
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.stream.OpenCardEvent
+import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamColumnRect
 import com.riffle.core.domain.launcher.stream.StreamFocus
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
@@ -132,6 +133,11 @@ internal fun StreamSurface(
      * the card. False wherever there is no Dock to hold them.
      */
     actionsInDock: Boolean = false,
+    /**
+     * Whether the page's quick actions sit in the Dock's row (a Dock along the top or bottom edge) rather than in a
+     * strip under the stack (a side Dock). False wherever there is no Dock to hold them.
+     */
+    quickActionsInDock: Boolean = false,
     /**
      * Unfolded: where the stack's column stands inside this surface (dp, in its coordinates). The pages are laid out
      * there and the surface itself is as wide and tall as an open card may be, so the card grows inside it, never
@@ -210,6 +216,26 @@ internal fun StreamSurface(
             )
         }
     val state = rememberStreamPageState(pages, results, initialPageKey, focusRequest, onFocusHandled, env.reducedMotion)
+    // Each page's quick actions as its row needs them: built when the page's actions change, not on a recomposition.
+    val latestCallbacksForQuick by rememberUpdatedState(surfaceCallbacks)
+    val quickByPage =
+        remember(pages, env.imageLoader, env.appIconLoader, env.installedApps) {
+            pages.filter { page -> page.quickActions.isNotEmpty() }.associate { page ->
+                page.key to
+                    PageQuickActions(
+                        pageKey = page.key,
+                        appLabel = page.label.orEmpty(),
+                        actions = page.quickActions,
+                        env = env,
+                        onLaunch = { action -> latestCallbacksForQuick.onAction(action.shortcut, StreamAction.Open) },
+                    )
+            }
+        }
+    if (dockLink != null && quickActionsInDock) {
+        // The page in front (the pager's, which moves as a swipe passes halfway) offers its quick actions to the Dock.
+        val frontKey = dockLink.currentKey ?: state.currentKey
+        SideEffect { dockLink.publishQuickActions(quickByPage[frontKey]) }
+    }
     // A card open on a page closes when the Stream comes to another one (a tap on a tile, the pager's own actions).
     LaunchedEffect(state.currentKey) { openCards.dispatch(OpenCardEvent.PageChanged(state.currentKey)) }
     LaunchedEffect(state.settledKey, state.restoring) {
@@ -245,7 +271,11 @@ internal fun StreamSurface(
                 Modifier.pressMenu(pageMenu, haptics, pageMenuLabel, onTap = tap)
             }
         } ?: Modifier
-    CompositionLocalProvider(LocalOpenCards provides openCards, LocalActionsInDock provides actionsInDock) {
+    CompositionLocalProvider(
+        LocalOpenCards provides openCards,
+        LocalActionsInDock provides actionsInDock,
+        LocalQuickActionsInDock provides quickActionsInDock,
+    ) {
         Box(
             modifier =
                 modifier.fillMaxSize().testTag(STREAM_SURFACE_TEST_TAG)
@@ -277,6 +307,7 @@ internal fun StreamSurface(
                             env = liveEnv,
                             callbacks = surfaceCallbacks,
                             dockLink = dockLink,
+                            quickByPage = quickByPage,
                         )
                     }
                 }
@@ -438,6 +469,7 @@ private fun StreamPagesMode(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
     dockLink: StreamDockLink?,
+    quickByPage: Map<String, PageQuickActions>,
 ) {
     val latestPages by rememberUpdatedState(pages)
     val keys = pages.map { it.key }
@@ -506,7 +538,7 @@ private fun StreamPagesMode(
         key = { index -> latestPages.getOrNull(index)?.key ?: index },
     ) { index ->
         val page = latestPages.getOrNull(index)
-        if (page != null) StreamPageView(page, env, callbacks)
+        if (page != null) StreamPageView(page, env, callbacks, quick = quickByPage[page.key])
     }
 }
 

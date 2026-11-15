@@ -70,6 +70,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.CountRecomposition
 import com.riffle.app.launcher.DockFanSource
 import com.riffle.app.launcher.LocalDockFan
+import com.riffle.app.launcher.reportsCardRect
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
@@ -339,6 +340,7 @@ private fun StreamStackContent(
                 )
             val dismissLabel = stringResource(R.string.stream_notification_dismiss)
             LoneCard(
+                streamStackCardTag(only.id),
                 Modifier,
                 hidden = drawnByLayer,
                 swipe = swipe,
@@ -472,7 +474,7 @@ private fun StreamStackContent(
                                         } else {
                                             null
                                         },
-                                    modifier = cardModifier.fillMaxWidth().testTag(STREAM_OPEN_CARD_TEST_TAG),
+                                    modifier = cardModifier.fillMaxWidth().reportsCardRect().testTag(STREAM_OPEN_CARD_TEST_TAG),
                                 )
                             }
                         },
@@ -531,6 +533,7 @@ internal const val STREAM_OPEN_CARD_TEST_TAG = "stream-open-card"
  */
 @Composable
 private fun LoneCard(
+    tag: String,
     modifier: Modifier,
     hidden: Boolean,
     swipe: SwipeDismissState?,
@@ -539,6 +542,7 @@ private fun LoneCard(
     onDismiss: () -> Unit,
     content: @Composable () -> Unit,
 ) {
+    val quickActions = LocalFrontCardQuickActions.current
     Box(
         modifier =
             modifier.fillMaxSize().then(
@@ -549,21 +553,26 @@ private fun LoneCard(
         Column(
             modifier =
                 Modifier
+                    .reportsCardRect()
                     .dockFan(LocalDockFan.current)
                     .swipeCue(swipe)
                     .swipeLayer(swipe)
                     .swipeToDismiss(swipe)
                     .semantics {
+                        testTag = tag
                         swipeSemantics(swipe)
-                        if (canDismiss) {
-                            customActions =
+                        val dismiss =
+                            if (canDismiss) {
                                 listOf(
                                     CustomAccessibilityAction(dismissLabel) {
                                         onDismiss()
                                         true
                                     },
                                 )
-                        }
+                            } else {
+                                emptyList()
+                            }
+                        if (dismiss.isNotEmpty() || quickActions.isNotEmpty()) customActions = dismiss + quickActions
                     }
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = StackBottomInset),
@@ -806,6 +815,7 @@ private fun StackSlot(
     card: @Composable () -> Unit,
 ) {
     CountRecomposition("stack-slot:$index")
+    val quickActions = LocalFrontCardQuickActions.current
     val semantics =
         if (isFront) {
             Modifier.semantics {
@@ -823,7 +833,7 @@ private fun StackSlot(
                             onDismiss()
                             true
                         }.takeIf { canDismiss },
-                    )
+                    ) + quickActions
             }
         } else {
             // One node for the strip: the whole card's text, one action. The card's own controls are not reachable.
@@ -842,6 +852,7 @@ private fun StackSlot(
         modifier =
             Modifier
                 .stackSlot(index)
+                .reportsCardRect()
                 .dockFan(dockFan, rank)
                 // The cue is drawn where the card was, so it stays while the card goes (before the swipe's layer).
                 .swipeCue(swipe.takeIf { canDismiss })

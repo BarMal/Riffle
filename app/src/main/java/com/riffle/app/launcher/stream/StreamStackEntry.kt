@@ -200,7 +200,7 @@ internal fun tomorrowFirstText(
 @Composable
 internal fun shortcutTitle(content: AppShortcutContent): String =
     if (content.opensApp) {
-        stringResource(R.string.stream_shortcut_open_app, content.appLabel ?: content.app.packageName)
+        content.appLabel ?: content.app.packageName
     } else {
         content.shortLabel ?: hiddenText()
     }
