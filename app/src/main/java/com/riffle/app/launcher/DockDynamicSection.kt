@@ -374,6 +374,9 @@ internal val LocalDockDynamicBoundsSink = staticCompositionLocalOf<(Rect?) -> Un
  */
 internal val LocalDockBodyBoundsSink = staticCompositionLocalOf<(Rect?) -> Unit> { {} }
 
+/** Where the Dock's body says how long it is in the contextual mode (dp): the Stream's column spans that length. */
+internal val LocalDockContextualLengthSink = staticCompositionLocalOf<(Float) -> Unit> { {} }
+
 /**
  * Where each dynamic entry is, in root coordinates by key (null once it leaves composition), so a press that starts on
  * an app's icon can land the Stream on that app. The dock host provides the sink; outside it nothing listens.

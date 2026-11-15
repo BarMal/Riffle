@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.stream
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.test.assertIsDisplayed
@@ -9,7 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.test.swipe
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.app.launcher.AppIconLoader
 import com.riffle.app.launcher.RiffleLauncherTheme
@@ -189,7 +190,10 @@ class StreamShortcutsTodayInteractionTest {
         assertEquals(chat, dock.currentKey)
         composeRule.onNodeWithText("Chat 1").assertIsDisplayed()
 
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput { swipeRight() }
+        // From the empty room above the stack (a drag that starts on a card is that card's, batch 7).
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
+            swipe(Offset(width * 0.15f, height * 0.08f), Offset(width * 0.85f, height * 0.08f))
+        }
         composeRule.waitForIdle()
 
         assertEquals(filesPage, dock.currentKey)

@@ -22,12 +22,14 @@ internal fun LauncherShellState.withHomePages(count: Int): LauncherShellState {
 internal fun LauncherShellState.searching(
     query: String = "ca",
     presentation: SearchResultPresentation = SearchResultPresentation.LIST,
+    results: List<com.riffle.core.domain.launcher.apps.InstalledApp>? = null,
 ): LauncherShellState =
     copy(
         destination = ShellDestination.SEARCH,
         searchQuery = query,
         searchResults =
-            if (query.isBlank()) emptyList() else listOf(ScreenshotFixtures.calendar, ScreenshotFixtures.camera),
+            results
+                ?: if (query.isBlank()) emptyList() else listOf(ScreenshotFixtures.calendar, ScreenshotFixtures.camera),
         launcherSettings = launcherSettings.copy(search = SearchSettings(resultPresentation = presentation)),
     )
 

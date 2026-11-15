@@ -82,12 +82,67 @@ class SwipeDismissTest {
     }
 
     @Test
-    fun aHorizontalDragIsTheCardsOnlyOnTheFrontCardOfADismissibleNotification() {
-        assertTrue(SwipeDismiss.claimsDrag(notification(), isFront = true))
-        // A strip (not the front card), the empty room (no card), a non-clearable notification: the pager's.
-        assertFalse(SwipeDismiss.claimsDrag(notification(), isFront = false))
-        assertFalse(SwipeDismiss.claimsDrag(null, isFront = true))
-        assertFalse(SwipeDismiss.claimsDrag(notification(dismissible = false), isFront = true))
+    fun aHorizontalDragOnACardIsAlwaysTheCardsAndNeverThePagers() {
+        val owner = SwipeDismiss.Owner.DISMISS
+        assertEquals(owner, SwipeDismiss.ownerOf(onCard = true, notification(), isFront = true))
+        // A strip, a non-clearable notification and a card that is no notification resist: they do not page.
+        assertEquals(SwipeDismiss.Owner.RESIST, SwipeDismiss.ownerOf(onCard = true, notification(), isFront = false))
+        assertEquals(
+            SwipeDismiss.Owner.RESIST,
+            SwipeDismiss.ownerOf(onCard = true, notification(dismissible = false), isFront = true),
+        )
+        assertEquals(SwipeDismiss.Owner.RESIST, SwipeDismiss.ownerOf(onCard = true, null, isFront = true))
+        assertEquals(SwipeDismiss.Owner.RESIST, SwipeDismiss.ownerOf(onCard = true, null, isFront = false))
+    }
+
+    @Test
+    fun onlyAnEmptyRoomPagesWhateverTheFrontCardIs() {
+        assertEquals(SwipeDismiss.Owner.PAGER, SwipeDismiss.ownerOf(onCard = false, notification(), isFront = true))
+        assertEquals(SwipeDismiss.Owner.PAGER, SwipeDismiss.ownerOf(onCard = false, null, isFront = false))
+    }
+
+    // Resisting
+
+    @Test
+    fun aCardThatResistsFollowsAtFirstAndNeverGivesMoreThanAFewDp() {
+        val max = SwipeDismiss.RESIST_MAX_DP * density
+        assertEquals(0f, SwipeDismiss.resist(0f, density), eps)
+        // Near zero it follows the finger almost one to one.
+        assertTrue(SwipeDismiss.resist(2f, density) > 1.5f)
+        // Monotonic, odd, and bounded by the maximum however far the finger goes.
+        var last = 0f
+        for (raw in listOf(5f, 20f, 80f, 300f, 2_000f, 100_000f)) {
+            val shown = SwipeDismiss.resist(raw, density)
+            assertTrue(shown > last && shown < max)
+            assertEquals(-shown, SwipeDismiss.resist(-raw, density), eps)
+            last = shown
+        }
+        assertTrue(SwipeDismiss.RESIST_MAX_DP in 6f..16f, "a few dp: ${SwipeDismiss.RESIST_MAX_DP}")
+    }
+
+    @Test
+    fun unresistInvertsResistSoAFingerThatTakesTheCardAgainDoesNotJump() {
+        for (raw in listOf(-90f, -10f, 0f, 4f, 30f, 200f)) {
+            val shown = SwipeDismiss.resist(raw, density)
+            assertEquals(raw, SwipeDismiss.unresist(shown, density), 0.05f + kotlin.math.abs(raw) * 0.001f)
+        }
+        assertTrue(SwipeDismiss.unresist(SwipeDismiss.RESIST_MAX_DP * density * 2f, density).isFinite())
+    }
+
+    // Looking different
+
+    @Test
+    fun theCueAppearsOnlyPastTheThresholdAndTheLiftComesInWithTravel() {
+        assertFalse(SwipeDismiss.isArmed(width * 0.39f, width))
+        assertTrue(SwipeDismiss.isArmed(width * 0.4f, width))
+        assertTrue(SwipeDismiss.isArmed(-width * 0.5f, width))
+        assertEquals(0f, SwipeDismiss.cueAlpha(width * 0.39f, width), eps)
+        assertEquals(0f, SwipeDismiss.cueAlpha(width * 0.4f, width), eps)
+        assertTrue(SwipeDismiss.cueAlpha(width * 0.43f, width) in 0.1f..0.9f)
+        assertEquals(1f, SwipeDismiss.cueAlpha(-width * 0.6f, width), eps)
+        assertEquals(1f, SwipeDismiss.scale(0f, density), eps)
+        assertEquals(SwipeDismiss.LIFT_SCALE, SwipeDismiss.scale(width, density), eps)
+        assertTrue(SwipeDismiss.scale(10f, density) in 1.001f..SwipeDismiss.LIFT_SCALE)
     }
 
     // The release

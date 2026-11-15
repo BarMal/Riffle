@@ -1557,3 +1557,220 @@ scrim were replaced, and nothing asserted them.
   probe's grid is offset by 1 dp to stay off that line, and it was not found at any other point. It is likely a rounding
   edge of the test's simulated inset and was not reproduced with a finger.
 - The feel of the slop rule and the haptic on a real panel.
+
+## Batch 7
+
+Three things the owner asked for after a device pass: dismissing a card must feel clearly different from changing
+stack, the unfolded stack is too small, and the Dock's resize animation is jarring. One commit each, tests in the same
+commit.
+
+### Dismissing a card against changing stack (item 1)
+
+The owner: "dismissing a card vs scrolling between stacks doesn't have that much difference". After round 5 a sideways
+drag that began on the front card of a dismissible notification dismissed it and one that began anywhere else paged, so
+which of the two you got depended on a few dp of where the finger landed, and both moved a card sideways.
+
+- **The rule** (`:core:domain` `SwipeDismiss.ownerOf`, pure, `SwipeDismissTest`): a sideways drag that starts on a card is
+  always that card's. The front card of a dismissible notification dismisses it (as before); every other card (a strip, a
+  notification that cannot be dismissed, a card of any other kind, a lone card) resists: it follows the finger through a
+  rubber band (`SwipeDismiss.resist`, at most 12 dp, no fade) and settles back, and the pager does not get the drag. Only a
+  drag that starts in the page's empty room, outside every card, changes the stack. Every card slot, strip included, and a
+  lone card now carry the `draggable` (`SwipeDismissState` takes a `dismissible` rule; it is non-null for every slot).
+- **Leaving a page without the Dock.** The empty room is the room above the stack (large on a folded phone) and the page's
+  margins and, unfolded, the column's room beside and above the stack. The Dock stays the primary route (a tile, an icon,
+  hold to choose, the contextual row) and "Previous page" and "Next page" are still the pager's accessibility actions
+  (tested).
+- **They look different.** A dismissing card alone moves; it lifts to 1.02 as it is taken, fades as it travels (to 50% at a
+  full width, as before) and past 40% of its width it is armed: the word "Dismiss" comes in, in the room the card leaves, on
+  the side it came from (`swipeCue`: a `drawBehind` ahead of the card's own graphics layer, text measured once, drawn in the
+  draw phase; no recomposition while dragging). A page change moves the whole stack with the pager as one sheet, with the Dock's
+  ring following (it moves when the page passes halfway, as before), and nothing fades. The dismissal's light tick stays; a
+  page change has none (there was none).
+- **A side effect that needed fixing.** The stack clipped itself to its own rectangle, which is 16 dp narrower than the
+  surface on each side, so a card that gave a few dp toward an edge would have had its rounded corner cut. The clip is now
+  the stack's rectangle widened by 16 dp at the sides (a `graphicsLayer` clip shape, no offscreen layer); the card is cut
+  only by the pager at the edge of the surface. A dismissed card also flies a little farther before it is cut.
+- **Hooks for tests** (semantics, read when the tree is read): `DismissArmedKey`, `DismissCueAlphaKey` and `SwipeOffsetKey`
+  on a card's node.
+- **Tests.** `:core:domain` `SwipeDismissTest` (the owner, the rubber band and its inverse, the cue and the lift).
+  Robolectric `StreamSwipeDismissTest`: a non-dismissible front card resists a few dp, settles back and does not page (at rest
+  and with the motion on, and with a fast flick), a strip likewise and is never dismissed, the empty room pages, the cue
+  appears only past the threshold and releasing there dismisses, a resisting card never shows it, the pager's accessibility
+  actions page. Device `StreamPagesInteractionTest` gains a swipe from a card that does not page.
+- **Tests rewritten on purpose** (behaviour changed by the brief): `StreamSwipeDismissTest.aNotificationThatCannotBeDismissed...
+  PagesInstead` and `aSwipeOnAStripOfAPageWhoseFrontCardIsDismissibleChangesThePage` asserted that a drag on such a card
+  pages; they now assert that it resists and settles. Device `StreamPagesInteractionTest.aSidewaysSwipeChangesThePageAndTheDockFollows`
+  and `StreamShortcutsTodayInteractionTest` (the swipe right to the pinned app's page) swiped at the pager's centre, which
+  can land on a card; they now swipe in the empty room above the stack.
+- **Not confirmed without a device:** the feel of the rubber band (12 dp), the lift and the cue's contrast over a busy
+  wallpaper, and that the empty room above the stack is easy to hit on the smallest phones with three strips.
+
+### Unfolded: the stack as tall as the Dock, with bigger cards (item 2)
+
+The owner: "the card stacks when unfolded are small/short, I wonder if we should make the visible area the height of the
+dock, and increase their size." Folded sizes did not change (the screenshots and the folded tests are as they were).
+
+- **The column spans the Dock** (`StreamColumn.rect`, pure, `StreamColumnTest`). Beside a left or right Dock the column's top
+  is the Dock body's top and its bottom the body's bottom: the Dock in its contextual mode (`StreamColumnWindow.dockBodyLengthDp`
+  about the middle of the measured body, else the measured body), held inside the safe area. A Dock shorter than the column's
+  least height (`StreamColumn.restHeightDp(unfolded = true)`: the tallest front card, three strips at the larger pitch and the
+  gap, 512 dp, never less than the earlier 448 dp) is centred on instead. The stack stays bottom-anchored inside it. Above a
+  bottom Dock the column keeps its centre on the Dock and takes the room between the safe top and the Dock, at most 560 dp
+  (`BOTTOM_DOCK_MAX_HEIGHT_DP`). An open card keeps the bottom, and its top is the rest column's when that is already taller
+  than the earlier 480 dp, so a tall Dock's open card may use all of its height. The grid's fade follows the same
+  rectangle (nothing else was needed: it reads `StreamColumn.rect`), and so does unfolded search (same width and side; its
+  bottom is the column's rectangle for the Dock as it is now, which is the Home mode's short Dock, centred, while search is
+  open; its height still follows its results).
+- **Wider.** The unfolded column is 0.38 of the window (360 dp at least), against a third (320 dp) before and still for the
+  folded phone's "apps behind the cards" column (`restWidthDp(width, unfolded)`); an open card is up to half as before.
+  The grid keeps more than half the window on a 1200 dp one. The hinge rule and the narrow-window clamp are unchanged.
+- **Bigger cards** (`StreamCardSizes`, pure, `StreamCardSizesTest`; provided by `StreamColumnSurface` through
+  `ProvideStreamCardSizes`, which also scales the theme's typography by 1.15 for the column's cards). A card of text (a
+  notification, an event, an article with no image) is up to 1.35 times the folded maximum (227 dp, 292 dp with buttons); a
+  card of fixed content (the player, an article with a picture, the checklist) 1.15 times its height so the larger text
+  fits; a notification shows up to six lines of body (four before) and four messages of a conversation (three); the strip
+  is 64 dp (56) so its header reads comfortably, and each strip is 2.5% narrower than the one in front (4% folded) because
+  there can be six. `BrowseCardHeight.notification` and `NotificationBrowseText.blocks` take the sizes.
+- **More strips.** The number of strips is what fits above the tallest card (`StreamCardSizes.peeksFor`), at most six and at
+  least three (the folded phone keeps its three, whatever the room), and also what leaves an open card its 240 dp (below
+  that the open card hides them). `StackGeometry` and the open card's layer take the peeks and the pitch.
+- **Tests.** Domain: `StreamColumnTest` (a tall Dock, a short Dock, a Dock longer than the safe area, a left Dock, a narrow
+  window, a hinge, a bottom Dock, an open card, the folded geometry unchanged), `StreamCardSizesTest`. Robolectric
+  `UnfoldedStreamColumnTest`: the column's top and bottom equal the Dock body's within 4 dp on a tall Dock (eight pinned
+  apps) on both sides, more than three strips at a 64 dp pitch, a front card taller than folded's maximum, a short Dock
+  centred on with the least height, the grid's fade under the tall column, a bottom Dock's column up to 560 dp; new
+  screenshots, dark and light, of a tall stack on a right Dock and light on a bottom Dock.
+- **Tests rewritten on purpose** (the brief changes the geometry): `UnfoldedStreamColumnTest` asserted a third of the width
+  (`about a third of the width`, twice), `restWidthDp(width)` and the search panel's width against the folded fraction, and
+  that search's bottom is the Home-mode Dock's lower end; they now assert the unfolded column's width and rectangle. The
+  fourteen unfolded goldens of that class were re-recorded (a taller, wider column with larger cards); no other golden changed.
+- **Not confirmed without a device:** how the larger text and cards look with a real wallpaper and a hinge, the column with
+  the Dock's measured body on every foldable, and unfolded search at the column's centred rectangle (its field now stands
+  below the Dock's lower end while the Home mode's Dock is shorter than the column's least height).
+
+### The Dock's resize animation (item 3)
+
+The owner: "the dock resize animation is a little jarring." What the code did, read and then measured frame by frame with the
+test clock (the Dock body's bounds and every icon's position at each 16 ms frame, bottom Dock on a 411 dp phone, right Dock on
+an unfolded window; px at 2.625):
+
+- **Opening, Home mode to contextual (before).** The body's length was a plain `width()` / `height()` of the strip
+  (`DockSurfaceStrip`), so it was not animated at all: on the frame after the release (the shell is told then, and the
+  contextual tiles appear) the bottom body went from 599 to 1014 px in one frame, the Home strip was swapped for the contextual
+  row in the same frame (the first pinned icon jumped from x 277 to x 70, 79 dp; the icons grew 116 to 126 px) and the five
+  tiles stood at full strength at once, two of them past the body's clip. A right Dock grew from 500 to 1094 px about its middle,
+  so each pinned icon jumped 297 px (113 dp) along the edge in that one frame, and the tiles popped in whole. The Stream's
+  cards fanned out over the next 200 ms against a Dock that had already finished. The two `animateContentSize` modifiers on the
+  Dock's area (`StandardHomeDockArea`'s own `RiffleMotion.smooth()` and `dockShelfMotion`) did not run for this: the area is
+  full width (or full height) along the Dock's edge and its thickness does not change, so there was nothing for them to ease.
+- **Live apps arriving or leaving in Home mode (before).** The same snap, by reading: `dockSurfaceStripMainAxisDp` changes with
+  the entries and the body's `width()` with it (not traced separately).
+- **The actions row (before)**, the only place the two stacked modifiers did run, and measured: the row grew 0 to 157 px over
+  about 20 frames in its own `AnimatedVisibility` spring, the area's height followed it 268 to 439 px through the two
+  `animateContentSize` springs in series (about 45 frames to settle: three springs, one behind the next), and since
+  `animateContentSize` keeps its content at the top and the area stands on the bottom edge, the Dock body, which is the
+  content's bottom, was clipped to a shrinking window and pushed down: its bounds went 200 to 110 px tall and its top
+  from 2157 to 2289 px (132 px past where it rests, below the area's clip) at frame 12 and rose back to 2159 by frame 44.
+  The Dock visibly sank and bobbed back as the row opened; the container lagged the row, so what Home was told to reserve
+  (the area less the row) lagged too.
+- **Not found:** an overshoot or bounce on any of them (all the springs are critically damped), the Dock re-centring mid-way on
+  the first frames (the first-frame easing was already off, and still is), or a relayout storm in Home's grid (it is not
+  measured by any of it).
+
+**What it is now: one motion.**
+
+- **The body's length** (`DockBodyLength.kt`: `DockBodyLength`, `rememberDockBodyLength`, `dockBodyLength`, `DockBodyFrame`)
+  eases from the length it has to the one it is to have, whatever the cause (the tiles appended by the Stream, a live app
+  arriving or leaving): one `Animatable` on `RiffleMotion.smooth(tuning)`, the Dock's own spring at the opening speed
+  (`DockMotionTuning`, the setting that moves the trampoline and the fan), critically damped, so no overshoot. It starts the
+  moment the target changes: the contextual mode is shown at the release, as the cards start to fan, so the two start
+  together. It is read in layout only: nothing recomposes per frame, and the Dock's cross size, and so the room Home reserves
+  and Home's grid, are not touched (the grid's cells keep their size at every frame; unfolded they keep their bounds).
+- **Closing is the opening reversed.** The row stays drawn while the cards go back in, but the body's target is already the
+  Home mode's length (`HomeDockInterpreter.retracting`, from `DockMotionState.isClosing`; `Dock` works the Home length out with
+  the same metrics), so it retracts with the cards, not after them. A closing that is taken back mid-way extends it again.
+- **The content is laid out once, at its final size, and the body clips it** (`DockBodyFrame`): the row is not measured
+  per frame and is never squeezed. The frame is the viewport the icons fade in (`LocalDockRunViewport`, the per-item
+  opacity by visible fraction of round 3, `DockEdgeFade`): a tile fades in as the body reaches it and one it has not
+  reached is not drawn, so no half-drawn tile and no tile outside the body. A few pixels of slack stop the rounding of an
+  icon's size and gap from reading as a cut at rest. The Home strip's icons, which had no such fade, now have it through the
+  same frame (a no-op at rest).
+- **Where the pinned icons are.** The pinned run does not move relative to the body. The Dock is centred on its edge, and
+  its contextual length is not its Home length, so the Home and the contextual Dock cannot both be centred with the pinned run
+  in the same place: anchoring the run would put the contextual Dock off-centre (and, on a bottom Dock, off the screen's
+  edge). I kept the Dock centred and made the body's growth the one thing that moves: the body grows about its middle,
+  the pinned run rides the body's start edge (its offset from it is the same at every frame, a test), and the new tiles
+  appear in the room beyond. So the pinned icons do move on screen, but with the body, smoothly, in the same single motion
+  (a right Dock's icons slide 113 dp over about 15 frames instead of jumping that far in one), never as a second motion
+  against the body. The ring and the selection do not scroll the row meanwhile: the row is laid out at its final
+  size, so its scroll range does not change with the motion (also covered by the pinned offset being constant).
+- **One thing animates a Dock's size, nothing stacks.** The area's two `animateContentSize` modifiers are removed (and
+  `dockShelfMotion`, `easeSizeWhen`): the actions row grows in its own `AnimatedVisibility`, now on the same spring at the
+  same speed (`DockActionsRow`), and the area is simply what it holds at every frame, so the Dock body does not move while the row
+  opens and goes (the measured sinking is gone) and what Home reserves is exact. A change of the Dock's thickness (its icon
+  size in Settings) and the shelf (off for everyone today) therefore land at once; they were eased by the modifiers.
+- **Reduced motion:** the length is the target in the very frame it changes (not a frame late) and the row's content
+  cross-fades in over the short 80 ms fade (`rememberDockContentFade`).
+- **First layout and a change of edge:** unchanged (`rememberDockSizeEasing`): the body is laid out at its length from the
+  first frame and never eased across a change of edge.
+- **The Stream's column** no longer reads the Dock's body frame by frame: the body reports the rectangle it will have once it
+  has arrived, and how long it is in the contextual mode (`HomeDockHostState.contextualLengthDp`), which the unfolded
+  column spans, so the column does not relayout while the Dock moves.
+
+Tests (`DockResizeMotionTest`, `DockLiveAppsResizeTest`, `DockActionsRowMotionTest`, Robolectric, the test clock stepped by hand,
+through the real `HomeDestination`): opening on a bottom and a right Dock (the body's length is monotonic, never above its
+final length, eased over several frames, starts within a few frames of the release, centred throughout; the first pinned
+icon's offset from the body's start edge is constant and it never jumps relative to it; no tile is drawn outside the body and
+tiles fade in part-way; Home's cells keep their size, unfolded their bounds), closing on both (monotonic, starts with the
+cards, never undershoots), reduced motion (nothing between the two lengths is drawn), the first frames, a live app arriving and
+leaving, and the actions row opening and closing (the row's height monotonic, the Dock body's bounds constant at every frame,
+the row inside the area and above the body, Home's grid unchanged).
+
+**Tests rewritten on purpose:** `DockEntranceTest.theDockAreaDoesNotEaseItsSizeOnTheFirstFramesButDoesEaseALaterChange` asserted
+that the Dock area eases a later change of its thickness (the two `animateContentSize` modifiers); it is now
+`theDockAreaHasNoSizeAnimationOfItsOwnSoAChangeOfItsThicknessLandsAtOnce`. `DockShelfMotionAndFrameRateTest` still tests the shelf
+motion policy; nothing draws with it now.
+
+**Not confirmed without a device:** how the sideways slide of the pinned icons reads on a real bottom Dock (it is the whole
+width, 79 dp), the match of the length's spring against the cards' fan (they share a tuning but are two springs; the frame
+tests show them starting together), and a Dock with a very long run of live apps.
+
+### Bugs from the owner's phone: the front card blinking out, and the stack at the top of the screen (A and B)
+
+Both came from the open card's overlay, and one commit fixes both.
+
+- **Cause (B, and half of A).** Every stack on screen publishes the open card's layer (`OpenCardHolder.publishLayer`) and the
+  Dock's actions (`publish`) in a `SideEffect` on every composition, with null when it has no card open. Two stacks are composed
+  while pages are swiped or one is going out, and the one with nothing open erased the layer of the one that had a card
+  (last writer wins). The stack still believed a card was open (`layerActive`), so its front slot stayed hidden (the hole above the
+  Dock: the front card "blinking out", strips left standing) and the stack was shifted to the open card's frame by
+  `frameGeometry.topPx`, which had not been laid out for lack of a layer (0): the stack was drawn with its front card at the top of
+  the screen under the status bar. Fix: a stack takes back only what it published (`PublishOwner`, tested); the slots give way to
+  the open card, and the stack shifts, only once the layer exists (`drawnByLayer`), which also removes a one-frame hole when a
+  card opens (a test fails on it); and the stack's position is held to its cards in the very frame they change.
+- **Cause (A, the other half).** A swiped card flew off and stayed off screen for two seconds waiting for the app to remove the
+  notification; an app that re-posts it brought it back, and each swipe left a hole. A swiped card is now out of the stack at once
+  (the next card comes forward) and, if the notification is still there after two seconds, comes back once. The Dismiss button and
+  the accessibility action are unchanged (the card stays until the app answers).
+- **Candidates checked and not the cause:** round 6's per-card heights (a re-post re-measures a card, never re-keys it: the id is the
+  notification's key), the keyboard's inset (the strips are simply hidden and returned), the position past the end after a
+  dismissal (already clamped in an effect, now in the same frame too).
+- **Tests.** `StreamFrontCardStaysTest` (every frame: the front card or the open card is drawn and stands on the Dock) re-posting at
+  rest, while open, while closing, after an ignored swipe, with the keyboard coming and going, dismissing down to the last card and
+  re-posting it; `PublishOwnerTest`. The ignored swipe and the opening frame fail without the fix. The test of the two-stacks
+  clobber itself is the unit test of `PublishOwner`: two composed stacks were not reproduced through the pager here.
+- **Not confirmed without a device:** that the owner's recording is this cause and not another.
+
+### Search from the Dock: legibility and the floating button (C)
+
+- **Why the field looked washed out.** The panel is Thick glass lit by `launcherPanelContentColor`, but the field inside it was an
+  `OutlinedTextField` taking the theme's `outline` and `onSurfaceVariant` for its box, its floating label and its hint: colours tuned
+  for a plain surface that read pale on the glass, and a second box inside a box. The field is now `PanelSearchField` (an unlined
+  `TextField`: a transparent container, no indicator, the text and the caret in the panel's own content colour, the hint in it at 74%),
+  so the glass is the field's container. The other search fields (Library, Settings, widgets) are unchanged.
+- **One results surface.** The empty answer and "Search web" are one glass surface directly above the field (a small seam of
+  4 dp), and with results "Search web" is the results' own footer, not a pill floating between them and the field.
+- **Tests and screenshots.** `HomeHandleScreenshotTest`: the empty-results state and the typed state, dark and light
+  (`searchWithNoResults*`, `searchWithNothingFoundDark`, the earlier search goldens re-recorded); `DockSearchPanelTest` (the action
+  stands within 20 dp of the field in both states; it does not by itself tell the old layout from the new, the screenshots do).
+  Search as a card stack is a later piece of work and was not started.

@@ -259,7 +259,9 @@ private fun NotificationBrowseBody(
     } else {
         val you = stringResource(R.string.stream_notification_you)
         Column(modifier = modifier) {
-            NotificationBrowseText.blocks(content).forEach { block -> BrowseLine(block.written(you), block.maxLines) }
+            NotificationBrowseText.blocks(content, LocalStreamCardSizes.current).forEach { block ->
+                BrowseLine(block.written(you), block.maxLines)
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -112,29 +113,36 @@ class UnfoldedStreamColumnTest {
     private val chatPage = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "$chatPackage:personal")
     private val dp get() = composeRule.density.density
 
+    /** Notifications with a long body and no thread, so the browse card fills with text. */
+    private var longNotifications = false
+
     private fun chatNotification(index: Int = 1) =
         LauncherNotification(
             key = LauncherNotificationKey("0|chat|$index"),
             packageName = AppPackageName(chatPackage),
             canDismiss = true,
             title = "Sam",
-            text = "Are we still on for lunch tomorrow?",
+            text = if (longNotifications) LONG_TEXT else "Are we still on for lunch tomorrow?",
             messages =
-                listOf(
-                    LauncherNotificationMessage("Sam", "Morning! Got a minute?", StreamFixtures.NOW - 20 * MINUTE),
-                    LauncherNotificationMessage(
-                        "Sam",
-                        "Are we still on for lunch tomorrow?",
-                        StreamFixtures.NOW - 4 * MINUTE,
-                    ),
-                ),
+                if (longNotifications) {
+                    emptyList()
+                } else {
+                    listOf(
+                        LauncherNotificationMessage("Sam", "Morning! Got a minute?", StreamFixtures.NOW - 20 * MINUTE),
+                        LauncherNotificationMessage(
+                            "Sam",
+                            "Are we still on for lunch tomorrow?",
+                            StreamFixtures.NOW - 4 * MINUTE,
+                        ),
+                    )
+                },
             postedAtEpochMillis = StreamFixtures.NOW - 4 * MINUTE,
         )
 
-    private fun host(): StreamHost =
+    private fun host(notifications: Int = 1): StreamHost =
         realWiringStreamHost(
             executor = executor,
-            activeNotifications = listOf(chatNotification()),
+            activeNotifications = (1..notifications).map { chatNotification(it) },
             installedApps = ScreenshotFixtures.installedApps,
             canReply = { true },
             canSnooze = { true },
@@ -145,9 +153,10 @@ class UnfoldedStreamColumnTest {
         destination: ShellDestination = ShellDestination.HOME,
         peekThrough: Boolean = true,
         reducedMotion: Boolean = true,
+        sizing: ScreenshotFixtures.HomeSizing = ScreenshotFixtures.HomeSizing(),
     ): LauncherShellState {
         val base =
-            ScreenshotFixtures.homeState(HomeLayoutDeviceClass.FOLDABLE, dock)
+            ScreenshotFixtures.homeState(HomeLayoutDeviceClass.FOLDABLE, dock, sizing)
                 .withHomePages(3)
                 .withManyApps()
                 .withAFullFirstPage()
@@ -188,9 +197,12 @@ class UnfoldedStreamColumnTest {
         )
     }
 
-    private fun show(state: LauncherShellState = shell) {
+    private fun show(
+        state: LauncherShellState = shell,
+        notifications: Int = 1,
+    ) {
         shell = state
-        val stream = host()
+        val stream = host(notifications)
         composeRule.setContent {
             CompositionLocalProvider(LocalRecompositionProbe provides probe) {
                 ScreenshotBackdrop {
@@ -284,7 +296,12 @@ class UnfoldedStreamColumnTest {
             "the column reaches the Dock's strip: ${column.right} vs ${dock.left}",
             column.right - dock.left in 0f..MAX_REACH * dp,
         )
-        assertTrue("about a third of the width: ${column.width / dp} dp", column.width in width * 0.3f..width * 0.42f)
+        assertEquals(
+            "the unfolded column's width (0.38 of the window, 360 dp at least)",
+            StreamColumn.restWidthDp(width / dp, unfolded = true),
+            column.width / dp,
+            1f,
+        )
         assertEquals(
             "it is the one Stream surface",
             1,
@@ -726,7 +743,12 @@ class UnfoldedStreamColumnTest {
             column.bottom - dock.top in 0f..MAX_REACH * dp,
         )
         assertTrue("centred on it", abs(column.center.x - dock.center.x) < 2f * dp)
-        assertTrue("about a third of the width", column.width in root().width * 0.3f..root().width * 0.42f)
+        assertEquals(
+            "the unfolded column's width",
+            StreamColumn.restWidthDp(root().width / dp, unfolded = true),
+            column.width / dp,
+            1f,
+        )
         composeRule.onNodeWithText("Sam").assertIsDisplayed()
         // The grid fades under it too.
         composeRule.waitForIdle()
@@ -742,7 +764,7 @@ class UnfoldedStreamColumnTest {
     fun theColumnsGeometryIsTheDomainsToThePixel() {
         showOpen()
         val width = root().width / dp
-        assertEquals(StreamColumn.restWidthDp(width), column().width / dp, 1f)
+        assertEquals(StreamColumn.restWidthDp(width, unfolded = true), column().width / dp, 1f)
     }
 
     // Search is the column's width, attached to the Dock
@@ -756,7 +778,7 @@ class UnfoldedStreamColumnTest {
         assertTrue("the field is against the Dock: ${panel.right} vs ${dock.left}", dock.left - panel.right < 24f * dp)
         assertTrue(
             "and no wider than the column plus its padding: ${panel.width / dp}",
-            panel.width <= (StreamColumn.restWidthDp(root().width / dp) + 1f) * dp,
+            panel.width <= (StreamColumn.restWidthDp(root().width / dp, unfolded = true) + 1f) * dp,
         )
     }
 
@@ -796,7 +818,11 @@ class UnfoldedStreamColumnTest {
             "the pages' room holds search's: stream $column, search $search",
             column.height >= search.height - 1f,
         )
-        assertEquals("its bottom is the Dock's lower end", body.bottom, search.bottom, 4f * dp)
+        // Search stands in the same rectangle the column does for the Dock as it is now: spanning the Dock's body, or
+        // centred on it and the column's least height when the Dock is shorter (the Home mode's is).
+        val least = StreamColumn.restHeightDp(unfolded = true) * dp
+        val expectedBottom = maxOf(body.bottom, body.center.y + least / 2f).coerceAtMost(root().bottom)
+        assertEquals("its bottom is the column's for this Dock", expectedBottom, search.bottom, 6f * dp)
         val reach =
             if (dockEdge == DockPosition.RIGHT) search.right - strip.left else strip.right - search.left
         assertTrue("it touches the Dock's inner edge: $reach", reach in 0f..MAX_REACH * dp)
@@ -978,6 +1004,133 @@ class UnfoldedStreamColumnTest {
         }
     }
 
+    // The column is as tall as the Dock, with bigger cards (batch 7)
+
+    /** A Dock with so many pinned apps that its contextual row fills the window's run: a tall Dock. */
+    private fun tallDock() = ScreenshotFixtures.HomeSizing(pins = ScreenshotFixtures.installedApps.take(TALL_PINS))
+
+    private fun showTall(
+        notifications: Int = TALL_NOTIFICATIONS,
+        dock: DockPosition? = null,
+    ) {
+        show(
+            unfolded(dock = dock, destination = ShellDestination.STREAM, sizing = tallDock()),
+            notifications = notifications,
+        )
+        waitForText("Sam")
+        composeRule.waitForIdle()
+    }
+
+    private fun stackCards() =
+        composeRule.onAllNodes(
+            SemanticsMatcher("a stack card") { node ->
+                node.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("stream-stack-card:") == true
+            },
+            useUnmergedTree = true,
+        ).fetchSemanticsNodes()
+
+    @Test
+    fun theColumnSpansTheDocksWholeHeightTopToBottom() {
+        showTall()
+        val body = bounds(HOME_DOCK_SURFACE_TEST_TAG)
+        val column = column()
+        assertTrue("the Dock is tall: ${body.height / dp} dp", body.height / dp > StreamColumn.restHeightDp(true))
+        assertEquals("its top is the Dock body's", body.top, column.top, 4f * dp)
+        assertEquals("its bottom is the Dock body's", body.bottom, column.bottom, 4f * dp)
+    }
+
+    @Test
+    fun aTallColumnShowsMoreStripsThanTheFoldedThreeAtAHigherPitch() {
+        showTall()
+        val cards = stackCards()
+        assertTrue("front card and more than three strips: ${cards.size}", cards.size > 1 + 3)
+        assertTrue("at most six strips", cards.size <= 1 + 6 + 1)
+        // Strips are a larger pitch apart than folded's 56 dp.
+        val tops = cards.map { it.boundsInRoot.top }.sorted()
+        val steps = tops.zipWithNext { a, b -> b - a }.filter { it > 1f }
+        assertTrue("strips are 64 dp apart: ${steps.map { it / dp }}", steps.all { abs(it / dp - 64f) < 2f })
+    }
+
+    @Test
+    fun theFrontCardIsBiggerThanFoldedsMaximumWithMoreLinesOfLargerText() {
+        longNotifications = true
+        showTall(notifications = 3)
+        val front =
+            composeRule.onAllNodes(
+                SemanticsMatcher("the front card") { node ->
+                    node.config.getOrNull(SemanticsProperties.StateDescription)?.startsWith("Card 1 of") == true
+                },
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes().first()
+        val tall = front.size.height / dp
+        // Folded draws at most 168 dp (four lines); unfolded, six lines of larger text, up to 1.35 times that.
+        assertTrue("taller than folded's maximum: $tall dp", tall > 168f + 8f)
+        assertTrue("and no taller than 1.35 times it: $tall dp", tall <= 168f * 1.35f + 1f)
+    }
+
+    @Test
+    fun aShortDockIsCentredOnAndTheColumnKeepsItsLeastHeight() {
+        showOpen()
+        val body = bounds(HOME_DOCK_SURFACE_TEST_TAG)
+        val column = column()
+        assertTrue("the Dock is short", body.height / dp < StreamColumn.restHeightDp(true))
+        assertEquals(
+            "never shorter than the least",
+            StreamColumn.restHeightDp(true).coerceAtLeast(StreamColumn.OPEN_HEIGHT_DP),
+            column.height / dp,
+            1f,
+        )
+        assertEquals("centred on the Dock", body.center.y, column.center.y, 4f * dp)
+    }
+
+    @Test
+    fun theGridFadeFollowsTheTallColumn() {
+        showTall()
+        val column = column()
+        val reach = StreamGridFade.FEATHER_DP * dp + 1f
+        val faded = cells().filter { it.third < 1f }
+        assertTrue("some cells fade under the column", faded.isNotEmpty())
+        faded.forEach { (x, y, _) ->
+            assertTrue(
+                "a faded cell is under the column or within the fade's reach: ($x, $y) vs $column",
+                y in (column.top - reach)..(column.bottom + reach),
+            )
+        }
+        // And cells at the column's rows, under it, are at the peek-through opacity.
+        assertTrue(
+            cells().any { (x, y, a) ->
+                val under = x in column.left..column.right && y in column.top..column.bottom
+                under && abs(a - StreamGridFade.PEEK_ALPHA) < 0.02f
+            },
+        )
+    }
+
+    @Test
+    fun aTallDockOnTheLeftMirrorsIt() {
+        showTall(dock = DockPosition.LEFT)
+        val body = bounds(HOME_DOCK_SURFACE_TEST_TAG)
+        val column = column()
+        assertEquals(body.top, column.top, 4f * dp)
+        assertEquals(body.bottom, column.bottom, 4f * dp)
+        assertTrue(
+            "against the Dock's inner edge: ${column.left} vs ${body.right}",
+            column.left - body.right in -MAX_REACH * dp..MAX_REACH * dp,
+        )
+    }
+
+    @Test
+    fun aBottomDockKeepsTheColumnCentredAndGivesItTheRoomAboveTheDockUpToFiveHundredSixty() {
+        showTall(dock = DockPosition.BOTTOM)
+        val column = column()
+        val dock = dock()
+        assertTrue("taller than folded's rest: ${column.height / dp}", column.height / dp > StreamColumn.REST_HEIGHT_DP)
+        assertTrue(
+            "at most 560 dp: ${column.height / dp}",
+            column.height / dp <= StreamColumn.BOTTOM_DOCK_MAX_HEIGHT_DP + 1f,
+        )
+        assertTrue("centred on the Dock", abs(column.center.x - dock.center.x) < 2f * dp)
+    }
+
     // Screenshots
 
     @Test
@@ -1034,6 +1187,16 @@ class UnfoldedStreamColumnTest {
             },
         )
 
+    @Test
+    fun unfoldedTallStackOnARightDockLight() = shoot(showing = { showTall() })
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun unfoldedTallStackOnARightDockDark() = shoot(showing = { showTall() })
+
+    @Test
+    fun unfoldedTallStackOnABottomDockLight() = shoot(showing = { showTall(dock = DockPosition.BOTTOM) })
+
     private fun openCard() {
         showOpen()
         composeRule.onNodeWithText("Sam").performClick()
@@ -1049,6 +1212,12 @@ class UnfoldedStreamColumnTest {
         const val MINUTE = 60_000L
         const val WAIT_MILLIS = 10_000L
         const val PRESS_PX = 150f
+        const val LONG_TEXT =
+            "Are we still on for lunch tomorrow? I can do twelve or half past, whichever suits you, and I will book " +
+                "the table by the window if the weather holds. Let me know about the others as well, because Priya " +
+                "said she might bring her sister and we would need a bigger table then, and maybe a high chair."
+        const val TALL_PINS = 8
+        const val TALL_NOTIFICATIONS = 9
         const val SWIPE_MILLIS = 200L
 
         /** Frames of the test clock (16 ms each) that carry an open or close well past its end. */

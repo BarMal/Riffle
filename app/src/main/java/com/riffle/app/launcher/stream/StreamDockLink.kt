@@ -54,7 +54,21 @@ internal class OpenCardHolder {
     var layer: OpenCardLayer? by mutableStateOf(null)
         private set
 
-    fun publishLayer(layer: OpenCardLayer?) {
+    /** Who published the layer (a stack's key): only that stack may take it back, not another page's stack. */
+    private val layerOwner = PublishOwner()
+    private val actionsOwner = PublishOwner()
+
+    /**
+     * A stack publishes its open card's layer ([layer] non-null) or takes it back (null). Every stack calls this
+     * on every composition (two are composed while pages are swiped), so a null from a stack that is not the one that
+     * published the layer is ignored: it used to erase the open card, leaving its slot hidden and the stack shifted to
+     * where the card's frame would have been (batch 7, bugs A and B).
+     */
+    fun publishLayer(
+        owner: Any,
+        layer: OpenCardLayer?,
+    ) {
+        if (!layerOwner.accepts(owner, layer != null)) return
         if (this.layer !== layer) this.layer = layer
     }
 
@@ -70,8 +84,21 @@ internal class OpenCardHolder {
         return true
     }
 
-    fun publish(actions: OpenCardActions?) {
+    /** The Dock's actions row, published by the stack that has the card open; another stack's null is ignored. */
+    fun publish(
+        owner: Any,
+        actions: OpenCardActions?,
+    ) {
+        if (!actionsOwner.accepts(owner, actions != null)) return
         if (shown != actions) shown = actions
+    }
+
+    /** Nothing is shown any more, whoever published it (the Stream left). */
+    fun clearPublished() {
+        layerOwner.reset()
+        actionsOwner.reset()
+        if (layer != null) layer = null
+        if (shown != null) shown = null
     }
 }
 
@@ -138,7 +165,7 @@ internal class StreamDockLink {
         currentKey = null
         pendingOption = null
         openCards.dispatch(OpenCardEvent.StreamLeft)
-        openCards.publish(null)
+        openCards.clearPublished()
     }
 
     fun requestOption(option: StreamPageOption) {
@@ -164,4 +191,27 @@ internal fun Map<StreamSection, StreamSectionResult>.dockLiveEntries(
     val media =
         (this[StreamSection.NOW] as? StreamSectionResult.Ready)?.items?.filterIsInstance<MediaContent>()?.firstOrNull()
     return DockDynamicSide.entries(groups, media, liveAppSlots, pinnedGroupKeys = pinnedGroupKeys)
+}
+
+/**
+ * Who published what a holder shows (the stack that has the card open): a stack that publishes nothing takes back only
+ * what it published itself. Every stack on screen publishes on every composition, so without this the one that has no
+ * card open (the neighbour page while pages are swiped) erased the open card's layer.
+ */
+internal class PublishOwner {
+    private var owner: Any? = null
+
+    /** Whether a publish by [by] of something ([hasValue]) or of nothing is to be applied; records the owner. */
+    fun accepts(
+        by: Any,
+        hasValue: Boolean,
+    ): Boolean {
+        if (!hasValue && owner != by) return false
+        owner = if (hasValue) by else null
+        return true
+    }
+
+    fun reset() {
+        owner = null
+    }
 }

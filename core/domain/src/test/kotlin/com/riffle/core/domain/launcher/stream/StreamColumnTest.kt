@@ -168,4 +168,167 @@ class StreamColumnTest {
             assertTrue(rect.left >= 72f - StreamColumn.PAGE_INSET_DP, "before the Dock at open=$open: $rect")
         }
     }
+
+    // The unfolded column spans the Dock (batch 7) -----------------------------------------------------------------
+
+    private fun unfolded(
+        edge: DockPosition,
+        width: Float = 1200f,
+        height: Float = 900f,
+        dock: StreamColumnRect? = null,
+        length: Float? = null,
+    ) = StreamColumnWindow(
+        widthDp = width,
+        heightDp = height,
+        dockEdge = edge,
+        dockExtentDp = 72f,
+        safeTopDp = 24f,
+        safeBottomDp = 16f,
+        dockBounds = dock,
+        unfolded = true,
+        dockBodyLengthDp = length,
+    )
+
+    /** A right Dock's body, [length] long and centred on the middle of a 900 dp tall window. */
+    private fun rightBody(length: Float) =
+        StreamColumnRect(left = 1128f, top = 450f - length / 2f, right = 1200f, bottom = 450f + length / 2f)
+
+    @Test
+    fun theUnfoldedColumnIsWiderAndTheFoldedOnesWidthIsUntouched() {
+        assertEquals(0.38f * 1200f, StreamColumn.restWidthDp(1200f, unfolded = true), 0.01f)
+        assertEquals(360f, StreamColumn.restWidthDp(840f, unfolded = true)) // 0.38 of 840 is 319: the floor holds
+        assertEquals(320f, StreamColumn.restWidthDp(840f)) // folded and the earlier column: as before
+        assertEquals(400f, StreamColumn.restWidthDp(1200f))
+        assertTrue(StreamColumn.openWidthDp(840f, unfolded = true) >= StreamColumn.restWidthDp(840f, unfolded = true))
+        // The grid stays usable: at 1200 dp it keeps more than half of the width past the Dock.
+        assertTrue(1200f - 72f - StreamColumn.restWidthDp(1200f, unfolded = true) > 600f)
+        assertTrue(StreamColumn.openWidthDp(300f, unfolded = true) <= 300f)
+    }
+
+    @Test
+    fun aTallDockGivesAColumnWhoseTopAndBottomAreTheDocksBody() {
+        val body = rightBody(700f)
+        val rect = StreamColumn.rect(unfolded(DockPosition.RIGHT, dock = body, length = 700f))
+        assertEquals(body.top, rect.top, 0.01f)
+        assertEquals(body.bottom, rect.bottom, 0.01f)
+        assertEquals(700f, rect.height, 0.01f)
+        // The edge against the Dock is as before.
+        assertEquals(1200f - 72f + overlap, rect.right)
+        assertEquals(StreamColumn.restWidthDp(1200f, unfolded = true), rect.width, 0.01f)
+    }
+
+    @Test
+    fun theColumnFollowsTheContextualLengthAboutTheMiddleOfTheMeasuredBody() {
+        // The Dock is still its short Home-mode self when it is measured; the contextual length is what is spanned.
+        val home = rightBody(300f)
+        val rect = StreamColumn.rect(unfolded(DockPosition.RIGHT, dock = home, length = 700f))
+        assertEquals(450f - 350f, rect.top, 0.01f)
+        assertEquals(450f + 350f, rect.bottom, 0.01f)
+    }
+
+    @Test
+    fun aShortDockIsCentredOnAndTheColumnIsNeverShorterThanItsRestHeight() {
+        val body = rightBody(300f)
+        val rect = StreamColumn.rect(unfolded(DockPosition.RIGHT, dock = body, length = 300f))
+        assertEquals(StreamColumn.restHeightDp(unfolded = true), rect.height, 0.01f)
+        assertTrue(rect.height >= StreamColumn.REST_HEIGHT_DP, "never shorter than today's resting height")
+        assertEquals(450f, (rect.top + rect.bottom) / 2f, 0.01f, "centred on the Dock")
+    }
+
+    @Test
+    fun aDockLongerThanTheSafeAreaIsHeldInsideIt() {
+        val body = rightBody(990f) // 450 +- 495: past both ends of the window
+        val rect = StreamColumn.rect(unfolded(DockPosition.RIGHT, dock = body, length = 990f))
+        assertEquals(24f + StreamColumn.TOP_MARGIN_DP, rect.top, 0.01f)
+        assertEquals(900f - 16f, rect.bottom, 0.01f)
+    }
+
+    @Test
+    fun aLeftDockMirrorsTheRightOneUnfolded() {
+        val body = StreamColumnRect(left = 0f, top = 150f, right = 72f, bottom = 750f)
+        val rect = StreamColumn.rect(unfolded(DockPosition.LEFT, dock = body, length = 600f))
+        assertEquals(150f, rect.top, 0.01f)
+        assertEquals(750f, rect.bottom, 0.01f)
+        assertEquals(72f - overlap, rect.left)
+    }
+
+    @Test
+    fun anOpenCardMayUseTheDocksHeightAndNoMore() {
+        val tall = unfolded(DockPosition.RIGHT, dock = rightBody(700f), length = 700f)
+        val rest = StreamColumn.rect(tall)
+        val open = StreamColumn.rect(tall, open = 1f)
+        assertEquals(rest.bottom, open.bottom, 0.01f, "the bottom stays")
+        assertEquals(rest.top, open.top, 0.01f, "a tall Dock already has the room: the top stays")
+        assertTrue(open.width > rest.width)
+        // A short Dock still grows up to the open height.
+        val short = unfolded(DockPosition.RIGHT, dock = rightBody(300f), length = 300f)
+        assertTrue(StreamColumn.rect(short, open = 1f).height >= StreamColumn.OPEN_HEIGHT_DP)
+        assertTrue(StreamColumn.rect(short, open = 1f).top >= 24f)
+    }
+
+    @Test
+    fun aMeasuredDockWithNoLengthYetStillGivesAColumnAtItsLowerEnd() {
+        val rect = StreamColumn.rect(unfolded(DockPosition.RIGHT, dock = rightBody(300f)))
+        assertEquals(StreamColumn.restHeightDp(unfolded = true), rect.height, 0.01f)
+        val none = StreamColumn.rect(unfolded(DockPosition.RIGHT))
+        assertEquals(900f - 16f, none.bottom)
+        assertEquals(StreamColumn.restHeightDp(unfolded = true), none.height, 0.01f)
+    }
+
+    @Test
+    fun aNarrowWindowKeepsTheUnfoldedColumnOnScreen() {
+        val narrow =
+            StreamColumnWindow(
+                widthDp = 340f,
+                heightDp = 640f,
+                dockEdge = DockPosition.RIGHT,
+                dockExtentDp = 72f,
+                unfolded = true,
+                dockBodyLengthDp = 400f,
+                dockBounds = StreamColumnRect(268f, 120f, 340f, 520f),
+            )
+        listOf(0f, 1f).forEach { open ->
+            val rect = StreamColumn.rect(narrow, open)
+            assertTrue(rect.left >= 0f && rect.right <= 340f - 72f + StreamColumn.PAGE_INSET_DP, "at $open: $rect")
+            assertTrue(rect.top >= 0f && rect.bottom <= 640f, "at $open: $rect")
+        }
+    }
+
+    @Test
+    fun aHingeStillCutsTheUnfoldedColumnBack() {
+        val hinge = StreamColumnRect(left = 700f, top = 0f, right = 708f, bottom = 900f)
+        val window =
+            unfolded(DockPosition.RIGHT, dock = rightBody(700f), length = 700f).copy(verticalHingesDp = listOf(hinge))
+        val open = StreamColumn.rect(window, open = 1f)
+        assertTrue(open.left >= hinge.right, "cut back to the hinge's far side: ${open.left}")
+        assertEquals(
+            StreamColumn.rect(unfolded(DockPosition.RIGHT, dock = rightBody(700f), length = 700f)).top,
+            open.top,
+        )
+    }
+
+    @Test
+    fun aBottomDockGetsTheHeightBetweenTheSafeTopAndTheDockUpToFiveHundredSixty() {
+        val dock = StreamColumnRect(left = 450f, top = 826f, right = 750f, bottom = 890f)
+        val tall = unfolded(DockPosition.BOTTOM, height = 1400f, dock = dock)
+        assertEquals(StreamColumn.BOTTOM_DOCK_MAX_HEIGHT_DP, StreamColumn.rect(tall).height, 0.01f)
+        val room = unfolded(DockPosition.BOTTOM, height = 900f, dock = dock)
+        val rect = StreamColumn.rect(room)
+        // 900 dp window: the room between the safe top and the Dock is less than 560 dp but more than the least.
+        assertTrue(rect.height <= StreamColumn.BOTTOM_DOCK_MAX_HEIGHT_DP)
+        assertTrue(rect.height >= StreamColumn.restHeightDp(unfolded = true))
+        assertTrue(rect.top >= 24f)
+        assertEquals(900f - 16f - 72f + overlap, rect.bottom, 0.01f, "stands on the Dock")
+        assertEquals(dock.centreX, rect.centreX, 0.01f, "centred on the Dock")
+    }
+
+    @Test
+    fun theFoldedGeometryIsExactlyWhatItWas() {
+        val folded = window(DockPosition.RIGHT, dock = StreamColumnRect(768f, 300f, 840f, 640f))
+        val rect = StreamColumn.rect(folded)
+        assertEquals(StreamColumn.REST_HEIGHT_DP, rect.height)
+        assertEquals(640f, rect.bottom)
+        assertEquals(StreamColumn.restWidthDp(840f), rect.width)
+        assertEquals(StreamColumn.OPEN_HEIGHT_DP, StreamColumn.rect(folded, open = 1f).height)
+    }
 }

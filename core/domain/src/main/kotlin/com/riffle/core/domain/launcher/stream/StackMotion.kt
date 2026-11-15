@@ -58,14 +58,26 @@ class StackGeometry(
     val pitchDp: Float = StreamCardStackSpec.PITCH_DP,
     val gapDp: Float = StreamCardStackSpec.GAP_DP,
     private val heightsDp: List<Float> = emptyList(),
+    /** How many cards peek above the front one (the folded phone's three; the unfolded column's as many as fit). */
+    val visiblePeeks: Int = StreamCardStackSpec.VISIBLE_PEEKS,
+    /** Each peeking card is this much narrower than the one in front of it. */
+    private val scaleStep: Float = StreamCardStackSpec.SCALE_STEP,
 ) {
     /** A stack whose cards each have their own height; [cardHeightDp] is then the tallest. */
-    constructor(heightsDp: List<Float>) : this(
+    constructor(
+        heightsDp: List<Float>,
+        pitchDp: Float = StreamCardStackSpec.PITCH_DP,
+        visiblePeeks: Int = StreamCardStackSpec.VISIBLE_PEEKS,
+        scaleStep: Float = StreamCardStackSpec.SCALE_STEP,
+    ) : this(
         cardHeightDp = heightsDp.maxOrNull() ?: StreamCardStackSpec.CARD_HEIGHT_DP,
+        pitchDp = pitchDp,
         heightsDp = heightsDp,
+        visiblePeeks = visiblePeeks,
+        scaleStep = scaleStep,
     )
 
-    private val peeks = StreamCardStackSpec.VISIBLE_PEEKS.toFloat()
+    private val peeks = visiblePeeks.toFloat()
 
     /** How tall the card at [index] is; an index outside the stack is held to it. */
     fun heightOf(index: Int): Float =
@@ -134,7 +146,7 @@ class StackGeometry(
         inFrontHeightDp: Float,
     ): StackCardFrame {
         val top = topDp(r, ownHeightDp, frontHeightDp)
-        val scale = 1f - StreamCardStackSpec.SCALE_STEP * minOf(r, peeks)
+        val scale = 1f - scaleStep * minOf(r, peeks)
         val alpha = if (r <= peeks) 1f else peeks + 1f - r
         val visibleBottom = topDp(r - 1f, inFrontHeightDp, frontHeightDp) + gapDp * minOf(r, 1f)
         return StackCardFrame(alpha = alpha, scale = scale, topDp = top, visibleBottomDp = minOf(visibleBottom, top))

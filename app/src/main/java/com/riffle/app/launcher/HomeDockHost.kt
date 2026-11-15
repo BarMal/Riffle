@@ -69,6 +69,12 @@ internal class HomeDockHostState {
     val bodyBounds: MutableState<Rect?> = mutableStateOf(null)
 
     /**
+     * How long the Dock's body is in the contextual mode (dp), once it has been drawn so: the Stream's column on an
+     * unfolded posture spans it. Null until then.
+     */
+    val contextualLengthDp: MutableState<Float?> = mutableStateOf(null)
+
+    /**
      * The dynamic section's bounds in root coordinates, null while there is none. An expanded posture reads it to tell
      * which end of the Dock the dynamic side is at.
      */
@@ -126,6 +132,8 @@ internal data class HomeDockInterpreter(
     val onDynamicEntryDelegated: (String) -> Unit = {},
     /** The Dock's contextual mode (the Stream is showing): one scrolling row of the same icons plus the page tiles. */
     val contextual: Boolean = false,
+    /** The Stream is on its way out: the body retracts to the Home mode's length while the row is still drawn. */
+    val retracting: Boolean = false,
     /** Items the mode adds to a pinned app's long-press menu; a tap on a pinned app always opens it. */
     val staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     /**
@@ -273,6 +281,7 @@ internal fun HomeDockHost(
                 LocalDockBackgroundAlpha provides dockBackgroundAlpha,
                 LocalDockDynamicBoundsSink provides rememberDynamicBoundsSink(hostState),
                 LocalDockBodyBoundsSink provides rememberDockBodyBoundsSink(hostState),
+                LocalDockContextualLengthSink provides rememberDockContextualLengthSink(hostState),
                 LocalDockDynamicEntryBoundsSink provides rememberDynamicEntryBoundsSink(hostState),
             ) {
                 StandardHomeDockArea(
@@ -288,6 +297,7 @@ internal fun HomeDockHost(
                     dynamicEntries = interpreter.dynamicEntries.orEmpty(),
                     onDynamicEntryDelegated = interpreter.onDynamicEntryDelegated,
                     contextual = interpreter.contextual,
+                    retracting = interpreter.retracting,
                     staticItemMenuExtras = interpreter.staticItemMenuExtras,
                     staticItemTapOverride = interpreter.staticItemTapOverride,
                     isDraggedItemOverDock = hostState.isDropTargetHighlighted.value,

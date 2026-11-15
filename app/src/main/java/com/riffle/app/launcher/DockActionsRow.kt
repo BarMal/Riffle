@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleMotion
@@ -61,6 +62,8 @@ internal fun DockActionsRow(
     var last by remember { mutableStateOf<OpenCardActions?>(null) }
     if (actions != null) last = actions
     val shown = actions ?: last
+    // The row grows and goes in the Dock's one motion: its spring at the opening speed, critically damped.
+    val tuning = LocalDockMotionTuning.current
     AnimatedVisibility(
         visible = actions != null && actions.actions.isNotEmpty(),
         modifier = modifier,
@@ -68,13 +71,13 @@ internal fun DockActionsRow(
             if (reducedMotion) {
                 fadeIn(tween(REDUCED_FADE_MILLIS))
             } else {
-                expandVertically(RiffleMotion.smooth()) + fadeIn(RiffleMotion.smooth())
+                expandVertically(RiffleMotion.smooth<IntSize>(tuning)) + fadeIn(RiffleMotion.smooth(tuning))
             },
         exit =
             if (reducedMotion) {
                 fadeOut(tween(REDUCED_FADE_MILLIS))
             } else {
-                shrinkVertically(RiffleMotion.smooth()) + fadeOut(RiffleMotion.smooth())
+                shrinkVertically(RiffleMotion.smooth<IntSize>(tuning)) + fadeOut(RiffleMotion.smooth(tuning))
             },
     ) {
         if (shown != null) {

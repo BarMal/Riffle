@@ -7,11 +7,11 @@ import kotlin.math.sign
  * Swiping a notification's card sideways to dismiss it (ADR 0003, Amendment 1; device fixes, round 5, item 2), as pure
  * rules: where the gesture exists, when a release dismisses and how the card looks on the way.
  *
- * The rule that settles the conflict with swiping between the Stream's pages: a horizontal drag is the card's only
- * where it starts on the front card of a notification that [StreamActionPolicy] offers Dismiss for ([claimsDrag]);
- * anywhere else on the page (the strips, the empty room, a notification that cannot be dismissed, any other kind of
- * card) it is the pager's, so a page whose front card is dismissible is still left by swiping on its strips or its
- * room.
+ * The rule that settles who owns a horizontal drag, by where it starts ([ownerOf], batch 7): a drag that starts on a
+ * card is always that card's and never the pager's. On the front card of a notification that [StreamActionPolicy]
+ * offers Dismiss for it dismisses; on any other card (a strip, a notification that cannot be dismissed, any other kind
+ * of card) the card resists, a short rubber band ([resist]) with no fade, and settles back. Only a drag that starts in
+ * the page's empty room, outside every card, changes the stack (the pager's); the Dock is the primary route.
  */
 object SwipeDismiss {
     /** A release past this share of the card's width dismisses, however slowly. */
@@ -42,14 +42,86 @@ object SwipeDismiss {
     fun offers(content: StreamContent): Boolean =
         content is NotificationContent && StreamActionPolicy.offers(content, StreamAction.Dismiss)
 
+    /** Who a horizontal drag belongs to. */
+    enum class Owner {
+        /** The card goes with the finger, fades, and is dismissed past the threshold. */
+        DISMISS,
+
+        /** The card gives a few dp, without fading, and settles back; the pager does not get the drag. */
+        RESIST,
+
+        /** The page's empty room: the pager changes the stack. */
+        PAGER,
+    }
+
     /**
-     * Whether a horizontal drag that starts on a card is that card's: only the front card of a dismissible
-     * notification ([content] is the card's content, null for a card that is no content). Everything else pages.
+     * Who owns a horizontal drag that starts where it does: [onCard] false is the empty room (the pager's); on a card,
+     * the front card of a dismissible notification ([content] is the card's content, null for a card that is no
+     * content) dismisses and every other card resists.
      */
-    fun claimsDrag(
+    fun ownerOf(
+        onCard: Boolean,
         content: StreamContent?,
         isFront: Boolean,
-    ): Boolean = isFront && content != null && offers(content)
+    ): Owner =
+        when {
+            !onCard -> Owner.PAGER
+            isFront && content != null && offers(content) -> Owner.DISMISS
+            else -> Owner.RESIST
+        }
+
+    /** How far a card that resists gives at most (dp): a short rubber band, a hint and not a movement. */
+    const val RESIST_MAX_DP = 12f
+
+    /** The card's offset (px) at a raw finger travel of [rawPx] when it resists: it follows, never past the max. */
+    fun resist(
+        rawPx: Float,
+        density: Float,
+    ): Float {
+        val max = RESIST_MAX_DP * density
+        val travel = abs(rawPx)
+        return sign(rawPx) * max * travel / (travel + max)
+    }
+
+    /** The finger travel that gives [offsetPx] of [resist] (for a finger that takes the card again mid-settle). */
+    fun unresist(
+        offsetPx: Float,
+        density: Float,
+    ): Float {
+        val max = RESIST_MAX_DP * density
+        val shown = abs(offsetPx).coerceAtMost(max * 0.99f)
+        return sign(offsetPx) * max * shown / (max - shown)
+    }
+
+    /** Whether a card taken [offsetPx] sideways is past the point where a release dismisses it. */
+    fun isArmed(
+        offsetPx: Float,
+        widthPx: Float,
+    ): Boolean = widthPx > 0f && abs(offsetPx) >= widthPx * DISTANCE_FRACTION
+
+    /** The card's scale while it is taken: lifted by [LIFT_SCALE] within [LIFT_RAMP_DP] of travel, 1 at rest. */
+    fun scale(
+        offsetPx: Float,
+        density: Float,
+    ): Float = 1f + (LIFT_SCALE - 1f) * (abs(offsetPx) / (LIFT_RAMP_DP * density)).coerceIn(0f, 1f)
+
+    /** The "Dismiss" cue's opacity: nothing before the threshold, full [CUE_RAMP] of the width past it. */
+    fun cueAlpha(
+        offsetPx: Float,
+        widthPx: Float,
+    ): Float {
+        if (!isArmed(offsetPx, widthPx)) return 0f
+        return ((abs(offsetPx) / widthPx - DISTANCE_FRACTION) / CUE_RAMP).coerceIn(0f, 1f)
+    }
+
+    /** A dismissing card lifts to this scale. */
+    const val LIFT_SCALE = 1.02f
+
+    /** The travel (dp) over which the lift comes in. */
+    const val LIFT_RAMP_DP = 24f
+
+    /** The share of the width, past the threshold, over which the cue comes to full opacity. */
+    const val CUE_RAMP = 0.06f
 
     /**
      * What releasing at [offsetPx] (positive: right) with the finger moving at [velocityPxPerSecond] does to a card

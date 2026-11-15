@@ -13,11 +13,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
@@ -417,7 +421,7 @@ private fun Modifier.dockShelfExtent(
 ): Modifier = if (runsHorizontally) width(mainAxis) else height(mainAxis)
 
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun DockSurfaceStrip(
     dock: DockModel,
     surfaceMetrics: DockSurfaceMetrics,
@@ -430,13 +434,26 @@ internal fun DockSurfaceStrip(
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
     dynamicEntries: List<DockDynamicEntry> = emptyList(),
     onDynamicEntryDelegated: (String) -> Unit = {},
+    /**
+     * The length the body is heading for when that is not the length its content has: the Home mode's, while the
+     * contextual row is still drawn as the cards go back in (the Dock retracts with them). Null: the content's own.
+     */
+    sizeTargetMainAxisDp: Int? = null,
 ) {
     val runsHorizontally = position.isHorizontalEdge
     val showDynamicSection =
         surfaceMetrics.contextualRun == null && dockSurfaceStripShowsDynamicSection(surfaceMetrics, dynamicEntries)
-    val mainAxisDp = dockSurfaceStripMainAxisDp(surfaceMetrics, showDynamicSection).dp
+    val contentMainAxisDp = dockSurfaceStripMainAxisDp(surfaceMetrics, showDynamicSection)
+    val targetMainAxisDp = sizeTargetMainAxisDp ?: contentMainAxisDp
     // The bar is as tall as the pinned icon is big: the configured size, which a short run never shrinks.
     val crossAxisDp = dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp
+    // The one size motion of the body: along the Dock's edge it eases from the length it has to the length it is to
+    // have, on the Dock's spring (see DockBodyLength); never on the first frames or a change of edge, never reduced.
+    val reducedMotion = presentation.interactions.reducedMotion
+    val ease = rememberDockSizeEasing(position)
+    val easing = ease && !reducedMotion
+    val bodyLength = rememberDockBodyLength(targetMainAxisDp.toFloat(), ease, reducedMotion)
+    val contentFade = rememberDockContentFade(surfaceMetrics.contextualRun != null, reducedMotion)
 
     // The spotlight belongs to the dock's own background, so a strip drawn without one (the
     // expanded shelf's, which sits on the shelf's background instead) carries no glow either.
@@ -448,16 +465,27 @@ internal fun DockSurfaceStrip(
     val backgroundAlpha = LocalDockBackgroundAlpha.current
     val bodyBoundsSink = LocalDockBodyBoundsSink.current
     DisposableEffect(bodyBoundsSink) { onDispose { if (renderBackground) bodyBoundsSink(null) } }
+    // The Stream's column spans the Dock in its contextual mode: say how long that is (not the motion's frame).
+    val targetMainAxisPx = targetMainAxisDp * LocalDensity.current.density
+    val lengthSink = LocalDockContextualLengthSink.current
+    val contextualLengthDp = if (surfaceMetrics.contextualRun != null) contentMainAxisDp else null
+    SideEffect { if (renderBackground && contextualLengthDp != null) lengthSink(contextualLengthDp.toFloat()) }
 
     Box(
         modifier =
             modifier
-                .width(if (runsHorizontally) mainAxisDp else crossAxisDp)
-                .height(if (runsHorizontally) crossAxisDp else mainAxisDp)
+                .dockBodyLength(runsHorizontally, crossAxisDp, { bodyLength.dp }, targetMainAxisDp.toFloat(), easing)
+                .semantics { this[DockContentAlphaKey] = contentFade() }
                 .then(
                     if (renderBackground) {
                         Modifier
-                            .onGloballyPositioned { coordinates -> bodyBoundsSink(coordinates.boundsInRoot()) }
+                            .onGloballyPositioned { coordinates ->
+                                // The body as it will stand once it has arrived (its middle stays where it is while
+                                // it grows), so nothing that follows the Dock reads the motion frame by frame.
+                                bodyBoundsSink(
+                                    coordinates.boundsInRoot().withMainAxisPx(targetMainAxisPx, runsHorizontally),
+                                )
+                            }
                             .dockSurfaceAppearance(dock)
                     } else {
                         Modifier
@@ -483,18 +511,42 @@ internal fun DockSurfaceStrip(
         contentAlignment = Alignment.Center,
     ) {
         CompositionLocalProvider(LocalGlassSpotlight provides spotlight) {
-            DockStripBody(
-                dock = dock,
-                surfaceMetrics = surfaceMetrics,
-                showDynamicSection = showDynamicSection,
-                isEditing = isEditing,
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-                position = position,
-                widgetPickerDockPreview = widgetPickerDockPreview,
-                dynamicEntries = dynamicEntries,
-                onDynamicEntryDelegated = onDynamicEntryDelegated,
+            DockBodyFrame(
+                runsHorizontally = runsHorizontally,
+                targetBodyMainDp = contentMainAxisDp,
+                paddingDp = DOCK_MAIN_AXIS_PADDING_DP,
+                alpha = contentFade,
+                fadeAtRest = surfaceMetrics.contextualRun != null,
+                moving = { bodyLength.isRunning },
+                content = {
+                    DockStripBody(
+                        dock = dock,
+                        surfaceMetrics = surfaceMetrics,
+                        showDynamicSection = showDynamicSection,
+                        isEditing = isEditing,
+                        presentation = presentation,
+                        appIconLoader = appIconLoader,
+                        position = position,
+                        widgetPickerDockPreview = widgetPickerDockPreview,
+                        dynamicEntries = dynamicEntries,
+                        onDynamicEntryDelegated = onDynamicEntryDelegated,
+                    )
+                },
             )
         }
     }
 }
+
+/**
+ * This body rectangle with its length along the Dock's edge replaced by [mainAxisPx] about its middle: the body as it
+ * will stand once it has arrived.
+ */
+internal fun Rect.withMainAxisPx(
+    mainAxisPx: Float,
+    runsHorizontally: Boolean,
+): Rect =
+    if (runsHorizontally) {
+        Rect(center.x - mainAxisPx / 2f, top, center.x + mainAxisPx / 2f, bottom)
+    } else {
+        Rect(left, center.y - mainAxisPx / 2f, right, center.y + mainAxisPx / 2f)
+    }

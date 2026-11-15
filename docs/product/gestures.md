@@ -152,8 +152,16 @@ the Dock's accessibility actions.
   `HorizontalPager` (`Orientation.Horizontal`, ADR 0002); a page's stack is `StreamStack`, bottom-anchored: the front card
   sits just above the Dock and older cards peek above it as the real card clipped to its top strip. Its drag is the
   platform `scrollable` (`Orientation.Vertical`), a List page is `verticalScroll`. The two never fight because
-  they take different axes and the platform decides from the first movement: a drag that leads sideways is the pager's,
-  one that leads up or down is the page's. A stack with one card draws no stack (a lone card is drawn where the front card
+  they take different axes and the platform decides from the first movement: a drag that leads up or down is the page's.
+  **Who owns a sideways drag is decided by where it starts (batch 7, `SwipeDismiss.ownerOf`): on a card it is always that
+  card's, never the pager's.** On the front card of a dismissible notification it dismisses; on any other card (a strip, a
+  notification that cannot be dismissed, any other kind of card) the card resists, a short rubber band of a few dp with no
+  fade, and settles back, and the stack does not change. A sideways drag that starts in the page's empty room (outside
+  every card) is the pager's and changes the stack; the Dock (a tap on an icon or tile, hold to choose, the contextual
+  row) is the primary route, and "Previous page" and "Next page" are the accessibility routes. They also look and feel
+  different: a dismissing card alone moves, lifts to 1.02, fades as it travels and shows the word "Dismiss" in the room
+  it leaves once past the threshold (one light tick on dismissal); a page change moves the whole stack as one sheet,
+  with the Dock's ring, fades nothing and has no tick. A stack with one card draws no stack (a lone card is drawn where the front card
   is, and owns no drag). Nothing in the Stream consumes a vertical drag the stack leaves over, so the stack takes all of
   it: past the first or last card it rubber-bands (a third of the finger's travel, back along the same path) instead of
   handing the drag on. The Dock pull is claimed on the dock body only, so it never competes with either.

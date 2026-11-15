@@ -105,6 +105,8 @@ internal fun Dock(
     onDynamicEntryDelegated: (String) -> Unit = {},
     /** The contextual mode (the Stream is showing): one scrolling row of the same icons plus the page tiles. */
     contextual: Boolean = false,
+    /** The Stream is on its way out: the body retracts to the Home mode's length as the cards go back in. */
+    retracting: Boolean = false,
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
 
@@ -124,11 +126,29 @@ internal fun Dock(
                 dynamicEntryCount = dynamicEntries.size,
                 contextualTileCount = if (contextual) dynamicEntries.count(DockDynamicEntry::isContextTile) else 0,
             ) ?: return@BoxWithConstraints
+        // The contextual row is drawn until the cards are back in, but the body is already heading for the Home mode's
+        // length: "closing is the opening reversed".
+        val homeLengthDp =
+            if (retracting && surfaceMetrics.contextualRun != null) {
+                val live = dynamicEntries.filterNot(DockDynamicEntry::isContextTile)
+                dockSurfaceMetrics(
+                    dock = dock,
+                    isEditing = isEditing,
+                    availableMainAxisDp =
+                        if (position.isHorizontalEdge) maxWidth.value.toInt() else maxHeight.value.toInt(),
+                    previewSlotCount = if (widgetPickerDockPreview != null) 1 else 0,
+                    runsHorizontally = position.isHorizontalEdge,
+                    dynamicEntryCount = live.size,
+                )?.let { home -> dockSurfaceStripMainAxisDp(home, dockSurfaceStripShowsDynamicSection(home, live)) }
+            } else {
+                null
+            }
         DockSurfaceStrip(
             modifier =
                 Modifier
                     .dockShelfPolicies(interactions)
                     .testTag(HOME_DOCK_SURFACE_TEST_TAG),
+            sizeTargetMainAxisDp = homeLengthDp,
             dock = dock,
             surfaceMetrics = surfaceMetrics,
             isEditing = isEditing,
