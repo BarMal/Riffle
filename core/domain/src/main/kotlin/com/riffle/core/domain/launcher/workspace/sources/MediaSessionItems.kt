@@ -1,11 +1,17 @@
 package com.riffle.core.domain.launcher.workspace.sources
 
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.stream.RecentPlayerSource
 import com.riffle.core.domain.launcher.workspace.Item
+import com.riffle.core.domain.launcher.workspace.ItemAction
 import com.riffle.core.domain.launcher.workspace.ItemExtKey
 import com.riffle.core.domain.launcher.workspace.ItemExtValue
+import com.riffle.core.domain.launcher.workspace.ItemId
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
 import com.riffle.core.domain.launcher.workspace.ItemPrivacy
 import com.riffle.core.domain.launcher.workspace.ItemTarget
+import com.riffle.core.domain.launcher.workspace.SourceIds
 
 /** What a transport control of a media session can do right now. */
 enum class MediaControl(val token: String) {
@@ -56,6 +62,12 @@ object MediaItemExt {
     val DURATION = ItemExtKey("media.duration")
     val CONTROLS = ItemExtKey("media.controls")
     val QUEUE_SIZE = ItemExtKey("media.queue_size")
+
+    /** Set on the item of a recent player that has no session (a "source"). */
+    val SOURCE = ItemExtKey("media.source")
+
+    /** Set on a source whose app can be resumed from here (it declares a media browser service). */
+    val RESUMABLE = ItemExtKey("media.resumable")
 
     fun queueTitle(index: Int) = ItemExtKey("media.q${index}_title")
 
@@ -111,4 +123,40 @@ object MediaSessionItems {
             ext = ext,
         )
     }
+}
+
+/**
+ * The items of the recent players that have no session: one quiet card each (ADR 0003, Amendment 4). They are media
+ * items like the others: the same source, the app as target, the hide rules and content levels apply to them, and the
+ * title and artist are only what this process last saw (null otherwise). Transient: built every time, never stored.
+ */
+object RecentPlayerItems {
+    fun build(
+        sources: List<RecentPlayerSource>,
+        appLabel: (String) -> String?,
+        canResume: (String) -> Boolean,
+    ): List<Item> =
+        sources.map { source ->
+            val player = source.player
+            val profile = player.profileId ?: DEFAULT_PROFILE
+            val packageId = AppPackageName(player.packageName)
+            val ext = LinkedHashMap<ItemExtKey, ItemExtValue>()
+            ext[MediaItemExt.SOURCE] = ItemExtValue.Flag(true)
+            if (canResume(player.packageName)) ext[MediaItemExt.RESUMABLE] = ItemExtValue.Flag(true)
+            Item(
+                id = ItemId("${SourceIds.MEDIA.value}:recent:${player.packageName}:$profile"),
+                sourceId = SourceIds.MEDIA,
+                target = ItemTarget.App(player.packageName, profile),
+                title = source.title?.takeIf(String::isNotBlank),
+                subtitle = source.artist?.takeIf(String::isNotBlank),
+                icon = ItemImageKeys.packageIcon(packageId, AppProfileId(profile)),
+                timeEpochMillis = player.lastPlayedEpochMillis.coerceAtLeast(0L),
+                groupKey = "${player.packageName}:$profile",
+                groupLabel = appLabel(player.packageName) ?: player.packageName,
+                actions = listOf(ItemAction.Open(), ItemAction.Dismiss()),
+                ext = ext,
+            )
+        }
+
+    private const val DEFAULT_PROFILE = "personal"
 }

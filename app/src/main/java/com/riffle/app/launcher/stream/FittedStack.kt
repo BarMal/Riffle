@@ -82,7 +82,8 @@ internal fun fitStack(
             ).coerceAtMost(behind)
         val floors =
             entries.mapIndexed { i, entry ->
-                val media = ((entry as? ContentEntry)?.takeIf { !it.nextUp }?.content) is MediaContent
+                val media =
+                    ((entry as? ContentEntry)?.takeIf { !it.nextUp }?.content).let { it is MediaContent && !it.source }
                 if (media) minOf(heights[i].value, MediaArtworkFloor.value * scale) else heights[i].value
             }
         val fit = StackFit.fit(heights.map { it.value }, floors, budget.pitchDp, wanted, room)

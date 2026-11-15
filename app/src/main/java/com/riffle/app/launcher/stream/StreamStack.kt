@@ -121,7 +121,7 @@ internal fun StreamContent.iconHandle(): ItemImageHandle? =
 internal fun StreamContent.cardHeight(): Dp =
     when (this) {
         is NotificationContent -> StreamCardHeights.notification
-        is MediaContent -> StreamCardHeights.media
+        is MediaContent -> if (source) StreamCardHeights.mediaSource else StreamCardHeights.media
         is EventContent -> StreamCardHeights.event
         is ArticleContent -> if (image != null) StreamCardHeights.article else StreamCardHeights.articleWithoutImage
         is TaskContent -> StreamCardHeights.task
@@ -134,13 +134,17 @@ internal fun StreamContent.cardHeight(): Dp =
 internal fun StreamContent.peekText(): String =
     when (this) {
         is NotificationContent -> headline ?: hiddenText()
-        is MediaContent -> title ?: stringResource(R.string.stream_media_unknown_title)
+        is MediaContent -> mediaPeekText()
         is EventContent -> eventTitle(this)
         is ArticleContent -> title ?: hiddenText()
         is TaskContent -> title ?: hiddenText()
         is RecentAppContent -> label ?: hiddenText()
         is AppShortcutContent -> shortcutTitle(this)
     }
+
+@Composable
+private fun MediaContent.mediaPeekText(): String =
+    if (source) appLabel ?: hiddenText() else title ?: stringResource(R.string.stream_media_unknown_title)
 
 /**
  * The card for any content, so a Stack draws without knowing what is in it. [onOpen] opens it in place when a tap on it
@@ -369,7 +373,7 @@ private fun StreamStackContent(
             // A lone card is its own front card: dismissible if it is a notification that can be, else it resists.
             val swipe =
                 rememberSwipeDismissState(
-                    only.swipeableNotification(),
+                    only.swipeableContent(),
                     callbacks,
                     env.reducedMotion,
                     resists = true,
@@ -380,9 +384,9 @@ private fun StreamStackContent(
                 resistLabel = only.resistLabel(isFront = true),
                 hidden = drawnByLayer,
                 swipe = swipe,
-                canDismiss = only.swipeableNotification() != null,
+                canDismiss = only.swipeableContent() != null,
                 dismissLabel = dismissLabel,
-                onDismiss = { only.swipeableNotification()?.let { callbacks.onAction(it, StreamAction.Dismiss) } },
+                onDismiss = { only.swipeableContent()?.let { callbacks.onAction(it, StreamAction.Dismiss) } },
             ) {
                 StackEntryCard(
                     entry = only,
@@ -706,7 +710,8 @@ internal fun StreamContent.spokenText(env: StreamEnvironment): String =
                 text?.takeIf { it.isNotBlank() },
                 env.formats.age(postedAtEpochMillis),
             )
-        is MediaContent -> listOfNotNull(appLabel, peekText(), artist)
+        is MediaContent ->
+            if (source) mediaSourceSpoken(env) else listOfNotNull(appLabel, peekText(), artist)
         is EventContent ->
             listOfNotNull(
                 eventSpanText(this, env),
@@ -857,7 +862,7 @@ private fun FocusedStack(
                     // dismissible notification dismisses, any other resists and settles back; none reach the pager.
                     val swipe =
                         rememberSwipeDismissState(
-                            item.swipeableNotification(),
+                            item.swipeableContent(),
                             callbacks,
                             env.reducedMotion,
                             resists = true,
@@ -893,10 +898,10 @@ private fun FocusedStack(
                             },
                         swipe = swipe,
                         resistLabel = item.resistLabel(isFront),
-                        canDismiss = item.swipeableNotification() != null,
+                        canDismiss = item.swipeableContent() != null,
                         dismissLabel = dismiss,
                         onDismiss = {
-                            item.swipeableNotification()?.let {
+                            item.swipeableContent()?.let {
                                 callbacks.onAction(
                                     it,
                                     StreamAction.Dismiss,

@@ -34,6 +34,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsText
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
+import com.riffle.app.launcher.stream.RecentPlayersControl
 import com.riffle.app.launcher.stream.titleRes
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.app.launcher.stream.todoist.TasksSettingsState
@@ -282,6 +283,9 @@ private fun AgendaIncludeFeedsSetting(state: SettingsSurfaceState) {
 
 /** The Tasks settings (the Todoist token), provided by the shell; null where there is none (previews). */
 internal val LocalTasksSettings = staticCompositionLocalOf<TasksSettingsController?> { null }
+
+/** The recent players Now remembers (Clear recent players), provided by the shell; null where there are none. */
+internal val LocalRecentPlayers = staticCompositionLocalOf<RecentPlayersControl?> { null }
 
 internal const val TASKS_TOKEN_FIELD_TEST_TAG = "settings-tasks-token"
 internal const val TASKS_SAVE_TEST_TAG = "settings-tasks-save"

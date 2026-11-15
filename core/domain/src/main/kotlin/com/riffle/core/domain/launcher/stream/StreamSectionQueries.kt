@@ -5,7 +5,8 @@ package com.riffle.core.domain.launcher.stream
  * returns (ADR 0003: no query language). Every function is pure over already excluded and redacted content;
  * ordering is total (ties break on the content id) so a refresh never shuffles equal items.
  *
- * - Now: media only, one group: the active sessions, playing first, then newest; up to `maxActive`.
+ * - Now: media only, one group: the active sessions, playing first, then newest (up to `maxActive`), then the recent
+ *   players that have no session (newest first, at most [RecentPlayers.CAP]) unless `recentPlayers` is off.
  * - Notifications: not older than `maxAgeMillis`; grouped by app, newest app first; within an app by priority
  *   then newest; limited to `maxApps` apps and `maxPerApp` each.
  * - Recents: not older than `maxAgeMillis`; one per app, most recently used first, `limit`; then up to
@@ -36,15 +37,30 @@ internal object StreamSectionQueries {
         content: List<StreamContent>,
         context: StreamContext,
     ): List<StreamGroup> {
-        val media =
-            content.filterIsInstance<MediaContent>()
+        val options = context.options.now
+        val media = content.filterIsInstance<MediaContent>()
+        val active =
+            media.filter { !it.source }
                 .sortedWith(
                     compareByDescending<MediaContent> { it.isPlaying == true }
                         .thenByDescending { it.postedAtEpochMillis ?: 0L }
                         .thenBy { it.id.value },
                 )
-                .take(context.options.now.maxActive)
-        return listOf(StreamGroup(NOW_GROUP, null, media))
+                .take(options.maxActive)
+        // An app with a session has its player card: never also a source.
+        val activePackages = media.filter { !it.source }.map { it.app.packageName }.toSet()
+        val sources =
+            if (options.recentPlayers) {
+                media.filter { it.source && it.app.packageName !in activePackages }
+                    .sortedWith(
+                        compareByDescending<MediaContent> { it.postedAtEpochMillis ?: 0L }.thenBy { it.id.value },
+                    )
+                    .distinctBy { it.app }
+                    .take(RecentPlayers.CAP)
+            } else {
+                emptyList()
+            }
+        return listOf(StreamGroup(NOW_GROUP, null, active + sources))
     }
 
     fun notifications(

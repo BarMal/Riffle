@@ -170,6 +170,7 @@ object GlanceWidgets {
         when (kind) {
             GlanceWidgetKind.NOW_PLAYING ->
                 items.filterIsInstance<MediaContent>()
+                    .filter { !it.source }
                     .maxWithOrNull(
                         compareBy<MediaContent> { it.postedAtEpochMillis ?: 0L }.thenByDescending { it.id.value },
                     )

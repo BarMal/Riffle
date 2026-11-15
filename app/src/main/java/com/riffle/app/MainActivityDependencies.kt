@@ -73,6 +73,7 @@ import com.riffle.app.launcher.sources.SourceChangeSource
 import com.riffle.app.launcher.sources.androidCalendarSourceDependencies
 import com.riffle.app.launcher.sources.androidItemSources
 import com.riffle.app.launcher.sources.androidStreamSources
+import com.riffle.app.launcher.stream.AndroidMediaResumer
 import com.riffle.app.launcher.stream.AndroidMediaSessions
 import com.riffle.app.launcher.stream.AndroidNextAlarm
 import com.riffle.app.launcher.stream.AndroidStreamActionGateway
@@ -80,6 +81,8 @@ import com.riffle.app.launcher.stream.AndroidStreamImageLoader
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
 import com.riffle.app.launcher.stream.DataStoreStreamLayoutStore
 import com.riffle.app.launcher.stream.ManualChangeSource
+import com.riffle.app.launcher.stream.RecentPlayersControl
+import com.riffle.app.launcher.stream.SharedPreferencesRecentPlayersStore
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.stream.StreamPlatform
 import com.riffle.app.launcher.stream.StreamPostureHolder
@@ -107,6 +110,7 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.stream.RecentPlayersTracker
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
 import com.riffle.core.domain.launcher.stream.StreamContext
 import com.riffle.core.domain.launcher.stream.TaskConnectionState
@@ -335,6 +339,22 @@ internal class MainActivityDependencies(
             Executors.newSingleThreadExecutor { task -> Thread(task, "riffle-stream").apply { isDaemon = true } }
         val mediaSessions = AndroidMediaSessions(activity)
         val feedReadChanges = ManualChangeSource()
+        val resumer = AndroidMediaResumer(activity)
+        val recentPlayersChanges = ManualChangeSource()
+        val recentPlayers =
+            RecentPlayersTracker(SharedPreferencesRecentPlayersStore(activity), System::currentTimeMillis)
+        val recentPlayersControl =
+            object : RecentPlayersControl {
+                override fun dismiss(key: String) {
+                    recentPlayers.dismiss(key)
+                    recentPlayersChanges.changed()
+                }
+
+                override fun clear() {
+                    recentPlayers.clear()
+                    recentPlayersChanges.changed()
+                }
+            }
         val registry =
             androidStreamSources(
                 installedApps = installedAppRepository,
@@ -349,7 +369,13 @@ internal class MainActivityDependencies(
                         access = calendarAccessGateway,
                         accessChanges = calendarAccessChanges,
                     ),
-                media = MediaSourceDependencies(sessions = mediaSessions, changes = mediaSessions),
+                media =
+                    MediaSourceDependencies(
+                        sessions = mediaSessions,
+                        changes = SourceChangeSource.merge(listOf(mediaSessions, recentPlayersChanges)),
+                        recentPlayers = recentPlayers,
+                        resumer = resumer,
+                    ),
                 content =
                     ContentSourceDependencies(
                         feeds =
@@ -376,6 +402,7 @@ internal class MainActivityDependencies(
             tasks = tasks.provider,
             taskActions = tasks.provider,
             taskSettings = tasks.settings,
+            recentPlayers = recentPlayersControl,
             registry = enabledStreamRegistry(registry, enablement),
             alarms = alarm.provider,
             actions =
@@ -389,6 +416,8 @@ internal class MainActivityDependencies(
                     launch = AndroidItemLaunchPort(activity, appLauncher),
                     openClock = alarm::openClock,
                     tasks = tasks.provider,
+                    resumer = resumer,
+                    recentPlayers = recentPlayersControl,
                 ),
         )
     }
@@ -470,6 +499,7 @@ internal class MainActivityDependencies(
             actions = platform.actions,
             tasks = platform.taskActions,
             taskSettings = platform.taskSettings,
+            recentPlayers = platform.recentPlayers,
             imageLoader =
                 AndroidStreamImageLoader(
                     activity.packageManager,

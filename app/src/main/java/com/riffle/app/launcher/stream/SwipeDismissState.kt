@@ -263,7 +263,7 @@ internal val ResistCueLabelKey = SemanticsPropertyKey<String>("ResistCueLabel")
 @Composable
 internal fun StackEntry.resistLabel(isFront: Boolean): String? =
     when {
-        !isFront || swipeableNotification() != null -> null
+        !isFront || swipeableContent() != null -> null
         openContent is NotificationContent -> stringResource(R.string.stream_swipe_ongoing)
         else -> stringResource(R.string.stream_swipe_cant_dismiss)
     }
@@ -336,9 +336,9 @@ internal fun Modifier.swipeToDismiss(state: SwipeDismissState?): Modifier =
         )
     }
 
-/** The notification [this] entry draws as a card that can be swiped away, or null. */
-internal fun StackEntry.swipeableNotification(): NotificationContent? =
-    (openContent as? NotificationContent)?.takeIf { this is ContentEntry && SwipeDismiss.offers(it) }
+/** The content [this] entry draws as a card that can be swiped away (a notification, a recent player), or null. */
+internal fun StackEntry.swipeableContent(): StreamContent? =
+    openContent?.takeIf { this is ContentEntry && SwipeDismiss.offers(it) }
 
 /** Told the id of a card the owner has just swiped away: the stack takes it out at once (see [StreamStack]). */
 internal val LocalSwipeDismissed = androidx.compose.runtime.staticCompositionLocalOf<(String) -> Unit> { {} }

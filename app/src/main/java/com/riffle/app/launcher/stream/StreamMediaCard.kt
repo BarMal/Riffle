@@ -63,6 +63,10 @@ internal fun MediaCard(
     modifier: Modifier = Modifier,
     onOpen: (() -> Unit)? = null,
 ) {
+    if (content.source) {
+        MediaSourceCard(content, env, callbacks, groupKey, modifier)
+        return
+    }
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     StreamCardSurface(content.id.value, content.app, content.icon, env, modifier) { sourceModifier ->
         Box(

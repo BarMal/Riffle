@@ -161,6 +161,9 @@ enum class MediaAction {
     PREVIOUS,
     NEXT,
     SEEK,
+
+    /** Offered by a [MediaContent.source] only: forget this recent player (a swipe, the Dismiss button). */
+    DISMISS,
 }
 
 /** One upcoming track; empty queue when the session exposes none. */
@@ -174,6 +177,11 @@ data class MediaQueueEntry(
  * Now playing. [actions] holds what the session can really do right now (transport actions only while the session
  * allows them); [isPlaying], the positions and [queue] are null or empty when the session reports none. Never
  * persisted. A redacted card has no queue and no actions beyond what the privacy level lets through.
+ *
+ * A [source] is a recent player (ADR 0003, Amendment 4): an app that played lately and has no session now. It is still
+ * media content (the quiet card of an app, its last [title] and [artist] when this process saw them, [postedAtEpochMillis]
+ * the time it last played) with no controls: [MediaAction.PLAY] means "resume it", offered only when the app can be
+ * resumed; [MediaAction.OPEN] opens the app; [MediaAction.DISMISS] forgets it.
  */
 data class MediaContent(
     override val id: StreamContentId,
@@ -191,6 +199,7 @@ data class MediaContent(
     val actions: Set<MediaAction>,
     val postedAtEpochMillis: Long? = null,
     override val privacy: StreamPrivacy,
+    val source: Boolean = false,
 ) : StreamContent {
     override val timeEpochMillis: Long? get() = postedAtEpochMillis
 }

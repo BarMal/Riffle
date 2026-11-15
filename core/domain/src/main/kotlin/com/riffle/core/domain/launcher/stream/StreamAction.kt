@@ -107,7 +107,8 @@ object StreamActionPolicy {
     ): Boolean =
         content.privacy != StreamPrivacy.REDACTED ||
             action == StreamAction.Open ||
-            (content is MediaContent && isTransport(action))
+            (content is MediaContent && isTransport(action)) ||
+            (content is MediaContent && content.source && action == StreamAction.Dismiss)
 
     private fun task(
         content: TaskContent,
@@ -151,6 +152,7 @@ object StreamActionPolicy {
     ): Boolean =
         when (action) {
             StreamAction.Open -> MediaAction.OPEN in content.actions
+            StreamAction.Dismiss -> MediaAction.DISMISS in content.actions
             StreamAction.Play -> MediaAction.PLAY in content.actions
             StreamAction.Pause -> MediaAction.PAUSE in content.actions
             StreamAction.Previous -> MediaAction.PREVIOUS in content.actions

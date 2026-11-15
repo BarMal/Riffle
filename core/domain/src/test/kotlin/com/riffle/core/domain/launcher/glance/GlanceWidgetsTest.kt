@@ -152,6 +152,17 @@ class GlanceWidgetsTest {
     }
 
     @Test
+    fun nowPlayingNeverShowsARecentPlayerThatHasNoSession() {
+        val active = media("m1", at = 10)
+        val source = media("m2", at = 20).copy(source = true)
+        assertEquals(
+            GlanceState.Showing(active),
+            GlanceWidgets.stateFor(GlanceWidgetKind.NOW_PLAYING, ready(source, active)),
+        )
+        assertEquals(GlanceState.Empty, GlanceWidgets.stateFor(GlanceWidgetKind.NOW_PLAYING, ready(source)))
+    }
+
+    @Test
     fun nextEventShowsTheEarliestUpcomingEventAndSkipsAlarms() {
         val alarm = event("alarm", 1, EventKind.ALARM)
         val later = event("later", 50)

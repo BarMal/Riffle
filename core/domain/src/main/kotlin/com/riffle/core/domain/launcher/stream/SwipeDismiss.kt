@@ -39,9 +39,13 @@ object SwipeDismiss {
     /** What a release does. */
     enum class Outcome { DISMISS, SETTLE }
 
-    /** Whether [content] can be dismissed by a swipe: only a notification that the policy offers Dismiss for. */
+    /**
+     * Whether [content] can be dismissed by a swipe: a notification that the policy offers Dismiss for, and a recent
+     * player's source card (it removes it from the list). An active player's card never: it resists.
+     */
     fun offers(content: StreamContent): Boolean =
-        content is NotificationContent && StreamActionPolicy.offers(content, StreamAction.Dismiss)
+        (content is NotificationContent || (content is MediaContent && content.source)) &&
+            StreamActionPolicy.offers(content, StreamAction.Dismiss)
 
     /** Who a horizontal drag belongs to. */
     enum class Owner {

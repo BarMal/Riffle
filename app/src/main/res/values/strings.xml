@@ -88,6 +88,12 @@
 
     <!-- Notifications -->
     <string name="stream_notification_dismiss">Dismiss</string>
+    <string name="stream_media_source_last_played">Last played %1$s</string>
+    <string name="stream_media_source_played_ago">%1$s, %2$s</string>
+    <string name="stream_media_source_play">Play</string>
+    <string name="stream_media_source_open">Open %1$s</string>
+    <string name="stream_media_source_spoken">%1$s, last played %2$s</string>
+    <string name="stream_media_source_spoken_unknown">%1$s, recent player</string>
     <string name="stream_notification_snooze">Snooze</string>
     <string name="stream_notification_reply">Reply</string>
     <string name="stream_notification_send">Send reply</string>
