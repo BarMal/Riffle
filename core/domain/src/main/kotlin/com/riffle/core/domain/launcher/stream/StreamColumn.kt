@@ -233,8 +233,9 @@ object StreamColumn {
      * The unfolded column beside a side Dock. While the Stream shows ([StreamColumnWindow.spansDockBody]) its top and
      * bottom are the Dock body's as it is drawn (the Dock in the contextual mode: [StreamColumnWindow.dockBodyLengthDp]
      * long about the middle of its measured body, a length the Dock holds to its room), inside the safe area; a body
-     * shorter than [MIN_SIDE_COLUMN_DP] is centred on instead, for the least a card and its strip can stand in. (It used
-     * to be at least [restHeightDp] tall, 512 dp: against a body of 489 dp the stack stood 11 dp over it at each end.)
+     * shorter than [MIN_SIDE_COLUMN_DP] is centred on instead, for the least a card and its strip can stand in. (It
+     * used to be at least [restHeightDp] tall, 512 dp: against a body of 489 dp the stack stood 11 dp over it at each
+     * end.)
      * Without the Stream (search over the Home mode's short Dock) it is [restHeightDp] tall at least, centred on the
      * body, as search always stood. Null until the Dock is measured.
      */

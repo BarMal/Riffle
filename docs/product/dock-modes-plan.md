@@ -2161,3 +2161,82 @@ bottom of the body mid-drag; unfolded also the long front card whose strips fill
 - **Not confirmed without a device:** the feel of the spring against a finger, the cue's legibility over real text on a real
   panel, the strip's slide under a real pager, TalkBack's reading of the strips below the card (the semantics are asserted, the
   speech is not), and the owner's own column height (the fixture's Dock body is 489 dp).
+
+## Device fixes, round 7
+
+The owner's report: "tops of cards cut off over dock height, bottom of items not aligning with dock bottom,
+amalgamating cards duplicates text (e.g. sender name), and expanding a card bugs out and shows nothing"; later
+"folded mode expansion is buggy too" and "expanding a single card obscures apps it doesn't cover". Unfolded numbers
+are the owner's window (724 x 784 dp, right Dock, 28/24 dp bars, 5 pins); folded is 411 x 914 dp.
+
+### Duplicate sender (item 3)
+
+Cause: a group conversation whose app names the group as the sender of every line printed "Book club: ..." on each
+line. `ConversationLines.resolve` now decides who a line says wrote it: a sender equal to the card's or the
+conversation's title (trimmed, ignoring case) is never said; a group names the person; a one-to-one chat is the text
+alone; the user's own lines keep "You". Changed on purpose: StreamBehaviorTest, StreamFrontCardHeightTest,
+StreamOpenCardDockTest, StreamScreenshotTest looked for "Sam: ..." and now find the text alone.
+
+### Bottom alignment (item 2)
+
+Cause: the unfolded column was at least 512 dp (`restHeightDp`) against a drawn body of 483-489 dp; pages added 8 dp
+above and 16 dp below; 68 dp was always reserved for the quick actions strip.
+
+| Measure (bars 28/24, 5 pins) | Before | After |
+| --- | --- | --- |
+| Column | 230.5-742.5 dp (512) | the body, 245-728 dp (483) |
+| Quick strip bottom | 734 | 728 (the body's bottom) |
+| Lone card bottom | 674 | 728 |
+| Front card, page with no quick actions | 658 | 728 |
+| Now page front card bottom | 625.5 | 695.5 (the stack is above the strip's room, none kept) |
+
+The column is `StreamColumnWindow.spansDockBody` (the Stream shows): exactly the Dock body as drawn, least 240 dp; search
+over the Home Dock keeps the 512 dp rule. The Dock reports its body held to its room. The unfolded pages keep no gaps
+(`StreamPageInsets.Flush`). **This reverses "always reserve the quick strip room":** a page with quick actions keeps
+the strip's room (the strip is its lowest element, on the body's bottom edge); a page without keeps none (its front
+card is). The room eases on the spring (`StackFooter.fraction`) when actions come or go. Opening and closing a card
+still leaves the collapsed stack's rectangle identical.
+
+Assertions changed on purpose: OpenCardFitUnfoldedTest (8/16 dp gaps gone, ceiling 432 to 433, viewport 220 to 221);
+OpenCardPolishUnfoldedTest (the no-quick-actions page's front card is flush; the lowest tab is hit at its bottom edge,
+13 dp under its centre, not 20: the column ends where the tab does, so nothing of the Stream is beneath it);
+UnfoldedStreamColumnTest (a short Dock: the column spans it; search keeps its room); domain StreamColumnTest gained
+the `spansDockBody` cases and keeps the 512 dp ones for search.
+
+### Open card shows nothing (item 4)
+
+Not reproduced through the shell (open/close then swipe and open; open while the pager settles; swipe while a card
+closes; a frame-by-frame check after the tap all pass with and without the change). The cause rests on reading: the
+open motion is the Stream's, so every stack composed (two while pages are swiped) published a layer whenever the
+motion was above 0; a stack that was not the open one published a layer with no cards, which replaced the open
+stack's (last writer wins), while the open stack hid its front slot and slimmed its tabs for a layer that drew
+nothing. Now: only the stack the card is open in (or was, while it closes) has a layer; a layer with no cards is not
+published; the front slot is hidden, the tabs slim and the stack moves only while the published layer is this stack's
+and has cards (`OpenCardCover`, pure, tested), and the slot is hidden in draw only while the layer draws that card
+with some alpha.
+
+### Fit, and header-only strips (item 1)
+
+Cause: the Now page's stack (a media card and two strips) started 58.5 dp above the body's top; strips were cut at 64-67
+dp while the body text starts at 60 dp, showing a sliver of the first line. `StackFit` holds the stack to the room: a
+notification's text gives lines first (a line budget of 4, 3, 2, 1 that the height and the drawing share, so only whole
+lines show), then a media card's artwork gives height down to 176 dp, then strips go (no floor of three any more). A
+card behind the front one draws its header only (56 dp, clipped in draw, easing with the stack's position).
+
+### Folded open card (item 6)
+
+(a) The open card was never shorter than its browse card, which left a dead band under a one-line message; it is now as
+tall as its content (`OpenCardLayout.frame`; the height may shrink on opening, still one way). (b) With tabs below, the
+group stands on the Dock (the card is not centred above floating tabs) and the tabs stand against the card (no 4 dp
+gap). (c) The text actions (Open, and the notification's own) are one scrolling row, whole labels, in the content
+colour (the theme's accent read as disabled on the Dock's glass). (d) The Dock's extended body and the open card's room
+(card, tabs, the space down to the Dock) are covers: no cell shows there at more than the peek opacity (nothing with
+"Around the cards").
+
+### Open card and the grid's fade (item H)
+
+Cause: with a card open the grid still faded around the column (taller than the card) with the 240 dp feather, so apps
+the card does not cover were hidden. Now the fade eases from the column to the open card's rectangle (with its tabs)
+and from the 240 dp feather to the 24 dp one as the card opens; under it apps keep the peek opacity (Behind and around,
+changed on purpose: they used to go out behind an open card) or nothing (Hidden, Around). The collapsed stack keeps the
+long feather. A custom-layout notification no longer repeats its title as a body line.

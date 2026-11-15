@@ -83,9 +83,10 @@ object OpenCardLayout {
      * The card grows from exactly where its browse card stands: its bottom at 0 is [restBottomPx] (the collapsed
      * stack's bottom edge, which may stand above the area's bottom by what the page keeps under the stack) and its
      * height is [browseHeightPx]. At 1 it stands where [placement] puts it, never above the strips and never below
-     * the room under it ([belowPx], the Dock's gap). It is as tall as its content ([fullHeightPx]), held to the room: a card
-     * with little to say is no taller than that (round 7: a one-line message left a dead band under it, which the old
-     * "never shorter than its browse card" rule kept), one with a lot takes all the room there is. Top, bottom and height are each linear in [progress], so they move one way only.
+     * the room under it ([belowPx], the Dock's gap). It is as tall as its content ([fullHeightPx]), held to the room: a
+     * card with little to say is no taller than that (round 7: a one-line message left a dead band under it, which the
+     * old "never shorter than its browse card" rule kept), one with a lot takes all the room there is. Top, bottom and
+     * height are each linear in [progress], so they move one way only.
      */
     @Suppress("LongParameterList")
     fun frame(

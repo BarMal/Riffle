@@ -1,9 +1,6 @@
 package com.riffle.app.screenshots
 
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
 import com.riffle.app.launcher.QUICK_ACTIONS_STRIP_TEST_TAG
@@ -23,7 +20,8 @@ import org.robolectric.annotation.Config
 import kotlin.math.abs
 
 /**
- * Device fixes, round 7, items 1 and 2: on the owner's unfolded window (724 x 784 dp, the Dock on the right edge, status
+ * Device fixes, round 7, items 1 and 2: on the owner's unfolded window (724 x 784 dp, the Dock on the right edge,
+ * status
  * and gesture bars) the stack stands inside the Dock's body, through the real shell. The column is the body as it is
  * drawn; the lowest element of a page (the quick actions strip, else the front card) has its bottom edge on the body's
  * bottom edge, on every page; the tallest stack's top is not above the body's top; a strip shows whole lines only.
@@ -100,7 +98,9 @@ internal class StackFitsColumnTest : OpenCardPolishHarness(HomeLayoutDeviceClass
 
     private fun stack(): Rect {
         val slots = cardRects()
-        return Rect(slots.minOf { it.left }, slots.minOf { it.top }, slots.maxOf { it.right }, slots.maxOf { it.bottom })
+        val left = slots.minOf { it.left }
+        val top = slots.minOf { it.top }
+        return Rect(left, top, slots.maxOf { it.right }, slots.maxOf { it.bottom })
     }
 
     @Test

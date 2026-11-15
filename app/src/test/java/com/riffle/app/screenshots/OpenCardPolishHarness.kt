@@ -18,14 +18,14 @@ import com.riffle.app.launcher.stream.QUICK_ACTIONS_RESERVE_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.home.GridCell
-import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey

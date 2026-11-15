@@ -122,7 +122,7 @@ internal class OpenCardFrameGeometry {
      */
     var tabs: List<OpenCardTab> = emptyList()
 
-    /** The card's column span and the top of its cards above it, as the layer last laid them out (written in layout). */
+    /** The card's column span and the top of its cards above it, as last laid out (written in layout). */
     var leftPx: Float = 0f
     var rightPx: Float = 0f
     var regionTopPx: Float = 0f
@@ -267,8 +267,8 @@ internal fun OpenCardLayerHost(
             restColumn = restColumn,
             modifier = Modifier.matchParentSize(),
         )
-        // The open card, its tabs and the room under them down to the Dock hide Home's grid as the card opens: one region
-        // (the grid fade follows it, not the column), so no app shows at full strength in it.
+        // The open card, its tabs and the room under them down to the Dock hide Home's grid as the card opens: one
+        // region (the grid fade follows it, not the column), so no app shows at full strength in it.
         val motion = cards.motion
         androidx.compose.ui.layout.Layout(
             content = { Box(Modifier.reportsGridCover(withOpenCard = true)) },
@@ -547,8 +547,8 @@ internal fun OpenCardFrames(
         geometry.tabs = tabTargets
         geometry.leftPx = tabLeft
         geometry.rightPx = tabRight
-        geometry.regionTopPx = (tabTargets.filter { it.above }.minOfOrNull { it.centerPx - pitch / 2f } ?: frontTop)
-            .coerceAtMost(frontTop)
+        val tabsTop = tabTargets.filter { it.above }.minOfOrNull { it.centerPx - pitch / 2f } ?: frontTop
+        geometry.regionTopPx = tabsTop.coerceAtMost(frontTop)
         layout(areaWidth, areaHeight) {
             stripsBelow.forEach { (placeable, top, alpha) ->
                 val x = columnLeft + (columnWidth - placeable.width) / 2

@@ -405,11 +405,12 @@ internal class OpenCardPolishUnfoldedTest : OpenCardPolishHarness(HomeLayoutDevi
                 .sortedBy { it.top }
         assertEquals(2, below.size)
         below.forEach { assertEquals("a tab is 28 dp tall", SlimTabs.PITCH_DP, it.height / density, 1f) }
-        // The tab farthest below the card, at its own bottom edge (13 dp under its centre). It used to be hit from 20 dp
-        // beneath its centre, in the 16 dp the column left under the stack; the column now ends on the Dock body's
+        // The tab farthest below the card, at its own bottom edge (13 dp under its centre). It used to be hit from 20
+        // dp beneath its centre, in the 16 dp the column left under the stack; the column now ends on the Dock body's
         // bottom edge, where the lowest element stands, so nothing of the Stream is beneath that tab to be hit.
         val last = below.last()
-        assertTrue("the tab stands on the column's bottom edge or above it", last.bottom <= checkNotNull(boundsOf(com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG)).bottom + 1f)
+        val bodyBottom = checkNotNull(boundsOf(com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG)).bottom
+        assertTrue("the tab stands on the column's bottom edge or above it", last.bottom <= bodyBottom + 1f)
         tapAt(last.center.x, last.center.y + 13f * density)
         assertEquals(
             "a card is open",

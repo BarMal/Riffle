@@ -5,8 +5,8 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
@@ -48,7 +48,8 @@ internal class OpenCardAcrossPagesTest : OpenCardPolishHarness(HomeLayoutDeviceC
     }
 
     private fun swipePage(left: Boolean) {
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG, useUnmergedTree = true).performTouchInput { if (left) swipeLeft() else swipeRight() }
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG, useUnmergedTree = true)
+            .performTouchInput { if (left) swipeLeft() else swipeRight() }
     }
 
     private fun goToLedger() {

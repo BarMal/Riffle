@@ -99,7 +99,8 @@ class StreamGridFadeTest {
         val under = StreamGridFade.alpha(deepX, deepY, column, peekThrough = true, featherDp = feather)
         assertEquals(StreamGridFade.PEEK_ALPHA, under, 0.001f)
         assertEquals(1f, StreamGridFade.alpha(440f - feather, 600f, column, peekThrough = true, featherDp = feather))
-        assertEquals(1f, StreamGridFade.alpha(440f - feather - 1f, 600f, column, peekThrough = true, featherDp = feather))
+        val beyond = StreamGridFade.alpha(440f - feather - 1f, 600f, column, peekThrough = true, featherDp = feather)
+        assertEquals(1f, beyond)
     }
 
     // "Around the cards"

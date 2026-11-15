@@ -110,13 +110,15 @@ internal fun StreamColumnSurface(
                         pinnedApps = visibleLayout.pinnedApps(),
                         appShortcuts = state.appShortcutsByApp,
                         launcherRole = state.homeRoleStatus != HomeRoleStatus.NOT_DEFAULT_HOME,
-                        // An open card grows from where its browse card stands, toward the screen's middle (Amendment 2):
+                        // An open card grows from where its browse card stands, toward the screen's middle
+                        // (Amendment 2):
                         // it does not travel to the centre of the column.
                         streamSettings =
                             state.launcherSettings.stream.copy(
                                 openCardPlacement = OpenCardPlacement.ABOVE_DOCK,
                             ),
-                        // The actions sit on the card: a side Dock holds no row, and a bottom Dock's would stand under the
+                        // The actions sit on the card: a side Dock holds no row, and a bottom Dock's would stand under
+                        // the
                         // column.
                         dockCanHoldActions = false,
                         quickActionsInDock = quickActionsInDock,

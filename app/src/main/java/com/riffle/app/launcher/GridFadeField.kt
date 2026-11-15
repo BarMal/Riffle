@@ -138,11 +138,10 @@ internal class GridFadeField {
         xPx: Float,
         yPx: Float,
     ): Boolean {
-        if (presence() <= 0f || open() < OPEN_BLOCKS_INPUT_FROM) return false
-        val region = openRegionDp() ?: column() ?: return false
+        val region = if (presence() <= 0f || open() < OPEN_BLOCKS_INPUT_FROM) null else openRegionDp() ?: column()
         val x = xPx / density
         val y = yPx / density
-        return x >= region.left && x <= region.right && y >= region.top && y <= region.bottom
+        return region != null && x >= region.left && x <= region.right && y >= region.top && y <= region.bottom
     }
 
     /** The rectangle of the open card, its tabs and the room under them down to the Dock (dp); null: none reported. */
