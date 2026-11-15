@@ -366,7 +366,10 @@ class StreamSwipeDismissTest {
         assertEquals("past 40% of the width the card is armed", true, slot.config.getOrNull(DismissArmedKey))
         assertEquals(1f, slot.config.getOrNull(DismissCueAlphaKey) ?: 0f, 0.001f)
         assertTrue("nothing is sent before the finger lifts: $sent", sent.isEmpty())
-        composeRule.onNodeWithText("First").performTouchInput { advanceEventTime(300); up() }
+        composeRule.onNodeWithText("First").performTouchInput {
+            advanceEventTime(300)
+            up()
+        }
         composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) { sent.isNotEmpty() }
         assertEquals(listOf("First" to StreamAction.Dismiss), sent)
     }
