@@ -265,6 +265,7 @@ private fun StreamStackContent(
             )
         }
     val openState = cards.state
+    val presences = remember(stackKey) { mutableMapOf<String, OpenCardPresence>() }
     val stackState = remember(stackKey) { StreamStackState() }
     val ids = remember(entries) { entries.map { it.id }.toSet() }
     // A card that goes away closes; a card open on another page is that page's.
@@ -279,7 +280,16 @@ private fun StreamStackContent(
     val latestOpenedHere by rememberUpdatedState(openedHere)
     // The layer is drawn while a card is open here and while it closes. Whether it is still there is read through a
     // derived value, so the stack recomposes when the card appears and when it is gone, never once per frame between.
-    val layerActive = remember(stackKey) { derivedStateOf { latestOpenedHere || motion.progress > 0f } }
+    // Only the stack the card is open in (or was, while it closes) has a layer: the motion is the Stream's, so another
+    // page's stack, composed beside this one while pages are swiped, must not take part in it (it published an empty
+    // layer that replaced the open card's, leaving tabs and no card).
+    var closingHere by remember(stackKey) { mutableStateOf(false) }
+    SideEffect { if (openedHere && !closingHere) closingHere = true }
+    LaunchedEffect(stackKey) {
+        snapshotFlow { !latestOpenedHere && motion.progress <= 0f }.collect { if (it) closingHere = false }
+    }
+    val layerActive =
+        remember(stackKey) { derivedStateOf { latestOpenedHere || (closingHere && motion.progress > 0f) } }
     // The cards the layer draws: those of the open card's kind at the two positions the stack lies between. The set
     // changes only when the stack crosses a card, so a drag recomposes nothing between.
     val latestReduced by rememberUpdatedState(env.reducedMotion)
@@ -327,7 +337,10 @@ private fun StreamStackContent(
     // The slots give way to the open card (hidden, the stack moved to its frame) only once the layer that draws it is
     // there: a frame with the slot hidden and no card drawn is a blink, and a stack moved to a frame that has not been
     // laid out is a stack at the top of the screen.
-    val drawnByLayer = layerActive.value && cards.layer != null
+    val layerNow = cards.layer
+    val layerIds = layerNow?.cards?.map { it.id }.orEmpty()
+    val drawnByLayer =
+        layerActive.value && OpenCardCover.drawsHere(layerNow != null && layerNow.stack === stackState, layerIds)
     val covers: (Int, Float) -> Boolean = { index, r ->
         layerActive.value && OpenCardBlend.openness(r) > 0f && index in overlayIndices.value
     }
@@ -393,6 +406,8 @@ private fun StreamStackContent(
                 cardWidth = cardWidth,
                 areaHeight = areaHeight,
                 openActive = drawnByLayer,
+                layerCardIds = layerIds,
+                layerAlpha = { id -> presences[id]?.alpha ?: 0f },
                 mover = mover,
                 covers = covers,
                 frameGeometry = frameGeometry,
@@ -407,7 +422,6 @@ private fun StreamStackContent(
     val density = LocalDensity.current.density
     val bodies = remember(stackKey) { OpenCardBodies() }
     val cue = remember(stackKey) { HandoffCueState() }
-    val presences = remember(stackKey) { mutableMapOf<String, OpenCardPresence>() }
     val footer = LocalStackFooter.current
     val handoff =
         remember(mover, density, cue) {
@@ -473,7 +487,7 @@ private fun StreamStackContent(
             drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, geometry,
             placement, dragModifier, entries.size, previous, next, sizes, footer, peeks, belowIndices.value, pageInsets,
         ) {
-            if (!layerActive.value) {
+            if (!layerActive.value || drawnCards.isEmpty()) {
                 null
             } else {
                 OpenCardLayer(
@@ -739,6 +753,9 @@ private fun FocusedStack(
     areaHeight: Dp,
     /** A card is open over the front card: the stack makes room for it and takes no input. */
     openActive: Boolean,
+    /** The ids of the cards the open card's layer draws for this stack, and how opaque it draws one (read in draw). */
+    layerCardIds: List<String>,
+    layerAlpha: (cardId: String) -> Float,
     mover: StackMover,
     /** Whether the open card's layer draws the card at [index] ([r] places from the front) in the slot's place. */
     covers: (index: Int, r: Float) -> Boolean,
@@ -849,7 +866,8 @@ private fun FocusedStack(
                         index = index,
                         cut = Modifier.stripCut(index, state, geometry, cardWidth, stripPitchDp),
                         isFront = isFront,
-                        covered = isFront && openActive,
+                        covered = isFront && OpenCardCover.hidesFront(openActive, layerCardIds, item.id, 1f),
+                        layerAlpha = { layerAlpha(item.id) },
                         rank = abs(index - frontIndex),
                         dockFan = dockFan,
                         tag = streamStackCardTag(item.id),
@@ -914,6 +932,8 @@ private fun StackSlot(
     isFront: Boolean,
     /** The front card with a card open over it: the open card is drawn in its place, so this one is not. */
     covered: Boolean,
+    /** How opaque the layer draws this card (read in draw): a covered card is hidden only while it is above 0. */
+    layerAlpha: () -> Float,
     rank: Int,
     dockFan: DockFanSource?,
     tag: String,
@@ -1000,7 +1020,13 @@ private fun StackSlot(
                 // The slot is as tall as the part of the card that shows (its strip: what a tap and a screen reader
                 // find); the card is drawn past it, down to and around the rounded top of the card in front.
                 .then(cut)
-                .then(if (covered) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics {} else semantics)
+                .then(
+                    if (covered) {
+                        Modifier.graphicsLayer { alpha = if (layerAlpha() > 0f) 0f else 1f }.clearAndSetSemantics {}
+                    } else {
+                        semantics
+                    },
+                )
                 .then(if (isFront && !covered) Modifier.frontCardKeys(onOpen) else Modifier)
                 .then(if (!covered) Modifier.swipeToDismiss(swipe) else Modifier),
     ) {
