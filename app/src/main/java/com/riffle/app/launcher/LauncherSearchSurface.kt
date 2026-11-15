@@ -224,11 +224,21 @@ internal fun SearchResultList(
                     tint = launcherPanelSurfaceColor(),
                     contentColor = launcherPanelContentColor(),
                 ) {
-                    Text(
-                        text = emptyText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(16.dp),
-                    )
+                    // The empty answer and the way on to the web are one surface, directly above the field.
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = emptyText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                        )
+                        webPreview?.let { preview ->
+                            SearchWebPanel(
+                                preview = preview,
+                                onAction = appListContext.onAction,
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                        }
+                    }
                 }
             } else {
                 Box(
@@ -253,32 +263,59 @@ internal fun SearchResultList(
                 contentColor = launcherPanelContentColor(),
                 spotlight = true,
             ) {
-                when (presentation) {
-                    SearchResultPresentation.ICONS ->
-                        SearchResultIconGrid(
-                            results = results,
-                            appListContext = appListContext,
-                            gridColumns = gridColumns,
-                            reverse = growsUp,
-                            modifier = if (growsUp) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
-                        )
+                Column {
+                    when (presentation) {
+                        SearchResultPresentation.ICONS ->
+                            SearchResultIconGrid(
+                                results = results,
+                                appListContext = appListContext,
+                                gridColumns = gridColumns,
+                                reverse = growsUp,
+                                modifier =
+                                    if (growsUp) {
+                                        Modifier.fillMaxWidth().weight(
+                                            1f,
+                                            fill = false,
+                                        )
+                                    } else {
+                                        Modifier.fillMaxSize()
+                                    },
+                            )
 
-                    SearchResultPresentation.LIST ->
-                        SearchResultListItems(
-                            results = results,
-                            appListContext = appListContext,
-                            reverse = growsUp,
-                            modifier = if (growsUp) Modifier.fillMaxWidth() else Modifier.fillMaxSize(),
-                        )
+                        SearchResultPresentation.LIST ->
+                            SearchResultListItems(
+                                results = results,
+                                appListContext = appListContext,
+                                reverse = growsUp,
+                                modifier =
+                                    if (growsUp) {
+                                        Modifier.fillMaxWidth().weight(
+                                            1f,
+                                            fill = false,
+                                        )
+                                    } else {
+                                        Modifier.fillMaxSize()
+                                    },
+                            )
+                    }
+                    // Growing up, the way on to the web is the results' own footer: one surface above the field.
+                    if (growsUp) {
+                        webPreview?.let { preview ->
+                            SearchWebPanel(preview = preview, onAction = appListContext.onAction)
+                        }
+                    }
                 }
             }
         }
-        webPreview?.let { preview ->
-            SearchWebPanel(
-                preview = preview,
-                onAction = appListContext.onAction,
-                modifier = Modifier.fillMaxWidth(),
-            )
+        // Growing up, the action is inside the results surface (above); otherwise it stands under the results.
+        if (!growsUp) {
+            webPreview?.let { preview ->
+                SearchWebPanel(
+                    preview = preview,
+                    onAction = appListContext.onAction,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }

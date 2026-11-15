@@ -1760,3 +1760,17 @@ Both came from the open card's overlay, and one commit fixes both.
   re-posting it; `PublishOwnerTest`. The ignored swipe and the opening frame fail without the fix. The test of the two-stacks
   clobber itself is the unit test of `PublishOwner`: two composed stacks were not reproduced through the pager here.
 - **Not confirmed without a device:** that the owner's recording is this cause and not another.
+
+### Search from the Dock: legibility and the floating button (C)
+
+- **Why the field looked washed out.** The panel is Thick glass lit by `launcherPanelContentColor`, but the field inside it was an
+  `OutlinedTextField` taking the theme's `outline` and `onSurfaceVariant` for its box, its floating label and its hint: colours tuned
+  for a plain surface that read pale on the glass, and a second box inside a box. The field is now `PanelSearchField` (an unlined
+  `TextField`: a transparent container, no indicator, the text and the caret in the panel's own content colour, the hint in it at 74%),
+  so the glass is the field's container. The other search fields (Library, Settings, widgets) are unchanged.
+- **One results surface.** The empty answer and "Search web" are one glass surface directly above the field (a small seam of
+  4 dp), and with results "Search web" is the results' own footer, not a pill floating between them and the field.
+- **Tests and screenshots.** `HomeHandleScreenshotTest`: the empty-results state and the typed state, dark and light
+  (`searchWithNoResults*`, `searchWithNothingFoundDark`, the earlier search goldens re-recorded); `DockSearchPanelTest` (the action
+  stands within 20 dp of the field in both states; it does not by itself tell the old layout from the new, the screenshots do).
+  Search as a card stack is a later piece of work and was not started.

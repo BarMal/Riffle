@@ -81,6 +81,17 @@ class HomeHandleScreenshotTest {
     fun searchWithNothingFoundLight() = render(pages.searching(query = "zzz"))
 
     @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun searchWithNothingFoundDark() = render(pages.searching(query = "zzz"))
+
+    @Test
+    fun searchWithNoResultsLight() = render(pages.searching(query = "help", results = emptyList()))
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun searchWithNoResultsDark() = render(pages.searching(query = "help", results = emptyList()))
+
+    @Test
     @Config(fontScale = ScreenshotDevices.LARGE_FONT_SCALE)
     fun searchResultsLargeFont() = render(pages.searching())
 

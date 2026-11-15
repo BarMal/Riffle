@@ -38,9 +38,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.AppListContext
-import com.riffle.app.launcher.AppSearchField
 import com.riffle.app.launcher.GlassSurface
 import com.riffle.app.launcher.LauncherShellAction
+import com.riffle.app.launcher.PanelSearchField
 import com.riffle.app.launcher.SearchResultList
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
@@ -165,7 +165,7 @@ internal fun DockSearchSurface(
                     growsUp = true,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                Spacer(modifier = Modifier.height(RiffleSpacing.s))
+                Spacer(modifier = Modifier.height(RiffleSpacing.xs))
             }
             DockSearchField(state = state, onAction = onAction, closeLabel = closeLabel, onClose = motion::close)
         }
@@ -209,13 +209,13 @@ private fun DockSearchField(
         tint = launcherPanelSurfaceColor(),
         contentColor = launcherPanelContentColor(),
     ) {
-        AppSearchField(
+        PanelSearchField(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(RiffleSpacing.s)
                     .focusRequester(focusRequester)
                     .testTag(DOCK_SEARCH_FIELD_TEST_TAG),
+            contentColor = launcherPanelContentColor(),
             query = state.query,
             onQueryChanged = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
             label = stringResource(R.string.library_search_label),
