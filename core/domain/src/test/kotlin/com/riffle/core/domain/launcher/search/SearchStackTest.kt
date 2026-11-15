@@ -7,8 +7,17 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.library.LibraryHit
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.stream.NotificationContent
+import com.riffle.core.domain.launcher.stream.StreamAppRef
 import com.riffle.core.domain.launcher.stream.StreamCardSizes
+import com.riffle.core.domain.launcher.stream.StreamContentId
+import com.riffle.core.domain.launcher.stream.StreamGroup
+import com.riffle.core.domain.launcher.stream.StreamPrivacy
 import com.riffle.core.domain.launcher.stream.StreamShortcutPages
+import com.riffle.core.domain.launcher.workspace.ItemTarget
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -47,7 +56,8 @@ class SearchStackTest {
     @Test
     fun anAppCardCarriesItsEnabledShortcutsInPlatformRankOrderCappedLikeAStreamPage() {
         val shortcuts =
-            (1..12).map { shortcut("maps", "s$it", rank = 20 - it) } + shortcut("maps", "off", rank = 0, enabled = false)
+            (1..12).map { shortcut("maps", "s$it", rank = 20 - it) } +
+                shortcut("maps", "off", rank = 0, enabled = false)
         val card =
             SearchStack.plan("maps", hits(maps), mapOf(maps.identity to shortcuts)).first() as SearchStackCard.App
 
@@ -116,7 +126,8 @@ class SearchStackTest {
 
     @Test
     fun settingsAreStripsWithNothingMoreAndKeepTheirPlaceInTheRanking() {
-        val entry = LauncherSearchSettingsEntry(LauncherSearchSettingsEntryId("dock"), "Dock", "Where it sits", "Layout")
+        val entry =
+            LauncherSearchSettingsEntry(LauncherSearchSettingsEntryId("dock"), "Dock", "Where it sits", "Layout")
         val cards = SearchStack.plan("d", hits(maps) + LibraryHit.Setting(LauncherSearchResult.Setting(entry)))
 
         assertEquals(listOf("app", "setting", "web"), cards.map { it.key.substringBefore(':') })
@@ -133,7 +144,11 @@ class SearchStackTest {
 
     @Test
     fun aTapOnAStripBringsItForwardOnlyWhenItHasMoreToShow() {
-        val withMore = SearchStackCard.App(maps, SearchStack.plan("m", hits(maps), mapOf(maps.identity to listOf(shortcut("maps", "route")))).let { (it.first() as SearchStackCard.App).quickActions }, null)
+        val route = shortcut("maps", "route")
+        val quick =
+            (SearchStack.plan("m", hits(maps), mapOf(maps.identity to listOf(route))).first() as SearchStackCard.App)
+                .quickActions
+        val withMore = SearchStackCard.App(maps, quick, null)
         val plain = SearchStackCard.App(notes, emptyList(), null)
 
         assertEquals(StripTapOutcome.BRING_TO_FRONT, SearchStackTap.onStrip(withMore))
@@ -153,8 +168,73 @@ class SearchStackTest {
             assertEquals(0, SearchStackLayout.peeksFor(sizes, 10f, inset))
             assertEquals(SearchStackLayout.frontHeightDp(sizes), SearchStackLayout.frontHeightDp(sizes))
         }
-        assertTrue(
-            SearchStackLayout.frontHeightDp(StreamCardSizes.UNFOLDED) > SearchStackLayout.frontHeightDp(StreamCardSizes.FOLDED),
-        )
+        val folded = SearchStackLayout.frontHeightDp(StreamCardSizes.FOLDED)
+        assertTrue(SearchStackLayout.frontHeightDp(StreamCardSizes.UNFOLDED) > folded)
+    }
+
+    private fun notification(
+        title: String?,
+        text: String?,
+        at: Long,
+        hidden: Boolean = false,
+    ) = NotificationContent(
+        id = StreamContentId("n$at"),
+        app = StreamAppRef("com.example.notes", "personal"),
+        appLabel = "Notes",
+        title = title,
+        text = text,
+        icon = null,
+        image = null,
+        postedAtEpochMillis = at,
+        category = null,
+        priority = null,
+        target = ItemTarget.None,
+        actions = emptySet(),
+        privacy = if (hidden) StreamPrivacy.REDACTED else StreamPrivacy.VISIBLE,
+    )
+
+    @Test
+    fun theNotificationLineIsTheNewestOnesAndTheCountIsTheLaunchersOwn() {
+        val groups =
+            listOf(
+                AppNotificationGroup(
+                    packageName = notes.identity.packageName,
+                    profileId = notes.identity.profile.id,
+                    latestCategory = NotificationCategory.UNKNOWN,
+                    latestAgeBucket = NotificationAgeBucket.NOW,
+                    notifications = emptyList(),
+                ),
+            )
+        val stream =
+            listOf(
+                StreamGroup(
+                    "com.example.notes:personal",
+                    "Notes",
+                    listOf(notification("Older", "x", 1), notification("Reminder", "Buy milk", 2)),
+                ),
+            )
+
+        val entry = SearchStackNotifications.from(groups, stream).getValue("com.example.notes:personal")
+
+        assertEquals("Reminder: Buy milk", entry.newestLine)
+        assertEquals(1, entry.count)
+        assertFalse(entry.hidden)
+    }
+
+    @Test
+    fun aRedactedNotificationCarriesNoTextAndWithoutTheStreamThereIsTheCountAlone() {
+        val stream =
+            listOf(
+                StreamGroup(
+                    "com.example.notes:personal",
+                    "Notes",
+                    listOf(notification(null, "secret", 5, hidden = true)),
+                ),
+            )
+        val hidden = SearchStackNotifications.from(emptyList(), stream).getValue("com.example.notes:personal")
+        assertEquals(null, hidden.newestLine)
+        assertTrue(hidden.hidden)
+
+        assertEquals(emptyMap(), SearchStackNotifications.from(emptyList(), emptyList()))
     }
 }

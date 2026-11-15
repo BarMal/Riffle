@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.library.LibrarySearch
 import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.StreamSettings
 
 /**
  * Everything the Library sheet draws, read from the shell state: the view the active device class stores, its apps
@@ -50,6 +51,8 @@ internal data class LibraryState(
     val pagedLayout: PostureLayoutSettings = PostureLayoutSettings.FOLDED_DEFAULT,
     /** The Dock the paged View's handle stands in front of: the handle is drawn as the same material. */
     val dock: DockModel? = null,
+    /** How the Stream's cards are tinted and lit: the search stack's cards are drawn the same way. */
+    val cardSettings: StreamSettings = StreamSettings(),
 ) {
     val isSearching: Boolean get() = query.isNotBlank()
 }
@@ -82,4 +85,5 @@ internal fun LauncherShellState.libraryState(): LibraryState =
         controlsSpacingDp = homeLayout.dock.homeControlsSpacingDp,
         pagedLayout = launcherSettings.layout.forDeviceClass(homeLayoutSet.activeKey.deviceClass),
         dock = homeLayout.dock,
+        cardSettings = launcherSettings.stream,
     )

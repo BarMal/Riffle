@@ -5,9 +5,12 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.library.LibraryHit
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.PinnedApp
 import com.riffle.core.domain.launcher.stream.QuickAction
 import com.riffle.core.domain.launcher.stream.StreamCardSizes
+import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamShortcutPages
 
 /**
@@ -22,7 +25,7 @@ data class SearchStackNotification(
 )
 
 /**
- * One card of the search stack (the Dock's search, as decided for the "bumpy" search): the best match is the front card,
+ * One card of the search stack (the Dock's search): the best match is the front card,
  * the next matches are strips behind it in rank order, and "Search web" is the last card. [hasMore] says whether the
  * card has something to show beyond its name (quick actions, a notification), which decides what a tap on its strip
  * does ([SearchStackTap]) and whether the strip carries the quiet mark.
@@ -55,7 +58,7 @@ sealed interface SearchStackCard {
         override val hasMore: Boolean get() = false
     }
 
-    /** "Search web" for [query]; when nothing matched it is the only card ([noResults]) and carries the empty wording. */
+    /** "Search web" for [query]; with nothing matched it is the only card ([noResults]), with the empty wording. */
     data class Web(val query: String, val noResults: Boolean) : SearchStackCard {
         override val key: String = "web"
         override val hasMore: Boolean get() = false
@@ -151,7 +154,7 @@ object SearchStack {
  */
 object SearchStackLayout {
     /** The front card's height folded (an app: header, a row of quick actions, a notification line). */
-    const val FRONT_HEIGHT_DP = 164f
+    const val FRONT_HEIGHT_DP = 152f
 
     fun frontHeightDp(sizes: StreamCardSizes): Float = FRONT_HEIGHT_DP * sizes.fixedHeightFactor
 
@@ -159,8 +162,7 @@ object SearchStackLayout {
     fun desiredHeightDp(
         sizes: StreamCardSizes,
         bottomInsetDp: Float,
-    ): Float =
-        StreamCardSizes.TOP_ROOM_DP + sizes.maxPeeks * sizes.pitchDp + frontHeightDp(sizes) + bottomInsetDp
+    ): Float = StreamCardSizes.TOP_ROOM_DP + sizes.maxPeeks * sizes.pitchDp + frontHeightDp(sizes) + bottomInsetDp
 
     /** How many strips stand above the front card in [areaHeightDp]: all of the posture's when they fit, else fewer. */
     fun peeksFor(
@@ -171,4 +173,37 @@ object SearchStackLayout {
         val room = areaHeightDp - bottomInsetDp - frontHeightDp(sizes) - StreamCardSizes.TOP_ROOM_DP
         return if (room <= 0f) 0 else (room / sizes.pitchDp).toInt().coerceIn(0, sizes.maxPeeks)
     }
+}
+
+/**
+ * The notification entry of each app for the search stack, keyed by [StreamShortcutPages.appKeyOf]. The count comes
+ * from the launcher's own groups (it is what the app's badge counts); the newest notification's line comes from the
+ * Stream's reading of the notifications section, which is already redacted by the Privacy content level, the hide
+ * rules and the profile's quiet state, so the stack can say nothing the Stream would not. Without the Stream there is
+ * the count alone.
+ */
+object SearchStackNotifications {
+    fun from(
+        groups: List<AppNotificationGroup>,
+        streamGroups: List<StreamGroup> = emptyList(),
+    ): Map<String, SearchStackNotification> {
+        val counts = groups.associate { group -> "${group.packageName.value}:${group.profileId.value}" to group.count }
+        val newest =
+            streamGroups.associate { group ->
+                group.key to group.items.filterIsInstance<NotificationContent>().maxByOrNull { it.postedAtEpochMillis }
+            }
+        return (counts.keys + newest.keys).associateWith { key ->
+            val content = newest[key]
+            SearchStackNotification(
+                count = maxOf(counts[key] ?: 0, if (content == null) 0 else 1),
+                newestLine = content?.takeUnless { it.hidden }?.let(::lineOf),
+                hidden = content?.hidden == true,
+            )
+        }
+    }
+
+    private fun lineOf(content: NotificationContent): String? =
+        listOfNotNull(content.headline, content.text?.takeIf { it.isNotBlank() })
+            .joinToString(": ")
+            .takeIf { it.isNotBlank() }
 }
