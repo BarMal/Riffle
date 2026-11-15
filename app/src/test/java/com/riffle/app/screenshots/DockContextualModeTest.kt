@@ -131,8 +131,8 @@ class DockContextualModeTest {
         val density = RuntimeEnvironment.getApplication().resources.displayMetrics.density
         val rowLeft = composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).fetchSemanticsNode().boundsInRoot.left
         val pins = pins.map { composeRule.onNodeWithTag(dockItemTestTag(it.id)).fetchSemanticsNode().boundsInRoot }
-        // Pinned icons are the Dock's own 56 dp with the gap the Home mode gives them (at most the Dock's 10 dp): one size
-        // and one gap for the whole run, never closed up to fit six items.
+        // Pinned icons are the Dock's own 56 dp with the gap the Home mode gives them (at most the Dock's 10 dp):
+        // one size and one gap for the whole run, never closed up to fit six items.
         pins.take(3).forEach { assertEquals(56f * density, it.width, 1f) }
         val gaps = pins.take(3).zipWithNext().map { (a, b) -> b.left - a.right }
         assertTrue(
