@@ -123,7 +123,7 @@ internal fun StreamCardSurface(
     ) {
         val color = rememberGlassSpotlightColor(identity = identity, appIconLoader = env.appIconLoader)
         val source = CardSpotlightSource(LocalGlassSpotlight.current, key, color)
-        CompositionLocalProvider(LocalCardSpotlightSource provides source) { body(Modifier) }
+        CompositionLocalProvider(LocalCardSpotlightSource provides source) { body(Modifier.headerOnlyAsStrip()) }
     }
 }
 

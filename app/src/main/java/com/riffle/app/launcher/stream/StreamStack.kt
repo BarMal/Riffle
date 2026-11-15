@@ -213,15 +213,21 @@ internal fun StreamStack(
     if (visible.isNotEmpty()) {
         CompositionLocalProvider(LocalSwipeDismissed provides hook) {
             BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-                StreamStackContent(
-                    entries = visible,
-                    env = env,
-                    callbacks = callbacks,
-                    groupKey = groupKey,
-                    stackKey = stackKey,
-                    cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth),
-                    areaHeight = maxHeight,
-                )
+                val cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth)
+                val fitted = rememberFittedStack(visible, cardWidth, maxHeight, LocalStreamPageInsets.current)
+                // The cards read the sizes with the line budget the stack needed: what they draw is what was measured.
+                CompositionLocalProvider(LocalStreamCardSizes provides fitted.sizes) {
+                    StreamStackContent(
+                        entries = visible,
+                        env = env,
+                        callbacks = callbacks,
+                        groupKey = groupKey,
+                        stackKey = stackKey,
+                        cardWidth = cardWidth,
+                        areaHeight = maxHeight,
+                        fitted = fitted,
+                    )
+                }
             }
         }
     }
@@ -237,24 +243,17 @@ private fun StreamStackContent(
     stackKey: String,
     cardWidth: Dp,
     areaHeight: Dp,
+    fitted: FittedStack,
 ) {
     val cards = LocalOpenCards.current
     val pageInsets = LocalStreamPageInsets.current
     // Each card is as tall as what it shows (a notification's text, its buttons); the stack's geometry is built from
     // those heights, so the strips, the drag and the open card all work from the height the front card really has.
-    val heights = rememberBrowseHeights(entries, cardWidth)
-    // The sizes of the posture: the folded phone's three strips of 56 dp, or the unfolded column's up to six of 64 dp
-    // as many as fit in the column's height above the tallest card.
+    val heights = fitted.heights
+    // The sizes of the posture: the folded phone's three strips of 56 dp, or the unfolded column's up to six of 64 dp;
+    // how many peek is what fits (StackFit: never above the column's top).
     val sizes = LocalStreamCardSizes.current
-    val peeks =
-        remember(sizes, heights, areaHeight, pageInsets) {
-            sizes.peeksFor(
-                count = sizes.maxPeeks + 1,
-                areaHeightDp = areaHeight.value,
-                frontHeightDp = heights.maxOfOrNull { it.value } ?: StreamCardStackSpec.CARD_HEIGHT_DP,
-                bottomInsetDp = pageInsets.stackBottom.value,
-            )
-        }
+    val peeks = fitted.peeks
     val geometry =
         remember(heights, sizes, peeks) {
             StackGeometry(
@@ -440,6 +439,8 @@ private fun StreamStackContent(
             )
         }
     // The cards in front of the open one show as strips under it: the nearest few below the position.
+    // The strips' number is the fit's, which changes with the room: read through the latest value, not the first.
+    val latestPeeks by rememberUpdatedState(peeks)
     val belowIndices =
         remember(stackKey) {
             derivedStateOf {
@@ -447,7 +448,7 @@ private fun StreamStackContent(
                     emptyList()
                 } else {
                     val low = floor(stackState.position).toInt().coerceAtMost(latestEntries.size - 1)
-                    ((low - peeks).coerceAtLeast(0) until low.coerceAtLeast(0)).toList()
+                    ((low - latestPeeks).coerceAtLeast(0) until low.coerceAtLeast(0)).toList()
                 }
             }
         }
@@ -903,14 +904,18 @@ private fun FocusedStack(
                             }
                         },
                     ) {
-                        StackEntryCard(
-                            entry = item,
-                            env = env,
-                            callbacks = callbacks,
-                            groupKey = groupKey,
-                            onOpen = { onOpen(item) },
-                            modifier = Modifier.size(width = cardWidth, height = heights[index]),
-                        )
+                        // A card behind the front one shows its header only: whole lines, never a cut one.
+                        val place = remember(index, state) { StripPlace(index) { state.position } }
+                        CompositionLocalProvider(LocalStripPlace provides place) {
+                            StackEntryCard(
+                                entry = item,
+                                env = env,
+                                callbacks = callbacks,
+                                groupKey = groupKey,
+                                onOpen = { onOpen(item) },
+                                modifier = Modifier.size(width = cardWidth, height = heights[index]),
+                            )
+                        }
                     }
                 }
             }

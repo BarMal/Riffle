@@ -47,22 +47,26 @@ internal fun rememberBrowseHeights(
     val you = stringResource(R.string.stream_notification_you)
     val sizes = LocalStreamCardSizes.current
     return remember(entries, cardWidth, density, style, you, sizes) {
-        val scale = density.fontScale.coerceIn(1f, MAX_FONT_SCALE_FOR_CARDS)
-        entries.map { entry ->
-            val notification = (entry as? ContentEntry)?.takeIf { !it.nextUp }?.content as? NotificationContent
-            if (notification == null) {
-                // The posture's size for the kind: a card of text grows to the larger maximum, one of fixed content
-                // (the player, the checklist) a little more so the larger text fits.
-                sizes.cardHeightDp(entry.height.value, textDriven = entry.isTextDriven()).dp * scale
-            } else {
-                notificationBrowseHeight(
-                    notification,
-                    cardWidth,
-                    BrowseMeasure(measurer, style, density, you),
-                    scale,
-                    sizes,
-                )
-            }
+        browseHeights(entries, cardWidth, BrowseMeasure(measurer, style, density, you), sizes)
+    }
+}
+
+/** The heights [rememberBrowseHeights] gives, for a given [sizes] (so a line budget can be tried without composing). */
+internal fun browseHeights(
+    entries: List<StackEntry>,
+    cardWidth: Dp,
+    measure: BrowseMeasure,
+    sizes: StreamCardSizes,
+): List<Dp> {
+    val scale = measure.density.fontScale.coerceIn(1f, MAX_FONT_SCALE_FOR_CARDS)
+    return entries.map { entry ->
+        val notification = (entry as? ContentEntry)?.takeIf { !it.nextUp }?.content as? NotificationContent
+        if (notification == null) {
+            // The posture's size for the kind: a card of text grows to the larger maximum, one of fixed content
+            // (the player, the checklist) a little more so the larger text fits.
+            sizes.cardHeightDp(entry.height.value, textDriven = entry.isTextDriven()).dp * scale
+        } else {
+            notificationBrowseHeight(notification, cardWidth, measure, scale, sizes)
         }
     }
 }
