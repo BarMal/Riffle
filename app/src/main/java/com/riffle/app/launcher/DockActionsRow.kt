@@ -110,7 +110,8 @@ internal fun DockBodyWithHeader(
     strip: @Composable () -> Unit,
 ) {
     Layout(
-        modifier = modifier,
+        // The extended body (its row and its icons) hides the grid under it: no app shows at full strength through it.
+        modifier = modifier.reportsGridCover(withOpenCard = false, active = header.wanted() != null),
         content = {
             strip()
             DockActionsHeader(header, headerAtEnd)

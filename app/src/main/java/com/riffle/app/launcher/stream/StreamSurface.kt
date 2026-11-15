@@ -516,7 +516,7 @@ private fun StreamPagesMode(
         modifier =
             Modifier
                 .fillMaxSize()
-                .padding(top = RiffleSpacing.s)
+                .padding(top = LocalStreamPageInsets.current.top)
                 .testTag(STREAM_PAGER_TEST_TAG)
                 .semantics {
                     // The one custom-actions list of the pager: every swipe has an action.

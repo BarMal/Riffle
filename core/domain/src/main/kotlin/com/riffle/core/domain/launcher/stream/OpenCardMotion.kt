@@ -83,9 +83,10 @@ object OpenCardLayout {
      * The card grows from exactly where its browse card stands: its bottom at 0 is [restBottomPx] (the collapsed
      * stack's bottom edge, which may stand above the area's bottom by what the page keeps under the stack) and its
      * height is [browseHeightPx]. At 1 it stands where [placement] puts it, never above the strips and never below
-     * the room under it ([belowPx], the Dock's gap). It is never shorter than its browse card ([fullHeightPx] is
-     * raised to it), so a card with little to say keeps its height and one with a lot of content takes all the room
-     * there is. Top, bottom and height are each linear in [progress], so they move one way only.
+     * the room under it ([belowPx], the Dock's gap). It is as tall as its content ([fullHeightPx]), held to the room: a
+     * card with little to say is no taller than that (round 7: a one-line message left a dead band under it, which the
+     * old "never shorter than its browse card" rule kept), one with a lot takes all the room there is. Top, bottom and
+     * height are each linear in [progress], so they move one way only.
      */
     @Suppress("LongParameterList")
     fun frame(
@@ -103,12 +104,14 @@ object OpenCardLayout {
         val bottom = areaHeightPx - bottomInsetPx - belowPx
         val room = (bottom - stripsPx).coerceAtLeast(0f)
         val browse = browseHeightPx.coerceAtMost(room)
-        val full = maxOf(fullHeightPx.coerceAtMost(room), browse)
+        val full = fullHeightPx.coerceAtMost(room)
         val height = browse + (full - browse) * p
         val browseTop = restBottomPx - browse
         val openTop =
             when (placement) {
-                OpenCardPlacement.CENTRE -> stripsPx + (room - full) / 2f
+                // With tabs below the card the group stands on the Dock like the collapsed stack did: the tabs are the
+                // stack's lower end, so they are not left floating under a card centred in the room (round 7).
+                OpenCardPlacement.CENTRE -> if (belowPx > 0f) bottom - full else stripsPx + (room - full) / 2f
                 OpenCardPlacement.ABOVE_DOCK -> bottom - full
             }
         return Frame(topPx = browseTop + (openTop - browseTop) * p, heightPx = height)

@@ -30,10 +30,6 @@ internal const val MAX_FONT_SCALE_FOR_CARDS = 1.8f
 /** The size of the picture thumbnail at the trailing edge of a notification's browse card. */
 internal val BrowseThumbnailSize: Dp = BrowseCardHeight.THUMBNAIL_DP.dp
 
-/** A block of a notification's browse text as it is written: a message says who wrote it first. */
-internal fun NotificationBrowseText.Block.written(you: String): String =
-    if (message) "${sender ?: you}: $text" else text
-
 /**
  * How tall each card of a stack is drawn, [cardWidth] wide. A notification is as tall as what it shows
  * ([BrowseCardHeight]: its text measured at the width it is written at, its thumbnail, a live notification's buttons),
@@ -51,22 +47,26 @@ internal fun rememberBrowseHeights(
     val you = stringResource(R.string.stream_notification_you)
     val sizes = LocalStreamCardSizes.current
     return remember(entries, cardWidth, density, style, you, sizes) {
-        val scale = density.fontScale.coerceIn(1f, MAX_FONT_SCALE_FOR_CARDS)
-        entries.map { entry ->
-            val notification = (entry as? ContentEntry)?.takeIf { !it.nextUp }?.content as? NotificationContent
-            if (notification == null) {
-                // The posture's size for the kind: a card of text grows to the larger maximum, one of fixed content
-                // (the player, the checklist) a little more so the larger text fits.
-                sizes.cardHeightDp(entry.height.value, textDriven = entry.isTextDriven()).dp * scale
-            } else {
-                notificationBrowseHeight(
-                    notification,
-                    cardWidth,
-                    BrowseMeasure(measurer, style, density, you),
-                    scale,
-                    sizes,
-                )
-            }
+        browseHeights(entries, cardWidth, BrowseMeasure(measurer, style, density, you), sizes)
+    }
+}
+
+/** The heights [rememberBrowseHeights] gives, for a given [sizes] (so a line budget can be tried without composing). */
+internal fun browseHeights(
+    entries: List<StackEntry>,
+    cardWidth: Dp,
+    measure: BrowseMeasure,
+    sizes: StreamCardSizes,
+): List<Dp> {
+    val scale = measure.density.fontScale.coerceIn(1f, MAX_FONT_SCALE_FOR_CARDS)
+    return entries.map { entry ->
+        val notification = (entry as? ContentEntry)?.takeIf { !it.nextUp }?.content as? NotificationContent
+        if (notification == null) {
+            // The posture's size for the kind: a card of text grows to the larger maximum, one of fixed content
+            // (the player, the checklist) a little more so the larger text fits.
+            sizes.cardHeightDp(entry.height.value, textDriven = entry.isTextDriven()).dp * scale
+        } else {
+            notificationBrowseHeight(notification, cardWidth, measure, scale, sizes)
         }
     }
 }

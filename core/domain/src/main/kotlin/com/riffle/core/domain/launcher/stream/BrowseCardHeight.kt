@@ -78,7 +78,16 @@ object NotificationBrowseText {
         /** A message of a conversation: [sender] is who wrote it (null: the user), said before the text. */
         val message: Boolean = false,
         val sender: String? = null,
-    )
+        /** False: [sender] would only repeat the card's title, so the line is the text alone. */
+        val showSender: Boolean = true,
+    ) {
+        /** The block as the card writes it: a message says who wrote it first, unless that is the card's title. */
+        fun written(you: String): String =
+            when {
+                !message || !showSender -> text
+                else -> "${sender ?: you}: $text"
+            }
+    }
 
     fun blocks(
         content: NotificationContent,
@@ -87,7 +96,13 @@ object NotificationBrowseText {
         when (val body = content.body) {
             is NotificationBody.Thread ->
                 body.messages.takeLast(sizes.maxThreadLines).map { message ->
-                    Block(text = message.text, maxLines = 1, message = true, sender = message.sender)
+                    Block(
+                        text = message.text,
+                        maxLines = 1,
+                        message = true,
+                        sender = message.sender,
+                        showSender = message.showSender,
+                    )
                 }
             is NotificationBody.Text -> listOf(Block(body.text, sizes.maxBodyLines))
             is NotificationBody.Custom ->

@@ -48,10 +48,18 @@ data class StreamColumnWindow(
     val unfolded: Boolean = false,
     /**
      * How long the Dock's body is in the contextual mode (along its edge), which is the mode whenever the Stream
-     * shows; the unfolded column spans it. Null before the Dock has said: the column then stands at the Dock's lower
-     * end as it did.
+     * shows; the unfolded column spans it. The Dock says the length it is drawn at: held to the room it has, so never
+     * more than the body as drawn. Null before the Dock has said: the column then stands at the Dock's lower end as
+     * it did.
      */
     val dockBodyLengthDp: Float? = null,
+    /**
+     * Whether the Stream shows, so the Dock's body is the one the column stands beside: the unfolded column beside a
+     * side Dock spans it exactly (down to [StreamColumn.MIN_SIDE_COLUMN_DP]) and an open card is held to it. False
+     * (search, over the Home mode's short Dock): the column is the least height [StreamColumn.restHeightDp] centred on
+     * the body, the room search grows in.
+     */
+    val spansDockBody: Boolean = false,
 )
 
 /**
@@ -88,6 +96,12 @@ object StreamColumn {
 
     /** The room a resting stack needs: its tallest front card, the peeking cards above it and the gap under it. */
     const val REST_HEIGHT_DP = 264f + StreamCardStackSpec.PITCH_DP * StreamCardStackSpec.VISIBLE_PEEKS + 16f
+
+    /**
+     * The least the unfolded column beside a side Dock is tall: a Dock body shorter than this is centred on and the
+     * column takes this much (a card of the least height, its strip and a tab or two). Taller bodies are spanned.
+     */
+    const val MIN_SIDE_COLUMN_DP = 240f
 
     /** The room an open card has: its content, the cards behind it as strips and the gap under it, up to the top. */
     const val OPEN_HEIGHT_DP = 480f
@@ -216,18 +230,23 @@ object StreamColumn {
     }
 
     /**
-     * The unfolded column beside a side Dock: its top and bottom are the Dock body's (the Dock in the contextual mode,
-     * [StreamColumnWindow.dockBodyLengthDp] long about the middle of its measured body), held inside the safe area. A
-     * Dock shorter than the column's least height ([restHeightDp]) is centred on instead. Null until the Dock is
-     * measured.
+     * The unfolded column beside a side Dock. While the Stream shows ([StreamColumnWindow.spansDockBody]) its top and
+     * bottom are the Dock body's as it is drawn (the Dock in the contextual mode: [StreamColumnWindow.dockBodyLengthDp]
+     * long about the middle of its measured body, a length the Dock holds to its room), inside the safe area; a body
+     * shorter than [MIN_SIDE_COLUMN_DP] is centred on instead, for the least a card and its strip can stand in. (It
+     * used to be at least [restHeightDp] tall, 512 dp: against a body of 489 dp the stack stood 11 dp over it at each
+     * end.)
+     * Without the Stream (search over the Home mode's short Dock) it is [restHeightDp] tall at least, centred on the
+     * body, as search always stood. Null until the Dock is measured.
      */
     private fun sideSpan(window: StreamColumnWindow): Pair<Float, Float>? {
         val body = window.dockBounds ?: return null
-        val highest = window.safeTopDp + TOP_MARGIN_DP
+        val highest = window.safeTopDp + if (window.spansDockBody) 0f else TOP_MARGIN_DP
         val lowest = window.heightDp - window.safeBottomDp
         val centre = (body.top + body.bottom) / 2f
         val half = (window.dockBodyLengthDp ?: body.height) / 2f
-        val least = restHeightDp(unfolded = true).coerceAtMost((lowest - highest).coerceAtLeast(0f))
+        val wanted = if (window.spansDockBody) MIN_SIDE_COLUMN_DP else restHeightDp(unfolded = true)
+        val least = wanted.coerceAtMost((lowest - highest).coerceAtLeast(0f))
         var top = (centre - half).coerceAtLeast(highest)
         var bottom = (centre + half).coerceAtMost(lowest)
         if (bottom - top < least) {
@@ -262,6 +281,8 @@ object StreamColumn {
                 } else {
                     (bottom - restHeightDp(window.unfolded)).coerceAtLeast(highest)
                 }
+        // Beside a side Dock the unfolded column is the Dock body's span and stays it: an open card is held to it too.
+        if (restTopOverride != null && window.spansDockBody) return restTop
         val openTop = (bottom - maxOf(OPEN_HEIGHT_DP, bottom - restTop)).coerceAtLeast(highest).coerceAtMost(restTop)
         return lerp(restTop, openTop, open)
     }

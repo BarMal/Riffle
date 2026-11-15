@@ -59,6 +59,7 @@ import com.riffle.core.domain.launcher.stream.StreamCardActions
 import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamPrivacy
 import com.riffle.core.domain.launcher.stream.TaskContent
+import com.riffle.core.domain.launcher.stream.written
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
 
 /** The collapsed height each card type is drawn at in a stack (scaled up with the font size). */
@@ -122,7 +123,7 @@ internal fun StreamCardSurface(
     ) {
         val color = rememberGlassSpotlightColor(identity = identity, appIconLoader = env.appIconLoader)
         val source = CardSpotlightSource(LocalGlassSpotlight.current, key, color)
-        CompositionLocalProvider(LocalCardSpotlightSource provides source) { body(Modifier) }
+        CompositionLocalProvider(LocalCardSpotlightSource provides source) { body(Modifier.headerOnlyAsStrip()) }
     }
 }
 
@@ -297,16 +298,9 @@ private val BrowseAvatarSize = StreamHeaderIconSize
 internal fun NotificationThread(content: NotificationContent) {
     if (content.thread.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs)) {
-        content.thread.takeLast(MAX_THREAD_LINES).forEach { message ->
-            Text(
-                text =
-                    buildString {
-                        append(message.sender ?: stringResource(R.string.stream_notification_you))
-                        append(": ")
-                        append(message.text)
-                    },
-                style = MaterialTheme.typography.bodyMedium,
-            )
+        val you = stringResource(R.string.stream_notification_you)
+        content.threadLines.takeLast(MAX_THREAD_LINES).forEach { message ->
+            Text(text = message.written(you), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

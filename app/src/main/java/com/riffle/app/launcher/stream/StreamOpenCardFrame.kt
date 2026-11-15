@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.app.launcher.reportsGridCover
 import com.riffle.core.domain.launcher.dock.DockMotionConstants
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.settings.OpenCardPlacement
@@ -120,6 +121,11 @@ internal class OpenCardFrameGeometry {
      * Written in layout, read by a tap: no state, nothing recomposes for it.
      */
     var tabs: List<OpenCardTab> = emptyList()
+
+    /** The card's column span and the top of its cards above it, as last laid out (written in layout). */
+    var leftPx: Float = 0f
+    var rightPx: Float = 0f
+    var regionTopPx: Float = 0f
 }
 
 /**
@@ -172,7 +178,7 @@ internal class OpenCardLayer(
     val onTabTap: (index: Int) -> Unit,
     val cards: List<OpenLayerCard>,
     /** The room the page keeps under the collapsed stack (the quick actions' strip): its bottom stands above it. */
-    val restFooter: Dp = 0.dp,
+    val restFooter: StackFooter = StackFooter.None,
     /** How many cards show as tabs on each side of the open card at most. */
     val peeks: Int = StreamCardStackSpec.VISIBLE_PEEKS,
     /** The cards in front of the open card (newer, lower index), drawn as header strips under it. */
@@ -199,6 +205,12 @@ private data class StripSlotId(val index: Int)
 @Stable
 internal class OpenCardPresence {
     var openness by mutableFloatStateOf(1f)
+
+    /**
+     * The opacity the layer last gave the card as a whole (its place's alpha, the stack's fade and the layer's own):
+     * what a test reads through [OpenCardAlphaKey] to tell a card that is drawn from one that is only in the tree.
+     */
+    var alpha by mutableFloatStateOf(1f)
 }
 
 /**
@@ -223,7 +235,8 @@ internal fun OpenCardLayerHost(
     modifier: Modifier = Modifier,
 ) {
     val layer = cards.layer ?: return
-    Box(modifier = modifier.fillMaxSize().padding(top = RiffleSpacing.s).then(layer.dragModifier)) {
+    val pageTop = LocalStreamPageInsets.current.top
+    Box(modifier = modifier.fillMaxSize().padding(top = pageTop).then(layer.dragModifier)) {
         Box(
             modifier =
                 Modifier
@@ -254,6 +267,21 @@ internal fun OpenCardLayerHost(
             restColumn = restColumn,
             modifier = Modifier.matchParentSize(),
         )
+        // The open card, its tabs and the room under them down to the Dock hide Home's grid as the card opens: one
+        // region (the grid fade follows it, not the column), so no app shows at full strength in it.
+        val motion = cards.motion
+        androidx.compose.ui.layout.Layout(
+            content = { Box(Modifier.reportsGridCover(withOpenCard = true)) },
+            modifier = Modifier.matchParentSize(),
+        ) { measurables, constraints ->
+            motion.progress
+            layer.stack.position
+            val top = layer.geometry.regionTopPx.roundToInt().coerceIn(0, constraints.maxHeight)
+            val left = layer.geometry.leftPx.roundToInt().coerceIn(0, constraints.maxWidth)
+            val right = layer.geometry.rightPx.roundToInt().coerceIn(left, constraints.maxWidth)
+            val child = measurables.first().measure(Constraints.fixed(right - left, constraints.maxHeight - top))
+            layout(constraints.maxWidth, constraints.maxHeight) { child.place(left, top) }
+        }
     }
 }
 
@@ -306,6 +334,7 @@ internal fun OpenCardFrames(
         },
         modifier = modifier.graphicsLayer { alpha = motion.fade },
     ) { measurables, constraints ->
+        val layerFade = motion.fade
         val areaWidth = constraints.maxWidth
         val areaHeight = constraints.maxHeight
         val progress = motion.progress.coerceIn(0f, 1f)
@@ -331,7 +360,7 @@ internal fun OpenCardFrames(
         val pitch = SlimTabs.pitchDp(layer.pitchDp, progress) * density
         val belowGap = BelowStripGap.roundToPx().toFloat()
         // Where the collapsed front card's bottom edge stands: the page keeps its footer under it.
-        val restBottom = (areaHeight - inset - layer.restFooter.roundToPx()).toFloat()
+        val restBottom = (areaHeight - inset - layer.restFooter.roomPx(this)).roundToInt().toFloat()
         val bottom = areaHeight - inset
         val minCard = MinOpenCardHeight.roundToPx().toFloat()
 
@@ -395,12 +424,11 @@ internal fun OpenCardFrames(
             }
         // A card that stands whole in its open place is measured at the height its content has (once per layout pass: a
         // child is measured only once), so content that changes is followed; the others are measured at the height the
-        // blend gives them, from the height their content would have. A card is never shorter than its browse card.
+        // blend gives them, from the height their content would have. A card is as tall as its content.
         val whole = HashMap<Int, androidx.compose.ui.layout.Placeable>()
         entries.filter { progress >= 1f && it.openness >= 1f }.forEach { entry ->
             val room = roomOf(entry.index)
-            val least = browsePxOf(entry.index).roundToInt().coerceAtMost(room)
-            val fully = entry.measurable.measure(Constraints(finalWidth, finalWidth, least, room))
+            val fully = entry.measurable.measure(Constraints(finalWidth, finalWidth, 0, room))
             naturals.getOrPut(entry.id) { OpenCardNaturalHeight() }.also {
                 it.key = finalWidth
                 it.px = fully.height
@@ -476,7 +504,10 @@ internal fun OpenCardFrames(
                     } else {
                         stackGeometry.frame(entry.index, position, pitch / density).alpha
                     }
-                layer.cards.firstOrNull { it.index == entry.index }?.presence?.openness = w
+                layer.cards.firstOrNull { it.index == entry.index }?.presence?.let { presence ->
+                    presence.openness = w
+                    presence.alpha = alpha * layer.stack.fade * layerFade
+                }
                 // Edges are rounded, not the height: top and bottom each move one way only, never a pixel back.
                 val topPx = top.roundToInt()
                 val placeable =
@@ -514,6 +545,10 @@ internal fun OpenCardFrames(
             }
         }
         geometry.tabs = tabTargets
+        geometry.leftPx = tabLeft
+        geometry.rightPx = tabRight
+        val tabsTop = tabTargets.filter { it.above }.minOfOrNull { it.centerPx - pitch / 2f } ?: frontTop
+        geometry.regionTopPx = tabsTop.coerceAtMost(frontTop)
         layout(areaWidth, areaHeight) {
             stripsBelow.forEach { (placeable, top, alpha) ->
                 val x = columnLeft + (columnWidth - placeable.width) / 2
@@ -527,5 +562,5 @@ internal fun OpenCardFrames(
     }
 }
 
-/** The gap between the open card and the strips of the cards in front of it. */
-private val BelowStripGap = 4.dp
+/** The gap between the open card and the tabs of the cards in front of it: none, they stand against it. */
+private val BelowStripGap = 0.dp

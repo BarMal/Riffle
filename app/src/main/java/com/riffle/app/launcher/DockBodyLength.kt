@@ -95,8 +95,11 @@ internal fun Modifier.dockBodyLength(
     length: () -> Float,
     targetDp: Float,
     easing: Boolean,
+    /** Told how long the room along the edge is (px): the body is never longer, whatever length it wants. */
+    onRoom: (Int) -> Unit = {},
 ): Modifier =
     layout { measurable, constraints ->
+        onRoom(if (runsHorizontally) constraints.maxWidth else constraints.maxHeight)
         // While the Dock is not easing (first frames, a change of edge, reduced motion) the body is the target in the
         // very frame it changes, before the spring state has been told.
         val main = (if (easing) length() else targetDp).coerceAtLeast(0f)

@@ -349,7 +349,7 @@ class StreamOpenCardDockTest {
         composeRule.waitForIdle()
 
         assertTrue(theCardIsOpen())
-        composeRule.onNodeWithText("Sam: Morning! Got a minute?").assertIsDisplayed()
+        composeRule.onNodeWithText("Morning! Got a minute?").assertIsDisplayed()
     }
 
     // Screenshots of the Dock with its actions row (the goldens are recorded with the others) ---------------------

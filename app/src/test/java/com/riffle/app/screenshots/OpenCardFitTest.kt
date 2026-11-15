@@ -113,25 +113,26 @@ internal class OpenCardFitUnfoldedTest : OpenCardFitHarness(HomeLayoutDeviceClas
         val body = dockBody()
         // The column is the Dock body's span (the body is clamped inside the safe area, the column is not narrower).
         assertTrue("the column spans the Dock body: ${host.height / density} dp", host.height >= body.height - TOL_PX)
-        // Card and strips fill the column but for the page's own padding (8 dp above, 16 dp under the stack).
-        val topPad = 8f * density
-        val bottomGap = 16f * density
+        // Card and strips fill the column: the pages keep no gap at its top or foot (round 7).
+        val topPad = 0f
+        val bottomGap = 0f
         assertEquals("the strips start under the column's top", host.top + topPad, s.strips.first().top, TOL_PX)
         assertEquals("the card stands above the column's bottom", host.bottom - bottomGap, s.card.bottom, TOL_PX)
         assertEquals("the card meets the strips above it", s.strips.last().bottom + 0f, s.card.top, 2 * density)
         // So strips and card together stand where the Dock body stands, to within the padding the page keeps.
         val span = s.card.bottom - s.strips.first().top
-        assertEquals("the stack spans the Dock body (${s.describe()})", body.height, span, 2f * density)
-        assertEquals("top", body.top, s.strips.first().top, 5f * density)
-        assertEquals("bottom", body.bottom, s.card.bottom, 5f * density)
+        assertEquals("the stack spans the Dock body (${s.describe()})", body.height, span, density)
+        assertEquals("top", body.top, s.strips.first().top, density)
+        assertEquals("bottom", body.bottom, s.card.bottom, density)
         assertTrue("it scrolls: ${s.describe()}", s.scrollRangeDp > 0f)
         val ceiling = host.height - topPad - bottomGap - s.strips.size * SlimTabs.PITCH_DP * density
         assertTrue("and no more than the ceiling: ${s.describe()}", s.card.height <= ceiling + TOL_PX)
-        // It fills it: with two slim tabs of 28 dp the ceiling is 432 dp (360 dp with two strips of 64 dp), and the
-        // body's viewport, the card less its header, its reply row and their spacing (212 dp), is 220 dp (148 dp).
+        // It fills it: with two slim tabs of 28 dp the ceiling is the column less 56 dp, 433 dp of the Dock body's 489
+        // (432 dp of 512 with the gaps before round 7), and the body's viewport, the card less its header, its reply
+        // row and their spacing (212 dp), is 221 dp.
         assertEquals("the card reaches its ceiling: ${s.describe()}", ceiling, s.card.height, TOL_PX)
-        assertEquals("the ceiling is 432 dp: ${s.describe()}", 432f, s.card.height / density, 1f)
-        assertEquals("the body's viewport is 220 dp: ${s.describe()}", 220f, s.viewportDp, 1f)
+        assertEquals("the ceiling is 433 dp: ${s.describe()}", 433f, s.card.height / density, 1f)
+        assertEquals("the body's viewport is 221 dp: ${s.describe()}", 221f, s.viewportDp, 1f)
         // The tabs are a slim pitch apart and the open card stands against the lowest.
         s.strips.zipWithNext().forEach { (a, b) ->
             assertEquals("tabs 28 dp apart: ${s.describe()}", SlimTabs.PITCH_DP * density, b.top - a.top, 1.5f)
@@ -140,12 +141,12 @@ internal class OpenCardFitUnfoldedTest : OpenCardFitHarness(HomeLayoutDeviceClas
 
     @Test
     fun aCardThatFitsBeneathTheCeilingIsAsTallAsItsContentAndDoesNotScroll() {
-        // One older card behind it: one tab, a ceiling 28 dp higher than with two (460 dp). Six sentences are taller
+        // One older card behind it: one tab, a ceiling 28 dp higher than with two (461 dp). Six sentences are taller
         // than the 360 dp that two full strips left and fit under this one.
         show(sam = sentences(6), chats = 2)
         val s = openAndSettle()
         val host = host()
-        val ceiling = host.height - 24f * density - s.strips.size * SlimTabs.PITCH_DP * density
+        val ceiling = host.height - s.strips.size * SlimTabs.PITCH_DP * density
         assertTrue("it is taller than 360 dp: ${s.describe()}", s.card.height > 360f * density)
         assertTrue("under its ceiling: ${s.describe()}", s.card.height < ceiling - 4f * density)
         assertEquals("no scroll range: ${s.describe()}", 0f, s.scrollRangeDp, 0f)
@@ -180,8 +181,8 @@ internal class OpenCardFitUnfoldedTest : OpenCardFitHarness(HomeLayoutDeviceClas
         val s = openAndSettle()
         val host = host()
         assertEquals("no strips", 0, s.strips.size)
-        assertEquals("top", host.top + 8f * density, s.card.top, TOL_PX)
-        assertEquals("bottom", host.bottom - 16f * density, s.card.bottom, TOL_PX)
+        assertEquals("top", host.top, s.card.top, TOL_PX)
+        assertEquals("bottom", host.bottom, s.card.bottom, TOL_PX)
         assertTrue("it scrolls: ${s.describe()}", s.scrollRangeDp > 0f)
     }
 }

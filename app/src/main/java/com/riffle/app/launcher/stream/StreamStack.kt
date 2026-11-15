@@ -213,15 +213,21 @@ internal fun StreamStack(
     if (visible.isNotEmpty()) {
         CompositionLocalProvider(LocalSwipeDismissed provides hook) {
             BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-                StreamStackContent(
-                    entries = visible,
-                    env = env,
-                    callbacks = callbacks,
-                    groupKey = groupKey,
-                    stackKey = stackKey,
-                    cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth),
-                    areaHeight = maxHeight,
-                )
+                val cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth)
+                val fitted = rememberFittedStack(visible, cardWidth, maxHeight, LocalStreamPageInsets.current)
+                // The cards read the sizes with the line budget the stack needed: what they draw is what was measured.
+                CompositionLocalProvider(LocalStreamCardSizes provides fitted.sizes) {
+                    StreamStackContent(
+                        entries = visible,
+                        env = env,
+                        callbacks = callbacks,
+                        groupKey = groupKey,
+                        stackKey = stackKey,
+                        cardWidth = cardWidth,
+                        areaHeight = maxHeight,
+                        fitted = fitted,
+                    )
+                }
             }
         }
     }
@@ -237,23 +243,17 @@ private fun StreamStackContent(
     stackKey: String,
     cardWidth: Dp,
     areaHeight: Dp,
+    fitted: FittedStack,
 ) {
     val cards = LocalOpenCards.current
+    val pageInsets = LocalStreamPageInsets.current
     // Each card is as tall as what it shows (a notification's text, its buttons); the stack's geometry is built from
     // those heights, so the strips, the drag and the open card all work from the height the front card really has.
-    val heights = rememberBrowseHeights(entries, cardWidth)
-    // The sizes of the posture: the folded phone's three strips of 56 dp, or the unfolded column's up to six of 64 dp
-    // as many as fit in the column's height above the tallest card.
+    val heights = fitted.heights
+    // The sizes of the posture: the folded phone's three strips of 56 dp, or the unfolded column's up to six of 64 dp;
+    // how many peek is what fits (StackFit: never above the column's top).
     val sizes = LocalStreamCardSizes.current
-    val peeks =
-        remember(sizes, heights, areaHeight) {
-            sizes.peeksFor(
-                count = sizes.maxPeeks + 1,
-                areaHeightDp = areaHeight.value,
-                frontHeightDp = heights.maxOfOrNull { it.value } ?: StreamCardStackSpec.CARD_HEIGHT_DP,
-                bottomInsetDp = StackBottomInset.value,
-            )
-        }
+    val peeks = fitted.peeks
     val geometry =
         remember(heights, sizes, peeks) {
             StackGeometry(
@@ -264,6 +264,7 @@ private fun StreamStackContent(
             )
         }
     val openState = cards.state
+    val presences = remember(stackKey) { mutableMapOf<String, OpenCardPresence>() }
     val stackState = remember(stackKey) { StreamStackState() }
     val ids = remember(entries) { entries.map { it.id }.toSet() }
     // A card that goes away closes; a card open on another page is that page's.
@@ -278,7 +279,16 @@ private fun StreamStackContent(
     val latestOpenedHere by rememberUpdatedState(openedHere)
     // The layer is drawn while a card is open here and while it closes. Whether it is still there is read through a
     // derived value, so the stack recomposes when the card appears and when it is gone, never once per frame between.
-    val layerActive = remember(stackKey) { derivedStateOf { latestOpenedHere || motion.progress > 0f } }
+    // Only the stack the card is open in (or was, while it closes) has a layer: the motion is the Stream's, so another
+    // page's stack, composed beside this one while pages are swiped, must not take part in it (it published an empty
+    // layer that replaced the open card's, leaving tabs and no card).
+    var closingHere by remember(stackKey) { mutableStateOf(false) }
+    SideEffect { if (openedHere && !closingHere) closingHere = true }
+    LaunchedEffect(stackKey) {
+        snapshotFlow { !latestOpenedHere && motion.progress <= 0f }.collect { if (it) closingHere = false }
+    }
+    val layerActive =
+        remember(stackKey) { derivedStateOf { latestOpenedHere || (closingHere && motion.progress > 0f) } }
     // The cards the layer draws: those of the open card's kind at the two positions the stack lies between. The set
     // changes only when the stack crosses a card, so a drag recomposes nothing between.
     val latestReduced by rememberUpdatedState(env.reducedMotion)
@@ -326,7 +336,10 @@ private fun StreamStackContent(
     // The slots give way to the open card (hidden, the stack moved to its frame) only once the layer that draws it is
     // there: a frame with the slot hidden and no card drawn is a blink, and a stack moved to a frame that has not been
     // laid out is a stack at the top of the screen.
-    val drawnByLayer = layerActive.value && cards.layer != null
+    val layerNow = cards.layer
+    val layerIds = layerNow?.cards?.map { it.id }.orEmpty()
+    val drawnByLayer =
+        layerActive.value && OpenCardCover.drawsHere(layerNow != null && layerNow.stack === stackState, layerIds)
     val covers: (Int, Float) -> Boolean = { index, r ->
         layerActive.value && OpenCardBlend.openness(r) > 0f && index in overlayIndices.value
     }
@@ -392,6 +405,8 @@ private fun StreamStackContent(
                 cardWidth = cardWidth,
                 areaHeight = areaHeight,
                 openActive = drawnByLayer,
+                layerCardIds = layerIds,
+                layerAlpha = { id -> presences[id]?.alpha ?: 0f },
                 mover = mover,
                 covers = covers,
                 frameGeometry = frameGeometry,
@@ -406,8 +421,7 @@ private fun StreamStackContent(
     val density = LocalDensity.current.density
     val bodies = remember(stackKey) { OpenCardBodies() }
     val cue = remember(stackKey) { HandoffCueState() }
-    val presences = remember(stackKey) { mutableMapOf<String, OpenCardPresence>() }
-    val footer = LocalStackFooter.current.room
+    val footer = LocalStackFooter.current
     val handoff =
         remember(mover, density, cue) {
             OpenCardHandoffConnection(
@@ -425,6 +439,8 @@ private fun StreamStackContent(
             )
         }
     // The cards in front of the open one show as strips under it: the nearest few below the position.
+    // The strips' number is the fit's, which changes with the room: read through the latest value, not the first.
+    val latestPeeks by rememberUpdatedState(peeks)
     val belowIndices =
         remember(stackKey) {
             derivedStateOf {
@@ -432,7 +448,7 @@ private fun StreamStackContent(
                     emptyList()
                 } else {
                     val low = floor(stackState.position).toInt().coerceAtMost(latestEntries.size - 1)
-                    ((low - peeks).coerceAtLeast(0) until low.coerceAtLeast(0)).toList()
+                    ((low - latestPeeks).coerceAtLeast(0) until low.coerceAtLeast(0)).toList()
                 }
             }
         }
@@ -470,9 +486,9 @@ private fun StreamStackContent(
     val layer =
         remember(
             drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, geometry,
-            placement, dragModifier, entries.size, previous, next, sizes, footer, peeks, belowIndices.value,
+            placement, dragModifier, entries.size, previous, next, sizes, footer, peeks, belowIndices.value, pageInsets,
         ) {
-            if (!layerActive.value) {
+            if (!layerActive.value || drawnCards.isEmpty()) {
                 null
             } else {
                 OpenCardLayer(
@@ -480,7 +496,7 @@ private fun StreamStackContent(
                     placement = placement,
                     stackGeometry = geometry,
                     pitchDp = sizes.pitchDp,
-                    bottomInset = StackBottomInset,
+                    bottomInset = pageInsets.stackBottom,
                     stack = stackState,
                     count = entries.size,
                     reducedMotion = env.reducedMotion,
@@ -533,9 +549,8 @@ private fun StreamStackContent(
                                     olderTitle = entries.getOrNull(index + 1)?.peekText(env),
                                     newerTitle = entries.getOrNull(index - 1)?.peekText(env),
                                     modifier =
-                                        cardModifier.fillMaxWidth().reportsCardRect().testTag(
-                                            STREAM_OPEN_CARD_TEST_TAG,
-                                        ),
+                                        cardModifier.fillMaxWidth().reportsCardRect()
+                                            .openCardAlphaSemantics(presence).testTag(STREAM_OPEN_CARD_TEST_TAG),
                                 )
                             })
                         },
@@ -639,6 +654,7 @@ private fun LoneCard(
     content: @Composable () -> Unit,
 ) {
     val quickActions = LocalFrontCardQuickActions.current
+    val stackBottom = LocalStreamPageInsets.current.stackBottom
     Box(
         modifier =
             Modifier.fillMaxSize().then(
@@ -671,7 +687,7 @@ private fun LoneCard(
                         if (dismiss.isNotEmpty() || quickActions.isNotEmpty()) customActions = dismiss + quickActions
                     }
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = StackBottomInset),
+                    .padding(bottom = stackBottom),
         ) { content() }
     }
 }
@@ -738,6 +754,9 @@ private fun FocusedStack(
     areaHeight: Dp,
     /** A card is open over the front card: the stack makes room for it and takes no input. */
     openActive: Boolean,
+    /** The ids of the cards the open card's layer draws for this stack, and how opaque it draws one (read in draw). */
+    layerCardIds: List<String>,
+    layerAlpha: (cardId: String) -> Float,
     mover: StackMover,
     /** Whether the open card's layer draws the card at [index] ([r] places from the front) in the slot's place. */
     covers: (index: Int, r: Float) -> Boolean,
@@ -770,14 +789,15 @@ private fun FocusedStack(
     val dismiss = stringResource(R.string.stream_notification_dismiss)
     Box(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current.density
-        val bottomInsetPx = StackBottomInset.value * density
+        val stackBottom = LocalStreamPageInsets.current.stackBottom
+        val bottomInsetPx = stackBottom.value * density
         val areaHeightPx = areaHeight.value * density
         val sideBleed = remember(density) { SideBleedShape(StackSideBleed.value * density) }
         StackLayout(
             state = state,
             geometry = geometry,
             cardWidth = cardWidth,
-            bottomInset = StackBottomInset,
+            bottomInset = stackBottom,
             covers = covers,
             stripPitchDp = stripPitchDp,
             modifier =
@@ -847,7 +867,8 @@ private fun FocusedStack(
                         index = index,
                         cut = Modifier.stripCut(index, state, geometry, cardWidth, stripPitchDp),
                         isFront = isFront,
-                        covered = isFront && openActive,
+                        covered = isFront && OpenCardCover.hidesFront(openActive, layerCardIds, item.id, 1f),
+                        layerAlpha = { layerAlpha(item.id) },
                         rank = abs(index - frontIndex),
                         dockFan = dockFan,
                         tag = streamStackCardTag(item.id),
@@ -883,14 +904,18 @@ private fun FocusedStack(
                             }
                         },
                     ) {
-                        StackEntryCard(
-                            entry = item,
-                            env = env,
-                            callbacks = callbacks,
-                            groupKey = groupKey,
-                            onOpen = { onOpen(item) },
-                            modifier = Modifier.size(width = cardWidth, height = heights[index]),
-                        )
+                        // A card behind the front one shows its header only: whole lines, never a cut one.
+                        val place = remember(index, state) { StripPlace(index) { state.position } }
+                        CompositionLocalProvider(LocalStripPlace provides place) {
+                            StackEntryCard(
+                                entry = item,
+                                env = env,
+                                callbacks = callbacks,
+                                groupKey = groupKey,
+                                onOpen = { onOpen(item) },
+                                modifier = Modifier.size(width = cardWidth, height = heights[index]),
+                            )
+                        }
                     }
                 }
             }
@@ -912,6 +937,8 @@ private fun StackSlot(
     isFront: Boolean,
     /** The front card with a card open over it: the open card is drawn in its place, so this one is not. */
     covered: Boolean,
+    /** How opaque the layer draws this card (read in draw): a covered card is hidden only while it is above 0. */
+    layerAlpha: () -> Float,
     rank: Int,
     dockFan: DockFanSource?,
     tag: String,
@@ -998,7 +1025,13 @@ private fun StackSlot(
                 // The slot is as tall as the part of the card that shows (its strip: what a tap and a screen reader
                 // find); the card is drawn past it, down to and around the rounded top of the card in front.
                 .then(cut)
-                .then(if (covered) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics {} else semantics)
+                .then(
+                    if (covered) {
+                        Modifier.graphicsLayer { alpha = if (layerAlpha() > 0f) 0f else 1f }.clearAndSetSemantics {}
+                    } else {
+                        semantics
+                    },
+                )
                 .then(if (isFront && !covered) Modifier.frontCardKeys(onOpen) else Modifier)
                 .then(if (!covered) Modifier.swipeToDismiss(swipe) else Modifier),
     ) {
@@ -1055,6 +1088,3 @@ private class SideBleedShape(private val bleedPx: Float) : Shape {
         density: Density,
     ): Outline = Outline.Rectangle(Rect(-bleedPx, 0f, size.width + bleedPx, size.height))
 }
-
-/** Where the front card stops above the area's bottom edge (the Dock's top, with the page's own inset). */
-private val StackBottomInset = RiffleSpacing.l

@@ -169,13 +169,36 @@ class StreamFrontCardHeightTest {
     }
 
     @Test
-    fun aConversationShowsItsLastThreeMessagesAsSenderAndText() {
+    fun aOneToOneConversationShowsItsLastThreeMessagesAndMarksTheUsersOwn() {
+        // Round 7, item 3: the card's title is Sam, so Sam's lines are the text alone; the user's own keep "You".
         show(chat, other)
-        composeRule.onNodeWithText("Sam: Got a minute?", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("Got a minute?", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("You: Sure", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("Are we still on?", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("Morning!", useUnmergedTree = true).assertDoesNotExist()
+        assertEquals(BrowseCardHeight.notification(bodyDp = 3 * BrowseCardHeight.LINE_DP), heightDp(3), LINES)
+    }
+
+    @Test
+    fun aGroupConversationShowsItsLastThreeMessagesAsSenderAndText() {
+        val group =
+            note(
+                3,
+                "Lunch crew",
+                "Are we still on?",
+                thread =
+                    listOf(
+                        NotificationMessage("Sam", "Morning!", 1L),
+                        NotificationMessage("Priya", "Got a minute?", 2L),
+                        NotificationMessage(null, "Sure", 3L),
+                        NotificationMessage("Sam", "Are we still on?", 4L),
+                    ),
+            )
+        show(group, other)
+        composeRule.onNodeWithText("Priya: Got a minute?", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("You: Sure", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("Sam: Are we still on?", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("Sam: Morning!", useUnmergedTree = true).assertDoesNotExist()
-        assertEquals(BrowseCardHeight.notification(bodyDp = 3 * BrowseCardHeight.LINE_DP), heightDp(3), LINES)
     }
 
     @Test

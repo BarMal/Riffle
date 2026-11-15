@@ -197,10 +197,11 @@ class OpenCardMotionTest {
     }
 
     @Test
-    fun aCardWithLittleToSayKeepsItsContentHeightButIsNeverShorterThanItsBrowseCard() {
+    fun aCardWithLittleToSayIsOnlyAsTallAsItsContentEvenIfItsBrowseCardWasTaller() {
+        // Round 7 (changed on purpose): it used to be raised to its browse card's 300 dp, leaving a dead band.
         assertEquals(500f, shared(1f, full = 500f).heightPx)
         val short = shared(1f, full = 120f)
-        assertEquals(300f, short.heightPx)
+        assertEquals(120f, short.heightPx)
         assertEquals(950f, short.topPx + short.heightPx)
     }
 
@@ -222,7 +223,8 @@ class OpenCardMotionTest {
                     oneWay(bottoms),
                     "$placement $full: bottom reversed $bottoms",
                 )
-                assertTrue(frames.map { it.heightPx }.zipWithNext().all { (a, b) -> b >= a - 1e-3f })
+                // One way: it grows, or (content shorter than the browse card, round 7) shrinks, never back.
+                assertTrue(oneWay(frames.map { it.heightPx }), "$placement $full: height reversed")
             }
         }
     }

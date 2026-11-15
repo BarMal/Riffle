@@ -24,12 +24,19 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
+import com.riffle.core.domain.launcher.stream.NextAlarm
+import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.stream.StreamPagePlanner
 import com.riffle.core.domain.launcher.stream.StreamSection
+import com.riffle.core.domain.launcher.workspace.sources.MediaSessionInfo
 import org.junit.After
 import org.junit.Rule
 import org.junit.runner.RunWith
@@ -90,33 +97,55 @@ internal abstract class OpenCardPolishHarness(
 
     protected val longText = (1..60).joinToString(" ") { "Line $it of a message that goes on and on." }
 
-    private fun note(
+    protected fun note(
         index: Int,
         title: String,
         text: String,
         pkg: String = chatPackage,
+        messages: List<LauncherNotificationMessage> = emptyList(),
     ) = LauncherNotification(
         key = LauncherNotificationKey("0|$pkg|$index"),
         packageName = AppPackageName(pkg),
         canDismiss = true,
         title = title,
         text = text,
-        messages = emptyList(),
+        messages = messages,
         postedAtEpochMillis = StreamFixtures.NOW - index * 60_000L,
     )
 
     protected fun state(
         reducedMotion: Boolean = false,
         chatShortcuts: AppShortcutsByApp = StreamFixtures.shortcutsOf(chat),
+        /** How many apps the Dock pins (null: the fixture's own), which sets how tall the Dock's body is. */
+        pins: Int? = null,
+        /** "Apps behind the cards" of both postures (null: the defaults). */
+        appsBehind: AppsBehindCards? = null,
     ): LauncherShellState {
+        val sizing =
+            if (pins == null) {
+                ScreenshotFixtures.HomeSizing()
+            } else {
+                ScreenshotFixtures.HomeSizing(pins = ScreenshotFixtures.pins(pins))
+            }
+        val homeBase = ScreenshotFixtures.homeState(deviceClass, dock, sizing)
         val base =
-            ScreenshotFixtures.homeState(deviceClass, dock).copy(
+            // A test of the grid's fade has apps in every cell of the first page.
+            (if (appsBehind == null) homeBase else homeBase.withHomePages(2).withManyApps().withFullFirstPage()).copy(
                 destination = ShellDestination.STREAM,
                 appShortcutsByApp = chatShortcuts + StreamFixtures.shortcutsOf(ScreenshotFixtures.camera),
             )
         return base.copy(
             launcherSettings =
                 base.launcherSettings.copy(
+                    layout =
+                        if (appsBehind == null) {
+                            base.launcherSettings.layout
+                        } else {
+                            base.launcherSettings.layout.copy(
+                                folded = base.launcherSettings.layout.folded.copy(appsBehind = appsBehind),
+                                unfolded = base.launcherSettings.layout.unfolded.copy(appsBehind = appsBehind),
+                            )
+                        },
                     motion =
                         base.launcherSettings.motion.copy(
                             reducedMotionPreference =
@@ -141,22 +170,49 @@ internal abstract class OpenCardPolishHarness(
         chatShortcuts: AppShortcutsByApp = StreamFixtures.shortcutsOf(chat),
         /** How many of the three chats ("Sam", "Notes", "Maps") the page has: fewer cards behind the front one. */
         chats: Int = 3,
+        /** The chat app's notifications instead of the three above (newest first), when a test needs its own. */
+        chatNotifications: List<LauncherNotification>? = null,
+        /** How many apps the Dock pins (null: the fixture's own). */
+        pins: Int? = null,
+        /** The notifications' own action buttons, as the listener holds them. */
+        ownActions: (LauncherNotificationKey) -> List<NotificationOwnAction> = { emptyList() },
+        /** How many notifications the mail app (which has no quick actions) has: its page. */
+        mails: Int = 2,
+        /** A playing media session and the next alarm, for the Now page. */
+        mediaSession: MediaSessionInfo? = null,
+        nextAlarm: NextAlarm? = null,
+        appsBehind: AppsBehindCards? = null,
     ) {
         stream =
             realWiringStreamHost(
                 executor = executor,
                 activeNotifications =
-                    listOf(note(1, "Sam", sam), note(2, "Notes", notes), note(3, "Maps", "Also short.")).take(chats) +
-                        (1..more).map { note(3 + it, "Chat $it", "Another short message.") } +
+                    (
+                        chatNotifications
+                            ?: (
+                                listOf(note(1, "Sam", sam), note(2, "Notes", notes), note(3, "Maps", "Also short."))
+                                    .take(chats) + (1..more).map { note(3 + it, "Chat $it", "Another short message.") }
+                            )
+                    ) +
                         listOf(
                             note(11, "Ledger", "A short one.", mailPackage),
                             note(12, "Receipts", "Another.", mailPackage),
+                        ).take(mails) +
+                        listOfNotNull(
+                            mediaSession?.let {
+                                note(21, it.title.orEmpty(), it.artist.orEmpty(), it.packageName).copy(
+                                    isMediaSession = true,
+                                )
+                            },
                         ),
                 installedApps = ScreenshotFixtures.installedApps,
+                ownActions = ownActions,
+                mediaSessions = listOfNotNull(mediaSession),
+                nextAlarm = nextAlarm,
                 canReply = { true },
                 canSnooze = { true },
             ).also { it.pages.remember(deviceClass, landOn) }
-        val shell = state(reducedMotion, chatShortcuts)
+        val shell = state(reducedMotion, chatShortcuts, pins, appsBehind)
         composeRule.setContent {
             CompositionLocalProvider(LocalRecompositionProbe provides probe) {
                 ScreenshotBackdrop {
@@ -252,3 +308,20 @@ private val LongLabels =
         "Open a new group chat",
         "Start a voice call",
     )
+
+private fun LauncherShellState.withFullFirstPage(): LauncherShellState {
+    val first = homeLayout.pages.first()
+    val columns = first.grid.columns
+    val items =
+        installedApps.take(columns * first.grid.rows).mapIndexed { index, app ->
+            ScreenshotFixtures.shortcut(
+                app,
+                GridPlacement(cell = GridCell(column = index % columns, row = index / columns)),
+            )
+        }
+    val layout = homeLayout.copy(pages = homeLayout.pages.map { if (it.id == first.id) it.copy(items = items) else it })
+    return copy(
+        homeLayout = layout,
+        homeLayoutSet = homeLayoutSet.copy(layouts = mapOf(homeLayoutSet.activeKey to layout)),
+    )
+}

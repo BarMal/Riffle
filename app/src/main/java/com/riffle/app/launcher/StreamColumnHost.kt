@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
@@ -26,10 +27,12 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.designsystem.RiffleMotion
+import com.riffle.app.launcher.stream.LocalStreamPageInsets
 import com.riffle.app.launcher.stream.ProvideStreamCardSizes
 import com.riffle.app.launcher.stream.STREAM_PAGES_TEST_TAG
 import com.riffle.app.launcher.stream.StreamDestination
 import com.riffle.app.launcher.stream.StreamHost
+import com.riffle.app.launcher.stream.StreamPageInsets
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -88,32 +91,41 @@ internal fun StreamColumnSurface(
         Box(modifier = Modifier.dpBounds(bounds).testTag(STREAM_COLUMN_HOST_TEST_TAG)) {
             // The column is as tall as the Dock and draws bigger cards (StreamCardSizes.UNFOLDED).
             ProvideStreamCardSizes(StreamCardSizes.UNFOLDED) {
-                StreamDestination(
-                    host = stream,
-                    deviceClass = state.homeLayoutSet.activeKey.deviceClass,
-                    installedApps = state.installedApps,
-                    appIconLoader = appIconLoader,
-                    reducedMotion = state.launcherSettings.motion.reducedMotion,
-                    // The column is already inside the system bars and beside the Dock.
-                    contentPadding = PaddingValues(),
-                    liveAppSlots = state.homeLayout.dock.liveAppSlots,
-                    onConnectTasks = onConnectTasks,
-                    pinnedApps = visibleLayout.pinnedApps(),
-                    appShortcuts = state.appShortcutsByApp,
-                    launcherRole = state.homeRoleStatus != HomeRoleStatus.NOT_DEFAULT_HOME,
-                    // An open card grows from where its browse card stands, toward the screen's middle (Amendment 2):
-                    // it does not travel to the centre of the column.
-                    streamSettings =
-                        state.launcherSettings.stream.copy(
-                            openCardPlacement = OpenCardPlacement.ABOVE_DOCK,
-                        ),
-                    // The actions sit on the card: a side Dock holds no row, and a bottom Dock's would stand under the
-                    // column.
-                    dockCanHoldActions = false,
-                    quickActionsInDock = quickActionsInDock,
-                    pageBounds = pageBounds,
-                    onEmptyTap = onCloseStream,
-                )
+                // Beside a side Dock the column is exactly the Dock body's span: the pages keep no gap at its top or
+                // its foot, so the tallest stack's top and the lowest element's bottom are the body's edges.
+                CompositionLocalProvider(
+                    LocalStreamPageInsets provides
+                        if (quickActionsInDock) StreamPageInsets.Default else StreamPageInsets.Flush,
+                ) {
+                    StreamDestination(
+                        host = stream,
+                        deviceClass = state.homeLayoutSet.activeKey.deviceClass,
+                        installedApps = state.installedApps,
+                        appIconLoader = appIconLoader,
+                        reducedMotion = state.launcherSettings.motion.reducedMotion,
+                        // The column is already inside the system bars and beside the Dock.
+                        contentPadding = PaddingValues(),
+                        liveAppSlots = state.homeLayout.dock.liveAppSlots,
+                        onConnectTasks = onConnectTasks,
+                        pinnedApps = visibleLayout.pinnedApps(),
+                        appShortcuts = state.appShortcutsByApp,
+                        launcherRole = state.homeRoleStatus != HomeRoleStatus.NOT_DEFAULT_HOME,
+                        // An open card grows from where its browse card stands, toward the screen's middle
+                        // (Amendment 2):
+                        // it does not travel to the centre of the column.
+                        streamSettings =
+                            state.launcherSettings.stream.copy(
+                                openCardPlacement = OpenCardPlacement.ABOVE_DOCK,
+                            ),
+                        // The actions sit on the card: a side Dock holds no row, and a bottom Dock's would stand under
+                        // the
+                        // column.
+                        dockCanHoldActions = false,
+                        quickActionsInDock = quickActionsInDock,
+                        pageBounds = pageBounds,
+                        onEmptyTap = onCloseStream,
+                    )
+                }
             }
         }
     }
@@ -233,6 +245,7 @@ internal fun rememberStreamColumnGeometry(
                 verticalHingesDp = hinges,
                 unfolded = unfolded,
                 dockBodyLengthDp = dockBodyLengthDp,
+                spansDockBody = streamShown,
             )
         }
     // The host stands at the open size for good; the column the grid fades under grows with the card's own motion.

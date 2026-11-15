@@ -14,7 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -474,7 +474,9 @@ internal fun DockSurfaceStrip(
     val targetMainAxisPx = targetMainAxisDp * LocalDensity.current.density
     val lengthSink = LocalDockContextualLengthSink.current
     val contextualLengthDp = if (surfaceMetrics.contextualRun != null) contentMainAxisDp else null
-    SideEffect { if (renderBackground && contextualLengthDp != null) lengthSink(contextualLengthDp.toFloat()) }
+    // The room the body has along its edge, told by its layout: the body is never drawn longer than it, so what the
+    // Stream's column spans (the body as drawn) is the length held to it, not the length the content would like.
+    val roomPx = remember { floatArrayOf(Float.MAX_VALUE) }
 
     // The open card's actions row is part of this body (one glass, one outline): the body grows away from the icons to
     // hold it, so the glass, the edge lights and the spotlight are the Dock's own, not a second surface.
@@ -482,7 +484,7 @@ internal fun DockSurfaceStrip(
     val sizing =
         Modifier.dockBodyLength(runsHorizontally, crossAxisDp, {
             bodyLength.dp
-        }, targetMainAxisDp.toFloat(), easing)
+        }, targetMainAxisDp.toFloat(), easing, onRoom = { roomPx[0] = it.toFloat() })
     // Extended, the body keeps its start where the Home mode's was and grows away from the pinned run.
     val extended = anchor != null && surfaceMetrics.contextualRun != null
     val anchorDensity = LocalDensity.current.density
@@ -508,20 +510,26 @@ internal fun DockSurfaceStrip(
                             // The body as it will stand once it has arrived (its middle stays where it is while
                             // it grows), so nothing that follows the Dock reads the motion frame by frame.
                             val now = coordinates.boundsInRoot()
+                            // Never longer than the room it is drawn in (the platform holds the body to it).
+                            val arrivalPx = minOf(targetMainAxisPx, roomPx[0])
+                            val arrivalDp = arrivalPx / anchorDensity
                             bodyBoundsSink(
                                 if (extended && anchor != null) {
                                     // Anchored, the body arrives by growing toward its end, not about its middle.
                                     now.anchoredArrival(
                                         anchor,
                                         if (easing) bodyLength.dp else targetMainAxisDp.toFloat(),
-                                        targetMainAxisDp.toFloat(),
+                                        arrivalDp,
                                         anchorDensity,
                                         runsHorizontally,
                                     )
                                 } else {
-                                    now.withMainAxisPx(targetMainAxisPx, runsHorizontally)
+                                    now.withMainAxisPx(arrivalPx, runsHorizontally)
                                 },
                             )
+                            if (contextualLengthDp != null) {
+                                lengthSink(minOf(contextualLengthDp.toFloat(), roomPx[0] / anchorDensity))
+                            }
                         }
                         .dockSurfaceAppearance(dock)
                 } else {
