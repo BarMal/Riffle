@@ -28,8 +28,9 @@ object StreamGridFade {
     /**
      * The opacity of an item centred at ([xDp], [yDp]) with [column] standing and [peekThrough] chosen. [presence]
      * runs from 0 (no column: the grid untouched) to 1 (the column in place), so the fade comes and goes with it.
-     * [open] runs from 0 to 1 as a card opens: apps that peek through the resting stack go out behind an open card,
-     * which is dense text. A null or empty column fades nothing.
+     * With a card open [column] is the rectangle of what is drawn (the card and its tabs) and [featherDp] the short one
+     * ([CARD_FEATHER_DP]): apps under it keep the peek opacity, apps beyond the feather are untouched (round 7: the
+     * column's 240 dp feather around an open card hid apps it does not cover). A null or empty column fades nothing.
      */
     fun alpha(
         xDp: Float,
@@ -37,12 +38,12 @@ object StreamGridFade {
         column: StreamColumnRect?,
         peekThrough: Boolean,
         presence: Float = 1f,
-        open: Float = 0f,
+        featherDp: Float = FEATHER_DP,
     ): Float {
         if (column == null || column.isEmpty) return 1f
         val distance = signedDistance(xDp, yDp, column)
-        val t = smoothStep((distance + INNER_DP) / (FEATHER_DP + INNER_DP))
-        val floor = floorAlpha(peekThrough) * (1f - open.coerceIn(0f, 1f))
+        val t = smoothStep((distance + INNER_DP) / (featherDp + INNER_DP))
+        val floor = floorAlpha(peekThrough)
         val faded = floor + t * (1f - floor)
         return 1f - presence.coerceIn(0f, 1f) * (1f - faded)
     }

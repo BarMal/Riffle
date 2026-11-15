@@ -18,6 +18,8 @@ import com.riffle.app.launcher.stream.QUICK_ACTIONS_RESERVE_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
@@ -28,6 +30,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.stream.NextAlarm
 import com.riffle.core.domain.launcher.stream.NotificationOwnAction
@@ -115,6 +118,8 @@ internal abstract class OpenCardPolishHarness(
         chatShortcuts: AppShortcutsByApp = StreamFixtures.shortcutsOf(chat),
         /** How many apps the Dock pins (null: the fixture's own), which sets how tall the Dock's body is. */
         pins: Int? = null,
+        /** "Apps behind the cards" of both postures (null: the defaults). */
+        appsBehind: AppsBehindCards? = null,
     ): LauncherShellState {
         val sizing =
             if (pins == null) {
@@ -122,14 +127,25 @@ internal abstract class OpenCardPolishHarness(
             } else {
                 ScreenshotFixtures.HomeSizing(pins = ScreenshotFixtures.pins(pins))
             }
+        val homeBase = ScreenshotFixtures.homeState(deviceClass, dock, sizing)
         val base =
-            ScreenshotFixtures.homeState(deviceClass, dock, sizing).copy(
+            // A test of the grid's fade has apps in every cell of the first page.
+            (if (appsBehind == null) homeBase else homeBase.withHomePages(2).withManyApps().withFullFirstPage()).copy(
                 destination = ShellDestination.STREAM,
                 appShortcutsByApp = chatShortcuts + StreamFixtures.shortcutsOf(ScreenshotFixtures.camera),
             )
         return base.copy(
             launcherSettings =
                 base.launcherSettings.copy(
+                    layout =
+                        if (appsBehind == null) {
+                            base.launcherSettings.layout
+                        } else {
+                            base.launcherSettings.layout.copy(
+                                folded = base.launcherSettings.layout.folded.copy(appsBehind = appsBehind),
+                                unfolded = base.launcherSettings.layout.unfolded.copy(appsBehind = appsBehind),
+                            )
+                        },
                     motion =
                         base.launcherSettings.motion.copy(
                             reducedMotionPreference =
@@ -165,6 +181,7 @@ internal abstract class OpenCardPolishHarness(
         /** A playing media session and the next alarm, for the Now page. */
         mediaSession: MediaSessionInfo? = null,
         nextAlarm: NextAlarm? = null,
+        appsBehind: AppsBehindCards? = null,
     ) {
         stream =
             realWiringStreamHost(
@@ -195,7 +212,7 @@ internal abstract class OpenCardPolishHarness(
                 canReply = { true },
                 canSnooze = { true },
             ).also { it.pages.remember(deviceClass, landOn) }
-        val shell = state(reducedMotion, chatShortcuts, pins)
+        val shell = state(reducedMotion, chatShortcuts, pins, appsBehind)
         composeRule.setContent {
             CompositionLocalProvider(LocalRecompositionProbe provides probe) {
                 ScreenshotBackdrop {
@@ -291,3 +308,20 @@ private val LongLabels =
         "Open a new group chat",
         "Start a voice call",
     )
+
+private fun LauncherShellState.withFullFirstPage(): LauncherShellState {
+    val first = homeLayout.pages.first()
+    val columns = first.grid.columns
+    val items =
+        installedApps.take(columns * first.grid.rows).mapIndexed { index, app ->
+            ScreenshotFixtures.shortcut(
+                app,
+                GridPlacement(cell = GridCell(column = index % columns, row = index / columns)),
+            )
+        }
+    val layout = homeLayout.copy(pages = homeLayout.pages.map { if (it.id == first.id) it.copy(items = items) else it })
+    return copy(
+        homeLayout = layout,
+        homeLayoutSet = homeLayoutSet.copy(layouts = mapOf(homeLayoutSet.activeKey to layout)),
+    )
+}

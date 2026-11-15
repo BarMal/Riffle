@@ -93,11 +93,13 @@ class StreamGridFadeTest {
     }
 
     @Test
-    fun anOpenCardTakesTheAppsBehindItOutToo() {
-        assertEquals(0f, StreamGridFade.alpha(deepX, deepY, column, peekThrough = true, open = 1f))
-        val half = StreamGridFade.alpha(deepX, deepY, column, peekThrough = true, open = 0.5f)
-        assertTrue(half > 0f && half < StreamGridFade.PEEK_ALPHA)
-        assertEquals(1f, StreamGridFade.alpha(100f, 100f, column, peekThrough = true, open = 1f))
+    fun aShortFeatherLeavesAppsBeyondItUntouchedAndKeepsThePeekUnderTheCard() {
+        // Round 7: with a card open the fade follows the card, 24 dp of feather, apps under it at the peek opacity.
+        val feather = StreamGridFade.CARD_FEATHER_DP
+        val under = StreamGridFade.alpha(deepX, deepY, column, peekThrough = true, featherDp = feather)
+        assertEquals(StreamGridFade.PEEK_ALPHA, under, 0.001f)
+        assertEquals(1f, StreamGridFade.alpha(440f - feather, 600f, column, peekThrough = true, featherDp = feather))
+        assertEquals(1f, StreamGridFade.alpha(440f - feather - 1f, 600f, column, peekThrough = true, featherDp = feather))
     }
 
     // "Around the cards"
