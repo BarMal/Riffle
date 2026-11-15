@@ -48,6 +48,11 @@ internal fun SettingsVersionPageContent(
             subtitle = stringResource(R.string.settings_page_app_publish_summary),
             onClick = { onPageSelected(SettingsPage.APP_PUBLISH) },
         )
+        SettingsClickableRow(
+            title = stringResource(R.string.settings_page_app_pair),
+            subtitle = stringResource(R.string.settings_page_app_pair_summary),
+            onClick = { onPageSelected(SettingsPage.APP_PAIR) },
+        )
     }
 }
 

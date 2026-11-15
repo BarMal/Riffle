@@ -1774,3 +1774,20 @@ Both came from the open card's overlay, and one commit fixes both.
   (`searchWithNoResults*`, `searchWithNothingFoundDark`, the earlier search goldens re-recorded); `DockSearchPanelTest` (the action
   stands within 20 dp of the field in both states; it does not by itself tell the old layout from the new, the screenshots do).
   Search as a card stack is a later piece of work and was not started.
+
+### App pair experiment (diagnostics only)
+
+- **What it is.** Settings > About > Diagnostics > "App pair experiment": pick two apps, pick a method, press Launch, and read the
+  in-memory result log. It exists so the owner can find out whether launching two apps as a split-screen pair works on their foldable
+  before any feature is designed. It adds nothing anywhere else and stores nothing.
+- **Methods.** Sequential (first app with `NEW_TASK`, a 0-2000 ms wait, second with `LAUNCH_ADJACENT | NEW_TASK | MULTIPLE_TASK`);
+  Trampoline, adjacent second / adjacent first (a transparent no-history activity in its own task starts both); Both adjacent (two
+  starts back to back); One `startActivities` call (second intent carries the adjacent flag). Public APIs only.
+- **How to run it.** On the foldable, folded and then unfolded: choose the two apps, try each method, and for each note whether both
+  apps appeared side by side, which app took which side, and the split ratio. Then "Copy log" and paste it back. Work and private
+  profile apps are not listed (the launcher gateway cannot add intent flags).
+- **What to report back.** The pasted log (it holds package names and device facts only), plus for each method what you saw. The log's
+  "ok" only means the call returned without an exception; a start the system refuses (background activity launch) is silent, so the
+  screen is the verdict. If only the first app opened, the second start was probably blocked.
+- **Known limits.** No public API chooses the ratio or the side; `ActivityOptions.setLaunchBounds` only applies in freeform windowing;
+  `ActivityInfo.resizeMode` is not public, so resizability cannot be logged.

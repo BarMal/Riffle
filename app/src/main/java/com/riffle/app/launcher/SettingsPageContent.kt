@@ -78,6 +78,7 @@ internal fun SettingsPageContent(
             SettingsPage.BACKUP -> SettingsBackupPageContent(onAction = onAction)
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state, onPageSelected = onPageSelected)
             SettingsPage.APP_PUBLISH -> SettingsAppPublishPageContent(state = state)
+            SettingsPage.APP_PAIR -> SettingsAppPairPageContent(state = state)
         }
     }
 }
