@@ -16,7 +16,10 @@ class DockChoiceTest {
 
     @Test
     fun liveAppsNowPlayingTilesAndPinnedAppsHaveAPageAndAnythingElseDoesNot() {
-        assertEquals(StreamFocusTarget.Now, DockChoice.pageFor(DockDynamicSideEntry.NOW_PLAYING_KEY))
+        assertEquals(
+            StreamFocusTarget.Section(StreamSection.NOW),
+            DockChoice.pageFor(DockDynamicSideEntry.contextTileKey(StreamSection.NOW)),
+        )
         assertEquals(
             StreamFocusTarget.AppStack("chat:p"),
             DockChoice.pageFor(DockDynamicSideEntry.liveAppKey("chat:p")),
@@ -35,7 +38,7 @@ class DockChoiceTest {
         assertNull(DockChoice.pageFor("item-123"))
         assertNull(DockChoice.pageFor("ctx:nothing"))
         assertFalse(DockChoice.isSelectable("item-123"))
-        assertTrue(DockChoice.isSelectable("now"))
+        assertTrue(DockChoice.isSelectable("ctx:now"))
     }
 
     @Test
@@ -107,14 +110,14 @@ class DockChoiceTest {
             DockChoiceItem("pin-a", 0f, 56f),
             DockChoiceItem("pin-b", 66f, 122f),
             DockChoiceItem("live:chat:p", 140f, 188f),
-            DockChoiceItem("now", 198f, 246f),
+            DockChoiceItem("ctx:now", 198f, 246f),
             DockChoiceItem("ctx:recents", 270f, 318f),
         )
 
     @Test
     fun theNearestSelectableItemIsTheOneUnderTheFingerAndPinnedAppsAreSkipped() {
         assertEquals("live:chat:p", DockChoice.nearestSelectable(150f, items))
-        assertEquals("now", DockChoice.nearestSelectable(230f, items))
+        assertEquals("ctx:now", DockChoice.nearestSelectable(230f, items))
         assertEquals("ctx:recents", DockChoice.nearestSelectable(500f, items))
         // Over a pinned app, it snaps to the nearest item that has a page; never the pinned app itself.
         assertEquals("live:chat:p", DockChoice.nearestSelectable(30f, items))
@@ -126,9 +129,9 @@ class DockChoiceTest {
     fun inAGapTheCloserCentreWinsAndATieGoesToTheEarlierItem() {
         // Centres 164 and 222: the gap between them is nearer the first below 193 and the second above it.
         assertEquals("live:chat:p", DockChoice.nearestSelectable(192f, items))
-        assertEquals("now", DockChoice.nearestSelectable(194f, items))
-        val tied = listOf(DockChoiceItem("now", 0f, 10f), DockChoiceItem("ctx:agenda", 20f, 30f))
-        assertEquals("now", DockChoice.nearestSelectable(10f, tied))
+        assertEquals("ctx:now", DockChoice.nearestSelectable(194f, items))
+        val tied = listOf(DockChoiceItem("ctx:now", 0f, 10f), DockChoiceItem("ctx:agenda", 20f, 30f))
+        assertEquals("ctx:now", DockChoice.nearestSelectable(10f, tied))
     }
 
     @Test

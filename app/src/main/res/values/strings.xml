@@ -221,7 +221,7 @@
     </plurals>
     <string name="search_stack_shortcut">App shortcut</string>
 
-    <!-- The Dock's dynamic side: live apps, now playing and, in the contextual mode, a tile per Stream page (ADR 0003) -->
+    <!-- The Dock's dynamic side: live apps, the Now tile and, in the contextual mode, a tile per Stream page (ADR 0003) -->
     <string name="dock_live_app_slots_title">Live apps</string>
     <string name="dock_now_playing_label">Now playing</string>
     <string name="dock_now_playing_titled_label">Now playing: %1$s</string>
@@ -450,9 +450,9 @@
     <string name="setting_dock_grid_spacing">Spacing to the grid</string>
     <string name="setting_dock_grid_spacing_keywords">dock gap spacing grid controls</string>
     <string name="setting_feature_dock_live_apps">Show live apps</string>
-    <string name="setting_feature_dock_live_apps_keywords">dock live apps now playing dynamic side switch on off</string>
+    <string name="setting_feature_dock_live_apps_keywords">dock live apps now playing now tile media dynamic side switch on off</string>
     <string name="setting_dock_live_apps">Number of live apps</string>
-    <string name="setting_dock_live_apps_keywords">dock dynamic side notification slots now playing</string>
+    <string name="setting_dock_live_apps_keywords">dock dynamic side notification slots now tile now playing</string>
     <string name="setting_floating_enabled">Floating dock</string>
     <string name="setting_floating_enabled_keywords">overlay handle on off permission</string>
     <string name="setting_floating_apps">Floating dock apps</string>
@@ -644,7 +644,7 @@
     <string name="settings_home_mode_simple_subtitle">Simple mode shows the App library. Your placed items come back when it is off.</string>
     <string name="settings_simple_mode_subtitle">Leaves the App library as Home and the Dock. Turns off the Stream, live apps and the Library sheet until you turn it off.</string>
     <string name="settings_feature_stream_subtitle">The actions centre: press the Dock down to see what is live. Off removes the press, the live pages and their shortcuts.</string>
-    <string name="settings_feature_live_apps_subtitle">Apps with something new and now playing, on the Dock. Off leaves the Dock with your pinned apps.</string>
+    <string name="settings_feature_live_apps_subtitle">Apps with something new, and a Now tile while something plays, on the Dock. Off leaves the Dock with your pinned apps.</string>
     <string name="settings_feature_library_subtitle">Every app on pages, reached by pulling away from the Dock. Off removes the pull, the Dock action and the gesture. Search stays.</string>
     <string name="settings_feature_off_in_simple_mode">Off in Simple mode</string>
     <string name="settings_section_search">Search</string>
