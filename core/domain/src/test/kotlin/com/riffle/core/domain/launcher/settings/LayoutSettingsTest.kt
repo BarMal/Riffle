@@ -138,16 +138,34 @@ class LayoutSettingsTest {
     // App peek-through (Amendment 2, U2)
 
     @Test
-    fun appsBehindTheCardsIsOnByDefaultUnfoldedOffFoldedAndIsSetPerPosture() {
-        assertFalse(LayoutSettings().folded.appPeekThrough)
-        assertTrue(LayoutSettings().unfolded.appPeekThrough)
-        val off = LayoutSettings().withAppPeekThrough(LayoutPosture.UNFOLDED, false)
-        assertFalse(off.unfolded.appPeekThrough)
-        assertFalse(off.folded.appPeekThrough)
-        assertEquals(PageScrollDirection.VERTICAL, off.unfolded.pageScroll)
-        val foldedOn = LayoutSettings().withAppPeekThrough(LayoutPosture.FOLDED, true)
-        assertTrue(foldedOn.folded.appPeekThrough)
-        assertTrue(foldedOn.unfolded.appPeekThrough)
+    fun appsBehindTheCardsDefaultsToHiddenFoldedAndBehindAndAroundUnfoldedAndIsSetPerPosture() {
+        assertEquals(AppsBehindCards.HIDDEN, LayoutSettings().folded.appsBehind)
+        assertEquals(AppsBehindCards.BEHIND_AND_AROUND, LayoutSettings().unfolded.appsBehind)
+        val around = LayoutSettings().withAppsBehind(LayoutPosture.UNFOLDED, AppsBehindCards.AROUND)
+        assertEquals(AppsBehindCards.AROUND, around.unfolded.appsBehind)
+        assertEquals(AppsBehindCards.HIDDEN, around.folded.appsBehind)
+        assertEquals(PageScrollDirection.VERTICAL, around.unfolded.pageScroll)
+        val foldedOn = LayoutSettings().withAppsBehind(LayoutPosture.FOLDED, AppsBehindCards.BEHIND_AND_AROUND)
+        assertEquals(AppsBehindCards.BEHIND_AND_AROUND, foldedOn.folded.appsBehind)
         assertEquals(PageScrollDirection.HORIZONTAL, foldedOn.folded.pageScroll)
+    }
+
+    @Test
+    fun homeStaysBehindTheStreamForTwoOfTheThreeChoices() {
+        fun posture(choice: AppsBehindCards) =
+            PostureLayoutSettings(PageScrollDirection.HORIZONTAL, appsBehind = choice)
+        assertFalse(posture(AppsBehindCards.HIDDEN).appPeekThrough)
+        assertTrue(posture(AppsBehindCards.AROUND).appPeekThrough)
+        assertTrue(PostureLayoutSettings(PageScrollDirection.HORIZONTAL).appPeekThrough)
+    }
+
+    @Test
+    fun aStoredBooleanReadsAsTheOldBehaviourAndAnIdAsItself() {
+        assertEquals(AppsBehindCards.BEHIND_AND_AROUND, AppsBehindCards.fromStored(true))
+        assertEquals(AppsBehindCards.HIDDEN, AppsBehindCards.fromStored(false))
+        assertEquals(AppsBehindCards.AROUND, AppsBehindCards.fromStored("around"))
+        assertEquals(null, AppsBehindCards.fromStored("nonsense"))
+        assertEquals(null, AppsBehindCards.fromStored(3))
+        AppsBehindCards.entries.forEach { assertEquals(it, AppsBehindCards.fromStored(it.storedId)) }
     }
 }

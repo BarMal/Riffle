@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -212,7 +213,7 @@ private fun encodePostureLayout(
         .put("pageScroll", settings.pageScroll.storedId)
         .put("indicator", settings.indicator.storedId)
         .put("quickScroll", settings.quickScroll)
-        .put(appsBehindKey, settings.appPeekThrough)
+        .put(appsBehindKey, settings.appsBehind.storedId)
 
 private fun JSONObject.toLayoutSettings(defaults: LayoutSettings): LayoutSettings =
     LayoutSettings(
@@ -221,7 +222,8 @@ private fun JSONObject.toLayoutSettings(defaults: LayoutSettings): LayoutSetting
     )
 
 /**
- * "Show apps behind the cards" is stored under `appPeekThrough` unfolded (as it always was) and under its own key
+ * "Apps behind the cards" (a choice of [AppsBehindCards] by its stored id; an older build stored a boolean, read as
+ * true: behind and around, false: hidden) is stored under `appPeekThrough` unfolded (as it always was) and under its own key
  * folded: builds before the folded setting was real wrote an `appPeekThrough` of true for the folded posture that
  * meant nothing, and reading it would have switched the folded Home's behaviour on for everyone.
  */
@@ -240,7 +242,7 @@ private fun JSONObject.toPostureLayout(
             PageIndicatorPlacement.fromStoredId(optString("indicator").takeIf(String::isNotEmpty))
                 ?: defaults.indicator,
         quickScroll = (opt("quickScroll") as? Boolean) ?: defaults.quickScroll,
-        appPeekThrough = (opt(appsBehindKey) as? Boolean) ?: defaults.appPeekThrough,
+        appsBehind = AppsBehindCards.fromStored(opt(appsBehindKey)) ?: defaults.appsBehind,
     )
 
 private fun encodeFeatures(settings: FeatureSettings): JSONObject =

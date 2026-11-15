@@ -63,6 +63,7 @@ import com.riffle.core.domain.launcher.home.handleAxis
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.home.modeSurface
 import com.riffle.core.domain.launcher.library.LibraryView
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.EffectiveFeatures
 import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.LayoutPosture
@@ -314,6 +315,8 @@ private fun HomeDestinationContent(
             closing = motion.isClosing,
             openProgress = { stream?.dock?.openCards?.motion?.progress ?: 0f },
             peekThrough = state.postureLayout().appPeekThrough,
+            around = state.postureLayout().appsBehind == AppsBehindCards.AROUND,
+            cardRects = stream?.dock?.cardRects,
             reducedMotion = state.reducedMotion(),
             dockEdge = plan.dockEdge,
             dockExtent =

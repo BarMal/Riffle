@@ -92,6 +92,34 @@ enum class PageIndicatorPlacement(
 }
 
 /**
+ * "Apps behind the cards": what Home does while the Stream shows. [HIDDEN]: Home fades out (unfolded, where Home always
+ * stays beside the column, nothing shows under it). [AROUND]: Home stays and any app under a card of the stack, an open
+ * card or the quick actions is fully hidden; apps beside and above the cards keep the distance fade.
+ * [BEHIND_AND_AROUND]:
+ * Home stays and the apps under the cards show faintly. A stored boolean from before the choice reads `true` as
+ * [BEHIND_AND_AROUND] and `false` as [HIDDEN].
+ */
+enum class AppsBehindCards(val storedId: String) {
+    HIDDEN("hidden"),
+    AROUND("around"),
+    BEHIND_AND_AROUND("behindAndAround"),
+    ;
+
+    companion object {
+        fun fromStoredId(id: String?): AppsBehindCards? = entries.firstOrNull { it.storedId == id }
+
+        /** A stored value of either age: the old boolean or the choice's id; null when it is neither. */
+        fun fromStored(value: Any?): AppsBehindCards? =
+            when (value) {
+                true -> BEHIND_AND_AROUND
+                false -> HIDDEN
+                is String -> fromStoredId(value)
+                else -> null
+            }
+    }
+}
+
+/**
  * One posture's layout settings, apart from the Dock edge (which is the Dock's own). The page indicator always runs
  * the way the pages scroll, so a quick-scroll drag never moves pages at right angles to it.
  */
@@ -101,13 +129,15 @@ data class PostureLayoutSettings(
     /** Whether dragging along the dots scrolls quickly; off, the dots only show where you are. */
     val quickScroll: Boolean = true,
     /**
-     * "Show apps behind the cards" (ADR 0003, Amendment 2; per posture): Home stays on screen behind the Stream and
-     * its grid fades cell by cell under the cards (it is never cut off, nothing is blurred). Off, Home fades out
-     * while the Stream is open, apart from the unfolded posture where it stays beside the column but nothing shows
-     * under it. Unfolded it is on by default, folded off.
+     * "Apps behind the cards" (ADR 0003, Amendment 2; per posture): what Home does while the Stream shows, one of
+     * [AppsBehindCards]. Unfolded it is [AppsBehindCards.BEHIND_AND_AROUND] by default, folded
+     * [AppsBehindCards.HIDDEN].
      */
-    val appPeekThrough: Boolean = true,
+    val appsBehind: AppsBehindCards = AppsBehindCards.BEHIND_AND_AROUND,
 ) {
+    /** Whether Home stays on screen with the Stream (apart from the unfolded posture, where it always does). */
+    val appPeekThrough: Boolean get() = appsBehind != AppsBehindCards.HIDDEN
+
     /** Whether the dots are drawn at all. */
     val showsDots: Boolean get() = indicator != PageIndicatorPlacement.OFF
 
@@ -116,7 +146,8 @@ data class PostureLayoutSettings(
 
     companion object {
         /** Folded: pages scroll sideways, the indicator above the Dock. */
-        val FOLDED_DEFAULT = PostureLayoutSettings(pageScroll = PageScrollDirection.HORIZONTAL, appPeekThrough = false)
+        val FOLDED_DEFAULT =
+            PostureLayoutSettings(pageScroll = PageScrollDirection.HORIZONTAL, appsBehind = AppsBehindCards.HIDDEN)
 
         /** Unfolded: pages scroll up and down, the indicator just in from the Dock in front of its middle. */
         val UNFOLDED_DEFAULT = PostureLayoutSettings(pageScroll = PageScrollDirection.VERTICAL)
@@ -171,8 +202,8 @@ data class LayoutSettings(
         enabled: Boolean,
     ): LayoutSettings = with(posture, forPosture(posture).copy(quickScroll = enabled))
 
-    fun withAppPeekThrough(
+    fun withAppsBehind(
         posture: LayoutPosture,
-        enabled: Boolean,
-    ): LayoutSettings = with(posture, forPosture(posture).copy(appPeekThrough = enabled))
+        choice: AppsBehindCards,
+    ): LayoutSettings = with(posture, forPosture(posture).copy(appsBehind = choice))
 }

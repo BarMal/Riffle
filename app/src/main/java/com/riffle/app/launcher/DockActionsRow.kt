@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -48,8 +48,8 @@ import com.riffle.app.launcher.stream.PageQuickActions
 import com.riffle.core.domain.launcher.designsystem.RiffleMotionTokens
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayout
-import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.roundToInt
 
 internal const val DOCK_CARD_ACTIONS_TEST_TAG = "dock-card-actions"
 
@@ -157,7 +157,13 @@ private fun DockActionsHeader(
     val latestTarget by rememberUpdatedState(target)
     val tuning = LocalDockMotionTuning.current
     val spec: AnimationSpec<Float> =
-        if (header.reducedMotion) tween(RiffleMotionTokens.DURATION_REDUCED_MOTION_MILLIS) else RiffleMotion.smooth(tuning)
+        if (header.reducedMotion) {
+            tween(
+                RiffleMotionTokens.DURATION_REDUCED_MOTION_MILLIS,
+            )
+        } else {
+            RiffleMotion.smooth(tuning)
+        }
     // The content's own opacity: dips to 0 and back when the row holds something else.
     val contentAlpha = remember { Animatable(1f) }
     LaunchedEffect(target?.identity) {

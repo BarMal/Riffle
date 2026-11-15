@@ -14,8 +14,10 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 
 /**
- * Where the Stream's cards (a stack's front card and strips, an open card) and the row of quick actions stand on screen,
- * for Home's grid to keep its apps out from under them ("Around the cards"). Each card reports its coordinates when it is
+ * Where the Stream's cards (a stack's front card and strips, an open card) and the row of quick actions stand on
+ * screen,
+ * for Home's grid to keep its apps out from under them ("Around the cards"). Each card reports its coordinates when it
+ * is
  * laid out; the rectangles are worked out when they are read ([rectsPx], in the draw phase of Home's cells), so a card
  * moved by a graphics layer (an open stack) is where it is now, and a moving stack redraws the cells and recomposes
  * nothing. Transient.

@@ -29,8 +29,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -133,7 +133,8 @@ internal fun StreamPageView(
 ) {
     val title = page.title()
     val underStack = quick != null && !LocalQuickActionsInDock.current
-    // The same actions are custom accessibility actions of the page's front card (or the quiet card), wherever the row is.
+    // The same actions are custom accessibility actions of the page's front card (or the quiet card), wherever the row
+    // is.
     val spokenActions =
         remember(quick) {
             quick?.actions.orEmpty().map { action ->
@@ -156,7 +157,7 @@ internal fun StreamPageView(
                 // The stack gives up the row's height: it is bottom-anchored in what is left above the row.
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) { StreamPageBodyView(page, env, callbacks) }
             }
-            if (underStack && quick != null) UnderStackQuickActions(quick)
+            if (underStack) UnderStackQuickActions(quick)
         }
     }
 }
@@ -168,9 +169,11 @@ internal fun StreamPageView(
 internal val LocalFrontCardQuickActions = compositionLocalOf<List<CustomAccessibilityAction>> { emptyList() }
 
 /**
- * The quick actions under the stack (a side Dock; folded or unfolded): a Thin strip as wide as the cards at the bottom of
+ * The quick actions under the stack (a side Dock; folded or unfolded): a Thin strip as wide as the cards at the bottom
+ * of
  * the page, where the Dock's lower end is. It is part of the page, so it goes with the page on a swipe. While a card is
- * open it is not drawn and takes no part in the tree: the open card grows over the room it keeps, so it is hidden rather
+ * open it is not drawn and takes no part in the tree: the open card grows over the room it keeps, so it is hidden
+ * rather
  * than covered (a decision of the design: the open card needs the room).
  */
 @Composable

@@ -76,7 +76,8 @@ class StreamShortcutPagesTest {
         // The page's stack is the quiet card alone: no shortcut is a card.
         assertEquals(1, page.count)
         assertTrue(cards(page).single().opensApp)
-        // A disabled shortcut would be a chip that does nothing, so it is left out; the rest are in the platform's order.
+        // A disabled shortcut would be a chip that does nothing, so it is left out; the rest are in the platform's
+        // order.
         val actions = page.quickActions
         assertEquals(listOf("search", "star", "recent"), actions.map { it.id })
         assertEquals(listOf("Search", "Starred", "Recent"), actions.map { it.label })

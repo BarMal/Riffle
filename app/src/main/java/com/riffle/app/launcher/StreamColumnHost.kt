@@ -205,6 +205,9 @@ internal fun rememberStreamColumnGeometry(
     dockRestBounds: Rect?,
     hinges: List<StreamColumnRect>,
     rootSize: IntSize,
+    /** "Around the cards": apps under a card are hidden (the cards' places are [cardRects]). */
+    around: Boolean = false,
+    cardRects: CardRects? = null,
     /** The unfolded column (wider, as tall as the Dock) rather than the folded phone's "apps behind the cards". */
     unfolded: Boolean = false,
     /** How long the Dock's body is in the contextual mode, once the Dock has said (dp). */
@@ -252,6 +255,8 @@ internal fun rememberStreamColumnGeometry(
         fade.presence = presence
         fade.open = open
         fade.peekThrough = peekThrough
+        fade.around = around
+        fade.cards = cardRects
         fade.density = density
     }
     return remember(fade, bounds, restBounds) { StreamColumnGeometry(fade, bounds, restBounds) }

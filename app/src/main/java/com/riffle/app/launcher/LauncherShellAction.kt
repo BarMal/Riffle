@@ -38,6 +38,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
@@ -567,10 +568,10 @@ sealed interface LauncherShellAction {
         val enabled: Boolean,
     ) : LauncherShellAction
 
-    /** Settings > Layout: whether apps show faintly through the Stream's cards (unfolded) or nothing does. */
-    data class SetAppPeekThrough(
+    /** Settings > Layout (and Stream > Cards): what Home does behind the Stream's cards, per posture. */
+    data class SetAppsBehindCards(
         val posture: LayoutPosture,
-        val enabled: Boolean,
+        val choice: AppsBehindCards,
     ) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction

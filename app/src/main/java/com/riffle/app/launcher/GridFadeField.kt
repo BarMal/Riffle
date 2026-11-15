@@ -45,6 +45,12 @@ internal class GridFadeField {
     /** 0 at rest, 1 with a card fully open: the apps peeking through go out behind it. */
     var open: () -> Float by mutableStateOf({ 0f })
 
+    /** "Around the cards": an app under a card, or the quick actions row, is fully hidden (the stack's cards below). */
+    var around: Boolean by mutableStateOf(false)
+
+    /** Where the cards stand; read while drawing. */
+    var cards: CardRects? = null
+
     /** Pixels per dp. */
     var density: Float = 1f
 
@@ -53,14 +59,41 @@ internal class GridFadeField {
         const val INPUT_ALPHA_FLOOR = 0.05f
     }
 
-    /** The opacity of an item centred at ([xPx], [yPx]) in the root's coordinates. */
+    /** The opacity of an item centred at ([xPx], [yPx]) in the root's coordinates, [widthPx] by [heightPx] big. */
     fun alphaAtPx(
         xPx: Float,
         yPx: Float,
+        widthPx: Float = 0f,
+        heightPx: Float = 0f,
     ): Float {
         val presence = presence()
-        if (presence <= 0f) return 1f
-        return StreamGridFade.alpha(xPx / density, yPx / density, column(), peekThrough, presence, open())
+        val faded =
+            if (presence <= 0f) {
+                1f
+            } else {
+                StreamGridFade.alpha(xPx / density, yPx / density, column(), peekThrough, presence, open())
+            }
+        val rects = if (around && presence > 0f) cards?.rectsPx().orEmpty() else emptyList()
+        if (rects.isEmpty()) return faded
+        val cell =
+            StreamColumnRect(
+                (xPx - widthPx / 2f) / density,
+                (yPx - heightPx / 2f) / density,
+                (xPx + widthPx / 2f) / density,
+                (yPx + heightPx / 2f) / density,
+            )
+        val under =
+            rects.map {
+                StreamColumnRect(
+                    it.left / density,
+                    it.top / density,
+                    it.right / density,
+                    it.bottom / density,
+                )
+            }
+        // The cards' hiding comes in with the Stream as the fade does.
+        val keep = 1f - presence.coerceIn(0f, 1f) * (1f - StreamGridFade.aroundFactor(cell, under))
+        return faded * keep
     }
 }
 
@@ -77,20 +110,26 @@ internal class GridFadeCell(
 ) {
     private val x = mutableFloatStateOf(Float.NaN)
     private val y = mutableFloatStateOf(Float.NaN)
+    private val width = mutableFloatStateOf(0f)
+    private val height = mutableFloatStateOf(0f)
 
     fun place(
         xPx: Float,
         yPx: Float,
+        widthPx: Float = 0f,
+        heightPx: Float = 0f,
     ) {
         x.floatValue = xPx
         y.floatValue = yPx
+        width.floatValue = widthPx
+        height.floatValue = heightPx
     }
 
     /** What this cell is drawn at; 1 until it has been laid out. */
     fun alpha(): Float {
         val cx = x.floatValue
         val cy = y.floatValue
-        return if (cx.isNaN() || cy.isNaN()) 1f else field.alphaAtPx(cx, cy)
+        return if (cx.isNaN() || cy.isNaN()) 1f else field.alphaAtPx(cx, cy, width.floatValue, height.floatValue)
     }
 
     /** Whether the cell is faded out so far that it takes no input (see [GridFadeField.INPUT_ALPHA_FLOOR]). */
@@ -117,7 +156,12 @@ internal fun Modifier.gridFade(cell: GridFadeCell?): Modifier =
         this
             .onGloballyPositioned { coordinates ->
                 val origin = coordinates.positionInRoot()
-                cell.place(origin.x + coordinates.size.width / 2f, origin.y + coordinates.size.height / 2f)
+                cell.place(
+                    origin.x + coordinates.size.width / 2f,
+                    origin.y + coordinates.size.height / 2f,
+                    coordinates.size.width.toFloat(),
+                    coordinates.size.height.toFloat(),
+                )
             }
             .graphicsLayer { alpha = cell.alpha() }
             // What the cell is drawn at, for a test to read: a layer's alpha is not in the semantics tree.

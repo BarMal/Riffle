@@ -28,7 +28,8 @@ private const val DISABLED_ALPHA = 0.6f
 internal fun streamShortcutTag(content: AppShortcutContent): String = "stream-shortcut:${content.shortcutId.orEmpty()}"
 
 /**
- * The quiet card of a pinned app with nothing live (ADR 0003, Amendment 3, "Every icon has a page"): the app's icon, its
+ * The quiet card of a pinned app with nothing live (ADR 0003, Amendment 3, "Every icon has a page"): the app's icon,
+ * its
  * name and "Nothing new", lit by the app's colour; a tap opens the app. A shortcut is no longer a card (it is a quick
  * action of the page, see `QuickActionsRow`), but the card still draws one when a List of shortcuts is asked for.
  */

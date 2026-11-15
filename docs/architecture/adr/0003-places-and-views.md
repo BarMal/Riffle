@@ -577,6 +577,16 @@ needs a first-run hint and an accessibility action that does the same.
 - **Reduced motion.** With the system setting on, every transition is a short fade.
 - **Settings, for now:** speed (200 ms default), trampoline, inertia, magnet, hold time and haptics.
 
+### Addendum (owner, 2026-11-15): quick actions
+
+An app's page is its live cards (notifications, the player) plus its **quick actions**: the app's launcher shortcuts
+are no longer cards of its stack. They are a typed list the page carries (`StreamPage.quickActions`, never persisted,
+not a new kind of content). A pinned app with nothing live keeps one quiet card ("Nothing new", a tap opens the app) and
+its quick actions. Folded, with a Dock along the top or bottom edge, they are a row of chips inside the Dock's one body
+(an open card's own actions take the row while it is open); unfolded, with a side Dock, they are a Thin strip under the
+stack inside the Stream. "Apps behind the cards" becomes a choice of three per posture (Hidden, Around the cards, Behind
+and around); see "Quick actions, and apps behind the cards" in `docs/product/dock-modes-plan.md`.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

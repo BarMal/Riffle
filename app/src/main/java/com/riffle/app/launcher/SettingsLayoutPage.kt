@@ -10,6 +10,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.LayoutPosture
 import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
 import com.riffle.core.domain.launcher.settings.PageScrollDirection
@@ -163,7 +164,7 @@ private fun SettingsPostureLayoutRows(
     // The same value, label and subtitle Settings > Stream > Cards shows for this posture.
     SettingsAppsBehindCardsRow(
         posture = posture,
-        on = settings.appPeekThrough,
+        choice = settings.appsBehind,
         onAction = onAction,
         modifier = Modifier.settingAnchor(layoutSettingKey(posture, LayoutRow.APPS_BEHIND)),
         tag = layoutOptionTestTag(posture, "peek", "through"),
@@ -171,25 +172,48 @@ private fun SettingsPostureLayoutRows(
 }
 
 /**
- * "Show apps behind the cards" for one [posture]: the one row both Settings > Layout and Settings > Stream > Cards
- * draw, so the two entry points read identically and, being one stored value, always agree.
+ * "Apps behind the cards" for one [posture]: the one row both Settings > Layout and Settings > Stream > Cards draw, so
+ * the
+ * two entry points read identically and, being one stored value, always agree. Three choices; the subtitle states the
+ * current one.
  */
 @Composable
 internal fun SettingsAppsBehindCardsRow(
     posture: LayoutPosture,
-    on: Boolean,
+    choice: AppsBehindCards,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
     tag: String,
 ) {
-    SettingsSwitchRow(
+    SettingsChoiceRow(
         modifier = modifier.testTag(tag),
         title = stringResource(R.string.settings_layout_peek_through_title),
         subtitle =
             stringResource(
-                if (on) R.string.settings_layout_peek_through_on else R.string.settings_layout_peek_through_off,
+                when (choice) {
+                    AppsBehindCards.HIDDEN -> R.string.settings_layout_apps_behind_hidden_subtitle
+                    AppsBehindCards.AROUND -> R.string.settings_layout_apps_behind_around_subtitle
+                    AppsBehindCards.BEHIND_AND_AROUND -> R.string.settings_layout_apps_behind_both_subtitle
+                },
             ),
-        checked = on,
-        onCheckedChange = { enabled -> onAction(LauncherShellAction.SetAppPeekThrough(posture, enabled)) },
+        options = AppsBehindCards.entries,
+        selected = choice,
+        onSelect = { picked -> onAction(LauncherShellAction.SetAppsBehindCards(posture, picked)) },
+        label = { option ->
+            stringResource(
+                when (option) {
+                    AppsBehindCards.HIDDEN -> R.string.settings_layout_apps_behind_hidden
+                    AppsBehindCards.AROUND -> R.string.settings_layout_apps_behind_around
+                    AppsBehindCards.BEHIND_AND_AROUND -> R.string.settings_layout_apps_behind_both
+                },
+            )
+        },
+        optionTag = { option -> appsBehindOptionTestTag(tag, option) },
     )
 }
+
+/** The test tag of one option of an "Apps behind the cards" row whose row tag is [rowTag]. */
+internal fun appsBehindOptionTestTag(
+    rowTag: String,
+    option: AppsBehindCards,
+): String = "$rowTag:${option.name}"

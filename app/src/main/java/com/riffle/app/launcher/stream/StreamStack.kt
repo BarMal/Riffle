@@ -70,9 +70,9 @@ import com.riffle.app.R
 import com.riffle.app.launcher.CountRecomposition
 import com.riffle.app.launcher.DockFanSource
 import com.riffle.app.launcher.LocalDockFan
-import com.riffle.app.launcher.reportsCardRect
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
+import com.riffle.app.launcher.reportsCardRect
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
@@ -341,7 +341,6 @@ private fun StreamStackContent(
             val dismissLabel = stringResource(R.string.stream_notification_dismiss)
             LoneCard(
                 streamStackCardTag(only.id),
-                Modifier,
                 hidden = drawnByLayer,
                 swipe = swipe,
                 canDismiss = only.swipeableNotification() != null,
@@ -474,7 +473,10 @@ private fun StreamStackContent(
                                         } else {
                                             null
                                         },
-                                    modifier = cardModifier.fillMaxWidth().reportsCardRect().testTag(STREAM_OPEN_CARD_TEST_TAG),
+                                    modifier =
+                                        cardModifier.fillMaxWidth().reportsCardRect().testTag(
+                                            STREAM_OPEN_CARD_TEST_TAG,
+                                        ),
                                 )
                             }
                         },
@@ -534,7 +536,6 @@ internal const val STREAM_OPEN_CARD_TEST_TAG = "stream-open-card"
 @Composable
 private fun LoneCard(
     tag: String,
-    modifier: Modifier,
     hidden: Boolean,
     swipe: SwipeDismissState?,
     canDismiss: Boolean,
@@ -545,7 +546,7 @@ private fun LoneCard(
     val quickActions = LocalFrontCardQuickActions.current
     Box(
         modifier =
-            modifier.fillMaxSize().then(
+            Modifier.fillMaxSize().then(
                 if (hidden) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics {} else Modifier,
             ),
         contentAlignment = Alignment.BottomCenter,

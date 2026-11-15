@@ -99,4 +99,43 @@ class StreamGridFadeTest {
         assertTrue(half > 0f && half < StreamGridFade.PEEK_ALPHA)
         assertEquals(1f, StreamGridFade.alpha(100f, 100f, column, peekThrough = true, open = 1f))
     }
+
+    // "Around the cards"
+
+    private val cell = StreamColumnRect(0f, 0f, 60f, 80f)
+
+    @Test
+    fun aCellUnderACardIsHiddenAndOneClearOfItIsUntouched() {
+        val under = StreamColumnRect(-10f, 20f, 200f, 300f)
+        assertEquals(0f, StreamGridFade.aroundFactor(cell, listOf(under)))
+        // Touching the edge counts as meeting it.
+        assertEquals(0f, StreamGridFade.aroundFactor(cell, listOf(StreamColumnRect(60f, 0f, 300f, 300f))))
+        val clear = StreamColumnRect(60f + StreamGridFade.CARD_FEATHER_DP, 0f, 300f, 300f)
+        assertEquals(1f, StreamGridFade.aroundFactor(cell, listOf(clear)))
+        assertEquals(1f, StreamGridFade.aroundFactor(cell, emptyList()))
+    }
+
+    @Test
+    fun aCellBesideOrAboveACardKeepsItsFadeAndTheFeatherIsSmoothAndMonotonic() {
+        var previous = 0f
+        for (gap in 0..StreamGridFade.CARD_FEATHER_DP.toInt() + 6) {
+            val card = StreamColumnRect(60f + gap, 0f, 400f, 300f)
+            val now = StreamGridFade.aroundFactor(cell, listOf(card))
+            assertTrue(now >= previous, "the factor fell at a gap of $gap")
+            assertTrue(now - previous < 0.2f, "the factor stepped at a gap of $gap")
+            previous = now
+        }
+        assertEquals(1f, previous)
+        // Above a card (a gap in y) is the same ramp.
+        val below = StreamColumnRect(0f, 80f + 12f, 400f, 300f)
+        val half = StreamGridFade.aroundFactor(cell, listOf(below))
+        assertTrue(half > 0f && half < 1f)
+    }
+
+    @Test
+    fun theNearestCardDecidesWhenThereAreSeveral() {
+        val near = StreamColumnRect(0f, 80f, 100f, 200f)
+        val far = StreamColumnRect(0f, 500f, 100f, 600f)
+        assertEquals(0f, StreamGridFade.aroundFactor(cell, listOf(far, near)))
+    }
 }

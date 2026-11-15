@@ -64,4 +64,29 @@ object StreamGridFade {
         val t = x.coerceIn(0f, 1f)
         return t * t * (3f - 2f * t)
     }
+
+    /** How far a card's edge fades the cell it reaches: a cell is fully hidden under a card, back in full this far
+     * off. */
+    const val CARD_FEATHER_DP = 24f
+
+    /**
+     * "Around the cards": the factor, 0 to 1, a cell standing at [cell] (dp, the cell's own rectangle) keeps given the
+     * [cards] (the stack's cards, an open card, the quick actions row; dp, same coordinates). A cell that meets a card
+     * is hidden (0); one [CARD_FEATHER_DP] or more clear of every card is untouched (1); between, a smooth ramp, so an
+     * icon does not pop as a card's edge reaches it. No cards: 1.
+     */
+    fun aroundFactor(
+        cell: StreamColumnRect,
+        cards: List<StreamColumnRect>,
+    ): Float = cards.minOfOrNull { card -> smoothStep(gap(cell, card) / CARD_FEATHER_DP) } ?: 1f
+
+    /** The distance between two rectangles: 0 when they touch or overlap. */
+    private fun gap(
+        a: StreamColumnRect,
+        b: StreamColumnRect,
+    ): Float {
+        val dx = maxOf(a.left - b.right, b.left - a.right, 0f)
+        val dy = maxOf(a.top - b.bottom, b.top - a.bottom, 0f)
+        return sqrt(dx * dx + dy * dy)
+    }
 }

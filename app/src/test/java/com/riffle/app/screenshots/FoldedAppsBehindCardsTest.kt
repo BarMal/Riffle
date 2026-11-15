@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
@@ -34,6 +35,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
+import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.LayoutSettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.stream.StreamGridFade
@@ -77,16 +79,19 @@ class FoldedAppsBehindCardsTest {
     private val chatPage = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "$chatPackage:personal")
     private val dp get() = composeRule.density.density
 
+    /** How many notifications Chat has: the stack's strips reach up into the grid with more than one. */
+    private var notificationCount = 1
+
     private fun host(): StreamHost =
         realWiringStreamHost(
             executor = executor,
             activeNotifications =
-                listOf(
+                (1..notificationCount).map { index ->
                     LauncherNotification(
-                        key = LauncherNotificationKey("0|chat|1"),
+                        key = LauncherNotificationKey("0|chat|$index"),
                         packageName = AppPackageName(chatPackage),
                         canDismiss = true,
-                        title = "Sam",
+                        title = if (index == 1) "Sam" else "Sam $index",
                         text = "Are we still on for lunch tomorrow?",
                         messages =
                             listOf(
@@ -96,9 +101,9 @@ class FoldedAppsBehindCardsTest {
                                     StreamFixtures.NOW - 4 * MINUTE,
                                 ),
                             ),
-                        postedAtEpochMillis = StreamFixtures.NOW - 4 * MINUTE,
-                    ),
-                ),
+                        postedAtEpochMillis = StreamFixtures.NOW - (4 + index) * MINUTE,
+                    )
+                },
             installedApps = ScreenshotFixtures.installedApps,
             canReply = { true },
             canSnooze = { true },
@@ -106,7 +111,7 @@ class FoldedAppsBehindCardsTest {
 
     private fun folded(
         destination: ShellDestination = ShellDestination.HOME,
-        appsBehind: Boolean = false,
+        appsBehind: AppsBehindCards = AppsBehindCards.HIDDEN,
         reducedMotion: Boolean = true,
     ): LauncherShellState {
         val base = ScreenshotFixtures.homeState().withHomePages(2).withManyApps().withAFullFirstPage()
@@ -116,7 +121,7 @@ class FoldedAppsBehindCardsTest {
             destination = destination,
             launcherSettings =
                 settings.copy(
-                    layout = layout.copy(folded = layout.folded.copy(appPeekThrough = appsBehind)),
+                    layout = layout.copy(folded = layout.folded.copy(appsBehind = appsBehind)),
                     motion =
                         settings.motion.copy(
                             reducedMotionPreference =
@@ -267,7 +272,7 @@ class FoldedAppsBehindCardsTest {
     @Test
     fun withAppsBehindTheCardsHomeStaysAndItsGridFadesUnderTheStack() {
         show(folded())
-        shell = folded(destination = ShellDestination.STREAM, appsBehind = true)
+        shell = folded(destination = ShellDestination.STREAM, appsBehind = AppsBehindCards.BEHIND_AND_AROUND)
         waitForText("Sam")
         composeRule.onNodeWithTag(HOME_SURFACE_TEST_TAG).assertExistsWithAlpha(1f)
         assertTrue("Home's grid is drawn", cells().size > 8)
@@ -282,11 +287,11 @@ class FoldedAppsBehindCardsTest {
 
     @Test
     fun theGridNeverMovesForTheStreamACardOrTheKeyboardWithAppsBehindTheCards() {
-        show(folded(appsBehind = true))
+        show(folded(appsBehind = AppsBehindCards.BEHIND_AND_AROUND))
         val closed = cells()
         assertTrue("the grid has cells", closed.size > 8)
 
-        shell = folded(destination = ShellDestination.STREAM, appsBehind = true)
+        shell = folded(destination = ShellDestination.STREAM, appsBehind = AppsBehindCards.BEHIND_AND_AROUND)
         waitForText("Sam")
         assertSame("with the Stream open", closed, cells())
 
@@ -334,14 +339,88 @@ class FoldedAppsBehindCardsTest {
         }
     }
 
+    // The three choices
+
+    private fun cardBounds(): List<Rect> =
+        composeRule.onAllNodes(
+            SemanticsMatcher("a stack card") { node ->
+                node.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag)
+                    ?.startsWith("stream-stack-card:") == true
+            },
+        ).fetchSemanticsNodes().map { it.boundsInRoot }
+
+    private fun cellsWithFade(): List<Pair<Rect, Float>> =
+        composeRule.onAllNodes(SemanticsMatcher.keyIsDefined(GridFadeAlphaKey)).fetchSemanticsNodes()
+            .map { it.boundsInRoot to it.config[GridFadeAlphaKey] }
+
+    private fun Rect.meets(other: Rect) = overlaps(other)
+
+    @Test
+    fun aroundTheCardsHidesTheAppsUnderACardAndKeepsTheOthersWithTheirDistanceFade() {
+        notificationCount = 4
+        show(folded())
+        shell = folded(destination = ShellDestination.STREAM, appsBehind = AppsBehindCards.AROUND)
+        waitForText("Sam")
+        composeRule.waitForIdle()
+        val cards = cardBounds()
+        assertTrue("the stack has a card", cards.isNotEmpty())
+        val cells = cellsWithFade()
+        assertTrue("Home's grid is drawn", cells.size > 8)
+        val under = cells.filter { (rect, _) -> cards.any { rect.meets(it) } }
+        assertTrue("some cell lies under a card", under.isNotEmpty())
+        assertTrue("cells under a card are hidden: $under", under.all { (_, alpha) -> alpha < 0.01f })
+        val clear =
+            cells.filter {
+                    (rect, _) ->
+                cards.none { rect.inflate(StreamGridFade.CARD_FEATHER_DP * dp).meets(it) }
+            }
+        assertTrue("some cells are clear of the cards", clear.isNotEmpty())
+        assertTrue("cells clear of the cards are not hidden: $clear", clear.all { (_, alpha) -> alpha > 0.05f })
+        assertTrue("cells far above keep most of their opacity", clear.any { (_, alpha) -> alpha > 0.8f })
+    }
+
+    @Test
+    fun behindAndAroundShowsTheAppsUnderTheCardsAtTheFloorAndHiddenShowsNoGrid() {
+        notificationCount = 4
+        show(folded())
+        shell = folded(destination = ShellDestination.STREAM, appsBehind = AppsBehindCards.BEHIND_AND_AROUND)
+        waitForText("Sam")
+        composeRule.waitForIdle()
+        val cards = cardBounds()
+        val under = cellsWithFade().filter { (rect, _) -> cards.any { rect.meets(it) } }
+        assertTrue(under.isNotEmpty())
+        assertTrue("under the cards the apps show at the floor: $under", under.all { (_, a) -> a > 0.1f })
+    }
+
+    @Test
+    fun aroundTheCardsFollowsTheCardsWhenTheyChange() {
+        notificationCount = 4
+        show(folded())
+        shell = folded(destination = ShellDestination.STREAM, appsBehind = AppsBehindCards.AROUND)
+        waitForText("Sam")
+        composeRule.waitForIdle()
+        val before = cellsWithFade().count { it.second < 0.01f }
+        // Opening a card is taller than the browse stack's front card: more of the grid is under cards.
+        composeRule.onNodeWithText("Sam").performClick()
+        composeRule.waitForIdle()
+        val open = cellsWithFade().count { it.second < 0.01f }
+        assertTrue("an open card hides at least as many apps ($open vs $before)", open >= before)
+    }
+
     // Screenshots
 
     @Test
-    fun foldedStreamWithAppsBehindTheCardsLight() = shoot(showing = { open(appsBehind = true) })
+    fun foldedStreamWithAppsBehindTheCardsLight() =
+        shoot(showing = {
+            open(appsBehind = AppsBehindCards.BEHIND_AND_AROUND)
+        })
 
     @Test
     @Config(qualifiers = ScreenshotDevices.NIGHT)
-    fun foldedStreamWithAppsBehindTheCardsDark() = shoot(showing = { open(appsBehind = true) })
+    fun foldedStreamWithAppsBehindTheCardsDark() =
+        shoot(
+            showing = { open(appsBehind = AppsBehindCards.BEHIND_AND_AROUND) },
+        )
 
     @Test
     fun foldedOpenCardWithAppsBehindTheCardsLight() = shoot(showing = { openCard() })
@@ -351,15 +430,27 @@ class FoldedAppsBehindCardsTest {
     fun foldedOpenCardWithAppsBehindTheCardsDark() = shoot(showing = { openCard() })
 
     @Test
-    fun foldedStreamWithAppsBehindTheCardsOffLight() = shoot(showing = { open(appsBehind = false) })
+    fun foldedStreamWithAppsBehindTheCardsOffLight() = shoot(showing = { open(appsBehind = AppsBehindCards.HIDDEN) })
 
-    private fun open(appsBehind: Boolean) {
+    @Test
+    fun foldedStreamWithAppsAroundTheCardsLight() = shoot(showing = { openAround() })
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun foldedStreamWithAppsAroundTheCardsDark() = shoot(showing = { openAround() })
+
+    private fun openAround() {
+        notificationCount = 4
+        open(appsBehind = AppsBehindCards.AROUND)
+    }
+
+    private fun open(appsBehind: AppsBehindCards) {
         show(folded(destination = ShellDestination.STREAM, appsBehind = appsBehind))
         waitForText("Sam")
     }
 
     private fun openCard() {
-        open(appsBehind = true)
+        open(appsBehind = AppsBehindCards.BEHIND_AND_AROUND)
         composeRule.onNodeWithText("Sam").performClick()
         composeRule.waitForIdle()
     }

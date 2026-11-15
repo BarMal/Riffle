@@ -1791,3 +1791,70 @@ Both came from the open card's overlay, and one commit fixes both.
   screen is the verdict. If only the first app opened, the second start was probably blocked.
 - **Known limits.** No public API chooses the ratio or the side; `ActivityOptions.setLaunchBounds` only applies in freeform windowing;
   `ActivityInfo.resizeMode` is not public, so resizability cannot be logged.
+
+## Quick actions, and apps behind the cards
+
+Two things the owner decided on the design canvas (boards QA, QA2, QA3 and QA-U1), one commit each.
+
+### Quick actions: an app's shortcuts leave the stack
+
+The owner: "once a pinned card is dismissed, the remaining items are the standard context actions; it'd be better to have
+these available as quick actions".
+
+- **The model** (`:core:domain` `StreamShortcutPages`, `QuickAction`, `StreamPage.quickActions`, tested in
+  `StreamShortcutPagesTest`). An app's page holds only its live content. Its launcher shortcuts are the page's
+  `quickActions`, a typed list over the existing `AppShortcutContent` (so the one action gateway launches them, profiles
+  included), in the platform's rank order, **at most eight** (`MAX_QUICK_ACTIONS`), **disabled shortcuts left out** (a chip
+  that does nothing is noise). Round 2's merge no longer interleaves cards: `merge` leaves a live page's cards as they are and
+  adds the actions. A pinned app with nothing live still has a page: **one quiet card** (its icon, its name, "Nothing new";
+  a tap opens the app) and its quick actions. An app with no shortcuts and nothing live is that card alone, as the old "Open
+  <app>" card was. Without the launcher role there are no quick actions and the existing "Shortcuts need Riffle to be your
+  Home app" notice stays behind the card (on a live page too), so the page says why there is no row. Recents, Today, Now and
+  Feeds have none.
+- **Folded, a Dock along the top or bottom edge** (`DockActionsRow.kt`, `QuickActionsRow.kt`). The chips are in the Dock's one
+  body above the icons with a hairline between, the same mechanism as the open card's actions row: the body's outline grows
+  with the row; the pinned run stays put. A chip is the shortcut's small icon and label, a 48 dp target; the row scrolls
+  sideways and a chip at a clipped end fades by how much shows (`dockEdgeFade`). A tap launches and the Stream closes as for any
+  launch from it. With a card open on the page the card's actions take the **same** row (a cross-fade; never two rows) and the
+  chips return when it closes; a change of page cross-fades the chips; a page without quick actions has no row. The row's
+  height now eases on the Dock's one spring to the height of what it holds (`DockHeaderState` holds either), so a swap of
+  content is one motion. With "Where its actions sit" on the card, the card's actions stay on it and the row still lives in
+  the Dock. Unfolded with a bottom Dock the row is in the Dock as folded.
+- **A side Dock, either posture** (`UnderStackQuickActions` in `StreamPageView`). The chips are a Thin glass strip under the
+  stack, as wide as the cards, at the bottom of the page (the column's lower end); the stack is bottom-anchored just above it,
+  so it gives up the row's height and the column's rectangle is unchanged. **While a card is open the strip is hidden** (it
+  fades with the open card's motion and leaves the tree): the open card grows over the room it keeps.
+- **Accessibility.** The row is a labelled group ("Quick actions for <app>"), each chip a button named by its shortcut; the
+  same actions are custom accessibility actions of the front card (and of the quiet card, a lone card).
+- **Where things moved.** `PageQuickActions` (the page's actions as a row needs them) is published by `StreamSurface` to
+  `StreamDockLink.quickActions` for the Dock; `LocalQuickActionsInDock` says which place a surface uses.
+- **Tests.** `StreamShortcutPagesTest` (rewritten: live cards only, the list, the cap and order, the quiet card, no role),
+  `QuickActionsTest` (Robolectric, through the real shell: folded the row inside the Dock's body above the icons, chips launch
+  through the gateway, a card replaces and then restores them, a change of page swaps them, the quiet card, accessibility;
+  unfolded the strip under the stack inside the column and hidden while a card is open; screenshots dark and light).
+- **Tests rewritten on purpose:** `StreamStripsTest` (a merged page of a notification and three shortcut cards; now a page of a
+  notification and cards of another kind, and a live page has no shortcut card), `OpenCardNeighbourWithNothingToOpenTest` (a
+  shortcut card was the neighbour with nothing to open; it is now a recent-app card), `StreamFrontCardStaysTest` (the
+  last card is now a lone card, which carries its stack-card tag so the helper finds it), the shortcuts goldens of
+  `StreamScreenshotTest`. Device: `StreamShortcutsTodayInteractionTest` taps shortcut cards and counts cards; see its notes.
+
+### Apps behind the cards: a choice of three per posture
+
+The owner: "make it configurable please, I like the choice". Per posture, in Settings > Layout and Settings > Stream > Cards
+(one shared row, `SettingsAppsBehindCardsRow`, one stored value; its subtitle states the choice):
+
+- **Hidden**: Home fades out when the Stream shows (unfolded, where Home always stays beside the column, nothing shows under
+  the column: as the old "off").
+- **Around the cards**: Home stays; any app that meets a card of the stack (front card, strips, an open card) or the quick
+  actions row is fully hidden, with a 24 dp feather (`StreamGridFade.aroundFactor`, pure) so an icon never pops; apps beside
+  and above the cards keep the distance fade at its floor.
+- **Behind and around**: the old "on": apps under the cards show at the floor.
+
+Stored data: `PostureLayoutSettings.appsBehind` (`AppsBehindCards`), stored by id under the same keys; an old boolean reads
+`true` as Behind and around and `false` as Hidden; unset: folded Hidden, unfolded Behind and around (`LayoutSettingsCodecTest`).
+The hiding follows the cards' real rectangles: every card reports its coordinates (`CardRects`, `reportsCardRect`) and a cell
+works its factor out **in the draw phase** (`GridFadeCell`, `GridFadeField.alphaAtPx`), so a moving stack redraws cells and
+recomposes nothing (the recomposition probe tests pass). A cell that is faded out takes no input by the existing alpha rule.
+Tests: `StreamGridFadeTest`, `LayoutSettingsTest`, the codec and reducer tests, `FoldedAppsBehindCardsTest` and
+`UnfoldedStreamColumnTest` (alphas under, beside and clear of the cards, per posture), `SettingsSharedRowsTest` (both entry
+points show and write the same value); screenshots dark and light of Around the cards, folded and unfolded.

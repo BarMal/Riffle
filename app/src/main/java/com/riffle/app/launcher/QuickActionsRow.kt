@@ -55,7 +55,8 @@ private val ChipIconSize = 24.dp
 /**
  * A page's quick actions as one row of chips (ADR 0003, Amendment 3): each the shortcut's small icon and its short
  * label, a 48 dp target; the row scrolls sideways when they do not fit and a chip at a clipped end fades by how much
- * of it shows ([dockEdgeFade]). A tap launches the shortcut. It draws no surface of its own: the Dock's body or the strip
+ * of it shows ([dockEdgeFade]). A tap launches the shortcut. It draws no surface of its own: the Dock's body or the
+ * strip
  * under the stack is its glass. A labelled group ("Quick actions for <app>") of buttons, each named by its shortcut.
  */
 @Composable

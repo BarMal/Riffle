@@ -32,7 +32,8 @@ data class QuickAction(val shortcut: AppShortcutContent) {
  * The Stream pages of the Dock's pinned apps (ADR 0003, Amendment 3): an app's page is its live cards (notifications,
  * the player) plus its quick actions, the launcher shortcuts the long-press menu offers.
  *
- * Every pinned app has one page. Its shortcuts are never cards of its stack: they are [StreamPage.quickActions] (static,
+ * Every pinned app has one page. Its shortcuts are never cards of its stack: they are [StreamPage.quickActions]
+ * (static,
  * dynamic and pinned, in the platform's rank order, the disabled ones left out, at most [MAX_QUICK_ACTIONS]). An app
  * with nothing live gets a page of [StreamSection.SHORTCUTS] holding one quiet card for the app (its icon, its name,
  * "Nothing new"; a tap opens the app) and its quick actions; with no shortcuts, or without the launcher role (shortcuts

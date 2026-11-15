@@ -284,7 +284,7 @@ class StreamStripsTest {
         assertStripShowsIconAndTitle("tasks unavailable notice")
     }
 
-    // A page of live cards and cards of other kinds, through the real stack ----------------------------------------------
+    // A page of live cards and cards of other kinds, through the real stack
 
     private val chatGroup = StreamShortcutPages.appKeyOf(ScreenshotFixtures.chat.identity)
     private val chat = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, chatGroup)
