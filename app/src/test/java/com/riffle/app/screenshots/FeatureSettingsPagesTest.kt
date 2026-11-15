@@ -11,14 +11,18 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.riffle.app.launcher.HOME_MODE_TEST_TAG_PREFIX
 import com.riffle.app.launcher.LauncherShellAction
+import com.riffle.app.launcher.LocalRecentPlayers
 import com.riffle.app.launcher.LocalStreamLayoutRepository
 import com.riffle.app.launcher.LocalTasksSettings
+import com.riffle.app.launcher.NOW_CLEAR_RECENT_PLAYERS_TEST_TAG
+import com.riffle.app.launcher.NOW_RECENT_PLAYERS_TEST_TAG
 import com.riffle.app.launcher.SIMPLE_MODE_TEST_TAG
 import com.riffle.app.launcher.SettingKey
 import com.riffle.app.launcher.SettingsPage
 import com.riffle.app.launcher.SettingsSurface
 import com.riffle.app.launcher.featureSwitchTestTag
 import com.riffle.app.launcher.settingsSurfaceState
+import com.riffle.app.launcher.stream.RecentPlayersControl
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.HomeMode
@@ -51,6 +55,7 @@ class FeatureSettingsPagesTest {
         mode: HomeMode = HomeMode.PlacedItems,
         anchor: SettingKey? = null,
         capture: Boolean = false,
+        recentPlayers: RecentPlayersControl? = null,
     ) {
         val base: LauncherShellState = ScreenshotFixtures.cardsState()
         val state =
@@ -66,6 +71,7 @@ class FeatureSettingsPagesTest {
                 CompositionLocalProvider(
                     LocalStreamLayoutRepository provides settingsStreamLayoutRepository(),
                     LocalTasksSettings provides null,
+                    LocalRecentPlayers provides recentPlayers,
                 ) {
                     SettingsSurface(
                         state = state,
@@ -122,6 +128,26 @@ class FeatureSettingsPagesTest {
             listOf<LauncherShellAction>(LauncherShellAction.SetFeatureEnabled(LauncherFeature.STREAM, false)),
             actions,
         )
+    }
+
+    @Test
+    fun nowsRecentPlayersAreOnByDefaultTurnOffAndClearForgetsThemInOneTap() {
+        val cleared = java.util.concurrent.atomic.AtomicInteger()
+        val control =
+            object : RecentPlayersControl {
+                override fun dismiss(key: String) = Unit
+
+                override fun clear() {
+                    cleared.incrementAndGet()
+                }
+            }
+        render(SettingsPage.STREAM, anchor = SettingKey.NOW_RECENT_PLAYERS, recentPlayers = control, capture = true)
+
+        composeRule.onNodeWithTag(NOW_RECENT_PLAYERS_TEST_TAG).assertIsDisplayed().assertIsOn().performClick()
+        composeRule.onNodeWithTag(NOW_RECENT_PLAYERS_TEST_TAG).assertIsOff()
+
+        composeRule.onNodeWithTag(NOW_CLEAR_RECENT_PLAYERS_TEST_TAG).performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) { cleared.get() == 1 }
     }
 
     @Test

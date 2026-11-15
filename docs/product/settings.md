@@ -41,6 +41,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | **Stream** | Features | Stream (a switch; off in Simple mode) |
 | | Look | Opens the Stream cards sub-page |
 | | each of Now, Notifications, Recents, Today, Feeds | On or off, order (move up, move down), Show as (Stack, List: it applies to every page of the section); a row opening each of the section's sub-pages where it has them (Today has two: Agenda and Tasks). The whole section is the search target of its setting |
+| | Now: Recent players, Clear recent players | Under Now, whose description reads "Now playing and your recent players". **Recent players** is a switch (on by default; stored with the Stream layout as `NowOptions.recentPlayers`, per posture): off, Now shows only the active sessions and its "Nothing playing" card. **Clear recent players** forgets the list Now keeps (package, profile and last-played time; nothing else is stored). Both are searchable ("recent players", "now playing") and are one row each: Settings is the only place they live. See [dock-modes-plan.md](dock-modes-plan.md), "Media centre" |
 | Stream cards (under Stream) | Preview | A sample card drawn with the same glass and tint a Stream card gets |
 | | Colour | Card colour strength (0 to 40%, 22%), Glow on the top edge (off): the app colour as a strip along the top edge, drawn with the spotlight |
 | | Folded, Unfolded | Show apps behind the cards, the same row as on the Layout page |

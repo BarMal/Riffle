@@ -487,6 +487,10 @@
     <string name="setting_feature_stream_keywords">stream switch on off actions centre live pages dock press</string>
     <string name="setting_stream_section_now">Now</string>
     <string name="setting_stream_section_now_keywords">stream now playing media section stack list on off order show as</string>
+    <string name="setting_now_recent_players">Recent players</string>
+    <string name="setting_now_recent_players_keywords">now playing media music podcasts player resume source cards recent players remember</string>
+    <string name="setting_now_clear_recent_players">Clear recent players</string>
+    <string name="setting_now_clear_recent_players_keywords">now playing media forget clear remove recent players history</string>
     <string name="setting_stream_section_notifications">Notifications</string>
     <string name="setting_stream_section_notifications_keywords">stream notifications section stack list on off order show as</string>
     <string name="setting_stream_section_recents">Recents</string>
@@ -696,6 +700,10 @@
     <string name="settings_stream_actions_on_card">On the card</string>
     <string name="settings_stream_intro">Choose which sections the Stream shows, in what order and how. These are the same choices as long-pressing a section header in the Stream.</string>
     <string name="settings_stream_section_on">On</string>
+    <string name="settings_stream_now_on">Now playing and your recent players</string>
+    <string name="settings_now_recent_players_subtitle">Players you used lately stay in Now as quiet cards you can resume. Off shows only what is playing.</string>
+    <string name="settings_now_clear_recent_players_subtitle">Forgets the players Now remembers. A player comes back when it plays again.</string>
+    <string name="settings_now_clear_recent_players_action">Clear</string>
     <string name="settings_stream_section_off">Off. The section is hidden from the Stream.</string>
     <string name="settings_stream_order">Order</string>
     <string name="settings_stream_position">Position %1$d of %2$d</string>
