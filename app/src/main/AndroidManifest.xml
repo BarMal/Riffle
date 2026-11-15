@@ -48,6 +48,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <!-- App pair experiment (Settings > About > Diagnostics): starts two apps from a window that is on screen. -->
+        <activity
+            android:name=".launcher.diagnostics.pair.PairTrampolineActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Riffle.PairTrampoline" />
         <service
             android:name=".launcher.notifications.RiffleNotificationListenerService"
             android:exported="true"

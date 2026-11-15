@@ -421,7 +421,7 @@ private fun Modifier.dockShelfExtent(
 ): Modifier = if (runsHorizontally) width(mainAxis) else height(mainAxis)
 
 @Composable
-@Suppress("LongParameterList", "LongMethod")
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
 internal fun DockSurfaceStrip(
     dock: DockModel,
     surfaceMetrics: DockSurfaceMetrics,
@@ -471,45 +471,50 @@ internal fun DockSurfaceStrip(
     val contextualLengthDp = if (surfaceMetrics.contextualRun != null) contentMainAxisDp else null
     SideEffect { if (renderBackground && contextualLengthDp != null) lengthSink(contextualLengthDp.toFloat()) }
 
-    Box(
-        modifier =
-            modifier
-                .dockBodyLength(runsHorizontally, crossAxisDp, { bodyLength.dp }, targetMainAxisDp.toFloat(), easing)
-                .semantics { this[DockContentAlphaKey] = contentFade() }
-                .then(
-                    if (renderBackground) {
-                        Modifier
-                            .onGloballyPositioned { coordinates ->
-                                // The body as it will stand once it has arrived (its middle stays where it is while
-                                // it grows), so nothing that follows the Dock reads the motion frame by frame.
-                                bodyBoundsSink(
-                                    coordinates.boundsInRoot().withMainAxisPx(targetMainAxisPx, runsHorizontally),
-                                )
-                            }
-                            .dockSurfaceAppearance(dock)
-                    } else {
-                        Modifier
-                    },
-                )
-                .glassSpotlight(
-                    spotlight = spotlight,
-                    shape = RoundedCornerShape(dock.cornerRadiusDp.dp),
-                    // The edge facing into the screen is the inner one: the top of a bottom dock,
-                    // the right of a left dock, and so on.
-                    innerAtStart = position == DockPosition.BOTTOM || position == DockPosition.RIGHT,
-                    alphaProvider = backgroundAlpha,
-                )
-                .dockDropHighlight(
-                    dock,
-                    presentation.interactions.isDropHighlighted,
-                    reducedMotion = presentation.interactions.reducedMotion,
-                )
-                .padding(
-                    horizontal = if (runsHorizontally) DOCK_MAIN_AXIS_PADDING_DP.dp else DOCK_CROSS_AXIS_PADDING_DP.dp,
-                    vertical = if (runsHorizontally) DOCK_CROSS_AXIS_PADDING_DP.dp else DOCK_MAIN_AXIS_PADDING_DP.dp,
-                ),
-        contentAlignment = Alignment.Center,
-    ) {
+    // The open card's actions row is part of this body (one glass, one outline): the body grows away from the icons to
+    // hold it, so the glass, the edge lights and the spotlight are the Dock's own, not a second surface.
+    val header = LocalDockHeader.current.takeIf { renderBackground && runsHorizontally }
+    val sizing =
+        Modifier.dockBodyLength(runsHorizontally, crossAxisDp, {
+            bodyLength.dp
+        }, targetMainAxisDp.toFloat(), easing)
+    val decor =
+        Modifier
+            .semantics { this[DockContentAlphaKey] = contentFade() }
+            .then(
+                if (renderBackground) {
+                    Modifier
+                        .onGloballyPositioned { coordinates ->
+                            // The body as it will stand once it has arrived (its middle stays where it is while
+                            // it grows), so nothing that follows the Dock reads the motion frame by frame.
+                            bodyBoundsSink(
+                                coordinates.boundsInRoot().withMainAxisPx(targetMainAxisPx, runsHorizontally),
+                            )
+                        }
+                        .dockSurfaceAppearance(dock)
+                } else {
+                    Modifier
+                },
+            )
+            .glassSpotlight(
+                spotlight = spotlight,
+                shape = RoundedCornerShape(dock.cornerRadiusDp.dp),
+                // The edge facing into the screen is the inner one: the top of a bottom dock,
+                // the right of a left dock, and so on.
+                innerAtStart = position == DockPosition.BOTTOM || position == DockPosition.RIGHT,
+                alphaProvider = backgroundAlpha,
+            )
+            .dockDropHighlight(
+                dock,
+                presentation.interactions.isDropHighlighted,
+                reducedMotion = presentation.interactions.reducedMotion,
+            )
+    val padding =
+        Modifier.padding(
+            horizontal = if (runsHorizontally) DOCK_MAIN_AXIS_PADDING_DP.dp else DOCK_CROSS_AXIS_PADDING_DP.dp,
+            vertical = if (runsHorizontally) DOCK_CROSS_AXIS_PADDING_DP.dp else DOCK_MAIN_AXIS_PADDING_DP.dp,
+        )
+    val stripContent: @Composable () -> Unit = {
         CompositionLocalProvider(LocalGlassSpotlight provides spotlight) {
             DockBodyFrame(
                 runsHorizontally = runsHorizontally,
@@ -532,6 +537,25 @@ internal fun DockSurfaceStrip(
                         onDynamicEntryDelegated = onDynamicEntryDelegated,
                     )
                 },
+            )
+        }
+    }
+    if (header == null) {
+        Box(
+            modifier = modifier.then(sizing).then(decor).then(padding),
+            contentAlignment = Alignment.Center,
+            content = { stripContent() },
+        )
+    } else {
+        DockBodyWithHeader(
+            header = header,
+            headerAtEnd = position == DockPosition.TOP,
+            modifier = modifier.then(decor),
+        ) {
+            Box(
+                modifier = sizing.then(padding),
+                contentAlignment = Alignment.Center,
+                content = { stripContent() },
             )
         }
     }

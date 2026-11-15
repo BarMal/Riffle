@@ -136,6 +136,12 @@ enum class SettingsPage(
         R.string.settings_page_app_publish_summary,
         R.string.settings_page_app_publish_keywords,
     ),
+    APP_PAIR(
+        VERSION,
+        R.string.settings_page_app_pair,
+        R.string.settings_page_app_pair_summary,
+        R.string.settings_page_app_pair_keywords,
+    ),
 }
 
 /** The rows of the main page, in order: the places Settings is organised by. */

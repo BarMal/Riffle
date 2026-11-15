@@ -71,7 +71,16 @@ internal fun StreamAvatar(
             hasAppIcon = appIcon != null,
             photoIsAppIcon = looksLikeAppIcon,
         )
-    Box(modifier = modifier.size(size).cardSpotlightSource("avatar").clearAndSetSemantics {}) {
+    // A person's photo lights the card with its own colour; initials and the app's icon with the card's (its app's).
+    val photoLight = if (plan.face == AvatarFace.PHOTO) rememberImageLight(photo, loaded) else null
+    val avatarColor = photoLight?.let { it.color } ?: LocalCardSpotlightSource.current?.color
+    Box(
+        modifier =
+            modifier
+                .size(size)
+                .cardSpotlightSource("avatar", photoLight)
+                .clearAndSetSemantics { cardSpotlightLight(avatarColor) },
+    ) {
         when (plan.face) {
             AvatarFace.PHOTO ->
                 Image(

@@ -26,6 +26,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
+import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
@@ -128,8 +129,11 @@ class StreamOpenCardDockTest {
             queue = listOf(MediaSessionQueueEntry("Reunion", "M83"), MediaSessionQueueEntry("Wait", "M83")),
         )
 
+    private var ownButtons: List<NotificationOwnAction> = emptyList()
+
     private fun host(landOn: String): StreamHost =
         realWiringStreamHost(
+            ownActions = { ownButtons },
             executor = executor,
             activeNotifications = listOf(chatNotification(), musicNotification()),
             installedApps = ScreenshotFixtures.installedApps,
@@ -369,6 +373,43 @@ class StreamOpenCardDockTest {
         waitForText("Midnight City")
         composeRule.onNodeWithText("Midnight City").performClick()
         composeRule.waitForIdle()
+        composeRule.captureScreen()
+    }
+
+    /** A reminder with its own buttons: every action is in the Dock's row, none on the card, none twice. */
+    private fun openAReminderWithItsOwnButtons() {
+        ownButtons =
+            listOf(
+                NotificationOwnAction("p:1", "Snooze"),
+                NotificationOwnAction("p:2", "Close"),
+                NotificationOwnAction("p:3", "Reschedule"),
+            )
+        openTheChat()
+    }
+
+    @Test
+    fun aNotificationsOwnButtonsAreInTheRowAndNotOnTheCardAndNothingIsTwice() {
+        openAReminderWithItsOwnButtons()
+        val row = composeRule.onNodeWithTag(DOCK_CARD_ACTIONS_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val card = composeRule.onNodeWithTag(STREAM_OPEN_CARD_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue("the card stands above the row: $card over $row", card.bottom <= row.top + 1f)
+        // "Reschedule" is the app's own and stands once, in the row; its "Snooze" and "Close" repeat Riffle's own.
+        val own = composeRule.onAllNodesWithText("Reschedule").fetchSemanticsNodes()
+        assertEquals(1, own.size)
+        assertTrue("it is in the row", own.single().boundsInRoot.top >= row.top - 1f)
+        assertEquals(0, composeRule.onAllNodesWithText("Snooze").fetchSemanticsNodes().size)
+        assertEquals(0, composeRule.onAllNodesWithText("Close").fetchSemanticsNodes().size)
+        // The conversation's "Open" is one button, in the row, not in the card's body as well.
+        val open = composeRule.onAllNodesWithText("Open").fetchSemanticsNodes()
+        assertEquals(1, open.size)
+        assertTrue("Open is in the row", open.single().boundsInRoot.top >= row.top - 1f)
+        composeRule.captureScreen()
+    }
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun aNotificationsOwnButtonsInTheRowDarkTheme() {
+        openAReminderWithItsOwnButtons()
         composeRule.captureScreen()
     }
 

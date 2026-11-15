@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInRoot
@@ -88,6 +91,18 @@ internal fun StandardHomeDockArea(
     // The room Home keeps for the Dock is the Dock's own, not the open card's actions row that grows out of it: that
     // row takes room from the Stream above it and leaves Home's grid where it is.
     val extent = remember { DockExtentReport() }
+    // The open card's actions row is part of the Dock's own body (one glass); a side Dock holds none (they stay on the
+    // card).
+    val latestActions by rememberUpdatedState(actions)
+    val headerState =
+        if (position.isHorizontalEdge) {
+            DockHeaderState(cardActions, presentation.reducedMotion) { rowPx ->
+                extent.rowPx = rowPx
+                latestActions.onDockInteractionExtentChanged(extent.reservedPx())
+            }
+        } else {
+            null
+        }
 
     Column(
         modifier =
@@ -105,6 +120,7 @@ internal fun StandardHomeDockArea(
                 .onSizeChanged { size ->
                     extent.totalPx = if (runsAlongASide) size.width else size.height
                     actions.onDockInteractionExtentChanged(extent.reservedPx())
+                    actions.onDockAreaExtentChanged(extent.totalPx)
                 }
                 .onGloballyPositioned { coordinates ->
                     actions.onDockBoundsChanged(coordinates.boundsInRoot())
@@ -120,30 +136,24 @@ internal fun StandardHomeDockArea(
         verticalArrangement = layout.dock.alignment.sideArrangement(runsAlongASide),
     ) {
         DockShelfExpandButton(interactions = dockInteractions)
-        DockActionsRowAt(DockPosition.BOTTOM, position, cardActions, layout, presentation) { rowPx ->
-            extent.rowPx = rowPx
-            actions.onDockInteractionExtentChanged(extent.reservedPx())
-        }
         Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
         Box(modifier = Modifier.testTag(HOME_DOCK_TEST_TAG)) {
-            DockOrShelf(
-                layout = layout,
-                presentation = presentation,
-                notificationShelfState = notificationShelfState,
-                showDockShelf = showDockShelf,
-                appIconLoader = appIconLoader,
-                position = position,
-                interactions = dockInteractions,
-                widgetPickerDockPreview = widgetPickerDockPreview,
-                dynamicEntries = dynamicEntries,
-                onDynamicEntryDelegated = onDynamicEntryDelegated,
-                contextual = contextual,
-                retracting = retracting,
-            )
-        }
-        DockActionsRowAt(DockPosition.TOP, position, cardActions, layout, presentation) { rowPx ->
-            extent.rowPx = rowPx
-            actions.onDockInteractionExtentChanged(extent.reservedPx())
+            CompositionLocalProvider(LocalDockHeader provides headerState) {
+                DockOrShelf(
+                    layout = layout,
+                    presentation = presentation,
+                    notificationShelfState = notificationShelfState,
+                    showDockShelf = showDockShelf,
+                    appIconLoader = appIconLoader,
+                    position = position,
+                    interactions = dockInteractions,
+                    widgetPickerDockPreview = widgetPickerDockPreview,
+                    dynamicEntries = dynamicEntries,
+                    onDynamicEntryDelegated = onDynamicEntryDelegated,
+                    contextual = contextual,
+                    retracting = retracting,
+                )
+            }
         }
     }
 }

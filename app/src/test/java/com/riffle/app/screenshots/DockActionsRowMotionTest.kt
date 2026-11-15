@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -12,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.riffle.app.launcher.DOCK_CARD_ACTIONS_TEST_TAG
+import com.riffle.app.launcher.GlassSurfaceWeightKey
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
 import com.riffle.app.launcher.HOME_GRID_CELL_TEST_TAG
@@ -193,7 +196,7 @@ class DockActionsRowMotionTest {
     private fun List<Frame>.rowHeights() = map { it.row?.height ?: 0f }
 
     @Test
-    fun theActionsRowGrowsInOneMotionAndTheDockBodyStaysWhereItIs() {
+    fun theActionsRowGrowsInOneMotionInsideTheDockBodyAndTheCardMakesRoom() {
         show(reducedMotion = false)
         composeRule.mainClock.autoAdvance = false
         val frames = mutableListOf(frame())
@@ -214,22 +217,67 @@ class DockActionsRowMotionTest {
             "it jumped instead of easing\n$log",
             heights.count { it > 2f && it < final - 2f } >= MIN_EASED_FRAMES,
         )
-        // The Dock body does not move or change while the row grows above it: no sinking, no catching up.
+        // One body: its icon run stays put (the bottom edge of the body does not move) and its outline grows upward to
+        // hold the row, at every frame.
         val body = frames.first().body
         frames.forEachIndexed { i, f ->
-            assertEquals("frame $i: the Dock body moved: ${f.body} against $body", body.top, f.body.top, 2f)
-            assertEquals("frame $i: the Dock body changed size", body.height, f.body.height, 2f)
-            assertEquals("frame $i: the Dock body changed size", body.width, f.body.width, 2f)
+            assertEquals("frame $i: the Dock's icons moved: ${f.body} against $body", body.bottom, f.body.bottom, 2f)
+            assertEquals("frame $i: the Dock body changed width", body.width, f.body.width, 2f)
+            assertTrue("frame $i: the body shrank: ${f.body} against $body", f.body.height >= body.height - 1f)
         }
-        // The area is what it holds, at every frame: the row stands inside it, above the Dock body, never over it.
+        assertTrue("the body did not grow to hold the row", frames.last().body.height > body.height + 40f)
+        // The area is what it holds, at every frame, and the row stands inside the one body, never outside it.
         frames.forEachIndexed { i, f ->
             val row = f.row?.takeIf { it.height > 0f } ?: return@forEachIndexed
             val inside = row.top >= f.area.top - 1f && row.bottom <= f.area.bottom + 1f
             assertTrue("frame $i: the row is outside the area: $row in ${f.area}", inside)
-            assertTrue("frame $i: the row is over the Dock body: $row on $body", row.bottom <= body.top + 1f)
+            assertTrue(
+                "frame $i: the row is outside the Dock body: $row in ${f.body}",
+                row.top >= f.body.top - 1f && row.bottom <= f.body.bottom + 1f && row.left >= f.body.left - 1f,
+            )
+            assertEquals("frame $i: a gap between the row and the icons' side", f.body.bottom > row.bottom, true)
+            // The open card's bottom edge stands above the row's top edge, with nothing of it under the row.
+            val card = bounds(STREAM_OPEN_CARD_TEST_TAG)
+            if (card != null) {
+                assertTrue("frame $i: the open card is under the row: $card over $row", card.bottom <= row.top + 1f)
+            }
         }
         // Home's grid does not move for it.
         frames.forEachIndexed { i, f -> assertEquals("frame $i: Home's grid changed", frames.first().cells, f.cells) }
+    }
+
+    @Test
+    fun theRowAndTheDockAreOneGlassSurfaceAndNoActionIsOnBothTheCardAndTheRow() {
+        show(reducedMotion = true)
+        composeRule.onNodeWithText("First").performClick()
+        composeRule.waitForIdle()
+        val row = checkNotNull(bounds(DOCK_CARD_ACTIONS_TEST_TAG))
+        val body = checkNotNull(bounds(HOME_DOCK_SURFACE_TEST_TAG))
+        assertTrue(
+            "the row stands in the Dock body: $row in $body",
+            row.top >= body.top - 1f && row.bottom <= body.bottom + 1f,
+        )
+        // No glass surface of its own stands where the row is: the Dock's body is the only glass there.
+        val glass =
+            composeRule.onAllNodes(SemanticsMatcher.keyIsDefined(GlassSurfaceWeightKey), useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .filter { it.boundsInRoot.overlaps(row) && it.boundsInRoot.height > 0f }
+        assertTrue("the row is drawn on a glass surface of its own: ${glass.map { it.boundsInRoot }}", glass.isEmpty())
+        // Every action is in the row, none on the card: the reply field and the dismiss/snooze controls are the row's.
+        val card = checkNotNull(bounds(STREAM_OPEN_CARD_TEST_TAG))
+        val rowActions =
+            composeRule.onAllNodes(
+                hasContentDescription("Dismiss") or hasContentDescription("Snooze"),
+                useUnmergedTree = true,
+            )
+                .fetchSemanticsNodes()
+        assertTrue("the row has its actions", rowActions.isNotEmpty())
+        rowActions.forEach { node ->
+            assertTrue(
+                "an action control is on the card: ${node.boundsInRoot} in $card",
+                !card.overlaps(node.boundsInRoot) || node.boundsInRoot.top >= row.top - 1f,
+            )
+        }
     }
 
     @Test
@@ -254,7 +302,7 @@ class DockActionsRowMotionTest {
             assertTrue("frame ${i + 1}: the row grew while it closes ($a to $b)\n$log", b <= a + 1f)
         }
         frames.forEachIndexed { i, f ->
-            assertEquals("frame $i: the Dock body moved", open.body.top, f.body.top, 2f)
+            assertEquals("frame $i: the Dock's icons moved", open.body.bottom, f.body.bottom, 2f)
         }
     }
 
