@@ -127,6 +127,7 @@ internal abstract class OpenCardPolishHarness(
     }
 
     /** Shows the Stream on the chat page: "Sam" (a long text) in front, "Notes" and "Maps" behind it. */
+    @Suppress("LongParameterList")
     protected fun show(
         reducedMotion: Boolean = false,
         landOn: String = chatPage,
@@ -138,12 +139,14 @@ internal abstract class OpenCardPolishHarness(
         /** The title the page shows, which the harness waits for. */
         waitFor: String = "Sam",
         chatShortcuts: AppShortcutsByApp = StreamFixtures.shortcutsOf(chat),
+        /** How many of the three chats ("Sam", "Notes", "Maps") the page has: fewer cards behind the front one. */
+        chats: Int = 3,
     ) {
         stream =
             realWiringStreamHost(
                 executor = executor,
                 activeNotifications =
-                    listOf(note(1, "Sam", sam), note(2, "Notes", notes), note(3, "Maps", "Also short.")) +
+                    listOf(note(1, "Sam", sam), note(2, "Notes", notes), note(3, "Maps", "Also short.")).take(chats) +
                         (1..more).map { note(3 + it, "Chat $it", "Another short message.") } +
                         listOf(
                             note(11, "Ledger", "A short one.", mailPackage),

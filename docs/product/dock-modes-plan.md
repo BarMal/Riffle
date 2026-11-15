@@ -2059,14 +2059,48 @@ test `OpenCardPolishUnfoldedTest` samples every frame of a 80 frame opening and 
 and after (0.5 px), the card's first drawn frame is the front card's rectangle (1.5 px of rounding), top never goes back down,
 bottom never goes back up, the left edge never goes back in, and the strip's reserved room never moves.
 
+### Fit content, up to the Dock's height (owner's decision)
+
+The rule: an open card is as tall as its content needs (header, the whole body, the reply row, its own actions), never shorter
+than the collapsed front card. Its ceiling unfolded is the Stream column, which spans the Dock body (not the window), less the
+room its neighbours take: 64 dp for each older card above it, the strips of the newer cards and their gap under it, the page's
+8 dp above and 16 dp under the stack. Folded it is the room between the status bar's inset and the Dock. The body scrolls only
+once the card has reached the ceiling; a card under it has no scroll range and no empty room inside; a short card stays short.
+The code already did this (`OpenCardLayout.frame`: `full = max(min(content, room), browse)`, the content measured at its
+intrinsic height, never a fixed maximum), and the column is the Dock's contextual length centred on its body, so no cause was
+found in the rectangle (`OPEN_HEIGHT_DP`, `REST_HEIGHT_DP` and `openTop` only matter when the Dock body is shorter than 480 dp)
+or in the strips' reservation. `OpenCardFitUnfoldedTest` and `OpenCardFitFoldedTest` assert the rule at layout level through the
+real shell and pass on the code as it was; they replace "rests on arithmetic" for the lone card too.
+
+Numbers in the owner's window (Dock body 272 to 761 dp = 489 dp, column 260.5 to 772.5 = 512 dp, xhdpi), card height / body
+scroll range, before and after (the same: nothing changed in the code):
+
+| Page and front card | Card | Scroll range | Reading |
+| --- | --- | --- | --- |
+| three chats, 12 sentences (long) | 360 dp | 376 px | at the ceiling: 512 - 24 - 2 x 64 = 360; strips 268.5 to 396.5, card to 756.5: the stack spans 488 dp of the Dock's 489 |
+| three chats, 8 sentences | 360 dp | 152 px | content is 436 dp, ceiling 360 dp: it scrolls |
+| two chats, 6 sentences | 380 dp | 0 | content, under the ceiling of 424 dp (one strip) |
+| three chats, "Hi." | 259 dp | 0 | the collapsed card's height |
+| one chat, 12 sentences | 488 dp | 240 px | no strips: the whole column less 8 and 16 dp |
+
+What the owner saw is this ceiling: with two older cards the strips take 128 dp of the Dock's ~470 dp, and the chrome of a
+conversation card (header 56, reply row 60, own actions 48, gaps) takes about 212 dp of the rest, so a body of eight messages
+shows about 148 dp of itself (four lines) in a 360 dp card. A taller card needs fewer strips or a different rule for them,
+which is a product decision, not a fit bug; see the report with this change.
+
+**A card whose content changes while it is open** (a message arrives): the card is measured at its content's height on each
+layout pass once settled, so its height changes in that frame; it does not ease on the spring. Not tested (the harness posts its
+notifications once); found by reading `OpenCardFrames`. Easing would need the natural height as animated state read in layout,
+which the one-measure-per-child rule of that layout makes more than a small change, so it is left.
+
 ### Tests
 
-`OpenCardMotionTest` (the frame from the rest rectangle, the room below, the minimum height, one-way edges, both placements),
+`OpenCardFitUnfoldedTest` and `OpenCardFitFoldedTest` (the fit rule above), `OpenCardMotionTest` (the frame from the rest rectangle, the room below, the minimum height, one-way edges, both placements),
 `QuickChipFitTest` (the fit, the scroll fallback, the vanishing edge chip), `OpenCardHandoffCueTest` (the cue's fill, its
 direction, no cue toward nothing, lifting ends it, the bodies are never both drawn, the header scale),
 `OpenCardPolishUnfoldedTest` and `OpenCardPolishFoldedTest` (every frame, above), `OpenCardPolishUnfoldedShots` and
 `OpenCardPolishFoldedShots` (a long card with neighbours above and below, light and dark, and the cue at the top and at the
-bottom of the body mid-drag).
+bottom of the body mid-drag; unfolded also the long front card whose strips fill the Dock's height).
 
 - **Tests rewritten on purpose:** none. Existing tests of the open card, its drag and quick actions pass unchanged.
 - **Not confirmed without a device:** the feel of the spring against a finger, the cue's legibility over real text on a real
