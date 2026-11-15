@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
@@ -70,6 +71,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.CountRecomposition
 import com.riffle.app.launcher.DockFanSource
 import com.riffle.app.launcher.LocalDockFan
+import com.riffle.app.launcher.LocalLauncherCardShape
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
 import com.riffle.app.launcher.reportsCardRect
@@ -382,11 +384,35 @@ private fun StreamStackContent(
     val placement = env.cardSettings.openCardPlacement
     val density = LocalDensity.current.density
     val bodies = remember(stackKey) { OpenCardBodies() }
+    val cue = remember(stackKey) { HandoffCueState() }
+    val presences = remember(stackKey) { mutableMapOf<String, OpenCardPresence>() }
+    val footer = LocalStackFooter.current.room
     val handoff =
-        remember(mover, density) {
-            OpenCardHandoffConnection(mover, density) {
-                latestEntries.getOrNull(StackFling.nearest(stackState.position, latestEntries.size))
-                    ?.let { entry -> bodies.scrollFor(entry.id) }
+        remember(mover, density, cue) {
+            OpenCardHandoffConnection(
+                mover,
+                density,
+                bodyScroll = {
+                    latestEntries.getOrNull(StackFling.nearest(stackState.position, latestEntries.size))
+                        ?.let { entry -> bodies.scrollFor(entry.id) }
+                },
+                cue = cue,
+                hasNeighbour = { older ->
+                    val front = StackFling.nearest(stackState.position, latestEntries.size)
+                    if (older) front + 1 < latestEntries.size else front > 0
+                },
+            )
+        }
+    // The cards in front of the open one show as strips under it: the nearest few below the position.
+    val belowIndices =
+        remember(stackKey) {
+            derivedStateOf {
+                if (latestReduced) {
+                    emptyList()
+                } else {
+                    val low = floor(stackState.position).toInt().coerceAtMost(latestEntries.size - 1)
+                    ((low - peeks).coerceAtLeast(0) until low.coerceAtLeast(0)).toList()
+                }
             }
         }
     val dragsStack = entries.size > 1
@@ -423,7 +449,7 @@ private fun StreamStackContent(
     val layer =
         remember(
             drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, geometry, strips,
-            placement, dragModifier, entries.size, previous, next, sizes,
+            placement, dragModifier, entries.size, previous, next, sizes, footer, peeks, belowIndices.value,
         ) {
             if (!layerActive.value) {
                 null
@@ -449,9 +475,28 @@ private fun StreamStackContent(
                             close()
                         }
                     },
+                    restFooter = footer,
+                    peeks = peeks,
+                    cue = cue,
+                    belowStrips =
+                        belowIndices.value.mapNotNull { index ->
+                            val entry = entries.getOrNull(index) ?: return@mapNotNull null
+                            OpenLayerStrip(index, entry.id) { stripModifier ->
+                                BelowStrip(
+                                    entry = entry,
+                                    env = env,
+                                    callbacks = callbacks,
+                                    groupKey = groupKey,
+                                    height = heights[index],
+                                    onOpen = { mover.goTo(index) },
+                                    modifier = stripModifier,
+                                )
+                            }
+                        },
                     cards =
                         drawnCards.map { (index, content) ->
-                            OpenLayerCard(index, content.id.value) { cardModifier ->
+                            val presence = presences.getOrPut(content.id.value) { OpenCardPresence() }
+                            OpenLayerCard(index, content.id.value, presence = presence, content = { cardModifier ->
                                 val scroll = rememberScrollState()
                                 DisposableEffect(content.id, scroll) {
                                     bodies.register(content.id.value, scroll)
@@ -474,12 +519,16 @@ private fun StreamStackContent(
                                         } else {
                                             null
                                         },
+                                    presence = presence,
+                                    cue = cue.takeIf { entries.size > 1 },
+                                    olderTitle = entries.getOrNull(index + 1)?.peekText(env),
+                                    newerTitle = entries.getOrNull(index - 1)?.peekText(env),
                                     modifier =
                                         cardModifier.fillMaxWidth().reportsCardRect().testTag(
                                             STREAM_OPEN_CARD_TEST_TAG,
                                         ),
                                 )
-                            }
+                            })
                         },
                 )
             }
@@ -487,6 +536,62 @@ private fun StreamStackContent(
     SideEffect { cards.publishLayer(stackKey, layer) }
     DisposableEffect(cards, stackKey) { onDispose { cards.publishLayer(stackKey, null) } }
 }
+
+/**
+ * A card in front of the open one, drawn as the strip under it: the real card, cut off at its header ([stackLayout]
+ * draws the strips above it the same way). One node to assistive technology that brings the card up when activated.
+ */
+@Composable
+@Suppress("LongParameterList")
+private fun BelowStrip(
+    entry: StackEntry,
+    env: StreamEnvironment,
+    callbacks: StreamCallbacks,
+    groupKey: String?,
+    height: Dp,
+    onOpen: () -> Unit,
+    modifier: Modifier,
+) {
+    CountRecomposition("open-strip:${entry.id}")
+    val spoken = entry.spokenText(env)
+    val bringToFront = stringResource(R.string.stream_bring_card_to_front)
+    Box(
+        modifier =
+            modifier
+                .clip(LocalLauncherCardShape.current)
+                .clearAndSetSemantics {
+                    testTag = STREAM_OPEN_STRIP_TEST_TAG
+                    contentDescription = spoken
+                    onClick(label = bringToFront) {
+                        onOpen()
+                        true
+                    }
+                }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onOpen,
+                ),
+    ) {
+        // The card is drawn as wide as the strip is (the layer widens it with the open card) and as tall as it is.
+        BoxWithConstraints {
+            val stripWidth = maxWidth
+            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)) {
+                StackEntryCard(
+                    entry = entry,
+                    env = env,
+                    callbacks = callbacks,
+                    groupKey = groupKey,
+                    onOpen = {},
+                    modifier = Modifier.size(width = stripWidth, height = height),
+                )
+            }
+        }
+    }
+}
+
+/** The test tag of a strip of a card in front of the open one. */
+internal const val STREAM_OPEN_STRIP_TEST_TAG = "stream-open-strip"
 
 /** The indices of the cards around [position] (the two it lies between) that open in place, in order. */
 private fun openableIndicesAround(

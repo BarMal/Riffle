@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -61,6 +62,12 @@ internal fun OpenStreamCard(
     bodyScroll: ScrollState = rememberScrollState(),
     /** Previous and Next card as accessibility actions of this card (a stack of more than one card); else null. */
     cardSteps: CardSteps? = null,
+    /** How open the card is while the stack moves from one card to the next: its body fades and its header scales. */
+    presence: OpenCardPresence? = null,
+    /** The drag past the body's edge toward a neighbour, and the neighbours' titles it names; null: no cue. */
+    cue: HandoffCueState? = null,
+    olderTitle: String? = null,
+    newerTitle: String? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
     val actions = StreamCardActions.forContent(content, queueShown)
@@ -83,27 +90,42 @@ internal fun OpenStreamCard(
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
                     .cardActionAccessibility(content, actions, callbacks, onQueueShownChange, cardSteps.actions())
                     .streamClickable(onClose, stringResource(R.string.stream_card_close))
+                    // A card measured shorter than its content (the stack is moving) is cut at its own edge.
+                    .clipToBounds()
                     .padding(horizontal = RiffleSpacing.l, vertical = RiffleSpacing.m),
-            verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
+            verticalArrangement = PinnedLastArrangement(RiffleSpacing.m, pinLast = actionsOnCard),
         ) {
             if (content is NotificationContent) {
-                OpenNotificationHeader(content, env, groupKey, callbacks, hideChoices, Modifier.swipeToDismiss(swipe))
+                OpenNotificationHeader(
+                    content,
+                    env,
+                    groupKey,
+                    callbacks,
+                    hideChoices,
+                    Modifier.swipeToDismiss(swipe).headerScale(presence),
+                )
             }
-            Column(
-                modifier = Modifier.weight(1f, fill = false).verticalScroll(bodyScroll),
-                verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
-            ) {
-                when (content) {
-                    is NotificationContent -> OpenNotificationBody(content, env)
-                    is MediaContent ->
-                        OpenMedia(content, env, callbacks, groupKey, hideChoices, queueShown)
-                    is EventContent -> OpenEvent(content, env, callbacks, groupKey, hideChoices)
-                    is TaskContent -> OpenTask(content, env)
-                    else -> Unit
+            Box(modifier = Modifier.weight(1f, fill = false)) {
+                Column(
+                    // The body dims as the finger goes past its edge toward a neighbour, so the cue reads over it.
+                    modifier = Modifier.bodyFade(presence, cue).verticalScroll(bodyScroll),
+                    verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
+                ) {
+                    when (content) {
+                        is NotificationContent -> OpenNotificationBody(content, env)
+                        is MediaContent ->
+                            OpenMedia(content, env, callbacks, groupKey, hideChoices, queueShown)
+                        is EventContent -> OpenEvent(content, env, callbacks, groupKey, hideChoices)
+                        is TaskContent -> OpenTask(content, env)
+                        else -> Unit
+                    }
+                }
+                if (cue != null && presence != null) {
+                    HandoffCue(cue, presence, olderTitle, newerTitle)
                 }
             }
             if (actionsOnCard) {
-                CardActionControls(content, actions, callbacks, onQueueShownChange)
+                CardActionControls(content, actions, callbacks, onQueueShownChange, Modifier.bodyFade(presence))
             }
         }
     }

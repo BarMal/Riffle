@@ -56,6 +56,9 @@ internal const val DOCK_CARD_ACTIONS_TEST_TAG = "dock-card-actions"
 /** The test tag of the Dock's row while it holds the page's quick actions. */
 internal const val DOCK_QUICK_ACTIONS_TEST_TAG = "dock-quick-actions"
 
+/** The semantics property of the opacity the Dock's row is drawn at (a test hook, read with the tree). */
+internal val DockHeaderAlphaKey = androidx.compose.ui.semantics.SemanticsPropertyKey<Float>("DockHeaderAlpha")
+
 /**
  * What the Dock's body needs to hold its row (ADR 0003, Amendment 1, "Stream: browse, then open", and Amendment 3,
  * "Quick actions"): the open card's actions (null while none is open), the quick actions of the page in front (null
@@ -208,7 +211,8 @@ private fun DockActionsHeader(
                     if (content !is HeaderContent.Quick) paneTitle = title
                 }
                 .clipToBounds()
-                .graphicsLayer { alpha = presence.value * contentAlpha.value },
+                .graphicsLayer { alpha = presence.value * contentAlpha.value }
+                .semantics { this[DockHeaderAlphaKey] = presence.value * contentAlpha.value },
         content = {
             if (visible && content != null) {
                 CompositionLocalProvider(

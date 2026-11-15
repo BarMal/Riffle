@@ -1967,3 +1967,108 @@ kind of content, no new visual language.
 - **Not confirmed without a device:** the feel of the stack under a real thumb with the keyboard up, the IME's search key, a
   launch of a quick action from the stack through the real gateway and a work profile, the notification line against a real
   listener, and TalkBack's reading of the front card and the strips (the semantics are asserted, the speech is not).
+
+## Open card polish
+
+Device report from the owner's unfolded phone (724 x 784 dp, the Dock on the right edge, a page with three notification cards
+and the quick actions strip under the stack): "expanded cards need to be bigger", "if we're allowing expanded cards to scroll to
+the next card then there needs to be a visual indicator", and "work on the animations to transition/dock/undock quick actions".
+The recording showed four things; each had a cause in the code, which the tests below pin.
+
+### What the recording showed, and why
+
+1. **The open card appeared somewhere else and was small.** The open card's layer measured from the bottom of the Stream's whole
+   area (the Dock's gap), but the collapsed stack stands higher on a side Dock's page: the page keeps the quick actions strip's
+   room under the stack (gap 8 + strip 52 + padding 8 dp). So at progress 0 the card was 68 dp lower than the front card it was
+   meant to grow from: the first frame was a jump, the card covered the strip, and on close the card landed 68 dp low and the
+   stack then snapped up. The "strip vanishes in one frame" was that cover. The card's height rule (`room` minus the strips of
+   the cards behind it) was right but the room was cut at the top by the strips only; its content measure gave a short card the
+   height of its text, which could be less than the front card it came from.
+2. **Handoff mess.** The card leaving and the card arriving were each drawn whole at the height the blend gave them, with the
+   content measured at that height: a body, its reply row and its actions overflowed a card that was a strip tall, and the two
+   bodies were drawn through each other. Nothing said a neighbour was reachable until the handoff had happened.
+3. **Strips only after the handoff.** The cards behind the open card were strips of the *stack*; the cards in front of it had no
+   strip at all, so the look of row 3 existed only for the older cards, and a card opened by the handoff had nothing below it.
+4. **Closing landed, then moved.** Same cause as 1: the layer's rest place was not the stack's. The strip came back in a single
+   frame because it was out of the tree while the card was open and its room was reserved only by being there.
+
+### What was built
+
+- **One rectangle, one spring (A).** `OpenCardLayout.frame` takes the collapsed front card's bottom edge (`restBottomPx`) and
+  the room the cards in front take under the open card (`belowPx`). At progress 0 the card is exactly the front card; top,
+  bottom and height are each linear in the progress, so they move one way only. A card is never shorter than its browse card
+  (`fullHeight` is raised to it); a card with more to say takes all the room: the column's height less the strips of its
+  neighbours and the Dock's gap. The page reserves the strip's room always (`StackFooter`, `LocalStackFooter`): the strip has
+  one fixed height (`QuickActionsStripHeight`, 52 dp), the room is there on every page of a side Dock whether or not the page
+  has quick actions and whether or not a card is open, and the layer reads it, so the rest place of the stack is a constant.
+  Edges are rounded to whole pixels, the height is the difference: no pixel goes back.
+- **Folded.** The layer's area is the Stream's, inside the system bars, down to the Dock's room, which grows with the row of the
+  card's actions: the card's top strip stands 8 dp from the top of the area and its foot 26 dp above the Dock. Both edges move
+  one way (the Dock rises under it, or falls), checked by `OpenCardPolishFoldedTest`.
+- **Neighbours from the first frame (B).** The cards behind stay as the stack's strips above the card (the stack moves to the
+  card's top). The cards in front of it are strips below it (`OpenLayerStrip`, the real card cut off at its header, one node for
+  assistive technology: "bring to front"), as many as leave the card its least room (`OPEN_CARD_MIN_DP`), tapping one opens
+  that card. Their slots do not move while the card changes: the card that leaves or arrives takes the slot of the one that
+  arrives or leaves, so each strip stands still and one card moves between them.
+- **The handoff.** The card's body (thread and actions) has an opacity of its own (`bodyAlphaAt`): nothing until the card is half
+  open, full from there, so the body of the card that leaves has gone before the body of the card that arrives shows: no
+  moment has both (a pure test over the whole range). The card is clipped to its own bounds, the header scales from 0.75 to 1
+  with it (the headers around it are about that size), the actions row stays at the foot of a card held at its browse height.
+  Everything moves on the position of the stack: one spring.
+- **The cue.** Past the edge of a scrolling body the stack does not move for 56 dp (`OpenCardHandoff.THRESHOLD_DP`). The finger's
+  travel past the edge now fills a cue: a chevron and the neighbour's title in a small Regular-glass pill at the top (older
+  card, finger down) or the bottom (newer card, finger up) of the body, its type the Dismiss cue's (`labelLarge`), opacity
+  rising with the first two thirds of the drag, a line along its foot filling to the threshold, the body dimming by up to 55 %
+  so the cue reads over it. It is drawn only toward a neighbour that exists, is no part of the tree for assistive technology,
+  and is read in draw (a recomposition probe, `handoff-cue` and `open-strip:`). The card's own "Next card" and "Previous card"
+  custom actions were already there (stack of more than one card); a test pins them.
+- **Quick actions (C).** Unfolded, the strip leaves the way the card arrives: it fades and slides down by its own height on the
+  card's growth (`openCards.motion.progress`, read in draw) and returns the same way; its room is reserved throughout, so nothing
+  around it moves. **Decision:** a page with no quick actions keeps the room empty and the stack keeps its place on every
+  page; the stack does not re-anchor (re-anchoring would need its own spring and would move the stack under the finger as
+  pages swipe; an empty band under it is the cheaper cost). The strip belongs to its page, so on a page change it goes with the
+  page on the pager's own motion (a slide, never an appearance or a disappearance); chips do not cross-fade inside one strip
+  because no strip is shared by two pages. Chips: `QuickChipFit` fits them whole when their labels can give up their ends
+  (every chip wider than a common cap is ellipsized, none narrower than 88 dp); only when that cannot be, the row scrolls and a
+  chip less than half in view is not drawn at all (`DockEdgeFade.alpha(vanishBelow = 0.5)`), one more in view is quiet.
+  Folded, the Dock's row swaps the chips for the card's actions: the row is one node holding one of the two, its content fades out,
+  swaps while nothing of it is drawn, and fades in while its height eases on the Dock's spring. Nothing was found to pop there;
+  the per-frame test (`OpenCardPolishFoldedTest`) pins it (`DockHeaderAlphaKey`, a test hook like `DockEdgeFadeAlphaKey`).
+
+### Per-frame numbers (owner's window, xhdpi so px = 2 x dp; the stack's front card and the open card)
+
+Collapsed front card before opening: left 300, top 482, right 628, bottom 688 dp (328 x 206 dp). After closing: the same
+rectangle, to the pixel (before the change too, but only after a jump, see below).
+
+| Frame after the tap | Before: open card top / bottom (dp) | After: open card top / bottom (dp) |
+| --- | --- | --- |
+| 1 | not drawn yet | not drawn yet |
+| 2 | 550.5 / 756.5 (68.5 dp lower than the front card: the jump) | 482.5 / 688.5 (the front card) |
+| 3 | 547.5 / 756.5 | 481 / 690 |
+| 5 | 533.5 / 756.5 | 473 / 696 |
+| 10 | 484.5 / 756.5 | 445.5 / 717.5 |
+| 20 | 426 / 756.5 | 411 / 745 |
+| 40 | 400.5 / 756.5 | 398 / 756 |
+| settled | 396.5 / 756.5 (360 dp tall) | 396.5 / 756.5 (360 dp tall) |
+
+The settled card is the same size in this window because its room (the column, 512 dp here, less two 64 dp strips and the gap)
+was always the limit; what changed is where it starts from and that it starts there. A lone card, with no strips, takes the
+column less its gap. On closing, before: the last card frame stood 68.5 dp low and the stack was drawn 68.5 dp higher the frame
+after (a jump of 137 px); after: the last card frame is the front card (482.5 / 688.5) and the stack is where it landed. The
+test `OpenCardPolishUnfoldedTest` samples every frame of a 80 frame opening and closing: the stack's rectangle is equal before
+and after (0.5 px), the card's first drawn frame is the front card's rectangle (1.5 px of rounding), top never goes back down,
+bottom never goes back up, the left edge never goes back in, and the strip's reserved room never moves.
+
+### Tests
+
+`OpenCardMotionTest` (the frame from the rest rectangle, the room below, the minimum height, one-way edges, both placements),
+`QuickChipFitTest` (the fit, the scroll fallback, the vanishing edge chip), `OpenCardHandoffCueTest` (the cue's fill, its
+direction, no cue toward nothing, lifting ends it, the bodies are never both drawn, the header scale),
+`OpenCardPolishUnfoldedTest` and `OpenCardPolishFoldedTest` (every frame, above), `OpenCardPolishUnfoldedShots` and
+`OpenCardPolishFoldedShots` (a long card with neighbours above and below, light and dark, and the cue at the top and at the
+bottom of the body mid-drag).
+
+- **Tests rewritten on purpose:** none. Existing tests of the open card, its drag and quick actions pass unchanged.
+- **Not confirmed without a device:** the feel of the spring against a finger, the cue's legibility over real text on a real
+  panel, the strip's slide under a real pager, TalkBack's reading of the strips below the card (the semantics are asserted, the
+  speech is not), and the owner's own column height (the fixture's Dock body is 489 dp).

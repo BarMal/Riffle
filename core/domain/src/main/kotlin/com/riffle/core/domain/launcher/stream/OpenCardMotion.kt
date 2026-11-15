@@ -77,10 +77,17 @@ object OpenCardLayout {
     /**
      * The open card at [progress]. [areaHeightPx] is the Stream's area down to the top of the Dock's room;
      * [bottomInsetPx] is the gap left above the Dock; [browseHeightPx] is the card's browse height and [fullHeightPx]
-     * its content's (already held to the room there is); [stripsPx] is the room the peeking cards above it take.
-     * The card grows in place: at 0 it is exactly where its browse card stands (just above the Dock), at 1 where
-     * [placement] puts it, never above the strips and never below the Dock's gap.
+     * its content's (already held to the room there is); [stripsPx] is the room the cards behind it take above it as
+     * strips and [belowPx] the room the cards in front of it take below it.
+     *
+     * The card grows from exactly where its browse card stands: its bottom at 0 is [restBottomPx] (the collapsed
+     * stack's bottom edge, which may stand above the area's bottom by what the page keeps under the stack) and its
+     * height is [browseHeightPx]. At 1 it stands where [placement] puts it, never above the strips and never below
+     * the room under it ([belowPx], the Dock's gap). It is never shorter than its browse card ([fullHeightPx] is
+     * raised to it), so a card with little to say keeps its height and one with a lot of content takes all the room
+     * there is. Top, bottom and height are each linear in [progress], so they move one way only.
      */
+    @Suppress("LongParameterList")
     fun frame(
         progress: Float,
         areaHeightPx: Float,
@@ -89,14 +96,16 @@ object OpenCardLayout {
         fullHeightPx: Float,
         stripsPx: Float,
         placement: OpenCardPlacement,
+        restBottomPx: Float = areaHeightPx - bottomInsetPx,
+        belowPx: Float = 0f,
     ): Frame {
         val p = progress.coerceIn(0f, 1f)
-        val browse = browseHeightPx.coerceAtMost(fullHeightPx)
-        val bottom = areaHeightPx - bottomInsetPx
+        val bottom = areaHeightPx - bottomInsetPx - belowPx
         val room = (bottom - stripsPx).coerceAtLeast(0f)
-        val full = fullHeightPx.coerceAtMost(room)
+        val browse = browseHeightPx.coerceAtMost(room)
+        val full = maxOf(fullHeightPx.coerceAtMost(room), browse)
         val height = browse + (full - browse) * p
-        val browseTop = bottom - browse
+        val browseTop = restBottomPx - browse
         val openTop =
             when (placement) {
                 OpenCardPlacement.CENTRE -> stripsPx + (room - full) / 2f
