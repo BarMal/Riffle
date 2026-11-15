@@ -1647,3 +1647,90 @@ dock, and increase their size." Folded sizes did not change (the screenshots and
 - **Not confirmed without a device:** how the larger text and cards look with a real wallpaper and a hinge, the column with
   the Dock's measured body on every foldable, and unfolded search at the column's centred rectangle (its field now stands
   below the Dock's lower end while the Home mode's Dock is shorter than the column's least height).
+
+### The Dock's resize animation (item 3)
+
+The owner: "the dock resize animation is a little jarring." What the code did, read and then measured frame by frame with the
+test clock (the Dock body's bounds and every icon's position at each 16 ms frame, bottom Dock on a 411 dp phone, right Dock on
+an unfolded window; px at 2.625):
+
+- **Opening, Home mode to contextual (before).** The body's length was a plain `width()` / `height()` of the strip
+  (`DockSurfaceStrip`), so it was not animated at all: on the frame after the release (the shell is told then, and the
+  contextual tiles appear) the bottom body went from 599 to 1014 px in one frame, the Home strip was swapped for the contextual
+  row in the same frame (the first pinned icon jumped from x 277 to x 70, 79 dp; the icons grew 116 to 126 px) and the five
+  tiles stood at full strength at once, two of them past the body's clip. A right Dock grew from 500 to 1094 px about its middle,
+  so each pinned icon jumped 297 px (113 dp) along the edge in that one frame, and the tiles popped in whole. The Stream's
+  cards fanned out over the next 200 ms against a Dock that had already finished. The two `animateContentSize` modifiers on the
+  Dock's area (`StandardHomeDockArea`'s own `RiffleMotion.smooth()` and `dockShelfMotion`) did not run for this: the area is
+  full width (or full height) along the Dock's edge and its thickness does not change, so there was nothing for them to ease.
+- **Live apps arriving or leaving in Home mode (before).** The same snap, by reading: `dockSurfaceStripMainAxisDp` changes with
+  the entries and the body's `width()` with it (not traced separately).
+- **The actions row (before)**, the only place the two stacked modifiers did run, and measured: the row grew 0 to 157 px over
+  about 20 frames in its own `AnimatedVisibility` spring, the area's height followed it 268 to 439 px through the two
+  `animateContentSize` springs in series (about 45 frames to settle: three springs, one behind the next), and since
+  `animateContentSize` keeps its content at the top and the area stands on the bottom edge, the Dock body, which is the
+  content's bottom, was clipped to a shrinking window and pushed down: its bounds went 200 to 110 px tall and its top
+  from 2157 to 2289 px (132 px past where it rests, below the area's clip) at frame 12 and rose back to 2159 by frame 44.
+  The Dock visibly sank and bobbed back as the row opened; the container lagged the row, so what Home was told to reserve
+  (the area less the row) lagged too.
+- **Not found:** an overshoot or bounce on any of them (all the springs are critically damped), the Dock re-centring mid-way on
+  the first frames (the first-frame easing was already off, and still is), or a relayout storm in Home's grid (it is not
+  measured by any of it).
+
+**What it is now: one motion.**
+
+- **The body's length** (`DockBodyLength.kt`: `DockBodyLength`, `rememberDockBodyLength`, `dockBodyLength`, `DockBodyFrame`)
+  eases from the length it has to the one it is to have, whatever the cause (the tiles appended by the Stream, a live app
+  arriving or leaving): one `Animatable` on `RiffleMotion.smooth(tuning)`, the Dock's own spring at the opening speed
+  (`DockMotionTuning`, the setting that moves the trampoline and the fan), critically damped, so no overshoot. It starts the
+  moment the target changes: the contextual mode is shown at the release, as the cards start to fan, so the two start
+  together. It is read in layout only: nothing recomposes per frame, and the Dock's cross size, and so the room Home reserves
+  and Home's grid, are not touched (the grid's cells keep their size at every frame; unfolded they keep their bounds).
+- **Closing is the opening reversed.** The row stays drawn while the cards go back in, but the body's target is already the
+  Home mode's length (`HomeDockInterpreter.retracting`, from `DockMotionState.isClosing`; `Dock` works the Home length out with
+  the same metrics), so it retracts with the cards, not after them. A closing that is taken back mid-way extends it again.
+- **The content is laid out once, at its final size, and the body clips it** (`DockBodyFrame`): the row is not measured
+  per frame and is never squeezed. The frame is the viewport the icons fade in (`LocalDockRunViewport`, the per-item
+  opacity by visible fraction of round 3, `DockEdgeFade`): a tile fades in as the body reaches it and one it has not
+  reached is not drawn, so no half-drawn tile and no tile outside the body. A few pixels of slack stop the rounding of an
+  icon's size and gap from reading as a cut at rest. The Home strip's icons, which had no such fade, now have it through the
+  same frame (a no-op at rest).
+- **Where the pinned icons are.** The pinned run does not move relative to the body. The Dock is centred on its edge, and
+  its contextual length is not its Home length, so the Home and the contextual Dock cannot both be centred with the pinned run
+  in the same place: anchoring the run would put the contextual Dock off-centre (and, on a bottom Dock, off the screen's
+  edge). I kept the Dock centred and made the body's growth the one thing that moves: the body grows about its middle,
+  the pinned run rides the body's start edge (its offset from it is the same at every frame, a test), and the new tiles
+  appear in the room beyond. So the pinned icons do move on screen, but with the body, smoothly, in the same single motion
+  (a right Dock's icons slide 113 dp over about 15 frames instead of jumping that far in one), never as a second motion
+  against the body. The ring and the selection do not scroll the row meanwhile: the row is laid out at its final
+  size, so its scroll range does not change with the motion (also covered by the pinned offset being constant).
+- **One thing animates a Dock's size, nothing stacks.** The area's two `animateContentSize` modifiers are removed (and
+  `dockShelfMotion`, `easeSizeWhen`): the actions row grows in its own `AnimatedVisibility`, now on the same spring at the
+  same speed (`DockActionsRow`), and the area is simply what it holds at every frame, so the Dock body does not move while the row
+  opens and goes (the measured sinking is gone) and what Home reserves is exact. A change of the Dock's thickness (its icon
+  size in Settings) and the shelf (off for everyone today) therefore land at once; they were eased by the modifiers.
+- **Reduced motion:** the length is the target in the very frame it changes (not a frame late) and the row's content
+  cross-fades in over the short 80 ms fade (`rememberDockContentFade`).
+- **First layout and a change of edge:** unchanged (`rememberDockSizeEasing`): the body is laid out at its length from the
+  first frame and never eased across a change of edge.
+- **The Stream's column** no longer reads the Dock's body frame by frame: the body reports the rectangle it will have once it
+  has arrived, and how long it is in the contextual mode (`HomeDockHostState.contextualLengthDp`), which the unfolded
+  column spans, so the column does not relayout while the Dock moves.
+
+Tests (`DockResizeMotionTest`, `DockLiveAppsResizeTest`, `DockActionsRowMotionTest`, Robolectric, the test clock stepped by hand,
+through the real `HomeDestination`): opening on a bottom and a right Dock (the body's length is monotonic, never above its
+final length, eased over several frames, starts within a few frames of the release, centred throughout; the first pinned
+icon's offset from the body's start edge is constant and it never jumps relative to it; no tile is drawn outside the body and
+tiles fade in part-way; Home's cells keep their size, unfolded their bounds), closing on both (monotonic, starts with the
+cards, never undershoots), reduced motion (nothing between the two lengths is drawn), the first frames, a live app arriving and
+leaving, and the actions row opening and closing (the row's height monotonic, the Dock body's bounds constant at every frame,
+the row inside the area and above the body, Home's grid unchanged).
+
+**Tests rewritten on purpose:** `DockEntranceTest.theDockAreaDoesNotEaseItsSizeOnTheFirstFramesButDoesEaseALaterChange` asserted
+that the Dock area eases a later change of its thickness (the two `animateContentSize` modifiers); it is now
+`theDockAreaHasNoSizeAnimationOfItsOwnSoAChangeOfItsThicknessLandsAtOnce`. `DockShelfMotionAndFrameRateTest` still tests the shelf
+motion policy; nothing draws with it now.
+
+**Not confirmed without a device:** how the sideways slide of the pinned icons reads on a real bottom Dock (it is the whole
+width, 79 dp), the match of the length's spring against the cards' fan (they share a tuning but are two springs; the frame
+tests show them starting together), and a Dock with a very long run of live apps.

@@ -5,10 +5,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
 import android.view.Display
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -17,9 +13,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import kotlin.math.abs
 
@@ -127,9 +121,6 @@ internal class DockShelfFrameRateGateway(
         }
 }
 
-internal fun Modifier.dockShelfMotion(policy: DockShelfMotionPolicy): Modifier =
-    animateContentSize(animationSpec = dockShelfSizeAnimation(policy))
-
 internal fun Modifier.dockShelfFrameRatePreference(targetFps: MotionPerformanceTargetFps): Modifier =
     composed {
         val view = LocalView.current
@@ -219,16 +210,4 @@ internal fun Modifier.dockShelfSystemGestureExclusion(policy: DockShelfGesturePo
                 )
             }
         }
-    }
-
-private fun dockShelfSizeAnimation(policy: DockShelfMotionPolicy): FiniteAnimationSpec<IntSize> =
-    when (policy) {
-        DockShelfMotionPolicy.ReducedShortTween ->
-            tween(
-                durationMillis = REDUCED_MOTION_DOCK_SHELF_DURATION_MILLIS,
-                easing = LinearOutSlowInEasing,
-            )
-
-        DockShelfMotionPolicy.StandardSpring ->
-            RiffleMotion.smooth()
     }

@@ -41,8 +41,8 @@ import org.robolectric.annotation.GraphicsMode
  * [HomeDestination]: the Dock is in its final place from the very first frame and never travels (its layout bounds are
  * the same at every frame of the entrance, bottom and side), the entrance changes only alpha and a translation toward
  * the Dock's edge (about 14 dp, to nothing), a reduced-motion entrance is a plain fade, it does not replay when a
- * sheet comes and goes over Home but does when Home was stopped, and the Dock area's own size easing does not run on
- * the first frames (it still eases a later change).
+ * sheet comes and goes over Home but does when Home was stopped, and the Dock area has no size animation of its own
+ * (a change of its thickness lands at once; the body's length has its own motion, see `DockResizeMotionTest`).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -274,7 +274,7 @@ class DockEntranceTest {
     }
 
     @Test
-    fun theDockAreaDoesNotEaseItsSizeOnTheFirstFramesButDoesEaseALaterChange() {
+    fun theDockAreaHasNoSizeAnimationOfItsOwnSoAChangeOfItsThicknessLandsAtOnce() {
         val small = ScreenshotFixtures.HomeSizing(dockIconSizeDp = SMALL_ICON_DP)
         val large = ScreenshotFixtures.HomeSizing(dockIconSizeDp = LARGE_ICON_DP)
         show(phone(small))
@@ -291,16 +291,20 @@ class DockEntranceTest {
         val settled = sample().layout.height
         assertEquals("a change during the entrance snaps", settled, early, 1f)
 
-        // The same kind of change once Home has settled is eased: it is part way a couple of frames in.
+        // Once Home has settled the area still has no animation of its own (batch 7: the two stacked
+        // `animateContentSize` modifiers are gone; the Dock's length and the actions row have their own motion): the
+        // thickness is the new one in the very next frame, with no second easing behind it.
         composeRule.runOnUiThread {
             shell = phone(small)
             Snapshot.sendApplyNotifications()
         }
-        repeat(FRAMES_PART_WAY) { composeRule.mainClock.advanceTimeByFrame() }
-        val part = sample().layout.height
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.mainClock.advanceTimeByFrame()
+        val next = sample().layout.height
         repeat(ENTRANCE_MILLIS / FRAME_MILLIS) { composeRule.mainClock.advanceTimeByFrame() }
         val later = sample().layout.height
-        assertTrue("eased: $part is between $settled and $later", part - later > 2f && settled - part > 2f)
+        assertTrue("the thickness changed: $settled to $later", settled - later > 2f)
+        assertEquals("a later change lands at once too", later, next, 1f)
     }
 
     private companion object {
@@ -308,7 +312,6 @@ class DockEntranceTest {
         const val ENTRANCE_MILLIS = 960
         const val REDUCED_MILLIS = 160
         const val FRAMES_FOR_A_SHEET = 30
-        const val FRAMES_PART_WAY = 20
         const val SMALL_ICON_DP = 44
         const val LARGE_ICON_DP = 64
     }

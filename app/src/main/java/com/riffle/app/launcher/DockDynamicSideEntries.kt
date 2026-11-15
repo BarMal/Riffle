@@ -59,6 +59,8 @@ internal fun rememberDockDynamicSide(
     pinnedApps: List<PinnedApp> = emptyList(),
     /** The "Show live apps" switch: off, live apps and now playing are not drawn (the contextual tiles still are). */
     showLiveApps: Boolean = true,
+    /** The Stream is on its way out (the cards are going back into the Dock): the Dock retracts with them. */
+    closing: Boolean = false,
 ): HomeDockInterpreter {
     if (stream == null) {
         return modeInterpreter.copy(dynamicEntries = emptyList(), pinnedStream = null, cardActions = null)
@@ -141,6 +143,7 @@ internal fun rememberDockDynamicSide(
     return modeInterpreter.copy(
         dynamicEntries = entries,
         contextual = extended,
+        retracting = closing,
         onDynamicEntryDelegated = { key ->
             // The second tap on a live app (its icon is ringed) opens the app; tiles and now playing only show a page.
             val live = latestSide.value.firstOrNull { entry -> entry.key == key } as? DockDynamicSideEntry.LiveApp

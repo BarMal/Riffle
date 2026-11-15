@@ -93,7 +93,6 @@ internal fun DockContextualRow(
             }
         }
     var viewportBounds by remember { mutableStateOf<Rect?>(null) }
-    val runViewport = remember(runsHorizontally) { DockRunViewport(runsHorizontally) }
     val pinnedSelected = LocalDockPinnedStream.current?.selectedKey
     RevealOpenEntry(
         selectedKey = dynamicEntries.firstOrNull(DockDynamicEntry::isSelected)?.key ?: pinnedSelected,
@@ -124,7 +123,6 @@ internal fun DockContextualRow(
                     choice?.rowViewport = coordinates.boundsInRoot()
                     val whole = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
                     if (viewportBounds != whole) viewportBounds = whole
-                    if (runViewport.bounds != whole) runViewport.bounds = whole
                 }
                 .dockOverflowMask(
                     runsHorizontally = runsHorizontally,
@@ -133,10 +131,9 @@ internal fun DockContextualRow(
                 )
                 .testTag(DOCK_CONTEXTUAL_ROW_TEST_TAG),
     ) {
-        CompositionLocalProvider(
-            LocalDockDynamicEntryBoundsSink provides boundsSink,
-            LocalDockRunViewport provides runViewport,
-        ) {
+        // The icons fade where the body's frame cuts them ([DockBodyFrame] provides the viewport): at rest that is this
+        // row's own viewport, and while the body is still growing it is the part of the row the body has reached.
+        CompositionLocalProvider(LocalDockDynamicEntryBoundsSink provides boundsSink) {
             DockSectionRun(
                 runsHorizontally = runsHorizontally,
                 modifier = scrollModifier,

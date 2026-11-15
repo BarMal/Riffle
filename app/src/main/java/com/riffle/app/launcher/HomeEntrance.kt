@@ -189,10 +189,10 @@ internal fun HomeEntranceState.frame(): HomeEntranceFrame {
 }
 
 /**
- * Whether the Dock area may ease its size changes (a shelf opening, an icon size, the actions row). Never on the first
- * frames of Home's entrance and never when the Dock changes edge: then the Dock is laid out where it belongs and only
- * appears there. An easing size animation would otherwise carry the Dock across the screen as Home settles (the
- * posture, the insets and the apps arriving after the first frame).
+ * Whether the Dock may ease its size changes (its body's length, see [DockBodyLength]). Never on the first frames of
+ * Home's entrance and never when the Dock changes edge: then the Dock is laid out where it belongs and only appears
+ * there. An easing size animation would otherwise carry the Dock across the screen as Home settles (the posture, the
+ * insets and the apps arriving after the first frame).
  */
 @Composable
 internal fun rememberDockSizeEasing(position: DockPosition): Boolean {
@@ -207,8 +207,3 @@ internal fun rememberDockSizeEasing(position: DockPosition): Boolean {
 private class EdgeMemory(
     var edge: DockPosition,
 )
-
-internal inline fun Modifier.easeSizeWhen(
-    ease: Boolean,
-    easing: Modifier.() -> Modifier,
-): Modifier = if (ease) easing() else this

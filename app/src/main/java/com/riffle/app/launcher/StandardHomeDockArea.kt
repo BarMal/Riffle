@@ -1,7 +1,5 @@
 package com.riffle.app.launcher
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.snap
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,7 +21,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.stream.OpenCardActions
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.DockAlignment
@@ -50,6 +47,7 @@ internal fun StandardHomeDockArea(
     dynamicEntries: List<DockDynamicEntry> = emptyList(),
     onDynamicEntryDelegated: (String) -> Unit = {},
     contextual: Boolean = false,
+    retracting: Boolean = false,
     staticItemMenuExtras: DockItemMenuExtras = DockItemMenuExtras(),
     staticItemTapOverride: (AppIdentity) -> LauncherShellAction? = { null },
     isDraggedItemOverDock: Boolean = false,
@@ -90,7 +88,6 @@ internal fun StandardHomeDockArea(
     // The room Home keeps for the Dock is the Dock's own, not the open card's actions row that grows out of it: that
     // row takes room from the Stream above it and leaves Home's grid where it is.
     val extent = remember { DockExtentReport() }
-    val easeSize = rememberDockSizeEasing(position)
 
     Column(
         modifier =
@@ -101,16 +98,10 @@ internal fun StandardHomeDockArea(
                     dock = layout.dock,
                     margins = margins,
                 )
-                // The container itself as one animated shape (dock-reorient decisions, follow-up to
-                // #1278): a dock pull's COMMIT can swap this area's cross-axis extent (a bottom dock's
-                // height for a side dock's width, or the shelf's own open/close) between one frame and
-                // the next: this eases the resize instead of a hard snap. Reduced motion (Decision:
-                // reduced motion) keeps the snap -- the crossfade it already gets is the whole effect.
-                .easeSizeWhen(easeSize) {
-                    animateContentSize(
-                        animationSpec = if (presentation.reducedMotion) snap() else RiffleMotion.smooth(),
-                    )
-                }
+                // No size animation of its own (batch 7): two `animateContentSize` modifiers used to stack here, easing
+                // the area behind the animations of what is in it. The Dock body eases along its edge in one motion
+                // ([DockBodyLength]) and the actions row grows in its own ([DockActionsRow]), so the area is just
+                // the sum of what it holds, at every frame.
                 .onSizeChanged { size ->
                     extent.totalPx = if (runsAlongASide) size.width else size.height
                     actions.onDockInteractionExtentChanged(extent.reservedPx())
@@ -124,7 +115,6 @@ internal fun StandardHomeDockArea(
                     top = if (runsAlongASide || position == DockPosition.TOP) margins.top.dp else 0.dp,
                     bottom = if (runsAlongASide || position == DockPosition.BOTTOM) margins.bottom.dp else 0.dp,
                 )
-                .easeSizeWhen(easeSize) { dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion)) }
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),
         verticalArrangement = layout.dock.alignment.sideArrangement(runsAlongASide),
@@ -148,6 +138,7 @@ internal fun StandardHomeDockArea(
                 dynamicEntries = dynamicEntries,
                 onDynamicEntryDelegated = onDynamicEntryDelegated,
                 contextual = contextual,
+                retracting = retracting,
             )
         }
         DockActionsRowAt(DockPosition.TOP, position, cardActions, layout, presentation) { rowPx ->
@@ -201,6 +192,7 @@ private fun DockOrShelf(
     dynamicEntries: List<DockDynamicEntry>,
     onDynamicEntryDelegated: (String) -> Unit,
     contextual: Boolean,
+    retracting: Boolean,
 ) {
     if (showDockShelf) {
         ExpandedDockSurface(
@@ -233,6 +225,7 @@ private fun DockOrShelf(
             dynamicEntries = dynamicEntries,
             onDynamicEntryDelegated = onDynamicEntryDelegated,
             contextual = contextual,
+            retracting = retracting,
         )
     }
 }
