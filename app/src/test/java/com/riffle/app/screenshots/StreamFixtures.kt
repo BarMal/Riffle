@@ -382,7 +382,7 @@ internal object StreamFixtures {
     fun ready(section: StreamSection): StreamSectionResult.Ready =
         StreamSectionResult.Ready(
             when (section) {
-                StreamSection.NOW -> listOf(group(StreamGroupKeys.NOW, null, listOf(media, nextEvent, alarm)))
+                StreamSection.NOW -> listOf(group(StreamGroupKeys.NOW, null, listOf(media)))
                 StreamSection.NOTIFICATIONS ->
                     listOf(
                         group("chat:personal", "Chat", listOf(chatNotification, chatNotificationTwo), total = 5),
@@ -397,6 +397,7 @@ internal object StreamFixtures {
                     listOf(
                         group("2026-01-01", null, listOf(nextEvent, lunchEvent)),
                         group("2026-01-02", null, listOf(feedEvent)),
+                        group(StreamGroupKeys.ALARM, null, listOf(alarm)),
                         group(StreamGroupKeys.TASKS, null, tasks),
                     )
                 StreamSection.SHORTCUTS -> emptyList()

@@ -67,9 +67,9 @@ fun StreamPage.ref(): StreamPageRef = StreamPageRef(key = key, section = section
 /**
  * Plans the Stream's pages from the layout and what each section delivered (ADR 0003, Views):
  *
- * - **Now**: one page (media with its queue, the next event, the alarm).
+ * - **Now**: one page, media only (the players with their queue; the next event and the alarm are on Today).
  * - **Notifications**: one page per app that has notifications, newest app first (the order the section delivers).
- * - **Recents**: one page. **Today** (the next event, "To do today", later events and tomorrow): one page.
+ * - **Recents**: one page. **Today** (the next event, the alarm, "To do today", later events and tomorrow): one page.
  * - **Feeds**: one page per feed with unread items, the feed with the newest article first.
  * - A section with nothing to show (empty, loading, no access, not connected, unavailable, off) is one page holding
  *   that state, so the Stream is never an empty pager and every state keeps its action.

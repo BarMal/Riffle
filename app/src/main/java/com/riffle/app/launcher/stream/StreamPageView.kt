@@ -66,8 +66,6 @@ import com.riffle.app.launcher.dockFan
 import com.riffle.app.launcher.rememberEasedFraction
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
-import com.riffle.core.domain.launcher.stream.EventContent
-import com.riffle.core.domain.launcher.stream.EventKind
 import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamGroupKeys
 import com.riffle.core.domain.launcher.stream.StreamPage
@@ -457,7 +455,7 @@ private fun StreamContentBody(
             PageScroll {
                 body.groups.forEach { group ->
                     GroupHeading(section, group, env)
-                    StreamRowsPanel(section, group.items, env, callbacks, hideGroupKey)
+                    StreamRowsPanel(group.items, env, callbacks, hideGroupKey)
                 }
                 body.gaps.forEach { gap -> StreamShortcutsGap(gap) }
             }
@@ -493,7 +491,6 @@ private fun StreamShortcutsGap(gap: com.riffle.core.domain.launcher.stream.Strea
 
 @Composable
 internal fun StreamRowsPanel(
-    section: StreamSection,
     items: List<com.riffle.core.domain.launcher.stream.StreamContent>,
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
@@ -508,11 +505,7 @@ internal fun StreamRowsPanel(
         Column {
             items.forEachIndexed { index, content ->
                 if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = RiffleSpacing.l))
-                val next =
-                    section == StreamSection.NOW &&
-                        content is EventContent &&
-                        content.kind != EventKind.ALARM
-                StreamRow(content, env, callbacks, groupKey, showCountdown = next)
+                StreamRow(content, env, callbacks, groupKey)
             }
         }
     }

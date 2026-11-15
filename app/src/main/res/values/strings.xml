@@ -36,7 +36,7 @@
 
     <!-- Section states -->
     <string name="stream_loading">Loading</string>
-    <string name="stream_empty_now">Nothing is playing and nothing is coming up.</string>
+    <string name="stream_empty_now">Nothing playing</string>
     <string name="stream_empty_notifications">No notifications.</string>
     <string name="stream_empty_recents">No recent apps yet.</string>
     <string name="stream_empty_today">Nothing planned today. Enjoy the quiet.</string>

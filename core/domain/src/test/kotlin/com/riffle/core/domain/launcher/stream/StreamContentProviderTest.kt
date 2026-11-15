@@ -119,12 +119,12 @@ class StreamContentProviderTest {
 
     @Test
     fun `two sections reading one source share one upstream`() {
-        collect(StreamSection.NOW)
         collect(StreamSection.TODAY)
         collect(StreamSection.TODAY)
-        assertEquals(1, registry.connects[SourceIds.CALENDAR])
+        collect(StreamSection.NOTIFICATIONS)
         assertEquals(1, registry.connects[StreamSourceIds.AGENDA])
         assertEquals(1, registry.connects[SourceIds.ICS])
+        assertEquals(1, registry.connects[SourceIds.NOTIFICATIONS])
     }
 
     @Test
@@ -172,9 +172,9 @@ class StreamContentProviderTest {
 
         val (now, _) = collect(StreamSection.NOW)
         registry.sinks.getValue(SourceIds.MEDIA).emit(SourceState.Ready(emptyList()))
-        registry.sinks.getValue(SourceIds.CALENDAR).emit(SourceState.Ready(emptyList()))
-        registry.sinks.getValue(SourceIds.ICS).emit(SourceState.Ready(emptyList()))
         assertEquals(StreamSectionResult.Empty, now.last())
+        // Now reads the media source alone: no calendar, feed or alarm connection is made for it.
+        assertEquals(null, registry.connects[SourceIds.CALENDAR])
     }
 
     @Test

@@ -73,6 +73,7 @@ internal fun todayEntries(
     return cards.mapIndexed { index, card ->
         when (card) {
             is TodayCard.NextEvent -> ContentEntry(card.event, nextUp = true)
+            is TodayCard.Alarm -> ContentEntry(card.alarm)
             is TodayCard.ToDo -> ToDoEntry(card)
             is TodayCard.LaterEvent -> ContentEntry(card.event)
             is TodayCard.Tomorrow -> TomorrowEntry(card)
@@ -462,7 +463,8 @@ internal fun TodayListBody(
     env: StreamEnvironment,
     callbacks: StreamCallbacks,
 ) {
-    val eventGroups = body.groups.filter { it.key != StreamGroupKeys.TASKS }
+    val eventGroups = body.groups.filter { it.key != StreamGroupKeys.TASKS && it.key != StreamGroupKeys.ALARM }
+    val alarm = body.groups.firstOrNull { it.key == StreamGroupKeys.ALARM }?.items.orEmpty()
     val tasks = body.groups.firstOrNull { it.key == StreamGroupKeys.TASKS }?.items.orEmpty()
     val tasksConnected =
         tasks.isNotEmpty() ||
@@ -472,13 +474,14 @@ internal fun TodayListBody(
             SectionHeading(stringResource(R.string.stream_today_agenda_heading))
             eventGroups.forEach { group ->
                 GroupHeading(StreamSection.TODAY, group, env)
-                StreamRowsPanel(StreamSection.TODAY, group.items, env, callbacks, null)
+                StreamRowsPanel(group.items, env, callbacks, null)
             }
         }
+        if (alarm.isNotEmpty()) StreamRowsPanel(alarm, env, callbacks, null)
         if (tasksConnected) {
             SectionHeading(stringResource(R.string.stream_today_tasks_heading))
             TaskQuickAdd(callbacks)
-            if (tasks.isNotEmpty()) StreamRowsPanel(StreamSection.TODAY, tasks, env, callbacks, null)
+            if (tasks.isNotEmpty()) StreamRowsPanel(tasks, env, callbacks, null)
             if (tasks.any { it is TaskContent && it.stale }) TaskStaleNote(callbacks)
         }
         body.gaps.mapNotNull(::noticeOf).forEach { notice ->
