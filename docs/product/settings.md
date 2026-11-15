@@ -35,7 +35,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | **Layout** | Folded, Unfolded | Per posture (a tablet and a desktop window use Unfolded): Dock position (Bottom, Left, Right), App pages scroll (Sideways, Up and down), Page dots (Beside the Dock, Off), Drag the dots to scroll (a switch, disabled while the dots are off) and Show apps behind the cards (a switch). Defaults: folded Bottom, Sideways, apps behind the cards off; unfolded Right, Up and down, apps behind the cards on; dots beside the Dock and quick scroll on in both. The Dock position and Show apps behind the cards are the same rows, with the same wording, as on the Dock page and the Stream cards page, and one stored value each. Stored in `LauncherSettings.layout` (`LayoutSettings`), reduced by `SelectPageScroll`, `SelectPageIndicator`, `SetQuickScroll` and `SelectPostureDockEdge`. See [dock-modes-plan.md](dock-modes-plan.md), "U1" |
 | **Library** | Features | Library (a switch; off in Simple mode) |
 | | View | Show as (Categories, A-Z, Grid, Pages), grid columns (used by Grid, disabled otherwise) |
-| | Search | Search results as icons or list |
+| | Search | Search results as a card stack (the default), icons or a list. The stack is the Dock's search; the Library's own search field draws the stack's choice as icons |
 | | Apps | Hidden apps (opens the sub-page), refresh installed apps |
 | Hidden apps (under Library) | | The one list of hidden apps |
 | **Stream** | Features | Stream (a switch; off in Simple mode) |

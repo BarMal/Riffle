@@ -1231,7 +1231,7 @@ and edge it names), **partly** (it did in some), **no**. Paths are under `app/sr
 | Library | Library | `features.library` | The Library sheet and its pull | yes (`FeatureSwitchesTest`) | nothing |
 | Library | Show as (Categories, A-Z, Grid, Pages) | per device class `appDrawer.libraryViews` | The Library's view, the same choice as its long-press | yes (`PagedLibraryTest`) | nothing |
 | Library | Grid columns | `appDrawer.iconGridColumns` | The Grid view's columns (disabled for other views, and says so) | yes | nothing |
-| Library | Search results | `search.resultPresentation` | Icons or list, in the Library and in the Dock's search | yes (`LibraryState`, `DockSearchSurface`) | nothing |
+| Library | Search results | `search.resultPresentation` | Card stack (the default), icons or list, in the Dock's search; the Library's own search field draws the stack's choice as icons | yes (`LibraryState`, `DockSearchSurface`, `SearchStackBehaviorTest`) | nothing |
 | Library | Hidden apps, Refresh installed apps | app visibility store; action | The hidden list; a rescan | yes | nothing |
 | Stream | Stream | `features.stream` | The Stream, its press, live pages and shortcuts | yes (`FeatureSwitchesTest`) | nothing |
 | Stream | Now, Notifications, Recents, Today, Feeds: on or off, Order, Show as | per device class Stream layout | Which pages exist, their order and Stack or List | yes (`CachedStreamLayoutRepository`, the Stream surface) | Each section (all three rows) is now the setting's search anchor, not only the switch |
@@ -1903,3 +1903,67 @@ A blank frame, the icons smaller in the contextual mode, and the pinned run slid
   strip; now on the body). **Not confirmed without a device:** that the owner's blank frame was this cause, the look of an
   off-centre Dock on a real foldable, a Dock with a very long run of live apps, and a right-to-left layout.
 
+## Search stack
+
+The owner found search "bumpy": results of three kinds in two layouts, a list that grows and shrinks under the thumb. The
+decision: **the Dock's search shows its results as a card stack**, the Stream's own (ADR 0003 and its amendments: the stack
+anchored to the Dock, strips that tuck under the front card, the per-card spotlight, quick actions). No new Place, no new
+kind of content, no new visual language.
+
+- **The model** (`:core:domain` `SearchStack`, `SearchStackCard`, `SearchStackTap`, `SearchStackLayout`,
+  `SearchStackNotifications`, tested in `SearchStackTest`). The hits (apps, then shortcuts, then settings, each in the
+  search's rank order) become cards: the **best match is the front card**, the next matches are **strips behind it in rank
+  order**, and **"Search web" is the last card** when the query is not blank (the existing offer), and the **only card** when
+  nothing matches (it then carries the existing "No results found" wording and the existing "Search web" pill). An app card
+  carries the app's **quick actions** exactly as its Stream page plans them (`StreamShortcutPages`: enabled, platform rank, at
+  most eight, the one `AppShortcutContent` so the one action gateway launches them, profile included) and, when the app has
+  notifications, a **short line for the newest**. A shortcut hit that already is one of its app card's quick actions is not
+  a strip of its own.
+- **The tap rule** (`SearchStackTap.onStrip`). A strip **with quick actions or a notification** comes to the front and shows
+  them; it does not open the app. A strip with **nothing more than a name** (an app without shortcuts or notifications, a
+  shortcut, a setting, "Search web") opens straight away. A tap on the **front card** opens it, and so do **Enter and the IME's
+  search action**: they open the front card, which is the best match until a strip has been brought forward, and "Search web"
+  when nothing matched (earlier, Enter on no results did nothing). The strips that have more carry the Stream's own "more"
+  glyph (the vertical dots its cards use for their menus), dimmed, at the trailing end of the header; it is decorative, the
+  strip's state description says it.
+- **Fixed geometry** (`SearchStackLayout`). The front card has one height (152 dp folded, times the unfolded fixed factor) and
+  the stack one height for a posture (its strips, the front card and the Stream's own insets), in one rectangle at the bottom of
+  the room search is given, just above the field. Nothing in it depends on the results: a keystroke changes what the cards say,
+  never where they stand or how big the front card is (`SearchStackBehaviorTest`: bounds equal across typed queries, across an
+  app with quick actions, with a notification and with nothing more). Only the room (the keyboard) can shorten the stack, and
+  then it shows fewer strips (down to none), never a smaller front card. The strips shown are the posture's: three of 56 dp
+  folded, as many as fit up to six of 64 dp unfolded. The rest are reached as in the Stream: dragging the stack, "Next card"
+  and "Previous card" as accessibility actions. A new query puts the best match in front again.
+- **Where it stands.** Folded (a bottom or top Dock) it is the old results' place: the panel's width, centred, above the field,
+  which stands above the Dock and the keyboard. Unfolded (a side Dock) it is the Stream column's rectangle
+  (`StreamColumn.rect`), the field at its bottom, the stack above it, in the unfolded sizes (`ProvideStreamCardSizes`). At 320 dp
+  with the keyboard up the stack stays on the screen, above the field and inside the width (`SearchStackNarrowTest`).
+- **What is reused.** `StackLayout`, `StackGeometry`, `StreamStackState` and `StackMover` (the position and its drag, release
+  and steps), `stripCut`, `StreamCardSurface` (the glass, the per-card spotlight and tint), `StreamCardHeader`, `QuickActionsRow`
+  and its chips, `SearchWebPanel`. The Stream's open card, swipe-to-dismiss and Dock fan are not used. The position is read in
+  layout and draw, so a drag recomposes no card (a recomposition-probe test).
+- **Notifications.** The count is the launcher's own (what the app's badge counts). The newest notification's line comes from
+  the Stream's notifications section when the Stream is on: that reading is already redacted by the Privacy content level, the
+  hide rules and the quiet profiles, so the card says nothing the Stream would not ("Hidden content" when text is withheld). It
+  is subscribed only while the stack is shown. With the Stream off the card says only "N notifications", and a quick action is
+  launched through the shell's own shortcut launch instead of the Stream's gateway.
+- **The setting.** "Search results" (Settings > Library; its one place) gains **Card stack**, the default for new installs and
+  for settings saved before the choice existed; a stored Icons or List keeps its value (`LauncherSettingsJsonCodecTest`,
+  `SearchResultsSettingTest`). The Library's own search field has no stack: it reads Card stack as Icons.
+- **Accessibility.** The front card is one node, a button named for the app ("Maps", with "Work - " for a profile as the lists
+  say it) whose click opens it and whose quick actions are custom actions (as the Stream's front card); the quick action chips
+  stay buttons for touch. A strip is one button named for its result with the state "Shows quick actions or notifications"
+  when it has more; its click follows the same tap rule. The stack has "Next card" and "Previous card" and says "Card n of m".
+- **Tests.** `SearchStackTest` (the ranking, the cap and order of quick actions, which cards have more, the web card last or
+  only, duplicates, the tap rule, the geometry), `SearchStackBehaviorTest` and `SearchStackNarrowTest` (Robolectric, through the
+  real shell content: both branches of the tap rule, Enter on the front, the quick action through the one gateway, the
+  notification line, fixed geometry while typing, the cap and stepping, the stored Icons and List choices, accessibility, a
+  drag recomposes no card), `SearchResultsSettingTest`, `SettingsPagesTest` (the option is found by "card stack"),
+  `SearchStackScreenshotTest` and `SearchStackUnfoldedScreenshotTest` (folded and unfolded, dark and light, with results, with
+  a notification and with none; large text).
+- **Tests rewritten on purpose:** `LauncherSettingsTest` (the default is the stack, not icons) and
+  `LauncherSettingsJsonCodecTest` (a missing or unknown value reads the stack; every stored value round-trips; a stored Icons or
+  List is kept).
+- **Not confirmed without a device:** the feel of the stack under a real thumb with the keyboard up, the IME's search key, a
+  launch of a quick action from the stack through the real gateway and a work profile, the notification line against a real
+  listener, and TalkBack's reading of the front card and the strips (the semantics are asserted, the speech is not).
