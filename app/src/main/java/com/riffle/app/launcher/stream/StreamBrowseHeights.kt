@@ -15,11 +15,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.BrowseCardHeight
+import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.NotificationBody
 import com.riffle.core.domain.launcher.stream.NotificationBrowseText
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.StreamCardActions
+import com.riffle.core.domain.launcher.stream.StreamCardSizes
 
 /** The largest font scale a card's fixed parts grow with. */
 internal const val MAX_FONT_SCALE_FOR_CARDS = 1.8f
@@ -46,14 +49,23 @@ internal fun rememberBrowseHeights(
     val style = MaterialTheme.typography.bodyMedium
     val density = LocalDensity.current
     val you = stringResource(R.string.stream_notification_you)
-    return remember(entries, cardWidth, density, style, you) {
+    val sizes = LocalStreamCardSizes.current
+    return remember(entries, cardWidth, density, style, you, sizes) {
         val scale = density.fontScale.coerceIn(1f, MAX_FONT_SCALE_FOR_CARDS)
         entries.map { entry ->
             val notification = (entry as? ContentEntry)?.takeIf { !it.nextUp }?.content as? NotificationContent
             if (notification == null) {
-                entry.height * scale
+                // The posture's size for the kind: a card of text grows to the larger maximum, one of fixed content
+                // (the player, the checklist) a little more so the larger text fits.
+                sizes.cardHeightDp(entry.height.value, textDriven = entry.isTextDriven()).dp * scale
             } else {
-                notificationBrowseHeight(notification, cardWidth, BrowseMeasure(measurer, style, density, you), scale)
+                notificationBrowseHeight(
+                    notification,
+                    cardWidth,
+                    BrowseMeasure(measurer, style, density, you),
+                    scale,
+                    sizes,
+                )
             }
         }
     }
@@ -73,6 +85,7 @@ internal fun notificationBrowseHeight(
     cardWidth: Dp,
     measure: BrowseMeasure,
     scale: Float,
+    sizes: StreamCardSizes = StreamCardSizes.FOLDED,
 ): Dp {
     val hasThumbnail = content.browseThumbnail != null
     val textWidth =
@@ -84,7 +97,7 @@ internal fun notificationBrowseHeight(
         } else {
             with(measure.density) {
                 val widthPx = textWidth.roundToPx().coerceAtLeast(1)
-                NotificationBrowseText.blocks(content).sumOf { block ->
+                NotificationBrowseText.blocks(content, sizes).sumOf { block ->
                     measure.measurer.measure(
                         text = block.written(measure.you),
                         style = measure.style,
@@ -100,8 +113,16 @@ internal fun notificationBrowseHeight(
         hasThumbnail = hasThumbnail,
         hasActions = StreamCardActions.onBrowseCard(content).isNotEmpty(),
         scale = scale,
+        sizes = sizes,
     ).dp
 }
 
 /** The picture a browse card shows as its trailing thumbnail: the notification's, else its own layout's. */
 internal val NotificationContent.browseThumbnail get() = picture ?: custom?.thumbnail
+
+/** Whether the card's height is its text's (it grows to the larger maximum), not a design with fixed content. */
+internal fun StackEntry.isTextDriven(): Boolean {
+    val content = (this as? ContentEntry)?.takeIf { !it.nextUp }?.content ?: return false
+    return content is NotificationContent || content is EventContent ||
+        (content is ArticleContent && content.image == null)
+}

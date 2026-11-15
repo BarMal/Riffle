@@ -58,8 +58,9 @@ import java.util.concurrent.Executors
  * Swiping the front card of a notification sideways to dismiss it (device fixes, round 5, item 2), through the real
  * shell content with a gateway that removes what it is told to dismiss, as the listener does. The rule that settles
  * the conflict with paging between stacks: a horizontal drag is a card's wherever it starts on a card, and it
- * dismisses only on the front card of a notification that offers Dismiss; on any other card (a strip, a notification that cannot be dismissed) the card
- * resists a few dp and settles back and the pager never gets the drag; only the empty room pages. Four chat
+ * dismisses only on the front card of a notification that offers Dismiss; on any other card (a strip, a notification
+ * that cannot be dismissed) the card resists a few dp and settles back and the pager never gets the drag; only the
+ * empty room pages. Four chat
  * notifications, "First" in front.
  */
 @RunWith(RobolectricTestRunner::class)

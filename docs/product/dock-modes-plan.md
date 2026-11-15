@@ -1604,3 +1604,46 @@ which of the two you got depended on a few dp of where the finger landed, and bo
   can land on a card; they now swipe in the empty room above the stack.
 - **Not confirmed without a device:** the feel of the rubber band (12 dp), the lift and the cue's contrast over a busy
   wallpaper, and that the empty room above the stack is easy to hit on the smallest phones with three strips.
+
+### Unfolded: the stack as tall as the Dock, with bigger cards (item 2)
+
+The owner: "the card stacks when unfolded are small/short, I wonder if we should make the visible area the height of the
+dock, and increase their size." Folded sizes did not change (the screenshots and the folded tests are as they were).
+
+- **The column spans the Dock** (`StreamColumn.rect`, pure, `StreamColumnTest`). Beside a left or right Dock the column's top
+  is the Dock body's top and its bottom the body's bottom: the Dock in its contextual mode (`StreamColumnWindow.dockBodyLengthDp`
+  about the middle of the measured body, else the measured body), held inside the safe area. A Dock shorter than the column's
+  least height (`StreamColumn.restHeightDp(unfolded = true)`: the tallest front card, three strips at the larger pitch and the
+  gap, 512 dp, never less than the earlier 448 dp) is centred on instead. The stack stays bottom-anchored inside it. Above a
+  bottom Dock the column keeps its centre on the Dock and takes the room between the safe top and the Dock, at most 560 dp
+  (`BOTTOM_DOCK_MAX_HEIGHT_DP`). An open card keeps the bottom, and its top is the rest column's when that is already taller
+  than the earlier 480 dp, so a tall Dock's open card may use all of its height. The grid's fade follows the same
+  rectangle (nothing else was needed: it reads `StreamColumn.rect`), and so does unfolded search (same width and side; its
+  bottom is the column's rectangle for the Dock as it is now, which is the Home mode's short Dock, centred, while search is
+  open; its height still follows its results).
+- **Wider.** The unfolded column is 0.38 of the window (360 dp at least), against a third (320 dp) before and still for the
+  folded phone's "apps behind the cards" column (`restWidthDp(width, unfolded)`); an open card is up to half as before.
+  The grid keeps more than half the window on a 1200 dp one. The hinge rule and the narrow-window clamp are unchanged.
+- **Bigger cards** (`StreamCardSizes`, pure, `StreamCardSizesTest`; provided by `StreamColumnSurface` through
+  `ProvideStreamCardSizes`, which also scales the theme's typography by 1.15 for the column's cards). A card of text (a
+  notification, an event, an article with no image) is up to 1.35 times the folded maximum (227 dp, 292 dp with buttons); a
+  card of fixed content (the player, an article with a picture, the checklist) 1.15 times its height so the larger text
+  fits; a notification shows up to six lines of body (four before) and four messages of a conversation (three); the strip
+  is 64 dp (56) so its header reads comfortably, and each strip is 2.5% narrower than the one in front (4% folded) because
+  there can be six. `BrowseCardHeight.notification` and `NotificationBrowseText.blocks` take the sizes.
+- **More strips.** The number of strips is what fits above the tallest card (`StreamCardSizes.peeksFor`), at most six and at
+  least three (the folded phone keeps its three, whatever the room), and also what leaves an open card its 240 dp (below
+  that the open card hides them). `StackGeometry` and the open card's layer take the peeks and the pitch.
+- **Tests.** Domain: `StreamColumnTest` (a tall Dock, a short Dock, a Dock longer than the safe area, a left Dock, a narrow
+  window, a hinge, a bottom Dock, an open card, the folded geometry unchanged), `StreamCardSizesTest`. Robolectric
+  `UnfoldedStreamColumnTest`: the column's top and bottom equal the Dock body's within 4 dp on a tall Dock (eight pinned
+  apps) on both sides, more than three strips at a 64 dp pitch, a front card taller than folded's maximum, a short Dock
+  centred on with the least height, the grid's fade under the tall column, a bottom Dock's column up to 560 dp; new
+  screenshots, dark and light, of a tall stack on a right Dock and light on a bottom Dock.
+- **Tests rewritten on purpose** (the brief changes the geometry): `UnfoldedStreamColumnTest` asserted a third of the width
+  (`about a third of the width`, twice), `restWidthDp(width)` and the search panel's width against the folded fraction, and
+  that search's bottom is the Home-mode Dock's lower end; they now assert the unfolded column's width and rectangle. The
+  fourteen unfolded goldens of that class were re-recorded (a taller, wider column with larger cards); no other golden changed.
+- **Not confirmed without a device:** how the larger text and cards look with a real wallpaper and a hinge, the column with
+  the Dock's measured body on every foldable, and unfolded search at the column's centred rectangle (its field now stands
+  below the Dock's lower end while the Home mode's Dock is shorter than the column's least height).

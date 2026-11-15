@@ -333,6 +333,7 @@ private fun HomeDestinationContent(
                     )
                 },
             rootSize = rootSize,
+            unfolded = unfolded,
         )
     // The shared backdrop every liquid-glass surface on Home samples from (see `LiquidGlassBackdrop.kt`): installed
     // here, around this content specifically, since this is exactly the wallpaper-plus-surface subtree every glass

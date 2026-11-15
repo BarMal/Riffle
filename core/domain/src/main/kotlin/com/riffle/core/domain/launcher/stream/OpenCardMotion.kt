@@ -121,5 +121,6 @@ object OpenCardLayout {
     fun stripsPx(
         cardsBehind: Int,
         pitchPx: Float,
-    ): Float = cardsBehind.coerceIn(0, StreamCardStackSpec.VISIBLE_PEEKS) * pitchPx
+        visiblePeeks: Int = StreamCardStackSpec.VISIBLE_PEEKS,
+    ): Float = cardsBehind.coerceIn(0, visiblePeeks) * pitchPx
 }

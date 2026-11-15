@@ -41,6 +41,17 @@ data class StreamColumnWindow(
     val dockRestBounds: StreamColumnRect? = null,
     /** Vertical hinges that separate the screen into two (a book-like fold), which a card is not drawn across. */
     val verticalHingesDp: List<StreamColumnRect> = emptyList(),
+    /**
+     * Whether this is the unfolded column (wider, as tall as the Dock, with bigger cards). False is the geometry a
+     * folded phone's "apps behind the cards" column has always had.
+     */
+    val unfolded: Boolean = false,
+    /**
+     * How long the Dock's body is in the contextual mode (along its edge), which is the mode whenever the Stream
+     * shows; the unfolded column spans it. Null before the Dock has said: the column then stands at the Dock's lower
+     * end as it did.
+     */
+    val dockBodyLengthDp: Float? = null,
 )
 
 /**
@@ -57,6 +68,16 @@ data class StreamColumnWindow(
 object StreamColumn {
     /** The share of the screen's width the cards take at rest (the grid keeps the other two thirds). */
     const val REST_FRACTION = 1f / 3f
+
+    /** The unfolded column's share and floor: wider, for the larger cards, while the grid stays usable. */
+    const val UNFOLDED_REST_FRACTION = 0.38f
+    const val UNFOLDED_MIN_REST_WIDTH_DP = 360f
+
+    /** The tallest front card a column rests with, at the folded sizes (the player's card). */
+    const val TALLEST_FRONT_CARD_DP = 264f
+
+    /** The most height the unfolded column takes above a bottom Dock. */
+    const val BOTTOM_DOCK_MAX_HEIGHT_DP = 560f
 
     /** The share an open card may take. */
     const val OPEN_FRACTION = 0.5f
@@ -87,15 +108,38 @@ object StreamColumn {
     const val TOP_MARGIN_DP = 8f
 
     /** The column's width at rest on a screen [windowWidthDp] wide. */
-    fun restWidthDp(windowWidthDp: Float): Float =
-        (windowWidthDp * REST_FRACTION).coerceAtLeast(MIN_REST_WIDTH_DP).coerceAtMost(windowWidthDp)
+    fun restWidthDp(
+        windowWidthDp: Float,
+        unfolded: Boolean = false,
+    ): Float =
+        if (unfolded) {
+            (windowWidthDp * UNFOLDED_REST_FRACTION).coerceAtLeast(UNFOLDED_MIN_REST_WIDTH_DP)
+        } else {
+            (windowWidthDp * REST_FRACTION).coerceAtLeast(MIN_REST_WIDTH_DP)
+        }.coerceAtMost(windowWidthDp)
 
     /** The column's width with a card fully open. Never narrower than at rest. */
-    fun openWidthDp(windowWidthDp: Float): Float =
+    fun openWidthDp(
+        windowWidthDp: Float,
+        unfolded: Boolean = false,
+    ): Float =
         (windowWidthDp * OPEN_FRACTION)
             .coerceAtLeast(MIN_OPEN_WIDTH_DP)
-            .coerceAtLeast(restWidthDp(windowWidthDp))
+            .coerceAtLeast(restWidthDp(windowWidthDp, unfolded))
             .coerceAtMost(windowWidthDp)
+
+    /**
+     * The least the column is tall at rest: the tallest front card, [StreamCardStackSpec.VISIBLE_PEEKS] strips above it
+     * and the gap under it, at the sizes of the posture. Never less than the folded [REST_HEIGHT_DP].
+     */
+    fun restHeightDp(unfolded: Boolean = false): Float {
+        val sizes = StreamCardSizes.forPosture(unfolded)
+        return maxOf(
+            REST_HEIGHT_DP,
+            TALLEST_FRONT_CARD_DP * sizes.fixedHeightFactor +
+                sizes.pitchDp * StreamCardStackSpec.VISIBLE_PEEKS + PAGE_INSET_DP,
+        )
+    }
 
     /**
      * The column for [window] with a card [open] by a fraction from 0 (the stack at rest) to 1 (a card fully open).
@@ -106,10 +150,12 @@ object StreamColumn {
         open: Float = 0f,
     ): StreamColumnRect {
         val p = open.coerceIn(0f, 1f)
-        val wanted = lerp(restWidthDp(window.widthDp), openWidthDp(window.widthDp), p)
+        val wanted =
+            lerp(restWidthDp(window.widthDp, window.unfolded), openWidthDp(window.widthDp, window.unfolded), p)
         val width: Float
         val left: Float
-        val bottom: Float
+        var bottom: Float
+        var restTop: Float? = null
         when (window.dockEdge) {
             DockPosition.RIGHT -> {
                 val reserved = window.widthDp - window.safeRightDp - window.dockExtentDp
@@ -118,12 +164,24 @@ object StreamColumn {
                 width = wanted.coerceAtMost((right - window.safeLeftDp).coerceAtLeast(0f))
                 left = right - width
                 bottom = sideBottom(window)
+                if (window.unfolded) {
+                    sideSpan(window)?.let { (top, low) ->
+                        restTop = top
+                        bottom = low
+                    }
+                }
             }
             DockPosition.LEFT -> {
                 val reserved = window.safeLeftDp + window.dockExtentDp
                 left = (window.dockRestBounds?.right ?: reserved) - DOCK_SIDE_OVERLAP_DP
                 width = wanted.coerceAtMost((window.widthDp - window.safeRightDp - left).coerceAtLeast(0f))
                 bottom = sideBottom(window)
+                if (window.unfolded) {
+                    sideSpan(window)?.let { (top, low) ->
+                        restTop = top
+                        bottom = low
+                    }
+                }
             }
             else -> {
                 width = wanted
@@ -135,7 +193,7 @@ object StreamColumn {
                 bottom = (window.dockRestBounds?.top ?: reserved) + DOCK_SIDE_OVERLAP_DP
             }
         }
-        val top = topFor(window, bottom, p)
+        val top = topFor(window, bottom, p, restTop)
         return StreamColumnRect(left = left, top = top, right = left + width, bottom = bottom).clearOf(window)
     }
 
@@ -157,14 +215,54 @@ object StreamColumn {
         return (window.dockBounds?.bottom ?: lowest).coerceIn(highest, lowest)
     }
 
+    /**
+     * The unfolded column beside a side Dock: its top and bottom are the Dock body's (the Dock in the contextual mode,
+     * [StreamColumnWindow.dockBodyLengthDp] long about the middle of its measured body), held inside the safe area. A
+     * Dock shorter than the column's least height ([restHeightDp]) is centred on instead. Null until the Dock is
+     * measured.
+     */
+    private fun sideSpan(window: StreamColumnWindow): Pair<Float, Float>? {
+        val body = window.dockBounds ?: return null
+        val highest = window.safeTopDp + TOP_MARGIN_DP
+        val lowest = window.heightDp - window.safeBottomDp
+        val centre = (body.top + body.bottom) / 2f
+        val half = (window.dockBodyLengthDp ?: body.height) / 2f
+        val least = restHeightDp(unfolded = true).coerceAtMost((lowest - highest).coerceAtLeast(0f))
+        var top = (centre - half).coerceAtLeast(highest)
+        var bottom = (centre + half).coerceAtMost(lowest)
+        if (bottom - top < least) {
+            top = centre - least / 2f
+            bottom = top + least
+            if (top < highest) {
+                bottom += highest - top
+                top = highest
+            }
+            if (bottom > lowest) {
+                top -= bottom - lowest
+                bottom = lowest
+            }
+            top = top.coerceAtLeast(highest)
+        }
+        return top to bottom
+    }
+
     private fun topFor(
         window: StreamColumnWindow,
         bottom: Float,
         open: Float,
+        restTopOverride: Float?,
     ): Float {
         val highest = window.safeTopDp + TOP_MARGIN_DP
-        val restTop = (bottom - REST_HEIGHT_DP).coerceAtLeast(highest)
-        val openTop = (bottom - OPEN_HEIGHT_DP).coerceAtLeast(highest).coerceAtMost(restTop)
+        val restTop =
+            restTopOverride
+                ?: if (window.unfolded && window.dockEdge == DockPosition.BOTTOM) {
+                    // Above a bottom Dock: the room between the safe top and the Dock, at most 560 dp.
+                    val height = (bottom - highest).coerceIn(restHeightDp(true), BOTTOM_DOCK_MAX_HEIGHT_DP)
+                    (bottom - height).coerceAtLeast(highest)
+                } else {
+                    (bottom - restHeightDp(window.unfolded)).coerceAtLeast(highest)
+                }
+        val openTop = (bottom - maxOf(OPEN_HEIGHT_DP, bottom - restTop)).coerceAtLeast(highest).coerceAtMost(restTop)
         return lerp(restTop, openTop, open)
     }
 

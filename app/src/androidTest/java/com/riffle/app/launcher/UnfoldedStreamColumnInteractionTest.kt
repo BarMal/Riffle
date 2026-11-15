@@ -87,8 +87,9 @@ class UnfoldedStreamColumnInteractionTest {
             column.right <= dock.right && column.right > dock.left,
         )
         assertTrue("the column runs off the screen: $column in $root", column.left >= root.left)
-        // About a third, and never under its own floor: on a narrow window the floor wins, held to the room there is.
-        val floorPx = with(composeRule.density) { StreamColumn.MIN_REST_WIDTH_DP.dp.toPx() }
+        // Under half the window, and never under its own floor: on a narrow window the floor wins, held to the room
+        // there is (the unfolded column's: 0.38 of the window, 360 dp at least).
+        val floorPx = with(composeRule.density) { StreamColumn.UNFOLDED_MIN_REST_WIDTH_DP.dp.toPx() }
         assertTrue(
             "the column is not about a third: $column in $root",
             column.width < maxOf(root.width * MAX_SHARE, floorPx + 1f),

@@ -50,6 +50,7 @@ object BrowseCardHeight {
         hasThumbnail: Boolean = false,
         hasActions: Boolean = false,
         scale: Float = 1f,
+        sizes: StreamCardSizes = StreamCardSizes.FOLDED,
     ): Float {
         val s = scale.coerceAtLeast(1f)
         val middle = maxOf(bodyDp.coerceAtLeast(0f), if (hasThumbnail) THUMBNAIL_DP else 0f)
@@ -58,7 +59,7 @@ object BrowseCardHeight {
                 (if (middle > 0f) SPACING_DP + middle else 0f) +
                 (if (hasActions) SPACING_DP + ACTIONS_DP * s else 0f) +
                 BOTTOM_DP
-        val max = (if (hasActions) MAX_WITH_ACTIONS_DP else MAX_DP) * s
+        val max = (if (hasActions) MAX_WITH_ACTIONS_DP else MAX_DP) * s * sizes.maxHeightFactor
         return wanted.coerceIn(MIN_DP * s, max)
     }
 }
@@ -79,18 +80,21 @@ object NotificationBrowseText {
         val sender: String? = null,
     )
 
-    fun blocks(content: NotificationContent): List<Block> =
+    fun blocks(
+        content: NotificationContent,
+        sizes: StreamCardSizes = StreamCardSizes.FOLDED,
+    ): List<Block> =
         when (val body = content.body) {
             is NotificationBody.Thread ->
-                body.messages.takeLast(BrowseCardHeight.MAX_THREAD_LINES).map { message ->
+                body.messages.takeLast(sizes.maxThreadLines).map { message ->
                     Block(text = message.text, maxLines = 1, message = true, sender = message.sender)
                 }
-            is NotificationBody.Text -> listOf(Block(body.text, BrowseCardHeight.MAX_BODY_LINES))
+            is NotificationBody.Text -> listOf(Block(body.text, sizes.maxBodyLines))
             is NotificationBody.Custom ->
                 if (body.content.embed) {
                     emptyList()
                 } else {
-                    body.content.lines.take(BrowseCardHeight.MAX_BODY_LINES).map { Block(it, maxLines = 1) }
+                    body.content.lines.take(sizes.maxBodyLines).map { Block(it, maxLines = 1) }
                 }
             NotificationBody.None -> emptyList()
         }

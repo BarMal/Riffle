@@ -32,7 +32,7 @@ import com.riffle.core.domain.launcher.stream.OpenCardSpring
 import com.riffle.core.domain.launcher.stream.OpenCardSpringState
 import com.riffle.core.domain.launcher.stream.StackFling
 import com.riffle.core.domain.launcher.stream.StackGeometry
-import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
+import com.riffle.core.domain.launcher.stream.StreamCardSizes
 import com.riffle.core.domain.launcher.stream.StreamColumnRect
 import kotlin.math.roundToInt
 
@@ -135,6 +135,8 @@ internal class OpenCardLayer(
     /** The stack's layout: each card's browse height and where its slot stands at a position. */
     val stackGeometry: StackGeometry,
     val strips: Dp,
+    /** The distance between the strips of the cards behind: the sizes' pitch. */
+    val pitchDp: Float,
     val bottomInset: Dp,
     /** The stack's position and fade, read in layout and draw so a drag moves the cards with no recomposition. */
     val stack: StreamStackState,
@@ -170,9 +172,9 @@ internal fun OpenCardLayerHost(
                         detectTapGestures { tap ->
                             // A tap on a strip behind the open card opens that card; anywhere else closes this one.
                             val top = layer.geometry.topPx
-                            val pitch = StreamCardStackSpec.PITCH_DP * density
+                            val pitch = layer.pitchDp * density
                             val rank = if (tap.y < top) kotlin.math.ceil((top - tap.y) / pitch).toInt() else 0
-                            val strips = (layer.strips.toPx() / pitch).toInt()
+                            val strips = (layer.strips.toPx() / pitch + STRIP_COUNT_EPSILON).toInt()
                             if (layer.geometry.stripsVisible && rank in 1..strips) {
                                 layer.onStripTap(
                                     rank,
@@ -192,8 +194,11 @@ internal fun OpenCardLayerHost(
     }
 }
 
+/** Float slack when counting how many strips the strips' room holds (three pitches may divide to 2.9999). */
+private const val STRIP_COUNT_EPSILON = 0.01f
+
 /** The least height an open card is given before the cards behind it stop peeking out above it. */
-private val MinOpenCardHeight = 240.dp
+private val MinOpenCardHeight = StreamCardSizes.OPEN_CARD_MIN_DP.dp
 
 /** The content height of an open card, kept between frames so an animation measures the content once. */
 private class OpenCardNaturalHeight {

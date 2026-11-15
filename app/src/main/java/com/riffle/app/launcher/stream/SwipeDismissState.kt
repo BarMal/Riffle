@@ -47,12 +47,13 @@ import kotlinx.coroutines.launch
  * A card that follows a sideways finger (ADR 0003, Amendment 1; device fixes, round 5, item 2; batch 7). A horizontal
  * drag that starts on a card is always the card's ([SwipeDismiss.ownerOf]): the front card of a dismissible
  * notification ([dismissible]) is dismissed; any other card resists, a few dp with no fade, and settles back.
- * What follows is the dismissing card. The platform's `draggable` (ADR 0002) gives the drag, the slop and the release velocity; the rules (how far
- * or how fast, the fade) are the pure [SwipeDismiss]. The card follows the finger with a slight fade; released early it
- * settles back on a spring; past the threshold, or flung, it flies off the way it was taken and [onDismiss] runs. Under
- * reduced motion it does not fly off: it fades out in place, and settles back at once. A dismissal that does not take
- * (the notification is still there [SwipeDismiss.RETURN_AFTER_MILLIS] later) brings the card back. The offset and the
- * fade are read where the card is drawn ([swipeLayer]), so a drag recomposes nothing.
+ * What follows is the dismissing card. The platform's `draggable` (ADR 0002) gives the drag, the slop and the release
+ * velocity; the rules (how far or how fast, the fade) are the pure [SwipeDismiss]. The card follows the finger with a
+ * slight fade; released early it settles back on a spring; past the threshold, or flung, it flies off the way it was
+ * taken and [onDismiss] runs. Under reduced motion it does not fly off: it fades out in place, and settles back at
+ * once. A dismissal that does not take (the notification is still there [SwipeDismiss.RETURN_AFTER_MILLIS] later)
+ * brings the card back. The offset and the fade are read where the card is drawn ([swipeLayer]), so a drag recomposes
+ * nothing.
  */
 @Stable
 internal class SwipeDismissState(

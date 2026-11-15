@@ -73,7 +73,7 @@ object SwipeDismiss {
     /** How far a card that resists gives at most (dp): a short rubber band, a hint and not a movement. */
     const val RESIST_MAX_DP = 12f
 
-    /** The card's offset (px) at a raw finger travel of [rawPx] when it resists: follows at first, never past the max. */
+    /** The card's offset (px) at a raw finger travel of [rawPx] when it resists: it follows, never past the max. */
     fun resist(
         rawPx: Float,
         density: Float,
@@ -93,7 +93,7 @@ object SwipeDismiss {
         return sign(offsetPx) * max * shown / (max - shown)
     }
 
-    /** Whether a card taken [offsetPx] sideways is past the point where releasing dismisses it ([DISTANCE_FRACTION]). */
+    /** Whether a card taken [offsetPx] sideways is past the point where a release dismisses it. */
     fun isArmed(
         offsetPx: Float,
         widthPx: Float,

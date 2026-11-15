@@ -39,8 +39,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -61,7 +59,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.traversalIndex
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.CountRecomposition
@@ -209,7 +209,27 @@ private fun StreamStackContent(
     // Each card is as tall as what it shows (a notification's text, its buttons); the stack's geometry is built from
     // those heights, so the strips, the drag and the open card all work from the height the front card really has.
     val heights = rememberBrowseHeights(entries, cardWidth)
-    val geometry = remember(heights) { StackGeometry(heightsDp = heights.map { it.value }) }
+    // The sizes of the posture: the folded phone's three strips of 56 dp, or the unfolded column's up to six of 64 dp
+    // as many as fit in the column's height above the tallest card.
+    val sizes = LocalStreamCardSizes.current
+    val peeks =
+        remember(sizes, heights, areaHeight) {
+            sizes.peeksFor(
+                count = sizes.maxPeeks + 1,
+                areaHeightDp = areaHeight.value,
+                frontHeightDp = heights.maxOfOrNull { it.value } ?: StreamCardStackSpec.CARD_HEIGHT_DP,
+                bottomInsetDp = StackBottomInset.value,
+            )
+        }
+    val geometry =
+        remember(heights, sizes, peeks) {
+            StackGeometry(
+                heightsDp = heights.map { it.value },
+                pitchDp = sizes.pitchDp,
+                visiblePeeks = peeks,
+                scaleStep = sizes.scaleStep,
+            )
+        }
     val openState = cards.state
     val stackState = remember(stackKey) { StreamStackState() }
     val ids = remember(entries) { entries.map { it.id }.toSet() }
@@ -322,8 +342,8 @@ private fun StreamStackContent(
             )
         }
     }
-    val behind = (entries.size - 1).coerceIn(0, StreamCardStackSpec.VISIBLE_PEEKS)
-    val strips = StreamCardStackSpec.PITCH_DP.dp * behind
+    val behind = (entries.size - 1).coerceIn(0, peeks)
+    val strips = sizes.pitchDp.dp * behind
     val placement = env.cardSettings.openCardPlacement
     val density = LocalDensity.current.density
     val bodies = remember(stackKey) { OpenCardBodies() }
@@ -368,7 +388,7 @@ private fun StreamStackContent(
     val layer =
         remember(
             drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, geometry, strips,
-            placement, dragModifier, entries.size, previous, next,
+            placement, dragModifier, entries.size, previous, next, sizes,
         ) {
             if (!layerActive.value) {
                 null
@@ -378,6 +398,7 @@ private fun StreamStackContent(
                     placement = placement,
                     stackGeometry = geometry,
                     strips = strips,
+                    pitchDp = sizes.pitchDp,
                     bottomInset = StackBottomInset,
                     stack = stackState,
                     count = entries.size,
