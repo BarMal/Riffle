@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.stream.NextAlarm
 import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
@@ -99,6 +100,8 @@ internal fun realWiringStreamHost(
     canSnooze: (LauncherNotificationKey) -> Boolean = { false },
     /** The active media sessions (none by default). */
     mediaSessions: List<MediaSessionInfo> = emptyList(),
+    /** The alarm the clock app will ring next (none by default). */
+    nextAlarm: NextAlarm? = null,
     /** What an action on content does; refuses everything by default. */
     actions: StreamActionGateway =
         object : StreamActionGateway {
@@ -160,7 +163,7 @@ internal fun realWiringStreamHost(
         provider =
             StreamContentProvider(
                 registry = registry,
-                alarms = refreshingAlarmProvider(executor, SourceChangeSource.NONE) { null },
+                alarms = refreshingAlarmProvider(executor, SourceChangeSource.NONE) { nextAlarm },
                 scheduler = streamLoadingScheduler(),
                 loadingTimeoutMillis = loadingTimeoutMillis,
             ) { StreamContext(nowEpochMillis = now) },

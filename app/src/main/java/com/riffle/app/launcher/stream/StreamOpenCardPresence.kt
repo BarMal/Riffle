@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import kotlin.math.abs
@@ -17,6 +19,17 @@ internal fun bodyAlphaAt(openness: Float): Float =
     ((openness - BODY_FADE_START) / (1f - BODY_FADE_START)).coerceIn(0f, 1f)
 
 private const val BODY_FADE_START = 0.5f
+
+/** Test hooks: how opaque the open card is as the layer draws it, and how opaque its body is. */
+internal val OpenCardAlphaKey = SemanticsPropertyKey<Float>("OpenCardAlpha")
+internal val OpenCardBodyAlphaKey = SemanticsPropertyKey<Float>("OpenCardBodyAlpha")
+
+/** Publishes the card's opacity and its body's for tests (read when the semantics are read, never per frame). */
+internal fun Modifier.openCardAlphaSemantics(presence: OpenCardPresence): Modifier =
+    semantics {
+        this[OpenCardAlphaKey] = presence.alpha
+        this[OpenCardBodyAlphaKey] = bodyAlphaAt(presence.openness)
+    }
 
 /** The smallest the header is drawn, as a strip: the headers of the strips around it are about this size. */
 internal const val HEADER_STRIP_SCALE = 0.75f

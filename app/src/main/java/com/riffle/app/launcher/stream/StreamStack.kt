@@ -239,6 +239,7 @@ private fun StreamStackContent(
     areaHeight: Dp,
 ) {
     val cards = LocalOpenCards.current
+    val pageInsets = LocalStreamPageInsets.current
     // Each card is as tall as what it shows (a notification's text, its buttons); the stack's geometry is built from
     // those heights, so the strips, the drag and the open card all work from the height the front card really has.
     val heights = rememberBrowseHeights(entries, cardWidth)
@@ -246,12 +247,12 @@ private fun StreamStackContent(
     // as many as fit in the column's height above the tallest card.
     val sizes = LocalStreamCardSizes.current
     val peeks =
-        remember(sizes, heights, areaHeight) {
+        remember(sizes, heights, areaHeight, pageInsets) {
             sizes.peeksFor(
                 count = sizes.maxPeeks + 1,
                 areaHeightDp = areaHeight.value,
                 frontHeightDp = heights.maxOfOrNull { it.value } ?: StreamCardStackSpec.CARD_HEIGHT_DP,
-                bottomInsetDp = StackBottomInset.value,
+                bottomInsetDp = pageInsets.stackBottom.value,
             )
         }
     val geometry =
@@ -407,7 +408,7 @@ private fun StreamStackContent(
     val bodies = remember(stackKey) { OpenCardBodies() }
     val cue = remember(stackKey) { HandoffCueState() }
     val presences = remember(stackKey) { mutableMapOf<String, OpenCardPresence>() }
-    val footer = LocalStackFooter.current.room
+    val footer = LocalStackFooter.current
     val handoff =
         remember(mover, density, cue) {
             OpenCardHandoffConnection(
@@ -470,7 +471,7 @@ private fun StreamStackContent(
     val layer =
         remember(
             drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, geometry,
-            placement, dragModifier, entries.size, previous, next, sizes, footer, peeks, belowIndices.value,
+            placement, dragModifier, entries.size, previous, next, sizes, footer, peeks, belowIndices.value, pageInsets,
         ) {
             if (!layerActive.value) {
                 null
@@ -480,7 +481,7 @@ private fun StreamStackContent(
                     placement = placement,
                     stackGeometry = geometry,
                     pitchDp = sizes.pitchDp,
-                    bottomInset = StackBottomInset,
+                    bottomInset = pageInsets.stackBottom,
                     stack = stackState,
                     count = entries.size,
                     reducedMotion = env.reducedMotion,
@@ -533,9 +534,8 @@ private fun StreamStackContent(
                                     olderTitle = entries.getOrNull(index + 1)?.peekText(env),
                                     newerTitle = entries.getOrNull(index - 1)?.peekText(env),
                                     modifier =
-                                        cardModifier.fillMaxWidth().reportsCardRect().testTag(
-                                            STREAM_OPEN_CARD_TEST_TAG,
-                                        ),
+                                        cardModifier.fillMaxWidth().reportsCardRect()
+                                            .openCardAlphaSemantics(presence).testTag(STREAM_OPEN_CARD_TEST_TAG),
                                 )
                             })
                         },
@@ -639,6 +639,7 @@ private fun LoneCard(
     content: @Composable () -> Unit,
 ) {
     val quickActions = LocalFrontCardQuickActions.current
+    val stackBottom = LocalStreamPageInsets.current.stackBottom
     Box(
         modifier =
             Modifier.fillMaxSize().then(
@@ -671,7 +672,7 @@ private fun LoneCard(
                         if (dismiss.isNotEmpty() || quickActions.isNotEmpty()) customActions = dismiss + quickActions
                     }
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = StackBottomInset),
+                    .padding(bottom = stackBottom),
         ) { content() }
     }
 }
@@ -770,14 +771,15 @@ private fun FocusedStack(
     val dismiss = stringResource(R.string.stream_notification_dismiss)
     Box(modifier = Modifier.fillMaxSize()) {
         val density = LocalDensity.current.density
-        val bottomInsetPx = StackBottomInset.value * density
+        val stackBottom = LocalStreamPageInsets.current.stackBottom
+        val bottomInsetPx = stackBottom.value * density
         val areaHeightPx = areaHeight.value * density
         val sideBleed = remember(density) { SideBleedShape(StackSideBleed.value * density) }
         StackLayout(
             state = state,
             geometry = geometry,
             cardWidth = cardWidth,
-            bottomInset = StackBottomInset,
+            bottomInset = stackBottom,
             covers = covers,
             stripPitchDp = stripPitchDp,
             modifier =
@@ -1055,6 +1057,3 @@ private class SideBleedShape(private val bleedPx: Float) : Shape {
         density: Density,
     ): Outline = Outline.Rectangle(Rect(-bleedPx, 0f, size.width + bleedPx, size.height))
 }
-
-/** Where the front card stops above the area's bottom edge (the Dock's top, with the page's own inset). */
-private val StackBottomInset = RiffleSpacing.l

@@ -821,9 +821,11 @@ class UnfoldedStreamColumnTest {
         assertEquals("same width: stream $column, search $search", column.width, search.width, 1f)
         // The pages' rectangle is as tall as an open card's room (the stack stands at its bottom); search is as tall as
         // the resting stack, which it grows from.
+        // Round 7: the stream's column is the Dock body (489 dp here); search, over the Home mode's short Dock, keeps
+        // the least height of 512 dp centred on it, so the column now sits inside search's rectangle, not over it.
         assertTrue(
-            "the pages' room holds search's: stream $column, search $search",
-            column.height >= search.height - 1f,
+            "search's room holds the pages': stream $column, search $search",
+            column.height <= search.height + 1f,
         )
         // Search stands in the same rectangle the column does for the Dock as it is now: spanning the Dock's body, or
         // centred on it and the column's least height when the Dock is shorter (the Home mode's is).
@@ -1076,18 +1078,15 @@ class UnfoldedStreamColumnTest {
     }
 
     @Test
-    fun aShortDockIsCentredOnAndTheColumnKeepsItsLeastHeight() {
+    fun theColumnSpansEvenAShortDock() {
+        // Round 7: the column is the Dock body as it is drawn. A body of 489 dp (shorter than the 512 dp the column
+        // used to be at least) is spanned, not centred on: the stack no longer stands 11 dp over it at each end.
         showOpen()
         val body = bounds(HOME_DOCK_SURFACE_TEST_TAG)
         val column = column()
         assertTrue("the Dock is short", body.height / dp < StreamColumn.restHeightDp(true))
-        assertEquals(
-            "never shorter than the least",
-            StreamColumn.restHeightDp(true).coerceAtLeast(StreamColumn.OPEN_HEIGHT_DP),
-            column.height / dp,
-            1f,
-        )
-        assertEquals("centred on the Dock", body.center.y, column.center.y, 4f * dp)
+        assertEquals("top", body.top, column.top, dp)
+        assertEquals("bottom", body.bottom, column.bottom, dp)
     }
 
     @Test

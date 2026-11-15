@@ -150,13 +150,13 @@ internal class OpenCardPolishUnfoldedTest : OpenCardPolishHarness(HomeLayoutDevi
         assertEquals("the strip returns where it was", opening.first().strip, closing.last().strip)
     }
 
-    /** The stack's front card stands above the reserved room and the page's gap, wherever the page's actions are. */
-    private fun assertTheStackStandsAboveTheReservedRoom() {
+    /**
+     * The stack's front card stands above the room the page keeps under it ([footerDp]: the quick actions strip and its
+     * gap, 60 dp, on a page that has quick actions; none on a page that has none), on the Dock body's bottom edge.
+     */
+    private fun assertTheStackStandsAboveTheRoom(footerDp: Float) {
         val pages = checkNotNull(boundsOf("stream-pages"))
-        // The page's bottom, less the strip's gap, the strip, its padding and the stack's own inset.
-        val expected = pages.bottom - (8f + 52f + 8f + 16f) * density
-        assertEquals("the front card's bottom", expected, settledSlot().bottom, TOL)
-        assertNotNull("the room is kept", reserveBounds())
+        assertEquals("the front card's bottom", pages.bottom - footerDp * density, settledSlot().bottom, TOL)
     }
 
     @Test
@@ -164,18 +164,23 @@ internal class OpenCardPolishUnfoldedTest : OpenCardPolishHarness(HomeLayoutDevi
         show()
         composeRule.waitForIdle()
         assertTrue(composeRule.onAllNodesWithTag(QUICK_ACTIONS_STRIP_TEST_TAG).fetchSemanticsNodes().isNotEmpty())
-        assertTheStackStandsAboveTheReservedRoom()
+        // The strip's gap (8 dp) and the strip (52 dp): the strip stands on the column's bottom edge.
+        assertTheStackStandsAboveTheRoom(8f + 52f)
+        assertNotNull("the room is kept", reserveBounds())
     }
 
     @Test
-    fun aPageWithNoQuickActionsKeepsTheStackInTheSamePlaceAndLeavesTheRoomEmpty() {
+    fun aPageWithNoQuickActionsStandsItsFrontCardOnTheColumnsBottomEdge() {
+        // Round 7, item 2: the room is no longer kept on every page; with no strip the front card is the lowest
+        // element and stands on the Dock body's bottom edge (it used to stand 76 dp above it).
         show(landOn = mailPage, waitFor = "Ledger")
         composeRule.waitForIdle()
         assertTrue(
             "no strip",
             composeRule.onAllNodesWithTag(QUICK_ACTIONS_STRIP_TEST_TAG).fetchSemanticsNodes().isEmpty(),
         )
-        assertTheStackStandsAboveTheReservedRoom()
+        assertTheStackStandsAboveTheRoom(0f)
+        assertEquals("no room is kept", 0f, checkNotNull(reserveBounds()).height, 0f)
     }
 
     @Test
@@ -389,7 +394,7 @@ internal class OpenCardPolishUnfoldedTest : OpenCardPolishHarness(HomeLayoutDevi
     }
 
     @Test
-    fun theFarthestTabBelowTheCardIsHitFromTwentyDpBeneathItsCentre() {
+    fun theFarthestTabBelowTheCardIsHitFromThirteenDpBeneathItsCentre() {
         show(more = 1)
         tapFront()
         composeRule.waitForIdle()
@@ -400,9 +405,12 @@ internal class OpenCardPolishUnfoldedTest : OpenCardPolishHarness(HomeLayoutDevi
                 .sortedBy { it.top }
         assertEquals(2, below.size)
         below.forEach { assertEquals("a tab is 28 dp tall", SlimTabs.PITCH_DP, it.height / density, 1f) }
-        // The tab farthest below the card, 20 dp under its centre (nothing is under it to share its room).
+        // The tab farthest below the card, at its own bottom edge (13 dp under its centre). It used to be hit from 20 dp
+        // beneath its centre, in the 16 dp the column left under the stack; the column now ends on the Dock body's
+        // bottom edge, where the lowest element stands, so nothing of the Stream is beneath that tab to be hit.
         val last = below.last()
-        tapAt(last.center.x, last.center.y + 20f * density)
+        assertTrue("the tab stands on the column's bottom edge or above it", last.bottom <= checkNotNull(boundsOf(com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG)).bottom + 1f)
+        tapAt(last.center.x, last.center.y + 13f * density)
         assertEquals(
             "a card is open",
             1,

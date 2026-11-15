@@ -236,6 +236,27 @@ class StreamColumnTest {
     }
 
     @Test
+    fun withTheStreamShowingTheColumnIsExactlyTheDrawnBodyEvenWhenItIsShorterThanTheRestHeight() {
+        // Round 7: the column was at least 512 dp against a body of 483 dp, so the stack stood over it at both ends.
+        val window = unfolded(DockPosition.RIGHT, dock = rightBody(483f), length = 483f).copy(spansDockBody = true)
+        val rect = StreamColumn.rect(window)
+        assertEquals(450f - 241.5f, rect.top, 0.01f)
+        assertEquals(450f + 241.5f, rect.bottom, 0.01f)
+        assertEquals(483f, rect.height, 0.01f)
+        val open = StreamColumn.rect(window, open = 1f)
+        assertEquals(rect.top, open.top, 0.01f, "an open card is held to the body")
+        assertEquals(rect.bottom, open.bottom, 0.01f)
+    }
+
+    @Test
+    fun withTheStreamShowingABodyShorterThanTheLeastIsCentredOnAndTheLeastIsTaken() {
+        val window = unfolded(DockPosition.RIGHT, dock = rightBody(150f), length = 150f).copy(spansDockBody = true)
+        val rect = StreamColumn.rect(window)
+        assertEquals(StreamColumn.MIN_SIDE_COLUMN_DP, rect.height, 0.01f)
+        assertEquals(450f, (rect.top + rect.bottom) / 2f, 0.01f)
+    }
+
+    @Test
     fun aDockLongerThanTheSafeAreaIsHeldInsideIt() {
         val body = rightBody(990f) // 450 +- 495: past both ends of the window
         val rect = StreamColumn.rect(unfolded(DockPosition.RIGHT, dock = body, length = 990f))

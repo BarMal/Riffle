@@ -172,7 +172,7 @@ internal class OpenCardLayer(
     val onTabTap: (index: Int) -> Unit,
     val cards: List<OpenLayerCard>,
     /** The room the page keeps under the collapsed stack (the quick actions' strip): its bottom stands above it. */
-    val restFooter: Dp = 0.dp,
+    val restFooter: StackFooter = StackFooter.None,
     /** How many cards show as tabs on each side of the open card at most. */
     val peeks: Int = StreamCardStackSpec.VISIBLE_PEEKS,
     /** The cards in front of the open card (newer, lower index), drawn as header strips under it. */
@@ -199,6 +199,12 @@ private data class StripSlotId(val index: Int)
 @Stable
 internal class OpenCardPresence {
     var openness by mutableFloatStateOf(1f)
+
+    /**
+     * The opacity the layer last gave the card as a whole (its place's alpha, the stack's fade and the layer's own):
+     * what a test reads through [OpenCardAlphaKey] to tell a card that is drawn from one that is only in the tree.
+     */
+    var alpha by mutableFloatStateOf(1f)
 }
 
 /**
@@ -223,7 +229,8 @@ internal fun OpenCardLayerHost(
     modifier: Modifier = Modifier,
 ) {
     val layer = cards.layer ?: return
-    Box(modifier = modifier.fillMaxSize().padding(top = RiffleSpacing.s).then(layer.dragModifier)) {
+    val pageTop = LocalStreamPageInsets.current.top
+    Box(modifier = modifier.fillMaxSize().padding(top = pageTop).then(layer.dragModifier)) {
         Box(
             modifier =
                 Modifier
@@ -306,6 +313,7 @@ internal fun OpenCardFrames(
         },
         modifier = modifier.graphicsLayer { alpha = motion.fade },
     ) { measurables, constraints ->
+        val layerFade = motion.fade
         val areaWidth = constraints.maxWidth
         val areaHeight = constraints.maxHeight
         val progress = motion.progress.coerceIn(0f, 1f)
@@ -331,7 +339,7 @@ internal fun OpenCardFrames(
         val pitch = SlimTabs.pitchDp(layer.pitchDp, progress) * density
         val belowGap = BelowStripGap.roundToPx().toFloat()
         // Where the collapsed front card's bottom edge stands: the page keeps its footer under it.
-        val restBottom = (areaHeight - inset - layer.restFooter.roundToPx()).toFloat()
+        val restBottom = (areaHeight - inset - layer.restFooter.roomPx(this)).roundToInt().toFloat()
         val bottom = areaHeight - inset
         val minCard = MinOpenCardHeight.roundToPx().toFloat()
 
@@ -476,7 +484,10 @@ internal fun OpenCardFrames(
                     } else {
                         stackGeometry.frame(entry.index, position, pitch / density).alpha
                     }
-                layer.cards.firstOrNull { it.index == entry.index }?.presence?.openness = w
+                layer.cards.firstOrNull { it.index == entry.index }?.presence?.let { presence ->
+                    presence.openness = w
+                    presence.alpha = alpha * layer.stack.fade * layerFade
+                }
                 // Edges are rounded, not the height: top and bottom each move one way only, never a pixel back.
                 val topPx = top.roundToInt()
                 val placeable =

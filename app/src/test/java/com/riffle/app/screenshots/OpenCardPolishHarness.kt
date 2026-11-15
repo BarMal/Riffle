@@ -29,9 +29,11 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
+import com.riffle.core.domain.launcher.stream.NextAlarm
 import com.riffle.core.domain.launcher.stream.NotificationOwnAction
 import com.riffle.core.domain.launcher.stream.StreamPagePlanner
 import com.riffle.core.domain.launcher.stream.StreamSection
+import com.riffle.core.domain.launcher.workspace.sources.MediaSessionInfo
 import org.junit.After
 import org.junit.Rule
 import org.junit.runner.RunWith
@@ -158,6 +160,11 @@ internal abstract class OpenCardPolishHarness(
         pins: Int? = null,
         /** The notifications' own action buttons, as the listener holds them. */
         ownActions: (LauncherNotificationKey) -> List<NotificationOwnAction> = { emptyList() },
+        /** How many notifications the mail app (which has no quick actions) has: its page. */
+        mails: Int = 2,
+        /** A playing media session and the next alarm, for the Now page. */
+        mediaSession: MediaSessionInfo? = null,
+        nextAlarm: NextAlarm? = null,
     ) {
         stream =
             realWiringStreamHost(
@@ -173,9 +180,18 @@ internal abstract class OpenCardPolishHarness(
                         listOf(
                             note(11, "Ledger", "A short one.", mailPackage),
                             note(12, "Receipts", "Another.", mailPackage),
+                        ).take(mails) +
+                        listOfNotNull(
+                            mediaSession?.let {
+                                note(21, it.title.orEmpty(), it.artist.orEmpty(), it.packageName).copy(
+                                    isMediaSession = true,
+                                )
+                            },
                         ),
                 installedApps = ScreenshotFixtures.installedApps,
                 ownActions = ownActions,
+                mediaSessions = listOfNotNull(mediaSession),
+                nextAlarm = nextAlarm,
                 canReply = { true },
                 canSnooze = { true },
             ).also { it.pages.remember(deviceClass, landOn) }
