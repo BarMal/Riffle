@@ -107,13 +107,12 @@ internal fun HapticFeedbackStrength.longPressHapticFeedbackConstant(): Int? =
 
 /**
  * Maps a semantic [LauncherHapticEvent] to a [HapticFeedbackConstants] value for [sdkInt]. The API 30
- * (`GESTURE_*`, `CONFIRM`, `REJECT`) and API 34 (`SEGMENT_*`) constants are only returned where the
- * platform defines them; older releases get the closest constant available since API 28.
+ * (`GESTURE_*`, `CONFIRM`, `REJECT`) constants are only returned where the platform defines them; older releases get
+ * the closest constant available since API 28. Ticks use the constants every phone plays.
  */
 @SuppressLint("InlinedApi")
 internal fun LauncherHapticEvent.hapticFeedbackConstant(sdkInt: Int = Build.VERSION.SDK_INT): Int {
     val hasGestureConstants = sdkInt >= Build.VERSION_CODES.R
-    val hasSegmentConstants = sdkInt >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
     return when (this) {
         LauncherHapticEvent.GESTURE_START ->
             if (hasGestureConstants) HapticFeedbackConstants.GESTURE_START else HapticFeedbackConstants.VIRTUAL_KEY
@@ -123,14 +122,10 @@ internal fun LauncherHapticEvent.hapticFeedbackConstant(sdkInt: Int = Build.VERS
             } else {
                 HapticFeedbackConstants.VIRTUAL_KEY_RELEASE
             }
-        LauncherHapticEvent.DETENT ->
-            if (hasSegmentConstants) {
-                HapticFeedbackConstants.SEGMENT_FREQUENT_TICK
-            } else {
-                HapticFeedbackConstants.CLOCK_TICK
-            }
-        LauncherHapticEvent.BOUNDARY ->
-            if (hasSegmentConstants) HapticFeedbackConstants.SEGMENT_TICK else HapticFeedbackConstants.CONTEXT_CLICK
+        // Not the API 34 SEGMENT_* constants: the platform plays SEGMENT_FREQUENT_TICK as a texture tick with no
+        // fallback, which is silent on phones whose motor has no such effect, so a card landing was never felt.
+        LauncherHapticEvent.DETENT -> HapticFeedbackConstants.CLOCK_TICK
+        LauncherHapticEvent.BOUNDARY -> HapticFeedbackConstants.CONTEXT_CLICK
         LauncherHapticEvent.COMMIT ->
             if (hasGestureConstants) HapticFeedbackConstants.CONFIRM else HapticFeedbackConstants.CONTEXT_CLICK
         LauncherHapticEvent.CANCEL ->

@@ -34,11 +34,9 @@ class LauncherHapticsTest {
             LauncherHapticEvent.GESTURE_START.hapticFeedbackConstant(sdk),
         )
         assertEquals(HapticFeedbackConstants.GESTURE_END, LauncherHapticEvent.GESTURE_END.hapticFeedbackConstant(sdk))
-        assertEquals(
-            HapticFeedbackConstants.SEGMENT_FREQUENT_TICK,
-            LauncherHapticEvent.DETENT.hapticFeedbackConstant(sdk),
-        )
-        assertEquals(HapticFeedbackConstants.SEGMENT_TICK, LauncherHapticEvent.BOUNDARY.hapticFeedbackConstant(sdk))
+        // Ticks keep the constants every phone plays: the API 34 segment ticks are silent on many motors.
+        assertEquals(HapticFeedbackConstants.CLOCK_TICK, LauncherHapticEvent.DETENT.hapticFeedbackConstant(sdk))
+        assertEquals(HapticFeedbackConstants.CONTEXT_CLICK, LauncherHapticEvent.BOUNDARY.hapticFeedbackConstant(sdk))
         assertEquals(HapticFeedbackConstants.CONFIRM, LauncherHapticEvent.COMMIT.hapticFeedbackConstant(sdk))
         assertEquals(HapticFeedbackConstants.REJECT, LauncherHapticEvent.CANCEL.hapticFeedbackConstant(sdk))
     }
