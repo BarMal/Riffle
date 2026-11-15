@@ -106,4 +106,16 @@ internal class OpenCardFadeTest : OpenCardPolishHarness(HomeLayoutDeviceClass.FO
         composeRule.waitForIdle()
         assertTheFadeFollowsTheCard(setting, "after the four-card page")
     }
+
+    @Test
+    fun unfoldedOneOpenCardWithAppsBehindAndAroundTheCardsLight() = shoot()
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun unfoldedOneOpenCardWithAppsBehindAndAroundTheCardsDark() = shoot()
+
+    private fun shoot() {
+        oneCardOpen(AppsBehindCards.BEHIND_AND_AROUND)
+        composeRule.captureScreen()
+    }
 }

@@ -141,4 +141,16 @@ internal class FoldedOpenCardDockTest : OpenCardPolishHarness(HomeLayoutDeviceCl
     @Test
     fun withAppsAroundTheCardsNothingShowsUnderTheDockOrTheCard() =
         assertNothingShowsFullUnderTheDockOrTheCard(AppsBehindCards.AROUND)
+
+    @Test
+    fun foldedOpenCardWithTabsBelowAndTheDocksActionsLight() = shoot()
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun foldedOpenCardWithTabsBelowAndTheDocksActionsDark() = shoot()
+
+    private fun shoot() {
+        open(AppsBehindCards.BEHIND_AND_AROUND, tabsBelow = true)
+        composeRule.captureScreen()
+    }
 }
