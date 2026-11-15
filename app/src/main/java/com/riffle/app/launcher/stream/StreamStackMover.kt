@@ -99,8 +99,19 @@ internal class OpenCardHandoffConnection(
     private val density: Float,
     /** The scroll state of the open card's body that is in front, or null. */
     private val bodyScroll: () -> ScrollState?,
+    /** What the cue at the body's edge draws: how far toward the threshold the finger has gone past it. */
+    private val cue: HandoffCueState = HandoffCueState(),
+    /** Whether the open card has a neighbour to hand over to: the older card above, or the newer one below. */
+    private val hasNeighbour: (older: Boolean) -> Boolean = { true },
 ) : NestedScrollConnection {
     private val handoff = OpenCardHandoff()
+
+    /** The cue follows what the body could not take, but only toward a card there is (not past either end). */
+    private fun updateCue() {
+        val accumulated = handoff.accumulated
+        val fraction = (accumulated / OpenCardHandoff.THRESHOLD_DP).coerceIn(-1f, 1f)
+        cue.fraction = if (accumulated != 0f && hasNeighbour(accumulated > 0f)) fraction else 0f
+    }
 
     private fun bodyScrolls(): Boolean = bodyScroll()?.let { it.canScrollForward || it.canScrollBackward } == true
 
@@ -115,6 +126,7 @@ internal class OpenCardHandoffConnection(
                 OpenCardHandoff.Retraction(0f, 0f)
             }
         mover.dragBy(back.stackDp)
+        if (back.consumedDp != 0f) updateCue()
         return Offset(0f, back.consumedDp * density)
     }
 
@@ -126,11 +138,13 @@ internal class OpenCardHandoffConnection(
         if (available.y == 0f || !bodyScrolls()) return Offset.Zero
         // What a body's fling leaves over at its edge is no drag of the finger's: it is swallowed, never momentum.
         if (source == NestedScrollSource.UserInput) mover.dragBy(handoff.leftover(available.y / density))
+        updateCue()
         return Offset(0f, available.y)
     }
 
     override suspend fun onPreFling(available: Velocity): Velocity {
         handoff.reset()
+        cue.fraction = 0f
         return Velocity.Zero
     }
 }
