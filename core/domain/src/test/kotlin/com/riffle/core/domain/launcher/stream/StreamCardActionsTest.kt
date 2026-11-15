@@ -101,7 +101,7 @@ class StreamCardActionsTest {
     @Test
     fun aConversationHasAReplyFieldAndDismissAndSnooze() {
         assertEquals(
-            listOf(CardAction.Reply, CardAction.Dismiss, CardAction.Snooze),
+            listOf(CardAction.Reply, CardAction.Dismiss, CardAction.Snooze, CardAction.OpenContent(player = false)),
             StreamCardActions.forContent(chat),
         )
     }
@@ -116,6 +116,7 @@ class StreamCardActionsTest {
                 CardAction.Reply,
                 CardAction.Dismiss,
                 CardAction.Snooze,
+                CardAction.OpenContent(player = false),
                 CardAction.Own("provider:1", "Mark as read"),
                 CardAction.Own("provider:2", "Archive"),
             ),
@@ -124,10 +125,33 @@ class StreamCardActionsTest {
     }
 
     @Test
+    fun anAppsOwnSnoozeAndCloseAreDroppedWhenRiffleOffersItsOwnSoNoActionIsTwice() {
+        val content =
+            chat.copy(
+                ownActions =
+                    listOf(
+                        NotificationOwnAction("p:1", "Snooze"),
+                        NotificationOwnAction("p:2", "Close"),
+                        NotificationOwnAction("p:3", "Archive"),
+                    ),
+            )
+        val actions = StreamCardActions.forContent(content)
+        assertEquals(listOf(CardAction.Own("p:3", "Archive")), actions.filterIsInstance<CardAction.Own>())
+        assertEquals(1, actions.count { it == CardAction.Snooze })
+        // Without Riffle's own Snooze and Dismiss (they are not offered) the app's buttons stay.
+        val bare = content.copy(actions = setOf(NotificationAction.OPEN, NotificationAction.HIDE))
+        assertEquals(3, StreamCardActions.forContent(bare).filterIsInstance<CardAction.Own>().size)
+    }
+
+    @Test
     fun aNotificationWithOnlyItsOwnButtonsOffersThemWithoutReplyOrDismiss() {
         val bare = chat.copy(actions = setOf(NotificationAction.OPEN, NotificationAction.HIDE), ownActions = ownActions)
         assertEquals(
-            listOf(CardAction.Own("provider:1", "Mark as read"), CardAction.Own("provider:2", "Archive")),
+            listOf(
+                CardAction.OpenContent(player = false),
+                CardAction.Own("provider:1", "Mark as read"),
+                CardAction.Own("provider:2", "Archive"),
+            ),
             StreamCardActions.forContent(bare),
         )
     }
@@ -164,10 +188,13 @@ class StreamCardActionsTest {
     @Test
     fun aNotificationOffersOnlyWhatItCanDo() {
         val noReply = chat.copy(actions = chat.actions - NotificationAction.REPLY - NotificationAction.SNOOZE)
-        assertEquals(listOf(CardAction.Dismiss), StreamCardActions.forContent(noReply))
-        // A redacted one has the notification key withheld: nothing but the card itself.
         assertEquals(
-            emptyList(),
+            listOf(CardAction.Dismiss, CardAction.OpenContent(player = false)),
+            StreamCardActions.forContent(noReply),
+        )
+        // A redacted one has the notification key withheld: only opening its app (its card always offered that).
+        assertEquals(
+            listOf(CardAction.OpenContent(player = false)),
             StreamCardActions.forContent(chat.copy(notificationKey = null, privacy = StreamPrivacy.REDACTED)),
         )
     }
@@ -180,6 +207,7 @@ class StreamCardActionsTest {
                 CardAction.PlayPause(playing = true),
                 CardAction.Next,
                 CardAction.ToggleQueue(shown = true),
+                CardAction.OpenContent(player = true),
             ),
             StreamCardActions.forContent(player),
         )

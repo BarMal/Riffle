@@ -317,7 +317,7 @@ private fun HomeDestinationContent(
             reducedMotion = state.reducedMotion(),
             dockEdge = plan.dockEdge,
             dockExtent =
-                dockHost.reservedExtent(
+                dockHost.reservedExtentWithActions(
                     dockHostState.homeLayout.visibleTo(dockHostState.installedApps),
                     plan.dockEdge,
                 ),
@@ -854,7 +854,7 @@ private fun StreamHomeSurface(
     modifier: Modifier = Modifier,
 ) {
     val visibleLayout = state.homeLayout.visibleTo(state.installedApps)
-    val dockExtent = dockHost.reservedExtent(visibleLayout, dockPosition)
+    val dockExtent = dockHost.reservedExtentWithActions(visibleLayout, dockPosition)
     val insets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets().asPaddingValues()
     // The stack lays out inside the system bars and the Dock's reserve, but its empty room (a tap closes, a long-press
     // is the page's options) is the whole window: the surface is not inset, its content is.

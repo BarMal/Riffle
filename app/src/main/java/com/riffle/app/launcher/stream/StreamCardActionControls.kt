@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.stream
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -20,15 +22,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -68,8 +73,14 @@ internal fun CardActionControls(
     // The notification's own buttons are text and may be three long titles: they get a row of their own under the
     // controls (the reply field and the icons), so the field keeps its room on the narrowest card.
     Column(modifier = modifier.fillMaxWidth()) {
-        val main = actions - own.toSet()
+        // Icons and the reply field on the first line; the text actions (Open, Open in calendar, Complete) on a line of
+        // their own that scrolls sideways when they do not fit; the notification's own buttons under them.
+        val text = actions.filter { it.isTextAction() }
+        val main = actions - own.toSet() - text.toSet()
         if (main.isNotEmpty()) ActionRow(content, main, callbacks, onToggleQueue)
+        if (text.isNotEmpty()) {
+            ActionRow(content, text, callbacks, onToggleQueue, Modifier.horizontalScroll(rememberScrollState()))
+        }
         if (own.isNotEmpty()) OwnActionRow(content, own, callbacks)
     }
 }
@@ -146,9 +157,10 @@ private fun ActionRow(
     actions: List<CardAction>,
     callbacks: StreamCallbacks,
     onToggleQueue: (Boolean) -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.xxs),
     ) {
@@ -203,6 +215,11 @@ private fun ActionRow(
                         stringResource(R.string.stream_task_complete_action),
                         { callbacks.onAction(content, StreamAction.Complete) },
                     )
+                is CardAction.OpenContent ->
+                    StreamTextButton(
+                        stringResource(if (action.player) R.string.stream_media_open_player else R.string.stream_open),
+                        { callbacks.onAction(content, StreamAction.Open) },
+                    )
                 is CardAction.Own -> Unit
             }
         }
@@ -219,6 +236,9 @@ private fun ActionIcon(
         Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp))
     }
 }
+
+/** The backing of the reply field where the row sits on the Dock's glass, so its contrast never depends on the fill. */
+internal val LocalCardActionFieldColor = compositionLocalOf { Color.Transparent }
 
 /** The inline reply: a field and its send button. The text is the user's, kept only while the card is open. */
 @Composable
@@ -244,6 +264,11 @@ private fun ReplyField(
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { send() }),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = LocalCardActionFieldColor.current,
+                    unfocusedContainerColor = LocalCardActionFieldColor.current,
+                ),
         )
         ActionIcon(
             Icons.AutoMirrored.Filled.Send,
@@ -278,6 +303,8 @@ internal fun Modifier.cardActionAccessibility(
     val calendar = stringResource(R.string.stream_event_open_in_calendar)
     val clock = stringResource(R.string.stream_event_open_clock)
     val complete = stringResource(R.string.stream_task_complete_action)
+    val open = stringResource(R.string.stream_open)
+    val openPlayer = stringResource(R.string.stream_media_open_player)
     val labelled =
         actions.mapNotNull { action ->
             val label =
@@ -291,6 +318,7 @@ internal fun Modifier.cardActionAccessibility(
                     is CardAction.ToggleQueue -> if (action.shown) hideQueue else showQueue
                     is CardAction.OpenEvent -> if (action.kind == EventKind.ALARM) clock else calendar
                     CardAction.Complete -> complete
+                    is CardAction.OpenContent -> if (action.player) openPlayer else open
                     is CardAction.Own -> action.title
                 }
             label?.let { action to it }
@@ -310,3 +338,7 @@ internal fun Modifier.cardActionAccessibility(
             } + extraActions
     }
 }
+
+/** The controls that are a text button (not an icon or the reply field): they sit on their own line. */
+private fun CardAction.isTextAction(): Boolean =
+    this is CardAction.OpenEvent || this is CardAction.Complete || this is CardAction.OpenContent

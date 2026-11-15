@@ -53,6 +53,12 @@ internal class HomeDockHostState {
     val extentPx = mutableIntStateOf(UNMEASURED_DOCK_EXTENT_PX)
 
     /**
+     * The Dock's whole area across its edge, the open card's actions row included: what the Stream leaves room for.
+     * [extentPx] is without the row (Home's grid does not move for it).
+     */
+    val areaExtentPx = mutableIntStateOf(UNMEASURED_DOCK_EXTENT_PX)
+
+    /**
      * The edge the dock stood on when [extentPx] was measured. A surface that lays out beside the
      * dock on another edge (the incoming side of a dock pull, whose dock is still on the outgoing
      * edge) estimates the room instead of borrowing a thickness measured across the wrong axis.
@@ -369,6 +375,7 @@ private fun dockHostWorkspaceActions(
             hostState.measuredEdge.value = position
             onExtentChanged(extentPx)
         },
+        onDockAreaExtentChanged = { areaPx -> hostState.areaExtentPx.intValue = areaPx },
         onDockBoundsChanged = { bounds -> hostState.bounds.value = bounds },
         onBackgroundClick = onBackgroundClick,
         onAction = dockOnAction,
@@ -469,7 +476,7 @@ private data class DockShelfController(
 /** The dock content's alpha at rest, or whenever nothing holds it back: every dock outside a reveal hold. */
 private val FullyRevealedDockContent: () -> Float = { 1f }
 
-private const val UNMEASURED_DOCK_EXTENT_PX = -1
+internal const val UNMEASURED_DOCK_EXTENT_PX = -1
 
 private const val DOCK_MENU_LONG_CLICK_LABEL = "Show home actions"
 

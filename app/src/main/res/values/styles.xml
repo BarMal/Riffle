@@ -8,4 +8,9 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:colorBackgroundCacheHint">@null</item>
     </style>
+    <!-- The app pair experiment's trampoline: nothing is drawn. -->
+    <style name="Theme.Riffle.PairTrampoline" parent="android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowNoDisplay">false</item>
+    </style>
 </resources>

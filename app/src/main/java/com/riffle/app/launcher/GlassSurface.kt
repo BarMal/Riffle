@@ -81,7 +81,7 @@ internal fun GlassSurface(
 
     Box(
         modifier =
-            modifier.clip(shape).then(
+            modifier.clip(shape).semantics { glassSurfaceWeight = weight.name }.then(
                 if (card != null) {
                     val look = GlassCardLook(fill.toArgb(), glow != Color.Unspecified)
                     Modifier.semantics { cardLook = look }
@@ -218,3 +218,12 @@ private const val DARK_TINT_LUMINANCE = 0.5f
 internal fun ProvideLiquidGlassBackdrop(content: @Composable (backdropCapture: Modifier) -> Unit) {
     content(Modifier)
 }
+
+/** The weight a [GlassSurface] is drawn at, on its node: a test hook (how many glass surfaces stand where). */
+internal val GlassSurfaceWeightKey = androidx.compose.ui.semantics.SemanticsPropertyKey<String>("GlassSurfaceWeight")
+
+private var androidx.compose.ui.semantics.SemanticsPropertyReceiver.glassSurfaceWeight: String
+    get() = throw UnsupportedOperationException("write only")
+    set(value) {
+        this[GlassSurfaceWeightKey] = value
+    }

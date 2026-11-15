@@ -115,11 +115,12 @@ class SettingsControlsHaveKeysTest {
     /**
      * The controls that are deliberately not settings: the way back, the device tabs that choose which device class a
      * page shows, rows that only open another page (each is the page's own entry in the search index), the bulk reset
-     * of the gestures, and the read-only diagnostics page.
+     * of the gestures, and the diagnostics pages.
      */
     private fun SemanticsNode.isExempt(shown: SettingsPage): Boolean {
         val text = describe()
         return shown == SettingsPage.APP_PUBLISH ||
+            shown == SettingsPage.APP_PAIR ||
             text in setOf("Back", "Home", "Folded", "Unfolded") ||
             text.startsWith("Open / ") ||
             text.startsWith("Reset / ")
