@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,7 +63,10 @@ internal fun StreamTextButton(
         onClick = onClick,
         modifier = modifier.heightIn(min = StreamMinTarget).widthIn(min = StreamMinTarget),
         enabled = enabled,
-    ) { Text(text) }
+        // The text's own colour is the surface's content colour, as an enabled control: the theme's accent read as
+        // disabled on the Dock's glass.
+        colors = ButtonDefaults.textButtonColors(contentColor = LocalContentColor.current),
+    ) { Text(text, maxLines = 1, softWrap = false) }
 }
 
 /** The Hide choices of [content] (what the existing exclusions flow offers); empty when the shell offers no Hide. */

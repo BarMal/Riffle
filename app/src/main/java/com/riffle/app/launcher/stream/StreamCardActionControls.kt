@@ -70,18 +70,23 @@ internal fun CardActionControls(
 ) {
     if (actions.isEmpty()) return
     val own = actions.filterIsInstance<CardAction.Own>()
-    // The notification's own buttons are text and may be three long titles: they get a row of their own under the
-    // controls (the reply field and the icons), so the field keeps its room on the narrowest card.
     Column(modifier = modifier.fillMaxWidth()) {
-        // Icons and the reply field on the first line; the text actions (Open, Open in calendar, Complete) on a line of
-        // their own that scrolls sideways when they do not fit; the notification's own buttons under them.
+        // Icons and the reply field on the first line; every text action (Open, Open in calendar, Complete and the
+        // notification's own buttons, whole labels) on one line of its own that scrolls sideways when they do not fit.
         val text = actions.filter { it.isTextAction() }
         val main = actions - own.toSet() - text.toSet()
         if (main.isNotEmpty()) ActionRow(content, main, callbacks, onToggleQueue)
-        if (text.isNotEmpty()) {
-            ActionRow(content, text, callbacks, onToggleQueue, Modifier.horizontalScroll(rememberScrollState()))
+        if (text.isNotEmpty() || own.isNotEmpty()) {
+            ActionRow(
+                content,
+                text + own,
+                callbacks,
+                onToggleQueue,
+                Modifier.fillMaxWidth()
+                    .then(if (own.isNotEmpty()) Modifier.testTag(CARD_OWN_ACTIONS_TEST_TAG) else Modifier)
+                    .horizontalScroll(rememberScrollState()),
+            )
         }
-        if (own.isNotEmpty()) OwnActionRow(content, own, callbacks)
     }
 }
 
@@ -220,7 +225,11 @@ private fun ActionRow(
                         stringResource(if (action.player) R.string.stream_media_open_player else R.string.stream_open),
                         { callbacks.onAction(content, StreamAction.Open) },
                     )
-                is CardAction.Own -> Unit
+                is CardAction.Own ->
+                    StreamTextButton(
+                        action.title,
+                        { callbacks.onAction(content, StreamAction.OwnAction(action.id)) },
+                    )
             }
         }
     }

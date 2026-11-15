@@ -58,6 +58,8 @@ internal object StreamContentDetails {
         ): List<String> =
             (0 until (item.number(count) ?: 0L).toInt().coerceAtMost(CustomNotificationMapping.MAX_BIG_LINES))
                 .mapNotNull { index -> item.text(ItemExtKey("$prefix$index")) }
+                // A line that only says the title again (the card's header already does) is not a line of the body.
+                .filterNot { line -> item.title?.trim()?.equals(line.trim(), ignoreCase = true) == true }
         return CustomNotificationContent(
             title = item.text(NotificationItemMapper.CUSTOM_TITLE_KEY),
             lines =

@@ -96,6 +96,7 @@ class CustomNotificationMappingTest {
         custom: CustomNotificationContent?,
         levels: SourceContentLevels = SourceContentLevels.ALL_SHOWN,
         visibility: AppProfileContentVisibility = AppProfileContentVisibility.VISIBLE,
+        notificationTitle: String? = null,
     ): NotificationContent {
         val items =
             NotificationItemMapper().notificationItems(
@@ -105,6 +106,7 @@ class CustomNotificationMappingTest {
                             LauncherNotification(
                                 key = LauncherNotificationKey("nav"),
                                 packageName = AppPackageName("com.example.nav"),
+                                title = notificationTitle.orEmpty(),
                                 postedAtEpochMillis = 1_000L,
                             ),
                         ),
@@ -124,6 +126,18 @@ class CustomNotificationMappingTest {
         assertEquals("Get off at Angel", mapped.headline)
         assertEquals("Navigator", mapped.secondaryLabel)
         assertEquals(NotificationBody.Custom(custom), mapped.body)
+    }
+
+    @Test
+    fun `a body line that says the notification's own title again is dropped (round 7)`() {
+        val repeating =
+            custom.copy(
+                lines = listOf("Ride 16 stops to", "3 stops away"),
+                bigLines = listOf(" ride 16 STOPS to", "Northern line"),
+            )
+        val mapped = content(repeating, notificationTitle = "Ride 16 stops to")
+        assertEquals(listOf("3 stops away"), mapped.custom?.lines)
+        assertEquals(listOf("Northern line"), mapped.custom?.bigLines)
     }
 
     @Test
