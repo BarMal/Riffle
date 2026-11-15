@@ -156,18 +156,25 @@ object DockRunScroll {
  * opacity only: no mask, gradient or offscreen layer. Positions are along the row's axis in the same unit.
  */
 object DockEdgeFade {
-    /** The opacity of an icon spanning [itemStart]..[itemEnd] in a viewport spanning [viewportStart]..[viewportEnd]. */
+    /**
+     * The opacity of an icon spanning [itemStart]..[itemEnd] in a viewport spanning [viewportStart]..[viewportEnd]. An
+     * item that is less than [vanishBelow] (a fraction of its extent) in view is not drawn at all: a wide chip is never
+     * left as a half chip at some strength, it either shows most of itself or is gone.
+     */
     fun alpha(
         itemStart: Float,
         itemEnd: Float,
         viewportStart: Float,
         viewportEnd: Float,
+        vanishBelow: Float = 0f,
     ): Float {
         val extent = itemEnd - itemStart
         val visible = (minOf(itemEnd, viewportEnd) - maxOf(itemStart, viewportStart)).coerceIn(0f, maxOf(extent, 0f))
         // An empty extent, and sub-pixel rounding between the icon's and the viewport's edges, are not a cut.
         val whole = extent <= 0f || visible >= extent - WHOLE_TOLERANCE
-        return if (whole) 1f else (visible / extent) * (visible / extent)
+        if (whole) return 1f
+        val shown = ((visible / extent - vanishBelow) / (1f - vanishBelow)).coerceIn(0f, 1f)
+        return shown * shown
     }
 
     private const val WHOLE_TOLERANCE = 1f
