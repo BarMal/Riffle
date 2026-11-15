@@ -71,10 +71,17 @@ fun AppDrawerSettings.coerced(): AppDrawerSettings =
 
 /** Durable presentation preference for launcher search results. */
 data class SearchSettings(
-    val resultPresentation: SearchResultPresentation = SearchResultPresentation.ICONS,
+    val resultPresentation: SearchResultPresentation = SearchResultPresentation.STACK,
 )
 
+/**
+ * How the Dock's search shows its results. [STACK] (the default for new installs and for settings saved before the
+ * choice existed) is the card stack: the best match is the front card, the next ones strips behind it. [ICONS] and
+ * [LIST] are the earlier presentations; a stored choice of either keeps its value. The Library's own search field has
+ * no stack, so it reads [STACK] as [ICONS].
+ */
 enum class SearchResultPresentation {
+    STACK,
     ICONS,
     LIST,
 }
