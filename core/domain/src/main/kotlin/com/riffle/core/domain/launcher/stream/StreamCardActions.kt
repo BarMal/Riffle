@@ -28,6 +28,9 @@ sealed interface CardAction {
     /** Shows or hides the queue on the open player. */
     data class ToggleQueue(val shown: Boolean) : CardAction
 
+    /** "Open" (the notification's app) or "Open player" ([player]): the content's own open action. */
+    data class OpenContent(val player: Boolean) : CardAction
+
     /** "Open in calendar" (an event), "Open clock" (an alarm). */
     data class OpenEvent(val kind: EventKind) : CardAction
 
@@ -93,10 +96,28 @@ object StreamCardActions {
             CardAction.Reply.takeIf { StreamActionPolicy.offers(content, StreamAction.Reply("x")) },
             CardAction.Dismiss.takeIf { StreamActionPolicy.offers(content, StreamAction.Dismiss) },
             CardAction.Snooze.takeIf { StreamActionPolicy.offers(content, StreamAction.Snooze()) },
-        ) +
-            content.ownActions
-                .filter { StreamActionPolicy.offers(content, StreamAction.OwnAction(it.id)) }
-                .map { CardAction.Own(it.id, it.title) }
+            CardAction.OpenContent(player = false).takeIf { StreamActionPolicy.offers(content, StreamAction.Open) },
+        ) + ownActionsOfOpenCard(content)
+
+    /**
+     * The notification's own buttons on its open card, less those that only repeat a control Riffle already offers:
+     * Riffle's own Snooze and Dismiss are kept (they are the same in every app) and an app's "Snooze", "Close",
+     * "Dismiss" and the like are dropped, so no action appears twice on a card.
+     */
+    fun ownActionsOfOpenCard(content: NotificationContent): List<CardAction.Own> {
+        val snooze = StreamActionPolicy.offers(content, StreamAction.Snooze())
+        val dismiss = StreamActionPolicy.offers(content, StreamAction.Dismiss)
+        return content.ownActions
+            .filter { StreamActionPolicy.offers(content, StreamAction.OwnAction(it.id)) }
+            .filterNot { own ->
+                val title = own.title.trim().lowercase()
+                (snooze && title in SNOOZE_TITLES) || (dismiss && title in DISMISS_TITLES)
+            }
+            .map { CardAction.Own(it.id, it.title) }
+    }
+
+    private val SNOOZE_TITLES = setOf("snooze", "remind me", "remind me later")
+    private val DISMISS_TITLES = setOf("dismiss", "close", "clear")
 
     private fun media(
         content: MediaContent,
@@ -109,6 +130,7 @@ object StreamCardActions {
             CardAction.PlayPause(playing).takeIf { StreamActionPolicy.offers(content, toggle) },
             CardAction.Next.takeIf { StreamActionPolicy.offers(content, StreamAction.Next) },
             CardAction.ToggleQueue(queueShown).takeIf { content.queue.isNotEmpty() },
+            CardAction.OpenContent(player = true).takeIf { StreamActionPolicy.offers(content, StreamAction.Open) },
         )
     }
 
@@ -128,7 +150,7 @@ object StreamCardActions {
             is CardAction.PlayPause -> if (action.playing) StreamAction.Pause else StreamAction.Play
             CardAction.Next -> StreamAction.Next
             is CardAction.ToggleQueue -> null
-            is CardAction.OpenEvent -> StreamAction.Open
+            is CardAction.OpenEvent, is CardAction.OpenContent -> StreamAction.Open
             CardAction.Complete -> StreamAction.Complete
             is CardAction.Own -> StreamAction.OwnAction(action.id)
         }

@@ -1146,6 +1146,8 @@ internal data class HomeWorkspaceActions(
     val currentDragSession: () -> HomeDragSession? = { null },
     val haptics: LauncherHaptics,
     val onDockInteractionExtentChanged: (Int) -> Unit = {},
+    /** The Dock's whole area along its cross axis, with the open card's actions row in it (the Stream's room). */
+    val onDockAreaExtentChanged: (Int) -> Unit = {},
     val onBottomControlsHeightChanged: (Int) -> Unit = {},
     val onWorkspaceGridBoundsChanged: (LauncherPageId, Rect) -> Unit = { _, _ -> },
     val onDockBoundsChanged: (Rect) -> Unit = {},

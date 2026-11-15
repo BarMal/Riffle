@@ -19,8 +19,8 @@ import kotlinx.coroutines.withContext
 
 /*
  * A card's light comes from its own header image. The card as a whole is lit by the app it belongs to, but several
- * cards belong to one app (a mail app's shortcuts) and each shows its own icon, so the colour that lights the rim beside
- * an icon is read from the image that icon actually shows, not from the app the cards share.
+ * cards belong to one app (a mail app's shortcuts) and each shows its own icon, so the colour that lights the rim
+ * beside an icon is read from the image that icon actually shows, not from the app the cards share.
  */
 
 /** The colour one image lights its card's rim with: null is a neutral light (no vivid colour, or still being read). */

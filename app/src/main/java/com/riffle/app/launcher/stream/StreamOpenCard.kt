@@ -29,8 +29,6 @@ import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.NotificationBody
 import com.riffle.core.domain.launcher.stream.NotificationContent
-import com.riffle.core.domain.launcher.stream.StreamAction
-import com.riffle.core.domain.launcher.stream.StreamActionPolicy
 import com.riffle.core.domain.launcher.stream.StreamCardActions
 import com.riffle.core.domain.launcher.stream.StreamContent
 import com.riffle.core.domain.launcher.stream.TaskContent
@@ -96,7 +94,7 @@ internal fun OpenStreamCard(
                 verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
             ) {
                 when (content) {
-                    is NotificationContent -> OpenNotificationBody(content, env, callbacks)
+                    is NotificationContent -> OpenNotificationBody(content, env)
                     is MediaContent ->
                         OpenMedia(content, env, callbacks, groupKey, hideChoices, queueShown)
                     is EventContent -> OpenEvent(content, env, callbacks, groupKey, hideChoices)
@@ -176,7 +174,6 @@ private fun OpenNotificationHeader(
 private fun OpenNotificationBody(
     content: NotificationContent,
     env: StreamEnvironment,
-    callbacks: StreamCallbacks,
 ) {
     when (val body = content.body) {
         is NotificationBody.Thread -> NotificationThread(content)
@@ -202,9 +199,7 @@ private fun OpenNotificationBody(
     // The picture the app attached, across the card under the conversation it belongs to.
     val sender = content.thread.lastOrNull()?.sender ?: content.headline
     StreamPicture(content.picture ?: content.custom?.thumbnail, sender, env, OpenPictureMaxHeight)
-    if (StreamActionPolicy.offers(content, StreamAction.Open)) {
-        StreamTextButton(stringResource(R.string.stream_open), { callbacks.onAction(content, StreamAction.Open) })
-    }
+    // "Open" is one of the card's actions (the Dock's row, or the card's own row), never also in the body.
 }
 
 @Composable
@@ -255,12 +250,6 @@ private fun OpenMedia(
     }
     MediaScrubber(content, callbacks)
     if (queueShown) MediaQueue(content, env)
-    if (StreamActionPolicy.offers(content, StreamAction.Open)) {
-        StreamTextButton(
-            stringResource(R.string.stream_media_open_player),
-            { callbacks.onAction(content, StreamAction.Open) },
-        )
-    }
 }
 
 @Composable
