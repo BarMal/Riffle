@@ -9,6 +9,7 @@ import com.riffle.app.launcher.DOCK_QUICK_ACTIONS_TEST_TAG
 import com.riffle.app.launcher.DockHeaderAlphaKey
 import com.riffle.app.launcher.HOME_DOCK_TEST_TAG
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.stream.SlimTabs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -120,8 +121,9 @@ internal class OpenCardPolishFoldedTest : OpenCardPolishHarness(HomeLayoutDevice
             "the card ends ${(dockTop - card.bottom) / density} dp above the Dock",
             dockTop - card.bottom in 0f..(32f * density),
         )
-        // Over the top: two strips of a card behind it, a pitch each, and the page's little air above them.
-        val above = card.top - 2 * 56f * density
+        // Over the top: two slim tabs of a card behind it, a pitch each (28 dp, 56 dp before), and the page's little
+        // air above them.
+        val above = card.top - 2 * SlimTabs.PITCH_DP * density
         assertTrue("the strips start ${above / density} dp from the top", above in 0f..(16f * density))
     }
 

@@ -117,5 +117,9 @@ internal class OpenCardPolishFoldedShots : OpenCardPolishShots(HomeLayoutDeviceC
     fun aLongCardWithNeighboursAboveAndBelow() = shootOpen()
 
     @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun aLongCardWithNeighboursAboveAndBelowDark() = shootOpen()
+
+    @Test
     fun theCueAtTheTopOfTheBodyNamesTheOlderCard() = shootCue(dyDp = 36f)
 }
