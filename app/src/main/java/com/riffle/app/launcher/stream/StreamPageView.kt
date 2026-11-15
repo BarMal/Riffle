@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -46,10 +49,12 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.GlassSurface
 import com.riffle.app.launcher.LocalDockFan
 import com.riffle.app.launcher.QuickActionsStrip
+import com.riffle.app.launcher.QuickActionsStripHeight
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
@@ -132,7 +137,6 @@ internal fun StreamPageView(
     quick: PageQuickActions? = null,
 ) {
     val title = page.title()
-    val underStack = quick != null && !LocalQuickActionsInDock.current
     // The same actions are custom accessibility actions of the page's front card (or the quiet card), wherever the row
     // is.
     val spokenActions =
@@ -144,6 +148,9 @@ internal fun StreamPageView(
                 }
             }
         }
+    // A side Dock keeps the strip's room under the stack on every page, quick actions or none, open card or none: the
+    // stack stands in one place whatever the strip is doing (see [StackFooter]).
+    val reservesStrip = LocalQuickStripReserved.current
     Box(modifier = modifier.fillMaxSize().semantics { paneTitle = title }, contentAlignment = Alignment.TopCenter) {
         Column(
             modifier =
@@ -153,14 +160,40 @@ internal fun StreamPageView(
                     .padding(horizontal = RiffleSpacing.l),
             verticalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
         ) {
-            CompositionLocalProvider(LocalFrontCardQuickActions provides spokenActions) {
-                // The stack gives up the row's height: it is bottom-anchored in what is left above the row.
+            CompositionLocalProvider(
+                LocalFrontCardQuickActions provides spokenActions,
+                LocalStackFooter provides if (reservesStrip) StackFooter.WithStrip else StackFooter.None,
+            ) {
+                // The stack gives up the row's room: it is bottom-anchored in what is left above it.
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) { StreamPageBodyView(page, env, callbacks) }
             }
-            if (underStack) UnderStackQuickActions(quick)
+            if (reservesStrip) UnderStackQuickActions(quick)
         }
     }
 }
+
+/**
+ * What a page keeps under its stack: nothing (the Dock's row holds the quick actions), or the room of the strip
+ * ([QuickActionsStripHeight]) with the gaps around it. The room is reserved whether or not the page has quick
+ * actions and whether or not a card is open, so the stack never moves because the strip came or went; the open card's
+ * layer reads it to grow from, and shrink back to, the collapsed front card's own rectangle.
+ */
+internal enum class StackFooter(val room: androidx.compose.ui.unit.Dp) {
+    None(0.dp),
+    WithStrip(RiffleSpacing.s + QuickActionsStripHeight + RiffleSpacing.s),
+}
+
+/** The test tag of the room a side Dock's page keeps under its stack for the quick actions strip (always there). */
+internal const val QUICK_ACTIONS_RESERVE_TEST_TAG = "quick-actions-reserve"
+
+/**
+ * Whether the pages keep the room of a quick actions strip under their stacks: a side Dock holds them under the stack
+ * (not in its row) and some page of the Stream has quick actions. Every page then keeps the room, so the stack stands
+ * in one place on all of them; with no quick actions anywhere (or the Dock's row holding them) nothing is reserved.
+ */
+internal val LocalQuickStripReserved = compositionLocalOf { false }
+
+internal val LocalStackFooter = compositionLocalOf { StackFooter.None }
 
 /**
  * The accessibility actions a page's quick actions add to its front card (and to the quiet card): the same actions as
@@ -170,25 +203,37 @@ internal val LocalFrontCardQuickActions = compositionLocalOf<List<CustomAccessib
 
 /**
  * The quick actions under the stack (a side Dock; folded or unfolded): a Thin strip as wide as the cards at the bottom
- * of
- * the page, where the Dock's lower end is. It is part of the page, so it goes with the page on a swipe. While a card is
- * open it is not drawn and takes no part in the tree: the open card grows over the room it keeps, so it is hidden
- * rather
- * than covered (a decision of the design: the open card needs the room).
+ * of the page, where the Dock's lower end is, in the room [StackFooter] reserves (nothing is drawn in it when the page
+ * has no quick actions). It is part of the page, so it goes with the page on a swipe. While a card is open the strip
+ * leaves the way the card arrives: it fades and slides down on the card's own spring (the card's growth, read where it
+ * is drawn), and comes back the same way when the card closes; the room stays reserved throughout, so nothing around
+ * it moves. While it is out it takes no part in the tree.
  */
 @Composable
-private fun UnderStackQuickActions(quick: PageQuickActions) {
+private fun UnderStackQuickActions(quick: PageQuickActions?) {
     val openCards = LocalOpenCards.current
     val open = openCards.state.isOpen
-    QuickActionsStrip(
-        quick = quick,
+    val slide = with(LocalDensity.current) { (QuickActionsStripHeight + RiffleSpacing.s).toPx() }
+    Box(
         modifier =
-            Modifier
-                .padding(bottom = RiffleSpacing.s)
-                .dockFan(LocalDockFan.current)
-                .graphicsLayer { alpha = 1f - openCards.motion.progress.coerceIn(0f, 1f) }
-                .then(if (open) Modifier.clearAndSetSemantics {} else Modifier),
-    )
+            Modifier.padding(bottom = RiffleSpacing.s).height(QuickActionsStripHeight)
+                .testTag(QUICK_ACTIONS_RESERVE_TEST_TAG),
+    ) {
+        if (quick != null) {
+            QuickActionsStrip(
+                quick = quick,
+                modifier =
+                    Modifier
+                        .dockFan(LocalDockFan.current)
+                        .graphicsLayer {
+                            val progress = openCards.motion.progress.coerceIn(0f, 1f)
+                            alpha = 1f - progress
+                            translationY = slide * progress
+                        }
+                        .then(if (open) Modifier.clearAndSetSemantics {} else Modifier),
+            )
+        }
+    }
 }
 
 /** The app's icon for an app page, else the section's glyph. Decorative: the title names the page. */

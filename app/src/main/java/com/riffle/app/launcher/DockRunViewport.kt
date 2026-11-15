@@ -44,7 +44,7 @@ internal val DockEdgeFadeAlphaKey = SemanticsPropertyKey<Float>("DockEdgeFadeAlp
  * outside a viewport.
  */
 @Composable
-internal fun Modifier.dockEdgeFade(): Modifier {
+internal fun Modifier.dockEdgeFade(vanishBelow: Float = 0f): Modifier {
     val viewport = LocalDockRunViewport.current ?: return this
     val item = remember { mutableStateOf<Rect?>(null) }
 
@@ -54,9 +54,9 @@ internal fun Modifier.dockEdgeFade(): Modifier {
         return if (port == null || rect == null || !viewport.enabled()) {
             1f
         } else if (viewport.runsHorizontally) {
-            DockEdgeFade.alpha(rect.left, rect.right, port.left, port.right)
+            DockEdgeFade.alpha(rect.left, rect.right, port.left, port.right, vanishBelow)
         } else {
-            DockEdgeFade.alpha(rect.top, rect.bottom, port.top, port.bottom)
+            DockEdgeFade.alpha(rect.top, rect.bottom, port.top, port.bottom, vanishBelow)
         }
     }
     return this

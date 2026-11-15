@@ -151,4 +151,79 @@ class OpenCardMotionTest {
         assertTrue(OpenCardLayout.stripsFit(458f, 50f, 168f, 240f))
         assertTrue(OpenCardLayout.stripsFit(300f, 50f, 0f, 240f))
     }
+
+    // Open card polish: it grows from the collapsed front card's own rectangle and takes the room there is ------------
+
+    private fun shared(
+        progress: Float,
+        placement: OpenCardPlacement = OpenCardPlacement.ABOVE_DOCK,
+        full: Float = 5000f,
+        strips: Float = 100f,
+        below: Float = 0f,
+    ) = OpenCardLayout.frame(
+        progress = progress,
+        areaHeightPx = 1000f,
+        bottomInsetPx = 50f,
+        browseHeightPx = 300f,
+        fullHeightPx = full,
+        stripsPx = strips,
+        placement = placement,
+        // The page keeps 140 under the stack, so the collapsed front card's bottom is 810, not 950.
+        restBottomPx = 810f,
+        belowPx = below,
+    )
+
+    @Test
+    fun theOpenCardStartsExactlyWhereTheCollapsedFrontCardStands() {
+        for (placement in OpenCardPlacement.entries) {
+            val frame = shared(0f, placement)
+            assertEquals(810f, frame.topPx + frame.heightPx, "$placement: bottom")
+            assertEquals(300f, frame.heightPx, "$placement: height")
+        }
+    }
+
+    @Test
+    fun aCardWithMoreToSayThanFitsTakesAllTheRoomUnderItsStripsAndAboveTheDock() {
+        val open = shared(1f)
+        assertEquals(100f, open.topPx)
+        assertEquals(950f, open.topPx + open.heightPx)
+    }
+
+    @Test
+    fun theCardsInFrontOfItTakeTheirRoomOffTheBottom() {
+        val open = shared(1f, below = 120f)
+        assertEquals(830f, open.topPx + open.heightPx)
+        assertEquals(100f, open.topPx)
+    }
+
+    @Test
+    fun aCardWithLittleToSayKeepsItsContentHeightButIsNeverShorterThanItsBrowseCard() {
+        assertEquals(500f, shared(1f, full = 500f).heightPx)
+        val short = shared(1f, full = 120f)
+        assertEquals(300f, short.heightPx)
+        assertEquals(950f, short.topPx + short.heightPx)
+    }
+
+    private fun oneWay(values: List<Float>): Boolean =
+        values.zipWithNext().all { (a, b) -> b <= a + 1e-3f } || values.zipWithNext().all { (a, b) -> b >= a - 1e-3f }
+
+    @Test
+    fun topAndBottomEachMoveOneWayOnlyWhateverThePlacement() {
+        for (placement in OpenCardPlacement.entries) {
+            for (full in listOf(120f, 500f, 5000f)) {
+                val frames = (0..40).map { shared(it / 40f, placement, full) }
+                val tops = frames.map { it.topPx }
+                val bottoms = frames.map { it.topPx + it.heightPx }
+                assertTrue(
+                    oneWay(tops),
+                    "$placement $full: top reversed $tops",
+                )
+                assertTrue(
+                    oneWay(bottoms),
+                    "$placement $full: bottom reversed $bottoms",
+                )
+                assertTrue(frames.map { it.heightPx }.zipWithNext().all { (a, b) -> b >= a - 1e-3f })
+            }
+        }
+    }
 }

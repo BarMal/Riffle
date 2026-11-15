@@ -202,13 +202,26 @@ the Dock's accessibility actions.
     is not covered; the keyboard raises the Dock and the card with it (both follow the window insets). A Dock down a side
     holds no row: the actions are on the card then (`StreamCardActions.effectiveActionsPlacement`), and so wherever there
     is no Dock to hold them (the unfolded column).
+  - **Neighbours of an open card (open card polish).** With more than one card in the stack and one open, the neighbours stay
+    visible from the moment it opens: older cards above it as header strips, newer cards below it (the real card cut off at its
+    header); a tap on a strip opens that card. A drag that starts on the header or beside the card moves the stack at once. A drag
+    that starts in the scrolling body scrolls it; at its top or bottom the finger's further travel is a quiet cue (a chevron and
+    the neighbour's title at that edge, filling toward the 56 dp hand-off threshold, the body dimming under it) and only past the
+    threshold does the stack follow, one to one; no cue toward a side with no card. While the stack moves, the body of the card
+    that leaves has faded out before the body of the card that arrives shows (never both), on the one spring of the stack's
+    position. "Next card" and "Previous card" are custom actions of the open card (and of a strip: it is one node, "bring to
+    front").
+  - **Quick actions under the stack (a side Dock).** The strip's room is reserved on every page whether or not it has quick actions
+    and whether or not a card is open: the stack never moves for it. It fades and slides down with the card's growth and returns
+    the same way; it goes with its page on a page swipe. Chips that do not fit whole give up the ends of their labels, and only
+    then does the row scroll (a chip less than half in view is not drawn).
   Every gesture has a non-gesture equivalent:
 
   | Gesture | Equivalent |
   | --- | --- |
   | Swipe to the next or previous page | Tap the page's tile or live app in the Dock (contextual mode); the pager's custom actions "Previous page" and "Next page" |
   | Tap the front card to open it, press the Dock to close it | The front card's custom action "Open card" and Enter or Space; the open card's "Close card" click action and Back; the Dock's action "Close card" (it reads "Back to Home" when no card is open) |
-  | Scroll a stack to another card | The stack's own custom actions "Previous card" and "Next card" (Next is an older card, drawn above) and the front card's "Open card"; the arrow keys (up and Page Up: older; down and Page Down: newer); a tap on a peeking card. There is no on-screen stepper (the "Card 2 of 3" pill with arrows was removed in slice 4a); the front card's state description says "Card 2 of 3" |
+  | Scroll a stack to another card | The stack's own custom actions "Previous card" and "Next card" (Next is an older card, drawn above) and the front card's "Open card"; the arrow keys (up and Page Up: older; down and Page Down: newer); a tap on a peeking card (above or, with a card open, below it); "Next card" and "Previous card" on the open card itself. There is no on-screen stepper (the "Card 2 of 3" pill with arrows was removed in slice 4a); the front card's state description says "Card 2 of 3" |
   | Long-press a page's tile or icon in the Dock for Show as, Move and Hide, and Show for each hidden section | The long-click custom action of the tile (assistive technology), the same menu |
 
   Each page is a labelled pane, the pager carries one custom-actions list, and no node carries two (the page actions are

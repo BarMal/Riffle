@@ -275,6 +275,7 @@ internal fun StreamSurface(
         LocalOpenCards provides openCards,
         LocalActionsInDock provides actionsInDock,
         LocalQuickActionsInDock provides quickActionsInDock,
+        LocalQuickStripReserved provides (!quickActionsInDock && quickByPage.isNotEmpty()),
     ) {
         Box(
             modifier =
