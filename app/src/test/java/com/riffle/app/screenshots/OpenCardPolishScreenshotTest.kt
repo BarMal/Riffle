@@ -69,6 +69,15 @@ internal class OpenCardPolishUnfoldedShots : OpenCardPolishShots(HomeLayoutDevic
     @Config(qualifiers = ScreenshotDevices.NIGHT)
     fun aLongCardWithNeighboursAboveAndBelowDark() = shootOpen()
 
+    /** The front card, long, open on the owner's window: with its two strips it fills the Dock body's height. */
+    @Test
+    fun aLongFrontCardAndItsStripsFillTheDocksHeight() {
+        show()
+        tapFront()
+        composeRule.waitForIdle()
+        composeRule.captureScreen()
+    }
+
     @Test
     fun theCueAtTheTopOfTheBodyNamesTheOlderCard() = shootCue(dyDp = 36f)
 
@@ -106,6 +115,10 @@ internal class OpenCardPolishUnfoldedShots : OpenCardPolishShots(HomeLayoutDevic
 internal class OpenCardPolishFoldedShots : OpenCardPolishShots(HomeLayoutDeviceClass.PHONE, null) {
     @Test
     fun aLongCardWithNeighboursAboveAndBelow() = shootOpen()
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.NIGHT)
+    fun aLongCardWithNeighboursAboveAndBelowDark() = shootOpen()
 
     @Test
     fun theCueAtTheTopOfTheBodyNamesTheOlderCard() = shootCue(dyDp = 36f)

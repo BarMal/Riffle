@@ -226,4 +226,68 @@ class OpenCardMotionTest {
             }
         }
     }
+
+    @Test
+    fun theNeighboursPitchEasesFromTheStacksToTheSlimTabsAndNeverBack() {
+        for (full in listOf(56f, 64f)) {
+            val pitches = (0..20).map { SlimTabs.pitchDp(full, it / 20f) }
+            assertEquals(full, pitches.first())
+            assertEquals(SlimTabs.PITCH_DP, pitches.last())
+            assertTrue(pitches.zipWithNext().all { (a, b) -> b <= a })
+        }
+        // Never wider than the pitch it came from (a stack already slimmer than a tab keeps its own).
+        assertEquals(20f, SlimTabs.pitchDp(20f, 1f))
+        // Out of range progress is held to it.
+        assertEquals(64f, SlimTabs.pitchDp(64f, -1f))
+        assertEquals(SlimTabs.PITCH_DP, SlimTabs.pitchDp(64f, 2f))
+    }
+
+    @Test
+    fun twoSlimTabsLeaveTheOpenCardTheRoomTwoFullStripsTook() {
+        // The unfolded column of the owner's window: 512 dp, 24 dp of the page's air, two neighbours above.
+        val column = 512f
+        val air = 24f
+        val before = column - air - 2 * 64f
+        val after = column - air - 2 * SlimTabs.PITCH_DP
+        assertEquals(360f, before)
+        assertEquals(432f, after)
+        val frame =
+            OpenCardLayout.frame(
+                progress = 1f,
+                areaHeightPx = column - 8f + 8f,
+                bottomInsetPx = 16f,
+                browseHeightPx = 200f,
+                fullHeightPx = 5000f,
+                stripsPx = 2 * SlimTabs.PITCH_DP,
+                placement = OpenCardPlacement.ABOVE_DOCK,
+            )
+        assertEquals(column - 16f - 2 * SlimTabs.PITCH_DP, frame.heightPx)
+    }
+
+    @Test
+    fun aTabsTargetReachesPastItsEdgesAndTheNearestCentreDecidesBetweenTwo() {
+        val pitch = SlimTabs.PITCH_DP
+        val centres = listOf(100f - pitch, 100f)
+        // 20 dp from a centre on the side with nothing there: still that tab.
+        assertEquals(0, SlimTabs.hit(centres[0] - 20f, centres, SlimTabs.TARGET_DP))
+        assertEquals(1, SlimTabs.hit(centres[1] + 20f, centres, SlimTabs.TARGET_DP))
+        // Between two tabs, the nearer centre wins.
+        assertEquals(0, SlimTabs.hit(centres[0] + 13f, centres, SlimTabs.TARGET_DP))
+        assertEquals(1, SlimTabs.hit(centres[0] + 15f, centres, SlimTabs.TARGET_DP))
+        // Further than half a target from every centre: no tab.
+        assertEquals(-1, SlimTabs.hit(centres[0] - 25f, centres, SlimTabs.TARGET_DP))
+        assertEquals(-1, SlimTabs.hit(0f, emptyList(), SlimTabs.TARGET_DP))
+    }
+
+    @Test
+    fun stripsOfTheStackFollowThePitchTheyAreGivenAndKeepTheirOwnByDefault() {
+        val geometry = StackGeometry(heightsDp = listOf(168f, 168f, 168f), pitchDp = 64f, visiblePeeks = 2)
+        val atRest = geometry.frame(2, 0f)
+        assertEquals(atRest, geometry.frame(2, 0f, 64f))
+        val slim = geometry.frame(2, 0f, SlimTabs.PITCH_DP)
+        assertEquals(168f + 2 * SlimTabs.PITCH_DP, slim.topDp)
+        // The strip's own height is a pitch (the gap is none), and it still tucks under the card in front.
+        assertEquals(SlimTabs.PITCH_DP, geometry.frame(1, 0f, SlimTabs.PITCH_DP).visibleHeightDp)
+        assertEquals(SlimTabs.PITCH_DP, slim.visibleHeightDp)
+    }
 }

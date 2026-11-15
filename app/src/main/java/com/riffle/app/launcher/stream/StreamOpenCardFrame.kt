@@ -30,6 +30,7 @@ import com.riffle.core.domain.launcher.stream.OpenCardBlend
 import com.riffle.core.domain.launcher.stream.OpenCardLayout
 import com.riffle.core.domain.launcher.stream.OpenCardSpring
 import com.riffle.core.domain.launcher.stream.OpenCardSpringState
+import com.riffle.core.domain.launcher.stream.SlimTabs
 import com.riffle.core.domain.launcher.stream.StackFling
 import com.riffle.core.domain.launcher.stream.StackGeometry
 import com.riffle.core.domain.launcher.stream.StreamCardSizes
@@ -113,7 +114,25 @@ internal class OpenCardFrameGeometry {
 
     /** False while the room is too short for the cards behind to peek out above the open card: they are not drawn. */
     var stripsVisible by mutableStateOf(true)
+
+    /**
+     * Where the slim tabs of the neighbours stand now (above and below the open card), as the scrim's tap finds them.
+     * Written in layout, read by a tap: no state, nothing recomposes for it.
+     */
+    var tabs: List<OpenCardTab> = emptyList()
 }
+
+/**
+ * A neighbour's tab as a tap can find it: the middle of its band ([centerPx], in the layer's coordinates), the card
+ * column's span there, the card it opens ([index], in the stack) and whether it stands above the open card.
+ */
+internal class OpenCardTab(
+    val centerPx: Float,
+    val leftPx: Float,
+    val rightPx: Float,
+    val index: Int,
+    val above: Boolean,
+)
 
 /** One open card the layer draws: the card at stack position [index] (its id [id]) and how to compose it. */
 @Stable
@@ -139,8 +158,7 @@ internal class OpenCardLayer(
     val placement: OpenCardPlacement,
     /** The stack's layout: each card's browse height and where its slot stands at a position. */
     val stackGeometry: StackGeometry,
-    val strips: Dp,
-    /** The distance between the strips of the cards behind: the sizes' pitch. */
+    /** The distance between the strips when no card is open: the sizes' pitch (open, they ease to slim tabs). */
     val pitchDp: Float,
     val bottomInset: Dp,
     /** The stack's position and fade, read in layout and draw so a drag moves the cards with no recomposition. */
@@ -150,12 +168,12 @@ internal class OpenCardLayer(
     /** What moves the stack from the layer: the platform scrollable and the body's hand-off, on the layer's root. */
     val dragModifier: Modifier,
     val onClose: () -> Unit,
-    /** A tap on the strip of the card [rank] places behind the open one (1 is the nearest): open that card. */
-    val onStripTap: (rank: Int) -> Unit,
+    /** A tap on the tab of the card at [index] of the stack, a neighbour of the open one: open that card. */
+    val onTabTap: (index: Int) -> Unit,
     val cards: List<OpenLayerCard>,
     /** The room the page keeps under the collapsed stack (the quick actions' strip): its bottom stands above it. */
     val restFooter: Dp = 0.dp,
-    /** How many cards show as strips on each side of the open card at most. */
+    /** How many cards show as tabs on each side of the open card at most. */
     val peeks: Int = StreamCardStackSpec.VISIBLE_PEEKS,
     /** The cards in front of the open card (newer, lower index), drawn as header strips under it. */
     val belowStrips: List<OpenLayerStrip> = emptyList(),
@@ -163,7 +181,7 @@ internal class OpenCardLayer(
     val cue: HandoffCueState = HandoffCueState(),
 )
 
-/** A card in front of the open one, shown as its header strip under the open card (tap: open it). */
+/** A card in front of the open one, shown as a slim tab under the open card (tap: open it). */
 @Stable
 internal class OpenLayerStrip(
     val index: Int,
@@ -213,18 +231,20 @@ internal fun OpenCardLayerHost(
                     .clearAndSetSemantics {}
                     .pointerInput(layer) {
                         detectTapGestures { tap ->
-                            // A tap on a strip behind the open card opens that card; anywhere else closes this one.
-                            val top = layer.geometry.topPx
-                            val pitch = layer.pitchDp * density
-                            val rank = if (tap.y < top) kotlin.math.ceil((top - tap.y) / pitch).toInt() else 0
-                            val strips = (layer.strips.toPx() / pitch + STRIP_COUNT_EPSILON).toInt()
-                            if (layer.geometry.stripsVisible && rank in 1..strips) {
-                                layer.onStripTap(
-                                    rank,
-                                )
-                            } else {
-                                layer.onClose()
-                            }
+                            // A tap on a neighbour's tab opens that card (the tab's target is 48 dp though the tab is
+                            // slimmer: see SlimTabs.hit); anywhere else closes this one. A tap on the open card itself
+                            // is the card's own and never gets here.
+                            val geometry = layer.geometry
+                            val reach = SlimTabs.TARGET_DP * density
+                            val tabs =
+                                geometry.tabs.filter { tab ->
+                                    val onSide =
+                                        if (tab.above) tap.y < geometry.topPx else tap.y >= geometry.bottomPx
+                                    onSide && tap.x >= tab.leftPx - reach / 2f && tap.x <= tab.rightPx + reach / 2f
+                                }
+                            val centres = tabs.map { it.centerPx }
+                            val hit = if (geometry.stripsVisible) SlimTabs.hit(tap.y, centres, reach) else -1
+                            if (hit >= 0) layer.onTabTap(tabs[hit].index) else layer.onClose()
                         }
                     },
         )
@@ -236,9 +256,6 @@ internal fun OpenCardLayerHost(
         )
     }
 }
-
-/** Float slack when counting how many strips the strips' room holds (three pitches may divide to 2.9999). */
-private const val STRIP_COUNT_EPSILON = 0.01f
 
 /** The least height an open card is given before the cards behind it stop peeking out above it. */
 private val MinOpenCardHeight = StreamCardSizes.OPEN_CARD_MIN_DP.dp
@@ -303,7 +320,15 @@ internal fun OpenCardFrames(
         val cardWidth = (columnWidth - 2 * pad).coerceIn(0, readable)
         val finalWidth = (areaWidth - 2 * pad).coerceIn(0, readable)
         val inset = layer.bottomInset.roundToPx()
-        val pitch = layer.pitchDp * density
+        // The strips of the neighbours ease from the stack's pitch to the slim tabs' on the open card's own progress
+        // (one spring): [pitch] is what stands now and [slimPitch] where they end up. The open card's frame is made
+        // against the room the slim tabs leave (its end state), so its top, bottom and height are each linear in the
+        // progress and move one way only, and so are the tabs above it (their room and its top are both linear). How
+        // many strips there are is decided at the full pitch, as it always was, so the count never changes with the
+        // motion and a slimmer tab adds none.
+        val fullPitch = layer.pitchDp * density
+        val slimPitch = SlimTabs.pitchDp(layer.pitchDp, 1f) * density
+        val pitch = SlimTabs.pitchDp(layer.pitchDp, progress) * density
         val belowGap = BelowStripGap.roundToPx().toFloat()
         // Where the collapsed front card's bottom edge stands: the page keeps its footer under it.
         val restBottom = (areaHeight - inset - layer.restFooter.roundToPx()).toFloat()
@@ -311,24 +336,27 @@ internal fun OpenCardFrames(
         val minCard = MinOpenCardHeight.roundToPx().toFloat()
 
         // What stands above and below the open card at an index: the strips of the cards behind and in front of it.
-        fun aboveOf(index: Int): Float = (layer.count - 1 - index).coerceIn(0, layer.peeks) * pitch
+        fun aboveCountOf(index: Int): Int = (layer.count - 1 - index).coerceIn(0, layer.peeks)
+
+        fun aboveOf(index: Int): Float = aboveCountOf(index) * slimPitch
 
         // The strips behind it stand only while they leave an open card its room (the keyboard is up, the window is
-        // short); the strips of the cards in front of it are as many as then fit under it.
+        // short); the strips of the cards in front of it are as many as then fit under it. Both are asked at the full
+        // pitch: the same cards show as before, only slimmer.
         fun stripsFitAt(index: Int): Boolean =
-            OpenCardLayout.stripsFit(areaHeight.toFloat(), inset.toFloat(), aboveOf(index), minCard)
+            OpenCardLayout.stripsFit(areaHeight.toFloat(), inset.toFloat(), aboveCountOf(index) * fullPitch, minCard)
 
         fun aboveShown(index: Int): Float = if (stripsFitAt(index)) aboveOf(index) else 0f
 
         fun belowCountAt(index: Int): Int {
             if (!stripsFitAt(index)) return 0
-            val room = areaHeight - inset - aboveShown(index) - minCard - belowGap
-            return minOf(index.coerceAtLeast(0), layer.peeks, (room / pitch).toInt().coerceAtLeast(0))
+            val room = areaHeight - inset - aboveCountOf(index) * fullPitch - minCard - belowGap
+            return minOf(index.coerceAtLeast(0), layer.peeks, (room / fullPitch).toInt().coerceAtLeast(0))
         }
 
         fun belowShown(index: Int): Float {
             val n = belowCountAt(index)
-            return if (n == 0) 0f else n * pitch + belowGap
+            return if (n == 0) 0f else n * slimPitch + belowGap
         }
 
         fun roomOf(index: Int): Int = (bottom - belowShown(index) - aboveShown(index)).roundToInt().coerceAtLeast(0)
@@ -374,7 +402,7 @@ internal fun OpenCardFrames(
             val least = browsePxOf(entry.index).roundToInt().coerceAtMost(room)
             val fully = entry.measurable.measure(Constraints(finalWidth, finalWidth, least, room))
             naturals.getOrPut(entry.id) { OpenCardNaturalHeight() }.also {
-                it.key = finalWidth * 31 + room
+                it.key = finalWidth
                 it.px = fully.height
             }
             whole[entry.index] = fully
@@ -382,11 +410,11 @@ internal fun OpenCardFrames(
 
         fun openFrameOf(entry: Entry): OpenCardLayout.Frame {
             val natural = naturals.getOrPut(entry.id) { OpenCardNaturalHeight() }
-            val room = roomOf(entry.index)
-            val key = finalWidth * 31 + room
-            if (natural.key != key) {
-                natural.key = key
-                natural.px = entry.measurable.maxIntrinsicHeight(finalWidth).coerceIn(0, room)
+            // The content's height, held to the room only where the frame is made: the room moves with the tabs while
+            // the card opens, and the content is not measured again for it.
+            if (natural.key != finalWidth) {
+                natural.key = finalWidth
+                natural.px = entry.measurable.maxIntrinsicHeight(finalWidth).coerceAtLeast(0)
             }
             return OpenCardLayout.frame(
                 progress = progress,
@@ -436,7 +464,7 @@ internal fun OpenCardFrames(
                     slotTop = frontBottom + belowGap + (-1f - entry.r) * pitch
                     slotHeight = pitch
                 } else {
-                    val slot = stackGeometry.frame(entry.index, position)
+                    val slot = stackGeometry.frame(entry.index, position, pitch / density)
                     slotTop = restBottom - slot.topDp * density + shift
                     slotHeight = slot.visibleHeightDp * density
                 }
@@ -446,10 +474,7 @@ internal fun OpenCardFrames(
                     if (layer.reducedMotion || entry.r < 0f) {
                         1f
                     } else {
-                        stackGeometry.frame(
-                            entry.index,
-                            position,
-                        ).alpha
+                        stackGeometry.frame(entry.index, position, pitch / density).alpha
                     }
                 layer.cards.firstOrNull { it.index == entry.index }?.presence?.openness = w
                 // Edges are rounded, not the height: top and bottom each move one way only, never a pixel back.
@@ -461,8 +486,11 @@ internal fun OpenCardFrames(
                         )
                 Triple(placeable, topPx.toFloat(), alpha)
             }
-        // The cards in front of the open one, as strips below it, each on a slot of its own that does not move while
+        // The cards in front of the open one, as slim tabs below it, each on a slot of its own that does not move while
         // the open card changes (the one that arrives or leaves takes the slot of the one that leaves or arrives).
+        val tabLeft = (columnLeft + (columnWidth - cardWidth) / 2).toFloat()
+        val tabRight = tabLeft + cardWidth
+        val tabTargets = ArrayList<OpenCardTab>()
         val stripsBelow =
             if (layer.reducedMotion || belowCountAt(nearest) == 0) {
                 emptyList()
@@ -474,9 +502,18 @@ internal fun OpenCardFrames(
                     val fade = (belowCountAt(nearest) - j).coerceIn(0f, 1f) * progress
                     if (fade <= 0f) return@mapNotNull null
                     val top = frontBottom + belowGap + j * pitch
+                    tabTargets += OpenCardTab(top + pitch / 2f, tabLeft, tabRight, index, above = false)
                     Triple(measurable.measure(Constraints.fixed(cardWidth, pitch.roundToInt())), top, fade)
                 }
             }
+        // The cards behind it, as the stack's own strips above it, which the stack draws: where their tabs stand.
+        if (geometry.stripsVisible) {
+            for (rank in 1..aboveCountOf(nearest)) {
+                val centre = frontTop - (rank - 0.5f) * pitch
+                tabTargets += OpenCardTab(centre, tabLeft, tabRight, nearest + rank, above = true)
+            }
+        }
+        geometry.tabs = tabTargets
         layout(areaWidth, areaHeight) {
             stripsBelow.forEach { (placeable, top, alpha) ->
                 val x = columnLeft + (columnWidth - placeable.width) / 2

@@ -27,6 +27,8 @@ import com.riffle.app.launcher.stream.NoticeEntry
 import com.riffle.app.launcher.stream.STREAM_CARD_ICON_TAG
 import com.riffle.app.launcher.stream.STREAM_CARD_TITLE_TAG
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
+import com.riffle.app.launcher.stream.STREAM_SLIM_TAB_ICON_TAG
+import com.riffle.app.launcher.stream.STREAM_SLIM_TAB_TITLE_TAG
 import com.riffle.app.launcher.stream.StackEntry
 import com.riffle.app.launcher.stream.StackEntryCard
 import com.riffle.app.launcher.stream.StreamCallbacks
@@ -111,10 +113,13 @@ class StreamStripsTest {
     private fun assertStripShowsIconAndTitle(
         kind: String,
         stripTag: String = STRIP_TAG,
+        /** The tags of the icon and the title: the card's header, or (a card open) the slim tab's own. */
+        iconTag: String = STREAM_CARD_ICON_TAG,
+        titleTag: String = STREAM_CARD_TITLE_TAG,
     ) {
         val strip = composeRule.onNodeWithTag(stripTag, useUnmergedTree = true).fetchSemanticsNode()
-        val icon = firstInside(strip, STREAM_CARD_ICON_TAG)
-        val title = firstInside(strip, STREAM_CARD_TITLE_TAG)
+        val icon = firstInside(strip, iconTag)
+        val title = firstInside(strip, titleTag)
         assertTrue("$kind: the strip has an icon or an avatar", icon != null)
         assertTrue("$kind: the strip has a title", title != null)
         for ((name, node) in listOf("icon" to icon!!, "title" to title!!)) {
@@ -369,7 +374,13 @@ class StreamStripsTest {
         otherSlots.forEach { tag ->
             val strip = composeRule.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
             assertTrue("$tag stands above the open card", strip.size.height > 0)
-            assertStripShowsIconAndTitle("mixed page, notification open: $tag", tag)
+            // With a card open the neighbours are slim tabs (28 dp): the tab's own icon and title lie inside it.
+            assertStripShowsIconAndTitle(
+                "mixed page, notification open: $tag",
+                tag,
+                iconTag = STREAM_SLIM_TAB_ICON_TAG,
+                titleTag = STREAM_SLIM_TAB_TITLE_TAG,
+            )
         }
         composeRule.captureScreen()
     }
