@@ -204,6 +204,15 @@
     <string name="home_handle_next_page">Next page</string>
     <string name="dock_search_label">Search</string>
     <string name="dock_search_close_action">Close search</string>
+    <string name="search_stack_has_more">Shows quick actions or notifications</string>
+    <string name="search_stack_bring_to_front">Show quick actions</string>
+    <string name="search_stack_open_result">Open %1$s</string>
+    <string name="search_stack_web_title">Search the web</string>
+    <plurals name="search_stack_notifications">
+        <item quantity="one">%1$d notification</item>
+        <item quantity="other">%1$d notifications</item>
+    </plurals>
+    <string name="search_stack_shortcut">App shortcut</string>
 
     <!-- The Dock's dynamic side: live apps, now playing and, in the contextual mode, a tile per Stream page (ADR 0003) -->
     <string name="dock_live_app_slots_title">Live apps</string>
@@ -464,7 +473,7 @@
     <string name="setting_library_grid_columns">Grid columns</string>
     <string name="setting_library_grid_columns_keywords">library icon grid columns</string>
     <string name="setting_library_search_results">Search results</string>
-    <string name="setting_library_search_results_keywords">search icons list results</string>
+    <string name="setting_library_search_results_keywords">search results card stack cards icons list</string>
     <string name="setting_library_refresh_apps">Refresh installed apps</string>
     <string name="setting_library_refresh_apps_keywords">refetch launchable apps</string>
     <string name="setting_feature_stream">Stream</string>
@@ -657,7 +666,8 @@
     <!-- Library -->
     <string name="settings_library_show_as_subtitle">How the Library draws your apps. Long-press its header to change it there too.</string>
     <string name="settings_library_grid_columns_subtitle">Icons in each row of the Grid view</string>
-    <string name="settings_library_search_results_subtitle">Compact app icons or a detailed list</string>
+    <string name="settings_library_search_results_subtitle">A stack of cards with the best match in front, compact app icons or a detailed list</string>
+    <string name="settings_search_results_stack">Card stack</string>
     <string name="settings_search_results_icons">Icons</string>
     <string name="settings_search_results_list">List</string>
     <string name="settings_hidden_apps_count">%1$d hidden</string>

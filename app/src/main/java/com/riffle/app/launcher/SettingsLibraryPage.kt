@@ -66,10 +66,10 @@ internal fun SettingsLibraryPageContent(
                 onAction(LauncherShellAction.SelectSearchResultPresentation(presentation))
             },
             label = { presentation ->
-                if (presentation == SearchResultPresentation.ICONS) {
-                    stringResource(R.string.settings_search_results_icons)
-                } else {
-                    stringResource(R.string.settings_search_results_list)
+                when (presentation) {
+                    SearchResultPresentation.STACK -> stringResource(R.string.settings_search_results_stack)
+                    SearchResultPresentation.ICONS -> stringResource(R.string.settings_search_results_icons)
+                    SearchResultPresentation.LIST -> stringResource(R.string.settings_search_results_list)
                 }
             },
             optionTag = { presentation -> "$SEARCH_RESULTS_TEST_TAG_PREFIX${presentation.name}" },

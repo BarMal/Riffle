@@ -51,10 +51,14 @@ import com.riffle.app.launcher.library.LibraryState
 import com.riffle.app.launcher.library.toGridResult
 import com.riffle.app.launcher.searchEmptyText
 import com.riffle.app.launcher.searchWebPreview
+import com.riffle.app.launcher.stream.ProvideStreamCardSizes
+import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.dock.DockSearchMotion
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
+import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.stream.StreamCardSizes
 import com.riffle.core.domain.launcher.stream.StreamColumn
 import com.riffle.core.domain.launcher.stream.StreamColumnRect
 
@@ -70,7 +74,7 @@ import com.riffle.core.domain.launcher.stream.StreamColumnRect
  * clears the text first. Launching a result is the caller's ([context]).
  */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongMethod", "LongParameterList")
 internal fun DockSearchSurface(
     state: LibraryState,
     context: AppListContext,
@@ -91,10 +95,18 @@ internal fun DockSearchSurface(
      * at its bottom and the results growing up from it. Null folded.
      */
     column: (() -> StreamColumnRect?)? = null,
+    /**
+     * The Stream's host, when the Stream is on: the card stack launches an app's quick actions through its one action
+     * gateway and reads the newest notification of an app from its (redacted) notifications section. Null: quick
+     * actions launch through the shell and a card says only how many notifications its app has.
+     */
+    stream: StreamHost? = null,
 ) {
     val motion = rememberDockSearchMotion(reducedMotion, tuning, onClosed = onClose)
     val onAction = context.onAction
     val closeLabel = stringResource(R.string.dock_search_close_action)
+    val asStack = state.searchPresentation == SearchResultPresentation.STACK
+    val stack = rememberSearchStackWiring(state, context, reducedMotion, stream, motion, asStack)
 
     BackHandler(enabled = state.isSearching) { onAction(LauncherShellAction.SearchQueryChanged("")) }
     BackHandler(enabled = !state.isSearching) { motion.close() }
@@ -154,7 +166,20 @@ internal fun DockSearchSurface(
                     },
             verticalArrangement = Arrangement.Bottom,
         ) {
-            if (state.isSearching) {
+            if (state.isSearching && asStack) {
+                // Unfolded the Stream's bigger cards and more strips; folded its three of 56 dp.
+                ProvideStreamCardSizes(StreamCardSizes.forPosture(unfolded = column != null)) {
+                    SearchResultStack(
+                        cards = stack.cards,
+                        stackState = stack.stackState,
+                        env = stack.env,
+                        context = context,
+                        emptyText = searchEmptyText(state.query, state.filters),
+                        actions = stack.actions,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
+            } else if (state.isSearching) {
                 SearchResultList(
                     results = state.hits.map { hit -> hit.toGridResult() },
                     appListContext = context,
@@ -167,7 +192,13 @@ internal fun DockSearchSurface(
                 )
                 Spacer(modifier = Modifier.height(RiffleSpacing.xs))
             }
-            DockSearchField(state = state, onAction = onAction, closeLabel = closeLabel, onClose = motion::close)
+            DockSearchField(
+                state = state,
+                onAction = onAction,
+                closeLabel = closeLabel,
+                onClose = motion::close,
+                onSearch = stack.openFront,
+            )
         }
     }
 }
@@ -179,6 +210,7 @@ private fun DockSearchField(
     onAction: (LauncherShellAction) -> Unit,
     closeLabel: String,
     onClose: () -> Unit,
+    onSearch: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -189,7 +221,6 @@ private fun DockSearchField(
             keyboard?.show()
         }
     }
-    val latestHits by rememberUpdatedState(state.hits)
     GlassSurface(
         modifier =
             Modifier
@@ -219,7 +250,7 @@ private fun DockSearchField(
             query = state.query,
             onQueryChanged = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
             label = stringResource(R.string.library_search_label),
-            onSearch = { latestHits.firstOrNull()?.toGridResult()?.action?.let(onAction) },
+            onSearch = onSearch,
         )
     }
 }

@@ -339,6 +339,8 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Grid / workspace | 1-finger horizontal | Page pager (owns) | – |
 | Grid / workspace | 1-finger vertical | Home (up: unbound, down: Search, which opens the Library with its field focused) | – |
 | Grid / workspace | long-press + drag | Item drag (owns) | – |
+| Search results (card stack) | tap | A strip with quick actions or a notification comes to the front; a strip with only a name opens; the front card opens | Enter and the IME's search action open the front card |
+| Search results (card stack) | 1-finger vertical | Stack (owns): moves through the results as the Stream's stack does | Next card and Previous card as accessibility actions |
 | Grid / workspace | 2-finger swipe | Home (up: search, down: settings) | – |
 | Grid / workspace | pinch | Home (in: edit mode, out: unbound) | – |
 | Grid / workspace, pager | 3-finger | **Home claims** (unbound by default) | – |

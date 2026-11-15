@@ -478,6 +478,7 @@ private fun HomeDestinationContent(
                         search = searchOpen,
                         // Unfolded, search stands in the Stream column's own rectangle (against the Dock's inner edge).
                         searchColumn = if (unfolded && rootSize != IntSize.Zero) column.restBounds else null,
+                        stream = stream,
                         tuning = dockTuning,
                         state = dockHostState,
                         dockHost = dockHost,
@@ -634,6 +635,7 @@ private fun rememberLibraryShown(
 private fun LibraryHomeSurface(
     search: Boolean,
     searchColumn: (() -> StreamColumnRect?)?,
+    stream: StreamHost?,
     tuning: DockMotionTuning,
     state: LauncherShellState,
     dockHost: HomeDockHostState,
@@ -689,6 +691,7 @@ private fun LibraryHomeSurface(
                 onClose = close,
                 contentPadding = room,
                 column = searchColumn,
+                stream = stream,
             )
         }
         return

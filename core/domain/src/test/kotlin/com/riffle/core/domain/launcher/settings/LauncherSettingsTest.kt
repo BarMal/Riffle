@@ -29,8 +29,8 @@ class LauncherSettingsTest {
     }
 
     @Test
-    fun defaultsSearchResultsToIconPresentation() {
-        assertEquals(SearchResultPresentation.ICONS, LauncherSettings().search.resultPresentation)
+    fun defaultsSearchResultsToTheCardStack() {
+        assertEquals(SearchResultPresentation.STACK, LauncherSettings().search.resultPresentation)
     }
 
     @Test
