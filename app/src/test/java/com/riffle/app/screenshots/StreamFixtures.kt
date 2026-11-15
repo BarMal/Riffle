@@ -146,9 +146,38 @@ internal object StreamFixtures {
                     MediaQueueEntry("Steve McQueen", "M83"),
                 ),
             target = ItemTarget.App(music.identity.packageName.value, "personal"),
-            actions = MediaAction.entries.toSet(),
+            actions = MediaAction.entries.toSet() - MediaAction.DISMISS,
             postedAtEpochMillis = NOW - MINUTE,
             privacy = com.riffle.core.domain.launcher.stream.StreamPrivacy.VISIBLE,
+        )
+
+    /** A recent player with no session ("Podcasts": it last played an episode and can be resumed). */
+    val recentPodcasts =
+        MediaContent(
+            id = StreamContentId("media:recent:notes:personal"),
+            app = ref(ScreenshotFixtures.notes),
+            appLabel = "Podcasts",
+            title = "Episode 42",
+            artist = "The Weekly",
+            artwork = null,
+            icon = icon,
+            target = ItemTarget.App(ScreenshotFixtures.notes.identity.packageName.value, "personal"),
+            actions = setOf(MediaAction.OPEN, MediaAction.PLAY, MediaAction.DISMISS),
+            postedAtEpochMillis = NOW - 25 * MINUTE,
+            privacy = com.riffle.core.domain.launcher.stream.StreamPrivacy.VISIBLE,
+            source = true,
+        )
+
+    /** A recent player nothing is known about this process, and that cannot be resumed (it is opened). */
+    val recentRadio =
+        recentPodcasts.copy(
+            id = StreamContentId("media:recent:weather:personal"),
+            app = ref(ScreenshotFixtures.weather),
+            appLabel = "Radio",
+            title = null,
+            artist = null,
+            actions = setOf(MediaAction.OPEN, MediaAction.DISMISS),
+            postedAtEpochMillis = NOW - 3 * 60 * MINUTE,
         )
 
     val nextEvent =

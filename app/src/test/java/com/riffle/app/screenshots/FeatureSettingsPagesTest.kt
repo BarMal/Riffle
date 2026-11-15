@@ -141,12 +141,17 @@ class FeatureSettingsPagesTest {
                     cleared.incrementAndGet()
                 }
             }
-        render(SettingsPage.STREAM, anchor = SettingKey.NOW_RECENT_PLAYERS, recentPlayers = control, capture = true)
+        render(
+            SettingsPage.STREAM,
+            anchor = SettingKey.NOW_CLEAR_RECENT_PLAYERS,
+            recentPlayers = control,
+            capture = true,
+        )
 
         composeRule.onNodeWithTag(NOW_RECENT_PLAYERS_TEST_TAG).assertIsDisplayed().assertIsOn().performClick()
         composeRule.onNodeWithTag(NOW_RECENT_PLAYERS_TEST_TAG).assertIsOff()
 
-        composeRule.onNodeWithTag(NOW_CLEAR_RECENT_PLAYERS_TEST_TAG).performClick()
+        composeRule.onNodeWithTag(NOW_CLEAR_RECENT_PLAYERS_TEST_TAG).assertIsDisplayed().performClick()
         composeRule.waitUntil(timeoutMillis = 5_000) { cleared.get() == 1 }
     }
 
