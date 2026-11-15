@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
@@ -146,11 +147,32 @@ class StreamPagesInteractionTest {
         show()
         assertOpen(chat)
 
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput { swipeLeft() }
+        // From the page's empty room, above the stack: a drag that starts on a card is that card's (it resists), so
+        // only the room outside the cards changes the page by a swipe (batch 7).
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
+            swipe(
+                Offset(width * EMPTY_ROOM_FROM, height * EMPTY_ROOM_Y),
+                Offset(width * EMPTY_ROOM_TO, height * EMPTY_ROOM_Y),
+            )
+        }
         composeRule.waitForIdle()
 
         assertOpen(mail)
         composeRule.onNodeWithText("Only mail").assertIsDisplayed()
+    }
+
+    @Test
+    fun aSidewaysSwipeThatStartsOnACardNeverChangesThePage() {
+        show()
+        assertOpen(chat)
+        // The front card and a strip: a drag that starts on a card is that card's (it dismisses or resists).
+        composeRule.onNodeWithText("First chat").performTouchInput { swipeLeft() }
+        composeRule.waitForIdle()
+        assertOpen(chat)
+        composeRule.onNodeWithTag(streamStackCardTag("n:chat:2")).performTouchInput { swipeLeft() }
+        composeRule.waitForIdle()
+        assertOpen(chat)
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -311,6 +333,9 @@ class StreamPagesInteractionTest {
     }
 
     private companion object {
+        const val EMPTY_ROOM_Y = 0.08f
+        const val EMPTY_ROOM_FROM = 0.85f
+        const val EMPTY_ROOM_TO = 0.15f
         const val STACK_LOW = 0.8f
         const val STACK_HIGH = 0.4f
         const val DRAG_STEPS = 10

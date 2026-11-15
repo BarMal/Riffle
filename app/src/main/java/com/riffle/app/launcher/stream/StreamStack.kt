@@ -35,7 +35,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -271,12 +276,20 @@ private fun StreamStackContent(
     Box(modifier = Modifier.fillMaxSize()) {
         if (entries.size == 1) {
             val only = entries.single()
-            val swipe = rememberSwipeDismissState(only.swipeableNotification(), callbacks, env.reducedMotion)
+            // A lone card is its own front card: dismissible if it is a notification that can be, else it resists.
+            val swipe =
+                rememberSwipeDismissState(
+                    only.swipeableNotification(),
+                    callbacks,
+                    env.reducedMotion,
+                    resists = true,
+                )
             val dismissLabel = stringResource(R.string.stream_notification_dismiss)
             LoneCard(
                 Modifier,
                 hidden = layerActive.value,
                 swipe = swipe,
+                canDismiss = only.swipeableNotification() != null,
                 dismissLabel = dismissLabel,
                 onDismiss = { only.swipeableNotification()?.let { callbacks.onAction(it, StreamAction.Dismiss) } },
             ) {
@@ -467,6 +480,7 @@ private fun LoneCard(
     modifier: Modifier,
     hidden: Boolean,
     swipe: SwipeDismissState?,
+    canDismiss: Boolean,
     dismissLabel: String,
     onDismiss: () -> Unit,
     content: @Composable () -> Unit,
@@ -482,10 +496,12 @@ private fun LoneCard(
             modifier =
                 Modifier
                     .dockFan(LocalDockFan.current)
+                    .swipeCue(swipe)
                     .swipeLayer(swipe)
                     .swipeToDismiss(swipe)
                     .semantics {
-                        if (swipe != null) {
+                        swipeSemantics(swipe)
+                        if (canDismiss) {
                             customActions =
                                 listOf(
                                     CustomAccessibilityAction(dismissLabel) {
@@ -589,6 +605,7 @@ private fun FocusedStack(
         val density = LocalDensity.current.density
         val bottomInsetPx = StackBottomInset.value * density
         val areaHeightPx = areaHeight.value * density
+        val sideBleed = remember(density) { SideBleedShape(StackSideBleed.value * density) }
         StackLayout(
             state = state,
             geometry = geometry,
@@ -611,8 +628,12 @@ private fun FocusedStack(
                         translationY = if (openActive) (frameGeometry.topPx.roundToInt() - frontTop).toFloat() else 0f
                         // Too little room above the open card for the strips: they are not drawn, not overlapped.
                         alpha = if (openActive && !frameGeometry.stripsVisible) 0f else 1f
+                        // Clipped to the stack's own rectangle at the top and the bottom (cards sink into the Dock),
+                        // but not at the sides: a card that gives a few dp sideways, or is taken to be dismissed,
+                        // is drawn into the page's margin and is cut only by the pager at the edge of the surface.
+                        clip = true
+                        shape = sideBleed
                     }
-                    .clipToBounds()
                     .scrollable(
                         state = mover.scrollable,
                         orientation = Orientation.Vertical,
@@ -644,7 +665,16 @@ private fun FocusedStack(
                 val item = items[index]
                 key(item.id) {
                     val isFront = index == frontIndex
-                    val swipe = rememberSwipeDismissState(item.swipeableNotification(), callbacks, env.reducedMotion)
+                    // Every card owns a horizontal drag that starts on it (SwipeDismiss.ownerOf): the front card of a
+                    // dismissible notification dismisses, any other resists and settles back; none reach the pager.
+                    val swipe =
+                        rememberSwipeDismissState(
+                            item.swipeableNotification(),
+                            callbacks,
+                            env.reducedMotion,
+                            resists = true,
+                            isFront = isFront,
+                        )
                     StackSlot(
                         index = index,
                         cut = Modifier.stripCut(index, state, geometry, cardWidth),
@@ -660,6 +690,7 @@ private fun FocusedStack(
                         onOpen = { onOpen(item) },
                         onBringToFront = { if (latestOpenActive) onCloseOpen() else goTo(index) },
                         swipe = swipe,
+                        canDismiss = item.swipeableNotification() != null,
                         dismissLabel = dismiss,
                         onDismiss = {
                             item.swipeableNotification()?.let {
@@ -708,8 +739,10 @@ private fun StackSlot(
     bringToFront: String,
     onOpen: () -> Unit,
     onBringToFront: () -> Unit,
-    /** The front card of a dismissible notification: the swipe that dismisses it, else null. */
+    /** The card's sideways drag: it dismisses the front card of a dismissible notification, else it resists. */
     swipe: SwipeDismissState?,
+    /** Whether the card is a notification that offers Dismiss (its custom action, and the cue). */
+    canDismiss: Boolean,
     /** The custom action that dismisses it without a gesture (its label), and what it does. */
     dismissLabel: String,
     onDismiss: () -> Unit,
@@ -722,6 +755,7 @@ private fun StackSlot(
                 testTag = tag
                 traversalIndex = 0f
                 stateDescription = position
+                swipeSemantics(swipe)
                 customActions =
                     listOfNotNull(
                         CustomAccessibilityAction(open) {
@@ -731,7 +765,7 @@ private fun StackSlot(
                         CustomAccessibilityAction(dismissLabel) {
                             onDismiss()
                             true
-                        }.takeIf { swipe != null },
+                        }.takeIf { canDismiss },
                     )
             }
         } else {
@@ -739,6 +773,7 @@ private fun StackSlot(
             Modifier.clearAndSetSemantics {
                 testTag = tag
                 traversalIndex = rank.toFloat()
+                swipeSemantics(swipe)
                 contentDescription = spoken
                 onClick(label = bringToFront) {
                     onBringToFront()
@@ -751,13 +786,16 @@ private fun StackSlot(
             Modifier
                 .stackSlot(index)
                 .dockFan(dockFan, rank)
+                // The cue is drawn where the card was, so it stays while the card goes (before the swipe's layer).
+                .swipeCue(swipe.takeIf { canDismiss })
                 // The swipe moves the whole slot, outside its cut, so the card is never cut off as it goes.
                 .swipeLayer(swipe)
                 // The slot is as tall as the part of the card that shows (its strip: what a tap and a screen reader
                 // find); the card is drawn past it, down to and around the rounded top of the card in front.
                 .then(cut)
                 .then(if (covered) Modifier.graphicsLayer { alpha = 0f }.clearAndSetSemantics {} else semantics)
-                .then(if (isFront && !covered) Modifier.frontCardKeys(onOpen).swipeToDismiss(swipe) else Modifier),
+                .then(if (isFront && !covered) Modifier.frontCardKeys(onOpen) else Modifier)
+                .then(if (!covered) Modifier.swipeToDismiss(swipe) else Modifier),
     ) {
         Box(modifier = Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)) { card() }
         if (!isFront) {
@@ -791,6 +829,18 @@ private val OpenKeys = setOf(Key.Enter, Key.NumPadEnter, Key.Spacebar, Key.Direc
 
 /** The test tag of the slot of the card whose content id is [contentId]. */
 internal fun streamStackCardTag(contentId: String): String = "stream-stack-card:$contentId"
+
+/** How far a card may be drawn past the stack's side edges: the page's margin (the pager still cuts at its own). */
+private val StackSideBleed = RiffleSpacing.l
+
+/** The stack's clip: its own rectangle, widened by [bleedPx] on each side. */
+private class SideBleedShape(private val bleedPx: Float) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline = Outline.Rectangle(Rect(-bleedPx, 0f, size.width + bleedPx, size.height))
+}
 
 /** Where the front card stops above the area's bottom edge (the Dock's top, with the page's own inset). */
 private val StackBottomInset = RiffleSpacing.l

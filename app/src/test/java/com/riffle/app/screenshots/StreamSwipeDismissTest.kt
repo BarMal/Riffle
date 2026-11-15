@@ -22,8 +22,11 @@ import androidx.compose.ui.test.swipe
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.LauncherShellContent
 import com.riffle.app.launcher.sources.SourceChangeSource
+import com.riffle.app.launcher.stream.DismissArmedKey
+import com.riffle.app.launcher.stream.DismissCueAlphaKey
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
 import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
+import com.riffle.app.launcher.stream.SwipeOffsetKey
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -54,9 +57,10 @@ import java.util.concurrent.Executors
 /**
  * Swiping the front card of a notification sideways to dismiss it (device fixes, round 5, item 2), through the real
  * shell content with a gateway that removes what it is told to dismiss, as the listener does. The rule that settles
- * the conflict with paging between stacks: a horizontal drag is the card's only where it starts on the front card of a
- * notification that offers Dismiss; on the strips, the empty room and a notification that cannot be dismissed it is the
- * pager's. Four chat notifications, "First" in front.
+ * the conflict with paging between stacks: a horizontal drag is a card's wherever it starts on a card, and it
+ * dismisses only on the front card of a notification that offers Dismiss; on any other card (a strip, a notification that cannot be dismissed) the card
+ * resists a few dp and settles back and the pager never gets the drag; only the empty room pages. Four chat
+ * notifications, "First" in front.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -276,24 +280,109 @@ class StreamSwipeDismissTest {
         assertEquals("First", frontTitle())
     }
 
+    /** The front card's slot (the node that carries "Card 1 of N", the swipe's hooks and the Dismiss action). */
+    private fun frontSlot() =
+        composeRule.onAllNodes(
+            androidx.compose.ui.test.SemanticsMatcher("the front card") { node ->
+                node.config.getOrNull(SemanticsProperties.StateDescription)?.startsWith("Card 1 of") == true
+            },
+        ).fetchSemanticsNodes().first()
+
+    /** How far the card of [node] has been taken sideways, in px (positive: right): the swipe's own hook. */
+    private fun offsetOf(node: androidx.compose.ui.semantics.SemanticsNode) =
+        node.config.getOrNull(SwipeOffsetKey) ?: error("no swipe on the node")
+
     @Test
-    fun aNotificationThatCannotBeDismissedIsNeverDismissedAndItsCardPagesInstead() {
+    fun aNotificationThatCannotBeDismissedIsNeverDismissedAndItsCardResistsAndSettlesBack() {
         show(firstDismissible = false)
         val before = pagerPosition()
-        composeRule.onNodeWithText("First").swipeSideways(-250f, durationMillis = 300)
+        composeRule.onNodeWithText("First").performTouchInput {
+            down(center)
+            repeat(10) { moveBy(Offset(-25f * dp, 0f), delayMillis = 16) }
+        }
+        composeRule.waitForIdle()
+        // Mid-drag: the card gave a few dp the way the finger went, and the pager did not move.
+        val moved = -offsetOf(frontSlot())
+        assertTrue("the card resisted by a few dp (not zero, not a page): $moved px", moved > 1f && moved <= 13f * dp)
+        assertEquals(before, pagerPosition(), 0.5f)
+        composeRule.onNodeWithText("First").performTouchInput { up() }
         composeRule.waitForIdle()
         assertTrue("nothing was sent: $sent", sent.isEmpty())
-        assertTrue("the page changed: $before -> ${pagerPosition()}", pagerPosition() != before)
+        assertEquals(before, pagerPosition(), 0.5f)
+        assertEquals("settled back", 0f, offsetOf(frontSlot()), 0.5f)
+        assertEquals("First", frontTitle())
     }
 
     @Test
-    fun aSwipeOnAStripOfAPageWhoseFrontCardIsDismissibleChangesThePage() {
-        show()
+    fun aFastSwipeOnANonDismissibleCardStillDoesNotPageOrDismiss() {
+        show(firstDismissible = false)
         val before = pagerPosition()
-        composeRule.onNode(hasContentDescription("Second", substring = true)).swipeSideways(-250f, durationMillis = 300)
+        composeRule.onNodeWithText("First").swipeSideways(-250f, durationMillis = 60)
         composeRule.waitForIdle()
         assertTrue("nothing was sent: $sent", sent.isEmpty())
-        assertTrue("the page changed: $before -> ${pagerPosition()}", pagerPosition() != before)
+        assertEquals(before, pagerPosition(), 0.5f)
+        assertEquals("First", frontTitle())
+    }
+
+    @Test
+    fun aSwipeOnAStripResistsLikeAnyOtherCardNeitherPagingNorDismissingIt() {
+        show()
+        val before = pagerPosition()
+        val strip = composeRule.onNode(hasContentDescription("Second", substring = true))
+        strip.performTouchInput {
+            down(center)
+            repeat(10) { moveBy(Offset(-25f * dp, 0f), delayMillis = 16) }
+        }
+        composeRule.waitForIdle()
+        val moved = -offsetOf(strip.fetchSemanticsNode())
+        assertTrue("the strip resisted by a few dp: $moved px", moved > 1f && moved <= 13f * dp)
+        assertEquals(before, pagerPosition(), 0.5f)
+        strip.performTouchInput { up() }
+        composeRule.waitForIdle()
+        assertTrue("nothing was sent: $sent", sent.isEmpty())
+        assertEquals(before, pagerPosition(), 0.5f)
+        // Still behind the front card: a strip is never dismissed, and it is back where it was.
+        assertEquals("First", frontTitle())
+        assertEquals("settled back", 0f, offsetOf(strip.fetchSemanticsNode()), 0.5f)
+    }
+
+    @Test
+    fun theDismissCueAppearsOnlyPastTheThresholdAndReleasingThereDismisses() {
+        show()
+        val width = composeRule.onNodeWithText("First").fetchSemanticsNode().size.width.toFloat()
+        composeRule.onNodeWithText("First").performTouchInput {
+            down(center)
+            repeat(5) { moveBy(Offset(width * 0.3f / 5f, 0f), delayMillis = 16) }
+        }
+        composeRule.waitForIdle()
+        var slot = frontSlot()
+        assertEquals(false, slot.config.getOrNull(DismissArmedKey))
+        assertEquals(0f, slot.config.getOrNull(DismissCueAlphaKey))
+        composeRule.onNodeWithText("First").performTouchInput {
+            repeat(5) { moveBy(Offset(width * 0.25f / 5f, 0f), delayMillis = 16) }
+        }
+        composeRule.waitForIdle()
+        slot = frontSlot()
+        assertEquals("past 40% of the width the card is armed", true, slot.config.getOrNull(DismissArmedKey))
+        assertEquals(1f, slot.config.getOrNull(DismissCueAlphaKey) ?: 0f, 0.001f)
+        assertTrue("nothing is sent before the finger lifts: $sent", sent.isEmpty())
+        composeRule.onNodeWithText("First").performTouchInput { advanceEventTime(300); up() }
+        composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) { sent.isNotEmpty() }
+        assertEquals(listOf("First" to StreamAction.Dismiss), sent)
+    }
+
+    @Test
+    fun aCardThatResistsNeverShowsTheDismissCue() {
+        show(firstDismissible = false)
+        composeRule.onNodeWithText("First").performTouchInput {
+            down(center)
+            repeat(10) { moveBy(Offset(30f * dp, 0f), delayMillis = 16) }
+        }
+        composeRule.waitForIdle()
+        val slot = frontSlot()
+        assertEquals(false, slot.config.getOrNull(DismissArmedKey))
+        assertEquals(0f, slot.config.getOrNull(DismissCueAlphaKey))
+        composeRule.onNodeWithText("First").performTouchInput { up() }
     }
 
     @Test
@@ -306,6 +395,40 @@ class StreamSwipeDismissTest {
         composeRule.waitForIdle()
         assertTrue("nothing was sent: $sent", sent.isEmpty())
         assertTrue("the page changed: $before -> ${pagerPosition()}", pagerPosition() != before)
+    }
+
+    @Test
+    fun thePagersAccessibilityActionsStillChangeThePageWithoutAnySwipe() {
+        show()
+        val before = pagerPosition()
+        val next =
+            composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode()
+                .config[SemanticsActions.CustomActions].first { it.label == "Next page" }
+        composeRule.runOnUiThread { next.action() }
+        composeRule.waitForIdle()
+        assertTrue("the page changed: $before -> ${pagerPosition()}", pagerPosition() != before)
+        val previous =
+            composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode()
+                .config[SemanticsActions.CustomActions].first { it.label == "Previous page" }
+        composeRule.runOnUiThread { previous.action() }
+        composeRule.waitForIdle()
+        assertEquals(before, pagerPosition(), 0.5f)
+    }
+
+    @Test
+    fun withTheMotionOnACardThatResistsSettlesBackAndTheStackStaysPut() {
+        show(reducedMotion = false, firstDismissible = false)
+        val before = pagerPosition()
+        composeRule.onNodeWithText("First").performTouchInput {
+            down(center)
+            repeat(8) { moveBy(Offset(-40f * dp, 0f), delayMillis = 16) }
+        }
+        composeRule.waitForIdle()
+        assertTrue(-offsetOf(frontSlot()) > 1f)
+        composeRule.onNodeWithText("First").performTouchInput { up() }
+        composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) { kotlin.math.abs(offsetOf(frontSlot())) < 0.5f }
+        assertEquals(before, pagerPosition(), 0.5f)
+        assertTrue(sent.isEmpty())
     }
 
     @Test

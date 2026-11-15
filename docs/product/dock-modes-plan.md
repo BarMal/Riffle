@@ -1557,3 +1557,50 @@ scrim were replaced, and nothing asserted them.
   probe's grid is offset by 1 dp to stay off that line, and it was not found at any other point. It is likely a rounding
   edge of the test's simulated inset and was not reproduced with a finger.
 - The feel of the slop rule and the haptic on a real panel.
+
+## Batch 7
+
+Three things the owner asked for after a device pass: dismissing a card must feel clearly different from changing
+stack, the unfolded stack is too small, and the Dock's resize animation is jarring. One commit each, tests in the same
+commit.
+
+### Dismissing a card against changing stack (item 1)
+
+The owner: "dismissing a card vs scrolling between stacks doesn't have that much difference". After round 5 a sideways
+drag that began on the front card of a dismissible notification dismissed it and one that began anywhere else paged, so
+which of the two you got depended on a few dp of where the finger landed, and both moved a card sideways.
+
+- **The rule** (`:core:domain` `SwipeDismiss.ownerOf`, pure, `SwipeDismissTest`): a sideways drag that starts on a card is
+  always that card's. The front card of a dismissible notification dismisses it (as before); every other card (a strip, a
+  notification that cannot be dismissed, a card of any other kind, a lone card) resists: it follows the finger through a
+  rubber band (`SwipeDismiss.resist`, at most 12 dp, no fade) and settles back, and the pager does not get the drag. Only a
+  drag that starts in the page's empty room, outside every card, changes the stack. Every card slot, strip included, and a
+  lone card now carry the `draggable` (`SwipeDismissState` takes a `dismissible` rule; it is non-null for every slot).
+- **Leaving a page without the Dock.** The empty room is the room above the stack (large on a folded phone) and the page's
+  margins and, unfolded, the column's room beside and above the stack. The Dock stays the primary route (a tile, an icon,
+  hold to choose, the contextual row) and "Previous page" and "Next page" are still the pager's accessibility actions
+  (tested).
+- **They look different.** A dismissing card alone moves; it lifts to 1.02 as it is taken, fades as it travels (to 50% at a
+  full width, as before) and past 40% of its width it is armed: the word "Dismiss" comes in, in the room the card leaves, on
+  the side it came from (`swipeCue`: a `drawBehind` ahead of the card's own graphics layer, text measured once, drawn in the
+  draw phase; no recomposition while dragging). A page change moves the whole stack with the pager as one sheet, with the Dock's
+  ring following (it moves when the page passes halfway, as before), and nothing fades. The dismissal's light tick stays; a
+  page change has none (there was none).
+- **A side effect that needed fixing.** The stack clipped itself to its own rectangle, which is 16 dp narrower than the
+  surface on each side, so a card that gave a few dp toward an edge would have had its rounded corner cut. The clip is now
+  the stack's rectangle widened by 16 dp at the sides (a `graphicsLayer` clip shape, no offscreen layer); the card is cut
+  only by the pager at the edge of the surface. A dismissed card also flies a little farther before it is cut.
+- **Hooks for tests** (semantics, read when the tree is read): `DismissArmedKey`, `DismissCueAlphaKey` and `SwipeOffsetKey`
+  on a card's node.
+- **Tests.** `:core:domain` `SwipeDismissTest` (the owner, the rubber band and its inverse, the cue and the lift).
+  Robolectric `StreamSwipeDismissTest`: a non-dismissible front card resists a few dp, settles back and does not page (at rest
+  and with the motion on, and with a fast flick), a strip likewise and is never dismissed, the empty room pages, the cue
+  appears only past the threshold and releasing there dismisses, a resisting card never shows it, the pager's accessibility
+  actions page. Device `StreamPagesInteractionTest` gains a swipe from a card that does not page.
+- **Tests rewritten on purpose** (behaviour changed by the brief): `StreamSwipeDismissTest.aNotificationThatCannotBeDismissed...
+  PagesInstead` and `aSwipeOnAStripOfAPageWhoseFrontCardIsDismissibleChangesThePage` asserted that a drag on such a card
+  pages; they now assert that it resists and settles. Device `StreamPagesInteractionTest.aSidewaysSwipeChangesThePageAndTheDockFollows`
+  and `StreamShortcutsTodayInteractionTest` (the swipe right to the pinned app's page) swiped at the pager's centre, which
+  can land on a card; they now swipe in the empty room above the stack.
+- **Not confirmed without a device:** the feel of the rubber band (12 dp), the lift and the cue's contrast over a busy
+  wallpaper, and that the empty room above the stack is easy to hit on the smallest phones with three strips.
