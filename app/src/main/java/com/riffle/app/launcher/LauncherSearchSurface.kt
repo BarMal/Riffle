@@ -192,7 +192,7 @@ private fun SearchTopControls(
 }
 
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun SearchResultList(
     results: List<SearchGridResult>,
     appListContext: AppListContext,

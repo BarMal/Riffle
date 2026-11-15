@@ -59,10 +59,10 @@ internal fun searchClearContentDescription(label: String): String = "Clear ${lab
 private const val PANEL_FIELD_SECONDARY_ALPHA = 0.74f
 
 /**
- * The search field of a glass panel that is itself the field's container (search from the Dock): no box inside the glass,
- * no container fill, the text, the caret and the hint in the panel's own [contentColor] (the hint softened, still well over
- * 4.5:1 on Thick glass). The outlined field it replaces took the theme's outline and variant colours, which are
- * tuned for a plain surface and read as washed out on the glass.
+ * The search field of a glass panel that is itself the field's container (search from the Dock): no box inside the
+ * glass, no container fill, the text, the caret and the hint in the panel's own [contentColor] (the hint softened, still
+ * well over 4.5:1 on Thick glass). The outlined field it replaces took the theme's outline and variant colours, which
+ * are tuned for a plain surface and read as washed out on the glass.
  */
 @Composable
 internal fun PanelSearchField(

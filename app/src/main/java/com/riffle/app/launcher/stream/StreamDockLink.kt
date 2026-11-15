@@ -54,12 +54,12 @@ internal class OpenCardHolder {
     var layer: OpenCardLayer? by mutableStateOf(null)
         private set
 
-    /** Who published [layer] (a stack's key): only that stack may take it back, so another page's stack cannot erase it. */
+    /** Who published the layer (a stack's key): only that stack may take it back, not another page's stack. */
     private val layerOwner = PublishOwner()
     private val actionsOwner = PublishOwner()
 
     /**
-     * A stack publishes its open card's layer ([layer] non-null) or takes it back (null). Every stack on screen calls this
+     * A stack publishes its open card's layer ([layer] non-null) or takes it back (null). Every stack calls this
      * on every composition (two are composed while pages are swiped), so a null from a stack that is not the one that
      * published the layer is ignored: it used to erase the open card, leaving its slot hidden and the stack shifted to
      * where the card's frame would have been (batch 7, bugs A and B).

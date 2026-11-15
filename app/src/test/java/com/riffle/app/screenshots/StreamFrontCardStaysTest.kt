@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.LauncherShellContent
 import com.riffle.app.launcher.sources.SourceChangeSource
 import com.riffle.app.launcher.stream.STREAM_OPEN_CARD_TEST_TAG
-import com.riffle.app.launcher.stream.STREAM_PAGER_TEST_TAG
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -47,7 +46,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The front card never blinks out and the stack never leaves the Dock (owner's recordings, batch 7 bugs A and B): through
+ * The front card never blinks out and the stack never leaves the Dock (owner's recordings, batch 7 bugs A, B): through
  * the real shell content, with the listener re-posting the front notification (same key, new text and time) at rest,
  * while its card is open, while it closes and after a swipe that the app ignores, and with the keyboard coming and
  * going and the cards being dismissed one by one. At every frame the front card is drawn (or the open card is) and
@@ -186,22 +185,11 @@ class StreamFrontCardStaysTest {
     private fun theCardIsOpen() =
         composeRule.onAllNodes(hasTestTag(STREAM_OPEN_CARD_TEST_TAG)).fetchSemanticsNodes().isNotEmpty()
 
-    /** Where the pager has scrolled to: it changes when the page does. */
-    private fun pagerPosition(): Float =
-        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).fetchSemanticsNode()
-            .config[SemanticsProperties.HorizontalScrollAxisRange].value()
-
     private fun SemanticsNodeInteraction.swipeSideways(
         dxDp: Float,
         durationMillis: Long,
     ) = performTouchInput {
         swipe(center, center + Offset(dxDp.dp.toPx(), 0f), durationMillis = durationMillis)
-    }
-
-    private fun waitForTheFrontCardToBe(title: String) {
-        composeRule.waitUntil(timeoutMillis = WAIT_MILLIS) { frontTitle() == title }
-        composeRule.waitForIdle()
-        assertEquals(title, frontTitle())
     }
 
     private val dock get() = com.riffle.app.launcher.HOME_DOCK_SURFACE_TEST_TAG
@@ -216,9 +204,7 @@ class StreamFrontCardStaysTest {
     private fun openCardNode() =
         composeRule.onAllNodes(hasTestTag(STREAM_OPEN_CARD_TEST_TAG)).fetchSemanticsNodes().firstOrNull()
 
-    private fun anyCardText() = frontTitle() != null
-
-    /** The front card (or the open card) is drawn and stands on the Dock: no hole, no stack at the top of the screen. */
+    /** The front card (or the open card) is drawn and stands on the Dock: no hole, no stack at the top. */
     private fun assertTheFrontCardStandsOnTheDock(what: String) {
         val dockTop = composeRule.onNodeWithTag(dock).fetchSemanticsNode().boundsInRoot.top
         val front = frontSlotOrNull()
