@@ -45,9 +45,10 @@ internal object StripCut {
         geometry: StackGeometry,
         cardWidthPx: Float,
         density: Float,
+        stripPitchDp: Float = geometry.pitchDp,
     ): InFront? {
-        val own = geometry.frame(index, position)
-        val front = geometry.frame(index - 1, position)
+        val own = geometry.frame(index, position, stripPitchDp)
+        val front = geometry.frame(index - 1, position, stripPitchDp)
         val cut = index > 0 && own.isVisible && front.isVisible && own.scale > 0f
         return if (cut) {
             val scale = front.scale / own.scale
@@ -78,12 +79,22 @@ internal fun Modifier.stripCut(
     state: StreamStackState,
     geometry: StackGeometry,
     cardWidth: Dp,
+    /** The distance between the strips now, read in draw (a card that is open slims it); null: the geometry's own. */
+    stripPitchDp: (() -> Float)? = null,
 ): Modifier {
     val shape = LocalLauncherCardShape.current
     val paths = remember { StripCutPaths() }
     return drawWithContent {
         val widthPx = cardWidth.toPx()
-        val inFront = StripCut.inFrontOf(index, state.position, geometry, widthPx, density)
+        val inFront =
+            StripCut.inFrontOf(
+                index,
+                state.position,
+                geometry,
+                widthPx,
+                density,
+                stripPitchDp?.invoke() ?: geometry.pitchDp,
+            )
         if (inFront == null) {
             drawContent()
         } else {

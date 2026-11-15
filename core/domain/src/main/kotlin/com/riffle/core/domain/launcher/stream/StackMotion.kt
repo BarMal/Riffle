@@ -95,32 +95,38 @@ class StackGeometry(
         return if (fraction <= 0f) heightOf(low) else heightOf(low) + (heightOf(low + 1) - heightOf(low)) * fraction
     }
 
-    /** The frame of the card at [index] when the stack is at [position]. */
+    /**
+     * The frame of the card at [index] when the stack is at [position]. [stripPitchDp] is the distance between the
+     * strips now (the geometry's own [pitchDp] at rest; a card that is open eases it to the slim tabs' pitch).
+     */
     fun frame(
         index: Int,
         position: Float,
+        stripPitchDp: Float = pitchDp,
     ): StackCardFrame =
         frame(
             r = index - position,
             ownHeightDp = heightOf(index),
             frontHeightDp = frontHeightAt(position),
             inFrontHeightDp = heightOf(index - 1),
+            stripPitchDp = stripPitchDp,
         )
 
     /** The frame of the card at [r] cards behind the front (negative: in front of it, sinking), all cards alike. */
-    fun frame(r: Float): StackCardFrame = frame(r, cardHeightDp, cardHeightDp, cardHeightDp)
+    fun frame(r: Float): StackCardFrame = frame(r, cardHeightDp, cardHeightDp, cardHeightDp, pitchDp)
 
     private fun frame(
         r: Float,
         ownHeightDp: Float,
         frontHeightDp: Float,
         inFrontHeightDp: Float,
+        stripPitchDp: Float,
     ): StackCardFrame =
         when {
             r <= -1f || r >= peeks + 1f ->
-                HIDDEN.copy(topDp = topDp(r.coerceIn(-1f, peeks + 1f), ownHeightDp, frontHeightDp))
+                HIDDEN.copy(topDp = topDp(r.coerceIn(-1f, peeks + 1f), ownHeightDp, frontHeightDp, stripPitchDp))
             r < 0f -> sinking(r, ownHeightDp)
-            else -> behind(r, ownHeightDp, frontHeightDp, inFrontHeightDp)
+            else -> behind(r, ownHeightDp, frontHeightDp, inFrontHeightDp, stripPitchDp)
         }
 
     /** The front card on its way into the Dock: the whole card, moving down, shrinking and fading. */
@@ -144,16 +150,17 @@ class StackGeometry(
         ownHeightDp: Float,
         frontHeightDp: Float,
         inFrontHeightDp: Float,
+        stripPitchDp: Float,
     ): StackCardFrame {
-        val top = topDp(r, ownHeightDp, frontHeightDp)
+        val top = topDp(r, ownHeightDp, frontHeightDp, stripPitchDp)
         val scale = 1f - scaleStep * minOf(r, peeks)
         val alpha = if (r <= peeks) 1f else peeks + 1f - r
-        val visibleBottom = topDp(r - 1f, inFrontHeightDp, frontHeightDp) + gapDp * minOf(r, 1f)
+        val visibleBottom = topDp(r - 1f, inFrontHeightDp, frontHeightDp, stripPitchDp) + gapDp * minOf(r, 1f)
         return StackCardFrame(alpha = alpha, scale = scale, topDp = top, visibleBottomDp = minOf(visibleBottom, top))
     }
 
     /** The top edge of the card at [r] in a stack whose cards are all [cardHeightDp] tall. */
-    fun topDp(r: Float): Float = topDp(r, cardHeightDp, cardHeightDp)
+    fun topDp(r: Float): Float = topDp(r, cardHeightDp, cardHeightDp, pitchDp)
 
     /**
      * The top edge of a card [ownHeightDp] tall at [r]: the front card's top is the front height; each card behind is
@@ -163,11 +170,12 @@ class StackGeometry(
         r: Float,
         ownHeightDp: Float,
         frontHeightDp: Float,
+        stripPitchDp: Float,
     ): Float =
         when {
             r <= -1f -> 0f
             r < 0f -> ownHeightDp * (r + 1f)
-            else -> frontHeightDp + pitchDp * r
+            else -> frontHeightDp + stripPitchDp * r
         }
 
     /** The indices of the cards worth composing at [position]: those with something to show (`-1 < r < 4`). */

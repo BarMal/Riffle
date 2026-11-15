@@ -2059,16 +2059,105 @@ test `OpenCardPolishUnfoldedTest` samples every frame of a 80 frame opening and 
 and after (0.5 px), the card's first drawn frame is the front card's rectangle (1.5 px of rounding), top never goes back down,
 bottom never goes back up, the left edge never goes back in, and the strip's reserved room never moves.
 
+### Fit content, up to the Dock's height (owner's decision)
+
+The rule: an open card is as tall as its content needs (header, the whole body, the reply row, its own actions), never shorter
+than the collapsed front card. Its ceiling unfolded is the Stream column, which spans the Dock body (not the window), less the
+room its neighbours take: 64 dp for each older card above it (28 dp since "Slim neighbour strips", below), the strips of the newer
+cards and their gap under it, the page's 8 dp above and 16 dp under the stack. Folded it is the room between the status bar's inset and the Dock. The body scrolls only
+once the card has reached the ceiling; a card under it has no scroll range and no empty room inside; a short card stays short.
+The code already did this (`OpenCardLayout.frame`: `full = max(min(content, room), browse)`, the content measured at its
+intrinsic height, never a fixed maximum), and the column is the Dock's contextual length centred on its body, so no cause was
+found in the rectangle (`OPEN_HEIGHT_DP`, `REST_HEIGHT_DP` and `openTop` only matter when the Dock body is shorter than 480 dp)
+or in the strips' reservation. `OpenCardFitUnfoldedTest` and `OpenCardFitFoldedTest` assert the rule at layout level through the
+real shell and pass on the code as it was; they replace "rests on arithmetic" for the lone card too.
+
+Numbers in the owner's window (Dock body 272 to 761 dp = 489 dp, column 260.5 to 772.5 = 512 dp, xhdpi), card height / body
+scroll range, before and after (the same: nothing changed in the code):
+
+| Page and front card | Card | Scroll range | Reading |
+| --- | --- | --- | --- |
+| three chats, 12 sentences (long) | 360 dp | 376 px | at the ceiling: 512 - 24 - 2 x 64 = 360; strips 268.5 to 396.5, card to 756.5: the stack spans 488 dp of the Dock's 489 |
+| three chats, 8 sentences | 360 dp | 152 px | content is 436 dp, ceiling 360 dp: it scrolls |
+| two chats, 6 sentences | 380 dp | 0 | content, under the ceiling of 424 dp (one strip) |
+| three chats, "Hi." | 259 dp | 0 | the collapsed card's height |
+| one chat, 12 sentences | 488 dp | 240 px | no strips: the whole column less 8 and 16 dp |
+
+What the owner saw is this ceiling: with two older cards the strips take 128 dp of the Dock's ~470 dp, and the chrome of a
+conversation card (header 56, reply row 60, own actions 48, gaps) takes about 212 dp of the rest, so a body of eight messages
+shows about 148 dp of itself (four lines) in a 360 dp card. A taller card needs fewer strips or a different rule for them,
+which is a product decision, not a fit bug; see the report with this change.
+
+**A card whose content changes while it is open** (a message arrives): the card is measured at its content's height on each
+layout pass once settled, so its height changes in that frame; it does not ease on the spring. Not tested (the harness posts its
+notifications once); found by reading `OpenCardFrames`. Easing would need the natural height as animated state read in layout,
+which the one-measure-per-child rule of that layout makes more than a small change, so it is left.
+
+### Slim neighbour strips (owner's decision)
+
+"While a card is open, its neighbours shrink to thin title-only tabs so the open card gets more reading room, and the
+next-card indicator stays." Measured before the change, unfolded at 724 x 784 dp with the Dock on the right and three chats:
+the column is 512 dp and each neighbour strip took a 64 dp pitch, so with two neighbours the open card's ceiling was 360 dp and
+its body's viewport 148 dp (about four lines).
+
+- **The rule.** With a card open, each neighbour (older above, newer below) is a slim tab: one line, a leading icon or avatar
+  of 18 dp (`SlimTabs.ICON_DP`; the person's avatar on a conversation, the app's icon, else a glyph of the kind) and the title
+  in `labelMedium`; no subtitle, no time, no body. **Pitch: 28 dp** (`SlimTabs.PITCH_DP`): the line of a small label is about 16 dp,
+  which leaves 5 dp of air above and below the icon so a tab reads whole, and it is the figure that takes the ceiling to the
+  asked-for 432 dp (512 - 24 - 2 x 28). Smaller would clip the label at large font sizes for no more room worth having. A tab
+  is the card's own glass drawn only as far as its header (`StreamCardSurface`), tucked under the open card by the same cut as a
+  strip ([`stripCut`](../../app/src/main/java/com/riffle/app/launcher/stream/StreamStripCut.kt)), 4 dp apart below it as before.
+- **The ceiling.** The room the open card has is the column less the page's 24 dp less 28 dp per neighbour. The fit rule is
+  unchanged: content height up to the ceiling, never shorter than the collapsed front card, the body scrolls only at the ceiling.
+  How many neighbours show is unchanged too: the same count as before (`peeks`, and the room the open card must keep, are asked
+  at the full pitch), so a slimmer tab adds none; with more room the cards still fit and are not made more.
+- **Touch targets.** A tab is 28 dp to look at and 48 dp to hit (`SlimTabs.TARGET_DP`), the whole width of the card's column
+  and a little beyond it. The layer's scrim finds the tap (`SlimTabs.hit`): the tab whose centre is nearest within 24 dp of the
+  tap, so a tab's target reaches past its edges into the room its neighbours' targets share (the nearer centre decides) and,
+  for the outermost tab, into the room beyond it. It never reaches the open card: a tap on the card is the card's (its header
+  closes it) and a tap beside the card's edge toward the tabs only counts on the tabs' own side of it. Where two tabs stand 28 dp
+  apart their two 48 dp targets cannot both be whole: each tab's target there is its own 28 dp band split at the middle line,
+  and only the outermost tab has the full 48 dp. That is the geometry, not a choice; Previous card and Next card (custom actions
+  of the open card, and Previous and Next in a drag from the header) are the equal route to any card.
+- **Accessibility.** Each tab is one node, a button labelled "<title>, open" (`stream_open_tab`; it was the card's whole text
+  and "Bring to front" while the cards were strips, and still is when none is open), whose action opens that card. The open
+  card's "Next card" and "Previous card" actions and its cue are as before.
+- **Motion.** On the open card's own progress (so on its spring: `OpenCardMotionState`), the strips' pitch eases from the stack's
+  (64 dp unfolded, 56 dp folded) to 28 dp, and the cards above swap their faces for their tabs' (the card fades out as the tab
+  fades in on the same number, both in draw). Closing is the same in reverse; the collapsed stack's rest rectangle is exactly what
+  it was. The open card's frame is made against the room the tabs leave in the end, so its top, bottom and height stay linear in
+  the progress and move one way only; the strips above stand on the open card's top, so they stay in the area. During a hand-off
+  to a neighbour the progress stays at 1 and the tabs move to their new slots on the stack's one spring. Nothing recomposes
+  per frame: the pitch and the faces are read in layout and draw (`StackLayout`, `stripCut`, the open card's layer), and a
+  probe test pins it.
+- **Applies** folded and unfolded.
+
+Numbers, owner's window (xhdpi), before / after:
+
+| | Before (two strips of 64 dp) | After (two tabs of 28 dp) |
+| --- | --- | --- |
+| Ceiling of the open card (three chats, a long card) | 360 dp | 432 dp |
+| Body viewport (the card less its header, reply row and their spacing, 212 dp) | 148 dp, about four lines | 220 dp, about six |
+| Scroll range of a 12-sentence card | 188 dp | 116 dp |
+| Six sentences, three chats | 360 dp card, scrolls 20 dp | 380 dp card, no scroll range |
+| Two chats (one neighbour), the ceiling | 424 dp | 460 dp |
+| Folded, two neighbours: room they take | 112 dp | 56 dp |
+
+**Rests on code reading, not a test:** TalkBack's speech for the new label (the semantics are asserted, not the speech), the tab
+over a bright wallpaper on a device panel (the screenshots show it on the fixture's backdrop), and the tabs at large font
+scales (the line is clipped to the tab, not measured at it).
+
 ### Tests
 
-`OpenCardMotionTest` (the frame from the rest rectangle, the room below, the minimum height, one-way edges, both placements),
+`OpenCardFitUnfoldedTest` and `OpenCardFitFoldedTest` (the fit rule above), `OpenCardMotionTest` (the frame from the rest rectangle, the room below, the minimum height, one-way edges, both placements),
 `QuickChipFitTest` (the fit, the scroll fallback, the vanishing edge chip), `OpenCardHandoffCueTest` (the cue's fill, its
 direction, no cue toward nothing, lifting ends it, the bodies are never both drawn, the header scale),
 `OpenCardPolishUnfoldedTest` and `OpenCardPolishFoldedTest` (every frame, above), `OpenCardPolishUnfoldedShots` and
 `OpenCardPolishFoldedShots` (a long card with neighbours above and below, light and dark, and the cue at the top and at the
-bottom of the body mid-drag).
+bottom of the body mid-drag; unfolded also the long front card whose strips fill the Dock's height).
 
-- **Tests rewritten on purpose:** none. Existing tests of the open card, its drag and quick actions pass unchanged.
+- **Tests rewritten on purpose:** the fit tests' ceilings and the folded test's strips above the card, for the slim tabs (listed with
+  the slim-strips change: 64 dp became 28 dp, 56 dp became 28 dp). The rest of the open card's tests pass unchanged.
 - **Not confirmed without a device:** the feel of the spring against a finger, the cue's legibility over real text on a real
   panel, the strip's slide under a real pager, TalkBack's reading of the strips below the card (the semantics are asserted, the
   speech is not), and the owner's own column height (the fixture's Dock body is 489 dp).

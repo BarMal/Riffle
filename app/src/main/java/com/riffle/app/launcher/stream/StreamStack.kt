@@ -54,11 +54,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.testTag
@@ -66,12 +68,10 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.CountRecomposition
 import com.riffle.app.launcher.DockFanSource
 import com.riffle.app.launcher.LocalDockFan
-import com.riffle.app.launcher.LocalLauncherCardShape
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
 import com.riffle.app.launcher.reportsCardRect
@@ -83,6 +83,7 @@ import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.OpenCardBlend
 import com.riffle.core.domain.launcher.stream.OpenCardEvent
 import com.riffle.core.domain.launcher.stream.RecentAppContent
+import com.riffle.core.domain.launcher.stream.SlimTabs
 import com.riffle.core.domain.launcher.stream.StackFling
 import com.riffle.core.domain.launcher.stream.StackGeometry
 import com.riffle.core.domain.launcher.stream.StreamAction
@@ -329,6 +330,26 @@ private fun StreamStackContent(
     val covers: (Int, Float) -> Boolean = { index, r ->
         layerActive.value && OpenCardBlend.openness(r) > 0f && index in overlayIndices.value
     }
+    // While a card is open its neighbours are slim tabs: the strips' pitch eases from the stack's to the tabs' on the
+    // open card's own progress, and the cards' faces swap for the tabs' on the same number. Both are read in layout
+    // and draw.
+    val stripPitchDp: () -> Float =
+        remember(stackKey, sizes) {
+            { if (layerActive.value) SlimTabs.pitchDp(sizes.pitchDp, motion.progress) else sizes.pitchDp }
+        }
+    val tabMorph: () -> Float =
+        remember(stackKey) { { if (layerActive.value) motion.progress.coerceIn(0f, 1f) else 0f } }
+    // A tap on a neighbour's tab (or its "open" action): that card opens in place; a card with nothing to open closes.
+    val openNeighbour: (Int) -> Unit =
+        remember(mover, cards) {
+            { index ->
+                if (latestEntries.getOrNull(index)?.opensInPlace == true) {
+                    mover.goTo(index)
+                } else {
+                    cards.dispatch(OpenCardEvent.CloseByTap)
+                }
+            }
+        }
     Box(modifier = Modifier.fillMaxSize()) {
         if (entries.size == 1) {
             val only = entries.single()
@@ -375,12 +396,12 @@ private fun StreamStackContent(
                 covers = covers,
                 frameGeometry = frameGeometry,
                 onOpen = open,
-                onCloseOpen = close,
+                stripPitchDp = stripPitchDp,
+                tabMorph = tabMorph,
+                onTab = openNeighbour,
             )
         }
     }
-    val behind = (entries.size - 1).coerceIn(0, peeks)
-    val strips = sizes.pitchDp.dp * behind
     val placement = env.cardSettings.openCardPlacement
     val density = LocalDensity.current.density
     val bodies = remember(stackKey) { OpenCardBodies() }
@@ -448,7 +469,7 @@ private fun StreamStackContent(
     SideEffect { if (openedHere) retained.cards = layerCards }
     val layer =
         remember(
-            drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, geometry, strips,
+            drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, geometry,
             placement, dragModifier, entries.size, previous, next, sizes, footer, peeks, belowIndices.value,
         ) {
             if (!layerActive.value) {
@@ -458,7 +479,6 @@ private fun StreamStackContent(
                     geometry = frameGeometry,
                     placement = placement,
                     stackGeometry = geometry,
-                    strips = strips,
                     pitchDp = sizes.pitchDp,
                     bottomInset = StackBottomInset,
                     stack = stackState,
@@ -466,15 +486,7 @@ private fun StreamStackContent(
                     reducedMotion = env.reducedMotion,
                     dragModifier = dragModifier,
                     onClose = close,
-                    onStripTap = { rank ->
-                        // The strips are the older cards above the front one: open the one that was tapped.
-                        val front = StackFling.nearest(stackState.position, latestEntries.size)
-                        if (latestEntries.getOrNull(front + rank)?.opensInPlace == true) {
-                            mover.goTo(front + rank)
-                        } else {
-                            close()
-                        }
-                    },
+                    onTabTap = openNeighbour,
                     restFooter = footer,
                     peeks = peeks,
                     cue = cue,
@@ -485,9 +497,6 @@ private fun StreamStackContent(
                                 BelowStrip(
                                     entry = entry,
                                     env = env,
-                                    callbacks = callbacks,
-                                    groupKey = groupKey,
-                                    height = heights[index],
                                     onOpen = { mover.goTo(index) },
                                     modifier = stripModifier,
                                 )
@@ -538,56 +547,33 @@ private fun StreamStackContent(
 }
 
 /**
- * A card in front of the open one, drawn as the strip under it: the real card, cut off at its header ([stackLayout]
- * draws the strips above it the same way). One node to assistive technology that brings the card up when activated.
+ * A card in front of the open one, drawn as a slim tab under it ([SlimTab]). One node to assistive technology, a button
+ * "<title>, open", that brings the card up when activated. A tap on it is found by the layer's scrim (the tab is
+ * slimmer than a touch target, so its target is wider than it: [SlimTabs.hit]).
  */
 @Composable
-@Suppress("LongParameterList")
 private fun BelowStrip(
     entry: StackEntry,
     env: StreamEnvironment,
-    callbacks: StreamCallbacks,
-    groupKey: String?,
-    height: Dp,
     onOpen: () -> Unit,
     modifier: Modifier,
 ) {
     CountRecomposition("open-strip:${entry.id}")
-    val spoken = entry.spokenText(env)
-    val bringToFront = stringResource(R.string.stream_bring_card_to_front)
-    Box(
+    val label = stringResource(R.string.stream_open_tab, entry.peekText(env))
+    SlimTab(
+        entry = entry,
+        env = env,
         modifier =
-            modifier
-                .clip(LocalLauncherCardShape.current)
-                .clearAndSetSemantics {
-                    testTag = STREAM_OPEN_STRIP_TEST_TAG
-                    contentDescription = spoken
-                    onClick(label = bringToFront) {
-                        onOpen()
-                        true
-                    }
+            modifier.clearAndSetSemantics {
+                testTag = STREAM_OPEN_STRIP_TEST_TAG
+                role = Role.Button
+                contentDescription = label
+                onClick(label = null) {
+                    onOpen()
+                    true
                 }
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onOpen,
-                ),
-    ) {
-        // The card is drawn as wide as the strip is (the layer widens it with the open card) and as tall as it is.
-        BoxWithConstraints {
-            val stripWidth = maxWidth
-            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)) {
-                StackEntryCard(
-                    entry = entry,
-                    env = env,
-                    callbacks = callbacks,
-                    groupKey = groupKey,
-                    onOpen = {},
-                    modifier = Modifier.size(width = stripWidth, height = height),
-                )
-            }
-        }
-    }
+            },
+    )
 }
 
 /** The test tag of a strip of a card in front of the open one. */
@@ -757,7 +743,12 @@ private fun FocusedStack(
     covers: (index: Int, r: Float) -> Boolean,
     frameGeometry: OpenCardFrameGeometry,
     onOpen: (StackEntry) -> Unit,
-    onCloseOpen: () -> Unit,
+    /** The distance between the strips now: the stack's pitch, or, with a card open, easing to the slim tabs' pitch. */
+    stripPitchDp: () -> Float,
+    /** How far the strips have become slim tabs, 0 to 1, read in draw. */
+    tabMorph: () -> Float,
+    /** The tab of the card at an index was activated (with a card open). */
+    onTab: (Int) -> Unit,
 ) {
     val count = items.size
     val dockFan = LocalDockFan.current
@@ -788,6 +779,7 @@ private fun FocusedStack(
             cardWidth = cardWidth,
             bottomInset = StackBottomInset,
             covers = covers,
+            stripPitchDp = stripPitchDp,
             modifier =
                 Modifier
                     .matchParentSize()
@@ -853,7 +845,7 @@ private fun FocusedStack(
                         )
                     StackSlot(
                         index = index,
-                        cut = Modifier.stripCut(index, state, geometry, cardWidth),
+                        cut = Modifier.stripCut(index, state, geometry, cardWidth, stripPitchDp),
                         isFront = isFront,
                         covered = isFront && openActive,
                         rank = abs(index - frontIndex),
@@ -864,7 +856,20 @@ private fun FocusedStack(
                         open = open,
                         bringToFront = bringToFront,
                         onOpen = { onOpen(item) },
-                        onBringToFront = { if (latestOpenActive) onCloseOpen() else goTo(index) },
+                        onBringToFront = { if (latestOpenActive) onTab(index) else goTo(index) },
+                        tabMorph = tabMorph.takeIf { openActive && !isFront },
+                        tab =
+                            if (openActive && !isFront) {
+                                { tabModifier -> SlimTab(item, env, tabModifier, tuck = SlimTabTuck) }
+                            } else {
+                                null
+                            },
+                        tabLabel =
+                            if (openActive && !isFront) {
+                                stringResource(R.string.stream_open_tab, item.peekText(env))
+                            } else {
+                                ""
+                            },
                         swipe = swipe,
                         resistLabel = item.resistLabel(isFront),
                         canDismiss = item.swipeableNotification() != null,
@@ -899,7 +904,7 @@ private fun FocusedStack(
  * of the card), and whose own controls are out of reach until it is in front.
  */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongMethod", "LongParameterList")
 private fun StackSlot(
     index: Int,
     /** Draws the card less the card in front of it, so it tucks under that card ([stripCut]). */
@@ -925,6 +930,12 @@ private fun StackSlot(
     /** The custom action that dismisses it without a gesture (its label), and what it does. */
     dismissLabel: String,
     onDismiss: () -> Unit,
+    /** While a card is open: how far this strip has become a slim tab, read in draw; null when it is a strip. */
+    tabMorph: (() -> Float)?,
+    /** The tab that takes this strip's place as the card opens (it fills the slot); null when it is a strip. */
+    tab: (@Composable (Modifier) -> Unit)?,
+    /** What the tab says to assistive technology: its title, open. */
+    tabLabel: String,
     card: @Composable () -> Unit,
 ) {
     CountRecomposition("stack-slot:$index")
@@ -947,6 +958,19 @@ private fun StackSlot(
                             true
                         }.takeIf { canDismiss },
                     ) + quickActions
+            }
+        } else if (tab != null) {
+            // With a card open the strip is a slim tab: one button, "<title>, open", that opens the card.
+            Modifier.clearAndSetSemantics {
+                testTag = tag
+                traversalIndex = rank.toFloat()
+                role = Role.Button
+                swipeSemantics(swipe)
+                contentDescription = tabLabel
+                onClick(label = null) {
+                    onBringToFront()
+                    true
+                }
             }
         } else {
             // One node for the strip: the whole card's text, one action. The card's own controls are not reachable.
@@ -978,7 +1002,16 @@ private fun StackSlot(
                 .then(if (isFront && !covered) Modifier.frontCardKeys(onOpen) else Modifier)
                 .then(if (!covered) Modifier.swipeToDismiss(swipe) else Modifier),
     ) {
-        Box(modifier = Modifier.wrapContentSize(Alignment.TopStart, unbounded = true)) { card() }
+        Box(
+            modifier =
+                Modifier.wrapContentSize(Alignment.TopStart, unbounded = true).then(
+                    // The card's face gives way to the tab's as the card opens: read in draw, nothing recomposes.
+                    if (tabMorph != null) Modifier.graphicsLayer { alpha = 1f - tabMorph() } else Modifier,
+                ),
+        ) { card() }
+        if (tab != null && tabMorph != null) {
+            tab(Modifier.matchParentSize().graphicsLayer { alpha = tabMorph() })
+        }
         if (!isFront) {
             // Above the real card, so a tap on the strip is the strip's and never reaches a button underneath.
             Box(

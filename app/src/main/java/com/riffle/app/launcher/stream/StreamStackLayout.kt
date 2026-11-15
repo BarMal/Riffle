@@ -22,6 +22,7 @@ import kotlin.math.roundToInt
  * strip: the strip and the whole card are the same pixels at every position.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun StackLayout(
     state: StreamStackState,
     geometry: StackGeometry,
@@ -33,6 +34,8 @@ internal fun StackLayout(
      * then the slot is left undrawn. Read when drawing, so it follows the open card's motion without a relayout.
      */
     covers: ((index: Int, r: Float) -> Boolean)? = null,
+    /** The distance between the strips now, read while measuring (an open card slims it); null: the geometry's. */
+    stripPitchDp: (() -> Float)? = null,
     content: @Composable () -> Unit,
 ) {
     Layout(content = content, modifier = modifier) { measurables, constraints ->
@@ -40,6 +43,7 @@ internal fun StackLayout(
         val height = constraints.maxHeight
         val position = state.position
         val fade = state.fade
+        val pitch = stripPitchDp?.invoke() ?: geometry.pitchDp
         val slotWidth = cardWidth.roundToPx().coerceAtMost(width)
         val left = (width - slotWidth) / 2
         val bottom = height - bottomInset.roundToPx()
@@ -47,7 +51,7 @@ internal fun StackLayout(
             measurables.mapNotNull { measurable ->
                 val index = measurable.layoutId as? Int ?: return@mapNotNull null
                 val r = index - position
-                val frame = geometry.frame(index, position)
+                val frame = geometry.frame(index, position, pitch)
                 if (!frame.isVisible) return@mapNotNull null
                 val clip = (frame.clipHeightDp * density).roundToInt().coerceAtLeast(1)
                 Slot(index, r, frame, measurable.measure(Constraints.fixed(slotWidth, clip)))

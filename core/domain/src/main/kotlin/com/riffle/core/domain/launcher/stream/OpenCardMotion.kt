@@ -133,3 +133,56 @@ object OpenCardLayout {
         visiblePeeks: Int = StreamCardStackSpec.VISIBLE_PEEKS,
     ): Float = cardsBehind.coerceIn(0, visiblePeeks) * pitchPx
 }
+
+/**
+ * The neighbours of an open card as slim tabs ("Slim neighbour strips", `docs/product/dock-modes-plan.md`, Open card
+ * polish): while a card is open, the strips of the cards around it shrink from the stack's pitch to [PITCH_DP], one
+ * line each (a small icon and the title), so the open card has more room. The shrinking runs on the open card's own
+ * progress, so strips and card ease on one spring. Pure, so the numbers and the touch rule are tested.
+ */
+object SlimTabs {
+    /**
+     * The distance between slim tabs. A tab holds one line: an [ICON_DP] icon and a small label (about 16 dp of line)
+     * with 5 dp of air above and below, so it reads whole and still is a slim band. (The unfolded column's full pitch
+     * is 64 dp, the folded phone's 56 dp: two neighbours give the open card 72 or 56 dp more.)
+     */
+    const val PITCH_DP = 28f
+
+    /** The size of the icon or avatar a tab leads with. */
+    const val ICON_DP = 18f
+
+    /** The least touch target: a tab is 28 dp to look at and this much to hit, where there is room for it. */
+    const val TARGET_DP = 48f
+
+    /** The pitch between neighbours when the open card has grown to [progress] (0: [fullPitchDp], 1: slim). */
+    fun pitchDp(
+        fullPitchDp: Float,
+        progress: Float,
+    ): Float {
+        val slim = minOf(PITCH_DP, fullPitchDp)
+        return fullPitchDp + (slim - fullPitchDp) * progress.coerceIn(0f, 1f)
+    }
+
+    /**
+     * The tab a tap at [tapPx] (along the tabs' axis) opens: the one whose centre is nearest among those within half
+     * a [targetPx] of it, or -1. A tab is slimmer than a touch target, so its target reaches past its edges into the
+     * room of its neighbours (the nearest centre decides between two) and, for the outermost tab, into the room beyond
+     * it; it never reaches the open card, which takes its own touches before they get here.
+     */
+    fun hit(
+        tapPx: Float,
+        centresPx: List<Float>,
+        targetPx: Float,
+    ): Int {
+        var best = -1
+        var bestDistance = targetPx / 2f
+        centresPx.forEachIndexed { i, centre ->
+            val distance = abs(tapPx - centre)
+            if (distance <= bestDistance) {
+                best = i
+                bestDistance = distance
+            }
+        }
+        return best
+    }
+}
