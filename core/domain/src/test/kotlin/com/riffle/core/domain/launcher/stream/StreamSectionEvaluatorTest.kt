@@ -58,9 +58,9 @@ class StreamSectionEvaluatorTest {
     fun `the typed inputs expire too, so Tasks and the alarm do not wait for good either`() {
         val tasks = StreamSection.TODAY
         assertEquals(StreamSectionResult.Unavailable, eval(tasks, StreamSectionInputs().withLoadingExpired(tasks)))
-        val now = StreamSection.NOW
         val answered = StreamSectionInputs(alarm = TypedSourceState.Ready(emptyList()))
-        assertEquals(TypedSourceState.Ready(emptyList<NextAlarm>()), answered.withLoadingExpired(now).alarm)
+        assertEquals(TypedSourceState.Ready(emptyList<NextAlarm>()), answered.withLoadingExpired(tasks).alarm)
+        assertEquals(TypedSourceState.Unavailable, StreamSectionInputs().withLoadingExpired(tasks).alarm)
     }
 
     // --- availability -----------------------------------------------------------------------------------------
@@ -85,20 +85,20 @@ class StreamSectionEvaluatorTest {
             StreamSectionInputs(
                 items =
                     mapOf(
-                        SourceIds.MEDIA to SourceState.PermissionRequired,
-                        SourceIds.CALENDAR to ready(eventItem("e", NOW + HOUR)),
-                        SourceIds.ICS to SourceState.Loading,
+                        StreamSourceIds.AGENDA to SourceState.Loading,
+                        SourceIds.ICS to ready(eventItem("e", NOW + HOUR, source = SourceIds.ICS, feed = "F")),
                     ),
+                tasks = TypedSourceState.Off,
                 alarm = TypedSourceState.Ready(emptyList()),
             )
-        assertEquals(listOf("calendar:e"), eval(StreamSection.NOW, inputs).ids())
+        assertEquals(listOf("ics:e"), eval(StreamSection.TODAY, inputs).ids())
 
-        val empty = inputs.copy(items = inputs.items + (SourceIds.CALENDAR to ready()))
-        assertEquals(StreamSectionResult.Loading, eval(StreamSection.NOW, empty))
-        val settled = empty.copy(items = empty.items + (SourceIds.ICS to ready()))
+        val empty = inputs.copy(items = inputs.items + (SourceIds.ICS to ready()))
+        assertEquals(StreamSectionResult.Loading, eval(StreamSection.TODAY, empty))
+        val settled = empty.copy(items = empty.items + (StreamSourceIds.AGENDA to SourceState.PermissionRequired))
         assertEquals(
-            StreamSectionResult.PermissionRequired(listOf(SourceIds.MEDIA)),
-            eval(StreamSection.NOW, settled),
+            StreamSectionResult.PermissionRequired(listOf(SourceIds.CALENDAR)),
+            eval(StreamSection.TODAY, settled),
         )
     }
 
@@ -172,7 +172,7 @@ class StreamSectionEvaluatorTest {
     // --- Now --------------------------------------------------------------------------------------------------
 
     @Test
-    fun `now is the media card, then the next event and the alarm by start`() {
+    fun `now is media only, playing first then newest, and ignores the calendar and the alarm`() {
         val inputs =
             StreamSectionInputs(
                 items =
@@ -182,25 +182,17 @@ class StreamSectionEvaluatorTest {
                                 notificationItem("old", posted = 1, source = SourceIds.MEDIA),
                                 notificationItem("new", posted = 9, source = SourceIds.MEDIA),
                             ),
-                        SourceIds.CALENDAR to
-                            ready(
-                                eventItem("late", NOW + 5 * HOUR),
-                                eventItem("soon", NOW + 2 * HOUR),
-                                eventItem("done", NOW - 3 * HOUR),
-                            ),
+                        SourceIds.CALENDAR to ready(eventItem("soon", NOW + 2 * HOUR)),
                         SourceIds.ICS to ready(eventItem("feed", NOW + 3 * HOUR, source = SourceIds.ICS, feed = "F")),
                     ),
-                alarm = TypedSourceState.Ready(listOf(NextAlarm("a1", NOW + HOUR), NextAlarm("a2", NOW + 9 * HOUR))),
+                alarm = TypedSourceState.Ready(listOf(NextAlarm("a1", NOW + HOUR))),
             )
 
-        assertEquals(
-            listOf("media:personal:new", "alarm:a1", "calendar:soon"),
-            eval(StreamSection.NOW, inputs).ids(),
-        )
+        assertEquals(listOf("media:personal:new", "media:personal:old"), eval(StreamSection.NOW, inputs).ids())
     }
 
     @Test
-    fun `now options pick the media count and turn the event and alarm off`() {
+    fun `now options pick how many active sessions show`() {
         val inputs =
             StreamSectionInputs(
                 items =
@@ -209,18 +201,43 @@ class StreamSectionEvaluatorTest {
                             ready(
                                 notificationItem("a", posted = 1, source = SourceIds.MEDIA),
                                 notificationItem("b", posted = 9, source = SourceIds.MEDIA),
+                                notificationItem("c", posted = 5, source = SourceIds.MEDIA),
                             ),
-                        SourceIds.CALENDAR to ready(eventItem("soon", NOW + HOUR)),
-                        SourceIds.ICS to ready(),
                     ),
-                alarm = TypedSourceState.Ready(listOf(NextAlarm("a1", NOW + HOUR))),
             )
-        val options = StreamSectionOptions(now = NowOptions(maxMedia = 2, showNextEvent = false, showAlarm = false))
+        val options = StreamSectionOptions(now = NowOptions(maxActive = 2))
 
         assertEquals(
-            listOf("media:personal:b", "media:personal:a"),
+            listOf("media:personal:b", "media:personal:c"),
             eval(StreamSection.NOW, inputs, context.copy(options = options)).ids(),
         )
+    }
+
+    @Test
+    fun `today carries the next alarm after the events and before the tasks, and not an alarm that has gone`() {
+        val inputs =
+            StreamSectionInputs(
+                items =
+                    mapOf(
+                        StreamSourceIds.AGENDA to ready(eventItem("soon", NOW + 2 * HOUR)),
+                        SourceIds.ICS to ready(),
+                    ),
+                alarm = TypedSourceState.Ready(listOf(NextAlarm("a1", NOW + HOUR), NextAlarm("a2", NOW - HOUR))),
+            )
+        val result = eval(StreamSection.TODAY, inputs) as StreamSectionResult.Ready
+
+        assertEquals(listOf("1970-01-11", StreamGroupKeys.ALARM), result.groups.map { it.key })
+        assertEquals(listOf("calendar:soon", "alarm:a1"), result.ids())
+    }
+
+    @Test
+    fun `an alarm that has not answered does not hold today in Loading`() {
+        val inputs =
+            StreamSectionInputs(
+                items = noCalendar,
+                tasks = TypedSourceState.NotConnected(),
+            )
+        assertEquals(StreamSectionResult.NotConnected(), eval(StreamSection.TODAY, inputs))
     }
 
     // --- Notifications ----------------------------------------------------------------------------------------

@@ -124,8 +124,8 @@ Each side of the Dock opens its own world: the pinned side the static one, the d
 | Library | Categories (iOS-style, the default), A–Z list, Grid | Personal and work split |
 | Stream | Stack or List, chosen per section; on an unfolded posture, Pages or Stage for the whole Stream | Which sections are on, and their order |
 
-The Stream's sections are fixed: **Now** (media and its queue, next event, alarm), **Notifications**,
-**Recents**, **Agenda**, **Tasks**, **Feeds**. Each draws as a Stack of cards or a List of rows.
+The Stream's sections are fixed: **Now** (media only: the players, then the recent players; the alarm is on Today,
+Amendment 4), **Notifications**, **Recents**, **Agenda**, **Tasks**, **Feeds**. Each draws as a Stack of cards or a List of rows.
 
 **The Stream is pages of vertical stacks** (decision 12). The Stream is a horizontal pager of pages, and each page is
 one vertically scrolling stack of cards or list of rows, the way Calm lays out its chapters. A page is one section's
@@ -169,7 +169,7 @@ Source ids are those in `core/domain/.../launcher/workspace/`.
 | Media (`media`) | Stream, Now | One card | Play, pause, skip, scrub; expand for the queue; tap opens the player | Dock dynamic entry while playing; glance widget |
 | Calendar and calendar feeds (`calendar`, `ics`) | Stream, Now (next event) and Agenda (by day) | Card or rows | Tap opens the event; expand for details | Glance widget |
 | News feeds (`rss`) | Stream, Feeds | One page per feed, each a vertical stack or headlines | Tap opens the article; Mark read action | Glance widget (top story) |
-| Alarm (`AlarmManager.getNextAlarmClock()`, wired in P3b) | Stream, Now | A row beside the next event | Tap opens the clock app | None |
+| Alarm (`AlarmManager.getNextAlarmClock()`, wired in P3b) | Stream, Today | A card after the next event | Tap opens the clock app | None |
 | To-do (Todoist, P10) | Stream, Tasks | Card of today's items, or rows | Tap ticks it off; tap the title to open; quick-add at the top | None |
 | Widgets as cards (`WIDGET_PROVIDER`, #1219) | Parked: widgets live on Home only | | | |
 
@@ -586,6 +586,29 @@ its quick actions. Folded, with a Dock along the top or bottom edge, they are a 
 (an open card's own actions take the row while it is open); unfolded, with a side Dock, they are a Thin strip under the
 stack inside the Stream. "Apps behind the cards" becomes a choice of three per posture (Hidden, Around the cards, Behind
 and around); see "Quick actions, and apps behind the cards" in `docs/product/dock-modes-plan.md`.
+
+## Amendment 4 (owner, 2026-11-15): the media centre
+
+The owner asked why calendar and alarm cards showed behind the player under the playing app's Dock icon. Decided:
+**Now is media only, and it is always there.** The rest of Amendments 1 to 3 stands.
+
+- **Now is media only.** The next event and the alarm leave Now. The alarm joins the next event on Today (next event,
+  alarm, "To do today", later events, tomorrow); Today reads the alarm provider now, Now reads the media source alone.
+  No stored concept goes: the layout's Now options lose `showNextEvent`, `showAlarm` and `maxMedia`, which older layouts
+  stored and which decoding now ignores (codec test with old data); `maxActive` (3) and `recentPlayers` (on) are new.
+- **Recent players.** The launcher remembers up to five media sources (package, profile, last played time: nothing
+  else is stored; the last title and artist stay in memory for the process). A session seen playing records its app; an
+  uninstalled app drops out; dismissing a source removes it until it plays again. Now is the active sessions (playing
+  first, then the most recent), each the usual player card, followed by the recent players that have no session, each a
+  quiet "source" card with one primary action: Play when the app can be resumed through its `MediaBrowserService`, else
+  Open. A swipe dismisses a source card (an active session keeps today's rule: it resists). With nothing at all, Now is
+  one quiet "Nothing playing" card. A setting turns the recent players off (Now then shows active sessions only).
+- **No new kind of content.** A source is `MediaContent` with `source = true` (no session, no controls): the card, the
+  swipe and the actions follow the existing media pattern, and the stored data is the list above, not content.
+- **The Now tile is its own tile.** The play-glyph tile is always in the Dock's contextual side, and in Home mode's
+  dynamic side while something plays. While something plays it carries the Now mark. The playing app's own Dock icon
+  never stands in for Now: if the app also has notifications it leads to that app's notifications page like any live
+  app. See "Media centre" in `docs/product/dock-modes-plan.md`.
 
 ## Superseded documents
 

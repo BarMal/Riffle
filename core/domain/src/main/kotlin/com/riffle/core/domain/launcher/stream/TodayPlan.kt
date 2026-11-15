@@ -12,6 +12,9 @@ sealed interface TodayCard {
     /** The next upcoming (or current) event, drawn with a live countdown and its actions. */
     data class NextEvent(val event: EventContent) : TodayCard
 
+    /** The next alarm, right after the next event (an alarm is a time to be at, like an event). */
+    data class Alarm(val alarm: EventContent) : TodayCard
+
     /**
      * "To do today": [tasks] (today's and overdue, the order the Tasks source gives), with [left] not yet done and
      * [overdue] of them overdue. Empty when a connected task list has nothing on it: the card still offers its add
@@ -50,8 +53,9 @@ sealed interface TodayNotice {
  * Composes the Today page's cards from what the Today section delivered (events grouped by day, then the tasks), a
  * clock and the day: pure, so the order and every combination of data are tested without a screen.
  *
- * Front to back: the next event (the first timed event that has not ended, else the first all-day one), the "To do
- * today" card (when a task list is connected, even with nothing on it), the other events today, a "Tomorrow" card (when
+ * Front to back: the next event (the first timed event that has not ended, else the first all-day one), the next
+ * alarm (when there is one that has not gone off), the "To do today" card (when a task list is connected, even with
+ * nothing on it), the other events today, a "Tomorrow" card (when
  * tomorrow has an event or a task) and last the notices for the inputs that gave nothing (calendar access, no task
  * account). With no events the "To do today" card is in front. Events that have ended since the section was evaluated
  * are left out, so the next event moves on as the clock does.
@@ -64,7 +68,11 @@ object TodayPlanner {
         zone: ZoneId = ZoneId.systemDefault(),
     ): List<TodayCard> {
         val tomorrow = today.plusDays(1)
-        val events = content.groups.filter { it.key != StreamGroupKeys.TASKS }
+        val events = content.groups.filter { it.key != StreamGroupKeys.TASKS && it.key != StreamGroupKeys.ALARM }
+        val alarm =
+            content.groups.firstOrNull { it.key == StreamGroupKeys.ALARM }?.items.orEmpty()
+                .filterIsInstance<EventContent>()
+                .firstOrNull { it.startEpochMillis >= nowEpochMillis }
         val todayEvents =
             events.firstOrNull { it.key == today.toString() }?.items.orEmpty()
                 .filterIsInstance<EventContent>()
@@ -89,6 +97,7 @@ object TodayPlanner {
 
         return buildList {
             next?.let { add(TodayCard.NextEvent(it)) }
+            alarm?.let { add(TodayCard.Alarm(it)) }
             if (tasksConnected) {
                 add(
                     TodayCard.ToDo(

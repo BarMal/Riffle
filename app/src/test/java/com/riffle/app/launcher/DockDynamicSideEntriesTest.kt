@@ -98,21 +98,29 @@ class DockDynamicSideEntriesTest {
     }
 
     @Test
-    fun nowPlayingNamesTheTitleWhenItIsShownAndNotWhenItIsWithheld() {
+    fun theNowTileWhilePlayingIsNowsOwnTileWithAPlayMarkAndNotTheAppsIcon() {
         val titled =
-            DockDynamicSideEntry.NowPlaying("chat", "personal", "Music", "Midnight City")
+            DockDynamicSideEntry.NowPlaying("Midnight City")
                 .toDockEntry(listOf(chat), streamShown = false, resources = resources)
         val withheld =
-            DockDynamicSideEntry.NowPlaying("chat", "personal", "Music", null)
+            DockDynamicSideEntry.NowPlaying(null)
                 .toDockEntry(listOf(chat), streamShown = false, resources = resources)
+        val idle =
+            DockDynamicSideEntry.ContextTile(StreamSection.NOW)
+                .toDockEntry(listOf(chat), streamShown = true, resources = resources)
 
-        // A tap opens the player app; a press that starts on it shows the Now page.
-        assertEquals(DockDynamicEntryIntent.Dispatch(LauncherShellAction.LaunchApp(chat.identity)), titled.intent)
-        assertEquals("Show Messages in Stream", titled.showInStreamLabel)
+        // A tap shows the Now page (it is not the player's icon); no app is behind the tile.
+        assertEquals(DockDynamicEntryIntent.Delegate, titled.intent)
+        assertNull(titled.identity)
+        assertNull(titled.showInStreamLabel)
         assertEquals("Now playing: Midnight City", titled.contentDescription)
         assertEquals("Now playing", withheld.contentDescription)
-        assertEquals(DockDynamicSymbol.NowPlaying, titled.symbol)
         assertEquals(0, titled.badgeCount)
+        // The same tile (and key) with and without the mark.
+        assertEquals(idle.key, titled.key)
+        assertEquals(true, (titled.symbol as DockDynamicSymbol.Glyph).playing)
+        assertEquals(false, (idle.symbol as DockDynamicSymbol.Glyph).playing)
+        assertEquals("Now", idle.contentDescription)
     }
 
     @Test
@@ -169,7 +177,9 @@ class DockDynamicSideEntriesTest {
 
     @Test
     fun aTapIsReadFromTheEntrysKey() {
-        assertEquals(StreamFocusTarget.Now, dockDynamicEntryTarget("now"))
+        assertEquals(StreamFocusTarget.Section(StreamSection.NOW), dockDynamicEntryTarget("ctx:now"))
+        // The retired key of the playing app's icon means nothing any more: Now is its own tile.
+        assertNull(dockDynamicEntryTarget("now"))
         assertEquals(StreamFocusTarget.AppStack("chat:personal"), dockDynamicEntryTarget("live:chat:personal"))
         assertEquals(StreamFocusTarget.Section(StreamSection.RECENTS), dockDynamicEntryTarget("ctx:recents"))
         assertNull(dockDynamicEntryTarget("ctx:nothing"))
@@ -185,8 +195,8 @@ class DockDynamicSideEntriesTest {
         val live = DockDynamicSideEntry.LiveApp("chat:personal", "chat", "personal", null, 1)
         assertEquals(StreamFocusTarget.AppStack(live.groupKey), dockDynamicEntryTarget(live.key))
         assertEquals(
-            StreamFocusTarget.Now,
-            dockDynamicEntryTarget(DockDynamicSideEntry.NowPlaying("m", null, null, null).key),
+            StreamFocusTarget.Section(StreamSection.NOW),
+            dockDynamicEntryTarget(DockDynamicSideEntry.NowPlaying(null).key),
         )
         StreamSection.layoutSections.forEach { section ->
             assertEquals(

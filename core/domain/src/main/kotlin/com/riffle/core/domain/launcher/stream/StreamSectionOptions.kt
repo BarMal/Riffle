@@ -16,14 +16,19 @@ data class StreamSectionOptions(
     val feeds: FeedsOptions = FeedsOptions(),
 )
 
+/**
+ * Now is media only (ADR 0003, Amendment 5). The next event and the alarm that older layouts stored options for
+ * (`showNextEvent`, `showAlarm`) belong to Today now; those stored keys, and the old `maxMedia` (which was one), are
+ * ignored when decoding.
+ */
 data class NowOptions(
-    /** How many media cards (several players can be active). */
-    val maxMedia: Int = 1,
-    val showNextEvent: Boolean = true,
-    val showAlarm: Boolean = true,
+    /** How many active sessions the stack shows (several players can be active). */
+    val maxActive: Int = 3,
+    /** Whether players that are not active stay in the stack as quiet "source" cards (the recent players). */
+    val recentPlayers: Boolean = true,
 ) {
     init {
-        require(maxMedia >= 0) { "maxMedia cannot be negative." }
+        require(maxActive >= 0) { "maxActive cannot be negative." }
     }
 }
 

@@ -69,11 +69,12 @@ internal fun androidStreamSources(
     calendar: CalendarSourceDependencies,
     media: MediaSourceDependencies,
     content: ContentSourceDependencies = ContentSourceDependencies(),
+    packageLabels: PackageLabelResolver = PackageLabelResolver.NONE,
 ): SourceRegistry =
     streamSourceRegistry(
         androidBuiltInSourceDependencies(
             installedApps, appVisibility, recentApps, notificationRepository, notificationAccess,
-            hideRules, calendar, content, media,
+            hideRules, calendar, content, media, packageLabels,
         ),
     )
 
@@ -88,6 +89,7 @@ private fun androidBuiltInSourceDependencies(
     calendar: CalendarSourceDependencies,
     content: ContentSourceDependencies,
     media: MediaSourceDependencies = MediaSourceDependencies.NONE,
+    packageLabels: PackageLabelResolver = PackageLabelResolver.NONE,
 ): BuiltInSourceDependencies {
     val snapshotChanges =
         SourceChangeSource { onChanged -> notificationRepository.observeActiveNotifications(onChanged) }
@@ -107,6 +109,7 @@ private fun androidBuiltInSourceDependencies(
                 recentAppsAccess = {
                     if (recentApps.canReadRecentApps()) SourceAccess.GRANTED else SourceAccess.REQUIRED
                 },
+                packageLabels = packageLabels,
             ),
         notifications =
             NotificationSourceDependencies(

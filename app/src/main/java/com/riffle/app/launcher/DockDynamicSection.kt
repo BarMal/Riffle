@@ -283,7 +283,9 @@ private fun DockDynamicSectionTile(
         contentAlignment = Alignment.TopEnd,
     ) {
         DockDynamicTileIcon(entry, iconSizeDp, tileShape, appIconLoader)
-        if (entry.symbol is DockDynamicSymbol.NowPlaying) NowPlayingMark(Modifier.align(Alignment.BottomEnd))
+        if ((entry.symbol as? DockDynamicSymbol.Glyph)?.playing == true) {
+            NowPlayingMark(Modifier.align(Alignment.BottomEnd))
+        }
         NotificationCountBadge(count = entry.badgeCount)
         if (hasMenu) {
             DynamicEntryMenu(
@@ -342,7 +344,7 @@ private fun DockDynamicTileIcon(
     }
 }
 
-/** The small play mark in the corner of the playing app's icon. */
+/** The small play mark in the corner of the Now tile while something plays. */
 @Composable
 private fun NowPlayingMark(modifier: Modifier) {
     Icon(

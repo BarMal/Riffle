@@ -24,7 +24,6 @@ object DockChoice {
      */
     fun pageFor(entryKey: String): StreamFocusTarget? =
         when {
-            entryKey == DockDynamicSideEntry.NOW_PLAYING_KEY -> StreamFocusTarget.Now
             entryKey.startsWith(DockDynamicSideEntry.LIVE_APP_KEY_PREFIX) ->
                 StreamFocusTarget.AppStack(entryKey.removePrefix(DockDynamicSideEntry.LIVE_APP_KEY_PREFIX))
             entryKey.startsWith(DockDynamicSideEntry.PINNED_APP_KEY_PREFIX) ->

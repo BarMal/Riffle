@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import android.content.res.Resources
 import com.riffle.app.R
 import com.riffle.app.launcher.stream.StreamPageOption
 import com.riffle.app.launcher.stream.glyph
@@ -56,19 +57,46 @@ private fun DockDynamicEntry.openLabelFor(resources: android.content.res.Resourc
 /** A contextual tile: the section's glyph and name; a tap shows its page. */
 internal fun DockDynamicSideEntry.ContextTile.contextTileEntry(
     resources: android.content.res.Resources,
-): DockDynamicEntry {
-    val name = resources.getString(section.titleRes())
-    return DockDynamicEntry(
+): DockDynamicEntry =
+    tileEntry(key, section, resources.getString(section.titleRes()), playing = false, title = null, resources)
+
+/**
+ * The Now tile while something plays: Now's own tile with the play mark, spoken as "Now playing: <title>". It is not
+ * an app: a tap shows the Now page.
+ */
+internal fun DockDynamicSideEntry.NowPlaying.nowTileEntry(resources: Resources): DockDynamicEntry =
+    tileEntry(
+        key,
+        StreamSection.NOW,
+        resources.getString(StreamSection.NOW.titleRes()),
+        playing = true,
+        title = title,
+        resources,
+    )
+
+private fun tileEntry(
+    key: String,
+    section: StreamSection,
+    name: String,
+    playing: Boolean,
+    title: String?,
+    resources: android.content.res.Resources,
+): DockDynamicEntry =
+    DockDynamicEntry(
         key = key,
         label = name,
         identity = null,
         badgeCount = 0,
         isSelected = false,
-        contentDescription = name,
+        contentDescription =
+            when {
+                !playing -> name
+                title != null -> resources.getString(R.string.dock_now_playing_titled_label, title)
+                else -> resources.getString(R.string.dock_now_playing_label)
+            },
         intent = DockDynamicEntryIntent.Delegate,
-        symbol = DockDynamicSymbol.Glyph(section.glyph()),
+        symbol = DockDynamicSymbol.Glyph(section.glyph(), playing),
     )
-}
 
 /**
  * The page options of an entry's page as long-press items (ADR 0003, Amendment 3: page options moved off the page's

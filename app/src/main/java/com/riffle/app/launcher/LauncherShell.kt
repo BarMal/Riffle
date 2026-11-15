@@ -501,6 +501,7 @@ private fun LauncherDestination(
             CompositionLocalProvider(
                 LocalStreamLayoutRepository provides stream?.layouts,
                 LocalTasksSettings provides stream?.taskSettings,
+                LocalRecentPlayers provides stream?.recentPlayers,
             ) {
                 SettingsSurface(
                     state = settingsState,

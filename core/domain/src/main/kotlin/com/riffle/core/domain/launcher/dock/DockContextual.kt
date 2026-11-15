@@ -87,8 +87,6 @@ object DockRing {
                         DockDynamicSideEntry.liveAppKey(requireNotNull(current.groupKey)),
                         DockDynamicSideEntry.pinnedAppKey(requireNotNull(current.groupKey)),
                     )
-                current.section == StreamSection.NOW ->
-                    listOf(DockDynamicSideEntry.NOW_PLAYING_KEY, DockDynamicSideEntry.contextTileKey(current.section))
                 else -> listOf(DockDynamicSideEntry.contextTileKey(current.section))
             }
         return candidates.firstOrNull { key -> key in entryKeys }

@@ -77,6 +77,9 @@ internal object StreamCardHeights {
     /** An app (a recent app, a shortcut): icon and a line or two. */
     val app: Dp = 104.dp
 
+    /** A recent player on Now: the app's icon and name, what it last played, and its Play or Open button. */
+    val mediaSource: Dp = 128.dp
+
     /** Today's front card: the event, its countdown and its actions. */
     val nextEvent: Dp = 200.dp
 

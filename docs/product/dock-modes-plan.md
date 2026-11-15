@@ -2240,3 +2240,57 @@ the card does not cover were hidden. Now the fade eases from the column to the o
 and from the 240 dp feather to the 24 dp one as the card opens; under it apps keep the peek opacity (Behind and around,
 changed on purpose: they used to go out behind an open card) or nothing (Hidden, Around). The collapsed stack keeps the
 long feather. A custom-layout notification no longer repeats its title as a body line.
+
+## Media centre
+
+The owner asked "why are calendar and alarm cards shown under YouTube Music?" and chose an **always-on Now stack** with
+**recently used players** (ADR 0003, Amendment 4). Now is media only and is always there.
+
+### What changed
+
+- **Now is media only.** The next event and the alarm left Now. The alarm sits on Today after the next event (next
+  event, alarm, "To do today", later events, tomorrow; in the List view, after the day groups and before the tasks);
+  `StreamSection.TODAY` reads the alarm provider, `NOW` reads the media source alone. The alarm never holds Today in
+  Loading (an alarm that has not answered counts as off). Stored layouts keep decoding: the Now options lose
+  `showNextEvent`, `showAlarm` and `maxMedia` (decoding ignores them; codec test with old data) and gain `maxActive`
+  (3, how many active sessions show) and `recentPlayers` (on).
+- **Recent players.** `RecentPlayers` (domain, pure): at most five, most recent first, one per app, dropped when
+  uninstalled, removed when dismissed (back only when it plays again), never a source while its app has a session.
+  `RecentPlayersTracker` records a session seen playing through `RecentPlayersStore` (a tiny preferences file in the
+  app: package, profile and time; nothing else is written) and keeps the last title and artist in memory for the
+  process. A source card says only the app's name until the app plays in this process. Not part of a backup.
+- **The Now stack.** Front to back: active sessions (playing before paused, then newest), each the usual player card
+  with its controls; then the sources, each a quiet card (`MediaContent` with `source = true`: the app's icon and
+  name, what it last played, the time, one primary action). With neither, Now is one quiet "Nothing playing" card
+  with no action. The front card is the first session, else the most recent source.
+- **Play or Open.** The primary action is decided up front: Play if the app declares a `MediaBrowserService` (a
+  `<queries>` entry in the manifest makes it visible; cached per package), else "Open <app>". Play uses the route
+  System UI's media resumption uses: `MediaBrowser` connects to the app's service, then `play()` on the session token
+  it returns (`MediaResumer`, `AndroidMediaResumer`). It waits at most 3 s (off the main thread; the browser itself is
+  created on the main looper and the call only waits) and on a refusal, a failure or the timeout opens the app
+  instead. A tap on the card's header opens the app. A swipe, the Dismiss button and the "Dismiss" accessibility action
+  forget the source; an active session's card still resists a swipe. Hide rules and content levels apply to a source
+  like any media content (a hidden source keeps Open and Dismiss).
+- **Accessibility.** A source card is one node, "<app>, last played <time>", with the primary action, Dismiss and the
+  Hide choices as actions; the buttons are still 48 dp targets for touch.
+- **The Now tile.** `DockDynamicSideEntry.NowPlaying` is now Now's own play-glyph tile with a play mark, the same key
+  as Now's plain tile (`ctx:now`), so the ring does not move when playback starts or stops. It is always in the
+  contextual side and in the Home side only while a session is active (a recent player does not count). The mark is
+  the existing play mark; the session's artwork was not used as the tile's face because it is illegible at tile size.
+  The playing app's own Dock icon, if it has notifications, is a live app and leads to its notifications page. "Show
+  live apps" now says "Apps with something new, and a Now tile while something plays".
+- **Settings > Stream.** Now's description reads "Now playing and your recent players"; Recent players (switch, on by
+  default; off hides the source cards but leaves the list, which Clear recent players empties) and Clear recent
+  players, both searchable.
+
+### Carried-over fix
+
+A notification from an app with no launcher entry (a screen recorder) was titled with its package name: the label came
+from the installed-apps snapshot, which omits such apps. The name is now the snapshot's label, then the platform's
+(`PackageLabelResolver`, cached), then the notification's own title (never a quiet profile's), then the package name.
+
+### What a device must confirm
+
+Media resumption against real apps (which apps let a launcher connect, and how long they take), the Dock tile's mark
+at the size of the real tile, and the swipe on a source card are verified by code and Robolectric tests only; the
+screenshots are in `app/src/test/screenshots` (`MediaCentreScreenshotTest`, `MediaCentreUnfoldedScreenshotTest`).

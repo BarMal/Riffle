@@ -19,6 +19,10 @@
 
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- Media apps that can be resumed from the Stream's recent players (Now): the apps with a browser service. -->
+        <intent>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent>
     </queries>
 
     <application

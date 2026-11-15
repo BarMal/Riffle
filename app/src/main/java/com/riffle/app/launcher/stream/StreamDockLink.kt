@@ -225,8 +225,10 @@ internal fun Map<StreamSection, StreamSectionResult>.dockLiveEntries(
     pinnedGroupKeys: Set<String> = emptySet(),
 ): List<DockDynamicSideEntry> {
     val groups = (this[StreamSection.NOTIFICATIONS] as? StreamSectionResult.Ready)?.groups.orEmpty()
+    // Only an active player marks the Now tile: a recent player that has no session is not "playing".
     val media =
-        (this[StreamSection.NOW] as? StreamSectionResult.Ready)?.items?.filterIsInstance<MediaContent>()?.firstOrNull()
+        (this[StreamSection.NOW] as? StreamSectionResult.Ready)?.items
+            ?.filterIsInstance<MediaContent>()?.firstOrNull { !it.source }
     return DockDynamicSide.entries(groups, media, liveAppSlots, pinnedGroupKeys = pinnedGroupKeys)
 }
 

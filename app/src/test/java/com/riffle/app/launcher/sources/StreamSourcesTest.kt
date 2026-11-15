@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.sources
 
+import com.riffle.app.launcher.stream.MediaResumer
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -18,8 +19,13 @@ import com.riffle.core.domain.launcher.stream.MediaAction
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.NotificationAction
 import com.riffle.core.domain.launcher.stream.NotificationContent
+import com.riffle.core.domain.launcher.stream.RecentPlayer
+import com.riffle.core.domain.launcher.stream.RecentPlayersStore
+import com.riffle.core.domain.launcher.stream.RecentPlayersTracker
+import com.riffle.core.domain.launcher.stream.StreamActionResult
 import com.riffle.core.domain.launcher.stream.StreamContentMapper
 import com.riffle.core.domain.launcher.stream.StreamSourceIds
+import com.riffle.core.domain.launcher.workspace.ItemTarget
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.SourceRegistry
@@ -59,6 +65,7 @@ class StreamSourcesTest {
         media: MediaSourceDependencies = MediaSourceDependencies.NONE,
         forStream: Boolean = true,
         notifications: List<LauncherNotification> = emptyList(),
+        packageLabels: PackageLabelResolver = PackageLabelResolver.NONE,
     ): SourceRegistry {
         val deps =
             BuiltInSourceDependencies(
@@ -76,6 +83,7 @@ class StreamSourcesTest {
                         shortcuts = AppShortcutRepository { emptyMap() },
                         recentApps = RecentAppRepository { listOf(RecentAppUsage(AppPackageName("player"), 5L)) },
                         recentAppsAccess = { SourceAccess.GRANTED },
+                        packageLabels = packageLabels,
                     ),
                 notifications =
                     NotificationSourceDependencies(
@@ -159,6 +167,93 @@ class StreamSourcesTest {
 
         val none = registry(notifications = emptyList()).latest(SourceIds.MEDIA) as SourceState.Ready
         assertTrue("a session without a visible media notification shows nothing", none.items.isEmpty())
+    }
+
+    @Test
+    fun aNotificationFromAnAppWithNoLauncherEntryIsNamedByThePlatformThenItsTitleNotItsPackage() {
+        val recorder =
+            LauncherNotification(
+                key = LauncherNotificationKey("r"),
+                packageName = AppPackageName("recorder"),
+                title = "Recording screen",
+                text = "Tap to stop",
+                canDismiss = true,
+                postedAtEpochMillis = NOW - 1,
+            )
+
+        fun label(labels: PackageLabelResolver): String? {
+            val registry = registry(notifications = listOf(recorder), packageLabels = labels)
+            return (registry.latest(SourceIds.NOTIFICATIONS) as SourceState.Ready).items.single().groupLabel
+        }
+
+        assertEquals("Screen recorder", label { pkg -> "Screen recorder".takeIf { pkg == "recorder" } })
+        assertEquals("Recording screen", label(PackageLabelResolver.NONE))
+    }
+
+    private class FakeRecentStore(var players: List<RecentPlayer> = emptyList()) : RecentPlayersStore {
+        override fun read(): List<RecentPlayer> = players
+
+        override fun write(players: List<RecentPlayer>) {
+            this.players = players
+        }
+    }
+
+    private fun mediaNotification(pkg: String) =
+        LauncherNotification(
+            key = LauncherNotificationKey("m-$pkg"),
+            packageName = AppPackageName(pkg),
+            isMediaSession = true,
+            title = "Song",
+            text = "Band",
+            canDismiss = false,
+            postedAtEpochMillis = NOW - 1,
+        )
+
+    @Test
+    fun aPlayerThatWasPlayingBecomesARecentPlayerWhenItsSessionEndsAndIsResumableWhenItsAppSaysSo() {
+        val store = FakeRecentStore()
+        var live: List<MediaSessionInfo> =
+            listOf(MediaSessionInfo("player", isPlaying = true, controls = setOf(MediaControl.PAUSE)))
+        val resumer =
+            object : MediaResumer {
+                override fun canResume(packageName: String) = packageName == "player"
+
+                override fun resume(packageName: String) = StreamActionResult.Performed
+            }
+        val media =
+            MediaSourceDependencies(
+                sessions = { live },
+                recentPlayers = RecentPlayersTracker(store) { NOW },
+                resumer = resumer,
+            )
+        // While it plays: its own player card, no source card, and it is remembered.
+        val playing = registry(media, notifications = listOf(mediaNotification("player"))).latest(SourceIds.MEDIA)
+        assertEquals(1, (playing as SourceState.Ready).items.size)
+        assertEquals(listOf("player"), store.players.map { it.packageName })
+
+        // Its session ended: a quiet source card with the last text this process saw, and Play.
+        live = emptyList()
+        val ended = registry(media).latest(SourceIds.MEDIA) as SourceState.Ready
+        val card = StreamContentMapper.map(ended.items.single()) as MediaContent
+        assertTrue(card.source)
+        assertEquals("Player", card.appLabel)
+        assertEquals("Song", card.title)
+        assertEquals("Band", card.artist)
+        assertEquals(setOf(MediaAction.OPEN, MediaAction.PLAY, MediaAction.DISMISS), card.actions)
+    }
+
+    @Test
+    fun anAppThatIsNoLongerInstalledLeavesTheRecentPlayersAndWithoutATrackerNothingIsRemembered() {
+        val store =
+            FakeRecentStore(listOf(RecentPlayer("gone", "personal", 5L), RecentPlayer("player", "personal", 4L)))
+        val media =
+            MediaSourceDependencies(sessions = { emptyList() }, recentPlayers = RecentPlayersTracker(store) { NOW })
+        val state = registry(media).latest(SourceIds.MEDIA) as SourceState.Ready
+        assertEquals(listOf("player"), state.items.map { (it.target as ItemTarget.App).packageName })
+        assertEquals(listOf("player"), store.players.map { it.packageName })
+
+        val none = registry(MediaSourceDependencies(sessions = { emptyList() })).latest(SourceIds.MEDIA)
+        assertTrue((none as SourceState.Ready).items.isEmpty())
     }
 
     @Test

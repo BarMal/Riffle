@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.stream.NotificationAction
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.StreamAppRef
 import com.riffle.core.domain.launcher.stream.StreamContentId
+import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamPageRef
 import com.riffle.core.domain.launcher.stream.StreamPrivacy
@@ -33,7 +34,7 @@ class DockDynamicSideTest {
                 liveAppSlots = 3,
             )
         assertEquals(
-            listOf("live:chat:personal", "live:news:personal", "live:mail:personal", "now"),
+            listOf("live:chat:personal", "live:news:personal", "live:mail:personal", "ctx:now"),
             entries.map { it.key },
         )
         val mail = entries[2] as DockDynamicSideEntry.LiveApp
@@ -46,7 +47,7 @@ class DockDynamicSideTest {
     fun theSlotsLimitLiveAppsButNeverNowPlaying() {
         val groups = (1..5).map { group("app$it", posted = it * 10L) }
         val entries = DockDynamicSide.entries(groups, media("music"), liveAppSlots = 2)
-        assertEquals(listOf("live:app5:personal", "live:app4:personal", "now"), entries.map { it.key })
+        assertEquals(listOf("live:app5:personal", "live:app4:personal", "ctx:now"), entries.map { it.key })
         assertEquals(DockDynamicSide.FIXED_ENTRY_COUNT, entries.count { it !is DockDynamicSideEntry.LiveApp })
     }
 
@@ -78,7 +79,7 @@ class DockDynamicSideTest {
     @Test
     fun zeroSlotsLeavesNowPlaying() {
         val entries = DockDynamicSide.entries(listOf(group("chat", 1)), media("music"), liveAppSlots = 0)
-        assertEquals(listOf("now"), entries.map { it.key })
+        assertEquals(listOf("ctx:now"), entries.map { it.key })
     }
 
     @Test
@@ -92,6 +93,42 @@ class DockDynamicSideTest {
     fun equalTimesBreakTiesByGroupKey() {
         val entries = DockDynamicSide.entries(listOf(group("b", 5), group("a", 5)), null, 2)
         assertEquals(listOf("live:a:personal", "live:b:personal"), entries.map { it.key })
+    }
+
+    @Test
+    fun thePlayingAppsOwnLiveIconLeadsToItsNotificationsAndTheNowTileLeadsToNow() {
+        // The player has notifications too: it is a live app like any other, and Now has its own tile beside it.
+        val entries = DockDynamicSide.entries(listOf(group("music", 300)), media("music", title = "Song"), 3)
+
+        assertEquals(listOf("live:music:personal", "ctx:now"), entries.map { it.key })
+        val live = assertIs<DockDynamicSideEntry.LiveApp>(entries[0])
+        assertEquals("music:personal", live.groupKey)
+        assertEquals(
+            StreamFocusTarget.AppStack("music:personal"),
+            DockChoice.pageFor(live.key),
+        )
+        assertEquals(StreamFocusTarget.Section(StreamSection.NOW), DockChoice.pageFor(entries[1].key))
+        // The tile is the contextual tile of Now (same key), so the two modes never draw Now twice.
+        assertEquals(DockDynamicSideEntry.ContextTile(StreamSection.NOW).key, entries[1].key)
+    }
+
+    @Test
+    fun nowIsInTheContextualRowWhetherOrNotAnythingPlays() {
+        val pages =
+            listOf(
+                StreamPageRef("now", StreamSection.NOW, null),
+                StreamPageRef("today", StreamSection.TODAY, null),
+            )
+        // Idle: Now has its plain tile among the contextual ones.
+        assertEquals(
+            listOf(StreamSection.NOW, StreamSection.TODAY),
+            DockDynamicSide.contextSections(pages, nowPlaying = false),
+        )
+        // Playing: the marked tile is already among the entries, so it is not repeated.
+        assertEquals(listOf(StreamSection.TODAY), DockDynamicSide.contextSections(pages, nowPlaying = true))
+        // The Home mode (no contextual sections) holds the Now tile only while something plays.
+        assertEquals(emptyList(), DockDynamicSide.entries(emptyList(), null, 3))
+        assertEquals(listOf("ctx:now"), DockDynamicSide.entries(emptyList(), media("music"), 3).map { it.key })
     }
 
     @Test
@@ -129,7 +166,7 @@ class DockDynamicSideTest {
             listOf(
                 "live:chat:personal",
                 "live:mail:personal",
-                "now",
+                "ctx:now",
                 "ctx:today",
                 "ctx:recents",
                 "ctx:feeds",

@@ -142,9 +142,8 @@ object StreamLayoutCodec {
         obj(
             "now" to
                 obj(
-                    "maxMedia" to num(options.now.maxMedia),
-                    "showNextEvent" to StoredValue.Bool(options.now.showNextEvent),
-                    "showAlarm" to StoredValue.Bool(options.now.showAlarm),
+                    "maxActive" to num(options.now.maxActive),
+                    "recentPlayers" to StoredValue.Bool(options.now.recentPlayers),
                 ),
             "notifications" to
                 obj(
@@ -194,9 +193,9 @@ object StreamLayoutCodec {
         root: StoredValue.Obj?,
         defaults: NowOptions,
     ) = NowOptions(
-        maxMedia = root.count("maxMedia", defaults.maxMedia),
-        showNextEvent = root?.bool("showNextEvent") ?: defaults.showNextEvent,
-        showAlarm = root?.bool("showAlarm") ?: defaults.showAlarm,
+        // The retired keys (maxMedia, showNextEvent, showAlarm) are ignored: Now is media only, see NowOptions.
+        maxActive = root.count("maxActive", defaults.maxActive),
+        recentPlayers = root?.bool("recentPlayers") ?: defaults.recentPlayers,
     )
 
     private fun decodeNotifications(

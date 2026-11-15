@@ -114,7 +114,11 @@ object StreamSectionEvaluator {
         buildList {
             itemSources.forEach { id -> add(Slot.of(id, inputs.items[id] ?: SourceState.Loading)) }
             if (readsTasks) add(Slot.of(StreamSourceIds.TASKS, inputs.tasks))
-            if (readsAlarm) add(Slot.of(StreamSourceIds.ALARM, inputs.alarm))
+            // The alarm only adds to a page: while it has not answered it never holds the page in Loading.
+            if (readsAlarm) {
+                val alarm = if (inputs.alarm == TypedSourceState.Loading) TypedSourceState.Off else inputs.alarm
+                add(Slot.of(StreamSourceIds.ALARM, alarm))
+            }
         }
 
     private sealed interface Slot {

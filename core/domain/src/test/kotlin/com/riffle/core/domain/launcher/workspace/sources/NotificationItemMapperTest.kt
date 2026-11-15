@@ -80,8 +80,34 @@ class NotificationItemMapperTest {
         assertEquals(ItemPrivacy.VISIBLE, chat.privacy)
         assertEquals(listOf(ItemAction.Open(), ItemAction.Dismiss()), chat.actions)
         assertEquals("notification-art:personal:a", chat.image?.key)
-        assertEquals("mail", items.first { it.groupKey == "mail:personal" }.groupLabel)
+        // No installed-app label for "mail": the notification's own title names the app (it used to be "mail").
+        assertEquals("Title b", items.first { it.groupKey == "mail:personal" }.groupLabel)
         assertTrue(items.all { it.sourceId == SourceIds.NOTIFICATIONS })
+    }
+
+    @Test
+    fun `an app with no launcher entry is named by the platform label, then the title, then the package`() {
+        val platform = input(notification("a", pkg = "recorder")).copy(appLabel = { "Screen recorder" })
+        assertEquals("Screen recorder", mapper.notificationItems(platform).single().groupLabel)
+
+        val titled = input(notification("a", pkg = "recorder", title = "Recording screen"))
+        assertEquals("Recording screen", mapper.notificationItems(titled).single().groupLabel)
+
+        // A blank label counts as none; a blank title leaves the package name.
+        val blank = input(notification("a", pkg = "recorder", title = " ")).copy(appLabel = { "  " })
+        assertEquals("recorder", mapper.notificationItems(blank).single().groupLabel)
+    }
+
+    @Test
+    fun `a quiet profile never lends its title as the app name`() {
+        val quiet =
+            input(
+                notification("a", pkg = "recorder", title = "Secret title"),
+                visibility = mapOf(personal to AppProfileContentVisibility.REDACTED_QUIET),
+            )
+        val item = mapper.notificationItems(quiet).single()
+        assertEquals("recorder", item.groupLabel)
+        assertNull(item.title)
     }
 
     @Test

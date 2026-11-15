@@ -37,7 +37,19 @@ internal class StreamPlatform(
     val tasks: TaskProvider = NotConnectedTaskProvider,
     val taskActions: TaskActions? = null,
     val taskSettings: TasksSettingsController? = null,
+    /** The recent players Now remembers (Settings > Stream clears them); null where there are none. */
+    val recentPlayers: RecentPlayersControl? = null,
 )
+
+/**
+ * The user's handle on the recent players (ADR 0003, Amendment 4): dismissing one and clearing them all. Both write
+ * the list, so call them off the main thread; Now re-reads once they are done.
+ */
+internal interface RecentPlayersControl {
+    fun dismiss(key: String)
+
+    fun clear()
+}
 
 /** A change signal the app raises itself (RSS read state has no platform callback). */
 internal class ManualChangeSource : SourceChangeSource {

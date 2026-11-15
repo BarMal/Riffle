@@ -49,11 +49,11 @@ class StreamLayoutRepositoryTest {
             val custom =
                 StreamLayouts().with(
                     phone,
-                    StreamLayout.DEFAULT.copy(options = StreamSectionOptions(now = NowOptions(maxMedia = 3))),
+                    StreamLayout.DEFAULT.copy(options = StreamSectionOptions(now = NowOptions(maxActive = 3))),
                 )
             val repository = repository(FakeStore(custom))
             repository.initialize()
-            assertEquals(3, repository.layoutFor(phone).options.now.maxMedia)
+            assertEquals(3, repository.layoutFor(phone).options.now.maxActive)
         }
 
     @Test
@@ -72,7 +72,7 @@ class StreamLayoutRepositoryTest {
     @Test
     fun anEditBeforeTheFirstReadIsMergedWithWhatIsStoredNotLostOrOverwritten() =
         runBlocking {
-            val tablet = StreamLayout.DEFAULT.copy(options = StreamSectionOptions(now = NowOptions(maxMedia = 3)))
+            val tablet = StreamLayout.DEFAULT.copy(options = StreamSectionOptions(now = NowOptions(maxActive = 3)))
             val store = FakeStore(StreamLayouts().with(HomeLayoutDeviceClass.TABLET, tablet))
             val repository = repository(store)
 
@@ -81,7 +81,7 @@ class StreamLayoutRepositoryTest {
             repository.initialize()
 
             assertEquals(StreamView.LIST, repository.layoutFor(phone).viewOf(StreamSection.NOW))
-            assertEquals(3, repository.layoutFor(HomeLayoutDeviceClass.TABLET).options.now.maxMedia)
+            assertEquals(3, repository.layoutFor(HomeLayoutDeviceClass.TABLET).options.now.maxActive)
             assertEquals(repository.layouts.value, store.stored)
         }
 
@@ -109,7 +109,7 @@ class StreamLayoutRepositoryTest {
 
         repository.update(phone, StreamLayoutAction.SetView(StreamSection.NOW, StreamView.LIST))
         assertEquals(0, told)
-        repository.update(phone, StreamLayoutAction.SetOptions(StreamSectionOptions(now = NowOptions(maxMedia = 2))))
+        repository.update(phone, StreamLayoutAction.SetOptions(StreamSectionOptions(now = NowOptions(maxActive = 2))))
         assertEquals(1, told)
     }
 
@@ -146,7 +146,7 @@ class StreamLayoutRepositoryTest {
             val restored =
                 StreamLayouts().with(
                     phone,
-                    StreamLayout.DEFAULT.copy(options = StreamSectionOptions(now = NowOptions(maxMedia = 4))),
+                    StreamLayout.DEFAULT.copy(options = StreamSectionOptions(now = NowOptions(maxActive = 4))),
                 )
             var told = 0
             repository.observe { told++ }

@@ -239,7 +239,7 @@ section's result into the ordered pages. A page is one vertically scrolling stac
 
 | Section | Pages | Key |
 | --- | --- | --- |
-| Now | one (media with its queue, next event, alarm) | `now` |
+| Now | one (media only: players and recent players; amended, ADR 0003 Amendment 4) | `now` |
 | Notifications | one per app with notifications, newest app first; one empty-state page when none | `notifications/<package:profile>`, `notifications` |
 | Recents | one (recent apps, then "Often used") | `recents` |
 | Today | one (the next event with a countdown, "To do today", later events, tomorrow, notices; List: the agenda by day, then the tasks) | `today` |
