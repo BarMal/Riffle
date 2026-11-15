@@ -743,7 +743,13 @@ class UnfoldedStreamColumnTest {
             "the column stands on the Dock: ${column.bottom} vs ${dock.top}",
             column.bottom - dock.top in 0f..MAX_REACH * dp,
         )
-        assertTrue("centred on it", abs(column.center.x - dock.center.x) < 2f * dp)
+        // The Dock's body is no longer centred on its edge while it is extended (the pinned run stays where it is and
+        // the body grows away from it), so the column is centred on the body's own rectangle, wherever that stands.
+        val body = bounds(HOME_DOCK_SURFACE_TEST_TAG)
+        assertTrue(
+            "centred on it: ${column.center.x} vs ${body.center.x}",
+            abs(column.center.x - body.center.x) < 2f * dp,
+        )
         assertEquals(
             "the unfolded column's width",
             StreamColumn.restWidthDp(root().width / dp, unfolded = true),
@@ -1129,7 +1135,9 @@ class UnfoldedStreamColumnTest {
             "at most 560 dp: ${column.height / dp}",
             column.height / dp <= StreamColumn.BOTTOM_DOCK_MAX_HEIGHT_DP + 1f,
         )
-        assertTrue("centred on the Dock", abs(column.center.x - dock.center.x) < 2f * dp)
+        // Centred on the Dock's body, which is off-centre on its edge while extended (see the test above).
+        val body = bounds(HOME_DOCK_SURFACE_TEST_TAG)
+        assertTrue("centred on the Dock", abs(column.center.x - body.center.x) < 2f * dp)
     }
 
     // "Apps behind the cards": the three choices

@@ -125,27 +125,24 @@ class DockContextualModeTest {
             dockDynamicSectionTileTestTag(section.name.lowercase().replaceFirstChar { it.uppercase() }),
         )
 
-    private fun itemTags() =
-        pins.map { dockItemTestTag(it.id) } +
-            sections.map { dockDynamicSectionTileTestTag(it.name.lowercase().replaceFirstChar { c -> c.uppercase() }) }
-
-    private fun visibleItemBounds() =
-        itemTags().mapNotNull { tag ->
-            val node = composeRule.onNodeWithTag(tag)
-            val shown = runCatching { node.assertIsDisplayed() }.isSuccess
-            if (shown) node.fetchSemanticsNode().boundsInRoot else null
-        }
-
     @Test
-    fun aPhoneWideRowShowsSixWholeItemsOfOneSizeAndTheRestScrollsAway() {
+    fun theContextualRowKeepsTheHomeModesPinnedIconSizeAndGapAndTheRestScrollsAway() {
         showRow()
         val density = RuntimeEnvironment.getApplication().resources.displayMetrics.density
         val rowLeft = composeRule.onNodeWithTag(DOCK_CONTEXTUAL_ROW_TEST_TAG).fetchSemanticsNode().boundsInRoot.left
-        val whole = visibleItemBounds().filter { it.width >= 47f * density }
-        assertTrue("fewer than six whole items on show: ${visibleItemBounds()}", whole.size >= 6)
-        // Pinned icons and tiles read as one row of equal items: every whole one is the 48 dp target, never larger.
-        whole.forEach { assertEquals(48f * density, it.width, 1f) }
-        assertEquals(rowLeft, whole.first().left, 1f)
+        val pins = pins.map { composeRule.onNodeWithTag(dockItemTestTag(it.id)).fetchSemanticsNode().boundsInRoot }
+        // Pinned icons are the Dock's own 56 dp with the gap the Home mode gives them (at most the Dock's 10 dp): one size
+        // and one gap for the whole run, never closed up to fit six items.
+        pins.take(3).forEach { assertEquals(56f * density, it.width, 1f) }
+        val gaps = pins.take(3).zipWithNext().map { (a, b) -> b.left - a.right }
+        assertTrue(
+            "the gap is the Dock's, not closed up: $gaps",
+            gaps.all { it > 4f * density && it <= 10f * density + 1f },
+        )
+        assertEquals(gaps.first(), gaps.last(), 1f)
+        assertEquals(rowLeft, pins.first().left, 1f)
+        // The row gains its tiles by scrolling, which is why the last one lies past the edge.
+        tile(sections.last()).assertIsNotDisplayed()
         composeRule.captureScreen()
     }
 

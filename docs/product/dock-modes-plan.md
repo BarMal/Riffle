@@ -1858,3 +1858,48 @@ recomposes nothing (the recomposition probe tests pass). A cell that is faded ou
 Tests: `StreamGridFadeTest`, `LayoutSettingsTest`, the codec and reducer tests, `FoldedAppsBehindCardsTest` and
 `UnfoldedStreamColumnTest` (alphas under, beside and clear of the cards, per posture), `SettingsSharedRowsTest` (both entry
 points show and write the same value); screenshots dark and light of Around the cards, folded and unfolded.
+
+## The Dock's open and close: one size, one place, no blink
+
+The owner, from a recording of the unfolded Dock on the right edge: "the dock open/close still has jitter/icon size changes".
+A blank frame, the icons smaller in the contextual mode, and the pinned run sliding (and the first icon clipped at the top).
+
+- **Measured before** (the test clock, a frame at a time; px at 2.625): bottom Dock on a phone, the first pinned icon was
+  116 px in the Home mode and 126 px from frame 3 of the opening (the contextual row drew every item as a 48 dp target and
+  closed the gap up until six fitted), its x going 277, 277, 277, 277 to 241 within the body's own growth about its middle
+  (body 240..839 to 33..1046); right Dock on a foldable, the body went 660..1160 to 363..1457 about its middle and the first
+  pinned icon went from y 688 to y 391 (297 px, 113 dp) in about 15 frames, ending near the Dock's top end.
+- **After** (same frames): the pinned icon is 116 px (bottom) and 96 px (right) on every frame of opening and closing, the gap
+  between neighbours constant; on the right Dock the body is 660..1160 growing to 660..1754 and the first pinned icon stays at
+  y 688 on every frame; on the bottom Dock the body grows from 240..839 to the right and the first icon stays at x 277 until
+  the body's end reaches the edge's room (frame 8, x 1046), after which it also grows back to the left (277 to 70 at rest).
+- **The blank frame.** The Dock's content was drawn at opacity 0 for the frame in which the mode changed, in every motion
+  setting: `rememberDockContentFade` set the opacity to 0 the moment the mode changed and returned it to 1 in an effect that
+  runs after that frame (it was meant for reduced motion's cross-fade). Now only reduced motion dips and fades back; with the
+  motion on the content is drawn on every frame. **I could not reproduce the blank frame with the test clock** (the effect
+  runs before the frame is sampled), so this is the cause found by reading the code, not one seen failing.
+- **One size per Dock** (`dockContextualSlotMetrics`, `DockSurface.kt`). The pinned icons keep the Home mode's size and gap
+  (what its pinned run needs, whatever the Dock's setting and room) in the contextual mode. Only the appended live apps and tiles
+  are the 48 dp target, with the same gap. The row gains its items by growing the body and then by scrolling, never by shrinking
+  an icon or closing the gap up (the "six whole items" rule is gone).
+- **The pinned run stays where it is** (`dockAnchoredShiftPx`, `DockBodyAnchor`). Extended, the body keeps its start edge where
+  the Home mode's body had it and grows away from the pinned run (a side Dock: downward; a bottom Dock: toward the end of the
+  row), and only when its end reaches the edge's room does it also grow back the other way. So the Dock may be off-centre on its
+  edge while it is extended; the Home mode's body is centred as ever and the change is one continuous motion on the same spring.
+  The body reports its arrived rectangle (`anchoredArrival`) and **the Stream's column follows that rectangle**: it spans the
+  body's actual top and bottom (side Dock) or is centred on the body (bottom Dock), wherever the body stands, not the edge's middle.
+  Left to right text direction is assumed for a bottom Dock's "end".
+- **The page handle** (`FadingHandle`, `StandardHome.kt`): unfolded, where it is hidden while the column stands, it fades on the
+  Dock's own spring (a snap under reduced motion) instead of popping out and in in the frame the mode changes.
+- **Tests** (`DockResizeMotionTest`, Robolectric, the test clock stepped by hand through the real `HomeDestination`, a right Dock
+  unfolded and a bottom Dock folded, opening and closing): on every frame every pinned icon is placed, has a size, is drawn and the
+  content is not blanked; each pinned icon's size and the gap are equal on every frame; the start edge stays until the end has
+  reached the room. `DockDynamicSectionMetricsTest` (the pinned run is the Home mode's on every width) and
+  `DockContextualModeTest`.
+- **Tests rewritten on purpose:** `DockResizeMotionTest.assertTheBodyExtends` asserted the body stays centred on its edge (now: it
+  grows away from the pinned run); `DockContextualModeTest.aPhoneWideRowShowsSixWholeItemsOfOneSizeAndTheRestScrollsAway` asserted
+  the 48 dp item and six whole items (now the pinned size and gap are the Dock's); `DockDynamicSectionMetricsTest` (the run's
+  length and the six-whole-items test); `UnfoldedStreamColumnTest` (two tests asserted a bottom Dock's column centred on the Dock's
+  strip; now on the body). **Not confirmed without a device:** that the owner's blank frame was this cause, the look of an
+  off-centre Dock on a real foldable, a Dock with a very long run of live apps, and a right-to-left layout.
+

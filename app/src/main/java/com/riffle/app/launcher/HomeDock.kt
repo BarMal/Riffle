@@ -129,7 +129,7 @@ internal fun Dock(
         // The contextual row is drawn until the cards are back in, but the body is already heading for the Home mode's
         // length: "closing is the opening reversed".
         val homeLengthDp =
-            if (retracting && surfaceMetrics.contextualRun != null) {
+            if (surfaceMetrics.contextualRun != null) {
                 val live = dynamicEntries.filterNot(DockDynamicEntry::isContextTile)
                 dockSurfaceMetrics(
                     dock = dock,
@@ -148,7 +148,15 @@ internal fun Dock(
                 Modifier
                     .dockShelfPolicies(interactions)
                     .testTag(HOME_DOCK_SURFACE_TEST_TAG),
-            sizeTargetMainAxisDp = homeLengthDp,
+            sizeTargetMainAxisDp = homeLengthDp.takeIf { retracting },
+            anchor =
+                homeLengthDp?.let { home ->
+                    DockBodyAnchor(
+                        runDp = if (position.isHorizontalEdge) maxWidth.value else maxHeight.value,
+                        homeDp = home,
+                        fraction = dock.alignment.fraction(),
+                    )
+                },
             dock = dock,
             surfaceMetrics = surfaceMetrics,
             isEditing = isEditing,
@@ -1384,3 +1392,11 @@ internal fun dockShortcutContextMenuItems(
             appShortcuts = appShortcuts,
         )
 }
+
+/** How far along the room the Dock's alignment puts a body: 0 at the start, a half centred, 1 at the end. */
+private fun DockAlignment.fraction(): Float =
+    when (this) {
+        DockAlignment.START -> 0f
+        DockAlignment.CENTER -> 0.5f
+        DockAlignment.END -> 1f
+    }

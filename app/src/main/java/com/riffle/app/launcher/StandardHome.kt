@@ -4,8 +4,10 @@ package com.riffle.app.launcher
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -35,14 +37,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -56,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.glance.rememberRiffleGlanceProviders
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -896,7 +903,7 @@ private fun HomeBottomSearchArea(
                 .height(HomeHandleLayout.reservedDp(DockPosition.BOTTOM, axis, pageCount, dots).dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (!hidden) {
+        FadingHandle(hidden = hidden, reducedMotion = reducedMotion) {
             HomeHandlePill(
                 pageCount = pageCount,
                 selectedPageIndex = selectedPageIndex,
@@ -944,7 +951,7 @@ private fun HomeHandleStrip(
                 .testTag(HOME_HANDLE_STRIP_TEST_TAG),
         contentAlignment = Alignment.Center,
     ) {
-        if (!hidden) {
+        FadingHandle(hidden = hidden, reducedMotion = reducedMotion) {
             HomeHandlePill(
                 pageCount = pageCount,
                 selectedPageIndex = selectedPageIndex,
@@ -1183,3 +1190,38 @@ internal fun widgetPickerDropTarget(
         dockBounds?.contains(position) == true -> WidgetAddTarget.DOCK
         else -> null
     }
+
+/**
+ * The page handle going and coming with the Stream (unfolded, where it is hidden while the column stands): it fades on
+ * the Dock's own spring rather than popping in the frame the mode changes (a snap under reduced motion). It stays
+ * composed while it is still showing at all, and takes no touch once it has been asked to go. The fade is read where it
+ * is drawn.
+ */
+@Composable
+private fun FadingHandle(
+    hidden: Boolean,
+    reducedMotion: Boolean,
+    content: @Composable () -> Unit,
+) {
+    val fade = remember { Animatable(if (hidden) 0f else 1f) }
+    var composed by remember { mutableStateOf(!hidden) }
+    if (!hidden) composed = true
+    val tuning = LocalDockMotionTuning.current
+    LaunchedEffect(hidden, reducedMotion) {
+        if (hidden) {
+            fade.animateTo(0f, RiffleMotion.smooth(tuning, reducedMotion, visibilityThreshold = 0.001f))
+            composed = false
+        } else {
+            composed = true
+            fade.animateTo(1f, RiffleMotion.smooth(tuning, reducedMotion, visibilityThreshold = 0.001f))
+        }
+    }
+    if (composed) {
+        Box(
+            modifier =
+                Modifier
+                    .graphicsLayer { alpha = fade.value }
+                    .then(if (hidden) Modifier.pointerInput(Unit) { detectTapGestures {} } else Modifier),
+        ) { content() }
+    }
+}

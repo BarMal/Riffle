@@ -102,7 +102,8 @@ class DockResizeMotionTest {
 
     private fun List<DockSample>.lengths(horizontal: Boolean) = map { it.length(horizontal) }
 
-    /** What every opening of the body must be: monotonic, no overshoot, eased, started promptly, about its middle. */
+    /** What every opening of the body must be: monotonic, no overshoot, eased, started promptly, anchored at its
+     * start. */
     private fun assertTheBodyExtends(
         samples: List<DockSample>,
         horizontal: Boolean,
@@ -122,14 +123,26 @@ class DockResizeMotionTest {
         )
         val started = lengths.indexOfFirst { it > home + 2f }
         assertTrue("it started late, at frame $started\n$log", started in 1..MAX_START_FRAME)
-        // Centred on its edge the whole time: the middle of the run does not move (a dip is across the run).
+        // The body grows away from the pinned run: its start edge stays where the Home mode's was until its end reaches
+        // the edge's room, and only then does it also grow back the other way (the Dock may be off-centre).
+        val homeStart = samples.first().start(horizontal)
+        val finalSample = samples.last()
+        val finalEnd = finalSample.start(horizontal) + finalSample.length(horizontal)
         samples.forEachIndexed { i, s ->
-            assertEquals(
-                "frame $i: the body's middle moved",
-                samples.first().centre(horizontal),
-                s.centre(horizontal),
-                2f,
-            )
+            val end = s.start(horizontal) + s.length(horizontal)
+            if (end < finalEnd - 2f) {
+                assertEquals(
+                    "frame $i: the body's start edge moved before its end had reached the room",
+                    homeStart,
+                    s.start(horizontal),
+                    2f,
+                )
+            }
+            assertTrue("frame $i: the start edge moved forward", s.start(horizontal) <= homeStart + 2f)
+        }
+        val starts = samples.map { it.start(horizontal) }
+        starts.zipWithNext().forEachIndexed { i, (a, b) ->
+            assertTrue("frame ${i + 1}: the start edge went back toward the pinned run ($a to $b)", b <= a + 1f)
         }
     }
 
@@ -218,6 +231,90 @@ class DockResizeMotionTest {
         val cells = samples.first().cells
         assertTrue("the grid is on screen", cells.isNotEmpty())
         samples.forEachIndexed { i, s -> assertEquals("frame $i: a cell of Home's grid moved", cells, s.cells) }
+    }
+
+    /** Every frame of the switch has the pinned run drawn: every icon placed, sized and drawn, content never blanked.
+     * */
+    private fun assertThePinnedRunIsDrawnOnEveryFrame(
+        samples: List<DockSample>,
+        horizontal: Boolean,
+    ) {
+        val count = samples.first().pins.size
+        assertTrue("the Dock has pinned icons", count > 0)
+        samples.forEachIndexed { i, s ->
+            assertEquals("frame $i: a pinned icon is missing", count, s.pins.size)
+            assertTrue("frame $i: the Dock's content is blanked (alpha ${s.contentAlpha})", s.contentAlpha > 0.99f)
+            s.pins.forEach { pin ->
+                assertTrue("frame $i: ${pin.tag} has no size ${pin.rect}", pin.rect.width > 1f && pin.rect.height > 1f)
+                assertTrue("frame $i: ${pin.tag} is not drawn (alpha ${pin.alpha})", (pin.alpha ?: 1f) > 0.02f)
+            }
+        }
+        println(
+            "DOCKFRAMES horizontal=$horizontal " +
+                samples.mapIndexed { i, s ->
+                    val pin = s.firstPin(horizontal)!!
+                    "$i: body=${s.body.left.toInt()},${s.body.top.toInt()},${s.body.right.toInt()}," +
+                        "${s.body.bottom.toInt()} pin=${pin.rect.left.toInt()},${pin.rect.top.toInt()}," +
+                        "${pin.rect.width.toInt()}x${pin.rect.height.toInt()} a=${pin.alpha}"
+                }.joinToString(" | "),
+        )
+    }
+
+    /** A pinned icon is one size with one gap before, during and after the switch. */
+    private fun assertThePinnedIconsKeepTheirSizeAndGap(
+        samples: List<DockSample>,
+        horizontal: Boolean,
+    ) {
+        fun sizeOf(s: DockSample) = s.firstPin(horizontal)!!.rect.let { if (horizontal) it.width else it.height }
+
+        fun gapOf(s: DockSample): Float {
+            val sorted = s.pins.sortedBy { if (horizontal) it.rect.left else it.rect.top }
+            return if (sorted.size < 2) {
+                0f
+            } else if (horizontal) {
+                sorted[1].rect.left - sorted[0].rect.right
+            } else {
+                sorted[1].rect.top - sorted[0].rect.bottom
+            }
+        }
+        samples.forEachIndexed { i, s ->
+            assertEquals("frame $i: a pinned icon changed size", sizeOf(samples.first()), sizeOf(s), 1f)
+            assertEquals("frame $i: the gap between pinned icons changed", gapOf(samples.first()), gapOf(s), 1f)
+        }
+    }
+
+    @Test
+    fun theBottomDocksPinnedRunIsDrawnOnEveryFrameOfOpeningAndClosingAtOneSizeAndGap() {
+        show(phone())
+        val opening = press(DockPosition.BOTTOM)
+        assertThePinnedRunIsDrawnOnEveryFrame(opening, horizontal = true)
+        assertThePinnedIconsKeepTheirSizeAndGap(opening, horizontal = true)
+    }
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
+    fun theRightDocksPinnedRunIsDrawnOnEveryFrameOfOpeningAtOneSizeAndGap() {
+        show(foldable())
+        val opening = press(DockPosition.RIGHT)
+        assertThePinnedRunIsDrawnOnEveryFrame(opening, horizontal = false)
+        assertThePinnedIconsKeepTheirSizeAndGap(opening, horizontal = false)
+    }
+
+    @Test
+    fun theBottomDocksPinnedRunIsDrawnOnEveryFrameOfClosingAtOneSizeAndGap() {
+        show(phone(), startShown = true)
+        val closing = press(DockPosition.BOTTOM, frames = CLOSING_FRAMES)
+        assertThePinnedRunIsDrawnOnEveryFrame(closing, horizontal = true)
+        assertThePinnedIconsKeepTheirSizeAndGap(closing, horizontal = true)
+    }
+
+    @Test
+    @Config(qualifiers = ScreenshotDevices.UNFOLDED_FOLDABLE)
+    fun theRightDocksPinnedRunIsDrawnOnEveryFrameOfClosingAtOneSizeAndGap() {
+        show(foldable(), startShown = true)
+        val closing = press(DockPosition.RIGHT, frames = CLOSING_FRAMES)
+        assertThePinnedRunIsDrawnOnEveryFrame(closing, horizontal = false)
+        assertThePinnedIconsKeepTheirSizeAndGap(closing, horizontal = false)
     }
 
     @Test
