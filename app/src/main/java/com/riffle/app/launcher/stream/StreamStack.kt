@@ -22,14 +22,17 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -83,9 +86,12 @@ import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamCardActions
 import com.riffle.core.domain.launcher.stream.StreamCardStackSpec
 import com.riffle.core.domain.launcher.stream.StreamContent
+import com.riffle.core.domain.launcher.stream.SwipeDismiss
 import com.riffle.core.domain.launcher.stream.TaskContent
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -179,18 +185,41 @@ internal fun StreamStack(
     stackKey: String,
     modifier: Modifier = Modifier,
 ) {
+    // A card the owner dismissed is out of the stack at once, so the next card comes forward and no hole is left while
+    // the app takes the notification away. If the app ignores the cancel (a messaging app re-posts it) the card comes
+    // back, once, after SwipeDismiss.RETURN_AFTER_MILLIS: it does not hide, return and hide again.
+    val dismissed = remember(stackKey) { mutableStateListOf<String>() }
+    val scope = rememberCoroutineScope()
+    // Only a swipe takes the card out at once (the Dismiss button and the accessibility action leave it to the app).
+    val hook: (String) -> Unit =
+        remember(stackKey) {
+            { id ->
+                if (id !in dismissed) {
+                    dismissed += id
+                    scope.launch {
+                        delay(SwipeDismiss.RETURN_AFTER_MILLIS)
+                        dismissed -= id
+                    }
+                }
+            }
+        }
+    val visible = entries.filter { it.id !in dismissed }
     // The width a card is drawn at decides how tall its text is, and so how tall the card is: known before anything
     // of the stack is composed.
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        StreamStackContent(
-            entries = entries,
-            env = env,
-            callbacks = callbacks,
-            groupKey = groupKey,
-            stackKey = stackKey,
-            cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth),
-            areaHeight = maxHeight,
-        )
+    if (visible.isNotEmpty()) {
+        CompositionLocalProvider(LocalSwipeDismissed provides hook) {
+            BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+                StreamStackContent(
+                    entries = visible,
+                    env = env,
+                    callbacks = callbacks,
+                    groupKey = groupKey,
+                    stackKey = stackKey,
+                    cardWidth = maxWidth.coerceAtMost(StackMaxCardWidth),
+                    areaHeight = maxHeight,
+                )
+            }
+        }
     }
 }
 
@@ -269,8 +298,8 @@ private fun StreamStackContent(
                 )
             }
         }
-    SideEffect { cards.publish(dockActions) }
-    DisposableEffect(cards) { onDispose { cards.publish(null) } }
+    SideEffect { cards.publish(stackKey, dockActions) }
+    DisposableEffect(cards, stackKey) { onDispose { cards.publish(stackKey, null) } }
     // A stack that comes to rest on another card with a card open (a drag, Next or Previous card, a tap on a strip):
     // that card is open in place, or, with nothing to open, the stack is at rest.
     LaunchedEffect(stackKey) {
@@ -290,6 +319,10 @@ private fun StreamStackContent(
         }
     }
     val close = { cards.dispatch(OpenCardEvent.CloseByTap) }
+    // The slots give way to the open card (hidden, the stack moved to its frame) only once the layer that draws it is
+    // there: a frame with the slot hidden and no card drawn is a blink, and a stack moved to a frame that has not been
+    // laid out is a stack at the top of the screen.
+    val drawnByLayer = layerActive.value && cards.layer != null
     val covers: (Int, Float) -> Boolean = { index, r ->
         layerActive.value && OpenCardBlend.openness(r) > 0f && index in overlayIndices.value
     }
@@ -307,7 +340,7 @@ private fun StreamStackContent(
             val dismissLabel = stringResource(R.string.stream_notification_dismiss)
             LoneCard(
                 Modifier,
-                hidden = layerActive.value,
+                hidden = drawnByLayer,
                 swipe = swipe,
                 canDismiss = only.swipeableNotification() != null,
                 dismissLabel = dismissLabel,
@@ -333,7 +366,7 @@ private fun StreamStackContent(
                 geometry = geometry,
                 cardWidth = cardWidth,
                 areaHeight = areaHeight,
-                openActive = layerActive.value,
+                openActive = drawnByLayer,
                 mover = mover,
                 covers = covers,
                 frameGeometry = frameGeometry,
@@ -446,8 +479,8 @@ private fun StreamStackContent(
                 )
             }
         }
-    SideEffect { cards.publishLayer(layer) }
-    DisposableEffect(cards) { onDispose { cards.publishLayer(null) } }
+    SideEffect { cards.publishLayer(stackKey, layer) }
+    DisposableEffect(cards, stackKey) { onDispose { cards.publishLayer(stackKey, null) } }
 }
 
 /** The indices of the cards around [position] (the two it lies between) that open in place, in order. */
@@ -610,6 +643,9 @@ private fun FocusedStack(
     val count = items.size
     val dockFan = LocalDockFan.current
     LaunchedEffect(count) { state.clampTo(count) }
+    // The stack is held to its cards in the very frame they change (a card dismissed, a conversation gone), not a frame
+    // later, so its position is never past the last card.
+    SideEffect { state.clampTo(count) }
     val goTo: (Int) -> Boolean = mover::goTo
     val step: (Boolean) -> Boolean = mover::step
     val latestOpenActive by rememberUpdatedState(openActive)

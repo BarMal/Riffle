@@ -1734,3 +1734,29 @@ motion policy; nothing draws with it now.
 **Not confirmed without a device:** how the sideways slide of the pinned icons reads on a real bottom Dock (it is the whole
 width, 79 dp), the match of the length's spring against the cards' fan (they share a tuning but are two springs; the frame
 tests show them starting together), and a Dock with a very long run of live apps.
+
+### Bugs from the owner's phone: the front card blinking out, and the stack at the top of the screen (A and B)
+
+Both came from the open card's overlay, and one commit fixes both.
+
+- **Cause (B, and half of A).** Every stack on screen publishes the open card's layer (`OpenCardHolder.publishLayer`) and the
+  Dock's actions (`publish`) in a `SideEffect` on every composition, with null when it has no card open. Two stacks are composed
+  while pages are swiped or one is going out, and the one with nothing open erased the layer of the one that had a card
+  (last writer wins). The stack still believed a card was open (`layerActive`), so its front slot stayed hidden (the hole above the
+  Dock: the front card "blinking out", strips left standing) and the stack was shifted to the open card's frame by
+  `frameGeometry.topPx`, which had not been laid out for lack of a layer (0): the stack was drawn with its front card at the top of
+  the screen under the status bar. Fix: a stack takes back only what it published (`PublishOwner`, tested); the slots give way to
+  the open card, and the stack shifts, only once the layer exists (`drawnByLayer`), which also removes a one-frame hole when a
+  card opens (a test fails on it); and the stack's position is held to its cards in the very frame they change.
+- **Cause (A, the other half).** A swiped card flew off and stayed off screen for two seconds waiting for the app to remove the
+  notification; an app that re-posts it brought it back, and each swipe left a hole. A swiped card is now out of the stack at once
+  (the next card comes forward) and, if the notification is still there after two seconds, comes back once. The Dismiss button and
+  the accessibility action are unchanged (the card stays until the app answers).
+- **Candidates checked and not the cause:** round 6's per-card heights (a re-post re-measures a card, never re-keys it: the id is the
+  notification's key), the keyboard's inset (the strips are simply hidden and returned), the position past the end after a
+  dismissal (already clamped in an effect, now in the same frame too).
+- **Tests.** `StreamFrontCardStaysTest` (every frame: the front card or the open card is drawn and stands on the Dock) re-posting at
+  rest, while open, while closing, after an ignored swipe, with the keyboard coming and going, dismissing down to the last card and
+  re-posting it; `PublishOwnerTest`. The ignored swipe and the opening frame fail without the fix. The test of the two-stacks
+  clobber itself is the unit test of `PublishOwner`: two composed stacks were not reproduced through the pager here.
+- **Not confirmed without a device:** that the owner's recording is this cause and not another.

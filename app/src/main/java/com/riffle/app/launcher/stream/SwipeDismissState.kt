@@ -177,6 +177,7 @@ internal fun rememberSwipeDismissState(
     val latestReduced by rememberUpdatedState(reducedMotion)
     val latestContent by rememberUpdatedState(content)
     val latestTuning by rememberUpdatedState(LocalDockMotionTuning.current)
+    val swiped by rememberUpdatedState(LocalSwipeDismissed.current)
     val latestFront by rememberUpdatedState(isFront)
     val offered = content != null && SwipeDismiss.offers(content)
     return remember(offered, resists, density) {
@@ -191,6 +192,8 @@ internal fun rememberSwipeDismissState(
                 dismissible = { offered && latestFront },
             ) {
                 haptics.perform(LauncherHapticEvent.DETENT)
+                // The stack takes the card out at once (the next card comes forward), then the app is asked.
+                latestContent?.let { swiped(it.id.value) }
                 latestContent?.let { latestCallbacks.onAction(it, StreamAction.Dismiss) }
             }
         }
@@ -275,3 +278,6 @@ internal fun Modifier.swipeToDismiss(state: SwipeDismissState?): Modifier =
 /** The notification [this] entry draws as a card that can be swiped away, or null. */
 internal fun StackEntry.swipeableNotification(): NotificationContent? =
     (openContent as? NotificationContent)?.takeIf { this is ContentEntry && SwipeDismiss.offers(it) }
+
+/** Told the id of a card the owner has just swiped away: the stack takes it out at once (see [StreamStack]). */
+internal val LocalSwipeDismissed = androidx.compose.runtime.staticCompositionLocalOf<(String) -> Unit> { {} }
