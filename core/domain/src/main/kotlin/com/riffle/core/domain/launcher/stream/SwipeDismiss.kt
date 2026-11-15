@@ -114,6 +114,16 @@ object SwipeDismiss {
         return ((abs(offsetPx) / widthPx - DISTANCE_FRACTION) / CUE_RAMP).coerceIn(0f, 1f)
     }
 
+    /**
+     * The opacity of the cue a card that resists draws in the room it uncovers ("Ongoing", "Can't dismiss"): it comes in
+     * with the rubber band's own travel, nothing at rest and full once the card has given [RESIST_MAX_DP] (it never
+     * gives more, so the cue is the same for every kind of card that resists).
+     */
+    fun resistCueAlpha(
+        offsetPx: Float,
+        density: Float,
+    ): Float = if (density <= 0f) 0f else (abs(offsetPx) / (RESIST_MAX_DP * density)).coerceIn(0f, 1f)
+
     /** A dismissing card lifts to this scale. */
     const val LIFT_SCALE = 1.02f
 

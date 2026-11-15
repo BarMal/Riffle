@@ -199,4 +199,27 @@ class SwipeDismissTest {
         assertEquals(-width * SwipeDismiss.FLY_OFF_WIDTHS, SwipeDismiss.flyOffTarget(-120f, 900f, width), eps)
         assertEquals(-width * SwipeDismiss.FLY_OFF_WIDTHS, SwipeDismiss.flyOffTarget(0f, -900f, width), eps)
     }
+
+    @Test
+    fun theCueOfACardThatResistsComesInWithTheRubberBandAndIsFullAtItsFarthest() {
+        val density = 2.5f
+        assertEquals(0f, SwipeDismiss.resistCueAlpha(0f, density))
+        val half = SwipeDismiss.resistCueAlpha(SwipeDismiss.RESIST_MAX_DP * density / 2f, density)
+        assertEquals(0.5f, half, 0.001f)
+        // However far the finger goes the card gives at most the one distance, so the cue is full and no more.
+        val far = SwipeDismiss.resist(10_000f, density)
+        assertEquals(1f, SwipeDismiss.resistCueAlpha(far, density), 0.01f)
+        assertEquals(1f, SwipeDismiss.resistCueAlpha(-far, density), 0.01f)
+        assertEquals(0f, SwipeDismiss.resistCueAlpha(5f, 0f))
+    }
+
+    @Test
+    fun everyCardThatResistsGivesTheSameDistanceWhateverItsKind() {
+        // One rule for the rubber band (it takes no content): the same travel gives the same offset for every card.
+        val density = 3f
+        listOf(40f, 400f, 4_000f).forEach { raw ->
+            assertEquals(SwipeDismiss.resist(raw, density), -SwipeDismiss.resist(-raw, density), 0.0001f)
+            assertTrue(SwipeDismiss.resist(raw, density) <= SwipeDismiss.RESIST_MAX_DP * density)
+        }
+    }
 }

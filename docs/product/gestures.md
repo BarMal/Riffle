@@ -161,7 +161,11 @@ the Dock's accessibility actions.
   row) is the primary route, and "Previous page" and "Next page" are the accessibility routes. They also look and feel
   different: a dismissing card alone moves, lifts to 1.02, fades as it travels and shows the word "Dismiss" in the room
   it leaves once past the threshold (one light tick on dismissal); a page change moves the whole stack as one sheet,
-  with the Dock's ring, fades nothing and has no tick. A stack with one card draws no stack (a lone card is drawn where the front card
+  with the Dock's ring, fades nothing and has no tick. **A card that resists says why** (`SwipeDismiss.resistCueAlpha`,
+  `swipeCue`): in the room it uncovers, in the same place, size and type as the "Dismiss" cue, a small lock and "Ongoing"
+  (a notification that cannot be cleared) or "Can't dismiss" (any other card in front: a recent app, an event, a task, the
+  quiet "Nothing new" card), fading in with the rubber band's travel (one constant for every kind, 12 dp) and gone when the
+  card settles; a strip says nothing, and there is no haptic. A stack with one card draws no stack (a lone card is drawn where the front card
   is, and owns no drag). Nothing in the Stream consumes a vertical drag the stack leaves over, so the stack takes all of
   it: past the first or last card it rubber-bands (a third of the finger's travel, back along the same path) instead of
   handing the drag on. The Dock pull is claimed on the dock body only, so it never competes with either.
