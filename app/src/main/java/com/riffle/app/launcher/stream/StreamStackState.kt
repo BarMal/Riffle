@@ -35,6 +35,16 @@ internal class StreamStackState {
     var settled by mutableIntStateOf(0)
         private set
 
+    /** The card the last tick was for: a tick plays as the stack crosses onto another card, once per card. */
+    private var ticked: Int = 0
+
+    /** True once, when the stack has crossed onto a card it has not ticked for (see [StackSettle.crossing]). */
+    fun takeCrossing(count: Int = Int.MAX_VALUE): Boolean {
+        val crossed = StackSettle.crossing(ticked, position, count) ?: return false
+        ticked = crossed
+        return true
+    }
+
     /** The card the stack is moving to, so Next and Previous step on from where a running move is heading. */
     var heading: Int = 0
         private set
@@ -49,6 +59,7 @@ internal class StreamStackState {
         if (position > last) position = last.toFloat()
         if (settled > last) settled = last
         if (heading > last) heading = last
+        if (ticked > last) ticked = last
     }
 
     /** The finger moved by [deltaDp] (positive: down); [slopDp] is credited once at the start of a drag. */
@@ -120,6 +131,7 @@ internal class StreamStackState {
             state = StackSpring.advance(state, target, (now - last) / NANOS_PER_SECOND, tuning)
             last = now
             position = state.position
+            if (takeCrossing()) onTick()
         }
         rest(target, onTick)
     }
@@ -128,6 +140,7 @@ internal class StreamStackState {
     fun snapTo(target: Int) {
         position = StackSettle.restPosition(target)
         heading = target
+        ticked = target
     }
 
     /** Reduced motion: no coast, spring or magnet; the nearest card at once and a short fade. */
@@ -155,7 +168,9 @@ internal class StreamStackState {
         onTick: () -> Unit,
     ) {
         position = StackSettle.restPosition(target)
-        val tick = StackSettle.shouldTick(startedOn = settled, settledOn = target)
+        // The crossing ticked already on the way here; this is for an arrival that crossed nothing (a jump).
+        val tick = StackSettle.shouldTick(startedOn = ticked, settledOn = target)
+        ticked = target
         settled = target
         heading = target
         inMotion = false
