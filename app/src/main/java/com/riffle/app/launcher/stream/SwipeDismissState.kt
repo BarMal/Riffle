@@ -256,8 +256,8 @@ internal val ResistCueAlphaKey = SemanticsPropertyKey<Float>("ResistCueAlpha")
 internal val ResistCueLabelKey = SemanticsPropertyKey<String>("ResistCueLabel")
 
 /**
- * The words a card says when it resists a sideways drag, or null when it says nothing: a card that can be dismissed, or a
- * strip (a card that is not in front). "Ongoing" for a notification that cannot be cleared, "Can't dismiss" for any
+ * The words a card says when it resists a sideways drag, or null when it says nothing: a card that can be dismissed, or
+ * a strip (a card that is not in front). "Ongoing" for a notification that cannot be cleared, "Can't dismiss" for any
  * other card.
  */
 @Composable

@@ -13,6 +13,7 @@ import kotlin.math.sign
  * of card) the card resists, a short rubber band ([resist]) with no fade, and settles back. Only a drag that starts in
  * the page's empty room, outside every card, changes the stack (the pager's); the Dock is the primary route.
  */
+@Suppress("TooManyFunctions")
 object SwipeDismiss {
     /** A release past this share of the card's width dismisses, however slowly. */
     const val DISTANCE_FRACTION = 0.4f
@@ -115,9 +116,9 @@ object SwipeDismiss {
     }
 
     /**
-     * The opacity of the cue a card that resists draws in the room it uncovers ("Ongoing", "Can't dismiss"): it comes in
-     * with the rubber band's own travel, nothing at rest and full once the card has given [RESIST_MAX_DP] (it never
-     * gives more, so the cue is the same for every kind of card that resists).
+     * The opacity of the cue a card that resists draws in the room it uncovers ("Ongoing", "Can't dismiss"): it
+     * comes in with the rubber band's own travel, nothing at rest and full once the card has given [RESIST_MAX_DP]
+     * (it never gives more, so the cue is the same for every kind of card that resists).
      */
     fun resistCueAlpha(
         offsetPx: Float,

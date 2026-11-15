@@ -535,6 +535,7 @@ internal const val STREAM_OPEN_CARD_TEST_TAG = "stream-open-card"
  * [hidden] while it is open: the open card is drawn over its place.
  */
 @Composable
+@Suppress("LongParameterList")
 private fun LoneCard(
     tag: String,
     /** The words the card says when it resists a sideways drag; null for a card that can be dismissed. */
@@ -812,7 +813,7 @@ private fun StackSlot(
     onBringToFront: () -> Unit,
     /** The card's sideways drag: it dismisses the front card of a dismissible notification, else it resists. */
     swipe: SwipeDismissState?,
-    /** What the front card says when it resists ("Ongoing", "Can't dismiss"); null for a strip or a dismissible card. */
+    /** What the front card says when it resists ("Ongoing", "Can't dismiss"); null for a strip or a dismissible one. */
     resistLabel: String?,
     /** Whether the card is a notification that offers Dismiss (its custom action, and the cue). */
     canDismiss: Boolean,
