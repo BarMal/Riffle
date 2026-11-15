@@ -177,6 +177,16 @@ enum class SettingKey(
         R.string.setting_stream_section_now,
         R.string.setting_stream_section_now_keywords,
     ),
+    NOW_RECENT_PLAYERS(
+        SettingsPage.STREAM,
+        R.string.setting_now_recent_players,
+        R.string.setting_now_recent_players_keywords,
+    ),
+    NOW_CLEAR_RECENT_PLAYERS(
+        SettingsPage.STREAM,
+        R.string.setting_now_clear_recent_players,
+        R.string.setting_now_clear_recent_players_keywords,
+    ),
     STREAM_SECTION_NOTIFICATIONS(
         SettingsPage.STREAM,
         R.string.setting_stream_section_notifications,

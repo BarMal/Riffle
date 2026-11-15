@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.stream.EventKind
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.RecentAppContent
+import com.riffle.core.domain.launcher.stream.RecentPlayer
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
@@ -49,6 +50,10 @@ internal class AndroidStreamActionGateway(
     private val launch: ItemLaunchPort,
     private val openClock: () -> Boolean,
     private val tasks: TaskActions? = null,
+    /** Resumes a recent player that has no session ([MediaResumer.NONE]: every one is opened instead). */
+    private val resumer: MediaResumer = MediaResumer.NONE,
+    /** Forgets a recent player the user dismissed; null where there is none. */
+    private val recentPlayers: RecentPlayersControl? = null,
 ) : StreamActionGateway {
     override fun perform(
         content: StreamContent,
@@ -106,10 +111,36 @@ internal class AndroidStreamActionGateway(
         }
     }
 
+    /**
+     * A recent player: Play resumes it through its media browser service and opens the app when that does not work in
+     * time; Open opens it; Dismiss forgets it.
+     */
+    private fun mediaSource(
+        content: MediaContent,
+        action: StreamAction,
+    ): StreamActionResult {
+        val packageName = content.app.packageName
+        return when (action) {
+            StreamAction.Play ->
+                if (resumer.resume(packageName) == StreamActionResult.Performed) {
+                    StreamActionResult.Performed
+                } else {
+                    launch.launchPackage(packageName).result()
+                }
+            StreamAction.Dismiss -> {
+                val control = recentPlayers ?: return StreamActionResult.Unavailable
+                control.dismiss(RecentPlayer.keyOf(packageName, content.app.profileId))
+                StreamActionResult.Performed
+            }
+            else -> launch.launchPackage(packageName).result()
+        }
+    }
+
     private fun mediaAction(
         content: MediaContent,
         action: StreamAction,
     ): StreamActionResult {
+        if (content.source) return mediaSource(content, action)
         val result = media.perform(content.app.packageName, action)
         return if (action == StreamAction.Open && result != StreamActionResult.Performed) {
             launch.launchPackage(content.app.packageName).result()

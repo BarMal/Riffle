@@ -46,7 +46,7 @@ class StreamLayoutCodecTest {
                     ),
                 options =
                     StreamSectionOptions(
-                        now = NowOptions(maxMedia = 2, showNextEvent = false, showAlarm = false),
+                        now = NowOptions(maxActive = 2, recentPlayers = false),
                         notifications = NotificationsOptions(maxApps = 3, maxPerApp = 2, maxAgeMillis = 3_600_000L),
                         recents = RecentsOptions(limit = 5, maxAgeMillis = 86_400_000L, frequentLimit = 0),
                         agenda = AgendaOptions(daysAhead = 3, maxEvents = 8, includeCalendarFeeds = false),
@@ -164,6 +164,27 @@ class StreamLayoutCodecTest {
         assertEquals(AgendaOptions().maxEvents, layout.options.agenda.maxEvents)
         assertEquals(FeedsOptions(maxFeeds = 2, perFeed = 7), layout.options.feeds)
         assertEquals(NowOptions(), layout.options.now)
+    }
+
+    @Test
+    fun aLayoutStoredBeforeNowWasMediaOnlyStillDecodesAndIgnoresTheRetiredKeys() {
+        val options =
+            obj(
+                "now" to
+                    obj(
+                        "maxMedia" to StoredValue.Num(1),
+                        "showNextEvent" to StoredValue.Bool(false),
+                        "showAlarm" to StoredValue.Bool(false),
+                    ),
+                "feeds" to obj("maxFeeds" to StoredValue.Num(2), "perFeed" to StoredValue.Num(7)),
+            )
+        val layout =
+            assertNotNull(
+                StreamLayoutCodec.decode(root(posture("PHONE", emptyList(), options))),
+            ).forPosture(HomeLayoutDeviceClass.PHONE)
+        assertEquals(NowOptions(), layout.options.now)
+        assertEquals(FeedsOptions(maxFeeds = 2, perFeed = 7), layout.options.feeds)
+        assertEquals(StreamSection.layoutSections, layout.sections.map { it.section })
     }
 
     private fun decodeOrder(vararg sections: StoredValue): StreamLayout =

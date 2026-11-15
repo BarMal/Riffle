@@ -77,7 +77,11 @@ class StreamFanTest {
     @Test
     fun theCardsOfAStackFanInSequenceFromTheFront() {
         val fan = RecordingFan(p = 0.6f)
-        show(fan, initialPageKey = StreamPagePlanner.keyOf(StreamSection.NOW))
+        // Now is media only: a player and two recent players are the three cards (it used to be media, event, alarm).
+        val results =
+            StreamSection.layoutSections.associateWith { StreamFixtures.ready(it) } +
+                (StreamSection.NOW to MediaCentreFixtures.playingAndTwoRecent)
+        show(fan, results = results, initialPageKey = StreamPagePlanner.keyOf(StreamSection.NOW))
         assertEquals("the focused card and the two behind it fan, in rank order", setOf(0, 1, 2), fan.ranks)
     }
 

@@ -45,8 +45,11 @@ enum class StreamSection(
     val readsTasks: Boolean = false,
     val readsAlarm: Boolean = false,
 ) {
-    /** Media with its queue, the next event and the next alarm. */
-    NOW("now", listOf(SourceIds.MEDIA, SourceIds.CALENDAR, SourceIds.ICS), readsAlarm = true),
+    /**
+     * Now playing: media only (ADR 0003, Amendment 5). The active sessions with their queue, then the recent players
+     * that have no session. The next event and the alarm are on [TODAY].
+     */
+    NOW("now", listOf(SourceIds.MEDIA)),
 
     NOTIFICATIONS("notifications", listOf(SourceIds.NOTIFICATIONS)),
 
@@ -54,10 +57,10 @@ enum class StreamSection(
 
     /**
      * Today: the next event with its countdown, a "To do today" checklist, later events and a summary of tomorrow
-     * (one page where Agenda and Tasks were two). It reads the device calendar and calendar feeds (by day) and the
-     * tasks.
+     * (one page where Agenda and Tasks were two). It reads the device calendar and calendar feeds (by day), the next
+     * alarm (which follows the next event) and the tasks.
      */
-    TODAY("today", listOf(StreamSourceIds.AGENDA, SourceIds.ICS), readsTasks = true),
+    TODAY("today", listOf(StreamSourceIds.AGENDA, SourceIds.ICS), readsTasks = true, readsAlarm = true),
 
     FEEDS("feeds", listOf(SourceIds.RSS)),
 

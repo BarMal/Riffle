@@ -2,6 +2,7 @@
 
 package com.riffle.app.launcher
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -34,6 +36,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsText
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
+import com.riffle.app.launcher.stream.RecentPlayersControl
 import com.riffle.app.launcher.stream.titleRes
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.app.launcher.stream.todoist.TasksSettingsState
@@ -44,6 +47,8 @@ import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamView
 import com.riffle.core.domain.launcher.stream.TaskConnectionState
 import com.riffle.core.domain.launcher.workspace.SourceIds
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * The Stream's layouts, which Settings edits through the very same repository the Stream's own menus write to (one
@@ -137,12 +142,7 @@ internal fun SettingsStreamSections(
             SettingsSwitchRow(
                 modifier = Modifier.testTag(streamSectionTestTag(section)),
                 title = stringResource(R.string.stream_show_hidden_section, name),
-                subtitle =
-                    if (entry.enabled) {
-                        stringResource(R.string.settings_stream_section_on)
-                    } else {
-                        stringResource(R.string.settings_stream_section_off)
-                    },
+                subtitle = stringResource(sectionSwitchSubtitle(section, entry.enabled)),
                 checked = entry.enabled,
                 onCheckedChange = { enabled -> onLayoutAction(StreamLayoutAction.SetEnabled(section, enabled)) },
             )
@@ -180,6 +180,7 @@ internal fun SettingsStreamSections(
                     stringResource(R.string.settings_stream_show_as_option, name, stringResource(view.titleRes()))
                 },
             )
+            if (section == StreamSection.NOW) NowRecentPlayersRows(layout, onLayoutAction)
             section.settingsPages().forEach { page ->
                 SettingsClickableRow(
                     title = stringResource(page.titleRes),
@@ -190,6 +191,59 @@ internal fun SettingsStreamSections(
         }
     }
 }
+
+/** What a section's switch says: Now says what it holds ("Now playing and your recent players") while on. */
+@StringRes
+private fun sectionSwitchSubtitle(
+    section: StreamSection,
+    enabled: Boolean,
+): Int =
+    when {
+        !enabled -> R.string.settings_stream_section_off
+        section == StreamSection.NOW -> R.string.settings_stream_now_on
+        else -> R.string.settings_stream_section_on
+    }
+
+/**
+ * Now's two settings: whether the recent players stay in it as source cards (a Stream option, stored with the layout)
+ * and clearing the list they are remembered in. Off keeps Now to the active sessions and the empty card.
+ */
+@Composable
+private fun NowRecentPlayersRows(
+    layout: StreamLayout,
+    onLayoutAction: (StreamLayoutAction) -> Unit,
+) {
+    val control = LocalRecentPlayers.current
+    val scope = rememberCoroutineScope()
+    SettingsSwitchRow(
+        modifier = Modifier.settingAnchor(SettingKey.NOW_RECENT_PLAYERS).testTag(NOW_RECENT_PLAYERS_TEST_TAG),
+        title = SettingKey.NOW_RECENT_PLAYERS.label(),
+        subtitle = stringResource(R.string.settings_now_recent_players_subtitle),
+        checked = layout.options.now.recentPlayers,
+        onCheckedChange = { shown ->
+            onLayoutAction(
+                StreamLayoutAction.SetOptions(
+                    layout.options.copy(now = layout.options.now.copy(recentPlayers = shown)),
+                ),
+            )
+        },
+    )
+    SettingsClickableRow(
+        modifier =
+            Modifier
+                .settingAnchor(SettingKey.NOW_CLEAR_RECENT_PLAYERS)
+                .testTag(NOW_CLEAR_RECENT_PLAYERS_TEST_TAG),
+        title = SettingKey.NOW_CLEAR_RECENT_PLAYERS.label(),
+        subtitle = stringResource(R.string.settings_now_clear_recent_players_subtitle),
+        onClick = { control?.let { scope.launch(Dispatchers.Default) { it.clear() } } },
+        trailingContent = {
+            SettingsButtonText(text = stringResource(R.string.settings_now_clear_recent_players_action))
+        },
+    )
+}
+
+internal const val NOW_RECENT_PLAYERS_TEST_TAG = "settings-now-recent-players"
+internal const val NOW_CLEAR_RECENT_PLAYERS_TEST_TAG = "settings-now-clear-recent-players"
 
 @Composable
 private fun MoveButton(
@@ -282,6 +336,9 @@ private fun AgendaIncludeFeedsSetting(state: SettingsSurfaceState) {
 
 /** The Tasks settings (the Todoist token), provided by the shell; null where there is none (previews). */
 internal val LocalTasksSettings = staticCompositionLocalOf<TasksSettingsController?> { null }
+
+/** The recent players Now remembers (Clear recent players), provided by the shell; null where there are none. */
+internal val LocalRecentPlayers = staticCompositionLocalOf<RecentPlayersControl?> { null }
 
 internal const val TASKS_TOKEN_FIELD_TEST_TAG = "settings-tasks-token"
 internal const val TASKS_SAVE_TEST_TAG = "settings-tasks-save"

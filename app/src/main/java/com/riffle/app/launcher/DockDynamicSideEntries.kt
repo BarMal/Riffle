@@ -190,8 +190,7 @@ internal fun DockDynamicSideEntry.toDockEntry(
     when (this) {
         is DockDynamicSideEntry.LiveApp ->
             liveAppEntry(installedApps.appFor(packageName, profileId), resources, appShortcuts)
-        is DockDynamicSideEntry.NowPlaying ->
-            nowPlayingEntry(installedApps.appFor(packageName, profileId), resources, appShortcuts)
+        is DockDynamicSideEntry.NowPlaying -> nowTileEntry(resources)
         is DockDynamicSideEntry.ContextTile -> contextTileEntry(resources)
     }.inMode(streamShown, selected, pageMenu, resources)
 
@@ -227,27 +226,6 @@ private fun DockDynamicSideEntry.LiveApp.liveAppEntry(
     ).withAppActions(name, app, resources, appShortcuts)
 }
 
-/** Now playing: a tap opens the player app, the swipe up shows the Now page. */
-private fun DockDynamicSideEntry.NowPlaying.nowPlayingEntry(
-    app: InstalledApp?,
-    resources: android.content.res.Resources,
-    appShortcuts: AppShortcutsByApp,
-): DockDynamicEntry {
-    val playerName = app?.label ?: appLabel
-    return DockDynamicEntry(
-        key = key,
-        label = playerName ?: resources.getString(R.string.dock_now_playing_label),
-        identity = app?.identity,
-        badgeCount = 0,
-        isSelected = false,
-        contentDescription =
-            title?.let { resources.getString(R.string.dock_now_playing_titled_label, it) }
-                ?: resources.getString(R.string.dock_now_playing_label),
-        intent = app.tapIntent(),
-        symbol = DockDynamicSymbol.NowPlaying,
-    ).withAppActions(playerName, app, resources, appShortcuts)
-}
-
 /** What an app entry adds: the spoken click and "Show in Stream" labels, and the long-press menu. */
 private fun DockDynamicEntry.withAppActions(
     name: String?,
@@ -263,7 +241,7 @@ private fun DockDynamicEntry.withAppActions(
     )
 
 /**
- * The long-press menu of a live app (or the playing app), under "Open in Stream": the app's own shortcuts, App info and
+ * The long-press menu of a live app, under "Open in Stream": the app's own shortcuts, App info and
  * Hide, the items every other place an app is listed offers (no Uninstall or dock edits: the entry is not pinned).
  */
 internal fun liveAppMenuItems(

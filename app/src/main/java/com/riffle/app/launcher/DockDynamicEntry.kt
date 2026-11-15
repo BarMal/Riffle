@@ -8,10 +8,11 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
  * says what showing it in the Stream means ([showInStreamLabel]): a press that starts on it, a long-press item, an
  * accessibility action and Shift+Enter all do that.
  *
- * The dynamic side lists live apps and now playing, and in the contextual mode a tile for each Stream page that is not
- * an app (ADR 0003, Amendment 3), so the entry carries its own intent rather than the section inferring one from a
- * shared entry type. That keeps the section itself free of any notion of the Stream or launching: it lays out entries,
- * marks the selected one, and reports taps (Decision 2 in docs/product/modes-dock-handle-and-cards-plan.md).
+ * The dynamic side lists live apps and the Now tile while media plays, and in the contextual mode a tile for each
+ * Stream page that is not an app (ADR 0003, Amendment 3), so the entry carries its own intent rather than the
+ * section inferring one from a shared entry type. That keeps the section itself free of any notion of the Stream or
+ * launching: it lays out entries, marks the selected one, and reports taps (Decision 2 in
+ * docs/product/modes-dock-handle-and-cards-plan.md).
  */
 internal data class DockDynamicEntry(
     val key: String,
@@ -43,11 +44,12 @@ internal data class DockDynamicEntry(
 
 /** A mark the dock draws itself on a dynamic entry. */
 internal sealed interface DockDynamicSymbol {
-    /** Now playing: a small play mark in the corner of the playing app's icon. */
-    data object NowPlaying : DockDynamicSymbol
-
-    /** A contextual tile (Now, Agenda, Recents, ...): the section's [glyph], drawn in place of an app icon. */
-    data class Glyph(val glyph: ImageVector) : DockDynamicSymbol
+    /**
+     * A contextual tile (Now, Agenda, Recents, ...): the section's [glyph], drawn in place of an app icon. [playing]
+     * marks the Now tile while something plays (the play mark in its corner; the glyph stays the tile's face, which
+     * stays legible at tile size where an artwork would not).
+     */
+    data class Glyph(val glyph: ImageVector, val playing: Boolean = false) : DockDynamicSymbol
 }
 
 /**

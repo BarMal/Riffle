@@ -53,7 +53,8 @@ object StreamCardActions {
      */
     fun opensInPlace(content: StreamContent): Boolean =
         when (content) {
-            is NotificationContent, is MediaContent, is EventContent, is TaskContent -> true
+            is MediaContent -> !content.source
+            is NotificationContent, is EventContent, is TaskContent -> true
             is ArticleContent, is RecentAppContent, is AppShortcutContent -> false
         }
 
@@ -67,7 +68,7 @@ object StreamCardActions {
     ): List<CardAction> =
         when (content) {
             is NotificationContent -> notification(content)
-            is MediaContent -> media(content, queueShown)
+            is MediaContent -> if (content.source) emptyList() else media(content, queueShown)
             is EventContent ->
                 listOfNotNull(
                     CardAction.OpenEvent(content.kind).takeIf { StreamActionPolicy.offers(content, StreamAction.Open) },

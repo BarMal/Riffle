@@ -629,7 +629,12 @@ class StreamBehaviorTest {
 
     @Test
     fun tomorrowSummarisesTheDayAfterAndOpensItsFirstEvent() {
-        show(initialPageKey = "today")
+        // Today without the alarm card, so the summary is within the cards a stack draws (it is the fifth with it).
+        val withoutAlarm =
+            StreamFixtures.ready(StreamSection.TODAY).let { ready ->
+                ready.copy(groups = ready.groups.filter { it.key != StreamGroupKeys.ALARM })
+            }
+        show(defaultResults() + (StreamSection.TODAY to withoutAlarm), initialPageKey = "today")
         composeRule.onNodeWithTag(streamStackCardTag("today:tomorrow")).performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("1 event").assertIsDisplayed()

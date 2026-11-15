@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.sources
 
+import com.riffle.app.launcher.stream.MediaResumer
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
@@ -16,6 +17,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.stream.CustomNotificationContent
 import com.riffle.core.domain.launcher.stream.NotificationOwnAction
+import com.riffle.core.domain.launcher.stream.RecentPlayersTracker
 import com.riffle.core.domain.launcher.workspace.Item
 import com.riffle.core.domain.launcher.workspace.ItemSource
 import com.riffle.core.domain.launcher.workspace.SourceCapability
@@ -75,6 +77,8 @@ internal class AppSourceDependencies(
     val recentAppsAccess: () -> SourceAccess,
     /** Package, profile and shortcut changes. [SourceChangeSource.NONE] until the platform observer is wired. */
     val changes: SourceChangeSource = SourceChangeSource.NONE,
+    /** Names a package the installed-apps snapshot omits (no launcher entry); asked per notification, cached. */
+    val packageLabels: PackageLabelResolver = PackageLabelResolver.NONE,
 )
 
 /** What the media source reads beyond the media notifications: the active media sessions. */
@@ -82,6 +86,10 @@ internal class MediaSourceDependencies(
     val sessions: MediaSessionReader,
     /** Session changes (a player starts, stops, pauses or changes track); [SourceChangeSource.NONE] when unobserved. */
     val changes: SourceChangeSource = SourceChangeSource.NONE,
+    /** The recent players that follow the sessions as quiet source cards; null: none are remembered or shown. */
+    val recentPlayers: RecentPlayersTracker? = null,
+    /** Whether an app can be resumed from a source card (Play) or is only opened. */
+    val resumer: MediaResumer = MediaResumer.NONE,
 ) {
     companion object {
         val NONE = MediaSourceDependencies(sessions = { emptyList() })
@@ -227,7 +235,9 @@ private fun notificationsSource(deps: BuiltInSourceDependencies): SharedSourceSt
  */
 private fun mediaSource(deps: BuiltInSourceDependencies): SharedSourceStream =
     notificationStream(deps, SourceIds.MEDIA, emptySet(), deps.media.changes) { input ->
-        MediaSessionItems.enrich(NotificationItemMapper().mediaItems(input), deps.media.sessions.activeSessions())
+        val sessions = deps.media.sessions.activeSessions()
+        val items = MediaSessionItems.enrich(NotificationItemMapper().mediaItems(input), sessions)
+        items + recentPlayerItems(deps.media, deps.apps.installedApps, items, sessions)
     }
 
 private fun notificationStream(
@@ -251,7 +261,7 @@ private fun notificationStream(
                     nowEpochMillis = deps.nowEpochMillis(),
                     hideRules = notifications.hideRules(),
                     profileContentVisibility = snapshot?.profileContentVisibility.orEmpty(),
-                    appLabel = labels::get,
+                    appLabel = { pkg -> labels[pkg] ?: deps.apps.packageLabels.label(pkg.value) },
                     profileTypes = profileTypes,
                     canReply = notifications.canReply,
                     canSnooze = notifications.canSnooze,

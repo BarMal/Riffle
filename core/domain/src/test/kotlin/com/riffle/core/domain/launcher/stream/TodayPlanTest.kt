@@ -84,6 +84,7 @@ class TodayPlanTest {
     private fun TodayCard.name(): String =
         when (this) {
             is TodayCard.NextEvent -> "next:${event.title}"
+            is TodayCard.Alarm -> "alarm"
             is TodayCard.ToDo -> "todo:${tasks.size}"
             is TodayCard.LaterEvent -> "later:${event.title}"
             is TodayCard.Tomorrow -> "tomorrow:$eventCount/$taskCount"
@@ -111,6 +112,30 @@ class TodayPlanTest {
         assertEquals(
             listOf("next:standup", "todo:2", "later:lunch", "later:review", "tomorrow:1/0"),
             names(body),
+        )
+    }
+
+    @Test
+    fun theAlarmFollowsTheNextEventAndLeadsWhenThereIsNoEvent() {
+        val alarm =
+            event("alarm", startMinutesFromNow = 60).copy(
+                id = StreamContentId("alarm:a1"),
+                kind = EventKind.ALARM,
+                endEpochMillis = null,
+            )
+        val alarmGroup = StreamGroup(StreamGroupKeys.ALARM, null, listOf(alarm))
+        val withEvent = content(events = listOf(event("standup", 25), event("lunch", 120)), tasks = listOf(task("a")))
+        assertEquals(
+            listOf("next:standup", "alarm", "todo:1", "later:lunch"),
+            names(withEvent.copy(groups = withEvent.groups + alarmGroup)),
+        )
+        val alone = content(tasks = listOf(task("a")))
+        assertEquals(listOf("alarm", "todo:1"), names(alone.copy(groups = alone.groups + alarmGroup)))
+        // An alarm that has already gone off is not drawn.
+        val gone = alarm.copy(startEpochMillis = now - minute)
+        assertEquals(
+            listOf("todo:1"),
+            names(alone.copy(groups = alone.groups + StreamGroup(StreamGroupKeys.ALARM, null, listOf(gone)))),
         )
     }
 

@@ -31,7 +31,11 @@ data class NotificationItemInput(
     val nowEpochMillis: Long,
     val hideRules: List<NotificationHideRule> = emptyList(),
     val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),
-    /** Display name of an app, by package; the package name itself is used when this returns null. */
+    /**
+     * Display name of an app, by package: the installed apps' label, then what the platform says of a package that has
+     * no launcher entry. When this returns null the notification's own title names the app, and only when it has none
+     * the package name does (a redacted notification never lends its title).
+     */
     val appLabel: (AppPackageName) -> String? = { null },
     /** Profile types by id when known; the well-known ids (`personal`, `work`, `private`) resolve without it. */
     val profileTypes: Map<AppProfileId, AppProfileType> = emptyMap(),
@@ -98,7 +102,10 @@ class NotificationItemMapper(
         input: NotificationItemInput,
         redacted: Boolean,
     ): Item {
-        val appName = input.appLabel(packageName) ?: packageName.value
+        val appName =
+            input.appLabel(packageName)?.takeIf(String::isNotBlank)
+                ?: title.takeIf { !redacted && it.isNotBlank() }
+                ?: packageName.value
         val base =
             Item(
                 id = ItemId("${sourceId.value}:${profileId.value}:${key.value}"),

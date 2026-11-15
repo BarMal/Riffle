@@ -36,7 +36,7 @@
 
     <!-- Section states -->
     <string name="stream_loading">Loading</string>
-    <string name="stream_empty_now">Nothing is playing and nothing is coming up.</string>
+    <string name="stream_empty_now">Nothing playing</string>
     <string name="stream_empty_notifications">No notifications.</string>
     <string name="stream_empty_recents">No recent apps yet.</string>
     <string name="stream_empty_today">Nothing planned today. Enjoy the quiet.</string>
@@ -88,6 +88,12 @@
 
     <!-- Notifications -->
     <string name="stream_notification_dismiss">Dismiss</string>
+    <string name="stream_media_source_last_played">Last played %1$s</string>
+    <string name="stream_media_source_played_ago">%1$s, %2$s</string>
+    <string name="stream_media_source_play">Play</string>
+    <string name="stream_media_source_open">Open %1$s</string>
+    <string name="stream_media_source_spoken">%1$s, last played %2$s</string>
+    <string name="stream_media_source_spoken_unknown">%1$s, recent player</string>
     <string name="stream_notification_snooze">Snooze</string>
     <string name="stream_notification_reply">Reply</string>
     <string name="stream_notification_send">Send reply</string>
@@ -215,7 +221,7 @@
     </plurals>
     <string name="search_stack_shortcut">App shortcut</string>
 
-    <!-- The Dock's dynamic side: live apps, now playing and, in the contextual mode, a tile per Stream page (ADR 0003) -->
+    <!-- The Dock's dynamic side: live apps, the Now tile and, in the contextual mode, a tile per Stream page (ADR 0003) -->
     <string name="dock_live_app_slots_title">Live apps</string>
     <string name="dock_now_playing_label">Now playing</string>
     <string name="dock_now_playing_titled_label">Now playing: %1$s</string>
@@ -444,9 +450,9 @@
     <string name="setting_dock_grid_spacing">Spacing to the grid</string>
     <string name="setting_dock_grid_spacing_keywords">dock gap spacing grid controls</string>
     <string name="setting_feature_dock_live_apps">Show live apps</string>
-    <string name="setting_feature_dock_live_apps_keywords">dock live apps now playing dynamic side switch on off</string>
+    <string name="setting_feature_dock_live_apps_keywords">dock live apps now playing now tile media dynamic side switch on off</string>
     <string name="setting_dock_live_apps">Number of live apps</string>
-    <string name="setting_dock_live_apps_keywords">dock dynamic side notification slots now playing</string>
+    <string name="setting_dock_live_apps_keywords">dock dynamic side notification slots now tile now playing</string>
     <string name="setting_floating_enabled">Floating dock</string>
     <string name="setting_floating_enabled_keywords">overlay handle on off permission</string>
     <string name="setting_floating_apps">Floating dock apps</string>
@@ -481,6 +487,10 @@
     <string name="setting_feature_stream_keywords">stream switch on off actions centre live pages dock press</string>
     <string name="setting_stream_section_now">Now</string>
     <string name="setting_stream_section_now_keywords">stream now playing media section stack list on off order show as</string>
+    <string name="setting_now_recent_players">Recent players</string>
+    <string name="setting_now_recent_players_keywords">now playing media music podcasts player resume source cards recent players remember</string>
+    <string name="setting_now_clear_recent_players">Clear recent players</string>
+    <string name="setting_now_clear_recent_players_keywords">now playing media forget clear remove recent players history</string>
     <string name="setting_stream_section_notifications">Notifications</string>
     <string name="setting_stream_section_notifications_keywords">stream notifications section stack list on off order show as</string>
     <string name="setting_stream_section_recents">Recents</string>
@@ -638,7 +648,7 @@
     <string name="settings_home_mode_simple_subtitle">Simple mode shows the App library. Your placed items come back when it is off.</string>
     <string name="settings_simple_mode_subtitle">Leaves the App library as Home and the Dock. Turns off the Stream, live apps and the Library sheet until you turn it off.</string>
     <string name="settings_feature_stream_subtitle">The actions centre: press the Dock down to see what is live. Off removes the press, the live pages and their shortcuts.</string>
-    <string name="settings_feature_live_apps_subtitle">Apps with something new and now playing, on the Dock. Off leaves the Dock with your pinned apps.</string>
+    <string name="settings_feature_live_apps_subtitle">Apps with something new, and a Now tile while something plays, on the Dock. Off leaves the Dock with your pinned apps.</string>
     <string name="settings_feature_library_subtitle">Every app on pages, reached by pulling away from the Dock. Off removes the pull, the Dock action and the gesture. Search stays.</string>
     <string name="settings_feature_off_in_simple_mode">Off in Simple mode</string>
     <string name="settings_section_search">Search</string>
@@ -690,6 +700,10 @@
     <string name="settings_stream_actions_on_card">On the card</string>
     <string name="settings_stream_intro">Choose which sections the Stream shows, in what order and how. These are the same choices as long-pressing a section header in the Stream.</string>
     <string name="settings_stream_section_on">On</string>
+    <string name="settings_stream_now_on">Now playing and your recent players</string>
+    <string name="settings_now_recent_players_subtitle">Players you used lately stay in Now as quiet cards you can resume. Off shows only what is playing.</string>
+    <string name="settings_now_clear_recent_players_subtitle">Forgets the players Now remembers. A player comes back when it plays again.</string>
+    <string name="settings_now_clear_recent_players_action">Clear</string>
     <string name="settings_stream_section_off">Off. The section is hidden from the Stream.</string>
     <string name="settings_stream_order">Order</string>
     <string name="settings_stream_position">Position %1$d of %2$d</string>

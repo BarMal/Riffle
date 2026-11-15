@@ -153,6 +153,10 @@ internal fun MediaRow(
     groupKey: String?,
     modifier: Modifier = Modifier,
 ) {
+    if (content.source) {
+        MediaSourceRow(content, env, callbacks, groupKey, modifier)
+        return
+    }
     val playing = content.isPlaying == true
     val toggle = if (playing) StreamAction.Pause else StreamAction.Play
     StreamRowFrame(
@@ -178,6 +182,49 @@ internal fun MediaRow(
     ) {
         RowTitle(content.title ?: stringResource(R.string.stream_hidden_content))
         content.artist?.takeIf { it.isNotBlank() }?.let { RowSubtitle(it) }
+    }
+}
+
+/** A recent player as a row: the app's icon and name, what it last played, Play when it can be resumed, Dismiss. */
+@Composable
+private fun MediaSourceRow(
+    content: MediaContent,
+    env: StreamEnvironment,
+    callbacks: StreamCallbacks,
+    groupKey: String?,
+    modifier: Modifier,
+) {
+    StreamRowFrame(
+        content = content,
+        groupKey = groupKey,
+        callbacks = callbacks,
+        onClick = { callbacks.onAction(content, StreamAction.Open) },
+        modifier = modifier,
+        leading = { StreamIcon(content.icon, env, RowArtworkSize, shape = RiffleShapes.small) },
+        trailing = {
+            if (StreamActionPolicy.offers(content, StreamAction.Play)) {
+                IconButton(
+                    onClick = { callbacks.onAction(content, StreamAction.Play) },
+                    modifier = Modifier.size(StreamMinTarget),
+                ) {
+                    Icon(
+                        Icons.Filled.PlayArrow,
+                        contentDescription = stringResource(R.string.stream_media_source_play),
+                    )
+                }
+            }
+            if (StreamActionPolicy.offers(content, StreamAction.Dismiss)) {
+                IconButton(
+                    onClick = { callbacks.onAction(content, StreamAction.Dismiss) },
+                    modifier = Modifier.size(StreamMinTarget),
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.stream_notification_dismiss))
+                }
+            }
+        },
+    ) {
+        RowTitle(content.appLabel ?: stringResource(R.string.stream_hidden_content))
+        content.sourceSubtitle(env).takeIf { it.isNotBlank() }?.let { RowSubtitle(it) }
     }
 }
 

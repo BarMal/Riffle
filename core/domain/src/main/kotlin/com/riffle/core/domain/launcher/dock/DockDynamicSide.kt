@@ -13,9 +13,9 @@ import com.riffle.core.domain.launcher.stream.StreamSection
  * One entry of the Dock's dynamic side (ADR 0003, Amendment 3). Transient, derived from what the Stream shows, so Hide
  * rules and content levels have already applied; never stored.
  *
- * In the Home mode the side holds live apps and now playing; in the contextual mode the same entries are followed by
- * one
- * [ContextTile] per Stream page that is not an app.
+ * In the Home mode the side holds live apps and, while media is active, the Now tile; in the contextual mode the same
+ * entries are followed by one [ContextTile] per Stream page that is not an app (Now's tile is always among them: it is
+ * the [NowPlaying] entry while media is active, else the plain tile).
  */
 sealed interface DockDynamicSideEntry {
     /** A stable key for the entry (tests, list keys, spotlight sources). */
@@ -35,14 +35,14 @@ sealed interface DockDynamicSideEntry {
         override val key: String get() = liveAppKey(groupKey)
     }
 
-    /** The one now-playing entry, while media is active; [title] is null when the content is withheld. */
-    data class NowPlaying(
-        val packageName: String,
-        val profileId: String?,
-        val appLabel: String?,
-        val title: String?,
-    ) : DockDynamicSideEntry {
-        override val key: String get() = NOW_PLAYING_KEY
+    /**
+     * The Now tile while media is active (ADR 0003, Amendment 4): the same tile as [ContextTile] of Now (same key), the
+     * Now page's own play-glyph tile, marked as playing. It is not an app's icon: the playing app's own Dock icon, if
+     * it has notifications, is a live app and leads to that app's notifications page. [title] is null when the
+     * content is withheld.
+     */
+    data class NowPlaying(val title: String?) : DockDynamicSideEntry {
+        override val key: String get() = contextTileKey(StreamSection.NOW)
     }
 
     /**
@@ -69,9 +69,6 @@ sealed interface DockDynamicSideEntry {
         /** The key of the live app whose notifications group is [groupKey]. */
         fun liveAppKey(groupKey: String): String = "$LIVE_APP_KEY_PREFIX$groupKey"
 
-        /** The key of the now playing entry. */
-        const val NOW_PLAYING_KEY: String = "now"
-
         /** The key of the contextual tile of [section]. */
         fun contextTileKey(section: StreamSection): String = "$CONTEXT_TILE_KEY_PREFIX${section.storedId}"
     }
@@ -83,7 +80,7 @@ object DockDynamicSide {
     const val FIXED_ENTRY_COUNT = 1
 
     /**
-     * The side's entries: up to [liveAppSlots] live apps (newest first), then now playing when [media] is active, then
+     * The side's entries: up to [liveAppSlots] live apps (newest first), then the Now tile when [media] is active, then
      * (the contextual mode only) one [DockDynamicSideEntry.ContextTile] for each of [contextSections], in that order.
      * The Home mode passes none, so it holds no tile; the entries it shares with the contextual mode keep their order.
      *
@@ -115,7 +112,7 @@ object DockDynamicSide {
     /**
      * The sections that get a contextual tile, in Dock order, from the pages the Stream is showing (in the order
      * [DockPageOrder] gave them): one per section that has a page that is not an app's, so a section with several pages
-     * (one per feed) has one tile. Now has none while the now playing entry stands for it ([nowPlaying]).
+     * (one per feed) has one tile. Now is not repeated while its marked tile is among the entries ([nowPlaying]).
      */
     fun contextSections(
         pages: List<StreamPageRef>,
@@ -144,10 +141,5 @@ object DockDynamicSide {
     }
 
     private fun nowPlaying(media: MediaContent): DockDynamicSideEntry.NowPlaying =
-        DockDynamicSideEntry.NowPlaying(
-            packageName = media.app.packageName,
-            profileId = media.app.profileId,
-            appLabel = media.appLabel,
-            title = media.title.takeIf { media.privacy == StreamPrivacy.VISIBLE },
-        )
+        DockDynamicSideEntry.NowPlaying(title = media.title.takeIf { media.privacy == StreamPrivacy.VISIBLE })
 }

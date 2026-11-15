@@ -213,10 +213,13 @@ class DockContextualTest {
     }
 
     @Test
-    fun theNowPageRingsNowPlayingWhileItIsShownElseItsTile() {
+    fun theNowPageRingsItsOneTileWhetherOrNotSomethingPlays() {
         val now = StreamPageRef("now", StreamSection.NOW, null)
-        assertEquals("now", DockRing.entryKeyFor(now, entryKeys))
         assertEquals("ctx:now", DockRing.entryKeyFor(now, listOf("ctx:now", "ctx:today")))
+        // The marked tile has the same key, so the ring does not move when playback starts or stops.
+        val playing = DockDynamicSideEntry.NowPlaying(null).key
+        assertEquals("ctx:now", DockRing.entryKeyFor(now, listOf("live:chat:p", playing)))
+        assertNull(DockRing.entryKeyFor(now, listOf("live:chat:p")))
     }
 
     @Test

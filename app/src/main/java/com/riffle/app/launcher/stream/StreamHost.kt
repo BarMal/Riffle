@@ -72,6 +72,8 @@ class StreamHost internal constructor(
     internal val tasks: TaskActions? = null,
     /** Settings > Stream > Tasks (the token); null where there is none. */
     internal val taskSettings: TasksSettingsController? = null,
+    /** Settings > Stream > Recent players: clearing them; null where there are none. */
+    internal val recentPlayers: RecentPlayersControl? = null,
     /** The page the Stream was last left on, per posture, for this session. */
     internal val pages: StreamPageMemory = StreamPageMemory(),
     /** What the Stream and the Dock's contextual mode tell each other: the pages, the open one, page options. */

@@ -26,6 +26,7 @@ import com.riffle.core.domain.launcher.workspace.sources.NotificationItemMapper
  * Items of a source this mapper does not know, or whose target cannot belong to the type (an app item without an
  * app target), map to null.
  */
+@Suppress("TooManyFunctions")
 object StreamContentMapper {
     private val END = ItemExtKey("calendar.end")
     private val ALL_DAY = ItemExtKey("calendar.all_day")
@@ -56,7 +57,7 @@ object StreamContentMapper {
         val showImages = ItemField.IMAGE in visible
         return when (item.sourceId) {
             SourceIds.NOTIFICATIONS -> notification(redacted, privacy, showBody, showImages)
-            SourceIds.MEDIA -> media(redacted, privacy, showBody)
+            SourceIds.MEDIA -> media(redacted, item, privacy, showBody)
             SourceIds.CALENDAR -> event(redacted, privacy, EventKind.CALENDAR)
             SourceIds.ICS -> event(redacted, privacy, EventKind.CALENDAR_FEED)
             SourceIds.RSS -> article(redacted, privacy)
@@ -153,12 +154,30 @@ object StreamContentMapper {
         )
     }
 
+    /**
+     * [item] has been through the content level (a hidden item loses its ext); [original] is the item as the source
+     * made it, which is where the recent player's flags are read: a hidden source is still a source.
+     */
     private fun media(
         item: Item,
+        original: Item,
         privacy: StreamPrivacy,
         showBody: Boolean,
     ): MediaContent? {
         val app = item.appRef() ?: return null
+        return if ((original.ext[MediaItemExt.SOURCE] as? ItemExtValue.Flag)?.value == true) {
+            mediaSource(item, app, privacy, resumable = original.ext[MediaItemExt.RESUMABLE] != null)
+        } else {
+            activeMedia(item, app, privacy, showBody)
+        }
+    }
+
+    private fun activeMedia(
+        item: Item,
+        app: StreamAppRef,
+        privacy: StreamPrivacy,
+        showBody: Boolean,
+    ): MediaContent {
         val controls =
             (item.ext[MediaItemExt.CONTROLS] as? ItemExtValue.Text)?.value.orEmpty()
                 .split(',').mapNotNull(MediaControl::fromToken)
@@ -194,6 +213,32 @@ object StreamContentMapper {
             privacy = privacy,
         )
     }
+
+    /** A recent player with no session: its quiet card; Play only when the app can be resumed. */
+    private fun mediaSource(
+        item: Item,
+        app: StreamAppRef,
+        privacy: StreamPrivacy,
+        resumable: Boolean,
+    ) = MediaContent(
+        id = StreamContentId(item.id.value),
+        app = app,
+        appLabel = item.groupLabel,
+        title = item.title,
+        artist = item.subtitle,
+        artwork = null,
+        icon = item.icon,
+        target = item.target,
+        actions =
+            buildSet {
+                add(MediaAction.OPEN)
+                if (resumable) add(MediaAction.PLAY)
+                add(MediaAction.DISMISS)
+            },
+        postedAtEpochMillis = item.timeEpochMillis,
+        privacy = privacy,
+        source = true,
+    )
 
     private fun event(
         item: Item,
