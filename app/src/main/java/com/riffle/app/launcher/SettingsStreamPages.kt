@@ -2,6 +2,7 @@
 
 package com.riffle.app.launcher
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -141,18 +142,7 @@ internal fun SettingsStreamSections(
             SettingsSwitchRow(
                 modifier = Modifier.testTag(streamSectionTestTag(section)),
                 title = stringResource(R.string.stream_show_hidden_section, name),
-                subtitle =
-                    if (entry.enabled) {
-                        stringResource(
-                            if (section == StreamSection.NOW) {
-                                R.string.settings_stream_now_on
-                            } else {
-                                R.string.settings_stream_section_on
-                            },
-                        )
-                    } else {
-                        stringResource(R.string.settings_stream_section_off)
-                    },
+                subtitle = stringResource(sectionSwitchSubtitle(section, entry.enabled)),
                 checked = entry.enabled,
                 onCheckedChange = { enabled -> onLayoutAction(StreamLayoutAction.SetEnabled(section, enabled)) },
             )
@@ -201,6 +191,18 @@ internal fun SettingsStreamSections(
         }
     }
 }
+
+/** What a section's switch says: Now says what it holds ("Now playing and your recent players") while on. */
+@StringRes
+private fun sectionSwitchSubtitle(
+    section: StreamSection,
+    enabled: Boolean,
+): Int =
+    when {
+        !enabled -> R.string.settings_stream_section_off
+        section == StreamSection.NOW -> R.string.settings_stream_now_on
+        else -> R.string.settings_stream_section_on
+    }
 
 /**
  * Now's two settings: whether the recent players stay in it as source cards (a Stream option, stored with the layout)

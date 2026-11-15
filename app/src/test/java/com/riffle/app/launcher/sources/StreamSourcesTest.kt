@@ -65,6 +65,7 @@ class StreamSourcesTest {
         media: MediaSourceDependencies = MediaSourceDependencies.NONE,
         forStream: Boolean = true,
         notifications: List<LauncherNotification> = emptyList(),
+        packageLabels: PackageLabelResolver = PackageLabelResolver.NONE,
     ): SourceRegistry {
         val deps =
             BuiltInSourceDependencies(
@@ -82,6 +83,7 @@ class StreamSourcesTest {
                         shortcuts = AppShortcutRepository { emptyMap() },
                         recentApps = RecentAppRepository { listOf(RecentAppUsage(AppPackageName("player"), 5L)) },
                         recentAppsAccess = { SourceAccess.GRANTED },
+                        packageLabels = packageLabels,
                     ),
                 notifications =
                     NotificationSourceDependencies(
@@ -165,6 +167,27 @@ class StreamSourcesTest {
 
         val none = registry(notifications = emptyList()).latest(SourceIds.MEDIA) as SourceState.Ready
         assertTrue("a session without a visible media notification shows nothing", none.items.isEmpty())
+    }
+
+    @Test
+    fun aNotificationFromAnAppWithNoLauncherEntryIsNamedByThePlatformThenItsTitleNotItsPackage() {
+        val recorder =
+            LauncherNotification(
+                key = LauncherNotificationKey("r"),
+                packageName = AppPackageName("recorder"),
+                title = "Recording screen",
+                text = "Tap to stop",
+                canDismiss = true,
+                postedAtEpochMillis = NOW - 1,
+            )
+
+        fun label(labels: PackageLabelResolver): String? {
+            val registry = registry(notifications = listOf(recorder), packageLabels = labels)
+            return (registry.latest(SourceIds.NOTIFICATIONS) as SourceState.Ready).items.single().groupLabel
+        }
+
+        assertEquals("Screen recorder", label { pkg -> "Screen recorder".takeIf { pkg == "recorder" } })
+        assertEquals("Recording screen", label(PackageLabelResolver.NONE))
     }
 
     private class FakeRecentStore(var players: List<RecentPlayer> = emptyList()) : RecentPlayersStore {

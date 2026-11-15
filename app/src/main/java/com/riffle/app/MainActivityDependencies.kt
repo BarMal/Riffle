@@ -64,6 +64,7 @@ import com.riffle.app.launcher.rss.FeedBackgroundRefreshScheduler
 import com.riffle.app.launcher.rss.FeedRefreshCoordinator
 import com.riffle.app.launcher.rss.RepositoryFeedArtworkLoader
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
+import com.riffle.app.launcher.sources.AndroidPackageLabels
 import com.riffle.app.launcher.sources.ContentSourceDependencies
 import com.riffle.app.launcher.sources.FeedSourceDependencies
 import com.riffle.app.launcher.sources.IcsSourceDependencies
@@ -376,6 +377,7 @@ internal class MainActivityDependencies(
                         recentPlayers = recentPlayers,
                         resumer = resumer,
                     ),
+                packageLabels = AndroidPackageLabels(activity.packageManager),
                 content =
                     ContentSourceDependencies(
                         feeds =

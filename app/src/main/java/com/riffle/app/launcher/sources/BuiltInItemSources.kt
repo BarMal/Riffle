@@ -77,6 +77,8 @@ internal class AppSourceDependencies(
     val recentAppsAccess: () -> SourceAccess,
     /** Package, profile and shortcut changes. [SourceChangeSource.NONE] until the platform observer is wired. */
     val changes: SourceChangeSource = SourceChangeSource.NONE,
+    /** Names a package the installed-apps snapshot omits (no launcher entry); asked per notification, cached. */
+    val packageLabels: PackageLabelResolver = PackageLabelResolver.NONE,
 )
 
 /** What the media source reads beyond the media notifications: the active media sessions. */
@@ -259,7 +261,7 @@ private fun notificationStream(
                     nowEpochMillis = deps.nowEpochMillis(),
                     hideRules = notifications.hideRules(),
                     profileContentVisibility = snapshot?.profileContentVisibility.orEmpty(),
-                    appLabel = labels::get,
+                    appLabel = { pkg -> labels[pkg] ?: deps.apps.packageLabels.label(pkg.value) },
                     profileTypes = profileTypes,
                     canReply = notifications.canReply,
                     canSnooze = notifications.canSnooze,
