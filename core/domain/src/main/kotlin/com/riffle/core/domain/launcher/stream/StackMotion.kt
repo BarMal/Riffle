@@ -372,6 +372,26 @@ object StackSettle {
         settledOn: Int,
     ): Boolean = settledOn != startedOn
 
+    /**
+     * The card the stack has crossed onto at [position], given the card it [ticked] for last, or null while it is
+     * still on that one. A card is crossed onto a little past half way ([CROSSING_HYSTERESIS]), so a finger resting
+     * on the half-way line does not tick back and forth.
+     */
+    fun crossing(
+        ticked: Int,
+        position: Float,
+        count: Int,
+    ): Int? {
+        if (abs(position - ticked) < HALF_WAY + CROSSING_HYSTERESIS) return null
+        val last = (count - 1).coerceAtLeast(0)
+        return position.roundToInt().coerceIn(0, last).takeIf { it != ticked }
+    }
+
+    private const val HALF_WAY = 0.5f
+
+    /** How far past half way, in cards, the stack goes before the next card counts as crossed onto. */
+    const val CROSSING_HYSTERESIS = 0.1f
+
     /** Reduced motion: no coast, no spring, no magnet. A release goes to the card nearest the finger, at once. */
     fun reducedTarget(
         position: Float,

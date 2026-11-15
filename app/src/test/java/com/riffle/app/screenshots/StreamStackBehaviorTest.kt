@@ -455,6 +455,24 @@ class StreamStackBehaviorTest {
         assertEquals(listOf(LauncherHapticEvent.DETENT, LauncherHapticEvent.DETENT), ticks)
     }
 
+    @Test
+    fun aTickForEachCardCrossedDuringOneDragBeforeTheFingerLifts() {
+        show()
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput {
+            down(Offset(centerX, height * START_Y))
+            // One card's travel at a time: the tick plays as each card is crossed, not when the stack comes to rest.
+            repeat(20) { moveBy(Offset(0f, 8.dp.toPx())) }
+        }
+        composeRule.waitForIdle()
+        val whileHeld = ticks.size
+        assertTrue("ticks while the finger is still down: $whileHeld", whileHeld >= 1)
+        assertTrue("only detents: $ticks", ticks.all { it == LauncherHapticEvent.DETENT })
+        composeRule.onNodeWithTag(STREAM_PAGER_TEST_TAG).performTouchInput { up() }
+        composeRule.waitForIdle()
+        // Coming to rest on a card already ticked for adds nothing.
+        assertTrue("a settle does not tick twice for one card: $ticks", ticks.size <= whileHeld + 1)
+    }
+
     // Reduced motion ------------------------------------------------------------------------------------------------
 
     @Test

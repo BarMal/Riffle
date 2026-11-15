@@ -47,6 +47,7 @@ internal class StackMover(
     val scrollable: ScrollableState =
         ScrollableState { delta ->
             state.dragBy(deltaDp = delta / density, slopDp = slopDp, count = count())
+            if (state.takeCrossing(count())) tick()
             delta
         }
 
@@ -85,6 +86,7 @@ internal class StackMover(
     /** Moves by [deltaDp] of finger travel without the platform's drag (the hand-off from an open card's body). */
     fun dragBy(deltaDp: Float) {
         if (deltaDp != 0f) state.dragBy(deltaDp = deltaDp, slopDp = 0f, count = count())
+        if (state.takeCrossing(count())) tick()
     }
 }
 

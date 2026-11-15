@@ -327,6 +327,21 @@ class StackMotionTest {
     // The settle rule, the haptic and reduced motion
 
     @Test
+    fun aCardIsCrossedOntoALittlePastHalfWayAndOnlyOnce() {
+        assertEquals(null, StackSettle.crossing(ticked = 0, position = 0.4f, count = 4))
+        // On the half-way line the finger can rest without ticking back and forth.
+        assertEquals(null, StackSettle.crossing(ticked = 0, position = 0.55f, count = 4))
+        assertEquals(1, StackSettle.crossing(ticked = 0, position = 0.62f, count = 4))
+        assertEquals(null, StackSettle.crossing(ticked = 1, position = 0.62f, count = 4))
+        assertEquals(null, StackSettle.crossing(ticked = 1, position = 0.45f, count = 4))
+        assertEquals(0, StackSettle.crossing(ticked = 1, position = 0.38f, count = 4))
+        // A fast frame that passes two cards ticks for the one it is on.
+        assertEquals(3, StackSettle.crossing(ticked = 1, position = 2.9f, count = 4))
+        // The rubber band past the last card crosses onto nothing.
+        assertEquals(null, StackSettle.crossing(ticked = 3, position = 3.7f, count = 4))
+    }
+
+    @Test
     fun aSettleOnADifferentCardTicksAndOneBackOnTheSameCardDoesNot() {
         assertTrue(StackSettle.shouldTick(startedOn = 0, settledOn = 1))
         assertTrue(StackSettle.shouldTick(startedOn = 3, settledOn = 2))
