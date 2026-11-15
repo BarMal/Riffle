@@ -1778,7 +1778,7 @@ Both came from the open card's overlay, and one commit fixes both.
 ### App pair experiment (diagnostics only)
 
 - **What it is.** Settings > About > Diagnostics > "App pair experiment": pick two apps, pick a method, press Launch, and read the
-  in-memory result log. It exists so the owner can find out whether launching two apps as a split-screen pair works on their foldable
+  in-memory result log (round 2 below adds the Custom method). It exists so the owner can find out whether launching two apps as a split-screen pair works on their foldable
   before any feature is designed. It adds nothing anywhere else and stores nothing.
 - **Methods.** Sequential (first app with `NEW_TASK`, a 0-2000 ms wait, second with `LAUNCH_ADJACENT | NEW_TASK | MULTIPLE_TASK`);
   Trampoline, adjacent second / adjacent first (a transparent no-history activity in its own task starts both); Both adjacent (two
@@ -1791,6 +1791,57 @@ Both came from the open card's overlay, and one commit fixes both.
   screen is the verdict. If only the first app opened, the second start was probably blocked.
 - **Known limits.** No public API chooses the ratio or the side; `ActivityOptions.setLaunchBounds` only applies in freeform windowing;
   `ActivityInfo.resizeMode` is not public, so resizability cannot be logged.
+
+#### Results so far (the owner's foldable: SDK 36, unfolded 724x784 dp, no freeform windowing)
+
+- Sequential, Trampoline (adjacent second) and Trampoline (adjacent first): both apps open full-screen one after the other. No split.
+- Both adjacent (first `LAUNCH_ADJACENT | NEW_TASK`, second `LAUNCH_ADJACENT | NEW_TASK | MULTIPLE_TASK`, 600 ms apart): split side
+  by side, evenly, when the apps were not already running.
+- One `startActivities` call (first `NEW_TASK`, second `LAUNCH_ADJACENT | NEW_TASK | MULTIPLE_TASK`): split, unevenly (the left
+  side phone-width, the right side tablet-width).
+- Both adjacent with both apps already in Recents: no split. Recents then showed the second app twice (a duplicate task from
+  `MULTIPLE_TASK`, one of them blank) and the first app once.
+- Folded (353x792 dp, compact; the second app locks portrait): no split. Expected; pairs are unfolded-only for now.
+- Side effect after a successful split: a duplicate, blank task of an app that was already open.
+
+**Working theory.** `LAUNCH_ADJACENT` is ignored when the target app already has a task: the system brings that task to the front
+full-screen, so there is nothing to be adjacent to. `MULTIPLE_TASK` forces a new task, which splits but leaves a duplicate when the
+app was already open. The goal of round 2 is a recipe that splits whether or not either app is running and leaves no duplicate; it
+may turn out that both cannot hold with public flags.
+
+#### Round 2: the Custom method
+
+- **Custom** (a sixth method; the five above are unchanged so old results stay comparable). Per app (First, Second) switches for
+  `LAUNCH_ADJACENT`, `MULTIPLE_TASK`, `CLEAR_TASK` and `NO_ANIMATION`; `NEW_TASK` is always on. The delay slider applies unless
+  "Send as one startActivities call" is on. The resulting flag strings show live under the switches.
+- **Presets** (each only fills the switches): Fresh both (both adjacent + multiple; expect a split even if running, duplicates both),
+  Reuse both (both adjacent; expect no duplicates, may not split if running), Reset both (both adjacent + `CLEAR_TASK`; expect no
+  duplicates, apps restart from their first screen, may split), Reuse first / fresh second (today's Both adjacent), Fresh first /
+  reuse second, One call / reset both (one `startActivities`; first `NEW_TASK | CLEAR_TASK`, second adjacent + `CLEAR_TASK`).
+- **Already open.** No public API says whether another app is running (`getAppTasks` only sees the caller's tasks, `getRunningTasks`
+  is restricted, usage stats need a permission Riffle does not ask for). So the page has two checkboxes, "First was already open" and
+  "Second was already open", written into the log entry (default unticked). The log also records each app's `FLAG_STOPPED`, which is
+  set only for an app never started since install or force-stopped; false does not mean running.
+- **Your verdict.** Each log entry has buttons "Split", "No split", "Split, uneven" (tap again to clear) and a "Duplicates in Recents"
+  switch; the newest entry shows them prominently. They are written into the entry and into the copied text.
+- **Lifecycle trace.** After Launch the launcher records, for about 3 seconds, what its own window does, into the same entry.
+
+#### Reading the lifecycle trace
+
+Each line is `+N ms` after the launch call. The trace is the launcher's view only; it cannot see the other two apps' windows,
+their tasks, Recents, or the split ratio.
+
+- `launcher window at launch`: multi-window state and bounds just before the launch (from the last callback the launcher saw).
+- `onPause` then `onStop` and no multi-window line: the launcher was covered full-screen. For a pair this means no split (or the
+  launcher was not part of it).
+- `onMultiWindowModeChanged(true)`, an `isInMultiWindowMode false -> true` line, or a `window bounds` line that shrinks the width,
+  with no `onStop`: the launcher became one side of a split (the launcher is the anchor when `LAUNCH_ADJACENT` is used from a
+  full-screen activity), which is the sign that a split happened. If the launcher stays visible at its old size and nothing else is
+  seen, the system may have put both apps in the split above it, so use your verdict.
+- `onStart`, `onResume` late in the window: the launcher came back (an app closed or the pair collapsed).
+- `observation ended (window over)` closes the trace with the launcher's final state; `(superseded by a newer launch)` means a
+  second Launch cut it short. The lifecycle lines are the androidx lifecycle events of the same callbacks.
+
 
 ## Quick actions, and apps behind the cards
 

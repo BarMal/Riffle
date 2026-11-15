@@ -40,6 +40,10 @@ enum class PairMethod(
         "One startActivities call",
         "Start both in one startActivities call, the second with the adjacent flag.",
     ),
+    CUSTOM(
+        "Custom",
+        "Round 2: choose the flags for each app yourself, or start from a preset.",
+    ),
 }
 
 /** Intent flags the experiment uses; the values are the framework's constants. */
@@ -54,6 +58,8 @@ object PairFlags {
             if (flags and Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT != 0) add("LAUNCH_ADJACENT")
             if (flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0) add("NEW_TASK")
             if (flags and Intent.FLAG_ACTIVITY_MULTIPLE_TASK != 0) add("MULTIPLE_TASK")
+            if (flags and Intent.FLAG_ACTIVITY_CLEAR_TASK != 0) add("CLEAR_TASK")
+            if (flags and Intent.FLAG_ACTIVITY_NO_ANIMATION != 0) add("NO_ANIMATION")
         }.ifEmpty { listOf("no flags") }.joinToString("|")
 }
 
@@ -211,6 +217,7 @@ class StartActivitiesArrayStrategy : PairStrategy {
 
 fun pairStrategyFor(
     method: PairMethod,
+    custom: CustomPair = CustomPair.DEFAULT,
     pause: suspend (Long) -> Unit = { kotlinx.coroutines.delay(it) },
 ): PairStrategy =
     when (method) {
@@ -219,4 +226,147 @@ fun pairStrategyFor(
         PairMethod.TRAMPOLINE_ADJACENT_FIRST -> TrampolineStrategy(adjacentFirst = true)
         PairMethod.BOTH_ADJACENT -> BothAdjacentStrategy()
         PairMethod.START_ACTIVITIES_ARRAY -> StartActivitiesArrayStrategy()
+        PairMethod.CUSTOM -> CustomStrategy(custom, pause)
     }
+
+/** The two flags the five fixed methods pass to the first and the second app (what their strategies start with). */
+fun PairMethod.plannedFlags(custom: CustomPair = CustomPair.DEFAULT): Pair<Int, Int> =
+    when (this) {
+        PairMethod.SEQUENTIAL, PairMethod.START_ACTIVITIES_ARRAY ->
+            PairFlags.NEW_TASK to PairFlags.ADJACENT_NEW_MULTIPLE_TASK
+        PairMethod.TRAMPOLINE_ADJACENT_SECOND -> PairFlags.NEW_TASK to PairFlags.ADJACENT_NEW_TASK
+        PairMethod.TRAMPOLINE_ADJACENT_FIRST -> PairFlags.ADJACENT_NEW_TASK to PairFlags.NEW_TASK
+        PairMethod.BOTH_ADJACENT -> PairFlags.ADJACENT_NEW_TASK to PairFlags.ADJACENT_NEW_MULTIPLE_TASK
+        PairMethod.CUSTOM -> custom.first.flags to custom.second.flags
+    }
+
+/**
+ * The switches of one app in the Custom strategy. `NEW_TASK` is always on (a start from the launcher's own context
+ * needs it for another app's activity), so it is not a switch; [flags] is the whole int.
+ */
+data class CustomAppFlags(
+    val adjacent: Boolean = false,
+    val multipleTask: Boolean = false,
+    val clearTask: Boolean = false,
+    val noAnimation: Boolean = false,
+) {
+    val flags: Int
+        get() =
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+                (if (adjacent) Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT else 0) or
+                (if (multipleTask) Intent.FLAG_ACTIVITY_MULTIPLE_TASK else 0) or
+                (if (clearTask) Intent.FLAG_ACTIVITY_CLEAR_TASK else 0) or
+                (if (noAnimation) Intent.FLAG_ACTIVITY_NO_ANIMATION else 0)
+
+    val description: String get() = PairFlags.describe(flags)
+}
+
+/** One switch of [CustomAppFlags], for the page and the tests. */
+enum class CustomSwitch(
+    val label: String,
+) {
+    ADJACENT("LAUNCH_ADJACENT"),
+    MULTIPLE_TASK("MULTIPLE_TASK"),
+    CLEAR_TASK("CLEAR_TASK"),
+    NO_ANIMATION("NO_ANIMATION"),
+}
+
+fun CustomAppFlags.isOn(switch: CustomSwitch): Boolean =
+    when (switch) {
+        CustomSwitch.ADJACENT -> adjacent
+        CustomSwitch.MULTIPLE_TASK -> multipleTask
+        CustomSwitch.CLEAR_TASK -> clearTask
+        CustomSwitch.NO_ANIMATION -> noAnimation
+    }
+
+fun CustomAppFlags.with(
+    switch: CustomSwitch,
+    on: Boolean,
+): CustomAppFlags =
+    when (switch) {
+        CustomSwitch.ADJACENT -> copy(adjacent = on)
+        CustomSwitch.MULTIPLE_TASK -> copy(multipleTask = on)
+        CustomSwitch.CLEAR_TASK -> copy(clearTask = on)
+        CustomSwitch.NO_ANIMATION -> copy(noAnimation = on)
+    }
+
+/**
+ * The Custom strategy's whole recipe: switches per app and whether both go out in one `startActivities` call (then the
+ * delay is ignored). [starts] is the list of `startActivity` calls it stands for, in order.
+ */
+data class CustomPair(
+    val first: CustomAppFlags = CustomAppFlags(),
+    val second: CustomAppFlags = CustomAppFlags(),
+    val oneCall: Boolean = false,
+) {
+    fun starts(
+        a: PairTarget,
+        b: PairTarget,
+    ): List<PairStart> = listOf(PairStart(a, first.flags), PairStart(b, second.flags))
+
+    companion object {
+        /** What the page starts with: the same recipe as the "Both adjacent" method. */
+        val DEFAULT =
+            CustomPair(CustomAppFlags(adjacent = true), CustomAppFlags(adjacent = true, multipleTask = true))
+    }
+}
+
+/** One-tap recipes for the Custom switches; each only fills them in. */
+enum class PairPreset(
+    val pair: CustomPair,
+) {
+    FRESH_BOTH(
+        CustomPair(
+            CustomAppFlags(adjacent = true, multipleTask = true),
+            CustomAppFlags(adjacent = true, multipleTask = true),
+        ),
+    ),
+    REUSE_BOTH(CustomPair(CustomAppFlags(adjacent = true), CustomAppFlags(adjacent = true))),
+    RESET_BOTH(
+        CustomPair(
+            CustomAppFlags(adjacent = true, clearTask = true),
+            CustomAppFlags(adjacent = true, clearTask = true),
+        ),
+    ),
+    REUSE_FIRST_FRESH_SECOND(
+        CustomPair(CustomAppFlags(adjacent = true), CustomAppFlags(adjacent = true, multipleTask = true)),
+    ),
+    FRESH_FIRST_REUSE_SECOND(
+        CustomPair(CustomAppFlags(adjacent = true, multipleTask = true), CustomAppFlags(adjacent = true)),
+    ),
+    ONE_CALL_RESET_BOTH(
+        CustomPair(
+            CustomAppFlags(clearTask = true),
+            CustomAppFlags(adjacent = true, clearTask = true),
+            oneCall = true,
+        ),
+    ),
+}
+
+/** Starts the pair the way a [CustomPair] says: one call, or two starts with the delay between them. */
+class CustomStrategy(
+    private val custom: CustomPair,
+    private val pause: suspend (Long) -> Unit = { kotlinx.coroutines.delay(it) },
+) : PairStrategy {
+    override val method = PairMethod.CUSTOM
+
+    override suspend fun launch(
+        first: PairTarget,
+        second: PairTarget,
+        starter: PairStarter,
+        delayMillis: Long,
+    ): List<StartOutcome> {
+        val (a, b) = custom.starts(first, second)
+        if (custom.oneCall) {
+            return listOf(
+                attempt("startActivities [${a.describe("first")}, ${b.describe("second")}]") {
+                    starter.startAll(listOf(a, b))
+                },
+            )
+        }
+        val outcomes = mutableListOf(attempt(a.describe("first")) { starter.start(a) })
+        if (delayMillis > 0) pause(delayMillis)
+        outcomes += attempt(b.describe("second after $delayMillis ms")) { starter.start(b) }
+        return outcomes
+    }
+}

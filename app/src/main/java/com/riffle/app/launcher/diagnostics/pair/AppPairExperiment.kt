@@ -38,6 +38,23 @@ fun widthClassFor(widthDp: Int): String =
         else -> "expanded"
     }
 
+/** What a launch carries besides the method: the Custom recipe, the owner's "already open" ticks and the watcher. */
+data class PairLaunchOptions(
+    val custom: CustomPair = CustomPair.DEFAULT,
+    val firstWasOpen: Boolean = false,
+    val secondWasOpen: Boolean = false,
+    val watcher: PairLaunchWatcher = PairLaunchWatcher.None,
+)
+
+/** The owner's after-the-fact judgement of what the screen showed. */
+enum class PairVerdict(
+    val text: String,
+) {
+    SPLIT("Split"),
+    NO_SPLIT("No split"),
+    SPLIT_UNEVEN("Split, uneven"),
+}
+
 data class PairLogEntry(
     val id: Long,
     val timeMillis: Long,
@@ -47,6 +64,16 @@ data class PairLogEntry(
     val second: String,
     val outcomes: List<StartOutcome>,
     val facts: PairFacts,
+    /** The Custom recipe used; only meaningful when [method] is [PairMethod.CUSTOM]. */
+    val custom: CustomPair = CustomPair.DEFAULT,
+    /** Ticked by the owner before launching: nothing in the public API can tell whether an app was running. */
+    val firstWasOpen: Boolean = false,
+    val secondWasOpen: Boolean = false,
+    /** What the launcher's own window saw after the launch, and whether it is still watching. */
+    val trace: List<PairObservation> = emptyList(),
+    val traceOpen: Boolean = false,
+    val verdict: PairVerdict? = null,
+    val duplicatesInRecents: Boolean = false,
 )
 
 /**
@@ -70,28 +97,35 @@ class AppPairExperiment(
         delayMillis: Long,
         starter: PairStarter,
         factsSource: PairFactsSource,
+        options: PairLaunchOptions = PairLaunchOptions(),
     ) {
         val id = nextId++
-        val strategy = pairStrategyFor(method, pause)
+        val strategy = pairStrategyFor(method, options.custom, pause)
         val collected = factsSource.collect(first, second)
         if (method == PairMethod.TRAMPOLINE_ADJACENT_FIRST || method == PairMethod.TRAMPOLINE_ADJACENT_SECOND) {
             waitingForTrampoline = id
         }
+        val launchedAt = clock()
         // The entry is shown at once so a slow sequential launch is visible; its outcomes arrive as they are made.
         entries.update {
             listOf(
                 PairLogEntry(
                     id,
-                    clock(),
+                    launchedAt,
                     method,
                     delayMillis,
                     first.packageName,
                     second.packageName,
                     emptyList(),
                     collected,
+                    custom = options.custom,
+                    firstWasOpen = options.firstWasOpen,
+                    secondWasOpen = options.secondWasOpen,
                 ),
             ) + it
         }
+        // Watching starts before the first start so the launcher's own reaction to it is in the trace.
+        options.watcher.begin(launchedAt) { events, open -> replace(id) { it.copy(trace = events, traceOpen = open) } }
         val outcomes = strategy.launch(first, second, starter, delayMillis)
         replace(id) { it.copy(outcomes = it.outcomes + outcomes) }
     }
@@ -102,6 +136,17 @@ class AppPairExperiment(
         waitingForTrampoline = null
         replace(id) { it.copy(outcomes = it.outcomes + outcomes) }
     }
+
+    /** The owner's verdict for entry [id]; choosing the same verdict again clears it. */
+    fun setVerdict(
+        id: Long,
+        verdict: PairVerdict,
+    ) = replace(id) { it.copy(verdict = if (it.verdict == verdict) null else verdict) }
+
+    fun setDuplicates(
+        id: Long,
+        duplicates: Boolean,
+    ) = replace(id) { it.copy(duplicatesInRecents = duplicates) }
 
     private fun replace(
         id: Long,
@@ -127,25 +172,53 @@ fun List<PairLogEntry>.toPlainText(zone: ZoneId = ZoneId.systemDefault()): Strin
         appendLine("ok means the call returned without an exception; the system can still refuse silently.")
     }
 
-/** One entry as plain text: when, which method, the two packages, each call's outcome and the device facts. */
-fun PairLogEntry.toPlainText(zone: ZoneId = ZoneId.systemDefault()): String {
+/** One entry as plain text: when, which method, the packages, flags, calls, the trace, the verdict and the device. */
+fun PairLogEntry.toPlainText(zone: ZoneId = ZoneId.systemDefault()): String =
+    buildString {
+        appendRecipe(this@toPlainText, zone)
+        appendTraceAndVerdict(this@toPlainText)
+        appendDevice(facts)
+    }
+
+private fun StringBuilder.appendRecipe(
+    e: PairLogEntry,
+    zone: ZoneId,
+) {
     val clock = DateTimeFormatter.ofPattern("HH:mm:ss.SSS", Locale.ROOT).withZone(zone)
-    val e = this
-    return buildString {
-        appendLine("${clock.format(Instant.ofEpochMilli(e.timeMillis))}  ${e.method.title}  delay ${e.delayMillis} ms")
-        appendLine("  first:  ${e.first}")
-        appendLine("  second: ${e.second}")
-        if (e.outcomes.isEmpty()) appendLine("  (no start made yet)")
-        e.outcomes.forEach { o ->
-            appendLine("  ${if (o.ok) "ok" else "FAILED"}: ${o.step}${o.error?.let { " -> $it" } ?: ""}")
-        }
-        val f = e.facts
-        appendLine("  device: Android SDK ${f.sdkInt}, ${f.manufacturer} ${f.model}")
-        appendLine(
-            "  window: ${f.windowDp} dp (${f.widthClass}), multi-window at launch: " +
-                (f.inMultiWindow?.toString() ?: "unknown") + ", layout: ${f.posture}",
-        )
-        f.features.forEach { appendLine("  feature: $it") }
-        f.targets.forEach { appendLine("  target: $it") }
+    val oneCall = e.method == PairMethod.START_ACTIVITIES_ARRAY || (e.method == PairMethod.CUSTOM && e.custom.oneCall)
+    val timing = if (oneCall) "one startActivities call, delay ignored" else "delay ${e.delayMillis} ms"
+    val (firstFlags, secondFlags) = e.method.plannedFlags(e.custom)
+    appendLine("${clock.format(Instant.ofEpochMilli(e.timeMillis))}  ${e.method.title}  $timing")
+    appendLine("  first:  ${e.first}")
+    appendLine("  second: ${e.second}")
+    appendLine("  flags first:  ${PairFlags.describe(firstFlags)}")
+    appendLine("  flags second: ${PairFlags.describe(secondFlags)}")
+    appendLine(
+        "  already open (ticked by the owner): first ${e.firstWasOpen.yesNo()}, second ${e.secondWasOpen.yesNo()}",
+    )
+    if (e.outcomes.isEmpty()) appendLine("  (no start made yet)")
+    e.outcomes.forEach { o ->
+        appendLine("  ${if (o.ok) "ok" else "FAILED"}: ${o.step}${o.error?.let { " -> $it" } ?: ""}")
     }
 }
+
+private fun StringBuilder.appendTraceAndVerdict(e: PairLogEntry) {
+    appendLine("  launcher lifecycle trace (the launcher's own window only):")
+    e.trace.forEach { appendLine("    +${it.offsetMillis} ms ${it.text}") }
+    if (e.trace.isEmpty()) appendLine("    nothing recorded")
+    if (e.traceOpen) appendLine("    (still watching)")
+    appendLine("  owner's verdict: ${e.verdict?.text ?: "not noted yet"}")
+    appendLine("  duplicates in Recents: ${if (e.duplicatesInRecents) "yes" else "no (not ticked)"}")
+}
+
+private fun StringBuilder.appendDevice(f: PairFacts) {
+    appendLine("  device: Android SDK ${f.sdkInt}, ${f.manufacturer} ${f.model}")
+    appendLine(
+        "  window: ${f.windowDp} dp (${f.widthClass}), multi-window at launch: " +
+            (f.inMultiWindow?.toString() ?: "unknown") + ", layout: ${f.posture}",
+    )
+    f.features.forEach { appendLine("  feature: $it") }
+    f.targets.forEach { appendLine("  target: $it") }
+}
+
+private fun Boolean.yesNo() = if (this) "yes" else "no"
