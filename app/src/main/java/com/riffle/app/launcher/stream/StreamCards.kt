@@ -140,9 +140,15 @@ internal val LocalCardSpotlightSource = staticCompositionLocalOf<CardSpotlightSo
  * the nearby part of the card's edge. [part] tells a card's sources apart; a no-op outside a card.
  */
 @Composable
-internal fun Modifier.cardSpotlightSource(part: String = ""): Modifier {
+internal fun Modifier.cardSpotlightSource(
+    part: String = "",
+    /** The light of the image this node shows; null: the card's own (its app's) colour. */
+    light: CardLight? = null,
+): Modifier {
     val source = LocalCardSpotlightSource.current ?: return this
-    return glassSpotlightSourceFor(source.spotlight, source.key + part, source.color)
+    val color = if (light != null) light.color else source.color
+    return glassSpotlightSourceFor(source.spotlight, source.key + part, color)
+        .semantics { cardSpotlightLight(color) }
 }
 
 @Composable

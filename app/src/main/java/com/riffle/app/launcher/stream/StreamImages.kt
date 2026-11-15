@@ -190,8 +190,10 @@ internal fun StreamIcon(
     lightsCard: Boolean = false,
 ) {
     val image = rememberStreamImage(handle, env.imageLoader, size)
-    val base = (if (lightsCard) modifier.cardSpotlightSource("icon") else modifier).size(size).clip(shape)
     val loaded = image.value
+    // The icon this card shows lights the card (a mail app's shortcuts each have their own), not the app they share.
+    val light = if (lightsCard) rememberImageLight(handle, loaded) else null
+    val base = (if (lightsCard) modifier.cardSpotlightSource("icon", light) else modifier).size(size).clip(shape)
     if (loaded != null) {
         Image(bitmap = loaded, contentDescription = null, modifier = base, contentScale = ContentScale.Crop)
     } else {
