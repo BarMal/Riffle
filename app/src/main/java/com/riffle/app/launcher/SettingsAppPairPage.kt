@@ -159,6 +159,18 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
                 PairLaunchOptions(scenario.custom, firstWasOpen, secondWasOpen, watcher, scenario.logName),
             )
         },
+        onRunHeld = { variant ->
+            launch(
+                PairMethod.CUSTOM,
+                PairLaunchOptions(
+                    firstWasOpen = firstWasOpen,
+                    secondWasOpen = secondWasOpen,
+                    watcher = watcher,
+                    scenario = variant.title,
+                    held = variant,
+                ),
+            )
+        },
     )
     PairLatestResultSection(
         log = log,

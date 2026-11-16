@@ -13,6 +13,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.diagnostics.pair.AppPairExperiment
+import com.riffle.app.launcher.diagnostics.pair.HeldVariant
+import com.riffle.app.launcher.diagnostics.pair.HeldVariants
 import com.riffle.app.launcher.diagnostics.pair.PairLogEntry
 import com.riffle.app.launcher.diagnostics.pair.PairScenario
 
@@ -20,6 +22,8 @@ import com.riffle.app.launcher.diagnostics.pair.PairScenario
 
 internal const val APP_PAIR_SCENARIO_TAG_PREFIX = "appPair.scenario."
 internal const val APP_PAIR_SCENARIO_RESULT_TAG_PREFIX = "appPair.scenarioResult."
+internal const val APP_PAIR_HELD_TAG_PREFIX = "appPair.held."
+internal const val APP_PAIR_HELD_RESULT_TAG_PREFIX = "appPair.heldResult."
 
 private const val DISABLED_ROW_ALPHA = 0.5f
 
@@ -30,6 +34,7 @@ internal fun PairScenarioSection(
     delayMillis: Int,
     log: List<PairLogEntry>,
     onRun: (PairScenario) -> Unit,
+    onRunHeld: (HeldVariant) -> Unit,
 ) {
     SettingsSection(title = stringResource(R.string.app_pair_section_scenarios)) {
         Text(
@@ -53,25 +58,48 @@ internal fun PairScenarioSection(
                 subtitle = stringResource(scenario.summaryRes()),
                 enabled = enabled,
                 onClick = { onRun(scenario) },
-                trailingContent = { ScenarioTrailing(scenario, latest) },
+                trailingContent = { ScenarioTrailing(APP_PAIR_SCENARIO_RESULT_TAG_PREFIX + scenario.name, latest) },
+            )
+        }
+    }
+    SettingsSection(title = stringResource(R.string.app_pair_section_held)) {
+        HeldVariants.all.forEach { variant ->
+            val latest = log.firstOrNull { it.held?.id == variant.id }
+            SettingsClickableRow(
+                modifier = Modifier.testTag(APP_PAIR_HELD_TAG_PREFIX + variant.id).alpha(rowAlpha(enabled)),
+                title = variant.title,
+                subtitle = stringResource(variant.summaryRes()),
+                enabled = enabled,
+                onClick = { onRunHeld(variant) },
+                trailingContent = { ScenarioTrailing(APP_PAIR_HELD_RESULT_TAG_PREFIX + variant.id, latest) },
             )
         }
     }
 }
+
+private fun HeldVariant.summaryRes(): Int =
+    when (id) {
+        "H1" -> R.string.app_pair_held_h1_summary
+        "H2" -> R.string.app_pair_held_h2_summary
+        "H3" -> R.string.app_pair_held_h3_summary
+        "H4" -> R.string.app_pair_held_h4_summary
+        "H5" -> R.string.app_pair_held_h5_summary
+        else -> R.string.app_pair_held_h6_summary
+    }
 
 private fun rowAlpha(enabled: Boolean) = if (enabled) 1f else DISABLED_ROW_ALPHA
 
 /** "Run", and under it a small label with the verdict of the scenario's most recent entry, if it has one. */
 @Composable
 private fun ScenarioTrailing(
-    scenario: PairScenario,
+    resultTag: String,
     latest: PairLogEntry?,
 ) {
     Column(horizontalAlignment = Alignment.End) {
         SettingsButtonText(text = stringResource(R.string.app_pair_scenario_run))
         if (latest != null) {
             Text(
-                modifier = Modifier.testTag(APP_PAIR_SCENARIO_RESULT_TAG_PREFIX + scenario.name),
+                modifier = Modifier.testTag(resultTag),
                 text = resultLabel(latest),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

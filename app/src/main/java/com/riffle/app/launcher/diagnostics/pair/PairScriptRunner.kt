@@ -23,6 +23,9 @@ data class PairScriptInfo(
     /** How the launcher came back (see the docs); null until it has, or when it never left. */
     val returned: String? = null,
     val notes: List<String> = emptyList(),
+    /** True when nothing says whether the apps were already open; the log then prints `unknown`. */
+    val openUnknown: Boolean = false,
+    val kind: PairScriptKind = PairScriptKind.SCENARIOS,
 )
 
 /** Where the script stands, for the page. */
@@ -113,15 +116,17 @@ class PairScriptRunner(
         launcher: PairScriptLauncher,
         firstPackage: String,
         secondPackage: String,
+        kind: PairScriptKind = PairScriptKind.SCENARIOS,
     ): Boolean {
         if (mutableState.value is PairScriptState.Running) return false
+        val steps = if (kind == PairScriptKind.HELD) PairScript.heldSteps else this.steps
         val first = launcher.resolve(firstPackage)
         val second = launcher.resolve(secondPackage)
         val ready = first != null && second != null
         if (first != null && second != null) {
             mutableState.value = PairScriptState.Running(1, steps.size, steps.first().name)
             val runId = clock()
-            job = scope.launch { run(launcher, first, second, runId) }
+            job = scope.launch { run(launcher, Run(steps, kind, runId), first, second) }
         } else {
             val missing = listOfNotNull(firstPackage.takeIf { first == null }, secondPackage.takeIf { second == null })
             mutableState.value = PairScriptState.Missing(missing)
@@ -137,20 +142,36 @@ class PairScriptRunner(
         mutableState.value = PairScriptState.Stopped(running.step, running.total)
     }
 
+    private class Run(
+        val steps: List<PairScriptStep>,
+        val kind: PairScriptKind,
+        val id: Long,
+    )
+
     private suspend fun run(
         launcher: PairScriptLauncher,
+        run: Run,
         first: PairTarget,
         second: PairTarget,
-        runId: Long,
     ) {
+        val steps = run.steps
         steps.forEachIndexed { index, step ->
             val number = index + 1
             mutableState.value = PairScriptState.Running(number, steps.size, step.name)
             awaitSettled()
-            toast.show("Step $number of ${steps.size}: ${step.name}")
-            val info = PairScriptInfo(runId, number, steps.size, step.bothOpen, step.bothOpen)
+            toast.show(step.toastText(number, steps.size))
+            val info =
+                PairScriptInfo(
+                    run.id,
+                    number,
+                    steps.size,
+                    step.bothOpen,
+                    step.bothOpen,
+                    openUnknown = step.openUnknown,
+                    kind = run.kind,
+                )
             val entryId = launcher.fire(step, info, first, second)
-            afterFire(launcher, entryId)
+            afterFire(launcher, entryId, step.dwellMillis)
         }
         toast.show("Script finished")
         mutableState.value = PairScriptState.Finished(steps.size)
@@ -167,14 +188,15 @@ class PairScriptRunner(
     private suspend fun afterFire(
         launcher: PairScriptLauncher,
         entryId: Long,
+        dwellMillis: Long,
     ) {
         val firedAt = clock()
-        val left = withTimeoutOrNull(PairScript.DWELL_MS) { lifecycle.resumed.first { !it } } != null
+        val left = withTimeoutOrNull(dwellMillis) { lifecycle.resumed.first { !it } } != null
         if (!left) {
             log.update(entryId) { it.copy(notes = it.notes + "launcher stayed in front") }
             return
         }
-        delay((PairScript.DWELL_MS - (clock() - firedAt)).coerceAtLeast(0))
+        delay((dwellMillis - (clock() - firedAt)).coerceAtLeast(0))
         if (lifecycle.resumed.value) {
             val text = "by the user after ${clock() - firedAt} ms (before the return attempt)"
             log.update(entryId) { it.copy(returned = text) }

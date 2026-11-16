@@ -27,6 +27,9 @@ class AndroidPairStarter(
         context.startActivity(intent)
     }
 
+    override fun startHolder(request: HolderRequest) =
+        context.startActivity(AndroidHolderIntents.intentFor(context, request))
+
     companion object {
         const val EXTRA_ADJACENT_FIRST = "pair.adjacentFirst"
         private const val EXTRA_FIRST_PACKAGE = "pair.first.package"

@@ -13,4 +13,11 @@
         <item name="android:windowAnimationStyle">@null</item>
         <item name="android:windowNoDisplay">false</item>
     </style>
+    <!-- The app pair experiment's holding window: a plain opaque surface the system can put on one side of a split. -->
+    <style name="Theme.Riffle.PairHolder" parent="android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowBackground">?android:attr/colorBackground</item>
+    </style>
 </resources>

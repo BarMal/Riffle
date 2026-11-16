@@ -102,6 +102,9 @@ interface PairStarter {
 
     /** Starts the trampoline activity in a new task; it makes the [trampolineSteps] and reports back. */
     fun startTrampoline(request: TrampolineRequest)
+
+    /** Starts the holder activity of a held-trampoline variant in a new task; it makes the two starts itself. */
+    fun startHolder(request: HolderRequest): Unit = throw UnsupportedOperationException("no holder in this starter")
 }
 
 /** What one call did: [error] is null when it returned normally, else the exception class and message. */

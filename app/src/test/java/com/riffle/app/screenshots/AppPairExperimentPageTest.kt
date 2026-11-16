@@ -14,6 +14,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
@@ -23,6 +24,11 @@ import com.riffle.app.launcher.APP_PAIR_DUPLICATES_TAG_PREFIX
 import com.riffle.app.launcher.APP_PAIR_EDIT_AS_CUSTOM_TAG
 import com.riffle.app.launcher.APP_PAIR_FIRST_OPEN_TAG
 import com.riffle.app.launcher.APP_PAIR_FIRST_TAG
+import com.riffle.app.launcher.APP_PAIR_HELD_CHOSEN_TAG
+import com.riffle.app.launcher.APP_PAIR_HELD_HINT_TAG
+import com.riffle.app.launcher.APP_PAIR_HELD_RESULT_TAG_PREFIX
+import com.riffle.app.launcher.APP_PAIR_HELD_RUN_TAG
+import com.riffle.app.launcher.APP_PAIR_HELD_TAG_PREFIX
 import com.riffle.app.launcher.APP_PAIR_LAUNCH_TAG
 import com.riffle.app.launcher.APP_PAIR_LOG_TAG
 import com.riffle.app.launcher.APP_PAIR_METHOD_TAG_PREFIX
@@ -50,6 +56,8 @@ import com.riffle.app.launcher.appPairSwitchTag
 import com.riffle.app.launcher.diagnostics.pair.AppPairExperiment
 import com.riffle.app.launcher.diagnostics.pair.CustomAppFlags
 import com.riffle.app.launcher.diagnostics.pair.CustomSwitch
+import com.riffle.app.launcher.diagnostics.pair.HeldVariants
+import com.riffle.app.launcher.diagnostics.pair.HolderRequest
 import com.riffle.app.launcher.diagnostics.pair.PairFacts
 import com.riffle.app.launcher.diagnostics.pair.PairFactsSource
 import com.riffle.app.launcher.diagnostics.pair.PairLaunchWatcher
@@ -129,6 +137,11 @@ class AppPairExperimentPageTest {
 
             override fun startTrampoline(request: TrampolineRequest) {
                 calls += "trampoline"
+            }
+
+            override fun startHolder(request: HolderRequest) {
+                calls += "holder ${request.variant.id}"
+                launcherResumed.value = false
             }
         }
     private val facts =
@@ -247,6 +260,132 @@ class AppPairExperimentPageTest {
         assertEquals("Warm-up: open both", experiment.log.value.single().scenario)
         composeRule.onNodeWithTag(APP_PAIR_SCRIPT_RUN_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(APP_PAIR_SCRIPT_STOP_TAG).assertIsDisplayed().assertTextContains("Stop")
+    }
+
+    private fun pressHeldRun() = composeRule.onNodeWithTag(APP_PAIR_HELD_RUN_TAG).performScrollTo().performClick()
+
+    @Test
+    fun theHeldButtonSitsAboveTheScriptButtonAndStartsASixStepRunThroughTheRunner() {
+        render()
+        composeRule.onNodeWithTag(APP_PAIR_HELD_RUN_TAG).assertIsDisplayed()
+            .assertTextContains("Run the held-trampoline script")
+        composeRule.onNodeWithTag(APP_PAIR_HELD_HINT_TAG).assertTextEquals(
+            "Six tries with a holding window. About 45 seconds. Start a screen recording first.",
+        )
+        val held = composeRule.onNodeWithTag(APP_PAIR_HELD_RUN_TAG).fetchSemanticsNode().boundsInRoot
+        val nine = composeRule.onNodeWithTag(APP_PAIR_SCRIPT_RUN_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue("held button above the nine-step button", held.top < nine.top)
+
+        pressHeldRun()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(APP_PAIR_FIRST_TAG).performScrollTo().assertTextContains(fixturePackages.first, true)
+        assertTrue(calls.isEmpty())
+        advanceScript(1_001)
+        assertEquals(listOf("holder H1"), calls)
+        scriptStatus().assertTextEquals("Step 1 of 6: Held: adjacent, then plain")
+        composeRule.onNodeWithTag(APP_PAIR_HELD_RUN_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_STOP_TAG).assertIsDisplayed()
+        val entry = experiment.log.value.single()
+        assertEquals(HeldVariants.all[0], entry.held)
+        assertEquals(6, entry.script?.total)
+        assertTrue(entry.script?.openUnknown == true)
+
+        advanceScript(5_000)
+        assertNull(experiment.log.value.single().script?.returnAttempt)
+        advanceScript(1_001)
+        assertEquals("ok", experiment.log.value.single().script?.returnAttempt)
+        advanceScript(2_000)
+        scriptStatus().assertTextEquals("Step 2 of 6: Held: adjacent, then adjacent")
+        assertEquals(listOf("holder H1", "holder H2"), calls)
+        assertEquals(
+            listOf("Held 1 of 6: adjacent, then plain", "Held 2 of 6: adjacent, then adjacent"),
+            toasts,
+        )
+    }
+
+    @Test
+    fun aMissingAppStopsTheHeldScriptToo() {
+        render()
+        unlaunchable += fixturePackages.first
+        pressHeldRun()
+        advanceScript(10_000)
+        assertTrue(calls.isEmpty())
+        scriptStatus().assertTextContains("Not installed or not launchable: ${fixturePackages.first}", true)
+    }
+
+    @Test
+    fun theHeldScriptRunsWithTheChosenAppsAndCopyNamesTheScriptInItsHeader() {
+        render()
+        composeRule.onNodeWithTag(APP_PAIR_HELD_CHOSEN_TAG).performScrollTo().assertIsNotEnabled()
+        choosePair()
+        composeRule.onNodeWithTag(APP_PAIR_HELD_CHOSEN_TAG).performScrollTo().assertIsEnabled().performClick()
+        repeat(2) {
+            advanceScript(1_001)
+            advanceScript(6_001)
+            advanceScript(2_000)
+        }
+        assertEquals(listOf("holder H1", "holder H2"), calls)
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_COPY_TAG).performScrollTo().performClick()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val clip = context.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
+        val header = "App pair script log (oldest first)\nscript: held-trampoline script (six steps)\n"
+        assertTrue(clip, clip.startsWith(header))
+        listOf(
+            "script: step 1 of 6",
+            "already open: unknown",
+            "script: step 2 of 6",
+            "already open: first=true second=true",
+            "Held: adjacent, then plain (Held trampoline)",
+            "Held: adjacent, then adjacent (Held trampoline)",
+            "holder trace",
+            "launcher lifecycle trace",
+        ).forEach { assertTrue("$it in\n$clip", clip.contains(it)) }
+        assertTrue(clip.indexOf("script: step 1 of 6") < clip.indexOf("script: step 2 of 6"))
+    }
+
+    @Test
+    fun theNineStepScriptsCopyNamesItsOwnScript() {
+        render()
+        pressRunScript()
+        advanceScript(1_001)
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_STOP_TAG).performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_COPY_TAG).performScrollTo().performClick()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val clip = context.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
+        assertTrue(clip, clip.contains("script: nine-step scenario script"))
+    }
+
+    @Test
+    fun heldRowsSitUnderTheirOwnHeadingAndEachLaunchesItsVariant() {
+        render()
+        composeRule.onNodeWithText("With a holding window").performScrollTo().assertIsDisplayed()
+        HeldVariants.all.forEach {
+            composeRule.onNodeWithTag(APP_PAIR_HELD_TAG_PREFIX + it.id).performScrollTo().assertIsDisplayed()
+                .assertIsNotEnabled()
+        }
+        choosePair()
+        composeRule.onNodeWithTag(APP_PAIR_HELD_TAG_PREFIX + "H3").performScrollTo().assertIsEnabled()
+        composeRule.onNodeWithTag(APP_PAIR_HELD_RESULT_TAG_PREFIX + "H3", useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithTag(APP_PAIR_HELD_TAG_PREFIX + "H3").performScrollTo().performClick()
+        composeRule.waitForIdle()
+
+        assertEquals(listOf("holder H3"), calls)
+        val entry = experiment.log.value.single()
+        assertEquals("Held: reset both", entry.scenario)
+        assertEquals(HeldVariants.all[2], entry.held)
+        assertEquals(1, watchedLaunches)
+        composeRule.onNodeWithTag(APP_PAIR_HELD_RESULT_TAG_PREFIX + "H3", useUnmergedTree = true)
+            .assertTextEquals("not marked")
+        val clip = copiedText()
+        listOf(
+            "Held: reset both (Held trampoline)",
+            "flags first:  LAUNCH_ADJACENT|NEW_TASK|CLEAR_TASK",
+            "flags second: NEW_TASK|CLEAR_TASK",
+            "holder trace",
+            "nothing reported (the holder never ran)",
+        ).forEach { assertTrue("$it in\n$clip", clip.contains(it)) }
+        composeRule.captureScreen()
     }
 
     @Test

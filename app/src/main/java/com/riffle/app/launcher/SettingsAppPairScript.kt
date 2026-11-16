@@ -28,6 +28,7 @@ import com.riffle.app.launcher.diagnostics.pair.ExperimentScriptLauncher
 import com.riffle.app.launcher.diagnostics.pair.PairActivityHub
 import com.riffle.app.launcher.diagnostics.pair.PairLaunchWatcher
 import com.riffle.app.launcher.diagnostics.pair.PairScriptApps
+import com.riffle.app.launcher.diagnostics.pair.PairScriptKind
 import com.riffle.app.launcher.diagnostics.pair.PairScriptState
 import com.riffle.app.launcher.diagnostics.pair.toScriptPlainText
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -40,6 +41,9 @@ internal const val APP_PAIR_SCRIPT_STOP_TAG = "appPair.script.stop"
 internal const val APP_PAIR_SCRIPT_STATUS_TAG = "appPair.script.status"
 internal const val APP_PAIR_SCRIPT_CHOSEN_TAG = "appPair.script.chosen"
 internal const val APP_PAIR_SCRIPT_COPY_TAG = "appPair.script.copy"
+internal const val APP_PAIR_HELD_RUN_TAG = "appPair.script.heldRun"
+internal const val APP_PAIR_HELD_HINT_TAG = "appPair.script.heldHint"
+internal const val APP_PAIR_HELD_CHOSEN_TAG = "appPair.script.heldChosen"
 
 private const val DISABLED_ROW_ALPHA = 0.5f
 
@@ -87,7 +91,7 @@ internal fun PairScriptHost(
         values = PairScriptSectionValues(scriptState, canRunPair(a, b), log.any { it.script != null }, copied),
         actions =
             PairScriptSectionActions(
-                onRun = {
+                onRun = { kind ->
                     val (one, two) = packages
                     val apps = state.installedApps
                     onPreselect(
@@ -95,13 +99,13 @@ internal fun PairScriptHost(
                         apps.firstOrNull { it.identity.packageName.value == two },
                     )
                     copied = false
-                    runner.start(launcher, one, two)
+                    runner.start(launcher, one, two, kind)
                 },
                 onStop = runner::stop,
-                onRunChosen = {
+                onRunChosen = { kind ->
                     if (a != null && b != null) {
                         copied = false
-                        runner.start(launcher, a.identity.packageName.value, b.identity.packageName.value)
+                        runner.start(launcher, a.identity.packageName.value, b.identity.packageName.value, kind)
                     }
                 },
                 onCopy = {
@@ -120,9 +124,9 @@ internal class PairScriptSectionValues(
 )
 
 internal class PairScriptSectionActions(
-    val onRun: () -> Unit,
+    val onRun: (PairScriptKind) -> Unit,
     val onStop: () -> Unit,
-    val onRunChosen: () -> Unit,
+    val onRunChosen: (PairScriptKind) -> Unit,
     val onCopy: () -> Unit,
 )
 
@@ -137,12 +141,25 @@ internal fun PairScriptSection(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (!running) {
+                Button(
+                    modifier = Modifier.fillMaxWidth().testTag(APP_PAIR_HELD_RUN_TAG),
+                    onClick = { actions.onRun(PairScriptKind.HELD) },
+                ) {
+                    Text(stringResource(R.string.app_pair_held_run))
+                }
+                Text(
+                    modifier = Modifier.testTag(APP_PAIR_HELD_HINT_TAG),
+                    text = stringResource(R.string.app_pair_held_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
             Button(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .testTag(if (running) APP_PAIR_SCRIPT_STOP_TAG else APP_PAIR_SCRIPT_RUN_TAG),
-                onClick = if (running) actions.onStop else actions.onRun,
+                onClick = if (running) actions.onStop else ({ actions.onRun(PairScriptKind.SCENARIOS) }),
             ) {
                 Text(stringResource(if (running) R.string.app_pair_script_stop else R.string.app_pair_script_run))
             }
@@ -161,7 +178,18 @@ internal fun PairScriptSection(
             title = stringResource(R.string.app_pair_script_run_chosen),
             subtitle = stringResource(R.string.app_pair_script_run_chosen_summary),
             enabled = chosenEnabled,
-            onClick = actions.onRunChosen,
+            onClick = { actions.onRunChosen(PairScriptKind.SCENARIOS) },
+            trailingContent = null,
+        )
+        SettingsClickableRow(
+            modifier =
+                Modifier
+                    .testTag(APP_PAIR_HELD_CHOSEN_TAG)
+                    .alpha(if (chosenEnabled) 1f else DISABLED_ROW_ALPHA),
+            title = stringResource(R.string.app_pair_held_run_chosen),
+            subtitle = stringResource(R.string.app_pair_held_run_chosen_summary),
+            enabled = chosenEnabled,
+            onClick = { actions.onRunChosen(PairScriptKind.HELD) },
             trailingContent = null,
         )
         if (values.hasScriptLog) {
