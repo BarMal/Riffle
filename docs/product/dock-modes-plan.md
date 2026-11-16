@@ -1852,6 +1852,37 @@ their tasks, Recents, or the split ratio.
 - `observation ended (window over)` closes the trace with the launcher's final state; `(superseded by a newer launch)` means a
   second Launch cut it short. The lifecycle lines are the androidx lifecycle events of the same callbacks.
 
+#### The script ("Run the whole script")
+
+One button at the top of the page runs every scenario in sequence over the owner's pair, so a single screen recording and one
+copied log cover everything. The pair is hard-coded in `PairScriptApps` (GitHub and Waterfox); pressing the button selects them in
+the pickers. If either has no launch intent the script does not start and the page names the missing package; then pick any two
+apps and press "Run the script with these apps" (the same script over the chosen pair). Start a screen recording first.
+
+- **Steps** (`PairScript.steps`, 1-based in the log): 1 Warm-up: open both (plain `NEW_TASK` starts of both apps so both are running;
+  logged as a step, not a result), 2 Reuse both, 3 Reset both, 4 One call, reset both, 5 One call (round 1), 6 Reuse first / fresh
+  second (round 1's Both adjacent), 7 Fresh first / reuse second, 8 Fresh both, 9 Reset both, again. The recipes are the scenarios'
+  own; the non-duplicating ones come first because forced new tasks leave duplicates in Recents that would pollute later steps, and
+  the last step repeats Reset both to see whether a reset still behaves with duplicate tasks around. From step 2 on the entry says
+  `already open: first=true second=true` automatically.
+- **Sequencing** (`PairScriptRunner`, one coroutine in the app-level scope that also holds `PairActivityHub`, so it survives the
+  Settings page being left or recreated; on process death the script is gone). A step fires only while the launcher activity is
+  RESUMED and has been for 1 s. After firing, the launcher is normally stopped by the launched apps; the runner holds 4 s so the
+  recording shows the result, then tries to start the launcher's own Home activity (`ACTION_MAIN` + `CATEGORY_HOME`, our package,
+  `NEW_TASK`; no new permission). The system may refuse a start from the background, so an exception is logged, not fatal. The next
+  step fires when the launcher is next resumed and settled, whether the automatic return worked or you swiped Home. A toast
+  ("Step 3 of 9: Reset both") labels each step on the recording and "Script finished" ends it. "Stop" ends the run at any point.
+  The runner does not navigate back to this page; the page is simply where the launcher resumes.
+- **Reading `returned to launcher`** in a step's entry: `automatically after X ms` means the Home start raised nothing and the
+  launcher was resumed within 2 s of it; `by the user after X ms` means it was resumed later, or the start was refused (see the
+  `return attempt:` line, `ok` or `refused: <exception>`), so you swiped Home; X counts from the return attempt.
+  `not within 20 s` means the launcher was not resumed 20 s after the attempt; the script kept waiting and the line gains
+  `, then by the user after X ms` once you came back. A step with `note: launcher stayed in front` never left the foreground
+  (nothing visibly launched). The Home start can succeed silently without bringing the launcher forward, which then reads as `by the
+  user`, so compare with the recording.
+- **The log.** "Copy log" copies everything, newest first as before. "Copy script log (oldest first)" copies only the newest run in
+  step order under one header (device, window, app pair, start time).
+
 
 ## Quick actions, and apps behind the cards
 

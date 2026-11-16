@@ -31,10 +31,16 @@ import com.riffle.app.launcher.APP_PAIR_PICK_TAG_PREFIX
 import com.riffle.app.launcher.APP_PAIR_RESULT_FLAGS_TAG
 import com.riffle.app.launcher.APP_PAIR_SCENARIO_RESULT_TAG_PREFIX
 import com.riffle.app.launcher.APP_PAIR_SCENARIO_TAG_PREFIX
+import com.riffle.app.launcher.APP_PAIR_SCRIPT_CHOSEN_TAG
+import com.riffle.app.launcher.APP_PAIR_SCRIPT_COPY_TAG
+import com.riffle.app.launcher.APP_PAIR_SCRIPT_RUN_TAG
+import com.riffle.app.launcher.APP_PAIR_SCRIPT_STATUS_TAG
+import com.riffle.app.launcher.APP_PAIR_SCRIPT_STOP_TAG
 import com.riffle.app.launcher.APP_PAIR_SECOND_OPEN_TAG
 import com.riffle.app.launcher.APP_PAIR_SECOND_TAG
 import com.riffle.app.launcher.APP_PAIR_VERDICT_TAG_PREFIX
 import com.riffle.app.launcher.AppPairEnvironment
+import com.riffle.app.launcher.AppPairScriptEnvironment
 import com.riffle.app.launcher.LocalAppPairEnvironment
 import com.riffle.app.launcher.LocalStreamLayoutRepository
 import com.riffle.app.launcher.LocalTasksSettings
@@ -51,12 +57,22 @@ import com.riffle.app.launcher.diagnostics.pair.PairMethod
 import com.riffle.app.launcher.diagnostics.pair.PairObservation
 import com.riffle.app.launcher.diagnostics.pair.PairPreset
 import com.riffle.app.launcher.diagnostics.pair.PairScenario
+import com.riffle.app.launcher.diagnostics.pair.PairScriptLifecycle
+import com.riffle.app.launcher.diagnostics.pair.PairScriptRunner
 import com.riffle.app.launcher.diagnostics.pair.PairStart
 import com.riffle.app.launcher.diagnostics.pair.PairStarter
+import com.riffle.app.launcher.diagnostics.pair.PairTarget
 import com.riffle.app.launcher.diagnostics.pair.PairVerdict
 import com.riffle.app.launcher.diagnostics.pair.TrampolineRequest
 import com.riffle.app.launcher.diagnostics.pair.isOn
 import com.riffle.app.launcher.settingsSurfaceState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -74,15 +90,37 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ScreenshotDevices.SDK], qualifiers = ScreenshotDevices.COMPACT_PHONE)
+@OptIn(ExperimentalCoroutinesApi::class)
 class AppPairExperimentPageTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    // The script runs in a scope on virtual time, so the tests decide when settle times and dwells pass.
+    private val scheduler = TestCoroutineScheduler()
+    private val launcherResumed = MutableStateFlow(true)
+    private val toasts = mutableListOf<String>()
+    private val unlaunchable = mutableSetOf<String>()
+    private val scriptRunner by lazy {
+        PairScriptRunner(
+            CoroutineScope(StandardTestDispatcher(scheduler) + SupervisorJob()),
+            { scheduler.currentTime },
+            object : PairScriptLifecycle {
+                override val resumed: StateFlow<Boolean> = launcherResumed
+            },
+            { toasts += it },
+            { id, change -> experiment.updateScript(id, change) },
+        )
+    }
+    private val fixturePackages by lazy {
+        ScreenshotFixtures.installedApps.map { it.identity.packageName.value }.let { it[0] to it[1] }
+    }
 
     private val calls = mutableListOf<String>()
     private val starter =
         object : PairStarter {
             override fun start(start: PairStart) {
                 calls += "start ${start.target.packageName}"
+                launcherResumed.value = false
             }
 
             override fun startAll(starts: List<PairStart>) {
@@ -151,7 +189,19 @@ class AppPairExperimentPageTest {
                 CompositionLocalProvider(
                     LocalStreamLayoutRepository provides settingsStreamLayoutRepository(),
                     LocalTasksSettings provides null,
-                    LocalAppPairEnvironment provides AppPairEnvironment(experiment, starter, facts, watcher),
+                    LocalAppPairEnvironment provides
+                        AppPairEnvironment(
+                            experiment,
+                            starter,
+                            facts,
+                            watcher,
+                            AppPairScriptEnvironment(
+                                scriptRunner,
+                                fixturePackages,
+                                { if (it in unlaunchable) null else PairTarget(it, "$it.Main", it) },
+                                { launcherResumed.value = true },
+                            ),
+                        ),
                 ) {
                     SettingsSurface(state = state, initialPage = SettingsPage.APP_PAIR, onAction = {})
                 }
@@ -166,6 +216,118 @@ class AppPairExperimentPageTest {
         composeRule.onNodeWithTag(APP_PAIR_PICK_TAG_PREFIX + apps[0]).performScrollTo().performClick()
         composeRule.onNodeWithTag(APP_PAIR_SECOND_TAG).performScrollTo().performClick()
         composeRule.onNodeWithTag(APP_PAIR_PICK_TAG_PREFIX + apps[1]).performScrollTo().performClick()
+    }
+
+    private fun advanceScript(ms: Long) {
+        scheduler.advanceTimeBy(ms)
+        scheduler.runCurrent()
+        composeRule.waitForIdle()
+    }
+
+    private fun scriptStatus() = composeRule.onNodeWithTag(APP_PAIR_SCRIPT_STATUS_TAG).performScrollTo()
+
+    private fun pressRunScript() = composeRule.onNodeWithTag(APP_PAIR_SCRIPT_RUN_TAG).performScrollTo().performClick()
+
+    @Test
+    fun theScriptButtonPreselectsTheTwoPackagesAndStartsTheWarmUp() {
+        render()
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_RUN_TAG).assertIsDisplayed()
+            .assertTextContains("Run the whole script")
+        scriptStatus().assertTextContains("Opens GitHub and Waterfox in every combination", substring = true)
+        composeRule.onNodeWithTag(APP_PAIR_FIRST_TAG).performScrollTo().assertTextContains("Choose an app", true)
+        pressRunScript()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(APP_PAIR_FIRST_TAG).performScrollTo().assertTextContains(fixturePackages.first, true)
+        composeRule.onNodeWithTag(APP_PAIR_SECOND_TAG).performScrollTo()
+            .assertTextContains(fixturePackages.second, true)
+        assertTrue(calls.isEmpty())
+
+        advanceScript(1_001)
+        assertEquals(listOf("start ${fixturePackages.first}", "start ${fixturePackages.second}"), calls)
+        assertEquals("Warm-up: open both", experiment.log.value.single().scenario)
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_RUN_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_STOP_TAG).assertIsDisplayed().assertTextContains("Stop")
+    }
+
+    @Test
+    fun aMissingAppStopsTheScriptAndTheMessageNamesIt() {
+        render()
+        unlaunchable += fixturePackages.second
+        pressRunScript()
+        advanceScript(10_000)
+        assertTrue(calls.isEmpty())
+        scriptStatus().assertTextContains("Not installed or not launchable: ${fixturePackages.second}", true)
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_RUN_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun theStepCounterFollowsTheRunAndStopEndsIt() {
+        render()
+        pressRunScript()
+        advanceScript(1_001)
+        scriptStatus().assertTextEquals("Step 1 of 9: Warm-up: open both")
+        advanceScript(4_001)
+        advanceScript(2_000)
+        scriptStatus().assertTextEquals("Step 2 of 9: Reuse both")
+        advanceScript(4_000)
+        advanceScript(2_000)
+        scriptStatus().assertTextEquals("Step 3 of 9: Reset both")
+        assertEquals(
+            listOf("Step 1 of 9: Warm-up: open both", "Step 2 of 9: Reuse both", "Step 3 of 9: Reset both"),
+            toasts,
+        )
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_STOP_TAG).performScrollTo().performClick()
+        composeRule.waitForIdle()
+        scriptStatus().assertTextEquals("Stopped at step 3 of 9.")
+        advanceScript(60_000)
+        assertEquals(3, experiment.log.value.size)
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun theScriptRunsWithTheChosenAppsToo() {
+        render()
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_CHOSEN_TAG).performScrollTo().assertIsNotEnabled()
+        choosePair()
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_CHOSEN_TAG).performScrollTo().assertIsEnabled().performClick()
+        advanceScript(1_001)
+        assertEquals(listOf("start ${fixturePackages.first}", "start ${fixturePackages.second}"), calls)
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_CHOSEN_TAG).performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test
+    fun copyScriptLogCopiesOnlyTheRunInStepOrderUnderOneHeader() {
+        render()
+        choosePair()
+        runScenario(PairScenario.FRESH_BOTH)
+        composeRule.waitForIdle()
+        launcherResumed.value = true
+        composeRule.onAllNodesWithTag(APP_PAIR_SCRIPT_COPY_TAG).assertCountEquals(0)
+        pressRunScript()
+        repeat(3) {
+            advanceScript(1_001)
+            advanceScript(4_001)
+            advanceScript(2_000)
+        }
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_COPY_TAG).performScrollTo().performClick()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val clip = context.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
+
+        assertTrue(clip, clip.startsWith("App pair script log (oldest first)\n"))
+        listOf(
+            "device: Android SDK 34, Acme Fold",
+            "app pair: first ${fixturePackages.first}, second ${fixturePackages.second}",
+            "started: ",
+            "script: step 1 of 9",
+            "script: step 2 of 9",
+            "script: step 3 of 9",
+            "return attempt: ok",
+            "returned to launcher: automatically after 0 ms",
+        ).forEach { assertTrue("$it in\n$clip", clip.contains(it)) }
+        assertTrue(clip.indexOf("script: step 1 of 9") < clip.indexOf("script: step 2 of 9"))
+        assertTrue(clip.indexOf("script: step 2 of 9") < clip.indexOf("script: step 3 of 9"))
+        assertEquals(1, Regex("started: ").findAll(clip).count())
+        assertTrue("hand-run scenario left out\n$clip", !clip.contains("Fresh both"))
     }
 
     @Test

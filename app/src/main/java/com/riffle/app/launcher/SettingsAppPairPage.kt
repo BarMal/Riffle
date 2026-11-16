@@ -1,7 +1,5 @@
 package com.riffle.app.launcher
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,6 +36,7 @@ import com.riffle.app.launcher.diagnostics.pair.PairLaunchWatcher
 import com.riffle.app.launcher.diagnostics.pair.PairLogEntry
 import com.riffle.app.launcher.diagnostics.pair.PairMethod
 import com.riffle.app.launcher.diagnostics.pair.PairScenario
+import com.riffle.app.launcher.diagnostics.pair.PairScriptRunner
 import com.riffle.app.launcher.diagnostics.pair.PairStarter
 import com.riffle.app.launcher.diagnostics.pair.PairTarget
 import com.riffle.app.launcher.diagnostics.pair.toPlainText
@@ -63,6 +62,16 @@ internal class AppPairEnvironment(
     val starter: PairStarter,
     val facts: PairFactsSource,
     val watcher: PairLaunchWatcher = PairLaunchWatcher.None,
+    /** The scripted run and what it needs from the platform; absent in the app, where the hub's runner is used. */
+    val script: AppPairScriptEnvironment? = null,
+)
+
+/** The script's runner, the two packages "Run the whole script" preselects, and how a package is resolved. */
+internal class AppPairScriptEnvironment(
+    val runner: PairScriptRunner,
+    val packages: Pair<String, String>,
+    val resolve: (String) -> PairTarget?,
+    val returnHome: () -> Unit,
 )
 
 internal val LocalAppPairEnvironment = compositionLocalOf<AppPairEnvironment?> { null }
@@ -122,13 +131,16 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
         }
     }
 
-    SettingsSection(title = stringResource(R.string.settings_page_app_pair)) {
-        Text(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            text = stringResource(R.string.app_pair_explainer),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
+    PairScriptHost(
+        environment = environment,
+        wiring = PairScriptWiring(experiment, watcher, posture),
+        state = state,
+        chosen = first to second,
+        onPreselect = { one, two ->
+            if (one != null) first = one
+            if (two != null) second = two
+        },
+    )
     PairAppsSection(
         state = state,
         iconLoader = iconLoader,
@@ -350,9 +362,4 @@ private fun InstalledApp.toPairTarget() = PairTarget(identity.packageName.value,
 private fun copyPairLog(
     context: Context,
     log: List<PairLogEntry>,
-) {
-    runCatching {
-        context.getSystemService(ClipboardManager::class.java)
-            ?.setPrimaryClip(ClipData.newPlainText("App pair experiment", log.toPlainText()))
-    }
-}
+) = copyPairText(context, log.toPlainText())

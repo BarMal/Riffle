@@ -1,0 +1,201 @@
+package com.riffle.app.launcher
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.riffle.app.R
+import com.riffle.app.launcher.diagnostics.pair.AndroidPairFactsSource
+import com.riffle.app.launcher.diagnostics.pair.AndroidPairScriptPlatform
+import com.riffle.app.launcher.diagnostics.pair.AndroidPairStarter
+import com.riffle.app.launcher.diagnostics.pair.AppPairExperiment
+import com.riffle.app.launcher.diagnostics.pair.ExperimentScriptLauncher
+import com.riffle.app.launcher.diagnostics.pair.PairActivityHub
+import com.riffle.app.launcher.diagnostics.pair.PairLaunchWatcher
+import com.riffle.app.launcher.diagnostics.pair.PairScriptApps
+import com.riffle.app.launcher.diagnostics.pair.PairScriptState
+import com.riffle.app.launcher.diagnostics.pair.toScriptPlainText
+import com.riffle.core.domain.launcher.apps.InstalledApp
+
+// The "Script" section of the "App pair experiment" page (SettingsAppPairPage.kt): one button that runs every
+// scenario in sequence (PairScript, PairScriptRunner), its progress line and the oldest-first copy of its log.
+
+internal const val APP_PAIR_SCRIPT_RUN_TAG = "appPair.script.run"
+internal const val APP_PAIR_SCRIPT_STOP_TAG = "appPair.script.stop"
+internal const val APP_PAIR_SCRIPT_STATUS_TAG = "appPair.script.status"
+internal const val APP_PAIR_SCRIPT_CHOSEN_TAG = "appPair.script.chosen"
+internal const val APP_PAIR_SCRIPT_COPY_TAG = "appPair.script.copy"
+
+private const val DISABLED_ROW_ALPHA = 0.5f
+
+/** What the host needs from the page besides the environment: the shared log, the watcher and the layout posture. */
+internal class PairScriptWiring(
+    val experiment: AppPairExperiment,
+    val watcher: PairLaunchWatcher,
+    val posture: String,
+)
+
+/**
+ * The script section with its wiring: the runner (the hub's, in the app), the launcher it is started with, and the two
+ * buttons. Pressing "Run the whole script" selects the hard-coded pair in the pickers, then starts the run.
+ */
+@Composable
+internal fun PairScriptHost(
+    environment: AppPairEnvironment?,
+    wiring: PairScriptWiring,
+    state: SettingsSurfaceState,
+    chosen: Pair<InstalledApp?, InstalledApp?>,
+    onPreselect: (InstalledApp?, InstalledApp?) -> Unit,
+) {
+    val context = LocalContext.current
+    val scriptEnvironment = environment?.script
+    val runner = scriptEnvironment?.runner ?: PairActivityHub.scriptRunner
+    val scriptState by runner.state.collectAsState()
+    val packages = scriptEnvironment?.packages ?: (PairScriptApps.FIRST_PACKAGE to PairScriptApps.SECOND_PACKAGE)
+    val log by wiring.experiment.log.collectAsState()
+    var copied by remember { mutableStateOf(false) }
+    val appContext = context.applicationContext
+    val launcher =
+        ExperimentScriptLauncher(
+            wiring.experiment,
+            starter = { environment?.starter ?: AndroidPairStarter(PairActivityHub.startContext(context)) },
+            facts = {
+                environment?.facts
+                    ?: AndroidPairFactsSource(PairActivityHub.startContext(context)) { wiring.posture }
+            },
+            watcher = wiring.watcher,
+            resolver = scriptEnvironment?.resolve ?: { AndroidPairScriptPlatform.resolve(appContext, it) },
+            home = scriptEnvironment?.returnHome ?: { AndroidPairScriptPlatform.returnToLauncher(appContext) },
+        )
+    val (a, b) = chosen
+    PairScriptSection(
+        values = PairScriptSectionValues(scriptState, canRunPair(a, b), log.any { it.script != null }, copied),
+        actions =
+            PairScriptSectionActions(
+                onRun = {
+                    val (one, two) = packages
+                    val apps = state.installedApps
+                    onPreselect(
+                        apps.firstOrNull { it.identity.packageName.value == one },
+                        apps.firstOrNull { it.identity.packageName.value == two },
+                    )
+                    copied = false
+                    runner.start(launcher, one, two)
+                },
+                onStop = runner::stop,
+                onRunChosen = {
+                    if (a != null && b != null) {
+                        copied = false
+                        runner.start(launcher, a.identity.packageName.value, b.identity.packageName.value)
+                    }
+                },
+                onCopy = {
+                    copyPairText(context, log.toScriptPlainText())
+                    copied = true
+                },
+            ),
+    )
+}
+
+internal class PairScriptSectionValues(
+    val state: PairScriptState,
+    val canRunChosen: Boolean,
+    val hasScriptLog: Boolean,
+    val copied: Boolean,
+)
+
+internal class PairScriptSectionActions(
+    val onRun: () -> Unit,
+    val onStop: () -> Unit,
+    val onRunChosen: () -> Unit,
+    val onCopy: () -> Unit,
+)
+
+@Composable
+internal fun PairScriptSection(
+    values: PairScriptSectionValues,
+    actions: PairScriptSectionActions,
+) {
+    val running = values.state is PairScriptState.Running
+    SettingsSection(title = stringResource(R.string.app_pair_section_script)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag(if (running) APP_PAIR_SCRIPT_STOP_TAG else APP_PAIR_SCRIPT_RUN_TAG),
+                onClick = if (running) actions.onStop else actions.onRun,
+            ) {
+                Text(stringResource(if (running) R.string.app_pair_script_stop else R.string.app_pair_script_run))
+            }
+            Text(
+                modifier = Modifier.testTag(APP_PAIR_SCRIPT_STATUS_TAG),
+                text = scriptStatusText(values.state),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        val chosenEnabled = values.canRunChosen && !running
+        SettingsClickableRow(
+            modifier =
+                Modifier
+                    .testTag(APP_PAIR_SCRIPT_CHOSEN_TAG)
+                    .alpha(if (chosenEnabled) 1f else DISABLED_ROW_ALPHA),
+            title = stringResource(R.string.app_pair_script_run_chosen),
+            subtitle = stringResource(R.string.app_pair_script_run_chosen_summary),
+            enabled = chosenEnabled,
+            onClick = actions.onRunChosen,
+            trailingContent = null,
+        )
+        if (values.hasScriptLog) {
+            SettingsClickableRow(
+                modifier = Modifier.testTag(APP_PAIR_SCRIPT_COPY_TAG),
+                title = stringResource(R.string.app_pair_script_copy),
+                subtitle =
+                    stringResource(
+                        if (values.copied) R.string.app_pair_log_copied else R.string.app_pair_script_copy_summary,
+                    ),
+                onClick = actions.onCopy,
+                trailingContent = null,
+            )
+        }
+    }
+}
+
+@Composable
+private fun scriptStatusText(state: PairScriptState): String =
+    when (state) {
+        PairScriptState.Idle -> stringResource(R.string.app_pair_script_hint)
+        is PairScriptState.Running -> stringResource(R.string.app_pair_script_step, state.step, state.total, state.name)
+        is PairScriptState.Finished -> stringResource(R.string.app_pair_script_finished, state.steps)
+        is PairScriptState.Stopped -> stringResource(R.string.app_pair_script_stopped, state.step, state.total)
+        is PairScriptState.Missing ->
+            stringResource(R.string.app_pair_script_missing, state.packages.joinToString(", "))
+    }
+
+internal fun copyPairText(
+    context: android.content.Context,
+    text: String,
+) {
+    runCatching {
+        context.getSystemService(android.content.ClipboardManager::class.java)
+            ?.setPrimaryClip(android.content.ClipData.newPlainText("App pair experiment", text))
+    }
+}
