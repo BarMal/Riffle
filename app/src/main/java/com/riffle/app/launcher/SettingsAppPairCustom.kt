@@ -25,14 +25,12 @@ import com.riffle.app.launcher.diagnostics.pair.CustomAppFlags
 import com.riffle.app.launcher.diagnostics.pair.CustomPair
 import com.riffle.app.launcher.diagnostics.pair.CustomSwitch
 import com.riffle.app.launcher.diagnostics.pair.PairLogEntry
-import com.riffle.app.launcher.diagnostics.pair.PairPreset
 import com.riffle.app.launcher.diagnostics.pair.PairVerdict
 import com.riffle.app.launcher.diagnostics.pair.isOn
 import com.riffle.app.launcher.diagnostics.pair.with
 
 // The Custom recipe and the after-the-fact note of the "App pair experiment" page (SettingsAppPairPage.kt).
 
-internal const val APP_PAIR_PRESET_TAG_PREFIX = "appPair.preset."
 internal const val APP_PAIR_SWITCH_TAG_PREFIX = "appPair.switch."
 internal const val APP_PAIR_ONE_CALL_TAG = "appPair.oneCall"
 internal const val APP_PAIR_RESULT_FLAGS_TAG = "appPair.resultFlags"
@@ -59,17 +57,6 @@ internal fun PairCustomSections(
             text = stringResource(R.string.app_pair_custom_intro),
             style = MaterialTheme.typography.bodyMedium,
         )
-    }
-    SettingsSection(title = stringResource(R.string.app_pair_section_presets)) {
-        PairPreset.entries.forEach { preset ->
-            SettingsClickableRow(
-                modifier = Modifier.testTag(APP_PAIR_PRESET_TAG_PREFIX + preset.name),
-                title = stringResource(preset.titleRes()),
-                subtitle = stringResource(preset.summaryRes()),
-                onClick = { onChange(preset.pair) },
-                trailingContent = { SettingsButtonText(text = stringResource(R.string.app_pair_preset_use)) },
-            )
-        }
     }
     SettingsSection(title = stringResource(R.string.app_pair_switches_first)) {
         CustomSwitchRows("first", custom.first) { onChange(custom.copy(first = it)) }
@@ -128,27 +115,7 @@ private fun CustomSwitch.summaryRes(): Int =
         CustomSwitch.NO_ANIMATION -> R.string.app_pair_switch_no_animation_summary
     }
 
-private fun PairPreset.titleRes(): Int =
-    when (this) {
-        PairPreset.FRESH_BOTH -> R.string.app_pair_preset_fresh_both
-        PairPreset.REUSE_BOTH -> R.string.app_pair_preset_reuse_both
-        PairPreset.RESET_BOTH -> R.string.app_pair_preset_reset_both
-        PairPreset.REUSE_FIRST_FRESH_SECOND -> R.string.app_pair_preset_reuse_first_fresh_second
-        PairPreset.FRESH_FIRST_REUSE_SECOND -> R.string.app_pair_preset_fresh_first_reuse_second
-        PairPreset.ONE_CALL_RESET_BOTH -> R.string.app_pair_preset_one_call_reset_both
-    }
-
-private fun PairPreset.summaryRes(): Int =
-    when (this) {
-        PairPreset.FRESH_BOTH -> R.string.app_pair_preset_fresh_both_summary
-        PairPreset.REUSE_BOTH -> R.string.app_pair_preset_reuse_both_summary
-        PairPreset.RESET_BOTH -> R.string.app_pair_preset_reset_both_summary
-        PairPreset.REUSE_FIRST_FRESH_SECOND -> R.string.app_pair_preset_reuse_first_fresh_second_summary
-        PairPreset.FRESH_FIRST_REUSE_SECOND -> R.string.app_pair_preset_fresh_first_reuse_second_summary
-        PairPreset.ONE_CALL_RESET_BOTH -> R.string.app_pair_preset_one_call_reset_both_summary
-    }
-
-private fun PairVerdict.labelRes(): Int =
+internal fun PairVerdict.labelRes(): Int =
     when (this) {
         PairVerdict.SPLIT -> R.string.app_pair_verdict_split
         PairVerdict.NO_SPLIT -> R.string.app_pair_verdict_no_split

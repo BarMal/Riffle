@@ -5,17 +5,22 @@ import android.content.Context
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
+import com.riffle.app.launcher.APP_PAIR_ADVANCED_TAG
 import com.riffle.app.launcher.APP_PAIR_COPY_TAG
 import com.riffle.app.launcher.APP_PAIR_DUPLICATES_TAG_PREFIX
+import com.riffle.app.launcher.APP_PAIR_EDIT_AS_CUSTOM_TAG
 import com.riffle.app.launcher.APP_PAIR_FIRST_OPEN_TAG
 import com.riffle.app.launcher.APP_PAIR_FIRST_TAG
 import com.riffle.app.launcher.APP_PAIR_LAUNCH_TAG
@@ -23,8 +28,10 @@ import com.riffle.app.launcher.APP_PAIR_LOG_TAG
 import com.riffle.app.launcher.APP_PAIR_METHOD_TAG_PREFIX
 import com.riffle.app.launcher.APP_PAIR_ONE_CALL_TAG
 import com.riffle.app.launcher.APP_PAIR_PICK_TAG_PREFIX
-import com.riffle.app.launcher.APP_PAIR_PRESET_TAG_PREFIX
 import com.riffle.app.launcher.APP_PAIR_RESULT_FLAGS_TAG
+import com.riffle.app.launcher.APP_PAIR_SCENARIO_RESULT_TAG_PREFIX
+import com.riffle.app.launcher.APP_PAIR_SCENARIO_TAG_PREFIX
+import com.riffle.app.launcher.APP_PAIR_SECOND_OPEN_TAG
 import com.riffle.app.launcher.APP_PAIR_SECOND_TAG
 import com.riffle.app.launcher.APP_PAIR_VERDICT_TAG_PREFIX
 import com.riffle.app.launcher.AppPairEnvironment
@@ -43,6 +50,7 @@ import com.riffle.app.launcher.diagnostics.pair.PairLaunchWatcher
 import com.riffle.app.launcher.diagnostics.pair.PairMethod
 import com.riffle.app.launcher.diagnostics.pair.PairObservation
 import com.riffle.app.launcher.diagnostics.pair.PairPreset
+import com.riffle.app.launcher.diagnostics.pair.PairScenario
 import com.riffle.app.launcher.diagnostics.pair.PairStart
 import com.riffle.app.launcher.diagnostics.pair.PairStarter
 import com.riffle.app.launcher.diagnostics.pair.PairVerdict
@@ -50,6 +58,7 @@ import com.riffle.app.launcher.diagnostics.pair.TrampolineRequest
 import com.riffle.app.launcher.diagnostics.pair.isOn
 import com.riffle.app.launcher.settingsSurfaceState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -106,6 +115,20 @@ class AppPairExperimentPageTest {
             onTrace(listOf(PairObservation(12, "onPause")), false)
         }
 
+    private fun expandAdvanced() = composeRule.onNodeWithTag(APP_PAIR_ADVANCED_TAG).performScrollTo().performClick()
+
+    private fun runScenario(scenario: PairScenario) =
+        composeRule.onNodeWithTag(APP_PAIR_SCENARIO_TAG_PREFIX + scenario.name).performScrollTo().performClick()
+
+    private fun scenarioLabel(scenario: PairScenario) =
+        composeRule.onNodeWithTag(APP_PAIR_SCENARIO_RESULT_TAG_PREFIX + scenario.name, useUnmergedTree = true)
+
+    private fun copiedText(): String {
+        composeRule.onNodeWithTag(APP_PAIR_COPY_TAG).performScrollTo().performClick()
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        return context.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
+    }
+
     private fun selectCustom() {
         composeRule.onNodeWithTag(APP_PAIR_METHOD_TAG_PREFIX + PairMethod.CUSTOM.name).performScrollTo().performClick()
     }
@@ -146,14 +169,137 @@ class AppPairExperimentPageTest {
     }
 
     @Test
-    fun thePageShowsItsExplanationPickersMethodsAndAnEmptyLog() {
+    fun thePageShowsItsPickersScenariosAndAnEmptyLogWithAdvancedCollapsed() {
         render()
         composeRule.onNodeWithTag(APP_PAIR_FIRST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(APP_PAIR_SECOND_TAG).assertIsDisplayed()
+        PairScenario.entries.forEach {
+            composeRule.onNodeWithTag(APP_PAIR_SCENARIO_TAG_PREFIX + it.name).performScrollTo().assertIsDisplayed()
+        }
+        composeRule.onAllNodesWithTag(APP_PAIR_LOG_TAG).assertCountEquals(0)
+        composeRule.onNodeWithTag(APP_PAIR_ADVANCED_TAG).performScrollTo().assertIsDisplayed()
+        PairMethod.entries.forEach {
+            composeRule.onAllNodesWithTag(APP_PAIR_METHOD_TAG_PREFIX + it.name).assertCountEquals(0)
+        }
+        composeRule.onAllNodesWithTag(APP_PAIR_LAUNCH_TAG).assertCountEquals(0)
+        composeRule.onAllNodesWithTag(APP_PAIR_ONE_CALL_TAG).assertCountEquals(0)
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun advancedExpandsToTheFiveRoundOneMethodsAndCustom() {
+        render()
+        expandAdvanced()
         PairMethod.entries.forEach {
             composeRule.onNodeWithTag(APP_PAIR_METHOD_TAG_PREFIX + it.name).performScrollTo().assertIsDisplayed()
         }
-        composeRule.onAllNodesWithTag(APP_PAIR_LOG_TAG).assertCountEquals(0)
+        composeRule.onNodeWithTag(APP_PAIR_LAUNCH_TAG).performScrollTo().assertIsDisplayed()
+        composeRule.captureScreen()
+        expandAdvanced()
+        composeRule.onAllNodesWithTag(APP_PAIR_LAUNCH_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun scenarioButtonsAreDisabledUntilTwoDifferentAppsAreChosen() {
+        render()
+        val apps = ScreenshotFixtures.installedApps.map { it.identity.packageName.value }
+
+        fun assertAll(enabled: Boolean) =
+            PairScenario.entries.forEach {
+                val node = composeRule.onNodeWithTag(APP_PAIR_SCENARIO_TAG_PREFIX + it.name).performScrollTo()
+                if (enabled) node.assertIsEnabled() else node.assertIsNotEnabled()
+            }
+        assertAll(false)
+        composeRule.onNodeWithTag(APP_PAIR_FIRST_TAG).performScrollTo().performClick()
+        composeRule.onNodeWithTag(APP_PAIR_PICK_TAG_PREFIX + apps[0]).performScrollTo().performClick()
+        assertAll(false)
+        composeRule.onNodeWithTag(APP_PAIR_SECOND_TAG).performScrollTo().performClick()
+        composeRule.onNodeWithTag(APP_PAIR_PICK_TAG_PREFIX + apps[0]).performScrollTo().performClick()
+        assertAll(false)
+        runScenario(PairScenario.RESET_BOTH)
+        composeRule.waitForIdle()
+        assertTrue(calls.isEmpty())
+        composeRule.onNodeWithTag(APP_PAIR_SECOND_TAG).performScrollTo().performClick()
+        composeRule.onNodeWithTag(APP_PAIR_PICK_TAG_PREFIX + apps[1]).performScrollTo().performClick()
+        assertAll(true)
+    }
+
+    @Test
+    fun tappingResetBothLaunchesOnceWithItsFlagsAndWritesAnEntryNamedAfterIt() {
+        render()
+        choosePair()
+        runScenario(PairScenario.RESET_BOTH)
+        composeRule.waitForIdle()
+
+        val apps = ScreenshotFixtures.installedApps.map { it.identity.packageName.value }
+        assertEquals(listOf("start ${apps[0]}", "start ${apps[1]}"), calls)
+        assertEquals(1, watchedLaunches)
+        val entry = experiment.log.value.single()
+        assertEquals("Reset both", entry.scenario)
+        assertEquals(PairMethod.CUSTOM, entry.method)
+        assertEquals(PairPreset.RESET_BOTH.pair, entry.custom)
+        assertEquals(600L, entry.delayMillis)
+        composeRule.onNodeWithTag(APP_PAIR_LOG_TAG).performScrollTo().assertIsDisplayed()
+        val clip = copiedText()
+        listOf(
+            "Reset both (Custom)  delay 600 ms",
+            "flags first:  LAUNCH_ADJACENT|NEW_TASK|CLEAR_TASK",
+            "flags second: LAUNCH_ADJACENT|NEW_TASK|CLEAR_TASK",
+        ).forEach { assertTrue("$it in\n$clip", clip.contains(it)) }
+    }
+
+    @Test
+    fun oneCallUsesTheRoundOneStartActivitiesStrategy() {
+        render()
+        choosePair()
+        runScenario(PairScenario.ONE_CALL)
+        composeRule.waitForIdle()
+
+        assertEquals(listOf("startAll"), calls)
+        val entry = experiment.log.value.single()
+        assertEquals("One call", entry.scenario)
+        assertEquals(PairMethod.START_ACTIVITIES_ARRAY, entry.method)
+        val clip = copiedText()
+        listOf(
+            "One call (One startActivities call)  one startActivities call, delay ignored",
+            "flags first:  NEW_TASK",
+            "flags second: LAUNCH_ADJACENT|NEW_TASK|MULTIPLE_TASK",
+        ).forEach { assertTrue("$it in\n$clip", clip.contains(it)) }
+    }
+
+    @Test
+    fun theAlreadyOpenTicksAreWrittenIntoTheScenarioEntry() {
+        render()
+        choosePair()
+        toggle(APP_PAIR_SECOND_OPEN_TAG)
+        runScenario(PairScenario.FRESH_BOTH)
+        composeRule.waitForIdle()
+        val entry = experiment.log.value.single()
+        assertTrue(!entry.firstWasOpen && entry.secondWasOpen)
+        assertTrue(copiedText().contains("already open (ticked by the owner): first no, second yes"))
+    }
+
+    @Test
+    fun aRowsTrailingLabelFollowsTheVerdictOfItsMostRecentEntry() {
+        render()
+        choosePair()
+        scenarioLabel(PairScenario.RESET_BOTH).assertDoesNotExist()
+        runScenario(PairScenario.RESET_BOTH)
+        composeRule.waitForIdle()
+        scenarioLabel(PairScenario.RESET_BOTH).assertTextEquals("not marked")
+        scenarioLabel(PairScenario.FRESH_BOTH).assertDoesNotExist()
+        val id = experiment.log.value.single().id
+        composeRule.onNodeWithTag("$APP_PAIR_VERDICT_TAG_PREFIX$id.${PairVerdict.SPLIT_UNEVEN}")
+            .performScrollTo().performClick()
+        scenarioLabel(PairScenario.RESET_BOTH).assertTextEquals("Split, uneven")
+        toggle("$APP_PAIR_DUPLICATES_TAG_PREFIX$id")
+        scenarioLabel(PairScenario.RESET_BOTH).assertTextEquals("Split, uneven, duplicates")
+        composeRule.onNodeWithTag("$APP_PAIR_VERDICT_TAG_PREFIX$id.${PairVerdict.SPLIT_UNEVEN}")
+            .performScrollTo().performClick()
+        scenarioLabel(PairScenario.RESET_BOTH).assertTextEquals("not marked, duplicates")
+        runScenario(PairScenario.RESET_BOTH)
+        composeRule.waitForIdle()
+        scenarioLabel(PairScenario.RESET_BOTH).assertTextEquals("not marked")
         composeRule.captureScreen()
     }
 
@@ -165,9 +311,10 @@ class AppPairExperimentPageTest {
     }
 
     @Test
-    fun choosingAPairAndLaunchingRecordsALogEntryAndCopyPutsItOnTheClipboard() {
+    fun launchingFromAdvancedRecordsALogEntryAndCopyPutsItOnTheClipboard() {
         render()
         choosePair()
+        expandAdvanced()
         val bothAdjacent = APP_PAIR_METHOD_TAG_PREFIX + PairMethod.BOTH_ADJACENT.name
         composeRule.onNodeWithTag(bothAdjacent).performScrollTo().performClick()
         composeRule.onNodeWithTag(APP_PAIR_LAUNCH_TAG).performScrollTo().performClick()
@@ -177,11 +324,9 @@ class AppPairExperimentPageTest {
         assertEquals(listOf("start ${apps[0]}", "start ${apps[1]}"), calls)
         composeRule.onNodeWithTag(APP_PAIR_LOG_TAG).performScrollTo().assertIsDisplayed()
         assertEquals(1, experiment.log.value.size)
-        composeRule.captureScreen()
+        assertNull(experiment.log.value.single().scenario)
 
-        composeRule.onNodeWithTag(APP_PAIR_COPY_TAG).performScrollTo().performClick()
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val clip = context.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
+        val clip = copiedText()
         assertTrue(clip, clip.contains("Both adjacent") && clip.contains(apps[0]) && clip.contains(apps[1]))
         assertTrue(clip.contains("Android SDK 34, Acme Fold"))
     }
@@ -189,6 +334,7 @@ class AppPairExperimentPageTest {
     @Test
     fun customSwitchesAreHiddenUntilCustomIsChosenThenShowTheResultingFlagsLive() {
         render()
+        expandAdvanced()
         composeRule.onAllNodesWithTag(APP_PAIR_ONE_CALL_TAG).assertCountEquals(0)
         selectCustom()
         assertFlags("First: LAUNCH_ADJACENT|NEW_TASK\nSecond: LAUNCH_ADJACENT|NEW_TASK|MULTIPLE_TASK")
@@ -204,16 +350,21 @@ class AppPairExperimentPageTest {
     }
 
     @Test
-    fun aPresetFillsEverySwitch() {
+    fun editAsCustomLoadsTheLatestScenariosFlagsIntoTheSwitches() {
         render()
+        choosePair()
+        expandAdvanced()
         selectCustom()
-        PairPreset.entries.forEach { preset ->
-            toggle(APP_PAIR_PRESET_TAG_PREFIX + preset.name)
-            assertSwitches("first", preset.pair.first)
-            assertSwitches("second", preset.pair.second)
+        composeRule.onNodeWithTag(APP_PAIR_EDIT_AS_CUSTOM_TAG).performScrollTo().assertIsNotEnabled()
+        PairScenario.entries.forEach { scenario ->
+            runScenario(scenario)
+            composeRule.waitForIdle()
+            toggle(APP_PAIR_EDIT_AS_CUSTOM_TAG)
+            assertSwitches("first", scenario.custom.first)
+            assertSwitches("second", scenario.custom.second)
             val one = composeRule.onNodeWithTag(APP_PAIR_ONE_CALL_TAG).performScrollTo()
-            if (preset.pair.oneCall) one.assertIsOn() else one.assertIsOff()
-            assertFlags("First: ${preset.pair.first.description}\nSecond: ${preset.pair.second.description}")
+            if (scenario.custom.oneCall) one.assertIsOn() else one.assertIsOff()
+            assertFlags("First: ${scenario.custom.first.description}\nSecond: ${scenario.custom.second.description}")
         }
     }
 
@@ -229,8 +380,13 @@ class AppPairExperimentPageTest {
     fun aCustomLaunchWritesItsRecipeTicksTraceAndVerdictIntoTheEntryAndTheCopiedText() {
         render()
         choosePair()
+        expandAdvanced()
         selectCustom()
-        toggle(APP_PAIR_PRESET_TAG_PREFIX + PairPreset.ONE_CALL_RESET_BOTH.name)
+        toggle(appPairSwitchTag("first", CustomSwitch.ADJACENT))
+        toggle(appPairSwitchTag("first", CustomSwitch.CLEAR_TASK))
+        toggle(appPairSwitchTag("second", CustomSwitch.MULTIPLE_TASK))
+        toggle(appPairSwitchTag("second", CustomSwitch.CLEAR_TASK))
+        toggle(APP_PAIR_ONE_CALL_TAG)
         toggle(APP_PAIR_FIRST_OPEN_TAG)
         composeRule.onNodeWithTag(APP_PAIR_LAUNCH_TAG).performScrollTo().performClick()
         composeRule.waitForIdle()
@@ -257,9 +413,7 @@ class AppPairExperimentPageTest {
         assertTrue(experiment.log.value.single().duplicatesInRecents)
         composeRule.captureScreen()
 
-        composeRule.onNodeWithTag(APP_PAIR_COPY_TAG).performScrollTo().performClick()
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val clip = context.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
+        val clip = copiedText()
         listOf(
             "Custom  one startActivities call, delay ignored",
             "first:  ${apps[0]}",
@@ -278,8 +432,8 @@ class AppPairExperimentPageTest {
     fun theNewestEntryAndOlderEntriesEachTakeTheirOwnVerdict() {
         render()
         choosePair()
-        composeRule.onNodeWithTag(APP_PAIR_LAUNCH_TAG).performScrollTo().performClick()
-        composeRule.onNodeWithTag(APP_PAIR_LAUNCH_TAG).performScrollTo().performClick()
+        runScenario(PairScenario.REUSE_BOTH)
+        runScenario(PairScenario.REUSE_BOTH)
         composeRule.waitForIdle()
         val (newest, older) = experiment.log.value
         composeRule.onNodeWithTag("$APP_PAIR_VERDICT_TAG_PREFIX${older.id}.${PairVerdict.NO_SPLIT}")
@@ -293,8 +447,9 @@ class AppPairExperimentPageTest {
     }
 
     @Test
-    fun launchDoesNothingUntilBothAppsAreChosen() {
+    fun advancedLaunchDoesNothingUntilBothAppsAreChosen() {
         render()
+        expandAdvanced()
         composeRule.onNodeWithTag(APP_PAIR_LAUNCH_TAG).performScrollTo().performClick()
         composeRule.waitForIdle()
         assertTrue(calls.isEmpty())
