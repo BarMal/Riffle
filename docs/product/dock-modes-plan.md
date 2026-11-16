@@ -1883,6 +1883,72 @@ apps and press "Run the script with these apps" (the same script over the chosen
 - **The log.** "Copy log" copies everything, newest first as before. "Copy script log (oldest first)" copies only the newest run in
   step order under one header (device, window, app pair, start time).
 
+#### Round 3: the held trampoline
+
+**What the device said after rounds 1 and 2.**
+
+- A nine-step script (every flag combination of `LAUNCH_ADJACENT`, `MULTIPLE_TASK` and `CLEAR_TASK`, started from the launcher's own
+  Home activity with both apps already open) split nothing; the launcher's trace shows it only pausing and stopping, never entering
+  multi-window.
+- The one recipe that split twice in round 1 (the launcher starts both with `LAUNCH_ADJACENT`) did not split when repeated later with
+  the same code and closed apps. Both round-1 successes were within a minute of a trampoline run, so they probably joined a split
+  session that run had left half-open. Conclusion: a full-screen HOME activity cannot start a split; `FLAG_ACTIVITY_LAUNCH_ADJACENT` is
+  honoured relative to the launching activity's task, and the Home task cannot be one side of a split.
+- The round-1 trampoline never tested the real technique: it made both starts synchronously in `onCreate` and finished at once, with a
+  transparent no-history theme, so it was never a resumed, resizable window the system could put on one side. The owner can split
+  these two apps by hand from Recents, so the apps support it.
+
+**How the holder works** (`PairHolderActivity`, the technique app-pair tools use). A normal, resizable (`resizeableActivity="true"`),
+opaque activity in its own task (`taskAffinity=""`, excluded from Recents, not `noHistory`, `configChanges` for size, layout and
+orientation so a resize into a split does not recreate it) is resumed full-screen and shows one line, "Opening two apps side by
+side...". It starts app A with `LAUNCH_ADJACENT | NEW_TASK` (the system enters split: holder on one side, A on the other), waits until
+the holder itself is in multi-window mode, starts app B from the holder so B takes the holder's side, and finishes itself
+(`finishAndRemoveTask()`, no animation). The launcher starts it in a new task per run (`NEW_TASK | MULTIPLE_TASK`), so a holder left
+behind is never reused. Diagnostics only: a plain themed surface, no glass, no new permission.
+
+The timing is a pure state machine (`PairHolderMachine`, unit-tested with a fake clock; `PairHolderSession` feeds it events and
+performs its effects): Created, then the first resume plus a 300 ms settle starts the first app; WaitingForSplit until
+`isInMultiWindowMode` is true (read from `onMultiWindowModeChanged`, `onConfigurationChanged`, and a poll on each resume, on each
+window-focus change and right after the first start), then 400 ms later the second app; then 300 ms (variant value) later the finish.
+If no split is seen within 3 s of the first start the log says `no split after first start` and the variant's timeout action runs
+(every variant starts the second app anyway, so the owner still sees both apps). A holder that is paused or stopped before the first
+start could run, or destroyed mid-way, records that and ends; nothing loops.
+
+**The variants** (`HeldVariants`; each is one log entry, with the first start from the holder, then the second):
+
+| | Name | First start | Second start | Finish after the second |
+|---|---|---|---|---|
+| H1 | Held: adjacent, then plain | `LAUNCH_ADJACENT \| NEW_TASK` | `NEW_TASK` | 300 ms |
+| H2 | Held: adjacent, then adjacent | `LAUNCH_ADJACENT \| NEW_TASK` | `LAUNCH_ADJACENT \| NEW_TASK` | 300 ms |
+| H3 | Held: reset both | `LAUNCH_ADJACENT \| NEW_TASK \| CLEAR_TASK` | `NEW_TASK \| CLEAR_TASK` | 300 ms |
+| H4 | Held: fresh both | `LAUNCH_ADJACENT \| NEW_TASK \| MULTIPLE_TASK` | `NEW_TASK \| MULTIPLE_TASK` | 300 ms |
+| H5 | Held: adjacent, then plain, hold longer | as H1 | as H1 | 800 ms |
+| H6 | Held: plain first, then adjacent | `NEW_TASK` (replaces the holder full-screen; expected to fail, kept as a control) | `LAUNCH_ADJACENT \| NEW_TASK`, 600 ms after the first | 300 ms |
+
+**Running it.** "Run the held-trampoline script" sits above the nine-step button in the Script section: six tries, about 45 seconds,
+start a screen recording first. It uses the same hard-coded pair (`PairScriptApps`) and the same "with these apps" alternative and
+missing-app message, and the same runner sequencing (a step fires when the launcher is resumed and settled, dwells 6 s, the launcher
+is brought back, a toast per step such as "Held 2 of 6: adjacent, then adjacent"). There is no warm-up: H1 runs on whatever state the
+apps are in, so step 1 says `already open: unknown` and the later steps `already open: first=true second=true`. Each variant can
+also be run alone from the rows under "Run a scenario" > "With a holding window". "Copy script log (oldest first)" copies the latest
+script run of either kind, with a `script:` line under the title naming which one.
+
+**Reading the holder trace.** Each held entry has a `holder trace` block (offsets from the holder's `onCreate`) and still has the
+launcher's own lifecycle trace. In the holder trace:
+
+- `isInMultiWindowMode false -> true`, together with a `window bounds` line whose width is about half of the earlier one, means the
+  system entered split with the holder as one side; `split observed via ...` names the signal that saw it and the second start follows
+  400 ms later. This is the sign the technique works on this device.
+- `no split after first start` and a second start anyway means the first start did not put the holder into a split (the holder trace
+  shows no multi-window change); look at the recording to see what the system did instead.
+- `start first ...: ok` or `FAILED -> <exception>` is each `startActivity` call's outcome; `ok` only means the call returned.
+- `onPause` / `onStop` right after the first start with no multi-window line: the first app covered the holder full-screen (always
+  the case for H6's first start).
+- `state Done: ...` and `final state:` give the end: `finished after the second start`, `onPause before the first start`, or
+  `destroyed in state ...`.
+- The launcher's trace in the same entry shows whether Home itself was resized; if the holder is the one that split, Home should only
+  pause and stop.
+
 
 ## Quick actions, and apps behind the cards
 

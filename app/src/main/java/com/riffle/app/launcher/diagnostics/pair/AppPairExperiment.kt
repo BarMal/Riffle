@@ -48,6 +48,8 @@ data class PairLaunchOptions(
     val scenario: String? = null,
     /** The scripted run's facts about this launch; null for a launch the owner made by hand. */
     val script: PairScriptInfo? = null,
+    /** The held-trampoline recipe this launch is; null for every other launch. */
+    val held: HeldVariant? = null,
 )
 
 /** The owner's after-the-fact judgement of what the screen showed. */
@@ -82,6 +84,10 @@ data class PairLogEntry(
     val scenario: String? = null,
     /** The scripted run's facts about this launch; null for a launch the owner made by hand. */
     val script: PairScriptInfo? = null,
+    /** The held-trampoline recipe, for an entry the holder activity reports into (its [method] is Custom). */
+    val held: HeldVariant? = null,
+    /** What the holder activity wrote about itself; null until it reports. */
+    val holder: HolderTrace? = null,
 )
 
 /**
@@ -95,6 +101,7 @@ class AppPairExperiment(
     private val entries = MutableStateFlow<List<PairLogEntry>>(emptyList())
     private var nextId = 1L
     private var waitingForTrampoline: Long? = null
+    private var waitingForHolder: Long? = null
 
     val log: StateFlow<List<PairLogEntry>> = entries
 
@@ -109,11 +116,12 @@ class AppPairExperiment(
         options: PairLaunchOptions = PairLaunchOptions(),
     ): Long {
         val id = nextId++
-        val strategy = pairStrategyFor(method, options.custom, pause)
+        val strategy = options.held?.let { HeldStrategy(it) } ?: pairStrategyFor(method, options.custom, pause)
         val collected = factsSource.collect(first, second)
         if (method == PairMethod.TRAMPOLINE_ADJACENT_FIRST || method == PairMethod.TRAMPOLINE_ADJACENT_SECOND) {
             waitingForTrampoline = id
         }
+        if (options.held != null) waitingForHolder = id
         val launchedAt = clock()
         // The entry is shown at once so a slow sequential launch is visible; its outcomes arrive as they are made.
         entries.update {
@@ -132,6 +140,7 @@ class AppPairExperiment(
                     secondWasOpen = options.secondWasOpen,
                     scenario = options.scenario,
                     script = options.script,
+                    held = options.held,
                 ),
             ) + it
         }
@@ -147,6 +156,13 @@ class AppPairExperiment(
         val id = waitingForTrampoline ?: return
         waitingForTrampoline = null
         replace(id) { it.copy(outcomes = it.outcomes + outcomes) }
+    }
+
+    /** Called by the holder activity with everything it has written so far; the last report has `open == false`. */
+    fun onHolderReport(trace: HolderTrace) {
+        val id = waitingForHolder ?: return
+        if (!trace.open) waitingForHolder = null
+        replace(id) { it.copy(holder = trace) }
     }
 
     /** The owner's verdict for entry [id]; choosing the same verdict again clears it. */
@@ -195,6 +211,7 @@ fun PairLogEntry.toPlainText(zone: ZoneId = ZoneId.systemDefault()): String =
     buildString {
         appendRecipe(this@toPlainText, zone)
         script?.let { appendScript(it) }
+        if (held != null) appendHolder(holder)
         appendTraceAndVerdict(this@toPlainText)
         appendDevice(facts)
     }
@@ -204,27 +221,45 @@ private fun StringBuilder.appendRecipe(
     zone: ZoneId,
 ) {
     val clock = DateTimeFormatter.ofPattern("HH:mm:ss.SSS", Locale.ROOT).withZone(zone)
-    val oneCall = e.method == PairMethod.START_ACTIVITIES_ARRAY || (e.method == PairMethod.CUSTOM && e.custom.oneCall)
-    val timing = if (oneCall) "one startActivities call, delay ignored" else "delay ${e.delayMillis} ms"
-    val (firstFlags, secondFlags) = e.method.plannedFlags(e.custom)
-    val name = e.scenario?.let { "$it (${e.method.title})" } ?: e.method.title
+    val (title, timing) = e.titleAndTiming()
+    val (firstFlags, secondFlags) = e.held?.let { it.firstFlags to it.secondFlags } ?: e.method.plannedFlags(e.custom)
+    val name = e.scenario?.let { "$it ($title)" } ?: title
     appendLine("${clock.format(Instant.ofEpochMilli(e.timeMillis))}  $name  $timing")
     appendLine("  first:  ${e.first}")
     appendLine("  second: ${e.second}")
     appendLine("  flags first:  ${PairFlags.describe(firstFlags)}")
     appendLine("  flags second: ${PairFlags.describe(secondFlags)}")
-    appendLine(
-        "  already open (ticked by the owner): first ${e.firstWasOpen.yesNo()}, second ${e.secondWasOpen.yesNo()}",
-    )
+    appendLine(e.alreadyOpenLine())
     if (e.outcomes.isEmpty()) appendLine("  (no start made yet)")
     e.outcomes.forEach { o ->
         appendLine("  ${if (o.ok) "ok" else "FAILED"}: ${o.step}${o.error?.let { " -> $it" } ?: ""}")
     }
 }
 
+/** The method's title and the timing the entry's first line prints: a held entry's own, else the strategy's. */
+private fun PairLogEntry.titleAndTiming(): Pair<String, String> {
+    val variant = held
+    if (variant != null) return "Held trampoline" to variant.timingText()
+    val oneCall = method == PairMethod.START_ACTIVITIES_ARRAY || (method == PairMethod.CUSTOM && custom.oneCall)
+    return method.title to if (oneCall) "one startActivities call, delay ignored" else "delay $delayMillis ms"
+}
+
+private fun PairLogEntry.alreadyOpenLine(): String =
+    if (script?.openUnknown == true) {
+        "  already open (ticked by the owner): not asked, see the script line"
+    } else {
+        "  already open (ticked by the owner): first ${firstWasOpen.yesNo()}, second ${secondWasOpen.yesNo()}"
+    }
+
 private fun StringBuilder.appendScript(info: PairScriptInfo) {
     appendLine("  script: step ${info.step} of ${info.total}")
-    appendLine("  already open: first=${info.firstOpen} second=${info.secondOpen}")
+    appendLine(
+        if (info.openUnknown) {
+            "  already open: unknown"
+        } else {
+            "  already open: first=${info.firstOpen} second=${info.secondOpen}"
+        },
+    )
     info.returnAttempt?.let { appendLine("  return attempt: $it") }
     info.returned?.let { appendLine("  returned to launcher: $it") }
     info.notes.forEach { appendLine("  note: $it") }

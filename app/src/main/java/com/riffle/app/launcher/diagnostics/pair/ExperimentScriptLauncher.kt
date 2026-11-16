@@ -33,7 +33,15 @@ class ExperimentScriptLauncher(
             PairScript.DELAY_MS,
             starter(),
             facts(),
-            PairLaunchOptions(step.custom, info.firstOpen, info.secondOpen, watcher, step.logName, info),
+            PairLaunchOptions(
+                step.custom,
+                info.firstOpen,
+                info.secondOpen,
+                watcher,
+                step.logName,
+                info,
+                step.held,
+            ),
         )
 
     override fun returnToLauncher() = home()
@@ -57,6 +65,7 @@ fun List<PairLogEntry>.toScriptPlainText(
             appendLine("no script entries yet")
             return@buildString
         }
+        appendLine("script: ${head.script?.kind?.label}")
         val clock = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT).withZone(zone)
         appendLine("device: Android SDK ${head.facts.sdkInt}, ${head.facts.manufacturer} ${head.facts.model}")
         appendLine("window: ${head.facts.windowDp} dp (${head.facts.widthClass}), layout: ${head.facts.posture}")

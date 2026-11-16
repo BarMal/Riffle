@@ -60,6 +60,15 @@
             android:noHistory="true"
             android:taskAffinity=""
             android:theme="@style/Theme.Riffle.PairTrampoline" />
+        <!-- App pair experiment, round 3: a resizable, opaque holding window that starts the pair from a split. -->
+        <activity
+            android:name=".launcher.diagnostics.pair.PairHolderActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Riffle.PairHolder" />
         <service
             android:name=".launcher.notifications.RiffleNotificationListenerService"
             android:exported="true"
