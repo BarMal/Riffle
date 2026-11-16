@@ -46,6 +46,8 @@ data class PairLaunchOptions(
     val watcher: PairLaunchWatcher = PairLaunchWatcher.None,
     /** The [PairScenario.logName] this launch is, when it came from a scenario button. */
     val scenario: String? = null,
+    /** The scripted run's facts about this launch; null for a launch the owner made by hand. */
+    val script: PairScriptInfo? = null,
 )
 
 /** The owner's after-the-fact judgement of what the screen showed. */
@@ -78,6 +80,8 @@ data class PairLogEntry(
     val duplicatesInRecents: Boolean = false,
     /** The [PairScenario.logName] when a scenario button started this launch. */
     val scenario: String? = null,
+    /** The scripted run's facts about this launch; null for a launch the owner made by hand. */
+    val script: PairScriptInfo? = null,
 )
 
 /**
@@ -94,6 +98,7 @@ class AppPairExperiment(
 
     val log: StateFlow<List<PairLogEntry>> = entries
 
+    /** Runs the launch and returns the id of the log entry it wrote. */
     suspend fun launch(
         method: PairMethod,
         first: PairTarget,
@@ -102,7 +107,7 @@ class AppPairExperiment(
         starter: PairStarter,
         factsSource: PairFactsSource,
         options: PairLaunchOptions = PairLaunchOptions(),
-    ) {
+    ): Long {
         val id = nextId++
         val strategy = pairStrategyFor(method, options.custom, pause)
         val collected = factsSource.collect(first, second)
@@ -126,6 +131,7 @@ class AppPairExperiment(
                     firstWasOpen = options.firstWasOpen,
                     secondWasOpen = options.secondWasOpen,
                     scenario = options.scenario,
+                    script = options.script,
                 ),
             ) + it
         }
@@ -133,6 +139,7 @@ class AppPairExperiment(
         options.watcher.begin(launchedAt) { events, open -> replace(id) { it.copy(trace = events, traceOpen = open) } }
         val outcomes = strategy.launch(first, second, starter, delayMillis)
         replace(id) { it.copy(outcomes = it.outcomes + outcomes) }
+        return id
     }
 
     /** Called by the trampoline activity with the outcomes of its own starts. */
@@ -147,6 +154,12 @@ class AppPairExperiment(
         id: Long,
         verdict: PairVerdict,
     ) = replace(id) { it.copy(verdict = if (it.verdict == verdict) null else verdict) }
+
+    /** Changes the script facts of entry [id], when it has any (the runner adds what happened after the launch). */
+    fun updateScript(
+        id: Long,
+        change: (PairScriptInfo) -> PairScriptInfo,
+    ) = replace(id) { entry -> entry.script?.let { entry.copy(script = change(it)) } ?: entry }
 
     fun setDuplicates(
         id: Long,
@@ -181,6 +194,7 @@ fun List<PairLogEntry>.toPlainText(zone: ZoneId = ZoneId.systemDefault()): Strin
 fun PairLogEntry.toPlainText(zone: ZoneId = ZoneId.systemDefault()): String =
     buildString {
         appendRecipe(this@toPlainText, zone)
+        script?.let { appendScript(it) }
         appendTraceAndVerdict(this@toPlainText)
         appendDevice(facts)
     }
@@ -206,6 +220,14 @@ private fun StringBuilder.appendRecipe(
     e.outcomes.forEach { o ->
         appendLine("  ${if (o.ok) "ok" else "FAILED"}: ${o.step}${o.error?.let { " -> $it" } ?: ""}")
     }
+}
+
+private fun StringBuilder.appendScript(info: PairScriptInfo) {
+    appendLine("  script: step ${info.step} of ${info.total}")
+    appendLine("  already open: first=${info.firstOpen} second=${info.secondOpen}")
+    info.returnAttempt?.let { appendLine("  return attempt: $it") }
+    info.returned?.let { appendLine("  returned to launcher: $it") }
+    info.notes.forEach { appendLine("  note: $it") }
 }
 
 private fun StringBuilder.appendTraceAndVerdict(e: PairLogEntry) {
