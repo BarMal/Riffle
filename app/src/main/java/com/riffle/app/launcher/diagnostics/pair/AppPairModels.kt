@@ -42,7 +42,7 @@ enum class PairMethod(
     ),
     CUSTOM(
         "Custom",
-        "Round 2: choose the flags for each app yourself, or start from a preset.",
+        "Round 2: choose the flags for each app yourself, or load a scenario's flags.",
     ),
 }
 

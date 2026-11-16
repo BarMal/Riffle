@@ -44,6 +44,8 @@ data class PairLaunchOptions(
     val firstWasOpen: Boolean = false,
     val secondWasOpen: Boolean = false,
     val watcher: PairLaunchWatcher = PairLaunchWatcher.None,
+    /** The [PairScenario.logName] this launch is, when it came from a scenario button. */
+    val scenario: String? = null,
 )
 
 /** The owner's after-the-fact judgement of what the screen showed. */
@@ -74,6 +76,8 @@ data class PairLogEntry(
     val traceOpen: Boolean = false,
     val verdict: PairVerdict? = null,
     val duplicatesInRecents: Boolean = false,
+    /** The [PairScenario.logName] when a scenario button started this launch. */
+    val scenario: String? = null,
 )
 
 /**
@@ -121,6 +125,7 @@ class AppPairExperiment(
                     custom = options.custom,
                     firstWasOpen = options.firstWasOpen,
                     secondWasOpen = options.secondWasOpen,
+                    scenario = options.scenario,
                 ),
             ) + it
         }
@@ -188,7 +193,8 @@ private fun StringBuilder.appendRecipe(
     val oneCall = e.method == PairMethod.START_ACTIVITIES_ARRAY || (e.method == PairMethod.CUSTOM && e.custom.oneCall)
     val timing = if (oneCall) "one startActivities call, delay ignored" else "delay ${e.delayMillis} ms"
     val (firstFlags, secondFlags) = e.method.plannedFlags(e.custom)
-    appendLine("${clock.format(Instant.ofEpochMilli(e.timeMillis))}  ${e.method.title}  $timing")
+    val name = e.scenario?.let { "$it (${e.method.title})" } ?: e.method.title
+    appendLine("${clock.format(Instant.ofEpochMilli(e.timeMillis))}  $name  $timing")
     appendLine("  first:  ${e.first}")
     appendLine("  second: ${e.second}")
     appendLine("  flags first:  ${PairFlags.describe(firstFlags)}")

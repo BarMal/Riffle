@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
@@ -39,6 +37,7 @@ import com.riffle.app.launcher.diagnostics.pair.PairLaunchOptions
 import com.riffle.app.launcher.diagnostics.pair.PairLaunchWatcher
 import com.riffle.app.launcher.diagnostics.pair.PairLogEntry
 import com.riffle.app.launcher.diagnostics.pair.PairMethod
+import com.riffle.app.launcher.diagnostics.pair.PairScenario
 import com.riffle.app.launcher.diagnostics.pair.PairStarter
 import com.riffle.app.launcher.diagnostics.pair.PairTarget
 import com.riffle.app.launcher.diagnostics.pair.toPlainText
@@ -55,10 +54,7 @@ internal const val APP_PAIR_LAUNCH_TAG = "appPair.launch"
 internal const val APP_PAIR_COPY_TAG = "appPair.copy"
 internal const val APP_PAIR_LOG_TAG = "appPair.log"
 internal const val APP_PAIR_PICK_TAG_PREFIX = "appPair.pick."
-internal const val APP_PAIR_METHOD_TAG_PREFIX = "appPair.method."
 private const val MAX_PICKER_ROWS = 40
-private const val MAX_DELAY_MS = 2000
-private const val DELAY_STEP_MS = 100
 private const val DEFAULT_DELAY_MS = 600
 
 /** What the page launches with and logs into; absent in the app, where the platform implementations are used. */
@@ -74,11 +70,12 @@ internal val LocalAppPairEnvironment = compositionLocalOf<AppPairEnvironment?> {
 private enum class PairSlot { FIRST, SECOND }
 
 /**
- * "App pair experiment": an experimental diagnostics page under About. Two pickers, a method, Launch and an in-memory
- * result log that can be copied. Nothing is stored and nothing outside this page uses it.
+ * "App pair experiment": an experimental diagnostics page under About. Two pickers, one button per scenario, the latest
+ * result with its verdict buttons, a collapsed Advanced part and an in-memory result log that can be copied. Nothing
+ * is stored and nothing outside this page uses it.
  */
 @Composable
-@Suppress("LongMethod", "CyclomaticComplexMethod")
+@Suppress("LongMethod")
 internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
     val context = LocalContext.current
     val environment = LocalAppPairEnvironment.current
@@ -94,15 +91,36 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
 
     var first by remember { mutableStateOf<InstalledApp?>(null) }
     var second by remember { mutableStateOf<InstalledApp?>(null) }
-    var picking by remember { mutableStateOf<PairSlot?>(null) }
     var method by remember { mutableStateOf(PairMethod.SEQUENTIAL) }
     var delayMillis by remember { mutableFloatStateOf(DEFAULT_DELAY_MS.toFloat()) }
     var custom by remember { mutableStateOf(CustomPair.DEFAULT) }
     var firstWasOpen by remember { mutableStateOf(false) }
     var secondWasOpen by remember { mutableStateOf(false) }
+    var advancedOpen by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
     val log by experiment.log.collectAsState()
     val delayValue = delayMillis.roundToInt()
+    val a = first
+    val b = second
+
+    fun launch(
+        launchMethod: PairMethod,
+        options: PairLaunchOptions,
+    ) {
+        if (a == null || b == null) return
+        copied = false
+        scope.launch {
+            experiment.launch(
+                launchMethod,
+                a.toPairTarget(),
+                b.toPairTarget(),
+                delayValue.toLong(),
+                starter,
+                facts,
+                options,
+            )
+        }
+    }
 
     SettingsSection(title = stringResource(R.string.settings_page_app_pair)) {
         Text(
@@ -111,20 +129,99 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
             style = MaterialTheme.typography.bodyMedium,
         )
     }
+    PairAppsSection(
+        state = state,
+        iconLoader = iconLoader,
+        chosen = first to second,
+        wasOpen = firstWasOpen to secondWasOpen,
+        onPicked = { slot, app -> if (slot == PairSlot.FIRST) first = app else second = app },
+        onOpenChange = { slot, open -> if (slot == PairSlot.FIRST) firstWasOpen = open else secondWasOpen = open },
+    )
+    PairScenarioSection(
+        enabled = canRunPair(a, b),
+        delayMillis = delayValue,
+        log = log,
+        onRun = { scenario ->
+            launch(
+                scenario.method,
+                PairLaunchOptions(scenario.custom, firstWasOpen, secondWasOpen, watcher, scenario.logName),
+            )
+        },
+    )
+    PairLatestResultSection(
+        log = log,
+        copied = copied,
+        experiment = experiment,
+        onCopy = {
+            copyPairLog(context, log)
+            copied = true
+        },
+    )
+    PairAdvancedSection(
+        expanded = advancedOpen,
+        onToggle = { advancedOpen = !advancedOpen },
+        launchSubtitle = pairLaunchSubtitle(a, b),
+        values =
+            PairAdvancedValues(
+                method,
+                custom,
+                delayMillis,
+                log.firstNotNullOfOrNull { PairScenario.fromLogName(it.scenario) },
+            ),
+        actions =
+            PairAdvancedActions(
+                onMethod = { method = it },
+                onCustom = { custom = it },
+                onDelay = { delayMillis = it },
+                onEditAsCustom = {
+                    custom = it.custom
+                    method = PairMethod.CUSTOM
+                },
+                onLaunch = { launch(method, PairLaunchOptions(custom, firstWasOpen, secondWasOpen, watcher)) },
+            ),
+    )
+    PairEarlierResultsSection(log.drop(1), experiment)
+}
+
+/** The two pickers, the picker list while one is open, and the "was already open" ticks under them. */
+@Composable
+private fun PairAppsSection(
+    state: SettingsSurfaceState,
+    iconLoader: AppIconLoader,
+    chosen: Pair<InstalledApp?, InstalledApp?>,
+    wasOpen: Pair<Boolean, Boolean>,
+    onPicked: (PairSlot, InstalledApp) -> Unit,
+    onOpenChange: (PairSlot, Boolean) -> Unit,
+) {
+    var picking by remember { mutableStateOf<PairSlot?>(null) }
     SettingsSection(title = stringResource(R.string.app_pair_section_apps)) {
         PairSlotRow(
             title = stringResource(R.string.app_pair_first),
-            app = first,
+            app = chosen.first,
             iconLoader = iconLoader,
             tag = APP_PAIR_FIRST_TAG,
             onClick = { picking = if (picking == PairSlot.FIRST) null else PairSlot.FIRST },
         )
         PairSlotRow(
             title = stringResource(R.string.app_pair_second),
-            app = second,
+            app = chosen.second,
             iconLoader = iconLoader,
             tag = APP_PAIR_SECOND_TAG,
             onClick = { picking = if (picking == PairSlot.SECOND) null else PairSlot.SECOND },
+        )
+        SettingsSwitchRow(
+            modifier = Modifier.testTag(APP_PAIR_FIRST_OPEN_TAG),
+            title = stringResource(R.string.app_pair_first_open),
+            subtitle = stringResource(R.string.app_pair_already_open_summary),
+            checked = wasOpen.first,
+            onCheckedChange = { onOpenChange(PairSlot.FIRST, it) },
+        )
+        SettingsSwitchRow(
+            modifier = Modifier.testTag(APP_PAIR_SECOND_OPEN_TAG),
+            title = stringResource(R.string.app_pair_second_open),
+            subtitle = stringResource(R.string.app_pair_already_open_summary),
+            checked = wasOpen.second,
+            onCheckedChange = { onOpenChange(PairSlot.SECOND, it) },
         )
     }
     picking?.let { slot ->
@@ -132,117 +229,29 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
             apps = state.installedApps,
             iconLoader = iconLoader,
             onPicked = { app ->
-                if (slot == PairSlot.FIRST) first = app else second = app
+                onPicked(slot, app)
                 picking = null
             },
         )
     }
-    SettingsSection(title = stringResource(R.string.app_pair_section_method)) {
-        PairMethod.entries.forEach { option ->
-            SettingsClickableRow(
-                modifier = Modifier.testTag(APP_PAIR_METHOD_TAG_PREFIX + option.name),
-                title = option.title,
-                subtitle = option.summary,
-                onClick = { method = option },
-                trailingContent =
-                    if (option == method) {
-                        { SettingsButtonText(text = stringResource(R.string.app_pair_method_selected)) }
-                    } else {
-                        null
-                    },
-            )
-        }
-    }
-    if (method == PairMethod.CUSTOM) {
-        PairCustomSections(custom = custom, delayMillis = delayValue, onChange = { custom = it })
-    }
-    SettingsSection(title = stringResource(R.string.app_pair_section_already_open)) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(
-                text = stringResource(R.string.app_pair_delay, delayValue),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Slider(
-                modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Delay before the second app" },
-                value = delayMillis,
-                onValueChange = { delayMillis = it },
-                valueRange = 0f..MAX_DELAY_MS.toFloat(),
-                steps = MAX_DELAY_MS / DELAY_STEP_MS - 1,
-            )
-            SettingsSecondaryText(text = stringResource(R.string.app_pair_delay_note))
-        }
-        SettingsSwitchRow(
-            modifier = Modifier.testTag(APP_PAIR_FIRST_OPEN_TAG),
-            title = stringResource(R.string.app_pair_first_open),
-            subtitle = stringResource(R.string.app_pair_already_open_summary),
-            checked = firstWasOpen,
-            onCheckedChange = { firstWasOpen = it },
-        )
-        SettingsSwitchRow(
-            modifier = Modifier.testTag(APP_PAIR_SECOND_OPEN_TAG),
-            title = stringResource(R.string.app_pair_second_open),
-            subtitle = stringResource(R.string.app_pair_already_open_summary),
-            checked = secondWasOpen,
-            onCheckedChange = { secondWasOpen = it },
-        )
-        val a = first
-        val b = second
-        SettingsClickableRow(
-            modifier = Modifier.testTag(APP_PAIR_LAUNCH_TAG),
-            title = stringResource(R.string.app_pair_launch),
-            subtitle =
-                if (a != null && b != null) {
-                    stringResource(R.string.app_pair_launch_subtitle, a.label, b.label)
-                } else {
-                    stringResource(R.string.app_pair_launch_needs_apps)
-                },
-            onClick = {
-                if (a != null && b != null) {
-                    copied = false
-                    scope.launch {
-                        experiment.launch(
-                            method,
-                            a.toPairTarget(),
-                            b.toPairTarget(),
-                            delayValue.toLong(),
-                            starter,
-                            facts,
-                            options = PairLaunchOptions(custom, firstWasOpen, secondWasOpen, watcher),
-                        )
-                    }
-                }
-            },
-            trailingContent = null,
-        )
-    }
-    SettingsSection(title = stringResource(R.string.app_pair_section_log)) {
-        SettingsClickableRow(
-            modifier = Modifier.testTag(APP_PAIR_COPY_TAG),
-            title = stringResource(R.string.app_pair_copy_log),
-            subtitle =
-                if (copied) {
-                    stringResource(R.string.app_pair_log_copied)
-                } else {
-                    stringResource(R.string.app_pair_copy_log_subtitle)
-                },
-            onClick = {
-                copyPairLog(context, log)
-                copied = true
-            },
-            trailingContent = null,
-        )
-        if (log.isEmpty()) SettingsListRow(title = stringResource(R.string.app_pair_log_empty))
-        log.forEachIndexed { index, entry ->
-            PairLogItem(entry)
-            PairVerdictControls(
-                entry = entry,
-                prominent = index == 0,
-                onVerdict = { experiment.setVerdict(entry.id, it) },
-                onDuplicates = { experiment.setDuplicates(entry.id, it) },
-            )
-        }
-    }
 }
+
+/** Scenarios need two different apps; the same package twice would only reopen one app. */
+internal fun canRunPair(
+    first: InstalledApp?,
+    second: InstalledApp?,
+): Boolean = first != null && second != null && first.identity.packageName != second.identity.packageName
+
+@Composable
+private fun pairLaunchSubtitle(
+    first: InstalledApp?,
+    second: InstalledApp?,
+): String =
+    if (first != null && second != null) {
+        stringResource(R.string.app_pair_launch_subtitle, first.label, second.label)
+    } else {
+        stringResource(R.string.app_pair_launch_needs_apps)
+    }
 
 @Composable
 private fun PairSlotRow(
@@ -299,7 +308,7 @@ private fun PairPicker(
 
 /** One log entry, read as a single unit by a screen reader. */
 @Composable
-private fun PairLogItem(entry: PairLogEntry) {
+internal fun PairLogItem(entry: PairLogEntry) {
     Column(
         modifier =
             Modifier

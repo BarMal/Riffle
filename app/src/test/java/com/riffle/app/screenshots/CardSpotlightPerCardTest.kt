@@ -146,6 +146,11 @@ class CardSpotlightPerCardTest {
     private fun hex(color: Color) = "#%08X".format(color.toArgb())
 
     private fun assertEachCardIsLitByItsOwnIcon() {
+        // A card reads its image's colour off the main thread and reports a neutral light until it has: wait for
+        // every coloured icon's reading to land, which the Compose clock's idle does not cover.
+        composeRule.waitUntil(timeoutMillis = LIGHT_READ_TIMEOUT_MILLIS) {
+            cards.filter { it.icon!!.key != "icon:grey" }.all { lightOf(it) != "neutral" }
+        }
         composeRule.waitForIdle()
         cards.forEach { card ->
             val expected = icons.getValue(card.icon!!.key)
@@ -195,3 +200,5 @@ class CardSpotlightPerCardTest {
         composeRule.captureScreen()
     }
 }
+
+private const val LIGHT_READ_TIMEOUT_MILLIS = 5_000L

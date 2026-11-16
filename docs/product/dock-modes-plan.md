@@ -1777,8 +1777,8 @@ Both came from the open card's overlay, and one commit fixes both.
 
 ### App pair experiment (diagnostics only)
 
-- **What it is.** Settings > About > Diagnostics > "App pair experiment": pick two apps, pick a method, press Launch, and read the
-  in-memory result log (round 2 below adds the Custom method). It exists so the owner can find out whether launching two apps as a split-screen pair works on their foldable
+- **What it is.** Settings > About > Diagnostics > "App pair experiment": pick two apps, tap a scenario, and read the
+  in-memory result log (round 1's methods are under Advanced; round 2 below adds the Custom method and the scenarios). It exists so the owner can find out whether launching two apps as a split-screen pair works on their foldable
   before any feature is designed. It adds nothing anywhere else and stores nothing.
 - **Methods.** Sequential (first app with `NEW_TASK`, a 0-2000 ms wait, second with `LAUNCH_ADJACENT | NEW_TASK | MULTIPLE_TASK`);
   Trampoline, adjacent second / adjacent first (a transparent no-history activity in its own task starts both); Both adjacent (two
@@ -1814,10 +1814,20 @@ may turn out that both cannot hold with public flags.
 - **Custom** (a sixth method; the five above are unchanged so old results stay comparable). Per app (First, Second) switches for
   `LAUNCH_ADJACENT`, `MULTIPLE_TASK`, `CLEAR_TASK` and `NO_ANIMATION`; `NEW_TASK` is always on. The delay slider applies unless
   "Send as one startActivities call" is on. The resulting flag strings show live under the switches.
-- **Presets** (each only fills the switches): Fresh both (both adjacent + multiple; expect a split even if running, duplicates both),
-  Reuse both (both adjacent; expect no duplicates, may not split if running), Reset both (both adjacent + `CLEAR_TASK`; expect no
-  duplicates, apps restart from their first screen, may split), Reuse first / fresh second (today's Both adjacent), Fresh first /
-  reuse second, One call / reset both (one `startActivities`; first `NEW_TASK | CLEAR_TASK`, second adjacent + `CLEAR_TASK`).
+- **Scenarios.** Each recipe below is a one-tap button on the page (see "Running round 2 in four taps"); in Advanced the
+  switches can be loaded from the newest scenario with "Edit as custom". Reset both (both adjacent + `CLEAR_TASK`; restarts each
+  app in its existing task, no duplicates expected), One call / reset both (one `startActivities`; first `NEW_TASK | CLEAR_TASK`,
+  second adjacent + `CLEAR_TASK`), Fresh both (both adjacent + multiple; splits even if running, duplicates both), Reuse both
+  (both adjacent; no duplicates, may not split if running), Reuse first / fresh second (today's Both adjacent, round 1's), Fresh
+  first / reuse second, and One call (round 1's `startActivities`: first `NEW_TASK`, second adjacent + `NEW_TASK | MULTIPLE_TASK`;
+  split, uneven in round 1). Scenarios use the delay slider's value (default 600 ms), shown under "Run a scenario".
+- **Running round 2 in four taps.** (1) Choose the two apps; tick "was already open" for any that were running. (2) Tap one
+  scenario row ("Reset both" first). (3) Look at the screen, then come back to the page. (4) Tap what you saw under "Latest
+  result": Split, No split or Split, uneven (and "Duplicates in Recents" if an app shows twice). The row's small trailing label
+  then shows that verdict, so you can see which scenarios are done; the log entry is named after the scenario. Repeat for the
+  next row, then "Copy log". The round-1 methods, the Custom switches, the delay slider and a plain Launch button are behind the
+  collapsed "Advanced: methods and custom switches" row; nothing was removed. Older log entries stay at the bottom with
+  text-button verdicts.
 - **Already open.** No public API says whether another app is running (`getAppTasks` only sees the caller's tasks, `getRunningTasks`
   is restricted, usage stats need a permission Riffle does not ask for). So the page has two checkboxes, "First was already open" and
   "Second was already open", written into the log entry (default unticked). The log also records each app's `FLAG_STOPPED`, which is
