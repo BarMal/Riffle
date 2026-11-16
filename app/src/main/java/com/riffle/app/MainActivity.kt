@@ -49,6 +49,7 @@ import com.riffle.app.launcher.canPerformStageAction
 import com.riffle.app.launcher.completeGlanceWidgetAdd
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
+import com.riffle.app.launcher.diagnostics.pair.PairActivityHub
 import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
 import com.riffle.app.launcher.isLauncherHomeIntent
@@ -533,6 +534,8 @@ class MainActivity : ComponentActivity() {
         // Writes the home layout (and the placed-items pool, once the home renders from it) behind on stop, so
         // backgrounding never leaves an edit only in memory.
         lifecycle.addObserver(dependencies.homeLayoutRuntime)
+        // The app pair experiment (Settings > About) reads what this window does after a launch.
+        PairActivityHub.install(this)
         if (dependencies.homeLayoutRuntime.takeRecoveryNotice()) {
             Toast.makeText(this, POOL_HOME_RECOVERY_NOTICE, Toast.LENGTH_LONG).show()
         }

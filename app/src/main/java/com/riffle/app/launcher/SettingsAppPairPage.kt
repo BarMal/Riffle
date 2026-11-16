@@ -32,7 +32,11 @@ import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.diagnostics.pair.AndroidPairFactsSource
 import com.riffle.app.launcher.diagnostics.pair.AndroidPairStarter
 import com.riffle.app.launcher.diagnostics.pair.AppPairExperiment
+import com.riffle.app.launcher.diagnostics.pair.CustomPair
+import com.riffle.app.launcher.diagnostics.pair.PairActivityHub
 import com.riffle.app.launcher.diagnostics.pair.PairFactsSource
+import com.riffle.app.launcher.diagnostics.pair.PairLaunchOptions
+import com.riffle.app.launcher.diagnostics.pair.PairLaunchWatcher
 import com.riffle.app.launcher.diagnostics.pair.PairLogEntry
 import com.riffle.app.launcher.diagnostics.pair.PairMethod
 import com.riffle.app.launcher.diagnostics.pair.PairStarter
@@ -52,7 +56,6 @@ internal const val APP_PAIR_COPY_TAG = "appPair.copy"
 internal const val APP_PAIR_LOG_TAG = "appPair.log"
 internal const val APP_PAIR_PICK_TAG_PREFIX = "appPair.pick."
 internal const val APP_PAIR_METHOD_TAG_PREFIX = "appPair.method."
-
 private const val MAX_PICKER_ROWS = 40
 private const val MAX_DELAY_MS = 2000
 private const val DELAY_STEP_MS = 100
@@ -63,6 +66,7 @@ internal class AppPairEnvironment(
     val experiment: AppPairExperiment,
     val starter: PairStarter,
     val facts: PairFactsSource,
+    val watcher: PairLaunchWatcher = PairLaunchWatcher.None,
 )
 
 internal val LocalAppPairEnvironment = compositionLocalOf<AppPairEnvironment?> { null }
@@ -84,6 +88,7 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
         state.selectedLayoutDeviceClass.let { "${it.name} (${it.layoutPosture()}), from the Settings layout tab" }
     val facts =
         environment?.facts ?: remember(context, posture) { AndroidPairFactsSource(context) { posture } }
+    val watcher = environment?.watcher ?: PairActivityHub.recorder
     val iconLoader = remember(context) { PackageManagerAppIconLoader(context.packageManager) }
     val scope = rememberCoroutineScope()
 
@@ -92,6 +97,9 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
     var picking by remember { mutableStateOf<PairSlot?>(null) }
     var method by remember { mutableStateOf(PairMethod.SEQUENTIAL) }
     var delayMillis by remember { mutableFloatStateOf(DEFAULT_DELAY_MS.toFloat()) }
+    var custom by remember { mutableStateOf(CustomPair.DEFAULT) }
+    var firstWasOpen by remember { mutableStateOf(false) }
+    var secondWasOpen by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
     val log by experiment.log.collectAsState()
     val delayValue = delayMillis.roundToInt()
@@ -144,6 +152,11 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
                     },
             )
         }
+    }
+    if (method == PairMethod.CUSTOM) {
+        PairCustomSections(custom = custom, delayMillis = delayValue, onChange = { custom = it })
+    }
+    SettingsSection(title = stringResource(R.string.app_pair_section_already_open)) {
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             Text(
                 text = stringResource(R.string.app_pair_delay, delayValue),
@@ -158,6 +171,20 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
             )
             SettingsSecondaryText(text = stringResource(R.string.app_pair_delay_note))
         }
+        SettingsSwitchRow(
+            modifier = Modifier.testTag(APP_PAIR_FIRST_OPEN_TAG),
+            title = stringResource(R.string.app_pair_first_open),
+            subtitle = stringResource(R.string.app_pair_already_open_summary),
+            checked = firstWasOpen,
+            onCheckedChange = { firstWasOpen = it },
+        )
+        SettingsSwitchRow(
+            modifier = Modifier.testTag(APP_PAIR_SECOND_OPEN_TAG),
+            title = stringResource(R.string.app_pair_second_open),
+            subtitle = stringResource(R.string.app_pair_already_open_summary),
+            checked = secondWasOpen,
+            onCheckedChange = { secondWasOpen = it },
+        )
         val a = first
         val b = second
         SettingsClickableRow(
@@ -180,6 +207,7 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
                             delayValue.toLong(),
                             starter,
                             facts,
+                            options = PairLaunchOptions(custom, firstWasOpen, secondWasOpen, watcher),
                         )
                     }
                 }
@@ -204,7 +232,15 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
             trailingContent = null,
         )
         if (log.isEmpty()) SettingsListRow(title = stringResource(R.string.app_pair_log_empty))
-        log.forEach { entry -> PairLogItem(entry) }
+        log.forEachIndexed { index, entry ->
+            PairLogItem(entry)
+            PairVerdictControls(
+                entry = entry,
+                prominent = index == 0,
+                onVerdict = { experiment.setVerdict(entry.id, it) },
+                onDuplicates = { experiment.setDuplicates(entry.id, it) },
+            )
+        }
     }
 }
 

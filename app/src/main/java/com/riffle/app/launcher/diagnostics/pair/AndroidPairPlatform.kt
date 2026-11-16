@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -110,6 +111,11 @@ class AndroidPairFactsSource(
         val component = ComponentName(target.packageName, target.activityName)
         val info = runCatching { pm.getActivityInfo(component, 0) }.getOrNull()
         val orientation = info?.let { "screenOrientation=${it.screenOrientation}" } ?: "activity info not readable"
-        return "${target.packageName}: $orientation (resizeMode is not public)"
+        // FLAG_STOPPED is set only for an app never started since install or force-stopped; it is not a running check.
+        val stopped =
+            runCatching { pm.getApplicationInfo(target.packageName, 0).flags and ApplicationInfo.FLAG_STOPPED != 0 }
+                .getOrNull()
+        return "${target.packageName}: $orientation, FLAG_STOPPED=${stopped ?: "unknown"} " +
+            "(resizeMode is not public; FLAG_STOPPED false does not mean running)"
     }
 }
