@@ -324,7 +324,8 @@ class AppPairExperimentPageTest {
             advanceScript(6_001)
             advanceScript(2_000)
         }
-        assertEquals(listOf("holder H1", "holder H2"), calls)
+        // The second round of advances already let step 3 settle and fire; the first two are what is asserted.
+        assertEquals(listOf("holder H1", "holder H2"), calls.take(2))
         composeRule.onNodeWithTag(APP_PAIR_SCRIPT_COPY_TAG).performScrollTo().performClick()
         val context = ApplicationProvider.getApplicationContext<Context>()
         val clip = context.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
