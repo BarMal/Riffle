@@ -18,9 +18,11 @@ import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
+import com.riffle.core.domain.launcher.settings.AppPairsMode
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.DockBehaviourSettings
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
@@ -62,6 +64,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("version", LAUNCHER_SETTINGS_JSON_VERSION)
         .put("appDrawer", encodeAppDrawerSettings(settings.appDrawer))
         .put("appearance", encodeAppearance(settings.appearance))
+        .put("dock", encodeDockBehaviour(settings.dock))
         .put("features", encodeFeatures(settings.features))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
@@ -110,6 +113,7 @@ private fun decodeLauncherSections(
     return defaults.copy(
         appDrawer = json.guarded("appDrawer", defaults.appDrawer, JSONObject::toAppDrawerSettings),
         appearance = json.guarded("appearance", defaults.appearance) { toAppearance(it, version) },
+        dock = json.guarded("dock", defaults.dock, JSONObject::toDockBehaviour),
         features = json.guarded("features", defaults.features, JSONObject::toFeatures),
         gestures = json.guarded("gestures", defaults.gestures, JSONObject::toGestures),
         haptics = json.guarded("haptics", defaults.haptics, JSONObject::toHaptics),
@@ -279,6 +283,18 @@ private fun encodePrivacy(settings: PrivacySettings): JSONObject =
 private fun JSONObject.toPrivacy(defaults: PrivacySettings): PrivacySettings =
     PrivacySettings(
         protectScreenContent = (opt("protectScreenContent") as? Boolean) ?: defaults.protectScreenContent,
+    )
+
+private fun encodeDockBehaviour(settings: DockBehaviourSettings): JSONObject =
+    JSONObject().put("appPairs", settings.appPairs.name)
+
+private fun JSONObject.toDockBehaviour(defaults: DockBehaviourSettings): DockBehaviourSettings =
+    DockBehaviourSettings(
+        appPairs =
+            optString("appPairs")
+                .takeIf(String::isNotEmpty)
+                ?.let { name -> AppPairsMode.entries.firstOrNull { it.name == name } }
+                ?: defaults.appPairs,
     )
 
 private fun encodeSearchSettings(settings: SearchSettings): JSONObject =

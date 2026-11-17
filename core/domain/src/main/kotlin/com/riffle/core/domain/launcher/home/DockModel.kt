@@ -55,6 +55,13 @@ data class DockModel(
     val availableSlots: Int = (capacity - items.size).coerceAtLeast(0)
 }
 
+/**
+ * This dock as drawn where app pairs are hidden (no split is possible, or the setting is off): the pairs are left out
+ * and the rest lay out as if they were never there. The stored dock is untouched.
+ */
+fun DockModel.withoutAppPairs(): DockModel =
+    if (items.any { it is AppPairItem }) copy(items = items.filterNot { it is AppPairItem }) else this
+
 enum class DockBackgroundSizing {
     DYNAMIC,
     FIXED,

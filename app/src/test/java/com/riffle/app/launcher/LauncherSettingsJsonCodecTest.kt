@@ -163,6 +163,21 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun roundTripsTheAppPairsModeAndOlderBlobsReadAutomatic() {
+        com.riffle.core.domain.launcher.settings.AppPairsMode.entries.forEach { mode ->
+            val settings =
+                LauncherSettings(
+                    dock = com.riffle.core.domain.launcher.settings.DockBehaviourSettings(appPairs = mode),
+                )
+
+            assertEquals(mode, decodeLauncherSettings(encodeLauncherSettings(settings)).dock.appPairs)
+        }
+        val automatic = com.riffle.core.domain.launcher.settings.AppPairsMode.AUTOMATIC
+        assertEquals(automatic, decodeLauncherSettings("{}").dock.appPairs)
+        assertEquals(automatic, decodeLauncherSettings("{\"dock\": {\"appPairs\": \"SOMETIMES\"}}").dock.appPairs)
+    }
+
+    @Test
     fun aStoredSearchResultChoiceKeepsItsValueWhenTheCardStackBecomesTheDefault() {
         assertEquals(
             SearchResultPresentation.ICONS,

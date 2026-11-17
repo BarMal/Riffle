@@ -95,4 +95,17 @@ class NotificationCountLookupTest {
                     )
                 },
         )
+
+    @Test
+    fun aPairCountsTheSumOfItsTwoApps() {
+        val groups =
+            listOf(
+                notificationGroup(profile = AppProfile.personal(), count = 2),
+            )
+        val a = shortcut(profile = AppProfile.personal())
+        val pair =
+            com.riffle.core.domain.launcher.home.AppPairItem(LauncherItemId("dock-pair:1"), a, a)
+
+        assertEquals(4, groups.notificationCountFor(pair))
+    }
 }

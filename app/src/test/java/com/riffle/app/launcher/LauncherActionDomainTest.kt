@@ -12,6 +12,8 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
+import com.riffle.core.domain.launcher.home.AppPairItem
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -39,6 +41,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.AppPairsMode
 import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
@@ -152,6 +155,12 @@ class LauncherActionDomainTest {
                 shortLabel = "Shortcut",
             )
         val itemId = LauncherItemId("item")
+        val appPair =
+            AppPairItem(
+                LauncherItemId("pair"),
+                AppShortcutItem(LauncherItemId("a"), appIdentity, "Example"),
+                AppShortcutItem(LauncherItemId("b"), appIdentity, "Example"),
+            )
         val pageId = LauncherPageId("page")
         val backupDocument =
             LauncherBackupDocument(
@@ -255,6 +264,7 @@ class LauncherActionDomainTest {
                 ),
                 app("LaunchApp", LauncherShellAction.LaunchApp(appIdentity)),
                 app("LaunchAppShortcut", LauncherShellAction.LaunchAppShortcut(appShortcut)),
+                app("LaunchAppPair", LauncherShellAction.LaunchAppPair(appPair)),
                 app("SearchWeb", LauncherShellAction.SearchWeb("weather")),
                 app("OpenAppInfo", LauncherShellAction.OpenAppInfo(appIdentity)),
                 app("UninstallApp", LauncherShellAction.UninstallApp(appIdentity)),
@@ -324,6 +334,10 @@ class LauncherActionDomainTest {
                     "MoveDockShortcutToIndex",
                     LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex = 2),
                 ),
+                activity("PairDockApps", LauncherShellAction.PairDockApps(itemId, itemId)),
+                activity("PairDockAppWith", LauncherShellAction.PairDockAppWith(itemId, installedApp)),
+                activity("UnpairDockItem", LauncherShellAction.UnpairDockItem(itemId)),
+                activity("SwapDockPair", LauncherShellAction.SwapDockPair(itemId)),
                 activity("MoveHomeItemToDock", LauncherShellAction.MoveHomeItemToDock(itemId)),
                 activity("MoveDockItemToHome", LauncherShellAction.MoveDockItemToHome(itemId, GridCell(1, 2))),
                 activity("MoveHomeShortcutToCell", LauncherShellAction.MoveHomeShortcutToCell(itemId, GridCell(1, 2))),
@@ -373,6 +387,7 @@ class LauncherActionDomainTest {
                     LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK),
                 ),
                 app("ResetSearchFilters", LauncherShellAction.ResetSearchFilters),
+                settings("SelectAppPairsMode", LauncherShellAction.SelectAppPairsMode(AppPairsMode.OFF)),
                 settings(
                     "SelectSearchResultPresentation",
                     LauncherShellAction.SelectSearchResultPresentation(SearchResultPresentation.LIST),

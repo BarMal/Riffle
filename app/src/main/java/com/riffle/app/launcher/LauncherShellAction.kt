@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -38,6 +39,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.AppPairsMode
 import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
@@ -298,15 +300,40 @@ sealed interface LauncherShellAction {
 
     data class RemoveDockShortcut(val itemId: LauncherItemId) : LauncherShellAction
 
+    /** [hiddenItemIds] are hidden app pairs: the move counts only the items the user can see. */
     data class MoveDockShortcut(
         val itemId: LauncherItemId,
         val direction: DockItemMoveDirection,
+        val hiddenItemIds: Set<LauncherItemId> = emptySet(),
     ) : LauncherShellAction
 
     data class MoveDockShortcutToIndex(
         val itemId: LauncherItemId,
         val targetIndex: Int,
+        val hiddenItemIds: Set<LauncherItemId> = emptySet(),
     ) : LauncherShellAction
+
+    /** Drop one pinned app on another: they become one app pair at the target's position. */
+    data class PairDockApps(
+        val targetId: LauncherItemId,
+        val draggedId: LauncherItemId,
+    ) : LauncherShellAction
+
+    /** "Pair with...": the pinned app [itemId] and [app] become one app pair at the pinned app's position. */
+    data class PairDockAppWith(
+        val itemId: LauncherItemId,
+        val app: InstalledApp,
+    ) : LauncherShellAction
+
+    /** Tap on an app pair: open both apps side by side. */
+    data class LaunchAppPair(val pair: AppPairItem) : LauncherShellAction
+
+    data class UnpairDockItem(val pairId: LauncherItemId) : LauncherShellAction
+
+    data class SwapDockPair(val pairId: LauncherItemId) : LauncherShellAction
+
+    /** Settings > Dock > App pairs. */
+    data class SelectAppPairsMode(val mode: AppPairsMode) : LauncherShellAction
 
     data class MoveHomeItemToDock(
         val itemId: LauncherItemId,

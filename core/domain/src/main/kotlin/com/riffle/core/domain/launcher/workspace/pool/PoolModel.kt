@@ -62,6 +62,18 @@ data class PoolWidget(
     val hostedId: HostedWidgetId? = null,
 ) : PoolItem
 
+/**
+ * Two apps pinned as one Dock item ("App pairs are Dock items", ADR 0003). [first] is the start (left) pane. Dock
+ * only: no arrangement places one. Only the two apps and their order are stored.
+ */
+data class PoolAppPair(
+    override val id: PoolItemId,
+    val first: FolderEntry,
+    val second: FolderEntry,
+) : PoolItem {
+    override val label: String get() = "${first.label} and ${second.label}"
+}
+
 /** One reference: "this item sits here". */
 data class Placement(
     val item: PoolItemId,

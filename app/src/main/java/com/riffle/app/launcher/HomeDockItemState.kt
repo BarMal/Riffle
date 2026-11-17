@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -41,6 +42,11 @@ internal sealed interface DockSlotItemState {
     data class Folder(val folder: FolderItem) : DockSlotItemState {
         override val id: LauncherItemId = folder.id
         override val label: String = folder.label
+    }
+
+    data class AppPair(val pair: AppPairItem) : DockSlotItemState {
+        override val id: LauncherItemId = pair.id
+        override val label: String = pair.label
     }
 
     data class Widget(val widget: WidgetItem) : DockSlotItemState {
@@ -68,6 +74,7 @@ internal fun dockSlotItemState(item: LauncherItem?): DockSlotItemState? =
         is AppShortcutItem -> DockSlotItemState.Shortcut(item)
         is FolderItem -> DockSlotItemState.Folder(item)
         is WidgetItem -> DockSlotItemState.Widget(item)
+        is AppPairItem -> DockSlotItemState.AppPair(item)
     }
 
 @Composable

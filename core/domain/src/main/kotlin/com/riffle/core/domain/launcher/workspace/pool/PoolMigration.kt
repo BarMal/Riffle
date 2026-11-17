@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -148,6 +149,7 @@ object PoolMigration {
             is AppShortcutItem -> copy(id = id)
             is FolderItem -> copy(id = id)
             is WidgetItem -> copy(id = id)
+            is AppPairItem -> copy(id = id)
         }
 
     private class PlacedItemBuilder {

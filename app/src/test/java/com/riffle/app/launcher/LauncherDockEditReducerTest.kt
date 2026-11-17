@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.DockEngine
@@ -108,6 +109,79 @@ class LauncherDockEditReducerTest {
 
         assertEquals(listOf(cameraShortcut.id, phoneShortcut.id), updatedState.homeLayout.dock.items.map { it.id })
         assertEquals(updatedState.homeLayout, repository.savedLayoutSet?.activeLayout)
+    }
+
+    private fun shortcut(name: String) =
+        AppShortcutItem(
+            LauncherItemId(name),
+            AppIdentity(AppPackageName("com.example.$name"), AppActivityName(".MainActivity")),
+            name.replaceFirstChar { it.uppercase() },
+        )
+
+    private fun stateWith(vararg items: AppShortcutItem) =
+        LauncherShellState(
+            homeLayout =
+                HomeLayoutDefaults.standard().let { it.copy(dock = it.dock.copy(items = items.toList())) },
+        )
+
+    @Test
+    fun pairingEditsAreSavedLikeAnyOtherDockEditAndKeepTheOtherItems() {
+        val repository = FakeHomeLayoutRepository()
+        val notes = shortcut("notes")
+        val maps = shortcut("maps")
+        val mail = shortcut("mail")
+        val reducer = reducer(repository)
+
+        val paired = reducer.reduce(stateWith(notes, maps, mail), LauncherShellAction.PairDockApps(maps.id, notes.id))
+        val pair = paired.homeLayout.dock.items.filterIsInstance<AppPairItem>().single()
+        val swapped = reducer.reduce(paired, LauncherShellAction.SwapDockPair(pair.id))
+        val unpaired = reducer.reduce(swapped, LauncherShellAction.UnpairDockItem(pair.id))
+
+        assertEquals(listOf(pair.id, mail.id), paired.homeLayout.dock.items.map { it.id })
+        val swappedPair = swapped.homeLayout.dock.items.first() as AppPairItem
+        assertEquals(listOf("Notes", "Maps"), listOf(swappedPair.first.label, swappedPair.second.label))
+        assertEquals(
+            listOf("Notes", "Maps", "Mail"),
+            unpaired.homeLayout.dock.items.filterIsInstance<AppShortcutItem>().labels,
+        )
+        assertEquals(unpaired.homeLayout, repository.savedLayoutSet?.activeLayout)
+        assertEquals(null, unpaired.dockEditRejectionReason)
+    }
+
+    @Test
+    fun pairingAnAppWithItselfIsRejectedAndNothingIsSaved() {
+        val repository = FakeHomeLayoutRepository()
+        val notes = shortcut("notes")
+
+        val updated =
+            reducer(repository).reduce(stateWith(notes), LauncherShellAction.PairDockApps(notes.id, notes.id))
+
+        assertEquals(DockEditRejectionReason.SAME_APP, updated.dockEditRejectionReason)
+        assertEquals(null, repository.savedLayoutSet)
+    }
+
+    @Test
+    fun movesByVisibleIndexSkipHiddenPairs() {
+        val repository = FakeHomeLayoutRepository()
+        val notes = shortcut("notes")
+        val maps = shortcut("maps")
+        val mail = shortcut("mail")
+        val clock = shortcut("clock")
+        val reducer = reducer(repository)
+        val paired =
+            reducer.reduce(
+                stateWith(notes, maps, mail, clock),
+                LauncherShellAction.PairDockApps(maps.id, mail.id),
+            )
+        val pairId = paired.homeLayout.dock.items[1].id
+
+        val moved =
+            reducer.reduce(
+                paired,
+                LauncherShellAction.MoveDockShortcutToIndex(notes.id, targetIndex = 1, hiddenItemIds = setOf(pairId)),
+            )
+
+        assertEquals(listOf(pairId, clock.id, notes.id), moved.homeLayout.dock.items.map { it.id })
     }
 
     @Test

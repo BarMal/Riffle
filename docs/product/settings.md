@@ -29,6 +29,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | | Full screen | Hide status bar, hide navigation bar |
 | | Set up | Set up Riffle again |
 | **Dock** | Dock | Show the Dock, Dock position, icon size, pinned icons, Dock width, Dock alignment (along the top or bottom edge: left, middle, right; down a side: top, middle, bottom), Dock corner radius, Dock background strength, spacing to the grid (per device class) |
+| | App pairs | App pairs (Automatic, Always show, Off): whether the Dock shows app pairs, pinned items that open two apps side by side. Automatic shows them where the system can split (SDK 37 or later, a window at least 600 dp wide, the launcher not in multi-window mode); Always show is for a device the rule gets wrong; Off hides them and turns off "Pair with..." and drop-to-pair. Stored in `LauncherSettings.dock` (`DockBehaviourSettings.appPairs`), reduced by `SelectAppPairsMode`. One row, on the Dock page (the dock model is per posture, this is per device). See [dock-modes-plan.md](dock-modes-plan.md), "App pairs" |
 | | Live apps | Show live apps (a switch), Number of live apps |
 | | Floating dock | Opens the sub-page |
 | Floating dock (under Dock) | | Floating dock on or off, apps, edge, handle thickness, size, position, opacity, expanded icon size, orientation, labels |

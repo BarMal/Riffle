@@ -2010,6 +2010,72 @@ it that hands the same text to the system share sheet (`ACTION_SEND`, `text/plai
 "Copy log (newest first)" is the full, unabridged log and is unchanged.
 
 
+## App pairs
+
+Owner's decision (design canvas round 13), built after the App pair experiment above had found a recipe that splits.
+
+### What it is
+
+- An **app pair** is a single pinned item in the Dock (ADR 0003, Amendment 5). A tap opens its two apps side by side.
+- **The tile** is the two apps' icons fused by a side blend: the left part of the first app's icon, the right part of the
+  second's, cross-faded through the middle, first app on the left (on the right in a right-to-left layout). It is one
+  bitmap made once off the main thread (`PairIconComposer`: each icon masked by a horizontal gradient with `DST_IN` on a
+  scratch canvas, the two summed with `ADD`; about 62% of each icon shows and the middle 24% is the fade), cached by
+  (first app, second app, size, layout direction) in a bounded cache, and drawn as a plain image: no runtime blur, no
+  offscreen layer, no gradient stroke. While it is being made the first app's icon stands in. The Dock has no themed
+  or monochrome icon mode, so there is nothing to apply to it. The badge is the sum of the two apps' notification
+  counts; the spoken label is "<first> and <second>, app pair".
+- **Making one.** Long-press a pinned app, "Pair with...", pick the second app in the picker (search, every visible
+  launchable app, the app itself left out); the pinned app is replaced by the pair at the same position. Or, while
+  rearranging, hold a dragged pinned app over the middle half of another pinned app for 350 ms: the target shows the
+  fused tile, a little larger, with one light detent; a drop pairs them (the target's app first, the dragged one second)
+  at the target's position. Over a gap or the outer quarters it still reorders. A pair cannot be dropped onto anything and
+  nothing can be dropped onto a pair (reorder only). Only plain apps of the personal profile can be paired (see Known
+  limits). "Pair with..." is the non-gesture route.
+- **The pair's menu**: Open side by side, Swap sides, Open <first>, Open <second>, Unpair (the two apps back as pinned
+  apps, first then second, where the pair was), and Remove from dock; Move left, right, to start and to end while
+  rearranging. Swap sides updates the tile at once.
+- **An app is uninstalled.** A pair with one app gone becomes the remaining pinned app (same place); both gone, the pair
+  is removed.
+- **Edits** are ordinary Dock edits (`PairDockApps`, `PairDockAppWith`, `SwapDockPair`, `UnpairDockItem`) through
+  `DockEngine` and the Dock edit reducer, so persistence and backup are the Dock's own. The Dock has no Undo, so there is
+  none here; Unpair is the way back from pairing.
+
+### The recipe and its evidence
+
+`PairRecipe(firstFlags = LAUNCH_ADJACENT | NEW_TASK, secondFlags = LAUNCH_ADJACENT | NEW_TASK, delayMillis = 600)` is
+the experiment's "Reuse both" scenario, started from the launcher's own Home activity: the first app, then 600 ms later
+the second. On the owner's foldable after its update to Android SDK 37 it split, with both apps already running, left no
+duplicate tasks and kept each app's state; on SDK 36 the same launch split nothing. `MULTIPLE_TASK` pulled the wrong
+windows into a pane and left duplicates, and `CLEAR_TASK` restarts the apps, so neither is used. These were single runs:
+the recipe is one small value (`AppPairLauncher.kt`) behind the `PairLauncher` interface so it can change when more
+pairs have been tried. The second start is a coroutine in the app's own scope, so it still fires after the first app has
+paused the launcher; one launch is in flight at a time and a second tap meanwhile is ignored; a tap plays the commit
+haptic. If a start throws, "Couldn't open <app>" is shown and the other app is still opened (alone, as a plain start,
+when it is the first that failed).
+
+### When pairs show
+
+`PairAvailability.canSplit(sdkInt, windowWidthDp, inMultiWindow)` is true on SDK 37 or later in a window at least 600 dp
+wide when the launcher is not itself in multi-window mode. Settings > Dock > "App pairs": **Automatic** (the rule,
+the default), **Always show** (show and launch regardless, for a device the rule gets wrong) and **Off** (pairs are
+hidden everywhere and "Pair with..." and drop-to-pair are off). Where pairs are not shown the stored pair stays, the Dock
+lays out as if it were not there (no gap) and the Dock's own size spring handles it appearing or disappearing on fold and
+unfold. Moves by position (drag, Move left and right) count only the items that are shown, and keep a hidden pair beside
+its neighbours.
+
+### Known limits
+
+- The split is always even: a launcher cannot choose the ratio or the side.
+- It depends on the Android version: below SDK 37 a launch from the Home activity splits nothing.
+- Only personal-profile apps: `LauncherApps.startMainActivity` takes no intent flags, so a work or private profile app
+  cannot be started with `LAUNCH_ADJACENT`. "Pair with..." and drop-to-pair do not offer one, and a work app is not in
+  the picker.
+- Reliability across app pairs is not confirmed: the evidence is single runs on one device. An app that does not support
+  split screen shows the system's own "App does not support split screen." and opens full screen.
+- The picker's dialog and the fused tile's look on a real icon set are covered on a device, not by the JVM tests (a text
+  field a dialog focuses keeps Robolectric's Compose from going idle).
+
 ## Quick actions, and apps behind the cards
 
 Two things the owner decided on the design canvas (boards QA, QA2, QA3 and QA-U1), one commit each.

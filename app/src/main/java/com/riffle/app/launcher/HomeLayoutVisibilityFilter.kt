@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -41,4 +42,11 @@ private fun LauncherItem.visibleTo(visibleAppIdentities: Set<AppIdentity>): Laun
             copy(items = items.filter { item -> item.appIdentity in visibleAppIdentities })
                 .takeIf { folder -> items.isEmpty() || folder.items.isNotEmpty() }
         is WidgetItem -> this
+        is AppPairItem ->
+            when {
+                first.appIdentity in visibleAppIdentities && second.appIdentity in visibleAppIdentities -> this
+                first.appIdentity in visibleAppIdentities -> first.copy(id = id)
+                second.appIdentity in visibleAppIdentities -> second.copy(id = id)
+                else -> null
+            }
     }

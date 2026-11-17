@@ -205,6 +205,7 @@ private fun SettingsDockPageContent(
             dock = state.homeLayout.dock,
             onAction = onAction,
             defaultEdge = state.selectedLayoutDeviceClass.defaultDockEdge,
+            appPairs = state.settings.dock.appPairs,
         )
     }
     SettingsSection(title = stringResource(R.string.settings_section_dynamic_side)) {

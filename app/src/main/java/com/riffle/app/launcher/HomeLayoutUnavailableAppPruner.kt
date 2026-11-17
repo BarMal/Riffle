@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -65,4 +66,12 @@ private fun LauncherItem.keepingApps(shouldKeep: (AppIdentity) -> Boolean): Laun
             copy(items = items.filter { item -> shouldKeep(item.appIdentity) })
                 .takeIf { folder -> folder.items.isNotEmpty() }
         is WidgetItem -> this
+        // One app gone: the pair becomes the remaining pinned app under the pair's id; both gone: removed.
+        is AppPairItem ->
+            when {
+                shouldKeep(first.appIdentity) && shouldKeep(second.appIdentity) -> this
+                shouldKeep(first.appIdentity) -> first.copy(id = id)
+                shouldKeep(second.appIdentity) -> second.copy(id = id)
+                else -> null
+            }
     }

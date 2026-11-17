@@ -23,6 +23,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -244,6 +245,8 @@ private fun HomeDraggedItemContent(
                     isEditing = false,
                     onAction = {},
                 )
+
+            is AppPairItem -> Unit // A pair is Dock-only; it is never dragged on a Home page.
         }
         WallpaperReadableLabel(
             text = item.dragLabel,
@@ -321,6 +324,7 @@ private val LauncherItem.dragLabel: String
             is AppShortcutItem -> label
             is FolderItem -> label
             is WidgetItem -> label
+            is AppPairItem -> label
         }
 
 private const val DRAG_PLACEHOLDER_STROKE_WIDTH_DP = 2

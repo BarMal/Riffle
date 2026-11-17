@@ -155,6 +155,7 @@ object PoolCopy {
             is PoolWidget -> true
             is PoolApp -> mode != CopyMode.CLONE
             is PoolFolder -> mode == CopyMode.KEEP_SHARED
+            is PoolAppPair -> false
         }
 
     private fun clone(
@@ -164,6 +165,7 @@ object PoolCopy {
         when (item) {
             is PoolApp -> item.copy(id = id)
             is PoolFolder -> item.copy(id = id)
+            is PoolAppPair -> item.copy(id = id)
             is PoolWidget -> item.copy(id = id, hostedId = null)
         }
 
