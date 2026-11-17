@@ -56,6 +56,7 @@ import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnectio
 import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
+import com.riffle.app.launcher.pair.AndroidPairLaunchers
 import com.riffle.app.launcher.rss.AndroidFeedParser
 import com.riffle.app.launcher.rss.AndroidFeedRefreshPolicy
 import com.riffle.app.launcher.rss.AndroidFeedTransport
@@ -218,6 +219,7 @@ internal class MainActivityDependencies(
     val recentAppRepository by lazy { AndroidRecentAppRepository(activity) }
     val homeRoleGateway by lazy { AndroidHomeRoleGateway(activity) }
     val appLauncher by lazy { AndroidAppLauncher(activity) }
+    val pairLauncher by lazy { AndroidPairLaunchers.create(activity) }
     val webSearchLauncher by lazy { AndroidWebSearchLauncher(activity) }
     val appIconLoader by lazy { PackageManagerAppIconLoader(activity.packageManager) }
     val wallpaperController by lazy { AndroidLauncherWallpaperController(activity.window) }

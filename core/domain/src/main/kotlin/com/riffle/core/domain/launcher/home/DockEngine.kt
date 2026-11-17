@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.home
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
 @Suppress("TooManyFunctions")
@@ -323,7 +324,8 @@ class DockEngine {
         val pinned = items.firstOrNull { it.id == itemId }
         return when {
             pinned == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
-            !pinned.isPairablePin() -> DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
+            !pinned.isPairablePin() || app.identity.profile.type != AppProfileType.PERSONAL ->
+                DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
             (pinned as AppShortcutItem).appIdentity == app.identity ->
                 DockEditResult.Rejected(DockEditRejectionReason.SAME_APP)
             else -> {
@@ -387,7 +389,12 @@ class DockEngine {
         }
     }
 
-    private fun LauncherItem.isPairablePin(): Boolean = this is AppShortcutItem && appShortcutId == null
+    /**
+     * A plain pinned app of the personal profile: a deep shortcut is not an app, and an app of another profile cannot
+     * be started with the flags a split needs (the launcher-apps API takes no intent flags).
+     */
+    private fun LauncherItem.isPairablePin(): Boolean =
+        this is AppShortcutItem && appShortcutId == null && appIdentity.profile.type == AppProfileType.PERSONAL
 
     private fun HomeLayout.withDockItems(items: List<LauncherItem>): HomeLayout = copy(dock = dock.copy(items = items))
 

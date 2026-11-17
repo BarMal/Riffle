@@ -168,6 +168,35 @@ class DockPairEngineTest {
     }
 
     @Test
+    fun anAppOfAnotherProfileCannotBePaired() {
+        val work =
+            pin("work").let {
+                it.copy(
+                    appIdentity = it.appIdentity.copy(profile = com.riffle.core.domain.launcher.apps.AppProfile.work()),
+                )
+            }
+        val layout = layoutOf(pin("notes"), work)
+
+        assertEquals(
+            DockEditRejectionReason.UNSUPPORTED_ITEM,
+            rejected(engine.pairDockApps(layout, LauncherItemId("notes"), LauncherItemId("work"))),
+        )
+        assertEquals(
+            DockEditRejectionReason.UNSUPPORTED_ITEM,
+            rejected(engine.pairDockApps(layout, LauncherItemId("work"), LauncherItemId("notes"))),
+        )
+        val workApp =
+            InstalledApp(
+                work.appIdentity,
+                label = "work",
+            )
+        assertEquals(
+            DockEditRejectionReason.UNSUPPORTED_ITEM,
+            rejected(engine.pairDockAppWith(layout, LauncherItemId("notes"), workApp)),
+        )
+    }
+
+    @Test
     fun aPairCannotBeMovedToHome() {
         val layout = layoutOf(pin("notes"), pin("maps"))
         val paired = updated(engine.pairDockApps(layout, LauncherItemId("notes"), LauncherItemId("maps")))
