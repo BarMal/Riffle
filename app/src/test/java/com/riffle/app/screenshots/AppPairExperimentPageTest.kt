@@ -270,7 +270,8 @@ class AppPairExperimentPageTest {
         assertEquals(listOf("start ${fixturePackages.first}", "start ${fixturePackages.second}"), calls)
         assertEquals("Warm-up: open both", experiment.log.value.single().scenario)
         composeRule.onNodeWithTag(APP_PAIR_SCRIPT_RUN_TAG).assertDoesNotExist()
-        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_STOP_TAG).assertIsDisplayed().assertTextContains("Stop")
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_STOP_TAG).performScrollTo().assertIsDisplayed()
+            .assertTextContains("Stop")
     }
 
     private fun pressHeldRun() = composeRule.onNodeWithTag(APP_PAIR_HELD_RUN_TAG).performScrollTo().performClick()
@@ -484,8 +485,8 @@ class AppPairExperimentPageTest {
     @Test
     fun thePageShowsItsPickersScenariosAndAnEmptyLogWithAdvancedCollapsed() {
         render()
-        composeRule.onNodeWithTag(APP_PAIR_FIRST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(APP_PAIR_SECOND_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(APP_PAIR_FIRST_TAG).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag(APP_PAIR_SECOND_TAG).performScrollTo().assertIsDisplayed()
         PairScenario.entries.forEach {
             composeRule.onNodeWithTag(APP_PAIR_SCENARIO_TAG_PREFIX + it.name).performScrollTo().assertIsDisplayed()
         }
