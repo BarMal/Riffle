@@ -7,6 +7,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.dock.PairAvailability
 import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -27,8 +28,16 @@ internal data class SplitFacts(
  */
 internal val LocalSplitFacts = compositionLocalOf<SplitFacts?> { null }
 
-/** Whether app pairs are available now (shown, and may be made and launched): read by the pair's menus and drag. */
-internal val LocalDockPairsAvailable = compositionLocalOf { false }
+/**
+ * What the Dock needs to make pairs: whether they are available now (shown, and may be made and launched) and the
+ * installed apps "Pair with..." offers. Provided by the shell; the default is "no pairs".
+ */
+internal data class DockPairs(
+    val available: Boolean = false,
+    val installedApps: List<InstalledApp> = emptyList(),
+)
+
+internal val LocalDockPairs = compositionLocalOf { DockPairs() }
 
 @Composable
 internal fun currentSplitFacts(): SplitFacts {

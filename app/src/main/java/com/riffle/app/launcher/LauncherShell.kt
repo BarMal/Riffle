@@ -222,7 +222,7 @@ fun LauncherShellContent(
         Box(
             modifier = rootModifier,
         ) {
-            CompositionLocalProvider(LocalDockPairsAvailable provides pairView.available) {
+            CompositionLocalProvider(LocalDockPairs provides DockPairs(pairView.available, state.installedApps)) {
                 LauncherDestination(
                     state = pairView.state,
                     settingsState =
