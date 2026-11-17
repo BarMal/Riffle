@@ -610,6 +610,27 @@ The owner asked why calendar and alarm cards showed behind the player under the 
   never stands in for Now: if the app also has notifications it leads to that app's notifications page like any live
   app. See "Media centre" in `docs/product/dock-modes-plan.md`.
 
+## Amendment 5 (owner, 2026-11-17): app pairs are Dock items
+
+The owner decided that two apps can be pinned as one Dock item that opens them side by side. This is the one place in
+this ADR that adds to what the Dock holds, so it is stated here as a rule, not as a feature. The rest of Amendments 1
+to 4 stands.
+
+- **A pair is a pinned item of the Dock.** It is not a workspace, a lens, a preset or a saved layout, and nothing about
+  windows is stored. What is stored is the two apps (each as a pinned app is stored, profile included) and their order;
+  the first app is the start (left) pane. The Dock's item kinds are an app, a folder, a widget and now a pair, each its
+  own typed item (`AppPairItem`, `PoolAppPair`); there is no generic "group". A pair is never nested, never placed on a
+  Home page, and may exist beside the same apps pinned singly.
+- **Where a split is not possible the item is hidden, not removed.** The Dock then lays out as if the pair were not
+  there, and the pair is back when a split is possible again. Settings > Dock > "App pairs" says when that is: Automatic
+  (Android SDK 37 or later, a window at least 600 dp wide, the launcher not itself in multi-window mode), Always show,
+  or Off.
+- **No new place or layer.** A pair is made in the Dock (the pinned app's "Pair with..." or dropping one pinned app on
+  another) and edited in the Dock (its long-press menu: Open side by side, Swap sides, each app, Unpair).
+- **Stored data keeps decoding.** An unknown item kind in a stored Dock is skipped without failing the rest.
+
+See "App pairs" in `docs/product/dock-modes-plan.md`.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as
