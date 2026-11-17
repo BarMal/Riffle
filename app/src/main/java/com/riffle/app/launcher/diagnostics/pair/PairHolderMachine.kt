@@ -50,7 +50,8 @@ class PairHolderMachine(
     private var resumedAt = 0L
     private var firstAt = 0L
     private var splitAt = 0L
-    private var secondAt = 0L
+    private var lastStartAt = 0L
+    private var secondStarted = false
     private var multiWindow: Boolean? = null
 
     /** The first resume starts the settle time; later resumes change nothing. */
@@ -95,7 +96,8 @@ class PairHolderMachine(
                 splitAt = clock()
                 phase = HolderPhase.SplitSettling
                 val was = before ?: "unknown"
-                it += HolderEffect.Note("split observed via $source (was $was); second start in $SPLIT_SETTLE_MS ms")
+                val settle = variant.splitSettleMillis
+                it += HolderEffect.Note("split observed via $source (was $was); second start in $settle ms")
             }
         }
 
@@ -105,10 +107,24 @@ class PairHolderMachine(
             when (phase) {
                 HolderPhase.Settling -> resumedAt + SETTLE_MS
                 HolderPhase.WaitingForSplit -> firstAt + (variant.secondAfterMillis ?: SPLIT_TIMEOUT_MS)
-                HolderPhase.SplitSettling -> splitAt + SPLIT_SETTLE_MS
-                HolderPhase.Finishing -> secondAt + variant.finishDelayMillis
+                HolderPhase.SplitSettling -> splitAt + variant.splitSettleMillis
+                HolderPhase.Finishing -> lastStartAt + variant.finishDelayMillis
                 HolderPhase.Created, HolderPhase.Done -> null
             }
+
+    /** What the holder is doing now, for the `split lost` line: waiting, how long ago the last start was, finishing. */
+    val status: String
+        get() {
+            val ago = clock() - lastStartAt
+            return when (phase) {
+                HolderPhase.Created, HolderPhase.Settling -> "waiting, nothing started yet"
+                HolderPhase.WaitingForSplit -> "waiting for the split, first started ${clock() - firstAt} ms ago"
+                HolderPhase.SplitSettling -> "waiting to start the second app"
+                HolderPhase.Finishing ->
+                    if (secondStarted) "second started $ago ms ago" else "first started $ago ms ago, no second start"
+                HolderPhase.Done -> "finishing"
+            }
+        }
 
     /** Moves on every step whose time has come. */
     fun onTick(): List<HolderEffect> = collect { }
@@ -130,7 +146,14 @@ class PairHolderMachine(
                     firstAt = clock()
                     phase = HolderPhase.WaitingForSplit
                     out += HolderEffect.StartFirst(variant.firstFlags)
-                    out += HolderEffect.Note("state WaitingForSplit: first started")
+                    if (variant.startsSecond) {
+                        out += HolderEffect.Note("state WaitingForSplit: first started")
+                    } else {
+                        lastStartAt = firstAt
+                        phase = HolderPhase.Finishing
+                        val ms = variant.finishDelayMillis
+                        out += HolderEffect.Note("state Finishing: first started, no second start; finish in $ms ms")
+                    }
                 }
                 HolderPhase.WaitingForSplit -> waitedLongEnough(out)
                 HolderPhase.SplitSettling -> startSecond(out, "split settled")
@@ -158,7 +181,8 @@ class PairHolderMachine(
         out: MutableList<HolderEffect>,
         why: String,
     ) {
-        secondAt = clock()
+        lastStartAt = clock()
+        secondStarted = true
         phase = HolderPhase.Finishing
         out += HolderEffect.StartSecond(variant.secondFlags)
         out += HolderEffect.Note("state Finishing: second started ($why); finish in ${variant.finishDelayMillis} ms")

@@ -206,4 +206,79 @@ class PairHolderMachineTest {
         )
         assertEquals(HolderPhase.Done, m.phase)
     }
+
+    private fun probe(id: String) = HeldVariants.probes.single { it.id == id }
+
+    @Test
+    fun aHoldOnlyProbeStartsTheFirstAppOnlyAndFinishesTheHoldAfterTheFirstStart() {
+        val p1 = probe("P1")
+        val m = machine(p1)
+        now = 1_000
+        m.onResume().keep()
+        val first = m.tickAt(1_300)
+        assertEquals(listOf(HolderEffect.StartFirst(p1.firstFlags)), first.filterNot { it is HolderEffect.Note })
+        assertEquals(HolderPhase.Finishing, m.phase)
+        assertEquals(6_300L, m.wakeAt)
+        now = 1_700
+        m.onSplitSignal(true, "onMultiWindowModeChanged").keep()
+        assertEquals("a split changes nothing for a probe that only holds", HolderPhase.Finishing, m.phase)
+        assertTrue(m.tickAt(6_299).none { it !is HolderEffect.Note })
+        val done = m.tickAt(6_300)
+        assertTrue(done.contains(HolderEffect.Finish))
+        assertEquals(0, count(HolderEffect.StartSecond::class.java))
+        assertEquals(1, count(HolderEffect.StartFirst::class.java))
+    }
+
+    @Test
+    fun aProbeThatNeverFinishesEarlyHoldsFiveSecondsAfterTheSecondStart() {
+        val p3 = probe("P3")
+        val m = machine(p3)
+        m.onResume().keep()
+        m.tickAt(300)
+        now = 500
+        m.onSplitSignal(true, "onMultiWindowModeChanged").keep()
+        assertEquals(900L, m.wakeAt)
+        assertTrue(m.tickAt(900).contains(HolderEffect.StartSecond(p3.secondFlags)))
+        assertEquals(5_900L, m.wakeAt)
+        assertTrue(m.tickAt(5_899).none { it is HolderEffect.Finish })
+        assertTrue(m.tickAt(5_900).contains(HolderEffect.Finish))
+    }
+
+    @Test
+    fun theLongWaitProbeStartsTheSecondAppTwoAndAHalfSecondsAfterTheSplitAndFinishesThreeHundredLater() {
+        val p4 = probe("P4")
+        val m = machine(p4)
+        m.onResume().keep()
+        m.tickAt(300)
+        now = 500
+        m.onSplitSignal(true, "onMultiWindowModeChanged").keep()
+        assertEquals(3_000L, m.wakeAt)
+        assertTrue(m.tickAt(2_999).none { it !is HolderEffect.Note })
+        assertTrue(m.tickAt(3_000).contains(HolderEffect.StartSecond(p4.secondFlags)))
+        assertEquals(3_300L, m.wakeAt)
+        assertTrue(m.tickAt(3_300).contains(HolderEffect.Finish))
+    }
+
+    @Test
+    fun theStatusSaysWhatTheHolderIsDoingForTheSplitLostLine() {
+        val m = machine(probe("P3"))
+        m.onResume().keep()
+        assertEquals("waiting, nothing started yet", m.status)
+        m.tickAt(300)
+        now = 350
+        assertEquals("waiting for the split, first started 50 ms ago", m.status)
+        m.onSplitSignal(true, "x").keep()
+        assertEquals("waiting to start the second app", m.status)
+        m.tickAt(750)
+        now = 810
+        assertEquals("second started 60 ms ago", m.status)
+        m.tickAt(5_750)
+        assertEquals("finishing", m.status)
+        val hold = machine(probe("P1"))
+        now = 0
+        hold.onResume().keep()
+        hold.tickAt(300)
+        now = 400
+        assertEquals("first started 100 ms ago, no second start", hold.status)
+    }
 }

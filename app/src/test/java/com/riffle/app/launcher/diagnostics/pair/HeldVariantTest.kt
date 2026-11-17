@@ -75,4 +75,45 @@ class HeldVariantTest {
         assertNull(HeldVariants.byId("H9"))
         assertNull(HeldVariants.byId(null))
     }
+
+    private val hold = 5_000L
+
+    @Test
+    fun thereAreFiveProbesWithTheAgreedFlagsAndTimings() {
+        val probes = HeldVariants.probes
+        assertEquals(listOf("P1", "P2", "P3", "P4", "P5"), probes.map { it.id })
+        assertTrue(probes.all { it.probe && it.secondAfterMillis == null })
+        val p1 = probes[0]
+        val p2 = probes[1]
+        val p3 = probes[2]
+        val p4 = probes[3]
+        val p5 = probes[4]
+        assertEquals(Triple(adjacent, false, hold), Triple(p1.firstFlags, p1.startsSecond, p1.finishDelayMillis))
+        assertEquals(Triple(adjacent, false, hold), Triple(p2.firstFlags, p2.startsSecond, p2.finishDelayMillis))
+        assertEquals(Triple(adjacent, plain, hold), Triple(p3.firstFlags, p3.secondFlags, p3.finishDelayMillis))
+        assertEquals(Triple(adjacent, plain, 300L), Triple(p4.firstFlags, p4.secondFlags, p4.finishDelayMillis))
+        assertEquals(2_500L, p4.splitSettleMillis)
+        assertEquals(adjacent or multiple, p5.firstFlags)
+        assertEquals(Pair(plain, hold), Pair(p5.secondFlags, p5.finishDelayMillis))
+        assertEquals(listOf(false, true, false, false, false), probes.map { it.listedHolder })
+        assertEquals(400L, p3.splitSettleMillis)
+    }
+
+    @Test
+    fun theHeldVariantsAreUnchangedByTheProbes() {
+        assertEquals(listOf("H1", "H2", "H3", "H4", "H5", "H6"), HeldVariants.all.map { it.id })
+        assertTrue(HeldVariants.all.none { it.probe || !it.startsSecond || it.listedHolder })
+        assertTrue(HeldVariants.all.all { it.splitSettleMillis == 400L })
+        assertEquals(HeldVariants.probes[2], HeldVariants.byId("P3"))
+    }
+
+    @Test
+    fun theProbeScriptHasFiveStepsWithSevenSecondDwellsAndProbeToasts() {
+        val steps = PairScript.probeSteps
+        assertEquals(5, steps.size)
+        assertEquals("Probe 2 of 5: hold only, listed in Recents", steps[1].toastText(2, 5))
+        assertEquals(HeldVariants.probes.map { it.title }, steps.map { it.logName })
+        steps.forEach { assertEquals(7_000L, it.dwellMillis) }
+        assertTrue(steps[0].openUnknown && steps.drop(1).none { it.openUnknown })
+    }
 }

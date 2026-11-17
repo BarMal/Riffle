@@ -1949,6 +1949,66 @@ launcher's own lifecycle trace. In the holder trace:
 - The launcher's trace in the same entry shows whether Home itself was resized; if the holder is the one that split, Home should only
   pause and stop.
 
+#### Round 4: why the split collapses
+
+**What the device showed** (HONOR foldable, unfolded 724x784 dp, Android SDK 37; the owner's screen recording and one complete
+holder trace).
+
+- The split does form. The holder got `onMultiWindowModeChanged(true)` about 20 ms after it started app A with
+  `LAUNCH_ADJACENT | NEW_TASK`, and the recording shows a divider with A in one pane.
+- It never lasts. In the one full trace (H5, A already running): multi-window `true` at +329 ms, `false` at +407 ms, before the second
+  start at +753 ms; the holder's own window bounds never changed. In the recording of H1 to H3, A sits in a pane beside a divider; in
+  H1 B is briefly visible in the other pane; within one to two seconds the screen is B full-screen with a **system** toast: **"App
+  does not support split screen."**
+- Both apps can be split by hand from Recents, so the toast is probably about our holder activity (the launcher is the device's HOME
+  app; the holder is `excludeFromRecents` with `taskAffinity=""`) or about how B was started. Round 4 finds out which.
+- The copied log was too long to paste (cut off after about one and a half held entries), because every entry repeated the device,
+  window, feature and target lines.
+
+**What changed in the holder.** It now keeps looking until it is destroyed (and for a probe through its 5 s hold): every
+`onMultiWindowModeChanged`, `onConfigurationChanged` (with `smallestScreenWidthDp` and `screenWidthDp`), `onTopResumedActivityChanged`,
+`onWindowFocusChanged`, `onStart/onResume/onPause/onStop`, `isInPictureInPictureMode`, and every change of the window bounds, which it
+reads on each callback and on one 250 ms ticker that is cancelled in `onDestroy`. Each change is written once. If multi-window mode
+drops from `true` to `false` the trace says `split lost after N ms in split (...)` with what the holder was doing (waiting, second
+started N ms ago, finishing). Once at its start the holder logs its own `ActivityInfo` read back from PackageManager (`flags`,
+`launchMode`, `taskAffinity`, `screenOrientation`; `resizeMode` is hidden and no public API says whether an activity is resizeable,
+so the line says that), the `freeform_window_management` feature, and whether Riffle holds the HOME role. H1 to H6 are unchanged
+apart from this extra logging.
+
+**The probes** (`HeldVariants.probes`, "Run the split probes" in the Script section and one row each under "Probes"; five steps, a toast
+per step such as "Probe 2 of 5: hold only, listed in Recents", 7 s dwell, the same hard-coded pair and "with these apps" alternative).
+Every probe is a holder run; the toast and the log name it a probe.
+
+| | Probe | What the holder does | Answers |
+|---|---|---|---|
+| P1 | Hold only | Starts A with `LAUNCH_ADJACENT \| NEW_TASK`, starts nothing else, finishes 5 s after the first start | Does holder + A stay split, and does the toast appear with no B involved? |
+| P2 | Hold only, listed in Recents | As P1, in `PairHolderListedActivity`: no `excludeFromRecents`, `taskAffinity=".pairholder"`, label "Riffle pair holder" | Is it the Recents exclusion or the empty affinity? |
+| P3 | Second, never finish | A adjacent; when the split is seen (+400 ms) B with `NEW_TASK`; finishes 5 s after the second start | Does finishing the holder cause the collapse? |
+| P4 | Second after a long wait | As H1, but B starts 2500 ms after the split is seen; finish 300 ms later | Is it timing? |
+| P5 | Fresh first | As P3, A with `LAUNCH_ADJACENT \| NEW_TASK \| MULTIPLE_TASK` | Is the collapse caused by A's existing task being reused? |
+
+**Reading the outcomes.**
+
+| Probe | If the split holds (no `split lost`, no toast) | If it collapses (`split lost`, toast) |
+|---|---|---|
+| P1 | The holder and A can share a split; what breaks it is B, or the holder finishing. Go on to P3 and P4. | A alone cannot stay beside the holder: the holder itself is not allowed in a split. Read the toast and P2 next. |
+| P2 | Our holder's Recents exclusion or empty affinity is the cause. Make the holder listed (and give it an affinity) in the real technique. | Not the Recents flag or the affinity. Suspect that the HOME app or its task is never allowed to be one pane (the `holds the HOME role` line), or the device's own rule. |
+| P3 | The holder finishing, or finishing too soon, collapses the split; the fix is to keep the holder (or a stand-in) alive. | Not the finish: B starting, or A's reused task, breaks it. Look at when `split lost` appears relative to the second start. |
+| P4 | A 400 ms wait was too short: A and the system need longer to settle before B starts. | Not timing. Compare with P3: if both collapse at the same moment after the second start, B's start is what ends it. |
+| P5 | A's existing task being reused is the cause (the 80 ms collapse); start A in a fresh task. | Not A's task. With P1 to P4, the collapse is about the holder or B's start, not about A. |
+
+The trace of each probe (`split lost after N ms in split (...)`, the window bounds and config lines, and the holder's facts) says when
+and in what state the split went. All of what the toast really tests can only be seen on the device.
+
+**Compact copies.** "Copy script log (oldest first)" copies the run that was started last, of any kind. "Copy held log", "Copy probe
+log" and "Copy nine-step log" each copy the latest run of that kind and are disabled until there is one. In a script copy the device,
+window, feature, target and holder-fact lines are printed once in the header; every entry keeps only its first line, one `script:`
+line, one flags line, one return line, the launcher's trace and the holder's trace (lines in the same millisecond share one line,
+joined with `|`); the owner's verdict and the Recents duplicates are printed only when set. Six held entries fit in about 12,000
+characters, and each entry has at most eight lines that are not trace lines (tested). Every copy button has a "Share..." button beside
+it that hands the same text to the system share sheet (`ACTION_SEND`, `text/plain`), so a long log can go out as a message or file.
+"Copy log (newest first)" is the full, unabridged log and is unchanged.
+
 
 ## Quick actions, and apps behind the cards
 

@@ -119,7 +119,12 @@ class PairScriptRunner(
         kind: PairScriptKind = PairScriptKind.SCENARIOS,
     ): Boolean {
         if (mutableState.value is PairScriptState.Running) return false
-        val steps = if (kind == PairScriptKind.HELD) PairScript.heldSteps else this.steps
+        val steps =
+            when (kind) {
+                PairScriptKind.HELD -> PairScript.heldSteps
+                PairScriptKind.PROBES -> PairScript.probeSteps
+                PairScriptKind.SCENARIOS -> this.steps
+            }
         val first = launcher.resolve(firstPackage)
         val second = launcher.resolve(secondPackage)
         val ready = first != null && second != null

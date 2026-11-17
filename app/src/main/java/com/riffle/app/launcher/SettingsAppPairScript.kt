@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,10 +41,12 @@ internal const val APP_PAIR_SCRIPT_RUN_TAG = "appPair.script.run"
 internal const val APP_PAIR_SCRIPT_STOP_TAG = "appPair.script.stop"
 internal const val APP_PAIR_SCRIPT_STATUS_TAG = "appPair.script.status"
 internal const val APP_PAIR_SCRIPT_CHOSEN_TAG = "appPair.script.chosen"
-internal const val APP_PAIR_SCRIPT_COPY_TAG = "appPair.script.copy"
 internal const val APP_PAIR_HELD_RUN_TAG = "appPair.script.heldRun"
 internal const val APP_PAIR_HELD_HINT_TAG = "appPair.script.heldHint"
 internal const val APP_PAIR_HELD_CHOSEN_TAG = "appPair.script.heldChosen"
+internal const val APP_PAIR_PROBE_RUN_TAG = "appPair.script.probeRun"
+internal const val APP_PAIR_PROBE_HINT_TAG = "appPair.script.probeHint"
+internal const val APP_PAIR_PROBE_CHOSEN_TAG = "appPair.script.probeChosen"
 
 private const val DISABLED_ROW_ALPHA = 0.5f
 
@@ -72,7 +75,7 @@ internal fun PairScriptHost(
     val scriptState by runner.state.collectAsState()
     val packages = scriptEnvironment?.packages ?: (PairScriptApps.FIRST_PACKAGE to PairScriptApps.SECOND_PACKAGE)
     val log by wiring.experiment.log.collectAsState()
-    var copied by remember { mutableStateOf(false) }
+    var copied by remember { mutableStateOf<ScriptCopy?>(null) }
     val appContext = context.applicationContext
     val launcher =
         ExperimentScriptLauncher(
@@ -88,7 +91,13 @@ internal fun PairScriptHost(
         )
     val (a, b) = chosen
     PairScriptSection(
-        values = PairScriptSectionValues(scriptState, canRunPair(a, b), log.any { it.script != null }, copied),
+        values =
+            PairScriptSectionValues(
+                scriptState,
+                canRunPair(a, b),
+                log.mapNotNull { it.script?.kind }.toSet(),
+                copied,
+            ),
         actions =
             PairScriptSectionActions(
                 onRun = { kind ->
@@ -98,20 +107,21 @@ internal fun PairScriptHost(
                         apps.firstOrNull { it.identity.packageName.value == one },
                         apps.firstOrNull { it.identity.packageName.value == two },
                     )
-                    copied = false
+                    copied = null
                     runner.start(launcher, one, two, kind)
                 },
                 onStop = runner::stop,
                 onRunChosen = { kind ->
                     if (a != null && b != null) {
-                        copied = false
+                        copied = null
                         runner.start(launcher, a.identity.packageName.value, b.identity.packageName.value, kind)
                     }
                 },
                 onCopy = {
-                    copyPairText(context, log.toScriptPlainText())
-                    copied = true
+                    copyPairText(context, log.toScriptPlainText(kind = it.kind))
+                    copied = it
                 },
+                onShare = { sharePairText(context, log.toScriptPlainText(kind = it.kind)) },
             ),
     )
 }
@@ -119,15 +129,17 @@ internal fun PairScriptHost(
 internal class PairScriptSectionValues(
     val state: PairScriptState,
     val canRunChosen: Boolean,
-    val hasScriptLog: Boolean,
-    val copied: Boolean,
+    /** The kinds of script run the log holds entries of; a copy row is enabled when its kind is among them. */
+    val kindsInLog: Set<PairScriptKind>,
+    val copied: ScriptCopy?,
 )
 
 internal class PairScriptSectionActions(
     val onRun: (PairScriptKind) -> Unit,
     val onStop: () -> Unit,
     val onRunChosen: (PairScriptKind) -> Unit,
-    val onCopy: () -> Unit,
+    val onCopy: (ScriptCopy) -> Unit,
+    val onShare: (ScriptCopy) -> Unit,
 )
 
 @Composable
@@ -142,17 +154,12 @@ internal fun PairScriptSection(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (!running) {
-                Button(
-                    modifier = Modifier.fillMaxWidth().testTag(APP_PAIR_HELD_RUN_TAG),
-                    onClick = { actions.onRun(PairScriptKind.HELD) },
-                ) {
-                    Text(stringResource(R.string.app_pair_held_run))
+                PairRunButton(APP_PAIR_HELD_RUN_TAG, R.string.app_pair_held_run) { actions.onRun(PairScriptKind.HELD) }
+                PairHint(APP_PAIR_HELD_HINT_TAG, R.string.app_pair_held_hint)
+                PairRunButton(APP_PAIR_PROBE_RUN_TAG, R.string.app_pair_probe_run) {
+                    actions.onRun(PairScriptKind.PROBES)
                 }
-                Text(
-                    modifier = Modifier.testTag(APP_PAIR_HELD_HINT_TAG),
-                    text = stringResource(R.string.app_pair_held_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                PairHint(APP_PAIR_PROBE_HINT_TAG, R.string.app_pair_probe_hint)
             }
             Button(
                 modifier =
@@ -170,40 +177,94 @@ internal fun PairScriptSection(
             )
         }
         val chosenEnabled = values.canRunChosen && !running
-        SettingsClickableRow(
-            modifier =
-                Modifier
-                    .testTag(APP_PAIR_SCRIPT_CHOSEN_TAG)
-                    .alpha(if (chosenEnabled) 1f else DISABLED_ROW_ALPHA),
-            title = stringResource(R.string.app_pair_script_run_chosen),
-            subtitle = stringResource(R.string.app_pair_script_run_chosen_summary),
-            enabled = chosenEnabled,
-            onClick = { actions.onRunChosen(PairScriptKind.SCENARIOS) },
-            trailingContent = null,
-        )
-        SettingsClickableRow(
-            modifier =
-                Modifier
-                    .testTag(APP_PAIR_HELD_CHOSEN_TAG)
-                    .alpha(if (chosenEnabled) 1f else DISABLED_ROW_ALPHA),
-            title = stringResource(R.string.app_pair_held_run_chosen),
-            subtitle = stringResource(R.string.app_pair_held_run_chosen_summary),
-            enabled = chosenEnabled,
-            onClick = { actions.onRunChosen(PairScriptKind.HELD) },
-            trailingContent = null,
-        )
-        if (values.hasScriptLog) {
-            SettingsClickableRow(
-                modifier = Modifier.testTag(APP_PAIR_SCRIPT_COPY_TAG),
-                title = stringResource(R.string.app_pair_script_copy),
-                subtitle =
-                    stringResource(
-                        if (values.copied) R.string.app_pair_log_copied else R.string.app_pair_script_copy_summary,
-                    ),
-                onClick = actions.onCopy,
-                trailingContent = null,
-            )
+        PairChosenRow(APP_PAIR_SCRIPT_CHOSEN_TAG, chosenEnabled, PairChosenText.NINE) {
+            actions.onRunChosen(PairScriptKind.SCENARIOS)
         }
+        PairChosenRow(APP_PAIR_HELD_CHOSEN_TAG, chosenEnabled, PairChosenText.HELD) {
+            actions.onRunChosen(PairScriptKind.HELD)
+        }
+        PairChosenRow(APP_PAIR_PROBE_CHOSEN_TAG, chosenEnabled, PairChosenText.PROBES) {
+            actions.onRunChosen(PairScriptKind.PROBES)
+        }
+        PairScriptCopyRows(values, actions)
+    }
+}
+
+@Composable
+private fun PairRunButton(
+    tag: String,
+    @StringRes label: Int,
+    onClick: () -> Unit,
+) {
+    Button(modifier = Modifier.fillMaxWidth().testTag(tag), onClick = onClick) { Text(stringResource(label)) }
+}
+
+@Composable
+private fun PairHint(
+    tag: String,
+    @StringRes text: Int,
+) {
+    Text(modifier = Modifier.testTag(tag), text = stringResource(text), style = MaterialTheme.typography.bodyMedium)
+}
+
+private enum class PairChosenText(
+    @StringRes val title: Int,
+    @StringRes val summary: Int,
+) {
+    NINE(R.string.app_pair_script_run_chosen, R.string.app_pair_script_run_chosen_summary),
+    HELD(R.string.app_pair_held_run_chosen, R.string.app_pair_held_run_chosen_summary),
+    PROBES(R.string.app_pair_probe_run_chosen, R.string.app_pair_probe_run_chosen_summary),
+}
+
+/** "Run the ... with these apps": enabled once two different apps are chosen and no run is under way. */
+@Composable
+private fun PairChosenRow(
+    tag: String,
+    enabled: Boolean,
+    text: PairChosenText,
+    onClick: () -> Unit,
+) {
+    SettingsClickableRow(
+        modifier = Modifier.testTag(tag).alpha(if (enabled) 1f else DISABLED_ROW_ALPHA),
+        title = stringResource(text.title),
+        subtitle = stringResource(text.summary),
+        enabled = enabled,
+        onClick = onClick,
+        trailingContent = null,
+    )
+}
+
+/** The script copy rows: the latest run of any kind (once there is one), then one row per kind of run. */
+@Composable
+private fun PairScriptCopyRows(
+    values: PairScriptSectionValues,
+    actions: PairScriptSectionActions,
+) {
+    ScriptCopy.entries.forEach { target ->
+        val has = if (target.kind == null) values.kindsInLog.isNotEmpty() else target.kind in values.kindsInLog
+        if (target.kind == null && !has) return@forEach
+        val title =
+            when (target) {
+                ScriptCopy.ANY -> R.string.app_pair_script_copy
+                ScriptCopy.HELD -> R.string.app_pair_copy_held
+                ScriptCopy.PROBES -> R.string.app_pair_copy_probe
+                ScriptCopy.NINE -> R.string.app_pair_copy_nine
+            }
+        val summary =
+            when {
+                values.copied == target -> R.string.app_pair_log_copied
+                target.kind == null -> R.string.app_pair_script_copy_summary
+                has -> R.string.app_pair_copy_kind_summary
+                else -> R.string.app_pair_copy_kind_none
+            }
+        PairCopyRow(
+            title = stringResource(title),
+            subtitle = stringResource(summary),
+            tag = target.tag,
+            enabled = has,
+            onCopy = { actions.onCopy(target) },
+            onShare = { actions.onShare(target) },
+        )
     }
 }
 

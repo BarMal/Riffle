@@ -23,15 +23,17 @@ data class PairScriptStep(
     fun toastText(
         number: Int,
         total: Int,
-    ): String = if (held != null) "Held $number of $total: ${held.short}" else "Step $number of $total: $name"
+    ): String =
+        if (held != null) "${held.kindWord} $number of $total: ${held.short}" else "Step $number of $total: $name"
 }
 
-/** Which script a run is: the nine-step scenario script or the six-step held-trampoline one. */
+/** Which script a run is: the nine-step scenario script, the six-step held-trampoline one or the five split probes. */
 enum class PairScriptKind(
     val label: String,
 ) {
     SCENARIOS("nine-step scenario script"),
     HELD("held-trampoline script (six steps)"),
+    PROBES("split probe script (five steps)"),
 }
 
 /**
@@ -84,6 +86,24 @@ object PairScript {
                 null,
                 bothOpen = index > 0,
                 dwellMillis = HELD_DWELL_MS,
+                held = variant,
+                openUnknown = index == 0,
+            )
+        }
+
+    /** How long a probe step stays on screen: the longest probe's holder lives about 6 s. */
+    const val PROBE_DWELL_MS = 7_000L
+
+    /** The five round-4 probes in order, on whatever state the apps are in (the first says `already open: unknown`). */
+    val probeSteps: List<PairScriptStep> =
+        HeldVariants.probes.mapIndexed { index, variant ->
+            PairScriptStep(
+                variant.title,
+                PairMethod.CUSTOM,
+                CustomPair.DEFAULT,
+                null,
+                bothOpen = index > 0,
+                dwellMillis = PROBE_DWELL_MS,
                 held = variant,
                 openUnknown = index == 0,
             )
