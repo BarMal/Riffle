@@ -81,7 +81,7 @@ class AppPairLauncher(
         start(platform, PairStart(second, if (firstOpened) recipe.secondFlags else PairFlags.NEW_TASK), second)
     }
 
-    @Suppress("TooGenericExceptionCaught") // Any failure of a start is a message, never a crash.
+    @Suppress("TooGenericExceptionCaught", "SwallowedException") // A failed start is a message, never a crash.
     private fun start(
         platform: PairStarter,
         start: PairStart,
