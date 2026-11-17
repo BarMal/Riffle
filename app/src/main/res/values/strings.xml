@@ -506,6 +506,12 @@
     <string name="setting_home_set_up_again_keywords">set up walkthrough onboarding tour first-time</string>
     <string name="setting_dock_show">Show the Dock</string>
     <string name="setting_dock_show_keywords">dock visible hide</string>
+    <string name="setting_dock_app_pairs">App pairs</string>
+    <string name="setting_dock_app_pairs_keywords">app pair split screen side by side two apps dock pair</string>
+    <string name="setting_dock_app_pairs_subtitle">Pin two apps as one icon that opens them side by side</string>
+    <string name="setting_dock_app_pairs_automatic">Automatic</string>
+    <string name="setting_dock_app_pairs_always">Always show</string>
+    <string name="setting_dock_app_pairs_off">Off</string>
     <string name="setting_layout_folded_dock_edge">Dock position, folded</string>
     <string name="setting_layout_folded_dock_edge_keywords">layout folded phone dock edge bottom left right side</string>
     <string name="setting_layout_folded_page_scroll">App pages scroll, folded</string>

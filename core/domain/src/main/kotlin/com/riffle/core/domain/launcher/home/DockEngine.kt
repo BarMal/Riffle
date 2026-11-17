@@ -92,29 +92,69 @@ class DockEngine {
         layout: HomeLayout,
         itemId: LauncherItemId,
         direction: DockItemMoveDirection,
+        hiddenItemIds: Set<LauncherItemId> = emptySet(),
     ): DockEditResult =
         when {
             layout.dock.items.hasDuplicateIds() ->
                 DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_ITEM_ID)
 
-            else ->
-                layout.dock.items.indexOfFirst { item -> item.id == itemId }.let { currentIndex ->
-                    val targetIndex = currentIndex + direction.indexDelta
-                    when {
-                        currentIndex < 0 ->
-                            DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+            else -> {
+                val visible = layout.dock.items.filter { item -> item.id !in hiddenItemIds }
+                val currentIndex = visible.indexOfFirst { item -> item.id == itemId }
+                val targetIndex = currentIndex + direction.indexDelta
+                when {
+                    currentIndex < 0 ->
+                        DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
 
-                        targetIndex !in layout.dock.items.indices ->
-                            DockEditResult.Rejected(DockEditRejectionReason.INDEX_OUT_OF_BOUNDS)
+                    targetIndex !in visible.indices ->
+                        DockEditResult.Rejected(DockEditRejectionReason.INDEX_OUT_OF_BOUNDS)
 
-                        else ->
-                            moveDockItemToIndex(layout = layout, itemId = itemId, targetIndex = targetIndex)
-                    }
+                    else ->
+                        moveDockItemToIndex(
+                            layout = layout,
+                            itemId = itemId,
+                            targetIndex = targetIndex,
+                            hiddenItemIds = hiddenItemIds,
+                        )
                 }
+            }
         }
 
-    /** Moves a dock item to its final index without mutating the supplied layout. */
+    /**
+     * Moves a dock item to its final index without mutating the supplied layout. [hiddenItemIds] are items the user
+     * could not see (hidden app pairs): [targetIndex] counts only the visible ones, and the hidden ones keep their
+     * place relative to their neighbours.
+     */
     fun moveDockItemToIndex(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        targetIndex: Int,
+        hiddenItemIds: Set<LauncherItemId> = emptySet(),
+    ): DockEditResult =
+        if (hiddenItemIds.isEmpty()) {
+            moveDockItemToStoredIndex(layout, itemId, targetIndex)
+        } else {
+            moveDockItemToStoredIndex(layout, itemId, storedIndexFor(layout, itemId, targetIndex, hiddenItemIds))
+        }
+
+    /** The index in the full list that lands [itemId] at [visibleIndex] among the items not in [hidden]. */
+    private fun storedIndexFor(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        visibleIndex: Int,
+        hidden: Set<LauncherItemId>,
+    ): Int {
+        val stored = layout.dock.items.filter { it.id != itemId }
+        val visibleOthers = stored.filter { it.id !in hidden }
+        return when {
+            visibleIndex < 0 || visibleIndex > visibleOthers.size -> -1
+            visibleIndex < visibleOthers.size -> stored.indexOfFirst { it.id == visibleOthers[visibleIndex].id }
+            visibleOthers.isEmpty() -> stored.size
+            else -> stored.indexOfFirst { it.id == visibleOthers.last().id } + 1
+        }
+    }
+
+    private fun moveDockItemToStoredIndex(
         layout: HomeLayout,
         itemId: LauncherItemId,
         targetIndex: Int,
@@ -258,7 +298,15 @@ class DockEngine {
                 DockEditResult.Updated(
                     layout.withDockItems(
                         items.filterNot { it.id == draggedId }.map { item ->
-                            if (item.id == targetId) pairOf(items, target as AppShortcutItem, dragged as AppShortcutItem) else item
+                            if (item.id == targetId) {
+                                pairOf(
+                                    items,
+                                    target as AppShortcutItem,
+                                    dragged as AppShortcutItem,
+                                )
+                            } else {
+                                item
+                            }
                         },
                     ),
                 )
@@ -287,7 +335,10 @@ class DockEngine {
                     ).let { candidate -> candidate.copy(id = candidate.id.uniqueAmong(items)) }
                 DockEditResult.Updated(
                     layout.withDockItems(
-                        items.map { item -> if (item.id == itemId) pairOf(items, pinned as AppShortcutItem, second) else item },
+                        items.map {
+                                item ->
+                            if (item.id == itemId) pairOf(items, pinned as AppShortcutItem, second) else item
+                        },
                     ),
                 )
             }
@@ -338,8 +389,7 @@ class DockEngine {
 
     private fun LauncherItem.isPairablePin(): Boolean = this is AppShortcutItem && appShortcutId == null
 
-    private fun HomeLayout.withDockItems(items: List<LauncherItem>): HomeLayout =
-        copy(dock = dock.copy(items = items))
+    private fun HomeLayout.withDockItems(items: List<LauncherItem>): HomeLayout = copy(dock = dock.copy(items = items))
 
     private fun pairOf(
         items: List<LauncherItem>,
@@ -358,7 +408,7 @@ class DockEngine {
     private fun LauncherItemId.uniqueAmong(items: List<LauncherItem>): LauncherItemId {
         val used = items.flatMap { item -> listOf(item.id) + item.memberIds() }.map { it.value }.toSet()
         return generateSequence(0) { it + 1 }
-            .map { n -> if (n == 0) this else LauncherItemId("${value}#$n") }
+            .map { n -> if (n == 0) this else LauncherItemId("$value#$n") }
             .first { it.value !in used }
     }
 

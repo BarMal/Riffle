@@ -146,8 +146,13 @@ class DockPairEngineTest {
         assertEquals(before.first, after.second)
         assertEquals(before.second, after.first)
         assertNotEquals(before, after)
-        assertEquals(before, (updated(engine.swapDockPair(updated(engine.swapDockPair(paired, before.id)), before.id))
-            .dock.items.first()))
+        assertEquals(
+            before,
+            (
+                updated(engine.swapDockPair(updated(engine.swapDockPair(paired, before.id)), before.id))
+                    .dock.items.first()
+            ),
+        )
     }
 
     @Test
@@ -169,6 +174,34 @@ class DockPairEngineTest {
         val pairId = paired.dock.items.first().id
 
         assertEquals(DockEditRejectionReason.UNSUPPORTED_ITEM, rejected(engine.moveDockItemToHome(paired, pairId)))
+    }
+
+    @Test
+    fun movingByVisibleIndexKeepsHiddenPairsBesideTheirNeighbours() {
+        val layout = layoutOf(pin("a"), pin("b"), pin("c"), pin("d"))
+        val paired = updated(engine.pairDockApps(layout, LauncherItemId("b"), LauncherItemId("c")))
+        val pairId = paired.dock.items[1].id
+        val hidden = setOf(pairId)
+
+        // stored: a, pair, d ; visible: a, d
+        fun order(result: DockEditResult) = updated(result).dock.items.map { it.id.value }
+
+        assertEquals(
+            listOf("dock-pair:1", "d", "a"),
+            order(engine.moveDockItemToIndex(paired, LauncherItemId("a"), 1, hidden)),
+        )
+        assertEquals(
+            listOf("d", "a", "dock-pair:1"),
+            order(engine.moveDockItemToIndex(paired, LauncherItemId("d"), 0, hidden)),
+        )
+        assertEquals(
+            listOf("dock-pair:1", "d", "a"),
+            order(engine.moveDockItem(paired, LauncherItemId("a"), DockItemMoveDirection.RIGHT, hidden)),
+        )
+        assertEquals(
+            DockEditRejectionReason.INDEX_OUT_OF_BOUNDS,
+            rejected(engine.moveDockItem(paired, LauncherItemId("a"), DockItemMoveDirection.LEFT, hidden)),
+        )
     }
 
     private fun updated(result: DockEditResult): HomeLayout = assertIs<DockEditResult.Updated>(result).layout

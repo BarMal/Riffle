@@ -92,6 +92,7 @@ enum class SettingKey(
         R.string.setting_dock_corner_radius,
         R.string.setting_dock_corner_radius_keywords,
     ),
+    DOCK_APP_PAIRS(SettingsPage.DOCK, R.string.setting_dock_app_pairs, R.string.setting_dock_app_pairs_keywords),
     DOCK_BACKGROUND(SettingsPage.DOCK, R.string.setting_dock_background, R.string.setting_dock_background_keywords),
     DOCK_GRID_SPACING(
         SettingsPage.DOCK,
