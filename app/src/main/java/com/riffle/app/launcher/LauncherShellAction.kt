@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
@@ -323,6 +324,9 @@ sealed interface LauncherShellAction {
         val itemId: LauncherItemId,
         val app: InstalledApp,
     ) : LauncherShellAction
+
+    /** Tap on an app pair: open both apps side by side. */
+    data class LaunchAppPair(val pair: AppPairItem) : LauncherShellAction
 
     data class UnpairDockItem(val pairId: LauncherItemId) : LauncherShellAction
 

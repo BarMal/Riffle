@@ -824,7 +824,7 @@ private data class DockDragViewport(
 internal fun dockItemTestTag(itemId: LauncherItemId): String = "dock-item:${itemId.value}"
 
 internal fun DockSlotItemState.isDirectDockDragEligible(): Boolean {
-    return this is DockSlotItemState.Shortcut || this is DockSlotItemState.Folder
+    return this is DockSlotItemState.Shortcut || this is DockSlotItemState.Folder || this is DockSlotItemState.AppPair
 }
 
 internal fun List<LauncherItem>.dockItemsForPreview(drag: DockDragState?): List<LauncherItem> {
@@ -937,16 +937,15 @@ private fun DockSlot(
                     appIconLoader = appIconLoader,
                 )
             is DockSlotItemState.AppPair ->
-                DockShortcut(
-                    shortcut = item.pair.first,
+                DockPairTile(
+                    pair = item.pair,
                     state =
-                        DockShortcutState(
+                        DockPairTileState(
                             iconSizeDp = state.iconSizeDp,
                             shortcutIndex = state.shortcutIndex,
                             shortcutCount = state.shortcutCount,
                             isEditing = state.isEditing,
                             notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item.pair),
-                            appShortcuts = emptyList(),
                         ),
                     presentation = presentation,
                     appIconLoader = appIconLoader,
