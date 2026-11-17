@@ -1,7 +1,9 @@
 package com.riffle.app.screenshots
 
+import android.app.Application
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -25,6 +27,7 @@ import com.riffle.app.launcher.APP_PAIR_EDIT_AS_CUSTOM_TAG
 import com.riffle.app.launcher.APP_PAIR_FIRST_OPEN_TAG
 import com.riffle.app.launcher.APP_PAIR_FIRST_TAG
 import com.riffle.app.launcher.APP_PAIR_HELD_CHOSEN_TAG
+import com.riffle.app.launcher.APP_PAIR_HELD_COPY_TAG
 import com.riffle.app.launcher.APP_PAIR_HELD_HINT_TAG
 import com.riffle.app.launcher.APP_PAIR_HELD_RESULT_TAG_PREFIX
 import com.riffle.app.launcher.APP_PAIR_HELD_RUN_TAG
@@ -32,8 +35,13 @@ import com.riffle.app.launcher.APP_PAIR_HELD_TAG_PREFIX
 import com.riffle.app.launcher.APP_PAIR_LAUNCH_TAG
 import com.riffle.app.launcher.APP_PAIR_LOG_TAG
 import com.riffle.app.launcher.APP_PAIR_METHOD_TAG_PREFIX
+import com.riffle.app.launcher.APP_PAIR_NINE_COPY_TAG
 import com.riffle.app.launcher.APP_PAIR_ONE_CALL_TAG
 import com.riffle.app.launcher.APP_PAIR_PICK_TAG_PREFIX
+import com.riffle.app.launcher.APP_PAIR_PROBE_CHOSEN_TAG
+import com.riffle.app.launcher.APP_PAIR_PROBE_COPY_TAG
+import com.riffle.app.launcher.APP_PAIR_PROBE_HINT_TAG
+import com.riffle.app.launcher.APP_PAIR_PROBE_RUN_TAG
 import com.riffle.app.launcher.APP_PAIR_RESULT_FLAGS_TAG
 import com.riffle.app.launcher.APP_PAIR_SCENARIO_RESULT_TAG_PREFIX
 import com.riffle.app.launcher.APP_PAIR_SCENARIO_TAG_PREFIX
@@ -44,6 +52,7 @@ import com.riffle.app.launcher.APP_PAIR_SCRIPT_STATUS_TAG
 import com.riffle.app.launcher.APP_PAIR_SCRIPT_STOP_TAG
 import com.riffle.app.launcher.APP_PAIR_SECOND_OPEN_TAG
 import com.riffle.app.launcher.APP_PAIR_SECOND_TAG
+import com.riffle.app.launcher.APP_PAIR_SHARE_TAG_SUFFIX
 import com.riffle.app.launcher.APP_PAIR_VERDICT_TAG_PREFIX
 import com.riffle.app.launcher.AppPairEnvironment
 import com.riffle.app.launcher.AppPairScriptEnvironment
@@ -88,6 +97,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -99,6 +109,7 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [ScreenshotDevices.SDK], qualifiers = ScreenshotDevices.COMPACT_PHONE)
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("LargeClass")
 class AppPairExperimentPageTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -756,5 +767,143 @@ class AppPairExperimentPageTest {
         composeRule.waitForIdle()
         assertTrue(calls.isEmpty())
         assertTrue(experiment.log.value.isEmpty())
+    }
+
+    private fun clipText(): String {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        return context.getSystemService(ClipboardManager::class.java).primaryClip!!.getItemAt(0).text.toString()
+    }
+
+    private fun copyFrom(tag: String): String {
+        composeRule.onNodeWithTag(tag).performScrollTo().performClick()
+        return clipText()
+    }
+
+    private fun stopRun() {
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_STOP_TAG).performScrollTo().performClick()
+        composeRule.waitForIdle()
+        launcherResumed.value = true
+    }
+
+    @Test
+    fun theProbesButtonRunsFiveStepsThroughTheRunnerWithProbeToasts() {
+        render()
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_RUN_TAG).assertIsDisplayed().assertTextContains("Run the split probes")
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_HINT_TAG).assertTextContains("Five probes", substring = true)
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_RUN_TAG).performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(APP_PAIR_FIRST_TAG).performScrollTo().assertTextContains(fixturePackages.first, true)
+        assertTrue(calls.isEmpty())
+        advanceScript(1_001)
+        scriptStatus().assertTextEquals("Step 1 of 5: Probe: hold only")
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_RUN_TAG).assertDoesNotExist()
+        val entry = experiment.log.value.single()
+        assertEquals(HeldVariants.probes[0], entry.held)
+        assertEquals(5, entry.script?.total)
+        assertTrue(entry.script?.openUnknown == true)
+        advanceScript(6_000)
+        assertNull(experiment.log.value.single().script?.returnAttempt)
+        advanceScript(1_001)
+        assertEquals("ok", experiment.log.value.single().script?.returnAttempt)
+        repeat(4) {
+            advanceScript(1_001)
+            advanceScript(7_001)
+        }
+        advanceScript(2_000)
+        assertEquals(listOf("holder P1", "holder P2", "holder P3", "holder P4", "holder P5"), calls)
+        assertEquals(
+            listOf(
+                "Probe 1 of 5: hold only",
+                "Probe 2 of 5: hold only, listed in Recents",
+                "Probe 3 of 5: second, never finish",
+                "Probe 4 of 5: second after a long wait",
+                "Probe 5 of 5: fresh first",
+                "Script finished",
+            ),
+            toasts,
+        )
+        scriptStatus().assertTextEquals("Finished: 5 steps. Copy the log below.")
+    }
+
+    @Test
+    fun theProbesRunWithTheChosenAppsAndASingleProbeRowRunsOneProbe() {
+        render()
+        composeRule.onNodeWithText("Probes").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_CHOSEN_TAG).performScrollTo().assertIsNotEnabled()
+        HeldVariants.probes.forEach {
+            composeRule.onNodeWithTag(APP_PAIR_HELD_TAG_PREFIX + it.id).performScrollTo().assertIsNotEnabled()
+        }
+        choosePair()
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_CHOSEN_TAG).performScrollTo().assertIsEnabled()
+        composeRule.onNodeWithTag(APP_PAIR_HELD_TAG_PREFIX + "P3").performScrollTo().assertIsEnabled().performClick()
+        composeRule.waitForIdle()
+        assertEquals(listOf("holder P3"), calls)
+        val entry = experiment.log.value.single()
+        assertEquals("Probe: second, never finish", entry.scenario)
+        assertEquals(HeldVariants.probes[2], entry.held)
+        assertEquals(null, entry.script)
+        launcherResumed.value = true
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_CHOSEN_TAG).performScrollTo().assertIsEnabled().performClick()
+        advanceScript(1_001)
+        scriptStatus().assertTextEquals("Step 1 of 5: Probe: hold only")
+        assertEquals(listOf("holder P3", "holder P1"), calls)
+    }
+
+    @Test
+    fun theThreeKindCopyButtonsAreDisabledUntilARunOfTheirKindExists() {
+        render()
+        composeRule.onAllNodesWithTag(APP_PAIR_SCRIPT_COPY_TAG).assertCountEquals(0)
+        listOf(APP_PAIR_HELD_COPY_TAG, APP_PAIR_PROBE_COPY_TAG, APP_PAIR_NINE_COPY_TAG).forEach {
+            composeRule.onNodeWithTag(it).performScrollTo().assertIsNotEnabled()
+            composeRule.onNodeWithTag(it + APP_PAIR_SHARE_TAG_SUFFIX).assertIsNotEnabled()
+        }
+        pressHeldRun()
+        advanceScript(1_001)
+        stopRun()
+        composeRule.onNodeWithTag(APP_PAIR_HELD_COPY_TAG).performScrollTo().assertIsEnabled()
+        composeRule.onNodeWithTag(APP_PAIR_HELD_COPY_TAG + APP_PAIR_SHARE_TAG_SUFFIX).assertIsEnabled()
+        composeRule.onNodeWithTag(APP_PAIR_SCRIPT_COPY_TAG).performScrollTo().assertIsEnabled()
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_COPY_TAG).performScrollTo().assertIsNotEnabled()
+        composeRule.onNodeWithTag(APP_PAIR_NINE_COPY_TAG).performScrollTo().assertIsNotEnabled()
+        assertTrue(copyFrom(APP_PAIR_HELD_COPY_TAG).contains("script: held-trampoline script (six steps)"))
+
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_RUN_TAG).performScrollTo().performClick()
+        advanceScript(1_001)
+        stopRun()
+        composeRule.onNodeWithTag(APP_PAIR_PROBE_COPY_TAG).performScrollTo().assertIsEnabled()
+        composeRule.onNodeWithTag(APP_PAIR_NINE_COPY_TAG).performScrollTo().assertIsNotEnabled()
+        // "Copy script log" is the run started last, whatever its kind; the kind buttons keep to their own kind.
+        assertTrue(copyFrom(APP_PAIR_SCRIPT_COPY_TAG).contains("script: split probe script (five steps)"))
+        assertTrue(copyFrom(APP_PAIR_HELD_COPY_TAG).contains("script: held-trampoline script (six steps)"))
+        assertTrue(copyFrom(APP_PAIR_PROBE_COPY_TAG).contains("script: split probe script (five steps)"))
+
+        pressRunScript()
+        advanceScript(1_001)
+        stopRun()
+        composeRule.onNodeWithTag(APP_PAIR_NINE_COPY_TAG).performScrollTo().assertIsEnabled()
+        assertTrue(copyFrom(APP_PAIR_SCRIPT_COPY_TAG).contains("script: nine-step scenario script"))
+        assertTrue(copyFrom(APP_PAIR_NINE_COPY_TAG).contains("script: nine-step scenario script"))
+        assertTrue(copyFrom(APP_PAIR_PROBE_COPY_TAG).contains("script: split probe script (five steps)"))
+    }
+
+    @Test
+    fun shareHandsTheSameTextToTheSystemChooserAsPlainText() {
+        render()
+        pressHeldRun()
+        advanceScript(1_001)
+        stopRun()
+        val application = shadowOf(ApplicationProvider.getApplicationContext<Application>())
+        composeRule.onNodeWithTag(APP_PAIR_HELD_COPY_TAG + APP_PAIR_SHARE_TAG_SUFFIX).performScrollTo().performClick()
+        val chooser = application.nextStartedActivity
+        assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+        val send = chooser.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)!!
+        assertEquals(Intent.ACTION_SEND, send.action)
+        assertEquals("text/plain", send.type)
+        val text = send.getStringExtra(Intent.EXTRA_TEXT)!!
+        assertEquals(copyFrom(APP_PAIR_HELD_COPY_TAG), text)
+
+        composeRule.onNodeWithTag(APP_PAIR_COPY_TAG + APP_PAIR_SHARE_TAG_SUFFIX).performScrollTo().performClick()
+        val full = application.nextStartedActivity.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)!!
+        assertTrue(full.getStringExtra(Intent.EXTRA_TEXT)!!.startsWith("App pair experiment log (newest first)"))
     }
 }

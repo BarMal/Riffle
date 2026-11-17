@@ -63,35 +63,18 @@ internal fun PairScenarioSection(
         }
     }
     SettingsSection(title = stringResource(R.string.app_pair_section_held)) {
-        HeldVariants.all.forEach { variant ->
-            val latest = log.firstOrNull { it.held?.id == variant.id }
-            SettingsClickableRow(
-                modifier = Modifier.testTag(APP_PAIR_HELD_TAG_PREFIX + variant.id).alpha(rowAlpha(enabled)),
-                title = variant.title,
-                subtitle = stringResource(variant.summaryRes()),
-                enabled = enabled,
-                onClick = { onRunHeld(variant) },
-                trailingContent = { ScenarioTrailing(APP_PAIR_HELD_RESULT_TAG_PREFIX + variant.id, latest) },
-            )
-        }
+        HeldVariants.all.forEach { HeldVariantRow(it, enabled, log, onRunHeld) }
+    }
+    SettingsSection(title = stringResource(R.string.app_pair_section_probes)) {
+        HeldVariants.probes.forEach { HeldVariantRow(it, enabled, log, onRunHeld) }
     }
 }
 
-private fun HeldVariant.summaryRes(): Int =
-    when (id) {
-        "H1" -> R.string.app_pair_held_h1_summary
-        "H2" -> R.string.app_pair_held_h2_summary
-        "H3" -> R.string.app_pair_held_h3_summary
-        "H4" -> R.string.app_pair_held_h4_summary
-        "H5" -> R.string.app_pair_held_h5_summary
-        else -> R.string.app_pair_held_h6_summary
-    }
-
-private fun rowAlpha(enabled: Boolean) = if (enabled) 1f else DISABLED_ROW_ALPHA
+internal fun rowAlpha(enabled: Boolean) = if (enabled) 1f else DISABLED_ROW_ALPHA
 
 /** "Run", and under it a small label with the verdict of the scenario's most recent entry, if it has one. */
 @Composable
-private fun ScenarioTrailing(
+internal fun ScenarioTrailing(
     resultTag: String,
     latest: PairLogEntry?,
 ) {
@@ -148,6 +131,7 @@ internal fun PairLatestResultSection(
     copied: Boolean,
     experiment: AppPairExperiment,
     onCopy: () -> Unit,
+    onShare: () -> Unit,
 ) {
     SettingsSection(title = stringResource(R.string.app_pair_section_latest)) {
         val newest = log.firstOrNull()
@@ -156,15 +140,16 @@ internal fun PairLatestResultSection(
         } else {
             PairEntryWithVerdict(newest, prominent = true, experiment = experiment)
         }
-        SettingsClickableRow(
-            modifier = Modifier.testTag(APP_PAIR_COPY_TAG),
+        PairCopyRow(
             title = stringResource(R.string.app_pair_copy_log),
             subtitle =
                 stringResource(
                     if (copied) R.string.app_pair_log_copied else R.string.app_pair_copy_log_subtitle,
                 ),
-            onClick = onCopy,
-            trailingContent = null,
+            tag = APP_PAIR_COPY_TAG,
+            enabled = true,
+            onCopy = onCopy,
+            onShare = onShare,
         )
     }
 }

@@ -115,4 +115,136 @@ class PairScriptLogTest {
         assertEquals(1, Regex("script: step").findAll(older).count())
         assertTrue(emptyList<PairLogEntry>().toScriptPlainText().contains("no script entries yet"))
     }
+
+    private val features = listOf("FEATURE_FREEFORM_WINDOW_MANAGEMENT=false", "FEATURE_PICTURE_IN_PICTURE=true")
+    private val targets = listOf("com.example.notes: screenOrientation=-1, FLAG_STOPPED=false")
+    private val manyFacts =
+        PairFacts(37, "Acme", "Fold 9", false, "724x784", "medium", "UNFOLDED", features, targets)
+
+    private fun heldEntry(
+        variant: HeldVariant,
+        index: Int,
+        runId: Long,
+        kind: PairScriptKind,
+        total: Int,
+    ) = PairLogEntry(
+        id = runId * 100 + index,
+        timeMillis = runId + index * 10_000L,
+        method = PairMethod.CUSTOM,
+        delayMillis = 600,
+        first = notes.packageName,
+        second = maps.packageName,
+        outcomes = listOf(StartOutcome("holder activity ${variant.id} [NEW_TASK]")),
+        facts = manyFacts,
+        trace = (1..8).map { PairObservation(it * 150L, "onPause window ${it * 3}") },
+        scenario = variant.title,
+        script =
+            PairScriptInfo(
+                runId,
+                index,
+                total,
+                index > 1,
+                index > 1,
+                returnAttempt = "ok",
+                returned = "automatically after 120 ms",
+                openUnknown = index == 1,
+                kind = kind,
+            ),
+        held = variant,
+        holder = FakeHolderRuns.collapsingTrace(variant),
+    )
+
+    private fun heldRun(
+        runId: Long,
+        variants: List<HeldVariant>,
+        kind: PairScriptKind,
+    ) = variants.mapIndexed { i, v -> heldEntry(v, i + 1, runId, kind, variants.size) }
+
+    @Test
+    fun aSixStepHeldRunCopiesInUnderTwelveThousandCharactersWithTheHeaderOnce() {
+        val log = heldRun(5_000L, HeldVariants.all, PairScriptKind.HELD).reversed()
+        val text = log.toScriptPlainText(zone = ZoneOffset.UTC)
+        assertTrue("${text.length} characters:\n$text", text.length < 12_000)
+        assertEquals(1, Regex("device: Android SDK").findAll(text).count())
+        assertEquals(1, Regex("window: ").findAll(text).count())
+        assertEquals(1, Regex("features: ").findAll(text).count())
+        assertEquals(1, Regex("target: ").findAll(text).count())
+        listOf("feature: ", "owner's verdict", "duplicates in Recents", "already open (ticked")
+            .forEach { assertTrue("$it must not repeat per entry in\n$text", !text.contains(it)) }
+        // The holder's own facts are the same in every entry, so they are printed once, in the header.
+        assertEquals(1, Regex("holder activityInfo: ").findAll(text).count())
+        assertEquals(1, Regex("holder holds the HOME role: true").findAll(text).count())
+        assertTrue(text, !text.contains("fact: "))
+    }
+
+    @Test
+    fun everyCompactEntryHasAtMostEightLinesThatAreNotTraceLines() {
+        val log = heldRun(5_000L, HeldVariants.all, PairScriptKind.HELD)
+        log.forEach { entry ->
+            val lines = entry.toCompactText(ZoneOffset.UTC).lines().filter { it.isNotBlank() }
+            val overhead = lines.filterNot { it.startsWith("    +") }
+            assertTrue("${overhead.size} overhead lines in\n${lines.joinToString("\n")}", overhead.size <= 8)
+        }
+    }
+
+    @Test
+    fun aHolderThatNeverRanStillHasASinglePlaceholderLine() {
+        val entry =
+            heldEntry(HeldVariants.all[0], 1, 1L, PairScriptKind.HELD, 6).copy(holder = null, trace = emptyList())
+        val text = entry.toCompactText(ZoneOffset.UTC)
+        assertTrue(text, text.contains("holder trace: nothing reported (the holder never ran)"))
+        assertTrue(text, text.contains("launcher lifecycle trace: nothing recorded"))
+    }
+
+    @Test
+    fun theOwnersVerdictAndDuplicatesArePrintedOnlyWhenSet() {
+        val plain = heldEntry(HeldVariants.all[0], 1, 1L, PairScriptKind.HELD, 6)
+        assertTrue(!plain.toCompactText(ZoneOffset.UTC).contains("verdict"))
+        val set = plain.copy(verdict = PairVerdict.SPLIT, duplicatesInRecents = true).toCompactText(ZoneOffset.UTC)
+        assertTrue(set, set.contains("owner's verdict: Split") && set.contains("duplicates in Recents: yes"))
+    }
+
+    @Test
+    fun aNoSecondProbeSaysSoInsteadOfPrintingSecondFlags() {
+        val entry = heldEntry(HeldVariants.probes[0], 1, 1L, PairScriptKind.PROBES, 5)
+        val compact = entry.toCompactText(ZoneOffset.UTC)
+        assertTrue(compact, compact.contains("second: none"))
+        assertTrue(compact, compact.contains("Split probe"))
+        assertTrue(entry.toPlainText(ZoneOffset.UTC).contains("flags second: none (no second start)"))
+    }
+
+    @Test
+    fun theCopyTakesTheMostRecentlyStartedRunOfAnyKindOrOfTheKindAsked() {
+        val held = heldRun(1_000L, HeldVariants.all.take(2), PairScriptKind.HELD)
+        val probes = heldRun(3_000L, HeldVariants.probes.take(2), PairScriptKind.PROBES)
+        val nine =
+            listOf(
+                heldEntry(HeldVariants.all[0], 1, 2_000L, PairScriptKind.SCENARIOS, 9).copy(held = null, holder = null),
+            )
+        // Newest first, as the log is kept; the probe run was started last although its entries are not first.
+        val log = probes.reversed() + nine + held.reversed()
+
+        fun head(text: String) = text.lines()[1]
+
+        assertEquals("script: split probe script (five steps)", head(log.toScriptPlainText(zone = ZoneOffset.UTC)))
+        assertEquals(
+            "script: held-trampoline script (six steps)",
+            head(log.toScriptPlainText(kind = PairScriptKind.HELD, zone = ZoneOffset.UTC)),
+        )
+        assertEquals(
+            "script: nine-step scenario script",
+            head(log.toScriptPlainText(kind = PairScriptKind.SCENARIOS, zone = ZoneOffset.UTC)),
+        )
+        val onlyHeld = held.reversed()
+        assertEquals(
+            "no script entries yet",
+            onlyHeld.toScriptPlainText(kind = PairScriptKind.PROBES, zone = ZoneOffset.UTC).lines()[1],
+        )
+        // A held run started after the nine-step one wins "any" even when the older run has more steps.
+        val later = heldRun(9_000L, HeldVariants.all.take(1), PairScriptKind.HELD)
+        assertEquals(
+            "script: held-trampoline script (six steps)",
+            head((later + probes.reversed() + nine).toScriptPlainText(zone = ZoneOffset.UTC)),
+        )
+    }
 }

@@ -180,6 +180,7 @@ internal fun SettingsAppPairPageContent(state: SettingsSurfaceState) {
             copyPairLog(context, log)
             copied = true
         },
+        onShare = { sharePairText(context, log.toPlainText()) },
     )
     PairAdvancedSection(
         expanded = advancedOpen,

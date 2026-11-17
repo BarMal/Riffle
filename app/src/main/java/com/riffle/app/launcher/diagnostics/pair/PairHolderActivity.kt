@@ -16,7 +16,7 @@ import com.riffle.app.R
  * second app from the split and finishes; [PairHolderMachine] decides when, this class only feeds it events (through
  * [PairHolderSession]) and shows one line of text. Diagnostics only: a plain themed surface, no glass.
  */
-class PairHolderActivity : Activity() {
+open class PairHolderActivity : Activity() {
     private var session: PairHolderSession? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,6 +68,11 @@ class PairHolderActivity : Activity() {
         session?.on(HolderEvent.Destroyed)
     }
 
+    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
+        super.onTopResumedActivityChanged(isTopResumedActivity)
+        session?.on(HolderEvent.TopResumedChanged(isTopResumedActivity))
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         session?.on(HolderEvent.FocusChanged(hasFocus))
@@ -90,3 +95,9 @@ class PairHolderActivity : Activity() {
         const val TEXT_SIZE_SP = 18f
     }
 }
+
+/**
+ * The holder of probe P2: the same activity, but listed in Recents and with an affinity of its own (see the manifest),
+ * to tell whether the Recents exclusion or the empty task affinity is what the system objects to.
+ */
+class PairHolderListedActivity : PairHolderActivity()

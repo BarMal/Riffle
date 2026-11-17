@@ -223,12 +223,13 @@ private fun StringBuilder.appendRecipe(
     val clock = DateTimeFormatter.ofPattern("HH:mm:ss.SSS", Locale.ROOT).withZone(zone)
     val (title, timing) = e.titleAndTiming()
     val (firstFlags, secondFlags) = e.held?.let { it.firstFlags to it.secondFlags } ?: e.method.plannedFlags(e.custom)
+    val noSecond = e.held?.startsSecond == false
     val name = e.scenario?.let { "$it ($title)" } ?: title
     appendLine("${clock.format(Instant.ofEpochMilli(e.timeMillis))}  $name  $timing")
     appendLine("  first:  ${e.first}")
     appendLine("  second: ${e.second}")
     appendLine("  flags first:  ${PairFlags.describe(firstFlags)}")
-    appendLine("  flags second: ${PairFlags.describe(secondFlags)}")
+    appendLine("  flags second: ${if (noSecond) "none (no second start)" else PairFlags.describe(secondFlags)}")
     appendLine(e.alreadyOpenLine())
     if (e.outcomes.isEmpty()) appendLine("  (no start made yet)")
     e.outcomes.forEach { o ->
@@ -237,9 +238,9 @@ private fun StringBuilder.appendRecipe(
 }
 
 /** The method's title and the timing the entry's first line prints: a held entry's own, else the strategy's. */
-private fun PairLogEntry.titleAndTiming(): Pair<String, String> {
+internal fun PairLogEntry.titleAndTiming(): Pair<String, String> {
     val variant = held
-    if (variant != null) return "Held trampoline" to variant.timingText()
+    if (variant != null) return (if (variant.probe) "Split probe" else "Held trampoline") to variant.timingText()
     val oneCall = method == PairMethod.START_ACTIVITIES_ARRAY || (method == PairMethod.CUSTOM && custom.oneCall)
     return method.title to if (oneCall) "one startActivities call, delay ignored" else "delay $delayMillis ms"
 }

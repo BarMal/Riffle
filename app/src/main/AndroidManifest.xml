@@ -69,6 +69,15 @@
             android:resizeableActivity="true"
             android:taskAffinity=""
             android:theme="@style/Theme.Riffle.PairHolder" />
+        <!-- Round 4, probe P2: as above, but listed in Recents and with an affinity of its own. -->
+        <activity
+            android:name=".launcher.diagnostics.pair.PairHolderListedActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:exported="false"
+            android:label="@string/app_pair_holder_listed_label"
+            android:resizeableActivity="true"
+            android:taskAffinity=".pairholder"
+            android:theme="@style/Theme.Riffle.PairHolder" />
         <service
             android:name=".launcher.notifications.RiffleNotificationListenerService"
             android:exported="true"

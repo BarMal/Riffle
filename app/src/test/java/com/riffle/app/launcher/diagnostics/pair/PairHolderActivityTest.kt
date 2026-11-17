@@ -1,6 +1,8 @@
 package com.riffle.app.launcher.diagnostics.pair
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
@@ -133,5 +135,120 @@ class PairHolderActivityTest {
         val controller = Robolectric.buildActivity(PairHolderActivity::class.java).create()
         assertTrue(controller.get().isFinishing)
         assertNull(shadowOf(controller.get()).nextStartedActivity)
+    }
+
+    private fun probe(id: String) = HeldVariants.probes.single { it.id == id }
+
+    @Test
+    fun theListedHolderIsAnActivityOfOursStartedWithTheHolderFlagsAndListedInRecents() {
+        val p2 = probe("P2")
+        val intent = AndroidHolderIntents.intentFor(context, HolderRequest(first, second, p2))
+        assertEquals(PairHolderListedActivity::class.java.name, intent.component?.className)
+        val plain = AndroidHolderIntents.intentFor(context, HolderRequest(first, second, probe("P1")))
+        assertEquals(PairHolderActivity::class.java.name, plain.component?.className)
+        assertEquals(plain.flags, intent.flags)
+        assertEquals(
+            "NEW_TASK|MULTIPLE_TASK|NO_ANIMATION",
+            PairFlags.describe(intent.flags),
+        )
+        val info =
+            context.packageManager.getActivityInfo(ComponentName(context, PairHolderListedActivity::class.java), 0)
+        assertEquals(0, info.flags and ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS)
+        assertEquals(".pairholder", info.taskAffinity)
+        val base = context.packageManager.getActivityInfo(ComponentName(context, PairHolderActivity::class.java), 0)
+        assertEquals(ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS, base.flags and ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS)
+        assertEquals(AndroidHolderIntents.requestFrom(intent.extras)?.variant, p2)
+    }
+
+    @Test
+    fun theListedHolderRunsTheSameHoldOnlyProbe() {
+        val p2 = probe("P2")
+        val intent = AndroidHolderIntents.intentFor(context, HolderRequest(first, second, p2))
+        val activity =
+            Robolectric.buildActivity(PairHolderListedActivity::class.java, intent).create().start().resume().visible()
+                .get()
+        val shadow = shadowOf(activity)
+        advance(310)
+        assertEquals(first.packageName, shadow.nextStartedActivity.component?.packageName)
+        advance(6_000)
+        assertNull(shadow.nextStartedActivity)
+        assertTrue(activity.isFinishing)
+    }
+
+    @Test
+    fun holdOnlyProbeStartsExactlyOneActivityAndFinishesFiveSecondsAfterIt() {
+        val p1 = probe("P1")
+        val activity = resumed(p1).get()
+        val shadow = shadowOf(activity)
+        advance(310)
+        val firstIntent = shadow.nextStartedActivity
+        assertEquals(first.packageName, firstIntent.component?.packageName)
+        assertEquals(PairFlags.describe(p1.firstFlags), PairFlags.describe(firstIntent.flags))
+        activity.onMultiWindowModeChanged(true, Configuration())
+        advance(4_900)
+        assertNull("no second start", shadow.nextStartedActivity)
+        assertFalse(activity.isFinishing)
+        advance(200)
+        assertTrue(activity.isFinishing)
+        assertNull(shadow.nextStartedActivity)
+    }
+
+    @Test
+    fun theNeverFinishProbeStartsTwoActivitiesAndFinishesOnlyAfterTheHold() {
+        val p3 = probe("P3")
+        val activity = resumed(p3).get()
+        val shadow = shadowOf(activity)
+        advance(310)
+        assertEquals(first.packageName, shadow.nextStartedActivity.component?.packageName)
+        activity.onMultiWindowModeChanged(true, Configuration())
+        advance(410)
+        val secondIntent = shadow.nextStartedActivity
+        assertEquals(second.packageName, secondIntent.component?.packageName)
+        assertEquals(PairFlags.describe(p3.secondFlags), PairFlags.describe(secondIntent.flags))
+        advance(4_900)
+        assertFalse("still held 4.9 s after the second start", activity.isFinishing)
+        advance(200)
+        assertTrue(activity.isFinishing)
+        assertNull(shadow.nextStartedActivity)
+    }
+
+    @Test
+    fun theHolderWritesItsOwnFactsAtTheStartForTheLog() {
+        val p1 = probe("P1")
+        val experiment = AppPairExperiment.shared
+        val quiet =
+            object : PairStarter {
+                override fun start(start: PairStart) = Unit
+
+                override fun startAll(starts: List<PairStart>) = Unit
+
+                override fun startTrampoline(request: TrampolineRequest) = Unit
+
+                override fun startHolder(request: HolderRequest) = Unit
+            }
+        runBlocking {
+            experiment.launch(
+                PairMethod.CUSTOM,
+                first,
+                second,
+                0,
+                quiet,
+                { _, _ ->
+                    PairFacts(34, "Acme", "Fold", false, "412x915", "compact", "PHONE", emptyList(), emptyList())
+                },
+                PairLaunchOptions(scenario = p1.title, held = p1),
+            )
+        }
+        resumed(p1)
+        advance(10)
+        val lines = experiment.log.value.first().holder!!.lines.map { it.text }
+        val facts = lines.filter { it.startsWith(PairHolderSession.FACT_PREFIX) }
+        assertEquals(lines.toString(), 3, facts.size)
+        assertTrue(facts[0], facts[0].startsWith("fact: activityInfo: PairHolderActivity flags=0x"))
+        assertTrue(facts[0], facts[0].contains("excludeFromRecents=true"))
+        assertTrue(facts[0], facts[0].contains("resizeableActivity: no public API reads it"))
+        assertTrue(facts[1], facts[1].startsWith("fact: FEATURE_FREEFORM_WINDOW_MANAGEMENT="))
+        assertTrue(facts[2], facts[2].startsWith("fact: holds the HOME role: "))
+        assertTrue(lines.toString(), lines.any { it.startsWith("config smallestScreenWidthDp=") })
     }
 }

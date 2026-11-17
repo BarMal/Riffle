@@ -4,10 +4,25 @@ package com.riffle.app.launcher.diagnostics.pair
 
 internal fun HeldVariant.timingText(): String {
     val second =
-        secondAfterMillis?.let { "second start $it ms after the first" }
-            ?: "second start ${PairHolderMachine.SPLIT_SETTLE_MS} ms after the split is seen"
+        when {
+            !startsSecond -> "no second start"
+            secondAfterMillis != null -> "second start $secondAfterMillis ms after the first"
+            else -> "second start $splitSettleMillis ms after the split is seen"
+        }
+    val last = if (startsSecond) "second" else "first"
     return "holder ${PairHolderMachine.SETTLE_MS} ms settle, $second, " +
-        "no-split timeout ${PairHolderMachine.SPLIT_TIMEOUT_MS} ms, finish $finishDelayMillis ms after the second"
+        "no-split timeout ${PairHolderMachine.SPLIT_TIMEOUT_MS} ms, finish $finishDelayMillis ms after the $last"
+}
+
+/** The timing without the parts every variant shares (those are in a compact copy's header, once). */
+internal fun HeldVariant.compactTimingText(): String {
+    val second =
+        when {
+            !startsSecond -> "no second start"
+            secondAfterMillis != null -> "second $secondAfterMillis ms after the first"
+            else -> "second $splitSettleMillis ms after the split"
+        }
+    return "$second, finish $finishDelayMillis ms after the ${if (startsSecond) "second" else "first"}"
 }
 
 internal fun StringBuilder.appendHolder(trace: HolderTrace?) {

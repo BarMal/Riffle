@@ -1,8 +1,10 @@
 package com.riffle.app.launcher.diagnostics.pair
 
 import android.app.Activity
+import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -23,7 +25,7 @@ object AndroidHolderIntents {
         context: Context,
         request: HolderRequest,
     ): Intent =
-        Intent(context, PairHolderActivity::class.java)
+        Intent(context, holderClass(request.variant))
             .addFlags(HOLDER_FLAGS)
             .putExtras(
                 Bundle().apply {
@@ -34,6 +36,10 @@ object AndroidHolderIntents {
                     putString(EXTRA_SECOND_ACTIVITY, request.second.activityName)
                 },
             )
+
+    /** The holder class a variant runs in: the Recents-listed one for the probe that tests that. */
+    fun holderClass(variant: HeldVariant): Class<out Activity> =
+        if (variant.listedHolder) PairHolderListedActivity::class.java else PairHolderActivity::class.java
 
     fun requestFrom(extras: Bundle?): HolderRequest? {
         val variant = HeldVariants.byId(extras?.getString(EXTRA_VARIANT))
@@ -69,6 +75,16 @@ class ActivityHolderHost(
                 "(${(b.width() / density).toInt()}x${(b.height() / density).toInt()} dp)"
         }.getOrDefault("unknown")
 
+    override fun isInPictureInPicture(): Boolean = runCatching { activity.isInPictureInPictureMode }.getOrDefault(false)
+
+    override fun configText(): String =
+        runCatching {
+            val c = activity.resources.configuration
+            "smallestScreenWidthDp=${c.smallestScreenWidthDp} screenWidthDp=${c.screenWidthDp}"
+        }.getOrDefault("unknown")
+
+    override fun holderFacts(): List<String> = HolderFacts.read(activity)
+
     override fun start(
         target: PairTarget,
         flags: Int,
@@ -88,4 +104,34 @@ class ActivityHolderHost(
     }
 
     override fun cancel(task: Runnable) = handler.removeCallbacks(task)
+}
+
+/** What can be read about the holder activity itself through public APIs (the toast may be a rule about it). */
+internal object HolderFacts {
+    fun read(activity: Activity): List<String> =
+        listOf(
+            "activityInfo: ${activityInfo(activity)}",
+            "FEATURE_FREEFORM_WINDOW_MANAGEMENT=" +
+                runCatching {
+                    activity.packageManager.hasSystemFeature("android.software.freeform_window_management")
+                }.getOrNull(),
+            "holds the HOME role: ${homeRole(activity)}",
+        )
+
+    // ActivityInfo.resizeMode is hidden and no public API says whether an activity is resizeable, so it is not logged.
+    private fun activityInfo(activity: Activity): String =
+        runCatching {
+            val info = activity.packageManager.getActivityInfo(activity.componentName, 0)
+            val recents = info.flags and ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS != 0
+            "${activity.javaClass.simpleName} flags=0x${info.flags.toString(HEX)} (excludeFromRecents=$recents) " +
+                "launchMode=${info.launchMode} taskAffinity='${info.taskAffinity}' " +
+                "screenOrientation=${info.screenOrientation} (resizeableActivity: no public API reads it)"
+        }.getOrDefault("not readable")
+
+    private fun homeRole(activity: Activity): String =
+        runCatching {
+            activity.getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_HOME)?.toString()
+        }.getOrNull() ?: "unknown"
+
+    private const val HEX = 16
 }
