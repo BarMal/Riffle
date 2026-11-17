@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppShortcutId
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -21,6 +22,7 @@ fun encodeLauncherItem(item: LauncherItem): JSONObject =
         is AppShortcutItem -> encodeShortcut(item)
         is FolderItem -> encodeFolder(item)
         is WidgetItem -> encodeWidget(item)
+        is AppPairItem -> encodePair(item)
     }
 
 fun encodeShortcut(shortcut: AppShortcutItem): JSONObject =
@@ -52,6 +54,13 @@ fun JSONArray.toShortcuts(): List<AppShortcutItem> =
             }
         }
 
+private fun encodePair(pair: AppPairItem): JSONObject =
+    JSONObject()
+        .put("type", "pair")
+        .put("id", pair.id.value)
+        .put("first", encodeShortcut(pair.first))
+        .put("second", encodeShortcut(pair.second))
+
 private fun encodeFolder(folder: FolderItem): JSONObject =
     JSONObject()
         .put("type", "folder")
@@ -67,8 +76,18 @@ private fun JSONObject.toLauncherItem(): LauncherItem =
     when (optString("type", "shortcut")) {
         "folder" -> toFolder()
         "widget" -> toWidget()
-        else -> toShortcut()
+        "pair" -> toPair()
+        // A kind this version does not know (written by a newer one) is skipped, not read as a shortcut.
+        "shortcut" -> toShortcut()
+        else -> throw IllegalArgumentException("Unknown item type")
     }
+
+private fun JSONObject.toPair(): AppPairItem =
+    AppPairItem(
+        id = LauncherItemId(getString("id")),
+        first = getJSONObject("first").toShortcut(),
+        second = getJSONObject("second").toShortcut(),
+    )
 
 private fun JSONObject.toFolder(): FolderItem =
     FolderItem(

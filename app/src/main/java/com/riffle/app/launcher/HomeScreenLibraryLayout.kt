@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridPlacementEngine
@@ -123,6 +124,7 @@ private fun LauncherItem.withoutLibraryApps(): LauncherItem? =
         is AppShortcutItem -> takeUnless { item -> item.isLibraryApp }
         is FolderItem -> this
         is WidgetItem -> this
+        is AppPairItem -> this
     }
 
 /**

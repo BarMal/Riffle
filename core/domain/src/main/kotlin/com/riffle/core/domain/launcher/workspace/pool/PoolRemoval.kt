@@ -99,11 +99,26 @@ object PoolRemoval {
                                     gone(it.appIdentity)
                                 },
                         ).takeIf { it.entries.isNotEmpty() || item.entries.isEmpty() }
+                    is PoolAppPair -> pairAfterUninstall(item, ::gone)
                     is PoolWidget -> item
                 }
             }.associateBy { it.id }
         return PoolGc.finish(pool, dropDangling(pool.copy(items = items)))
     }
+
+    /** A pair with one app gone becomes the remaining single app (same id, so its pin stays); both gone: null. */
+    private fun pairAfterUninstall(
+        pair: PoolAppPair,
+        gone: (com.riffle.core.domain.launcher.apps.AppIdentity) -> Boolean,
+    ): PoolItem? =
+        when {
+            gone(pair.first.appIdentity) && gone(pair.second.appIdentity) -> null
+            gone(pair.first.appIdentity) -> pair.second.asApp(pair.id)
+            gone(pair.second.appIdentity) -> pair.first.asApp(pair.id)
+            else -> pair
+        }
+
+    private fun FolderEntry.asApp(id: PoolItemId) = PoolApp(id, appIdentity, label, appShortcutId)
 
     /** Removes placements and dock references whose item is missing. */
     internal fun dropDangling(pool: PlacedItemPool): PlacedItemPool =

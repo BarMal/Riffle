@@ -38,6 +38,7 @@ internal object PoolItemDecoding {
                         root.array("entries").mapNotNull { (it as? StoredValue.Obj)?.let(::decodeEntry) },
                     )
                 root.string("kind") == "widget" -> decodeWidget(id, label, root)
+                root.string("kind") == "pair" -> decodePair(id, root)
                 else -> null
             }
         }
@@ -54,6 +55,15 @@ internal object PoolItemDecoding {
             provider = root.obj("provider")?.let(::decodeProvider),
             hostedId = root.int("host")?.let(::HostedWidgetId),
         )
+
+    private fun decodePair(
+        id: PoolItemId,
+        root: StoredValue.Obj,
+    ): PoolAppPair? {
+        val first = root.obj("first")?.let(::decodeEntry)
+        val second = root.obj("second")?.let(::decodeEntry)
+        return if (first == null || second == null) null else PoolAppPair(id, first, second)
+    }
 
     private fun decodeEntry(root: StoredValue.Obj): FolderEntry? {
         val id = root.string("id")

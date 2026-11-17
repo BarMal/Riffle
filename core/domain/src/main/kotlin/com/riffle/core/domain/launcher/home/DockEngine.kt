@@ -233,6 +233,141 @@ class DockEngine {
         }
     }
 
+    /**
+     * Drops the pinned app [draggedId] onto the pinned app [targetId]: the two items become one [AppPairItem] at the
+     * target's position, the target's app first. A pair is never nested and nothing is dropped onto one; an app is
+     * never paired with itself.
+     */
+    fun pairDockApps(
+        layout: HomeLayout,
+        targetId: LauncherItemId,
+        draggedId: LauncherItemId,
+    ): DockEditResult {
+        val items = layout.dock.items
+        val target = items.firstOrNull { it.id == targetId }
+        val dragged = items.firstOrNull { it.id == draggedId }
+        return when {
+            items.hasDuplicateIds() -> DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_ITEM_ID)
+            target == null || dragged == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+            targetId == draggedId -> DockEditResult.Rejected(DockEditRejectionReason.SAME_APP)
+            !target.isPairablePin() || !dragged.isPairablePin() ->
+                DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
+            (target as AppShortcutItem).appIdentity == (dragged as AppShortcutItem).appIdentity ->
+                DockEditResult.Rejected(DockEditRejectionReason.SAME_APP)
+            else ->
+                DockEditResult.Updated(
+                    layout.withDockItems(
+                        items.filterNot { it.id == draggedId }.map { item ->
+                            if (item.id == targetId) pairOf(items, target as AppShortcutItem, dragged as AppShortcutItem) else item
+                        },
+                    ),
+                )
+        }
+    }
+
+    /** "Pair with...": the pinned app [itemId] and [app] become one pair at the pinned app's position. */
+    fun pairDockAppWith(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        app: InstalledApp,
+    ): DockEditResult {
+        val items = layout.dock.items
+        val pinned = items.firstOrNull { it.id == itemId }
+        return when {
+            pinned == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+            !pinned.isPairablePin() -> DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
+            (pinned as AppShortcutItem).appIdentity == app.identity ->
+                DockEditResult.Rejected(DockEditRejectionReason.SAME_APP)
+            else -> {
+                val second =
+                    AppShortcutItem(
+                        id = LauncherItemId("dock:${app.identity.shortcutKey}:${layout.nextDockShortcutOrdinal(app)}"),
+                        appIdentity = app.identity,
+                        label = app.label,
+                    ).let { candidate -> candidate.copy(id = candidate.id.uniqueAmong(items)) }
+                DockEditResult.Updated(
+                    layout.withDockItems(
+                        items.map { item -> if (item.id == itemId) pairOf(items, pinned as AppShortcutItem, second) else item },
+                    ),
+                )
+            }
+        }
+    }
+
+    /** Unpair: the pair becomes its two apps, first then second, at the pair's position. */
+    fun unpairDockItem(
+        layout: HomeLayout,
+        pairId: LauncherItemId,
+    ): DockEditResult {
+        val items = layout.dock.items
+        val pair = items.firstOrNull { it.id == pairId } as? AppPairItem
+        return when {
+            pair == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+            else -> {
+                val others = items.filterNot { it.id == pairId }
+                val first = pair.first.copy(id = pair.first.id.uniqueAmong(others))
+                val second = pair.second.copy(id = pair.second.id.uniqueAmong(others + first))
+                // Like pinning an app, an extra item scrolls in the strip rather than being refused at the capacity.
+                DockEditResult.Updated(
+                    layout.withDockItems(
+                        items.flatMap { item -> if (item.id == pairId) listOf(first, second) else listOf(item) },
+                    ),
+                )
+            }
+        }
+    }
+
+    /** Swap sides: the pair's apps trade places, so the tile and the launch order both reverse. */
+    fun swapDockPair(
+        layout: HomeLayout,
+        pairId: LauncherItemId,
+    ): DockEditResult {
+        val pair = layout.dock.items.firstOrNull { it.id == pairId } as? AppPairItem
+        return if (pair == null) {
+            DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+        } else {
+            DockEditResult.Updated(
+                layout.withDockItems(
+                    layout.dock.items.map { item ->
+                        if (item.id == pairId) pair.copy(first = pair.second, second = pair.first) else item
+                    },
+                ),
+            )
+        }
+    }
+
+    private fun LauncherItem.isPairablePin(): Boolean = this is AppShortcutItem && appShortcutId == null
+
+    private fun HomeLayout.withDockItems(items: List<LauncherItem>): HomeLayout =
+        copy(dock = dock.copy(items = items))
+
+    private fun pairOf(
+        items: List<LauncherItem>,
+        first: AppShortcutItem,
+        second: AppShortcutItem,
+    ): AppPairItem =
+        AppPairItem(
+            id =
+                generateSequence(1) { it + 1 }
+                    .map { LauncherItemId("dock-pair:$it") }
+                    .first { candidate -> items.none { it.id == candidate } },
+            first = first.copy(placement = null),
+            second = second.copy(placement = null),
+        )
+
+    private fun LauncherItemId.uniqueAmong(items: List<LauncherItem>): LauncherItemId {
+        val used = items.flatMap { item -> listOf(item.id) + item.memberIds() }.map { it.value }.toSet()
+        return generateSequence(0) { it + 1 }
+            .map { n -> if (n == 0) this else LauncherItemId("${value}#$n") }
+            .first { it.value !in used }
+    }
+
+    private fun LauncherItem.memberIds(): List<LauncherItemId> =
+        when (this) {
+            is AppPairItem -> listOf(first.id, second.id)
+            else -> emptyList()
+        }
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,
@@ -248,6 +383,7 @@ class DockEngine {
             is AppShortcutItem -> copy(placement = null)
             is FolderItem -> copy(placement = null)
             is WidgetItem -> copy(placement = null)
+            is AppPairItem -> copy(placement = null)
         }
 
     private fun HomeLayout.nextDockShortcutOrdinal(app: InstalledApp): Int =
@@ -317,6 +453,9 @@ enum class DockEditRejectionReason {
     HOME_PAGE_NOT_FOUND,
     NO_AVAILABLE_HOME_CELL,
     INVALID_HOME_PLACEMENT,
+
+    /** An app cannot be paired with itself. */
+    SAME_APP,
 
     /** A side dock would take a grid column the workspace has nowhere to put the contents of. */
     NO_ROOM_FOR_GRID,

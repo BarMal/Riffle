@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.workspace.pool
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.FolderItem
@@ -417,6 +418,7 @@ private fun LauncherItem.withId(value: String): LauncherItem =
         is AppShortcutItem -> copy(id = LauncherItemId(value))
         is FolderItem -> copy(id = LauncherItemId(value))
         is WidgetItem -> copy(id = LauncherItemId(value))
+        is AppPairItem -> copy(id = LauncherItemId(value))
     }
 
 /**

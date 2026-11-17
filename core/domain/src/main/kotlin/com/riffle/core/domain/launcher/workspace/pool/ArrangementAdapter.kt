@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
 import com.riffle.core.domain.launcher.glance.GlanceWidgets
+import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -37,6 +38,13 @@ object ArrangementAdapter {
                         },
                     placement = at,
                 )
+            is PoolAppPair ->
+                AppPairItem(
+                    id = LauncherItemId(item.id.value),
+                    first = entryItem(item.first),
+                    second = entryItem(item.second),
+                    placement = at,
+                )
             is PoolWidget ->
                 WidgetItem(
                     id = LauncherItemId(item.id.value),
@@ -47,6 +55,12 @@ object ArrangementAdapter {
                     glance = GlanceWidgets.kindOf(item.provider),
                 )
         }
+
+    private fun entryItem(entry: FolderEntry): AppShortcutItem =
+        AppShortcutItem(LauncherItemId(entry.entryId), entry.appIdentity, entry.label, entry.appShortcutId)
+
+    fun entryOf(app: AppShortcutItem): FolderEntry =
+        FolderEntry(app.id.value, app.appIdentity, app.label, app.appShortcutId)
 
     /** A placement whose item is missing from [pool] is skipped (it draws as an empty cell). */
     fun toLauncherPage(

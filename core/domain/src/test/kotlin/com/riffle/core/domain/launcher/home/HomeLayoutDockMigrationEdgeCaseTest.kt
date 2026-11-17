@@ -242,7 +242,7 @@ class HomeLayoutDockMigrationEdgeCaseTest {
             when (item) {
                 is AppShortcutItem -> listOf(item.appIdentity)
                 is FolderItem -> item.items.map { app -> app.appIdentity }
-                is WidgetItem -> emptyList()
+                is WidgetItem, is AppPairItem -> emptyList()
             }
         }
 

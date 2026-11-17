@@ -936,6 +936,21 @@ private fun DockSlot(
                     presentation = presentation,
                     appIconLoader = appIconLoader,
                 )
+            is DockSlotItemState.AppPair ->
+                DockShortcut(
+                    shortcut = item.pair.first,
+                    state =
+                        DockShortcutState(
+                            iconSizeDp = state.iconSizeDp,
+                            shortcutIndex = state.shortcutIndex,
+                            shortcutCount = state.shortcutCount,
+                            isEditing = state.isEditing,
+                            notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item.pair),
+                            appShortcuts = emptyList(),
+                        ),
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                )
             is DockSlotItemState.Folder ->
                 DockFolder(
                     folder = item.folder,
