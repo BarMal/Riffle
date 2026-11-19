@@ -148,6 +148,13 @@ internal fun StreamSurface(
     pageBounds: (() -> StreamColumnRect?)? = null,
     /** A tap on the Stream's own empty space (no card, no control) closes the Stream; null leaves it to do nothing. */
     onEmptyTap: (() -> Unit)? = null,
+    /** Whether two apps can open side by side now: without it the Pairs page (and its Dock tile) is not planned. */
+    splitAvailable: Boolean = true,
+    /** The layout the owner just removed: the Stream says so, with Undo ([onRestorePair]). */
+    removedPair: RemovedPair? = null,
+    /** The Pairs page's quick-action chips (New pair, or Cancel while a draft is in front); empty on every page. */
+    pairChips: List<QuickChip> = emptyList(),
+    onRestorePair: (RemovedPair) -> Unit = {},
 ) {
     val openCards = dockLink?.openCards ?: remember { OpenCardHolder() }
     // The one motion of the open card (its growth, the column's and the grid's fade follow it), run here.
@@ -174,6 +181,13 @@ internal fun StreamSurface(
             val outcome = snackbar.showSnackbar(message, actionLabel = undo, duration = SnackbarDuration.Long)
             if (outcome == SnackbarResult.ActionPerformed) callbacks.onLayoutAction(StreamLayoutAction.Restore(before))
         }
+    }
+    val removedMessage = stringResource(R.string.stream_pair_removed)
+    LaunchedEffect(removedPair?.serial) {
+        val removal = removedPair ?: return@LaunchedEffect
+        snackbar.currentSnackbarData?.dismiss()
+        val outcome = snackbar.showSnackbar(removedMessage, actionLabel = undo, duration = SnackbarDuration.Long)
+        if (outcome == SnackbarResult.ActionPerformed) onRestorePair(removal)
     }
     val onShowAs: (StreamSection, StreamView) -> Unit = { section, view ->
         val before = latestLayout
@@ -209,9 +223,13 @@ internal fun StreamSurface(
             results.dockLiveEntries(liveAppSlots, pinnedGroupKeys.toSet())
         }
     val pages =
-        remember(layout, results, dockEntries, shortcutPages, pinnedGroupKeys) {
+        remember(layout, results, dockEntries, shortcutPages, pinnedGroupKeys, splitAvailable) {
             DockPageOrder.order(
-                pages = StreamShortcutPages.merge(StreamPagePlanner.plan(layout, results), shortcutPages),
+                pages =
+                    StreamShortcutPages.merge(
+                        StreamPagePlanner.plan(layout, results, splitAvailable),
+                        shortcutPages,
+                    ),
                 liveGroupKeys = DockPageOrder.liveGroupKeys(dockEntries),
                 nowPlaying = dockEntries.any { entry -> entry is DockDynamicSideEntry.NowPlaying },
                 pinnedGroupKeys = pinnedGroupKeys,
@@ -221,8 +239,8 @@ internal fun StreamSurface(
     // Each page's quick actions as its row needs them: built when the page's actions change, not on a recomposition.
     val latestCallbacksForQuick by rememberUpdatedState(surfaceCallbacks)
     val quickByPage =
-        remember(pages, env.imageLoader, env.appIconLoader, env.installedApps) {
-            pages.filter { page -> page.quickActions.isNotEmpty() }.associate { page ->
+        remember(pages, env.imageLoader, env.appIconLoader, env.installedApps, pairChips) {
+            pages.filter { page -> page.quickActions.isNotEmpty() || page.hasPairChips(pairChips) }.associate { page ->
                 page.key to
                     PageQuickActions(
                         pageKey = page.key,
@@ -230,6 +248,7 @@ internal fun StreamSurface(
                         actions = page.quickActions,
                         env = env,
                         onLaunch = { action -> latestCallbacksForQuick.onAction(action.shortcut, StreamAction.Open) },
+                        chips = pairChips.takeIf { page.section == StreamSection.PAIRS }.orEmpty(),
                     )
             }
         }
@@ -622,3 +641,6 @@ private fun DockLinkEffects(
         dockLink.optionHandled(pending.id)
     }
 }
+
+private fun StreamPage.hasPairChips(chips: List<QuickChip>): Boolean =
+    section == StreamSection.PAIRS && chips.isNotEmpty()

@@ -8,9 +8,9 @@ import com.riffle.app.launcher.diagnostics.pair.PairFlags
 import com.riffle.app.launcher.diagnostics.pair.PairStart
 import com.riffle.app.launcher.diagnostics.pair.PairStarter
 import com.riffle.app.launcher.diagnostics.pair.PairTarget
+import com.riffle.core.domain.launcher.dock.PairApp
+import com.riffle.core.domain.launcher.dock.PairLaunch
 import com.riffle.core.domain.launcher.dock.PairLauncher
-import com.riffle.core.domain.launcher.home.AppPairItem
-import com.riffle.core.domain.launcher.home.AppShortcutItem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -58,7 +58,7 @@ class AppPairLauncher(
 
     val isInFlight: Boolean get() = job?.isActive == true
 
-    override fun launch(pair: AppPairItem): Boolean {
+    override fun launch(pair: PairLaunch): Boolean {
         if (isInFlight) return false
         job = scope.launch { run(pair.first.toTarget(), pair.second.toTarget()) }
         return true
@@ -95,8 +95,7 @@ class AppPairLauncher(
             false
         }
 
-    private fun AppShortcutItem.toTarget() =
-        PairTarget(appIdentity.packageName.value, appIdentity.activityName.value, label)
+    private fun PairApp.toTarget() = PairTarget(identity.packageName.value, identity.activityName.value, label)
 }
 
 /** The process-wide pair launcher: its scope is the app's, not an activity's. */

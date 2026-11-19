@@ -486,7 +486,7 @@ class StreamSectionEvaluatorTest {
     fun `every section has a stored id that round trips`() {
         StreamSection.entries.forEach { assertEquals(it, StreamSection.fromStoredId(it.storedId)) }
         assertEquals(
-            listOf("now", "notifications", "recents", "today", "feeds"),
+            listOf("now", "notifications", "recents", "today", "feeds", "pairs"),
             StreamSection.layoutSections.map {
                 it.storedId
             },

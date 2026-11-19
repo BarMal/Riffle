@@ -7,17 +7,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.LayoutDirection
 import com.riffle.core.domain.launcher.designsystem.CardTint
 import com.riffle.core.domain.launcher.designsystem.GlassMaterialTokens
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -53,7 +57,7 @@ import com.riffle.core.domain.launcher.designsystem.GlassWeight
  * clipped to the same [shape], with [contentColor] (default: the colour that contrasts [tint]).
  */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "CyclomaticComplexMethod")
 internal fun GlassSurface(
     modifier: Modifier = Modifier,
     weight: GlassWeight = GlassWeight.Regular,
@@ -70,6 +74,13 @@ internal fun GlassSurface(
     val reducedTransparency = LocalLiquidGlassSettings.current.reducedTransparency
     val card = cardTint?.let { spec -> resolveCardFill(spec, tint, reducedTransparency) }
     val fill = card?.fill ?: glassFillColor(weight, tint, reducedTransparency)
+    // A card that blends into a second app's colour: the fill is a brush, the same two fills at both ends of it.
+    val blend =
+        cardTint?.blendTo?.let { second ->
+            resolveCardFill(GlassCardTint(second, cardTint.strengthPercent), tint, reducedTransparency)
+        }
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val fillBrush = if (card != null && blend != null) cardBlendBrush(card.fill, blend.fill, rtl) else null
     val spotlightState =
         rememberGlassSpotlightState(
             enabled = spotlight,
@@ -90,7 +101,11 @@ internal fun GlassSurface(
                 },
             ),
     ) {
-        Box(Modifier.matchParentSize().background(fill))
+        Box(
+            Modifier.matchParentSize().then(
+                if (fillBrush != null) Modifier.background(fillBrush) else Modifier.background(fill),
+            ),
+        )
         if (spotlightState != null) {
             Box(Modifier.matchParentSize().glassSpotlight(spotlightState, shape))
         }
@@ -106,6 +121,7 @@ internal fun GlassSurface(
         CompositionLocalProvider(
             LocalContentColor provides resolvedContentColor,
             LocalGlassSpotlight provides spotlightState,
+            LocalGlassCardInks provides if (card != null && blend != null) GlassCardInks(card.ink, blend.ink) else null,
         ) {
             if (card != null && contentColor == Color.Unspecified) {
                 // The card's text colour follows its fill: the theme's own text colours would not be readable on it.
@@ -126,7 +142,40 @@ internal class GlassCardTint(
     val appColor: Color?,
     val strengthPercent: Int,
     val topGlow: Boolean = false,
+    /**
+     * The "tint brush": a second app's colour the ground blends into (a Pairs card). The fill is then one horizontal
+     * linear gradient over the whole surface, [appColor]'s fill to ~30% of the width and [blendTo]'s from ~70%, smooth
+     * between, flipped in a right-to-left layout. Both ends are `CardTint` fills at the same strength, so the text
+     * contrast guarantee holds at each end ([LocalGlassCardInks] says each end's ink); under reduced transparency
+     * both are the near-opaque fill. A fill, not a stroke: no blur, no offscreen layer.
+     */
+    val blendTo: Color? = null,
 )
+
+/** The text colour at each end of a blended card (start side, then end side), for content that sits in a half. */
+internal class GlassCardInks(
+    val start: Color,
+    val end: Color,
+)
+
+internal val LocalGlassCardInks = compositionLocalOf<GlassCardInks?> { null }
+
+/** Where the blend of a card's two colours starts and ends, as shares of its width. */
+private const val BLEND_FROM = 0.3f
+private const val BLEND_TO = 0.7f
+
+private fun cardBlendBrush(
+    first: Color,
+    second: Color,
+    rtl: Boolean,
+): Brush {
+    // Left to right the first app comes first; in a right-to-left layout it is on the right, so the stops are mirrored.
+    val left = if (rtl) second else first
+    val right = if (rtl) first else second
+    return Brush.horizontalGradient(
+        colorStops = arrayOf(0f to left, BLEND_FROM to left, BLEND_TO to right, 1f to right),
+    )
+}
 
 /** What a tinted card is drawn with, exposed to tests: the fill (ARGB) and whether the top-edge glow is lit. */
 internal data class GlassCardLook(

@@ -163,18 +163,36 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsTheAppPairsModeAndOlderBlobsReadAutomatic() {
-        com.riffle.core.domain.launcher.settings.AppPairsMode.entries.forEach { mode ->
+    fun roundTripsTheShowPairsModeAndOlderBlobsReadAutomatic() {
+        com.riffle.core.domain.launcher.settings.PairsMode.entries.forEach { mode ->
             val settings =
                 LauncherSettings(
-                    dock = com.riffle.core.domain.launcher.settings.DockBehaviourSettings(appPairs = mode),
+                    stream = com.riffle.core.domain.launcher.settings.StreamSettings(showPairs = mode),
                 )
 
-            assertEquals(mode, decodeLauncherSettings(encodeLauncherSettings(settings)).dock.appPairs)
+            assertEquals(mode, decodeLauncherSettings(encodeLauncherSettings(settings)).stream.showPairs)
         }
-        val automatic = com.riffle.core.domain.launcher.settings.AppPairsMode.AUTOMATIC
-        assertEquals(automatic, decodeLauncherSettings("{}").dock.appPairs)
-        assertEquals(automatic, decodeLauncherSettings("{\"dock\": {\"appPairs\": \"SOMETIMES\"}}").dock.appPairs)
+        val automatic = com.riffle.core.domain.launcher.settings.PairsMode.AUTOMATIC
+        assertEquals(automatic, decodeLauncherSettings("{}").stream.showPairs)
+        assertEquals(automatic, decodeLauncherSettings("{\"stream\": {\"showPairs\": \"SOMETIMES\"}}").stream.showPairs)
+    }
+
+    @Test
+    fun theOldDockAppPairsValueBecomesShowPairs() {
+        val off = com.riffle.core.domain.launcher.settings.PairsMode.OFF
+        val always = com.riffle.core.domain.launcher.settings.PairsMode.ALWAYS_SHOW
+
+        // Stored before Settings > Dock > "App pairs" moved to Settings > Stream > Pairs > "Show pairs".
+        assertEquals(off, decodeLauncherSettings("{\"dock\": {\"appPairs\": \"OFF\"}}").stream.showPairs)
+        assertEquals(
+            always,
+            decodeLauncherSettings("{\"dock\": {\"appPairs\": \"ALWAYS_SHOW\"}, \"stream\": {\"cardTintPercent\": 20}}")
+                .stream.showPairs,
+        )
+        // A value already stored under the new name wins, and nothing writes the old key again.
+        val both = "{\"dock\": {\"appPairs\": \"OFF\"}, \"stream\": {\"showPairs\": \"ALWAYS_SHOW\"}}"
+        assertEquals(always, decodeLauncherSettings(both).stream.showPairs)
+        assertEquals(false, org.json.JSONObject(encodeLauncherSettings(LauncherSettings())).has("dock"))
     }
 
     @Test

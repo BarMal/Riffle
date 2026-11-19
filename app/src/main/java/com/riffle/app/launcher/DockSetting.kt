@@ -29,7 +29,6 @@ import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.sharedDockPositions
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
-import com.riffle.core.domain.launcher.settings.AppPairsMode
 
 @Composable
 internal fun DockSetting(
@@ -37,7 +36,6 @@ internal fun DockSetting(
     onAction: (LauncherShellAction) -> Unit,
     /** The edge the layout's device class uses until one is chosen (ADR 0003, Amendment 2). */
     defaultEdge: DockPosition = DockPosition.BOTTOM,
-    appPairs: AppPairsMode = AppPairsMode.AUTOMATIC,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         DockSizeSummary(
@@ -69,10 +67,6 @@ internal fun DockSetting(
         )
         DockAlignmentSetting(
             alignment = dock.alignment,
-            onAction = onAction,
-        )
-        DockAppPairsSetting(
-            mode = appPairs,
             onAction = onAction,
         )
         DockCornerRadiusSetting(
@@ -238,35 +232,6 @@ private fun DockBackgroundSizingSetting(
         },
     )
 }
-
-/**
- * Whether app pairs show in the Dock. Automatic shows them where the system can split; Always show is for a device the
- * rule gets wrong; Off hides them everywhere and turns off "Pair with..." and drop-to-pair.
- */
-@Composable
-private fun DockAppPairsSetting(
-    mode: AppPairsMode,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsChoiceRow(
-        modifier = Modifier.settingAnchor(SettingKey.DOCK_APP_PAIRS),
-        title = SettingKey.DOCK_APP_PAIRS.label(),
-        subtitle = stringResource(R.string.setting_dock_app_pairs_subtitle),
-        options = AppPairsMode.entries,
-        selected = mode,
-        onSelect = { candidate -> onAction(LauncherShellAction.SelectAppPairsMode(candidate)) },
-        label = { candidate ->
-            when (candidate) {
-                AppPairsMode.AUTOMATIC -> stringResource(R.string.setting_dock_app_pairs_automatic)
-                AppPairsMode.ALWAYS_SHOW -> stringResource(R.string.setting_dock_app_pairs_always)
-                AppPairsMode.OFF -> stringResource(R.string.setting_dock_app_pairs_off)
-            }
-        },
-        optionTag = { candidate -> "$APP_PAIRS_TEST_TAG_PREFIX${candidate.name}" },
-    )
-}
-
-internal const val APP_PAIRS_TEST_TAG_PREFIX = "dock-app-pairs-"
 
 @Composable
 private fun DockCornerRadiusSetting(

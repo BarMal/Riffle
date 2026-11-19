@@ -90,7 +90,7 @@ private sealed interface HeaderContent {
 private fun DockHeaderState.wanted(): HeaderContent? =
     when {
         actions != null -> actions.takeIf { it.actions.isNotEmpty() }?.let(HeaderContent::Card)
-        quickActions != null && quickActions.actions.isNotEmpty() -> HeaderContent.Quick(quickActions)
+        quickActions != null && !quickActions.isEmpty -> HeaderContent.Quick(quickActions)
         else -> null
     }
 

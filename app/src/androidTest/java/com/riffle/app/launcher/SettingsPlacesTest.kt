@@ -177,7 +177,7 @@ class SettingsPlacesTest {
             val layout = repository.layoutFor(HomeLayoutDeviceClass.PHONE)
             assertEquals(StreamView.STACK, layout.viewOf(StreamSection.TODAY))
             assertEquals(false, layout.layoutOf(StreamSection.RECENTS).enabled)
-            assertEquals(StreamSection.FEEDS, layout.sections[StreamSection.layoutSections.lastIndex - 1].section)
+            assertEquals(StreamSection.FEEDS, layout.sections[StreamSection.layoutSections.lastIndex - 2].section)
         }
         composeRule.onNodeWithTag(streamShowAsTestTag(StreamSection.TODAY, StreamView.STACK)).assertIsSelected()
         composeRule.onNodeWithTag(streamShowAsTestTag(StreamSection.TODAY, StreamView.LIST)).assertIsNotSelected()

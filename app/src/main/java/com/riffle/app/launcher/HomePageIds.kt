@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -44,5 +43,4 @@ private fun LauncherItem.itemIds(): List<LauncherItemId> =
         is AppShortcutItem -> listOf(id)
         is FolderItem -> listOf(id) + items.map { shortcut -> shortcut.id }
         is WidgetItem -> listOf(id)
-        is AppPairItem -> listOf(id, first.id, second.id)
     }

@@ -76,7 +76,6 @@ fun DockEngine.applyEdit(
                 layout = layout,
                 itemId = action.itemId,
                 direction = action.direction,
-                hiddenItemIds = action.hiddenItemIds,
             )
 
         is LauncherShellAction.MoveDockShortcutToIndex ->
@@ -84,18 +83,7 @@ fun DockEngine.applyEdit(
                 layout = layout,
                 itemId = action.itemId,
                 targetIndex = action.targetIndex,
-                hiddenItemIds = action.hiddenItemIds,
             )
-
-        is LauncherShellAction.PairDockApps ->
-            pairDockApps(layout = layout, targetId = action.targetId, draggedId = action.draggedId)
-
-        is LauncherShellAction.PairDockAppWith ->
-            pairDockAppWith(layout = layout, itemId = action.itemId, app = action.app)
-
-        is LauncherShellAction.UnpairDockItem -> unpairDockItem(layout = layout, pairId = action.pairId)
-
-        is LauncherShellAction.SwapDockPair -> swapDockPair(layout = layout, pairId = action.pairId)
 
         is LauncherShellAction.MoveHomeItemToDock ->
             moveHomeItemToDock(

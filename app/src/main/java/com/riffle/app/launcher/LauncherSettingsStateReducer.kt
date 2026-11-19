@@ -112,11 +112,11 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectAppPairsMode ->
+                is LauncherShellAction.SelectPairsMode ->
                     state.withLauncherSettings(
                         settings =
                             state.launcherSettings.copy(
-                                dock = state.launcherSettings.dock.copy(appPairs = action.mode),
+                                stream = state.launcherSettings.stream.copy(showPairs = action.mode),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )

@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.pairs.AppPair
 import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
@@ -26,6 +27,9 @@ interface WorkspaceBackupPort {
     /** How the Stream is arranged (P4); null when nothing was ever stored, so the section is omitted. */
     fun currentStreamLayouts(): StreamLayouts? = null
 
+    /** The Pairs stack, or null where there is none. */
+    fun currentPairs(): List<AppPair>? = null
+
     /** The calendar feed list (links included, never events); null when none is stored, so the section is omitted. */
     fun currentCalendarFeeds(): IcsFeedSettings? = null
 
@@ -36,6 +40,8 @@ interface WorkspaceBackupPort {
     fun restorePool(state: PoolStoreState)
 
     fun restoreStreamLayouts(layouts: StreamLayouts) = Unit
+
+    fun restorePairs(layouts: List<AppPair>) = Unit
 
     fun restoreCalendarFeeds(feeds: IcsFeedSettings) = Unit
 }

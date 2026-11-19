@@ -75,6 +75,7 @@ import com.riffle.app.launcher.LocalDockFan
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.dockFan
 import com.riffle.app.launcher.reportsCardRect
+import com.riffle.core.domain.launcher.stream.AppPairContent
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
@@ -109,6 +110,7 @@ internal fun StreamContent.iconHandle(): ItemImageHandle? =
         is MediaContent -> icon
         is RecentAppContent -> icon
         is AppShortcutContent -> icon
+        is AppPairContent -> first?.icon
         else -> null
     }
 
@@ -127,6 +129,7 @@ internal fun StreamContent.cardHeight(): Dp =
         is TaskContent -> StreamCardHeights.task
         is RecentAppContent -> StreamCardHeights.app
         is AppShortcutContent -> StreamCardHeights.app
+        is AppPairContent -> StreamCardHeights.pair
     }
 
 /** One line saying what a card is about, for the strip of it that peeks out below the card in front. */
@@ -140,6 +143,7 @@ internal fun StreamContent.peekText(): String =
         is TaskContent -> title ?: hiddenText()
         is RecentAppContent -> label ?: hiddenText()
         is AppShortcutContent -> shortcutTitle(this)
+        is AppPairContent -> pairPeekText(this)
     }
 
 @Composable
@@ -170,6 +174,7 @@ internal fun StreamCard(
         is TaskContent -> TasksCard(listOf(content), env, callbacks, modifier)
         is RecentAppContent -> RecentAppCard(content, env, callbacks, groupKey, modifier, caption)
         is AppShortcutContent -> AppShortcutCard(content, env, callbacks, modifier)
+        is AppPairContent -> PairCard(content, env, callbacks, modifier)
     }
 }
 
@@ -701,6 +706,7 @@ private fun LoneCard(
  * peeking card, so assistive technology reads what the strip hides (the body, not only the line that shows).
  */
 @Composable
+@Suppress("CyclomaticComplexMethod") // One line per kind of content.
 internal fun StreamContent.spokenText(env: StreamEnvironment): String =
     when (this) {
         is NotificationContent ->
@@ -724,6 +730,7 @@ internal fun StreamContent.spokenText(env: StreamEnvironment): String =
         is TaskContent -> listOfNotNull(title ?: hiddenText(), listName)
         is RecentAppContent -> listOfNotNull(label ?: hiddenText(), lastUsedEpochMillis?.let(env.formats::age))
         is AppShortcutContent -> listOfNotNull(shortcutTitle(this), longLabel, appLabel.takeIf { !opensApp })
+        is AppPairContent -> listOf(pairSpokenText(this))
     }.joinToString(". ")
 
 /**

@@ -43,6 +43,7 @@ class StreamLayoutCodecTest {
                         StreamSectionLayout(StreamSection.TODAY, view = StreamView.LIST),
                         StreamSectionLayout(StreamSection.NOTIFICATIONS),
                         StreamSectionLayout(StreamSection.RECENTS),
+                        StreamSectionLayout(StreamSection.PAIRS, enabled = false),
                     ),
                 options =
                     StreamSectionOptions(
@@ -99,7 +100,7 @@ class StreamLayoutCodecTest {
         assertEquals(StreamSection.layoutSections.size, layout.sections.size)
         // The ones the data lacked come last, on, with their default view.
         assertEquals(
-            listOf(StreamSection.NOTIFICATIONS, StreamSection.RECENTS, StreamSection.TODAY),
+            listOf(StreamSection.NOTIFICATIONS, StreamSection.RECENTS, StreamSection.TODAY, StreamSection.PAIRS),
             layout.sections.drop(2).map { it.section },
         )
         assertTrue(layout.sections.drop(2).all { it.enabled })
@@ -212,6 +213,8 @@ class StreamLayoutCodecTest {
                 StreamSection.RECENTS,
                 StreamSection.TODAY,
                 StreamSection.FEEDS,
+                // A Stream layout stored before the Pairs stack gets it appended, on.
+                StreamSection.PAIRS,
             ),
             layout.sections.map { it.section },
         )
@@ -238,6 +241,7 @@ class StreamLayoutCodecTest {
                 StreamSection.NOW,
                 StreamSection.RECENTS,
                 StreamSection.NOTIFICATIONS,
+                StreamSection.PAIRS,
             ),
             layout.sections.map { it.section },
         )

@@ -57,6 +57,7 @@ import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
 import com.riffle.app.launcher.pair.AndroidPairLaunchers
+import com.riffle.app.launcher.pairs.AppPairsRepositories
 import com.riffle.app.launcher.rss.AndroidFeedParser
 import com.riffle.app.launcher.rss.AndroidFeedRefreshPolicy
 import com.riffle.app.launcher.rss.AndroidFeedTransport
@@ -154,6 +155,9 @@ internal class MainActivityDependencies(
         )
     }
     val exclusionRepository by lazy { CachedExclusionRepository(DataStoreExclusionStore(activity)) }
+
+    /** The Pairs stack's two apps per pair; the Stream, the backup and the Dock's pair migration share it. */
+    val appPairsRepository by lazy { AppPairsRepositories.get(activity) }
 
     /** How the Stream is arranged per posture; the backup and the Stream both go through this one repository. */
     val streamLayoutRepository by lazy { CachedStreamLayoutRepository(DataStoreStreamLayoutStore(activity)) }
@@ -517,6 +521,8 @@ internal class MainActivityDependencies(
             requestAccess = requestAccess,
             enableSources = { ids -> ids.forEach { id -> enablement.setEnabled(id, true) } },
             posture = posture,
+            appPairs = appPairsRepository,
+            pairLauncher = pairLauncher,
         )
     }
 
@@ -565,6 +571,7 @@ internal class MainActivityDependencies(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
             stream = streamLayoutRepository,
             calendarFeeds = icsFeedRepository,
+            pairs = appPairsRepository,
             poolOwnsHome = { homeLayoutRuntime.poolHome != null },
         )
     }

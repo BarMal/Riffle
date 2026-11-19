@@ -64,7 +64,6 @@ import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
-import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
@@ -209,9 +208,6 @@ internal fun DockSlotStrip(
                 ),
         )
     val previewItems = dock.items.dockItemsForPreview(dragState.value)
-    val pairsAvailable = LocalDockPairs.current.available
-    val pairable =
-        remember(dock.items, pairsAvailable) { if (pairsAvailable) dock.items.map { it.pairableId() } else emptyList() }
     // A scrolling pinned run comes to rest on a whole icon, so neither end ever shows half of one (its viewport holds
     // whole icons, see dockWholeIconsViewportMainAxisDp). Not while an icon is being dragged: that scrolls it itself.
     val strideDensity = LocalDensity.current
@@ -325,10 +321,6 @@ internal fun DockSlotStrip(
                                     itemSpacingDp = slotMetrics.itemSpacingDp,
                                     isEditing = isEditing,
                                     position = position,
-                                    pairable = pairable,
-                                    pairPreview =
-                                        pairPreviewFor(dock.items, dragState.value)
-                                            ?.takeIf { dragState.value?.pairTargetId == previewItem?.id },
                                 ),
                             presentation = slotPresentation,
                             appIconLoader = appIconLoader,
@@ -816,18 +808,12 @@ private data class DockSlotState(
     val isEditing: Boolean,
     /** The edge the dock is on, which is what tells a drag which way is along its run and which is off it. */
     val position: DockPosition,
-    /** Per pinned item (by index in the Dock): its id when it may be paired, else null. Empty: no pairing. */
-    val pairable: List<LauncherItemId?> = emptyList(),
-    /** Set on the slot a held drag would pair into: the pair its drop would make. */
-    val pairPreview: AppPairItem? = null,
 )
 
 internal data class DockDragState(
     val itemId: LauncherItemId,
     val originIndex: Int,
     val targetIndex: Int,
-    /** The pinned app the dragged one has been held over long enough to pair with; a drop pairs them. */
-    val pairTargetId: LauncherItemId? = null,
 )
 
 private data class DockDragViewport(
@@ -838,12 +824,11 @@ private data class DockDragViewport(
 internal fun dockItemTestTag(itemId: LauncherItemId): String = "dock-item:${itemId.value}"
 
 internal fun DockSlotItemState.isDirectDockDragEligible(): Boolean {
-    return this is DockSlotItemState.Shortcut || this is DockSlotItemState.Folder || this is DockSlotItemState.AppPair
+    return this is DockSlotItemState.Shortcut || this is DockSlotItemState.Folder
 }
 
 internal fun List<LauncherItem>.dockItemsForPreview(drag: DockDragState?): List<LauncherItem> {
-    // Held over an app to pair with it: nothing reorders, the target shows the pair it would make.
-    if (drag == null || drag.pairTargetId != null || drag.itemId !in map { it.id }) return this
+    if (drag == null || drag.itemId !in map { it.id }) return this
     val sourceIndex = indexOfFirst { it.id == drag.itemId }
     val targetIndex = drag.targetIndex.coerceIn(0, lastIndex)
     return toMutableList().apply { add(targetIndex, removeAt(sourceIndex)) }
@@ -933,17 +918,20 @@ private fun DockSlot(
     ) {
         when (val item = state.item) {
             null -> Unit
-            is DockSlotItemState.Shortcut -> DockShortcutSlot(item.shortcut, state, presentation, appIconLoader)
-            is DockSlotItemState.AppPair ->
-                DockPairTile(
-                    pair = item.pair,
+            is DockSlotItemState.Shortcut ->
+                DockShortcut(
+                    shortcut = item.shortcut,
                     state =
-                        DockPairTileState(
+                        DockShortcutState(
                             iconSizeDp = state.iconSizeDp,
                             shortcutIndex = state.shortcutIndex,
                             shortcutCount = state.shortcutCount,
                             isEditing = state.isEditing,
-                            notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item.pair),
+                            notificationCount =
+                                presentation.notificationGroupsByApp.notificationCountFor(
+                                    item.shortcut,
+                                ),
+                            appShortcuts = presentation.appShortcutsByApp[item.shortcut.appIdentity].orEmpty(),
                         ),
                     presentation = presentation,
                     appIconLoader = appIconLoader,
@@ -969,39 +957,6 @@ private fun DockSlot(
                     iconSizeDp = state.iconSizeDp,
                 )
         }
-    }
-}
-
-/** A pinned app's slot: the app, or the pair a held drag would make of it. */
-@Composable
-private fun DockShortcutSlot(
-    shortcut: AppShortcutItem,
-    state: DockSlotState,
-    presentation: DockPresentation,
-    appIconLoader: AppIconLoader,
-) {
-    if (state.pairPreview != null) {
-        DockPairPreview(
-            pair = state.pairPreview,
-            iconSizeDp = state.iconSizeDp,
-            reducedMotion = presentation.interactions.reducedMotion,
-            appIconLoader = appIconLoader,
-        )
-    } else {
-        DockShortcut(
-            shortcut = shortcut,
-            state =
-                DockShortcutState(
-                    iconSizeDp = state.iconSizeDp,
-                    shortcutIndex = state.shortcutIndex,
-                    shortcutCount = state.shortcutCount,
-                    isEditing = state.isEditing,
-                    notificationCount = presentation.notificationGroupsByApp.notificationCountFor(shortcut),
-                    appShortcuts = presentation.appShortcutsByApp[shortcut.appIdentity].orEmpty(),
-                ),
-            presentation = presentation,
-            appIconLoader = appIconLoader,
-        )
     }
 }
 
@@ -1089,7 +1044,6 @@ private fun Modifier.dockItemDrag(
                     var dragXPx = 0f
                     var dragYPx = 0f
                     var targetIndex = state.shortcutIndex
-                    val pairHold = DockPairHold(this, haptics)
                     var initialScrollOffset = 0
                     var edgeAutoScrollDelta = 0f
                     var autoScrollJob: Job? = null
@@ -1105,29 +1059,7 @@ private fun Modifier.dockItemDrag(
                                 slotWidthPx = slotSizePx,
                                 itemCount = state.shortcutCount,
                             )
-                        onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex, pairHold.confirmed))
-                        // Held over the middle of another pinned app for a moment: it will pair, not reorder.
-                        val draggedPx =
-                            state.position.dragAlongRunPx(dragXPx, dragYPx) +
-                                dragViewport.scrollState.value - initialScrollOffset
-                        pairHold.update(
-                            candidate =
-                                dockPairCandidate(
-                                    hover =
-                                        dockHover(
-                                            originIndex = state.shortcutIndex,
-                                            draggedPx = draggedPx,
-                                            slotPx = slotSizePx,
-                                            iconPx = density * slotSizeDp,
-                                            itemCount = state.shortcutCount,
-                                        ),
-                                    originIndex = state.shortcutIndex,
-                                    pairable = state.pairable,
-                                ),
-                            onChange = { held ->
-                                onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex, held))
-                            },
-                        )
+                        onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex))
                     }
 
                     fun updateEdgeAutoScroll(slotSizePx: Float) {
@@ -1153,7 +1085,6 @@ private fun Modifier.dockItemDrag(
                             dragXPx = 0f
                             dragYPx = 0f
                             targetIndex = state.shortcutIndex
-                            pairHold.reset()
                             initialScrollOffset = dragViewport.scrollState.value
                             edgeAutoScrollDelta = 0f
                             haptics.longPress()
@@ -1179,8 +1110,6 @@ private fun Modifier.dockItemDrag(
                         },
                         onDragEnd = {
                             autoScrollJob?.cancel()
-                            val pairTarget = pairHold.confirmed
-                            pairHold.reset()
                             dockDragDropAction(
                                 itemId = itemId,
                                 originIndex = state.shortcutIndex,
@@ -1188,18 +1117,11 @@ private fun Modifier.dockItemDrag(
                                 awayFromEdgePx =
                                     state.position.dragAwayFromEdgePx(dragXPx, dragYPx),
                                 dockItemSizePx = density * slotSizeDp,
-                                pairTargetId = pairTarget,
-                            )?.let { action ->
-                                if (action is LauncherShellAction.PairDockApps) {
-                                    haptics.perform(LauncherHapticEvent.COMMIT)
-                                }
-                                onAction(action)
-                            }
+                            )?.let(onAction)
                             onDragStateChanged(null)
                         },
                         onDragCancel = {
                             autoScrollJob?.cancel()
-                            pairHold.reset()
                             onDragStateChanged(null)
                         },
                     )
@@ -1220,12 +1142,9 @@ internal fun dockDragDropAction(
     targetIndex: Int,
     awayFromEdgePx: Float,
     dockItemSizePx: Float,
-    /** The app the drag was held over to pair with, if any: a drop there pairs instead of reordering. */
-    pairTargetId: LauncherItemId? = null,
 ): LauncherShellAction? =
     when {
         awayFromEdgePx >= dockItemSizePx -> LauncherShellAction.MoveDockItemToHome(itemId)
-        pairTargetId != null -> LauncherShellAction.PairDockApps(targetId = pairTargetId, draggedId = itemId)
         targetIndex != originIndex -> LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex)
         else -> null
     }
@@ -1296,7 +1215,7 @@ private fun Modifier.showInStreamAction(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-@Suppress("LongMethod", "CyclomaticComplexMethod")
+@Suppress("LongMethod")
 private fun DockShortcut(
     shortcut: AppShortcutItem,
     state: DockShortcutState,
@@ -1304,8 +1223,6 @@ private fun DockShortcut(
     appIconLoader: AppIconLoader,
 ) {
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
-    val dockPairs = LocalDockPairs.current
-    val isPairPickerOpen = remember(shortcut.id) { mutableStateOf(false) }
     val pinned = LocalDockPinnedStream.current
     val entryKey = remember(shortcut.appIdentity) { pinnedEntryKey(shortcut.appIdentity) }
     val entryBoundsSink = LocalDockDynamicEntryBoundsSink.current
@@ -1408,28 +1325,10 @@ private fun DockShortcut(
                     shortcutIndex = state.shortcutIndex,
                     shortcutCount = state.shortcutCount,
                     modeItems = presentation.interactions.staticItemMenuExtras.forApp(shortcut.appIdentity),
-                    onPairWith =
-                        if (dockPairs.available && shortcut.pairableId() != null) {
-                            { isPairPickerOpen.value = true }
-                        } else {
-                            null
-                        },
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = presentation.interactions.onAction,
         )
-        if (isPairPickerOpen.value) {
-            PairWithPicker(
-                first = shortcut,
-                apps = dockPairs.installedApps,
-                iconLoader = appIconLoader,
-                onPick = { app ->
-                    isPairPickerOpen.value = false
-                    presentation.interactions.onAction(LauncherShellAction.PairDockAppWith(shortcut.id, app))
-                },
-                onDismiss = { isPairPickerOpen.value = false },
-            )
-        }
     }
 }
 
@@ -1440,8 +1339,6 @@ internal fun dockShortcutContextMenuItems(
     shortcutIndex: Int = 0,
     shortcutCount: Int = 1,
     modeItems: List<ShortcutContextMenuItem> = emptyList(),
-    /** Opens the app picker to pair this app with another; null where pairs are not available. */
-    onPairWith: (() -> Unit)? = null,
 ): List<ShortcutContextMenuItem> {
     val editItems =
         if (isEditing) {
@@ -1486,12 +1383,9 @@ internal fun dockShortcutContextMenuItems(
     // A tap on a pinned app opens it in every mode (#1212), so the menu no longer repeats "Open".
     // What the active mode adds (Cards: "Show stage", "Pin stage") leads the browsing menu.
     val browsingModeItems = if (isEditing) emptyList() else modeItems
-    val pairItems =
-        listOfNotNull(onPairWith?.let { ShortcutContextMenuItem(label = "Pair with…", onSelect = it) })
 
     return editItems +
         browsingModeItems +
-        pairItems +
         shortcutContextMenuItems(
             shortcut = shortcut,
             surface = ShortcutContextSurface.DOCK,

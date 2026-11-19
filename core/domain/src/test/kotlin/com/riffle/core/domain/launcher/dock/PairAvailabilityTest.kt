@@ -1,6 +1,6 @@
 package com.riffle.core.domain.launcher.dock
 
-import com.riffle.core.domain.launcher.settings.AppPairsMode
+import com.riffle.core.domain.launcher.settings.PairsMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -36,19 +36,19 @@ class PairAvailabilityTest {
 
     @Test
     fun theSettingDecidesWhetherTheRuleApplies() {
-        assertEquals(true, PairAvailability.available(AppPairsMode.AUTOMATIC, canSplit = true))
-        assertEquals(false, PairAvailability.available(AppPairsMode.AUTOMATIC, canSplit = false))
-        assertEquals(true, PairAvailability.available(AppPairsMode.ALWAYS_SHOW, canSplit = false))
-        assertEquals(true, PairAvailability.available(AppPairsMode.ALWAYS_SHOW, canSplit = true))
-        assertEquals(false, PairAvailability.available(AppPairsMode.OFF, canSplit = true))
-        assertEquals(false, PairAvailability.available(AppPairsMode.OFF, canSplit = false))
+        assertEquals(true, PairAvailability.available(PairsMode.AUTOMATIC, canSplit = true))
+        assertEquals(false, PairAvailability.available(PairsMode.AUTOMATIC, canSplit = false))
+        assertEquals(true, PairAvailability.available(PairsMode.ALWAYS_SHOW, canSplit = false))
+        assertEquals(true, PairAvailability.available(PairsMode.ALWAYS_SHOW, canSplit = true))
+        assertEquals(false, PairAvailability.available(PairsMode.OFF, canSplit = true))
+        assertEquals(false, PairAvailability.available(PairsMode.OFF, canSplit = false))
     }
 
     @Test
     fun automaticIsTheDefault() {
         assertEquals(
-            AppPairsMode.AUTOMATIC,
-            com.riffle.core.domain.launcher.settings.LauncherSettings().dock.appPairs,
+            PairsMode.AUTOMATIC,
+            com.riffle.core.domain.launcher.settings.StreamSettings().showPairs,
         )
     }
 }

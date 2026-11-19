@@ -103,6 +103,7 @@ object StreamHideItems {
             is RecentAppContent -> item(SourceIds.RECENT_APPS, content, content.label, null, null, null, privacy)
             is TaskContent -> null
             is AppShortcutContent -> null
+            is AppPairContent -> null
         }
     }
 
@@ -123,7 +124,7 @@ object StreamHideItems {
                 is ArticleContent -> content.target
                 is RecentAppContent -> content.target
                 is TaskContent -> content.target
-                is AppShortcutContent -> ItemTarget.None
+                is AppShortcutContent, is AppPairContent -> ItemTarget.None
             }
         return Item(
             id = ItemId(content.id.value),

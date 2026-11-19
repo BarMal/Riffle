@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,6 +43,7 @@ import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.stream.PageQuickActions
+import com.riffle.app.launcher.stream.QuickChip
 import com.riffle.app.launcher.stream.StreamIcon
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.stream.QuickAction
@@ -112,6 +115,7 @@ internal fun QuickActionsRow(
                     quick.actions.forEach { action ->
                         key(action.shortcut.id.value) { QuickActionChip(action, quick) }
                     }
+                    quick.chips.forEach { chip -> key(chip.id) { PairQuickChip(chip) } }
                 }
             }
         }
@@ -183,6 +187,44 @@ private fun QuickActionChip(
             StreamIcon(action.icon, quick.env, ChipIconSize, shape = RiffleShapes.full)
             Text(
                 text = action.label,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** A chip of the Pairs page ("New pair", "Cancel"): the same chip as a shortcut's, with a glyph for its icon. */
+@Composable
+private fun PairQuickChip(chip: QuickChip) {
+    Box(
+        modifier =
+            Modifier
+                .dockEdgeFade(vanishBelow = CHIP_VANISH_BELOW)
+                .heightIn(min = ChipTarget)
+                .testTag(quickActionChipTag(chip.id))
+                .clickable(role = Role.Button, onClick = chip.onClick)
+                .padding(vertical = RiffleSpacing.xxs),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .clip(RiffleShapes.full)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RiffleShapes.full)
+                    .padding(
+                        start = RiffleSpacing.s,
+                        end = RiffleSpacing.m,
+                        top = RiffleSpacing.xs,
+                        bottom = RiffleSpacing.xs,
+                    ),
+            horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(chip.glyph, contentDescription = null, modifier = Modifier.size(ChipIconSize))
+            Text(
+                text = chip.label,
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

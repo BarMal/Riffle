@@ -27,14 +27,6 @@ internal object PoolItemEncoding {
                     "label" to str(item.label),
                     "entries" to arr(item.entries.map(::encodeEntry)),
                 )
-            is PoolAppPair ->
-                obj(
-                    "id" to str(item.id.value),
-                    "kind" to str("pair"),
-                    "label" to str(item.label),
-                    "first" to encodeEntry(item.first),
-                    "second" to encodeEntry(item.second),
-                )
             is PoolWidget ->
                 obj(
                     "id" to str(item.id.value),

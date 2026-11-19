@@ -852,7 +852,6 @@ private fun AppLibraryHome(
 private fun LauncherShellAction.closesLibrary(): Boolean =
     this is LauncherShellAction.LaunchApp ||
         this is LauncherShellAction.LaunchAppShortcut ||
-        this is LauncherShellAction.LaunchAppPair ||
         this is LauncherShellAction.SearchWeb
 
 /**

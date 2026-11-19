@@ -30,7 +30,7 @@ internal object StreamSectionQueries {
             StreamSection.RECENTS -> recents(content, context)
             StreamSection.TODAY -> agenda(content, context) + alarm(content, context) + tasks(content, context)
             StreamSection.FEEDS -> feeds(content, context)
-            StreamSection.SHORTCUTS -> emptyList()
+            StreamSection.PAIRS, StreamSection.SHORTCUTS -> emptyList()
         }.filter { it.items.isNotEmpty() }
 
     fun now(

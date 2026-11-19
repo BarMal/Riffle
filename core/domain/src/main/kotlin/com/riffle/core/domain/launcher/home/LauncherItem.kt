@@ -24,22 +24,6 @@ data class AppShortcutItem(
     override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
 }
 
-/**
- * Two apps pinned as one Dock item (ADR 0003, amendment "App pairs are Dock items"). A tap opens them side by side;
- * [first] is the left (start) pane. Only the two apps and their order are stored: nothing about windows or layouts.
- * Dock only: a pair is never placed on a Home page.
- */
-data class AppPairItem(
-    override val id: LauncherItemId,
-    val first: AppShortcutItem,
-    val second: AppShortcutItem,
-    override val placement: GridPlacement? = null,
-) : LauncherItem {
-    override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
-
-    val label: String get() = "${first.label} and ${second.label}"
-}
-
 data class FolderItem(
     override val id: LauncherItemId,
     val label: String,

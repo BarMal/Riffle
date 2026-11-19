@@ -342,3 +342,62 @@ data class AppShortcutContent(
     /** True for the card that opens the app itself. */
     val opensApp: Boolean get() = shortcutId == null
 }
+
+/** What a card of the Pairs stack is: a saved pair, the one being made, or the "New pair" card. */
+enum class PairCardKind {
+    /** A stored pair of two apps. */
+    SAVED,
+
+    /** The pair being made: each half is an app or still "Choose an app". Never stored until both are chosen. */
+    DRAFT,
+
+    /** The "New pair" card: at the back of the stack, and alone on an empty page. */
+    NEW,
+}
+
+/** What a card of the Pairs stack offers (see [AppPairContent.actions]). */
+enum class PairAction {
+    /** Open the two apps side by side. */
+    OPEN,
+    SWAP_SIDES,
+    CHANGE_FIRST,
+    CHANGE_SECOND,
+
+    /** Remove the pair (a swipe, the menu, the accessibility action); Undo brings it back. */
+    REMOVE,
+
+    /** The draft's halves: choose the app of that side. */
+    CHOOSE_FIRST,
+    CHOOSE_SECOND,
+
+    /** The "New pair" card: put a draft card in front. */
+    NEW_PAIR,
+}
+
+/** One app of a pair: which, its name and icon (resolved from the installed apps when the content is made). */
+data class PairSide(
+    val identity: AppIdentity,
+    val label: String,
+    val icon: ItemImageHandle?,
+) {
+    val app: StreamAppRef get() = StreamAppRef(identity.packageName.value, identity.profile.id.value)
+}
+
+/**
+ * A card of the Pairs stack (ADR 0003, Amendment 7): two apps side by side, [first] on the start (left) pane. Its own
+ * kind of content, with its own card, strip and actions; never persisted as content (what is stored is the two apps
+ * and their order, `AppPair`). A [PairCardKind.DRAFT] has no [pairId] and a null half where the app is not chosen
+ * yet; the [PairCardKind.NEW] card has neither half. [timeEpochMillis] is when the pair was last opened.
+ */
+data class AppPairContent(
+    override val id: StreamContentId,
+    val kind: PairCardKind,
+    val pairId: String?,
+    val first: PairSide?,
+    val second: PairSide?,
+    val actions: Set<PairAction>,
+    val lastOpenedEpochMillis: Long? = null,
+    override val privacy: StreamPrivacy = StreamPrivacy.VISIBLE,
+) : StreamContent {
+    override val timeEpochMillis: Long? get() = lastOpenedEpochMillis
+}

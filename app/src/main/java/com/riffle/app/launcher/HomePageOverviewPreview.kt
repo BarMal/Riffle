@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
-import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -159,8 +158,6 @@ private fun PageOverviewPreviewItem(
                 widget = item,
                 widgetViewFactory = widgetViewFactory,
             )
-
-        is AppPairItem -> Unit // A pair is Dock-only; it is never on a page.
     }
 }
 

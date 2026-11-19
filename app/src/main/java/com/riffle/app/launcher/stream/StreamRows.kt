@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.core.domain.launcher.stream.AppPairContent
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.ArticleAction
 import com.riffle.core.domain.launcher.stream.ArticleContent
@@ -364,5 +366,7 @@ internal fun StreamRow(
         is TaskContent -> TaskRow(content, env, callbacks)
         is RecentAppContent -> RecentAppRow(content, env, callbacks, groupKey)
         is AppShortcutContent -> AppShortcutRow(content, env, callbacks)
+        is AppPairContent ->
+            PairCard(content, env, callbacks, Modifier.fillMaxWidth().height(StreamCardHeights.pair))
     }
 }

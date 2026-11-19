@@ -93,11 +93,9 @@ object StreamActionPolicy {
                 is MediaContent -> media(content, action)
                 is EventContent -> action == StreamAction.Open && EventAction.OPEN in content.actions
                 is ArticleContent -> article(content, action)
-                is RecentAppContent -> action == StreamAction.Open && RecentAppAction.LAUNCH in content.actions
-                is AppShortcutContent ->
-                    action == StreamAction.Open && AppShortcutAction.LAUNCH in content.actions &&
-                        (content.enabled || content.opensApp)
+                is RecentAppContent, is AppShortcutContent -> launchOnly(content, action)
                 is TaskContent -> task(content, action)
+                is AppPairContent -> layout(content, action)
             }
 
     /** A redacted value shows "Hidden content": it can be opened (and a media card still has its transport). */
@@ -109,6 +107,30 @@ object StreamActionPolicy {
             action == StreamAction.Open ||
             (content is MediaContent && isTransport(action)) ||
             (content is MediaContent && content.source && action == StreamAction.Dismiss)
+
+    /** A recent app and a launcher shortcut offer one action, launch (a disabled shortcut only opens its app). */
+    private fun launchOnly(
+        content: StreamContent,
+        action: StreamAction,
+    ): Boolean =
+        action == StreamAction.Open &&
+            when (content) {
+                is RecentAppContent -> RecentAppAction.LAUNCH in content.actions
+                is AppShortcutContent ->
+                    AppShortcutAction.LAUNCH in content.actions && (content.enabled || content.opensApp)
+                else -> false
+            }
+
+    /** A layout opens its two apps (a saved one) and is removed by a dismissal; a draft and the New card do neither. */
+    private fun layout(
+        content: AppPairContent,
+        action: StreamAction,
+    ): Boolean =
+        when (action) {
+            StreamAction.Open -> PairAction.OPEN in content.actions
+            StreamAction.Dismiss -> PairAction.REMOVE in content.actions
+            else -> false
+        }
 
     private fun task(
         content: TaskContent,

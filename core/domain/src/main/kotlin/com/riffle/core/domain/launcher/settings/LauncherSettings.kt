@@ -12,7 +12,6 @@ import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 data class LauncherSettings(
     val appDrawer: AppDrawerSettings = AppDrawerSettings(),
     val appearance: AppearanceSettings = AppearanceSettings(),
-    val dock: DockBehaviourSettings = DockBehaviourSettings(),
     val features: FeatureSettings = FeatureSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
@@ -69,23 +68,6 @@ const val DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS = 4
 
 fun AppDrawerSettings.coerced(): AppDrawerSettings =
     copy(iconGridColumns = iconGridColumns.coerceIn(MIN_APP_DRAWER_ICON_GRID_COLUMNS, MAX_APP_DRAWER_ICON_GRID_COLUMNS))
-
-/** Settings > Dock behaviour that is the device's and not a layout's (a layout is per posture; this is not). */
-data class DockBehaviourSettings(
-    /** Whether app pairs show in the Dock (see [AppPairsMode] and `PairAvailability`). */
-    val appPairs: AppPairsMode = AppPairsMode.AUTOMATIC,
-)
-
-/**
- * Settings > Dock > "App pairs". [AUTOMATIC] shows pairs where the system can split (`PairAvailability.canSplit`);
- * [ALWAYS_SHOW] shows and launches them regardless, for a device the rule gets wrong; [OFF] hides them everywhere
- * and disables "Pair with..." and drop-to-pair. A hidden pair stays stored.
- */
-enum class AppPairsMode {
-    AUTOMATIC,
-    ALWAYS_SHOW,
-    OFF,
-}
 
 /** Durable presentation preference for launcher search results. */
 data class SearchSettings(

@@ -10,11 +10,6 @@ internal class LauncherAppActionHandler(
                 true
             }
 
-            is LauncherAppActionRoute.LaunchAppPair -> {
-                callbacks.launch.launchAppPair(route.action)
-                true
-            }
-
             is LauncherAppActionRoute.LaunchAppShortcut -> {
                 callbacks.launch.launchAppShortcut(route.action)
                 true
@@ -84,5 +79,4 @@ internal data class LauncherAppLaunchCallbacks(
     val searchWeb: (LauncherShellAction.SearchWeb) -> Unit,
     val openAppInfo: (LauncherShellAction.OpenAppInfo) -> Unit,
     val uninstallApp: (LauncherShellAction.UninstallApp) -> Unit,
-    val launchAppPair: (LauncherShellAction.LaunchAppPair) -> Unit = {},
 )

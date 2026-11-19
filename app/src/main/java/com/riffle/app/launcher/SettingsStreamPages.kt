@@ -41,6 +41,7 @@ import com.riffle.app.launcher.stream.titleRes
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
 import com.riffle.app.launcher.stream.todoist.TasksSettingsState
 import com.riffle.core.domain.launcher.settings.LauncherFeature
+import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.stream.StreamLayout
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
 import com.riffle.core.domain.launcher.stream.StreamSection
@@ -75,6 +76,7 @@ internal fun StreamSection.settingKey(): SettingKey =
         StreamSection.RECENTS -> SettingKey.STREAM_SECTION_RECENTS
         StreamSection.TODAY -> SettingKey.STREAM_SECTION_TODAY
         StreamSection.FEEDS -> SettingKey.STREAM_SECTION_FEEDS
+        StreamSection.PAIRS -> SettingKey.STREAM_SECTION_PAIRS
         // Derived from the Dock's pinned apps: it is never listed in Settings, so it has no row to anchor.
         StreamSection.SHORTCUTS -> SettingKey.STREAM_SECTION_NOW
     }
@@ -85,7 +87,7 @@ internal fun StreamSection.settingsPages(): List<SettingsPage> =
         StreamSection.NOTIFICATIONS -> listOf(SettingsPage.STREAM_NOTIFICATIONS)
         StreamSection.TODAY -> listOf(SettingsPage.STREAM_AGENDA, SettingsPage.STREAM_TASKS)
         StreamSection.FEEDS -> listOf(SettingsPage.STREAM_FEEDS)
-        StreamSection.NOW, StreamSection.RECENTS, StreamSection.SHORTCUTS -> emptyList()
+        StreamSection.NOW, StreamSection.RECENTS, StreamSection.PAIRS, StreamSection.SHORTCUTS -> emptyList()
     }
 
 /** Stream: the six sections, each on or off, in order, shown as a Stack or a List, then a sub-page where it has one. */
@@ -111,6 +113,8 @@ internal fun SettingsStreamPageContent(
         layout = layouts.forPosture(deviceClass),
         onLayoutAction = { action -> repository.update(deviceClass, action) },
         onOpenPage = onPageSelected,
+        showPairs = state.settings.stream.showPairs,
+        onShowPairs = { mode -> onAction(LauncherShellAction.SelectPairsMode(mode)) },
     )
 }
 
@@ -120,6 +124,9 @@ internal fun SettingsStreamSections(
     layout: StreamLayout,
     onLayoutAction: (StreamLayoutAction) -> Unit,
     onOpenPage: (SettingsPage) -> Unit,
+    /** Settings > Stream > Pairs > "Show pairs" (it was Settings > Dock > "App pairs"). */
+    showPairs: PairsMode = PairsMode.AUTOMATIC,
+    onShowPairs: (PairsMode) -> Unit = {},
 ) {
     Text(
         modifier = Modifier.padding(horizontal = 8.dp),
@@ -168,19 +175,22 @@ internal fun SettingsStreamSections(
                     }
                 },
             )
-            SettingsChoiceRow(
-                title = stringResource(R.string.stream_show_as),
-                subtitle = stringResource(R.string.settings_stream_show_as_subtitle),
-                options = StreamView.entries,
-                selected = entry.view,
-                onSelect = { view -> onLayoutAction(StreamLayoutAction.SetView(section, view)) },
-                label = { view -> stringResource(view.titleRes()) },
-                optionTag = { view -> streamShowAsTestTag(section, view) },
-                optionDescription = { view ->
-                    stringResource(R.string.settings_stream_show_as_option, name, stringResource(view.titleRes()))
-                },
-            )
+            if (section != StreamSection.PAIRS) {
+                SettingsChoiceRow(
+                    title = stringResource(R.string.stream_show_as),
+                    subtitle = stringResource(R.string.settings_stream_show_as_subtitle),
+                    options = StreamView.entries,
+                    selected = entry.view,
+                    onSelect = { view -> onLayoutAction(StreamLayoutAction.SetView(section, view)) },
+                    label = { view -> stringResource(view.titleRes()) },
+                    optionTag = { view -> streamShowAsTestTag(section, view) },
+                    optionDescription = { view ->
+                        stringResource(R.string.settings_stream_show_as_option, name, stringResource(view.titleRes()))
+                    },
+                )
+            }
             if (section == StreamSection.NOW) NowRecentPlayersRows(layout, onLayoutAction)
+            if (section == StreamSection.PAIRS) ShowPairsRow(showPairs, onShowPairs)
             section.settingsPages().forEach { page ->
                 SettingsClickableRow(
                     title = stringResource(page.titleRes),
@@ -477,3 +487,29 @@ private fun TasksSaveButton(
         },
     ) { SettingsButtonText(stringResource(R.string.settings_tasks_save)) }
 }
+
+/** Whether the Pairs stack shows: Automatic where the system can split, Always show, or Off (the pairs are kept). */
+@Composable
+private fun ShowPairsRow(
+    mode: PairsMode,
+    onSelect: (PairsMode) -> Unit,
+) {
+    SettingsChoiceRow(
+        modifier = Modifier.settingAnchor(SettingKey.STREAM_SHOW_PAIRS).testTag(SHOW_PAIRS_TEST_TAG),
+        title = SettingKey.STREAM_SHOW_PAIRS.label(),
+        subtitle = stringResource(R.string.setting_stream_show_pairs_subtitle),
+        options = PairsMode.entries,
+        selected = mode,
+        onSelect = onSelect,
+        label = { candidate ->
+            when (candidate) {
+                PairsMode.AUTOMATIC -> stringResource(R.string.setting_stream_show_pairs_automatic)
+                PairsMode.ALWAYS_SHOW -> stringResource(R.string.setting_stream_show_pairs_always)
+                PairsMode.OFF -> stringResource(R.string.setting_stream_show_pairs_off)
+            }
+        },
+        optionTag = { candidate -> "$SHOW_PAIRS_TEST_TAG-${candidate.name}" },
+    )
+}
+
+internal const val SHOW_PAIRS_TEST_TAG = "settings-stream-show-pairs"

@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.riffle.app.launcher.pairs.AppPairsRepositories
 import com.riffle.app.launcher.pool.CachedPoolRepository
 import com.riffle.app.launcher.pool.DataStorePoolStore
 import com.riffle.app.launcher.pool.HomeLayoutCutoverStore
@@ -163,7 +164,10 @@ internal object HomeLayoutRepositories {
     fun pool(context: Context): CachedPoolRepository =
         poolInstance ?: synchronized(this) {
             poolInstance
-                ?: CachedPoolRepository(DataStorePoolStore(context.applicationContext)).also { poolInstance = it }
+                ?: CachedPoolRepository(
+                    DataStorePoolStore(context.applicationContext),
+                    legacyPairs = { pairs -> AppPairsRepositories.get(context).addMigrated(pairs) },
+                ).also { poolInstance = it }
         }
 
     private fun create(context: Context): HomeLayoutRuntime {

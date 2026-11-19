@@ -10,6 +10,7 @@
     <string name="stream_section_tasks">Tasks</string>
     <string name="stream_section_shortcuts">Shortcuts</string>
     <string name="stream_section_feeds">Feeds</string>
+    <string name="stream_section_pairs">Pairs</string>
 
     <!-- Section header, Show as and layout edits -->
     <string name="stream_show_as">Show as</string>
@@ -41,6 +42,22 @@
     <string name="stream_empty_recents">No recent apps yet.</string>
     <string name="stream_empty_today">Nothing planned today. Enjoy the quiet.</string>
     <string name="stream_empty_shortcuts">This app has no shortcuts.</string>
+    <string name="stream_pair_removed">Pair removed</string>
+    <string name="stream_pair_open_side_by_side">Open side by side</string>
+    <string name="stream_pair_swap_sides">Swap sides</string>
+    <string name="stream_pair_change_first">Change first app</string>
+    <string name="stream_pair_change_second">Change second app</string>
+    <string name="stream_pair_remove">Remove</string>
+    <string name="stream_pair_cancel">Cancel</string>
+    <string name="stream_pair_new">New pair</string>
+    <string name="stream_pair_choose_app">Choose an app</string>
+    <string name="stream_pair_choose_first">Choose first app</string>
+    <string name="stream_pair_choose_second">Choose second app</string>
+    <string name="stream_pair_peek">%1$s and %2$s</string>
+    <string name="stream_pair_hint">Tap to open side by side</string>
+    <string name="stream_pair_spoken">%1$s and %2$s, pair. Opens side by side</string>
+    <string name="stream_pair_draft_spoken">New pair. Choose two apps</string>
+    <string name="stream_empty_pairs">Open two apps side by side.</string>
     <string name="stream_empty_feeds">No articles yet. Add a feed in Settings.</string>
     <string name="stream_permission_message">Allow access to show this</string>
     <string name="stream_permission_action">Allow access</string>
@@ -506,12 +523,6 @@
     <string name="setting_home_set_up_again_keywords">set up walkthrough onboarding tour first-time</string>
     <string name="setting_dock_show">Show the Dock</string>
     <string name="setting_dock_show_keywords">dock visible hide</string>
-    <string name="setting_dock_app_pairs">App pairs</string>
-    <string name="setting_dock_app_pairs_keywords">app pair split screen side by side two apps dock pair</string>
-    <string name="setting_dock_app_pairs_subtitle">Pin two apps as one icon that opens them side by side</string>
-    <string name="setting_dock_app_pairs_automatic">Automatic</string>
-    <string name="setting_dock_app_pairs_always">Always show</string>
-    <string name="setting_dock_app_pairs_off">Off</string>
     <string name="setting_layout_folded_dock_edge">Dock position, folded</string>
     <string name="setting_layout_folded_dock_edge_keywords">layout folded phone dock edge bottom left right side</string>
     <string name="setting_layout_folded_page_scroll">App pages scroll, folded</string>
@@ -600,6 +611,14 @@
     <string name="setting_stream_section_today_keywords">stream today agenda events tasks to-do section stack list on off order show as</string>
     <string name="setting_stream_section_feeds">Feeds</string>
     <string name="setting_stream_section_feeds_keywords">stream feeds news section stack list on off order show as</string>
+    <string name="setting_stream_section_pairs">Pairs</string>
+    <string name="setting_stream_section_pairs_keywords">stream pairs section split screen side by side two apps pair on off order</string>
+    <string name="setting_stream_show_pairs">Show pairs</string>
+    <string name="setting_stream_show_pairs_keywords">show pairs automatic always show off split screen side by side two apps pair</string>
+    <string name="setting_stream_show_pairs_subtitle">Two apps that open side by side, where the screen is wide enough</string>
+    <string name="setting_stream_show_pairs_automatic">Automatic</string>
+    <string name="setting_stream_show_pairs_always">Always show</string>
+    <string name="setting_stream_show_pairs_off">Off</string>
     <string name="setting_notifications_source">Use notifications</string>
     <string name="setting_notifications_source_keywords">notifications source on off status allow access</string>
     <string name="setting_agenda_calendar">Device calendar</string>

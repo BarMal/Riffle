@@ -8,6 +8,7 @@ import com.riffle.app.launcher.workspace.ParsedImageKey
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.settings.StreamSettings
+import com.riffle.core.domain.launcher.stream.AppPairContent
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.MediaContent
 import com.riffle.core.domain.launcher.stream.NotificationContent
@@ -110,6 +111,8 @@ internal data class StreamCallbacks(
     val onConnectTasks: () -> Unit = {},
     /** "Retry" on a section that could not be read (or did not answer in time): observe it afresh. */
     val onRetrySection: (StreamSection) -> Unit = {},
+    /** The Pairs stack's own edits: the draft, swapping sides, changing an app (see [PairEdit]). */
+    val onPairEdit: (PairEdit) -> Unit = {},
 )
 
 internal fun StreamContent.appRef(): StreamAppRef? =
@@ -118,6 +121,7 @@ internal fun StreamContent.appRef(): StreamAppRef? =
         is MediaContent -> app
         is RecentAppContent -> app
         is AppShortcutContent -> app
+        is AppPairContent -> first?.app
         else -> null
     }
 

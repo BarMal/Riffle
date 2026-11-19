@@ -15,7 +15,21 @@ data class StreamSettings(
     val openCardPlacement: OpenCardPlacement = OpenCardPlacement.CENTRE,
     /** Where an open card's actions sit. */
     val cardActionsPlacement: CardActionsPlacement = CardActionsPlacement.IN_DOCK,
+    /** Settings > Stream > Pairs > "Show pairs" (see [PairsMode] and `PairAvailability`). */
+    val showPairs: PairsMode = PairsMode.AUTOMATIC,
 )
+
+/**
+ * Settings > Stream > Pairs > "Show pairs" (it was Settings > Dock > "App pairs", whose stored value is read as
+ * this one). [AUTOMATIC] shows the Pairs stack where the system can split (`PairAvailability.canSplit`);
+ * [ALWAYS_SHOW] shows and launches it regardless, for a device the rule gets wrong; [OFF] hides it everywhere. The
+ * stored pairs are kept while it is hidden.
+ */
+enum class PairsMode {
+    AUTOMATIC,
+    ALWAYS_SHOW,
+    OFF,
+}
 
 /**
  * Where an open card sits on the screen (the first is the default). Folded only: the unfolded stack's column is

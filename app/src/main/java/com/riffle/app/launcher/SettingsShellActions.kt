@@ -113,7 +113,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectSettingsLayoutDeviceClass,
         is LauncherShellAction.ImportLauncherBackup,
         is LauncherShellAction.SelectSearchResultPresentation,
-        is LauncherShellAction.SelectAppPairsMode,
+        is LauncherShellAction.SelectPairsMode,
         is LauncherShellAction.SelectStreamCardTint,
         is LauncherShellAction.SetStreamCardTopGlow,
         is LauncherShellAction.SelectOpenCardPlacement,
