@@ -34,6 +34,9 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.icons.IconPackDrawableRef
+import com.riffle.core.domain.launcher.icons.IconShape
+import com.riffle.core.domain.launcher.icons.LegacyIconHandling
 import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
@@ -531,6 +534,22 @@ class LauncherActionDomainTest {
                     "SelectLauncherThemeTypography",
                     LauncherShellAction.SelectLauncherThemeTypography(LauncherThemeTypography.MONOSPACE),
                 ),
+                settings("SelectIconShape", LauncherShellAction.SelectIconShape(IconShape.CIRCLE)),
+                settings(
+                    "SelectLegacyIconHandling",
+                    LauncherShellAction.SelectLegacyIconHandling(LegacyIconHandling.AS_IS),
+                ),
+                settings("SetThemedIcons", LauncherShellAction.SetThemedIcons(enabled = true)),
+                settings("SetThemeAllIcons", LauncherShellAction.SetThemeAllIcons(enabled = true)),
+                settings("SelectIconPack", LauncherShellAction.SelectIconPack("com.example.pack")),
+                settings(
+                    "SetAppIconOverride",
+                    LauncherShellAction.SetAppIconOverride(appIdentity, IconPackDrawableRef("com.example.pack", "a")),
+                ),
+                settings("SetAppLabelOverride", LauncherShellAction.SetAppLabelOverride(appIdentity, "Jot")),
+                settings("RestoreIconOverrides", LauncherShellAction.RestoreIconOverrides(emptyMap())),
+                settings("OpenChangeIcon", LauncherShellAction.OpenChangeIcon(appIdentity, "Notes")),
+                settings("ResetIconChanges", LauncherShellAction.ResetIconChanges),
                 settings(
                     "SelectWallpaperScrollMode",
                     LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING),

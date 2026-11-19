@@ -44,6 +44,7 @@ import com.riffle.app.launcher.defaultLauncherViewModeAvailability
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.exclusions.DataStoreExclusionStore
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
+import com.riffle.app.launcher.icons.AppIconPipeline
 import com.riffle.app.launcher.ics.CachedIcsFeedRepository
 import com.riffle.app.launcher.ics.DataStoreIcsStore
 import com.riffle.app.launcher.ics.ICS_MAX_RESPONSE_BYTES
@@ -238,7 +239,13 @@ internal class MainActivityDependencies(
         }
     }
     val webSearchLauncher by lazy { AndroidWebSearchLauncher(activity) }
-    val appIconLoader by lazy { PackageManagerAppIconLoader(activity.packageManager) }
+    val appIconLoader by lazy {
+        // One icon pipeline for the process (the Floating dock service draws through it too), given the stored style
+        // before the first icon is drawn so nothing is first drawn in a style that is then replaced.
+        val pipeline = AppIconPipeline.shared(activity)
+        launcherSettingsRepository.loadLauncherSettings()?.icons?.let { style -> pipeline.applyStyle(style, null) }
+        PackageManagerAppIconLoader(activity.packageManager, pipeline = pipeline)
+    }
     val wallpaperController by lazy { AndroidLauncherWallpaperController(activity.window) }
     val wallpaperPickerGateway by lazy { AndroidWallpaperPickerGateway(activity) }
     val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(activity) }
@@ -558,6 +565,7 @@ internal class MainActivityDependencies(
                     },
                     feedArtwork = RepositoryFeedArtworkLoader(feedArticleCacheRepository)::artworkFor,
                     shortcutIcon = AndroidShortcutIcons(activity)::iconFor,
+                    appIcons = AppIconPipeline.shared(activity),
                 ),
             requestAccess = requestAccess,
             enableSources = { ids -> ids.forEach { id -> enablement.setEnabled(id, true) } },
@@ -569,7 +577,11 @@ internal class MainActivityDependencies(
 
     fun packageChangeObserver(onCatalogChanged: (AppCatalogChange) -> Unit): AndroidPackageChangeObserver =
         AndroidPackageChangeObserver(activity) { change ->
-            activity.runOnUiThread { onCatalogChanged(change) }
+            activity.runOnUiThread {
+                // An icon pack may have been installed, updated or removed: the pipeline looks again.
+                appIconLoader.onCatalogChanged()
+                onCatalogChanged(change)
+            }
         }
 
     fun activeNotificationRefreshCoordinator(

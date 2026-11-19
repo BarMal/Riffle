@@ -9,6 +9,9 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.icons.IconPackDrawableRef
+import com.riffle.core.domain.launcher.icons.IconShape
+import com.riffle.core.domain.launcher.icons.IconStyleSettings
 import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
@@ -68,6 +71,44 @@ class LauncherBackupDocumentTest {
         assertEquals(setOf(cameraIdentity), decodedDocument.hiddenAppIdentities)
         assertEquals(123_456L, decodedDocument.exportedAtEpochMillis)
     }
+
+    @Test
+    fun iconStylesAndPerAppChoicesTravelAsReferencesAndNeverAsBitmaps() {
+        val icons =
+            IconStyleSettings(shape = IconShape.SQUIRCLE, themedIcons = true, iconPack = "com.example.pack.one")
+                .withIconOverride(cameraIdentity, IconPackDrawableRef("com.example.pack.gone", "camera_alt"))
+                .withLabelOverride(cameraIdentity, "Shots")
+        val document =
+            LauncherBackupDocument(
+                homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
+                launcherSettings = LauncherSettings(icons = icons),
+            )
+
+        val encoded = encodeLauncherBackupDocument(document)
+
+        // The override whose pack is not installed on the restoring device is kept, so installing it restores it.
+        assertEquals(icons, decodeLauncherBackupDocument(encoded).launcherSettings.icons)
+        val overrides =
+            JSONObject(encoded).getJSONObject("settings").getJSONObject("icons").getJSONArray("overrides")
+        assertEquals("camera_alt", overrides.getJSONObject(0).getString("drawable"))
+        assertEquals(false, encoded.contains("base64", ignoreCase = true))
+    }
+
+    @Test
+    fun aBackupFromBeforeIconStylesRestoresTheDefaultStyle() {
+        val old = JSONObject(encodeLauncherBackupDocument(backupDocument()))
+        old.getJSONObject("settings").remove("icons")
+
+        val decoded = decodeLauncherBackupDocument(old.toString())
+
+        assertEquals(IconStyleSettings(), decoded.launcherSettings.icons)
+    }
+
+    private fun backupDocument() =
+        LauncherBackupDocument(
+            homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
+            launcherSettings = LauncherSettings(),
+        )
 
     @Test
     fun roundTripsValidRssFeedConfigurationInBackup() {

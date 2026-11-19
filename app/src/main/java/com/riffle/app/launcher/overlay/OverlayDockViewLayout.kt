@@ -16,6 +16,7 @@ import kotlin.math.abs
 
 internal const val COLLAPSED_HANDLE_TOUCH_TARGET_WIDTH_DP = 48
 internal const val EXPANDED_ITEM_SPACING_DP = 6
+internal const val ICON_PADDING_DP = 8
 
 private const val EXPANDED_LABEL_HEIGHT_DP = 24
 private const val EXPANDED_CLOSE_BUTTON_HEIGHT_DP = 44

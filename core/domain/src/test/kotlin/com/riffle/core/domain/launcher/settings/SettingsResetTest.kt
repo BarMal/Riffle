@@ -5,6 +5,9 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.icons.IconPackDrawableRef
+import com.riffle.core.domain.launcher.icons.IconShape
+import com.riffle.core.domain.launcher.icons.IconStyleSettings
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
@@ -46,6 +49,25 @@ class SettingsResetTest {
         assertEquals(listOf(floating), reset.overlayDock.items)
         assertEquals(false, reset.overlayDock.enabled)
         assertEquals(false, reset.overlayDock.showLabels)
+    }
+
+    @Test
+    fun theStyleResetsButTheIconsAndNamesChosenForSingleAppsAreKept() {
+        val app = AppIdentity(AppPackageName("com.example.notes"), AppActivityName("Main"))
+        val changed =
+            LauncherSettings(
+                icons =
+                    IconStyleSettings(shape = IconShape.CIRCLE, themedIcons = true, iconPack = "com.example.pack")
+                        .withIconOverride(app, IconPackDrawableRef("com.example.pack", "notes"))
+                        .withLabelOverride(app, "Jot"),
+            )
+
+        val reset = SettingsReset.reset(changed).icons
+
+        assertEquals(IconShape.SYSTEM, reset.shape)
+        assertEquals(false, reset.themedIcons)
+        assertEquals(null, reset.iconPack)
+        assertEquals(changed.icons.overrides, reset.overrides)
     }
 
     @Test

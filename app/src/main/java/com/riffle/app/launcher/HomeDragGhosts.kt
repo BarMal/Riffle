@@ -21,13 +21,19 @@ internal class HomeDragGhost(
  * background thread.
  */
 internal object HomeDragGhosts {
-    private val cache = BoundedCache<AppIdentity, HomeDragGhost>(MAX_GHOSTS)
+    // The icon style is part of the key: a ghost baked from the old style is never drawn for the new one.
+    private data class GhostKey(val identity: AppIdentity, val version: Int)
+
+    private val cache = BoundedCache<GhostKey, HomeDragGhost>(MAX_GHOSTS)
 
     fun forIcon(
         identity: AppIdentity,
         icon: ImageBitmap,
-    ): HomeDragGhost =
-        cache[identity] ?: HomeDragGhost(bakeSource(icon), bakeOutline(icon)).also { cache[identity] = it }
+        version: Int = 0,
+    ): HomeDragGhost {
+        val key = GhostKey(identity, version)
+        return cache[key] ?: HomeDragGhost(bakeSource(icon), bakeOutline(icon)).also { cache[key] = it }
+    }
 
     internal fun clear() = cache.evictAll()
 

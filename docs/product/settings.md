@@ -60,6 +60,12 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | **Appearance** | Colour | Colour mode, accent, custom accent |
 | | Glass | Reduced transparency, spotlight flow (reduced transparency is read by every glass surface) |
 | | Shape and type | Corners (standard, compact, rounded), typography (standard, monospace; the old "System" choice was the same typeface as standard, and a stored one reads as standard) |
+| | Icons | A row opening the Icons sub-page, saying the shape, "themed" when themed icons are on and how many apps have a changed icon |
+| Icons (under Appearance) | Preview | A strip of six of the user's apps drawn by the launcher's own icon loader, so it shows exactly the style every surface shows |
+| | Shape | **Icon shape** (System default, Circle, Squircle, Rounded square, Square, Teardrop) and **Legacy icons** (Fit on a plate, Leave as is; disabled, and saying why, while the shape is System default) |
+| | Themed icons | **Themed icons** (a switch, off by default; disabled with "Needs Android 13 or later" on API 32 and below) and **Theme all icons** (off by default; disabled until Themed icons is on) |
+| | Icon pack | None and the installed icon packs, one radio row each with the pack's icon. Says so when none is installed, and when the chosen pack is not (icons use the default style until it is) |
+| | Changes | **Reset icon changes**: clears every icon chosen for a single app, after a confirmation, with "Icon changes reset" and Undo (names are kept). Disabled, and saying so, when nothing was changed. See "Appearance > Icons" below |
 | **Gestures** | One finger, Two fingers, Pinch, Three fingers | The 14 swipe and pinch bindings on Home. Actions: None, Open search, Open Library, Open Stream, Open settings, Edit Home, Page overview, Full-screen Home, Next page, Previous page, Launch app, Launch shortcut. Reset |
 | **Motion and haptics** | Motion | Animation performance, reduced motion, feedback strength (all choice rows) |
 | | Dock and Stream | Opening speed (also the grid fade under the stack, the Home entrance and a swiped card), Dock bounce, Card stack coasting, Card snapping, Hold time to choose, Light ticks |
@@ -76,6 +82,50 @@ Where "Show as" lives twice it is one stored value. The Stream page writes `Stre
 `CachedStreamLayoutRepository` the Stream's header menus use (`A/stream/StreamLayoutStore.kt`); Library > Show as
 dispatches `SelectLibraryView`, the action the Library's long-press dispatches. The Stream page and Library page are
 per device class, so both show the device tabs.
+
+## Appearance > Icons
+
+One pipeline (`AppIconPipeline`, `A/icons/`) draws every app icon: Home, the Dock, folders and their previews, the Library,
+search, Stream and pair cards, the widget stack editor, the Floating dock and the Settings lists. A surface never decodes
+an icon itself and never clips one to its own shape when the icon already comes cut (`AppIconLoader.drawsOwnShape`).
+Stored in `LauncherSettings.icons` (`IconStyleSettings`, the `icons` section of the settings blob and so of a backup); a
+blob without it reads as the defaults.
+
+- **Defaults draw the platform's icons exactly as before**: System default, themed icons off, no icon pack, no changes.
+  `IconStyleSettings.isDefault`; the existing goldens do not change at the defaults.
+- **Order of precedence for one app**: the icon chosen for it > the icon pack > the themed icon > the shape
+  (`IconPrecedence`, pure). The first recipe that works is drawn; a drawable missing from the pack falls through to the
+  next. A choice whose pack is not installed is skipped and **kept**, so installing the pack again restores it.
+- **Shapes** (`IconShapeGeometry`, pure, `:core:domain`): mask outlines in a 100 by 100 box (Circle, the n = 4 superellipse
+  for Squircle, Rounded square at 26% radius, Square at 4%, Teardrop with one sharp corner) and the scales that keep an
+  icon from being cropped. An adaptive icon's layers are drawn 108/72 times the icon, centred, and the mask cuts the icon
+  out of the middle. A legacy icon (no adaptive layers) goes on a neutral plate (the same in light and dark) scaled to the
+  shape's inscribed square, at most 86% of the plate; "Leave as is" draws it unmasked. System default is the platform's
+  own mask, untouched.
+- **Themed icons** (API 33 and later): where an app ships a monochrome layer it is drawn in the theme's on-primary-container
+  colour on its primary container, so it follows the accent, Material You and light and dark. **Theme all icons** gives an
+  app without a monochrome layer a generated one: the icon is desaturated (Rec. 709 luma) and thresholded at 50% with a soft
+  edge, the smaller of the light and dark classes of its opaque pixels is the symbol, and an icon with one class keeps its
+  silhouette (`MonochromeSynthesis`, pure). Both are off by default.
+- **Icon packs**: found by the launcher-theme intent filters (`org.adw.launcher.THEMES`,
+  `org.adw.launcher.icons.ACTION_PICK_ICON`, `com.novalauncher.THEME`, `com.gau.go.launcherex.theme`,
+  `com.anddoes.launcher.THEME`, all in `<queries>`). `appfilter.xml` (res/xml or assets) maps `ComponentInfo{package/activity}`
+  to a drawable name; `iconback`, `iconmask`, `iconupon` and `scale` dress apps the pack has no drawable for. The parser is
+  defensive (`IconPackAppFilter`: malformed XML yields what could be read, 8 million characters and 30,000 entries at most,
+  names of letters, digits, dots and underscores only). A pack is read once per package version, off the main thread, and
+  held in memory only (no disk cache, never in a backup); a removed or updated pack falls back at once and is read again on
+  the package change broadcast the launcher already receives. Calendar and dynamic-clock extras are not supported.
+- **Change icon** (the long-press menu of Home, the Dock, folders, the Library and search): one sheet with a name field
+  (Rename, Reset name), the icons of the current or another installed pack as a searchable grid (a page of 90 at a time,
+  each drawable decoded only when its cell is composed) and Reset to default. Stored per app identity (package, activity
+  and profile) as the pack's package and the drawable's name, never a bitmap. A custom name is applied to what is drawn
+  (`withAppLabelOverrides`: installed apps, Home, folders, the Dock) and not to the stored layout; a shortcut of an app
+  keeps its own label. Reset settings keeps these per-app changes; Reset icon changes clears the icons.
+- **Cache**: the loader's bitmap cache is bounded by bytes (24 MiB, the old ceiling of 48 icons of 320 px) and keyed by app,
+  size and style version, so a change of style makes the old entries unreachable and they age out; an icon on screen stays
+  until its replacement has loaded. The version holds every global choice, the chosen pack's version, the theme colours
+  (only while themed) and, per app, its own choice. Resolution is blocking and runs off the main thread; a main-thread call
+  is reported (`MainThreadGuard`) and the tests assert there is none.
 
 ## The settings audit (after dock modes U2 and the device fixes)
 
@@ -112,6 +162,7 @@ the "Settings audit" section of [dock-modes-plan.md](dock-modes-plan.md). The ru
 | Show apps behind the cards | "Peek through" |
 | Live apps | "Dynamic side" |
 | Swipes and pinches on Home | "Home swipe actions" |
+| Icon shape, Themed icons, Icon pack, Change icon | "Icon style", "Theme icons", "Icon theme", "Edit icon" |
 
 ## Wording
 

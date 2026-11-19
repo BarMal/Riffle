@@ -32,7 +32,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,8 +51,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
 import com.riffle.app.R
+import com.riffle.app.launcher.icons.AppIconPipeline
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -57,6 +61,9 @@ import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.WidgetStackEngine
 import com.riffle.core.domain.launcher.home.WidgetStackRejection
 import com.riffle.core.domain.launcher.home.WidgetStackResult
+import com.riffle.core.domain.launcher.icons.IconShape
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** The stack of [itemId] on a Home page of this layout, or null (it was removed, or is a lone widget again). */
 internal fun HomeLayout.widgetStack(itemId: LauncherItemId?): WidgetItem? =
@@ -81,23 +88,39 @@ internal fun HomeLayout.moveOutRejection(
 @Composable
 internal fun rememberSystemStackMemberIcons(): WidgetStackMemberIcons {
     val context = LocalContext.current
-    return remember(context) { WidgetStackMemberIcons { member -> context.iconOfWidgetApp(member) } }
+    return remember(context) { PipelineStackMemberIcons(context, AppIconPipeline.shared(context)) }
 }
 
-private fun Context.iconOfWidgetApp(member: StackedWidget): ImageBitmap? =
-    runCatching {
-        val packageName =
-            if (member.glance != null) {
-                packageName
-            } else {
-                AppWidgetManager.getInstance(this).getAppWidgetInfo(member.appWidgetId.value)?.provider?.packageName
-            }
-        packageName?.let {
-            packageManager.getApplicationIcon(
-                it,
-            ).toBitmap(STACK_ICON_PX, STACK_ICON_PX).asImageBitmap()
-        }
-    }.getOrNull()
+/** The widget's app icon, resolved by the one icon pipeline so the chosen style applies here too. */
+private class PipelineStackMemberIcons(
+    private val context: Context,
+    private val pipeline: AppIconPipeline,
+) : WidgetStackMemberIcons {
+    private val cache = BoundedCache<String, ImageBitmap>(STACK_ICON_CACHE)
+
+    override val styleVersion: Int get() = pipeline.styleVersion
+
+    override val drawsOwnShape: Boolean
+        get() = pipeline.effectiveStyle.let { it.shape != IconShape.SYSTEM || it.iconPack != null }
+
+    override fun cachedIconFor(member: StackedWidget): ImageBitmap? = cache[cacheKey(member)]
+
+    override fun iconFor(member: StackedWidget): ImageBitmap? =
+        runCatching {
+            val packageName =
+                if (member.glance != null) {
+                    context.packageName
+                } else {
+                    AppWidgetManager.getInstance(
+                        context,
+                    ).getAppWidgetInfo(member.appWidgetId.value)?.provider?.packageName
+                }
+            packageName?.let { pipeline.forPackage(it, STACK_ICON_PX)?.asImageBitmap() }
+        }.getOrNull()?.also { cache[cacheKey(member)] = it }
+
+    private fun cacheKey(member: StackedWidget) =
+        "${member.appWidgetId.value}/${member.glance != null}/${pipeline.styleVersion}"
+}
 
 /**
  * The sheet that edits a stack (ADR 0003, Amendment 14): its widgets in order, each with its name and its app's icon;
@@ -270,14 +293,19 @@ private fun StackMemberIcon(
     member: StackedWidget,
     icons: WidgetStackMemberIcons,
 ) {
-    val icon = remember(member, icons) { icons.iconFor(member) }
+    val version = icons.styleVersion
+    var icon by remember(member, icons) { mutableStateOf(icons.cachedIconFor(member)) }
+    LaunchedEffect(member, icons, version) {
+        icon = icons.cachedIconFor(member) ?: withContext(Dispatchers.Default) { icons.iconFor(member) }
+    }
+    val shown = icon
     Box(
-        modifier = Modifier.size(STACK_ICON_DP.dp).clip(CircleShape),
+        modifier = Modifier.size(STACK_ICON_DP.dp).let { if (icons.drawsOwnShape) it else it.clip(CircleShape) },
         contentAlignment = Alignment.Center,
     ) {
-        if (icon != null) {
+        if (shown != null) {
             Image(
-                bitmap = icon,
+                bitmap = shown,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.size(STACK_ICON_DP.dp),
@@ -303,6 +331,7 @@ internal const val WIDGET_STACK_EDITOR_ROW_TEST_TAG = "widget-stack-editor-row"
 private const val EDITOR_PADDING_DP = 20
 private const val STACK_ICON_DP = 40
 private const val STACK_ICON_PX = 96
+private const val STACK_ICON_CACHE = 32
 private const val STACK_ROW_BUTTON_DP = 48
 
 /** Removing a stack removes every widget in it, so it asks first (a lone widget does not). */

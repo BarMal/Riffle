@@ -107,6 +107,12 @@ enum class SettingsPage(
         R.string.settings_page_appearance_summary,
         R.string.settings_page_appearance_keywords,
     ),
+    APPEARANCE_ICONS(
+        APPEARANCE,
+        R.string.settings_page_appearance_icons,
+        R.string.settings_page_appearance_icons_summary,
+        R.string.settings_page_appearance_icons_keywords,
+    ),
     GESTURES(
         MAIN,
         R.string.settings_page_gestures,

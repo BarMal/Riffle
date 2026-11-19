@@ -10,6 +10,7 @@ import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.app.launcher.apps.AndroidRecentAppRepository
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
+import com.riffle.app.launcher.icons.AppIconPipeline
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
@@ -19,7 +20,11 @@ class OverlayDockService : Service() {
     private val appLauncher by lazy { AndroidAppLauncher(this) }
     private val recentAppRepository by lazy { AndroidRecentAppRepository(this) }
     private val usageAccessSettingsAction by lazy { AndroidUsageAccessSettingsAction(this) }
-    private val viewFactory by lazy { OverlayDockViewFactory(context = this, appLauncher = appLauncher) }
+    private var viewFactoryCreated = false
+    private val viewFactory by lazy {
+        viewFactoryCreated = true
+        OverlayDockViewFactory(context = this, appLauncher = appLauncher)
+    }
     private val launcherSettingsRepository by lazy { DataStoreLauncherSettingsRepository(this) }
     private var overlayView: View? = null
     private var expanded: Boolean = false
@@ -43,6 +48,7 @@ class OverlayDockService : Service() {
 
     override fun onDestroy() {
         removeOverlay()
+        if (viewFactoryCreated) viewFactory.release()
         super.onDestroy()
     }
 
@@ -53,7 +59,10 @@ class OverlayDockService : Service() {
     private fun renderOverlay() {
         removeOverlay()
 
-        val overlaySettings = loadLauncherSettings().overlayDock.coerceOverlayDockSettings()
+        val launcherSettings = loadLauncherSettings()
+        // The Floating dock draws icons in the same style as the launcher (its colours stay as the launcher last set).
+        AppIconPipeline.shared(this).applyStyle(launcherSettings.icons, colors = null)
+        val overlaySettings = launcherSettings.overlayDock.coerceOverlayDockSettings()
         currentOverlaySettings = overlaySettings
         val content = overlayDockContent(overlaySettings)
         val view =

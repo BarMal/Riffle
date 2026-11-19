@@ -289,6 +289,21 @@ Don't
   corner setting.
 - Don't use continuous corners on pills and circles (`full` stays circular).
 
+## Icons
+
+App icons are content, not chrome: they are drawn by one pipeline (`AppIconPipeline`) so a style applies everywhere at
+once, and no surface draws, decodes or clips an app icon on its own.
+
+- At the defaults an icon is the platform's own, unchanged. A shape, themed icons or an icon pack are the user's choices
+  (Settings > Appearance > Icons) and never default.
+- An icon that comes already cut to a shape is not clipped again by the surface that shows it (a circle clip on a squircle
+  would crop its corners); the placeholder before it loads still uses the surface's shape.
+- A style change replaces icons in place: the icon on screen stays until its successor has loaded, so nothing falls back
+  to a placeholder or flashes the old style.
+- Themed icons take their colours from the theme (primary container and its on colour), never from literals, so they
+  follow the accent, Material You and light and dark. A legacy icon's plate is the one fixed neutral, the same in both.
+- No icon work on the main thread: decoding, masking and the generated monochrome layer all run off it.
+
 ## 6. Focus over chrome
 
 Do

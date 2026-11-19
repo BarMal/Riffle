@@ -28,7 +28,12 @@ internal class LauncherSettingsStateReducer(
         action: LauncherShellAction,
     ): LauncherShellState =
         when (val route = action.launcherSettingsActionRoute()) {
-            is LauncherSettingsActionRoute.SettingsState -> reduceSettingsStateAction(state, route.action)
+            is LauncherSettingsActionRoute.SettingsState ->
+                if (route.action.isIconSettingsAction) {
+                    state.withIconSettingsAction(route.action, launcherSettingsRepository)
+                } else {
+                    reduceSettingsStateAction(state, route.action)
+                }
             else -> state
         }
 

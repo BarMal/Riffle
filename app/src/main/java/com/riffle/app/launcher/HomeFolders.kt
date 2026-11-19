@@ -550,6 +550,10 @@ internal fun folderShortcutContextMenuItems(
             action = shortcut.openAppInfoAction(),
         ),
         ShortcutContextMenuItem(
+            label = text.text(R.string.menu_change_icon),
+            action = LauncherShellAction.OpenChangeIcon(shortcut.appIdentity, shortcut.label),
+        ),
+        ShortcutContextMenuItem(
             label = text.text(R.string.menu_move_up),
             action =
                 LauncherShellAction.MoveAppInFolder(
