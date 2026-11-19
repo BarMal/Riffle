@@ -66,6 +66,11 @@ data class OnboardingState(
     val progress: OnboardingProgress = OnboardingProgress.NOT_STARTED,
     /** How many times the set-up was finished (Settings re-runs included). */
     val completedRuns: Int = 0,
+    /**
+     * "How should Home start?" was answered (a choice, or "Skip set-up", which starts with all apps): Home is seeded
+     * once and never again, whatever happens to the set-up later (`places-views-plan.md`, "First run").
+     */
+    val homeStartChosen: Boolean = false,
 )
 
 /**
@@ -100,6 +105,9 @@ object Onboarding {
     fun completed(state: OnboardingState): OnboardingState =
         state.copy(progress = OnboardingProgress.COMPLETED, completedRuns = state.completedRuns + 1)
 
+    /** Home was seeded (or the choice was made): the set-up never asks, and nothing seeds, again. */
+    fun homeStartChosen(state: OnboardingState): OnboardingState = state.copy(homeStartChosen = true)
+
     /** Closed without finishing. A re-run from Settings that is cancelled keeps an earlier completion. */
     fun skipped(state: OnboardingState): OnboardingState =
         if (state.progress == OnboardingProgress.COMPLETED) state else state.copy(progress = OnboardingProgress.SKIPPED)
@@ -126,6 +134,7 @@ object OnboardingCodec {
             "origin" to state.origin?.let { str(it.name) },
             "walkthrough" to str(state.progress.name),
             "completedRuns" to num(state.completedRuns),
+            "homeStartChosen" to StoredValue.Bool(state.homeStartChosen),
         )
 
     fun decode(value: StoredValue?): OnboardingState {
@@ -134,6 +143,7 @@ object OnboardingCodec {
             origin = enumOrNull<OnboardingOrigin>(root.string("origin")),
             progress = enumOrNull<OnboardingProgress>(root.string("walkthrough")) ?: legacyCompleted(root),
             completedRuns = root.long("completedRuns")?.coerceIn(0, Int.MAX_VALUE.toLong())?.toInt() ?: 0,
+            homeStartChosen = root.bool("homeStartChosen") ?: false,
         )
     }
 

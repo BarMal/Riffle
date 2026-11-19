@@ -693,7 +693,7 @@ except what is said here about the Home mode and the Library default.
   "Add to Home" in the Library places it in the first free cell after the last occupied one.
 - **New apps.** Settings > Home > "Add new apps to Home" (default on): a newly installed launchable app is placed in the
   first free cell after the last occupied one (a new page if needed); off keeps it in the Library only. Apps present at the
-  first run or restored are not placed. The per-workspace "New apps" setting is no longer read.
+  first run or restored are not placed (**amended by Amendment 11**: a fresh install is seeded once by the set-up). The per-workspace "New apps" setting is no longer read.
 - **Drag and drop always works** and has its own rules: see `gestures.md`, "Dragging on Home", and the defaults table in
   `places-views-plan.md`, "Home drag".
 
@@ -760,6 +760,24 @@ stored arrangement.
   state change until nothing is left to convert).
 
 Details: `places-views-plan.md`, "The library view mode is retired".
+
+## Amendment 11 (owner, 2026-11-19): a fresh install starts with something on Home
+
+The first five minutes were the weakest part: a fresh install showed an empty Home and an empty Dock, and the apps already
+installed were not placed. The rest of Amendments 1 to 10 stands, except one sentence of Amendment 8: "Apps present at the
+first run or restored are not placed."
+
+- **Fresh installs are seeded once**, by the set-up's first step "How should Home start?": **All my apps** (the default:
+  every visible app A to Z, laid out by the Arrange rule with the Compact setting) or **Start empty** (one empty page).
+  "Skip set-up" starts with all apps. In both cases the Dock starts with up to four apps resolved by role or intent (dialer,
+  SMS, browser, camera), and those are not also placed on Home.
+- **Restored apps are still not placed**, and neither are the apps of an existing install: the seed runs only on a fresh
+  install, only on a Home that holds nothing, and only once (the answer is stored). It is not a rule that runs again, so
+  a removed app stays removed.
+- **Two buttons in Settings > Home** (Add all apps to Home, Arrange Home A to Z, with a Compact switch) do the same
+  placements on demand; both have Undo, and Arrange asks first. "Add new apps to Home" is unchanged.
+
+Details: `places-views-plan.md`, "First run"; `settings.md`, "Home > Fill Home".
 
 ## Superseded documents
 

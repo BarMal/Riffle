@@ -13,6 +13,10 @@ fun HomeLayout.containsHomeAppShortcut(
         page.containsHomeAppShortcut(identity = identity, shortcutId = shortcutId)
     }
 
+/** Whether the app is on a Home page (in a folder too) or in the Dock. */
+fun HomeLayout.containsHomeAppOrDock(identity: AppIdentity): Boolean =
+    containsHomeApp(identity) || dock.containsDockApp(identity)
+
 fun DockModel.containsDockApp(identity: AppIdentity): Boolean = items.any { item -> item.containsApp(identity) }
 
 fun DockModel.dockShortcutIdFor(identity: AppIdentity): LauncherItemId? =

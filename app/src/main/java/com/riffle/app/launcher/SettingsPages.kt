@@ -154,6 +154,12 @@ enum class SettingsPage(
         R.string.settings_page_drag_tuning_summary,
         R.string.settings_page_drag_tuning_keywords,
     ),
+    AFTER_UPDATE(
+        VERSION,
+        R.string.settings_page_after_update,
+        R.string.settings_page_after_update_summary,
+        R.string.settings_page_after_update_keywords,
+    ),
 }
 
 /** The rows of the main page, in order: the places Settings is organised by. */

@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
+import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -482,6 +483,31 @@ sealed interface LauncherShellAction {
     data class SetAddNewApps(
         val enabled: Boolean,
     ) : LauncherShellAction
+
+    /**
+     * Settings > Home > "Add all apps to Home" (also the empty-Home hint's button): every visible app that is not on
+     * Home yet, after the last occupied cell in A to Z order. Acts on the layout Settings is showing.
+     */
+    data object AddAllAppsToHome : LauncherShellAction
+
+    /** Settings > Home > "Arrange Home A to Z" (confirmed first): re-lays Home's apps and folders out A to Z. */
+    data object ArrangeHomeAtoZ : LauncherShellAction
+
+    /** Settings > Home > "Compact: fill each page completely"; off leaves room on each page. */
+    data class SetCompactArrange(
+        val enabled: Boolean,
+    ) : LauncherShellAction
+
+    /**
+     * Undo of [AddAllAppsToHome] or [ArrangeHomeAtoZ]: puts [before] back as the layout Settings is showing, exactly as
+     * it was.
+     */
+    data class UndoHomeBulkEdit(
+        val before: HomeLayout,
+    ) : LauncherShellAction
+
+    /** The empty-Home hint was dismissed (or is no longer needed): it is never shown again. */
+    data object DismissEmptyHomeHint : LauncherShellAction
 
     /** Settings: one feature switch (Stream, Dock live apps, Library) on or off. */
     data class SetFeatureEnabled(

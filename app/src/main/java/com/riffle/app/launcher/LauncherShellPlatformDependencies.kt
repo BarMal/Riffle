@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.app.launcher.rss.FeedArticleCacheRepository
 import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
+import com.riffle.core.domain.launcher.home.DockDefaultsResolver
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -22,6 +23,8 @@ data class LauncherShellPlatformDependencies(
     val feedArticleCacheRepository: FeedArticleCacheRepository = NoopFeedArticleCacheRepository,
     /** The workspace store the dock's workspace menu reads (#1351); null leaves the menu unavailable. */
     val workspaceRepository: CachedWorkspaceRepository? = null,
+    /** The apps the Dock starts with on a fresh install, by role (dialer, SMS, browser, camera); none by default. */
+    val dockDefaultsResolver: DockDefaultsResolver = DockDefaultsResolver { emptyList() },
 ) {
     fun installedWidgetProviders(catalog: WidgetProviderCatalog): List<InstalledWidgetProvider> =
         catalog.sortedProviders(widgetProviderRepository.installedWidgetProviders())

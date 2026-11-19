@@ -22,6 +22,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | Page | Section | Settings |
 | --- | --- | --- |
 | **Home** | Home screen | Simple mode (the locked-down Home: every app A to Z, not arrangeable; it overrides the Stream, live apps and the Library) and Add new apps to Home (a switch, on by default: a new app is placed after the last item, off keeps it in the Library only). There is no "Home shows" choice any more (ADR 0003, Amendment 8) |
+| | Fill Home | Add all apps to Home (a button; its subtitle says what it will do now: "Adds 23 apps that aren't on Home yet", or "Every app is already on Home" and disabled), Arrange Home A to Z (a button, after a confirmation) and Compact: fill each page completely (a switch, on by default). Both buttons act on the layout of the posture tab Settings shows and are off in Simple mode. See "Fill Home" below |
 | | Grid | Columns, rows (a stepper), horizontal margin, vertical margin (per device class) |
 | | Icons and labels | Icon size, show labels, label background (with its strength while it is on), label text size, label width, label sizing, label lines |
 | | Behaviour | Returning to Home (restore, first page, start page) |
@@ -205,6 +206,33 @@ so the links are included and the Backup page and the feed page say to keep the 
 - **Gestures.** The Gestures page keeps the four groups of the old panel (one finger, two, pinch, three), each row a
   menu, plus a Reset.
 - **Backup of calendar feeds.** See Backup above.
+
+## Home > Fill Home
+
+Two buttons and one switch (`SettingsHomeFillSection`; the rules are `HomeArrangement` in `:core:domain`).
+
+- **Add all apps to Home.** Places every visible (not hidden), launchable app that Home does not show yet, after the last
+  occupied cell in the Library's A to Z order, adding pages as needed. "Shows" counts a page, a folder on Home and the
+  Dock; work and private profile apps follow whatever the Library shows. Nothing already placed moves. Afterwards the
+  Settings snackbar says "Added 23 apps" with Undo, which puts the previous layout back exactly.
+- **Arrange Home A to Z.** Re-lays out the apps and folders of Home's pages alphabetically (apps and folders sorted
+  together by label; a folder sorts by its name; the Library's order), page after page. It asks first ("Arrange Home A to
+  Z? Your current arrangement will be replaced." with Arrange and Cancel), then says "Home arranged" with Undo. Widgets
+  never move: they keep their page and cells, icons flow around them, and a page with a widget is never dropped. The Dock
+  is not touched, trailing empty pages are removed (one page stays), and running it twice changes nothing.
+- **Compact: fill each page completely** (`HomeBehaviourSettings.compactArrange`, default on). On, each page is filled
+  before the next starts. Off ("leave room"), each page is filled to `floor(0.75 * cells)` cells (at least 1; the cells of
+  a widget count) before the next starts. It decides what Arrange does and what the first-run seed does.
+- Also stored there: `emptyHomeHintDismissed`, for the empty-Home hint (see `places-views-plan.md`, "First run").
+
+## About > Diagnostics > After-update starts
+
+What the first start after each update looked like, for the last ten updates, with a Copy button: time, old and new
+version code, the intent the activity was started with (action, categories, flags, component), whether it was the task
+root, whether Riffle held the Home role, which component resolved `ACTION_MAIN` + `CATEGORY_HOME`, the time from process
+start to the first frame, and the time of each new intent that carried `CATEGORY_HOME` in the first five minutes. It is
+device-local (`riffle_after_update`, outside the launcher settings, the backup document and Auto Backup). See
+`places-views-plan.md`, "After-update starts".
 
 ## About > Diagnostics > Drag tuning
 
