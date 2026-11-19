@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.border
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
@@ -12,6 +11,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,7 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -35,6 +39,7 @@ import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dock.DockChoice
 import com.riffle.core.domain.launcher.dock.DockChoiceItem
+import com.riffle.core.domain.launcher.dock.DockScrub
 import com.riffle.core.domain.launcher.dock.DockMotionConstants
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import kotlinx.coroutines.flow.collectLatest
@@ -63,6 +68,16 @@ internal class DockChoiceState {
         /** The direction the Dock is pulled in, away from its edge. */
         val pull: DockPullDirection,
         val density: Float,
+        /** The scrub's pages: which entries stand for a page, and which one is the open page's (ringed). */
+        val scrubPages: (Collection<String>) -> DockScrubPages = { keys ->
+            DockScrubPages(keys.filter(DockChoice::isSelectable).toSet(), null)
+        },
+    )
+
+    /** What a scrub may land on: [selectable] entries (each stands for a page) and the [ringed] one now. */
+    class DockScrubPages(
+        val selectable: Set<String>,
+        val ringed: String?,
     )
 
     var choosing: Boolean by mutableStateOf(false)
@@ -83,6 +98,30 @@ internal class DockChoiceState {
     /** Whether holding near an end has scrolled the row since choosing began (it then stops revealing by itself). */
     var edgeScrolled: Boolean by mutableStateOf(false)
         private set
+
+    /**
+     * Whether a slide along the Dock is scrubbing the stack (the Stream shows; the tile under the finger is the current
+     * page). Not choosing: the selection only follows the finger, nothing opens on the lift.
+     */
+    var scrubbing: Boolean by mutableStateOf(false)
+        private set
+
+    private var scrubbedKey: String? = null
+
+    /**
+     * Whether the ring arriving on [key] is the scrub's own landing (taken once): the row then keeps where the finger or
+     * its fling put it, rather than scrolling back to show a tile the finger was just on.
+     */
+    fun consumeScrubbed(key: String): Boolean = (scrubbedKey == key).also { if (it) scrubbedKey = null }
+
+    /** Called with the key of the tile the scrub entered, after its tick: the Stream shows that tile's page. */
+    var onScrubTo: (String) -> Unit = {}
+
+    /** Scrolls the row by inertia from a release with this velocity (px per second), set by the row. */
+    var flingRowBy: ((Float) -> Unit)? = null
+
+    /** Whether the row has tiles hidden toward its start (-1) or its end (+1); set by the row. */
+    var canScrollRowTo: ((Int) -> Boolean)? = null
 
     var environment: Environment? = null
 
@@ -106,6 +145,17 @@ internal class DockChoiceState {
             val viewport = rowViewport
             if (env == null || viewport == null || !isChoosingNotCancelling) return 0
             val alongRun = env.pull.unitY != 0f
+            if (scrubbing) {
+                val canScroll = canScrollRowTo ?: return 0
+                return DockScrub.edgeDirection(
+                    fingerPx = if (alongRun) finger.x else finger.y,
+                    viewportStartPx = if (alongRun) viewport.left else viewport.top,
+                    viewportEndPx = if (alongRun) viewport.right else viewport.bottom,
+                    zonePx = DockScrub.EDGE_ZONE_DP * env.density,
+                    canScrollToStart = canScroll(-1),
+                    canScrollToEnd = canScroll(1),
+                )
+            }
             return DockChoice.edgeDirection(
                 fingerPx = if (alongRun) finger.x else finger.y,
                 viewportStartPx = if (alongRun) viewport.left else viewport.top,
@@ -113,7 +163,7 @@ internal class DockChoiceState {
             )
         }
 
-    private val isChoosingNotCancelling: Boolean get() = choosing && !cancelling
+    private val isChoosingNotCancelling: Boolean get() = (choosing && !cancelling) || scrubbing
 
     /** What the entries' places are now, so the selection is looked at again whenever one moves (the row scrolled). */
     fun entryPlaces(): List<Pair<String, Rect>> =
@@ -134,12 +184,24 @@ internal class DockChoiceState {
         onTick()
     }
 
+    /** A slide along the Dock begins scrubbing with the finger at [position] (the gesture's own coordinates). */
+    fun beginScrub(position: Offset) {
+        val env = environment ?: return
+        edgeScrolled = false
+        cancelling = false
+        scrubbing = true
+        scrubbedKey = null
+        finger = env.toRoot(position)
+        selectedKey = env.scrubPages(env.entryBounds().keys).ringed
+        reselect(env, tickOnSelect = true)
+    }
+
     /** The finger is at [position] (the gesture's own coordinates). */
     fun moved(
         position: Offset,
         tickOnSelect: Boolean = true,
     ) {
-        if (!choosing) return
+        if (!choosing && !scrubbing) return
         val env = environment ?: return
         finger = env.toRoot(position)
         reselect(env, tickOnSelect)
@@ -164,7 +226,7 @@ internal class DockChoiceState {
 
     /** What is under the finger may have changed (an entry moved): look again. */
     fun refresh() {
-        if (!choosing) return
+        if (!choosing && !scrubbing) return
         val env = environment ?: return
         reselect(env, tickOnSelect = true)
     }
@@ -172,6 +234,7 @@ internal class DockChoiceState {
     /** The press ended, committed or not. */
     fun end() {
         choosing = false
+        scrubbing = false
         selectedKey = null
         cancelling = false
     }
@@ -180,6 +243,10 @@ internal class DockChoiceState {
         env: Environment,
         tickOnSelect: Boolean,
     ) {
+        if (scrubbing) {
+            reselectScrub(env, tickOnSelect)
+            return
+        }
         val alongRun = env.pull.unitY != 0f
         val dock = env.dockBounds()
         cancelling = dock != null && DockChoice.isCancelling(awayDp(env, dock), thicknessDp(env, dock, alongRun))
@@ -202,6 +269,37 @@ internal class DockChoiceState {
         val previous = selectedKey
         selectedKey = next
         if (tickOnSelect && DockChoice.shouldTick(previous, next)) onTick()
+    }
+
+    /** The scrub's selection: the tile the finger is on, with hysteresis; other tiles and gaps are passed over. */
+    private fun reselectScrub(
+        env: Environment,
+        tickOnSelect: Boolean,
+    ) {
+        val alongRun = env.pull.unitY != 0f
+        val bounds = env.entryBounds()
+        val next =
+            DockScrub.tileAt(
+                positionPx = if (alongRun) finger.x else finger.y,
+                items =
+                    bounds.map { (key, rect) ->
+                        DockChoiceItem(
+                            key = key,
+                            startPx = if (alongRun) rect.left else rect.top,
+                            endPx = if (alongRun) rect.right else rect.bottom,
+                        )
+                    },
+                selectable = env.scrubPages(bounds.keys).selectable,
+                currentKey = selectedKey,
+                hysteresisPx = DockScrub.HYSTERESIS_DP * env.density,
+            )
+        val previous = selectedKey
+        selectedKey = next
+        if (tickOnSelect && DockChoice.shouldTick(previous, next)) {
+            onTick()
+            scrubbedKey = next
+            next?.let(onScrubTo)
+        }
     }
 
     /** How far the finger is beyond the Dock's inner edge (the one away from the screen's), in dp. */
@@ -239,8 +337,8 @@ internal val LocalDockChoice = staticCompositionLocalOf<DockChoiceState?> { null
 
 /**
  * The marks of a selected tile: it is drawn slightly larger with a ring, and under reduced motion at once instead of
- * growing. The state is read in this composition only to flip a boolean, so a moving selection recomposes just the two
- * tiles it leaves and lands on.
+ * growing. Draw-phase only: the selection is read inside the graphics layer and the draw, never in composition, so a
+ * moving selection (hold to choose, or a slide along the Dock) recomposes no tile.
  */
 @Composable
 internal fun Modifier.dockChoiceMark(
@@ -249,22 +347,26 @@ internal fun Modifier.dockChoiceMark(
     reducedMotion: Boolean,
 ): Modifier {
     val choice = LocalDockChoice.current ?: return this
-    val picked by remember(choice, entryKey) { derivedStateOf { choice.selectedKey == entryKey } }
-    val scale by animateFloatAsState(
-        targetValue = if (picked) DockMotionConstants.CHOOSE_SELECTED_SCALE else 1f,
-        animationSpec = RiffleMotion.snappy(reducedMotion),
-        label = "dock-choice-scale",
-    )
+    val picked = remember(choice, entryKey) { derivedStateOf { choice.selectedKey == entryKey } }
+    val scale = remember(choice, entryKey) { Animatable(1f) }
+    val latestReduced = rememberUpdatedState(reducedMotion)
+    LaunchedEffect(choice, entryKey) {
+        snapshotFlow { picked.value }.collect { isPicked ->
+            val target = if (isPicked) DockMotionConstants.CHOOSE_SELECTED_SCALE else 1f
+            if (latestReduced.value) scale.snapTo(target) else scale.animateTo(target, RiffleMotion.snappy(false))
+        }
+    }
+    val ringWidthPx = with(LocalDensity.current) { CHOICE_RING_DP.dp.toPx() }
+    val ringColor = MaterialTheme.colorScheme.primary
     return graphicsLayer {
-        scaleX = scale
-        scaleY = scale
-    }.then(
-        if (picked) {
-            Modifier.border(CHOICE_RING_DP.dp, MaterialTheme.colorScheme.primary, shape)
-        } else {
-            Modifier
-        },
-    )
+        scaleX = scale.value
+        scaleY = scale.value
+    }.drawWithContent {
+        drawContent()
+        if (picked.value) {
+            drawOutline(shape.createOutline(size, layoutDirection, this), ringColor, style = Stroke(ringWidthPx))
+        }
+    }
 }
 
 /**
@@ -332,8 +434,9 @@ private var SemanticsPropertyReceiver.choiceLabel by DockChoiceLabelKey
  */
 @Composable
 internal fun DockChoiceFrames(choice: DockChoiceState) {
-    LaunchedEffect(choice, choice.choosing) {
-        if (!choice.choosing) return@LaunchedEffect
+    val active = choice.choosing || choice.scrubbing
+    LaunchedEffect(choice, active) {
+        if (!active) return@LaunchedEffect
         launch { snapshotFlow { choice.entryPlaces() }.collect { choice.refresh() } }
         snapshotFlow { choice.edgeDirection }.collectLatest { direction ->
             if (direction == 0) return@collectLatest
@@ -352,13 +455,21 @@ internal fun DockChoiceFrames(choice: DockChoiceState) {
 internal fun DockChoiceRowRegistration(
     choice: DockChoiceState?,
     scrollBy: (Float) -> Float,
+    flingBy: (Float) -> Unit = {},
+    canScrollTo: (Int) -> Boolean = { false },
 ) {
     if (choice == null) return
-    val latest = androidx.compose.runtime.rememberUpdatedState(scrollBy)
+    val latest = rememberUpdatedState(scrollBy)
+    val latestFling = rememberUpdatedState(flingBy)
+    val latestCan = rememberUpdatedState(canScrollTo)
     DisposableEffect(choice) {
         choice.scrollRowBy = { delta -> latest.value(delta) }
+        choice.flingRowBy = { velocity -> latestFling.value(velocity) }
+        choice.canScrollRowTo = { direction -> latestCan.value(direction) }
         onDispose {
             choice.scrollRowBy = null
+            choice.flingRowBy = null
+            choice.canScrollRowTo = null
             choice.rowViewport = null
         }
     }

@@ -218,6 +218,7 @@ private fun DockDynamicSectionTile(
     onShowInStream: () -> Unit,
     interactions: DockInteractions,
 ) {
+    CountRecomposition("dock-tile:${entry.key}")
     val label = entry.label
     val identity = entry.identity
     val isSelected = entry.isSelected

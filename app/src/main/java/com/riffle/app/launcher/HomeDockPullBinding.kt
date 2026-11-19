@@ -69,6 +69,12 @@ internal class StreamPullInputs(
     val onPress: (entryKey: String?) -> Unit = {},
     /** A press that chose an entry while the Stream was out: the Stream stays and switches to that entry's page. */
     val onSwitchPage: (entryKey: String) -> Unit = {},
+    /** Which Dock entries stand for a Stream page and which is the open one's, for a slide along the Dock. */
+    val scrubPages: (Collection<String>) -> DockChoiceState.DockScrubPages = { keys ->
+        DockChoiceState.DockScrubPages(keys.filter(DockChoice::isSelectable).toSet(), null)
+    },
+    /** A slide along the Dock entered the entry [entryKey]: the Stream shows its page, as a tap on it does. */
+    val onScrubTo: (entryKey: String) -> Unit = {},
     /** The card open in the Stream, if any: the press, and its accessible equivalent, close it before the Stream. */
     val openCard: OpenCardPress = OpenCardPress.NONE,
 )
@@ -287,7 +293,7 @@ internal fun rememberHomeDockPullBinding(
         latestStream = latestStream,
         reducedMotion = reducedMotion,
     )
-    BindChoice(choice, haptics, direction, hostState, dockCoordinates)
+    BindChoice(choice, haptics, direction, hostState, dockCoordinates, latestStream)
     val frameState =
         remember(dockPull, reducedMotion) {
             derivedStateOf { streamPullFrame(dockPull.progress, dockPull.opening, reducedMotion) }
@@ -305,6 +311,7 @@ internal fun rememberHomeDockPullBinding(
             hostState = hostState,
             dockCoordinates = dockCoordinates,
             libraryEnabled = libraryEnabled,
+            choice = choice,
         )
     val actions =
         dockPullActions(dockPull, motion, canPull, stream, direction, reducedMotion, libraryEnabled, onAction)
@@ -468,6 +475,7 @@ private fun BindChoice(
     direction: DockPullDirection,
     hostState: HomeDockHostState,
     dockCoordinates: DockCoordinates,
+    latestStream: State<StreamPullInputs>,
 ) {
     val density = LocalDensity.current.density
     val latestHaptics = rememberUpdatedState(haptics)
@@ -479,7 +487,9 @@ private fun BindChoice(
                 dockBounds = { hostState.bounds.value },
                 pull = direction,
                 density = density,
+                scrubPages = { keys -> latestStream.value.scrubPages(keys) },
             )
+        choice.onScrubTo = { key -> latestStream.value.onScrubTo(key) }
         // A light tick (the haptics setting applies: off sounds nothing): choosing began, or another item landed.
         choice.onTick = { latestHaptics.value.perform(LauncherHapticEvent.DETENT) }
     }
@@ -594,6 +604,7 @@ private fun rememberDockPullGestureHost(
     hostState: HomeDockHostState,
     dockCoordinates: DockCoordinates,
     libraryEnabled: Boolean,
+    choice: DockChoiceState,
 ): DockPullGestureHost {
     val latestCanPull = rememberUpdatedState(canPull)
     val latestReducedMotion = rememberUpdatedState(reducedMotion)
@@ -625,6 +636,14 @@ private fun rememberDockPullGestureHost(
             override val press: DockPressState = press
 
             override fun settleMotion() = motion.finishNow()
+
+            override val scrub: DockChoiceState = choice
+
+            override fun canScrubFrom(position: Offset): Boolean {
+                if (!latestStream.value.shown || !canPull || motion.running) return false
+                val row = choice.rowViewport ?: return false
+                return row.contains(dockCoordinates.coordinates?.localToRoot(position) ?: position)
+            }
 
             override val canPress: Boolean
                 get() = latestStream.value.available && this.canPull
