@@ -2607,13 +2607,24 @@ screenshots are in `app/src/test/screenshots` (`MediaCentreScreenshotTest`, `Med
 The owner's decisions: the Dock itself is the handle for moving between card stacks (option "HA"); a sideways swipe on a
 card only dismisses; the Library pull defaults to off. ADR 0003, Amendment 6.
 
-### Slide along the Dock
+### Hold, then slide along the Dock
 
-While the Stream shows, a drag that starts on the Dock's contextual row and leads along the Dock's run, past touch slop,
-scrubs (`DockScrub.claims` in `:core:domain`, decided on the Initial pass of the Dock's one pointer loop, `dockPullInput`, so
-the row's own scroll does not take it first). It uses the hold-to-choose selection (`DockChoiceState`) in a scrubbing mode
-rather than a second detector.
+The owner tried the first version (a plain drag along the contextual row scrubbed) and found a conflict: "the dock is
+scrollable, but also the dock is the scroll for the cards". The decision: **hold, then slide to scrub**. A plain drag along
+the contextual row scrolls it, as before the scrub existed (the drag scrolls, a fling scrolls by inertia, no page changes,
+no ticks). A press held for the platform's long-press timeout (`DockScrub.armed`) arms the scrub: one light haptic and the
+choice mark on the tile under the finger, so it is clear scrubbing is armed. Sliding along the run, past touch slop
+(`DockScrub.claims` in `:core:domain`), scrubs. It is decided in the Dock's one pointer loop (`dockPullInput`, ADR 0002):
+nothing is claimed before the timeout, so the row's scroll and a pull or press are untouched; at the timeout a finger still
+within slop on the row arms the scrub (`DockChoiceState.armScrub`), and the slide's events are consumed on the Initial pass
+so the row's scroll does not take them. It uses the hold-to-choose selection (`DockChoiceState`) in a scrubbing mode rather
+than a second detector.
 
+- **Menu unless it moves.** The same press is the tile's long-press menu: hold without moving and the menu opens (and the
+  mark ends at the lift); hold, then move past slop along the run and the menu closes and the scrub starts. This is the one
+  rule the Home drag shares (`HoldMenuRule.leavesMenu`); the Dock closes open menus through `DockChoiceState.dismissMenus`,
+  which every Riffle context menu observes. Home mode keeps hold to choose, which starts from a press that is claimed before
+  the timeout; the two do not meet.
 - **Which tile.** `DockScrub.tileAt`: the selectable tile under the finger becomes current as the finger enters it. The
   current tile keeps the finger until it is more than 6 dp past its extent, so a finger resting on a boundary does not
   flicker. A gap between tiles and a pinned app with no page (not in the Stream's pages)
@@ -2622,13 +2633,15 @@ rather than a second detector.
   focus request; not the tap's "second tap on the ringed app opens it"). The Stream's pager animates one page switch at a
   time and a new request restarts it, so a quick scrub across several tiles coalesces to the latest target. Under reduced
   motion the switch is the same cross-fade a tile tap makes.
-- **Tick.** One `DETENT` per tile entered, through the tick wrapper ("Light ticks" applies). Nothing at the release.
+- **Tick.** The hold's own `DETENT` (on the tile under the finger), then one per tile entered, through the tick wrapper
+  ("Light ticks" applies). Nothing at the release.
 - **The row holds more tiles than fit.** The row does not follow the finger while scrubbing. Within 24 dp of its leading or
   trailing end, while tiles are hidden toward that end, it scrolls toward it at the hold-to-choose pace (300 dp/s,
-  `DockChoice.edgeScrollDp`), a frame at a time, and the tiles that pass under the finger keep becoming current. A lift with
-  velocity (more than 100 dp/s) flings the row by the platform's fling without changing the page past the tile last entered;
-  the ring arriving on that tile does not scroll the row back (`DockChoiceState.consumeScrubbed`).
-- **What is unchanged.** A tap on a tile jumps to its page; a long-press opens its menu; a drag across the run is the press
+  `DockChoice.edgeScrollDp`), a frame at a time, and the tiles that pass under the finger keep becoming current (only once the
+  finger slides, not while it merely holds). The ring arriving on the tile the scrub entered does not scroll the row back
+  (`DockChoiceState.consumeScrubbed`). The row has no fling of the scrub's own any more: a fling is a plain drag, which the
+  row's scroll handles.
+- **What is unchanged.** A tap on a tile jumps to its page; a hold opens its menu until it moves; a drag across the run is the press
   or the pull (and hold to choose, from Home or sliding after a press); the accessibility actions "Previous page" and "Next
   page", the focusable tiles and their click actions. No two-finger drag. Nothing is gesture-only.
 - **Draw-phase only.** The choice mark (the ring and the 14% growth) is drawn in the draw phase from a derived state, and while
@@ -2653,6 +2666,6 @@ the Library is on).
 
 ### What a device must confirm
 
-The feel of the scrub: the hysteresis width, the edge pace and whether 24 dp is easy to reach with a thumb, the fling's
-inertia against the scrub, how the page transition keeps up with a fast slide, and the double ring that shows for the frame or
+The feel of the scrub: whether the long-press timeout is the right hold, the hysteresis width, the edge pace and whether
+24 dp is easy to reach with a thumb, how the page transition keeps up with a fast slide, and the double ring that shows for the frame or
 two before the pager passes halfway are verified by Robolectric tests with injected touches only.

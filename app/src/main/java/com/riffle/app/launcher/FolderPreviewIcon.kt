@@ -12,10 +12,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.FolderItem
 
@@ -99,6 +102,55 @@ private fun FilledFolderPreviewIcon(
     }
 }
 
+/**
+ * The folder a drag lifted, where it was: the same tile and the same four icons as [FolderPreviewIcon], desaturated and
+ * dimmed like the apps' own ghosts (each icon is the baked ghost of that app, so nothing is tinted or blurred at
+ * runtime and no offscreen layer opens).
+ */
+@Composable
+internal fun FolderGhostIcon(
+    folder: FolderItem,
+    appIconLoader: AppIconLoader,
+    iconSizeDp: Int,
+) {
+    if (folder.items.isEmpty()) {
+        Box(modifier = Modifier.alpha(FOLDER_GHOST_ALPHA)) { EmptyFolderPreviewIcon(iconSizeDp) }
+        return
+    }
+    val layout = folderPreviewLayout(iconSizeDp)
+    val tile = MaterialTheme.colorScheme.secondaryContainer.desaturatedAndDimmed()
+    Column(
+        modifier =
+            Modifier
+                .testTag(HOME_DRAG_FOLDER_GHOST_TEST_TAG)
+                .size(iconSizeDp.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(tile)
+                .padding(layout.paddingDp.dp),
+        verticalArrangement = Arrangement.spacedBy(layout.spacingDp.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        folder.items.take(FOLDER_PREVIEW_ICON_COUNT).chunked(2).forEach { rowItems ->
+            Row(horizontalArrangement = Arrangement.spacedBy(layout.spacingDp.dp)) {
+                rowItems.forEach { shortcut ->
+                    HomeGhostIcon(
+                        identity = shortcut.appIdentity,
+                        iconLoader = appIconLoader,
+                        outline = false,
+                        modifier = Modifier.size(layout.childIconSizeDp.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The colour's grey (by luma) at the ghosts' dimness. */
+internal fun Color.desaturatedAndDimmed(): Color {
+    val luma = FOLDER_LUMA_R * red + FOLDER_LUMA_G * green + FOLDER_LUMA_B * blue
+    return Color(luma, luma, luma, alpha * FOLDER_GHOST_ALPHA)
+}
+
 internal data class FolderPreviewLayout(
     val paddingDp: Int,
     val spacingDp: Int,
@@ -115,7 +167,14 @@ internal fun folderPreviewLayout(iconSizeDp: Int): FolderPreviewLayout {
     )
 }
 
+/** The desaturated ghost of a folder a drag lifted, where it was. */
+internal const val HOME_DRAG_FOLDER_GHOST_TEST_TAG = "home-drag-folder-ghost"
+
 private const val FOLDER_PREVIEW_ICON_COUNT = 4
+private const val FOLDER_GHOST_ALPHA = 0.4f
+private const val FOLDER_LUMA_R = 0.299f
+private const val FOLDER_LUMA_G = 0.587f
+private const val FOLDER_LUMA_B = 0.114f
 private const val EMPTY_FOLDER_STROKE_WIDTH_DP = 2
 private const val EMPTY_FOLDER_DASH_DP = 8
 private const val EMPTY_FOLDER_GAP_DP = 6

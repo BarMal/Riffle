@@ -22,6 +22,7 @@ internal fun applyShortcutOrFolderDropEdit(
                     sourceItemId = action.itemId,
                     targetCell = action.cell,
                     installedApps = installedApps,
+                    fallbackLabel = action.folderLabel,
                 )
                 ?.toShortcutOrFolderDropEditResult()
                 ?: shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
@@ -37,18 +38,53 @@ internal fun applyShortcutOrFolderDropEdit(
                 ).toShortcutOrFolderDropEditResult()
 
         is LauncherShellAction.DropHomeItem ->
-            shortcutEngine
-                .dropWithPush(
-                    layout = layout,
-                    itemId = action.itemId,
-                    sourcePageId = action.sourcePageId,
-                    targetPageId = action.targetPageId,
-                    cell = action.cell,
-                    pushed = action.pushed,
-                ).toShortcutOrFolderDropEditResult()
+            if (action.dropOnItemId != null) {
+                dropOnAnotherPage(action, layout, shortcutEngine, folderEngine, installedApps)
+            } else {
+                shortcutEngine
+                    .dropWithPush(
+                        layout = layout,
+                        itemId = action.itemId,
+                        sourcePageId = action.sourcePageId,
+                        targetPageId = action.targetPageId,
+                        cell = action.cell,
+                        pushed = action.pushed,
+                    ).toShortcutOrFolderDropEditResult()
+            }
 
         else -> shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
     }
+
+/**
+ * A drop on top of an item of another page: the dragged item first takes the first free cell of that page, then the
+ * ordinary same-page drop on top runs there (a folder of the two, or the item added to the folder), with that page
+ * selected. A full page refuses, so the item stays where it was.
+ */
+private fun dropOnAnotherPage(
+    action: LauncherShellAction.DropHomeItem,
+    layout: HomeLayout,
+    shortcutEngine: HomeShortcutEngine,
+    folderEngine: FolderEngine,
+    installedApps: List<InstalledApp>,
+): ShortcutOrFolderDropEditResult {
+    val target =
+        layout.pages.firstOrNull { it.id == action.targetPageId }
+            ?.items?.firstOrNull { it.id == action.dropOnItemId }?.placement?.cell
+            ?: return ShortcutOrFolderDropEditResult.Rejected
+    val moved =
+        shortcutEngine.moveItemToFirstFreeCell(layout, action.itemId, action.sourcePageId, action.targetPageId)
+    return when (moved) {
+        is HomeShortcutResult.Rejected -> ShortcutOrFolderDropEditResult.Rejected
+        is HomeShortcutResult.Updated ->
+            applyShortcutOrFolderDropEdit(
+                action = LauncherShellAction.MoveHomeShortcutToCell(action.itemId, target, action.folderLabel),
+                layout = moved.layout.copy(selectedPageId = action.targetPageId),
+                shortcutEngine = shortcutEngine,
+                folderEngine = folderEngine,
+                installedApps = installedApps,
+            )
+    }
+}
 
 internal sealed interface ShortcutOrFolderDropEditResult {
     data class Updated(val layout: HomeLayout) : ShortcutOrFolderDropEditResult

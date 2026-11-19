@@ -20,8 +20,10 @@ import com.riffle.app.launcher.LauncherHapticEvent
 import com.riffle.app.launcher.LauncherHaptics
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LocalRecompositionProbe
+import com.riffle.app.launcher.RIFFLE_CONTEXT_MENU_TEST_TAG
 import com.riffle.app.launcher.RecompositionProbe
 import com.riffle.app.launcher.dockDynamicSectionTileTestTag
+import com.riffle.app.launcher.dockItemTestTag
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.core.domain.launcher.home.DockPosition
 import org.junit.After
@@ -36,11 +38,13 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.concurrent.Executors
 
 /**
- * Sliding along the Dock to change stack (ADR 0003, The Dock is the handle) through the real [HomeDestination] with the
- * real Stream wiring, on a bottom and on a side Dock: with the Stream out, a drag that starts on the contextual row and
- * leads along its run scrubs. The tile under the finger becomes the page in front, with one tick per tile entered; the
- * row scrolls at an end at a steady pace and by inertia after a fling; nothing happens on the lift. The decisions
- * (the claim, hysteresis, the edge) are tested in `core:domain` (`DockScrubTest`).
+ * Hold, then slide along the Dock to change stack (ADR 0003, The Dock is the handle) through the real
+ * [HomeDestination] with the real Stream wiring, on a bottom and on a side Dock: with the Stream out, a press on the
+ * contextual row held for the long-press timeout arms the scrub (one tick, the choice mark on the tile under the
+ * finger) and sliding along the run from there scrubs. The tile under the finger becomes the page in front, with one
+ * tick per tile entered; the row scrolls at an end at a steady pace; nothing happens on the lift. A plain drag along
+ * the row scrolls it (by inertia after a fling) and changes no page; a hold that does not move is the tile's menu. The
+ * decisions (the hold, the claim, hysteresis, the edge) are tested in `core:domain` (`DockScrubTest`).
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -56,6 +60,7 @@ class DockScrubTest {
     private val ticks = mutableListOf<LauncherHapticEvent>()
     private var vertical = false
     private val probe = RecompositionProbe()
+    private var pinnedFirstId = com.riffle.core.domain.launcher.home.LauncherItemId("none")
 
     @After
     fun stop() {
@@ -73,6 +78,7 @@ class DockScrubTest {
                 dockPosition = edge.takeIf { it != DockPosition.BOTTOM },
                 sizing = ScreenshotFixtures.HomeSizing(pins = if (pinned) null else emptyList()),
             )
+        state.homeLayout.dock.items.firstOrNull()?.let { pinnedFirstId = it.id }
         composeRule.setContent {
             ScreenshotBackdrop {
                 CompositionLocalProvider(LocalRecompositionProbe provides probe) {
@@ -171,6 +177,16 @@ class DockScrubTest {
         down(alongPx)
     }
 
+    /** Presses at [alongPx] and holds for the long-press timeout: the scrub is armed (a tick, the mark). */
+    private fun hold(alongPx: Float) {
+        press(alongPx)
+        composeRule.mainClock.advanceTimeBy(HOLD_MILLIS)
+        composeRule.waitForIdle()
+    }
+
+    private fun menuShown() =
+        composeRule.onAllNodesWithTag(RIFFLE_CONTEXT_MENU_TEST_TAG).fetchSemanticsNodes().isNotEmpty()
+
     private fun lift() {
         composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).performTouchInput { up() }
         composeRule.mainClock.advanceTimeByFrame()
@@ -191,14 +207,16 @@ class DockScrubTest {
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(first)).performClick()
         landed(first.lowercase())
         ticks.clear()
-        press(along(first)!!)
+        hold(along(first)!!)
+        assertEquals("the hold ticked once", 1, detents())
         slideTo(along(second)!!)
         slideTo(along(third)!!)
-        assertEquals("one tick per tile entered", 2, detents())
+        assertEquals("the hold's tick and one per tile entered", 3, detents())
+        assertTrue("the hold's menu stayed open while scrubbing", !menuShown())
         lift()
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         landed(third.lowercase())
-        assertEquals("the lift ticked", 2, detents())
+        assertEquals("the lift ticked", 3, detents())
         assertTrue("the lift did something: $sent", sent.isEmpty())
     }
 
@@ -219,13 +237,13 @@ class DockScrubTest {
         landed(first.lowercase())
         ticks.clear()
         val boundary = (along(first)!! + along(second)!!) / 2f
-        press(along(first)!!)
+        hold(along(first)!!)
         slideTo(boundary - 2f)
         repeat(4) {
             slideTo(boundary + 1f)
             slideTo(boundary - 3f)
         }
-        assertEquals("a finger on the boundary ticked", 0, detents())
+        assertEquals("a finger on the boundary ticked past the hold's own tick", 1, detents())
         lift()
         composeRule.waitForIdle()
         assertEquals(first.lowercase(), host.dock.currentKey)
@@ -239,7 +257,7 @@ class DockScrubTest {
         assertTrue("every tile was in view already: $before", hidden.isNotEmpty())
         val dock = composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).fetchSemanticsNode()
         val extent = if (vertical) dock.size.height else dock.size.width
-        press(along(before.last())!!)
+        hold(along(before.last())!!)
         slideTo(extent - END_INSET_PX)
         repeat(EDGE_FRAMES) { composeRule.mainClock.advanceTimeByFrame() }
         composeRule.waitForIdle()
@@ -251,16 +269,22 @@ class DockScrubTest {
     }
 
     @Test
-    fun aFlingScrollsTheRowWithoutChangingThePageBeyondTheLastTileEntered() {
-        show()
+    fun aPlainDragAlongTheRowScrollsItAndChangesNoPageAndTicksNothing() = plainDragScrolls(DockPosition.BOTTOM)
+
+    @Test
+    fun aPlainDragAlongASideDockScrollsItAndChangesNoPageAndTicksNothing() = plainDragScrolls(DockPosition.LEFT)
+
+    private fun plainDragScrolls(edge: DockPosition) {
+        show(edge)
         val tiles = visibleTiles()
         val (first, second) = tiles
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(second)).performClick()
         landed(second.lowercase())
+        ticks.clear()
         val probe = tiles.last()
         val before = along(probe)
-        // A quick flick from the second tile back to the first (toward where tiles are hidden), lifting at speed: the
-        // page is the first's, and the row carries on by inertia after the lift.
+        // A quick flick from the second tile back to the first (toward where tiles are hidden), lifting at speed, with
+        // no hold: the row scrolls (and carries on by inertia), the page stays the second's, nothing ticks.
         val x0 = along(second)!!
         val x1 = along(first)!!
         composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).performTouchInput {
@@ -271,9 +295,78 @@ class DockScrubTest {
         }
         composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
         composeRule.waitForIdle()
-        assertEquals(first.lowercase(), host.dock.currentKey)
-        assertTrue("the row did not move after the lift: $before -> ${along(probe)}", along(probe) != before)
+        assertEquals("a plain drag changed the page", second.lowercase(), host.dock.currentKey)
+        assertEquals("a plain drag ticked", 0, detents())
+        assertTrue("the row did not scroll: $before -> ${along(probe)}", along(probe) != before)
     }
+
+    @Test
+    fun aHoldThatDoesNotMoveOpensTheTilesMenuAndChangesNoPage() = holdOpensTheMenu(DockPosition.BOTTOM)
+
+    @Test
+    fun aHoldThatDoesNotMoveOnASideDockOpensTheTilesMenu() = holdOpensTheMenu(DockPosition.LEFT)
+
+    private fun holdOpensTheMenu(edge: DockPosition) {
+        show(edge)
+        val first = visibleTiles().first()
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(first)).performClick()
+        landed(first.lowercase())
+        ticks.clear()
+        hold(along(first)!!)
+        assertTrue("the hold did not open the menu", menuShown())
+        lift()
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+        composeRule.waitForIdle()
+        assertTrue("the menu closed on the lift", menuShown())
+        assertEquals(first.lowercase(), host.dock.currentKey)
+    }
+
+    @Test
+    fun movingPastSlopAfterTheHoldClosesTheMenuAndScrubs() {
+        show()
+        val (first, second) = visibleTiles()
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(first)).performClick()
+        landed(first.lowercase())
+        hold(along(first)!!)
+        assertTrue("the hold did not open the menu", menuShown())
+        slideTo(along(second)!!)
+        composeRule.waitForIdle()
+        assertTrue("the menu stayed open under the scrub", !menuShown())
+        lift()
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+        landed(second.lowercase())
+    }
+
+    @Test
+    fun aHoldThenAMoveOnAPinnedAppInTheContextualModeScrubsAndNeverReorders() {
+        show()
+        val pinnedItem = shellPinnedTag()
+        val node = composeRule.onNodeWithTag(pinnedItem).fetchSemanticsNode()
+        val start =
+            if (vertical) {
+                node.positionInRoot.y + node.size.height / 2f
+            } else {
+                node.positionInRoot.x + node.size.width / 2f
+            }
+        val dock = composeRule.onNodeWithTag(HOME_DOCK_PULL_TEST_TAG).fetchSemanticsNode()
+        val tile = visibleTiles().first()
+        val from = start - (if (vertical) dock.positionInRoot.y else dock.positionInRoot.x)
+        ticks.clear()
+        hold(from)
+        slideTo(along(tile)!!)
+        lift()
+        composeRule.mainClock.advanceTimeBy(SETTLE_MILLIS)
+        composeRule.waitForIdle()
+        assertTrue(
+            "the pinned item was reordered in the contextual mode: $sent",
+            sent.none {
+                it is LauncherShellAction.MoveDockShortcutToIndex || it is LauncherShellAction.MoveDockItemToHome
+            },
+        )
+        assertTrue("the hold then slide did not scrub", detents() >= 2)
+    }
+
+    private fun shellPinnedTag(): String = dockItemTestTag(pinnedFirstId)
 
     @Test
     fun scrubbingAcrossThreeTilesRecomposesNoTile() {
@@ -283,7 +376,7 @@ class DockScrubTest {
         val fourth = tiles[3]
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(first)).performClick()
         landed(first.lowercase())
-        press(along(first)!!)
+        hold(along(first)!!)
         slideTo(along(second)!!)
         val before = probe.total("dock-tile:")
         slideTo(along(third)!!)
@@ -325,5 +418,6 @@ class DockScrubTest {
         const val EDGE_FRAMES = 60
         const val END_INSET_PX = 4f
         const val SETTLE_MILLIS = 1_000L
+        const val HOLD_MILLIS = 600L
     }
 }

@@ -65,7 +65,7 @@ The Dock has two gestures along the axis across its run, in opposite directions 
 | Gesture | Direction | Result |
 | --- | --- | --- |
 | **Pull** | Away from the edge (a bottom dock pulls up, a top dock down, a left dock right, a right dock left) | The Library, tracking the finger, from anywhere on the Dock and from Home or the Stream. **Only while the Library switch is on: it defaults off** (Settings > Features), and with it off the pull claims nothing, so the drag falls through to what is underneath |
-| **Slide** | Along the Dock's run (sideways on a top or bottom Dock, up and down on a side Dock), starting on the contextual row, with the Stream showing | Changes the stack: the tile under the finger becomes the open page as the finger enters it. See "Slide along the Dock" below |
+| **Hold, then slide** | Press and hold the contextual row (the long-press timeout), then slide along the Dock's run (sideways on a top or bottom Dock, up and down on a side Dock), with the Stream showing | Changes the stack: the tile under the finger becomes the open page as the finger enters it. A plain drag along the row only scrolls it. See "Hold, then slide along the Dock" below |
 | **Press** | Toward the edge (a bottom dock is pressed down), then release | Toggles Home and the contextual mode (the Stream): opens the Stream on the last page, or on the page of the live app / now playing icon the press started on; from the Stream returns Home |
 
 - **Claim.** One finger on the dock body, past touch slop, before the long-press timeout. The drag is a pull when it leads
@@ -127,19 +127,41 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   Library" and Ctrl + Shift + the arrow. Switching page: the tiles are focusable 48 dp targets with a spoken name and a
   click action ("Show Today"), and the pager's custom actions "Previous page" and "Next page". Page options: the tile's
   long-press menu (its own long-click action for assistive technology).
-- **Slide along the Dock (design canvas round 12).** With the Stream showing, a drag that starts on the Dock's contextual
-  row and leads along its run, past touch slop (`DockScrub.claims`), scrubs: the tile under the finger becomes the open page
-  as the finger enters it (with a few dp of hysteresis at the tile boundaries, `DockScrub.tileAt`), the ring moves to it, and
-  the Stream lands on that page with the landing a tap on the tile makes (the latest target wins when several tiles are
-  crossed quickly). One `DETENT` tick per tile entered, through the same tick wrapper as hold to choose ("Light ticks"
-  applies). Pair tiles and pinned apps with no page are passed over (no tick). Releasing leaves the current page showing:
-  nothing opens, the Dock does not collapse. The row holds more tiles than fit: within 24 dp of an end, while tiles are hidden
-  that way, it scrolls toward that end at the hold-to-choose pace (300 dp/s) and the tiles passing under the finger keep
-  becoming current; a fling (a lift with velocity) scrolls the row by inertia without changing the page past the tile last
-  entered. A tap still jumps to a page, a long-press still opens a tile's menu, and a drag across the run is still the press or
-  the pull. It reuses `DockChoiceState` (one selection that follows the finger) and the Dock's one pointer loop (`dockPullInput`).
-  Draw-phase only: scrubbing recomposes no tile (the choice mark is drawn in the draw phase). Equivalents are unchanged (the
-  tiles, "Previous page" and "Next page"); there is nothing gesture-only.
+- **Hold, then slide along the Dock (design canvas round 12; the hold is the owner's decision after trying the plain
+  slide: "the dock is scrollable, but also the dock is the scroll for the cards").** With the Stream showing, a plain drag
+  along the contextual row scrolls the row (the drag, then a fling by inertia), changes no page and ticks nothing. A press on
+  the row held for the platform's long-press timeout, within touch slop (`DockScrub.armed`), arms the scrub: one `DETENT`
+  light haptic and the choice mark on the tile under the finger. Sliding along the run past touch slop (`DockScrub.claims`)
+  scrubs: the tile under the finger becomes the open page as the finger enters it (with a few dp of hysteresis at the tile
+  boundaries, `DockScrub.tileAt`), the ring moves to it, and the Stream lands on that page with the landing a tap on the
+  tile makes (the latest target wins when several tiles are crossed quickly). One `DETENT` tick per tile entered, through the
+  same tick wrapper as hold to choose ("Light ticks" applies). Pair tiles and pinned apps with no page are passed over (no
+  tick). Releasing leaves the current page showing: nothing opens, the Dock does not collapse. The row holds more tiles than
+  fit: within 24 dp of an end, while tiles are hidden that way, a sliding finger scrolls it toward that end at the
+  hold-to-choose pace (300 dp/s) and the tiles passing under the finger keep becoming current.
+  **Menu unless it moves**: the hold is also the tile's long-press menu. Hold without moving: the menu opens and the mark
+  goes at the lift. Hold then move past slop: the menu closes and the scrub starts (the rule is `HoldMenuRule`, shared with
+  the Home drag). A tap still jumps to a page, and a drag across the run is still the press or the pull. It reuses
+  `DockChoiceState` (one selection that follows the finger) and the Dock's one pointer loop (`dockPullInput`). Draw-phase
+  only: scrubbing recomposes no tile (the choice mark is drawn in the draw phase). Equivalents are unchanged (the tiles,
+  "Previous page" and "Next page"); there is nothing gesture-only.
+- **Pinned items: pick up and reorder, no edit mode (Home mode).** A long-press then a move on a pinned app or folder in
+  the Dock lifts it and reorders the run, with the same scale and shadow lift the edit mode had; the run scrolls at its ends
+  while the finger is held there. Hold without moving: the item's menu opens (and stays), as today. Hold, then move past
+  touch slop: the menu closes and the item is dragged (`HoldMenuRule`, the rule the Home drag and the scrub share; the
+  Dock closes menus through `DockChoiceState.dismissMenus`). Dragged away from the Dock's edge by more than its own size
+  and dropped on a Home page it is **moved** (not copied) to the free cell under the finger, else to the page's first free
+  cell; dropped where no Home page lies under the finger it returns. A Home item dropped on the Dock is **moved** into it
+  at the slot it hovers, between the pinned items whose centres the finger has passed (`dockInsertionIndexAmong`), under
+  the existing capacity rule (a full Dock refuses and the item stays). The drag sits on the icon, inside its click handling
+  (`LocalDockSlotDrag`): a tap detector with a long-click consumes the press after the hold, which would end a drag held
+  above it.
+  *Against hold to choose.* They do not meet: hold to choose is a press **claimed before the long-press timeout** (a drag
+  toward the Dock's edge past slop), then held or slid; a long-press is **after** it, and the Dock's pointer loop claims
+  nothing at the timeout in Home mode. So on a pinned icon a press that is drawn toward the edge is hold to choose (the
+  Stream is the target), and a press that is held still for the long-press timeout and then moved is the reorder; a quick
+  slide along the run still scrolls the pinned run. Nothing had to give. In the contextual mode there is no reordering:
+  the same hold then move is the scrub.
 - **Expanded postures.** The P6 split and its divider are gone (dock modes U2): the press opens the Stream in a column attached
   to the Dock, as folded, with Home beside and under it.
 - **Library pull (P7).** Unchanged: the sheet rises from the Dock's edge as the finger moves, 1:1, while what is under it
@@ -431,6 +453,15 @@ no longer be available for the hand-off.
 
 ## Known limitations / remaining work
 
+- **Home drag, not yet done:** the source ghost and the push ring for a Dock item dragged out onto Home (the Dock item is
+  placed at the cell under the finger on release); the Dock reorder shows the lifted scale and shadow, not Home's source
+  ghost.
+- **Legacy `HOME_SCREEN_LIBRARY` layouts keep auto-filling.** The One Home migration rewrites the stored Home *mode*
+  (`HomeMode`), not a layout's view mode. A layout whose view mode is `HOME_SCREEN_LIBRARY` (a workspace migrated from the old
+  Library mode brings it back through `WorkspaceHome.homeModeFor`) is still re-filled with every missing app and compacted
+  (`withHomeScreenLibraryApps`), so an item removed from Home can reappear there. Retiring the view mode means changing the
+  workspace ids that derive from it and about twenty legacy tests; it is a separate slice.
+
 - **Hand-off is vertical only.** Leftover horizontal travel (e.g. past the last stage in the
   `HorizontalPager`, or a horizontal side-rail stack) is not handed to home gestures. Enabling it
   would turn a pager overscroll into a page/stage action; that needs a product decision first.
@@ -472,6 +503,22 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
   name ready to type; a folder's dead zone is its whole icon (the app is added). Empty space: the item is placed there.
 - **Edges.** Held within 24 dp of the trailing screen edge for the edge hold (500 ms) turns to the next page, and keeps
   turning every 700 ms while held; the leading edge goes back (top and bottom when the pages scroll up and down; mirrored in
-  right-to-left). Every page stays composed during a drag so the gesture survives. Dragging past the last page does not
-  create a page yet.
+  right-to-left). Every page stays composed during a drag so the gesture survives. **A new page past the last**: held at the
+  trailing edge on the last page (which has items), the drag offers an empty page after it (`HomeDragPages`); it is created
+  for the drag, kept when the item is dropped on it and discarded (`DiscardEmptyHomePage`) when the drag is cancelled or
+  ends elsewhere. The page dots show the page the drag is over.
+- **To and from the Dock.** An app or folder dragged below the grid onto the Dock is pinned at the slot it hovers; a pinned
+  item dragged out is placed on the Home page and cell under the finger (see "Pinned items" above). Both are moves.
+- **Across pages.** After a page turn the dead zone works on the new page as on the first: a drop on top of one of its
+  items moves the dragged item to that page's first free cell and makes the folder there (or adds it to the folder); a
+  full page refuses and the item stays. The suggested folder name is a string resource.
+- **Ghosts.** An app leaves a baked desaturated, dimmed icon and shows the baked outline of the same icon at its landing; a
+  folder leaves its desaturated, dimmed tile and four icons (the apps' baked ghosts); a widget leaves the outline of its span
+  with the card corners at the source and at the landing. Nothing is tinted or blurred at runtime.
+- **Drop and cancel.** On a drop the lifted item springs from where the finger let go to its cell on the existing spring
+  (`RiffleMotion.snappy`), and pushed items move to and from their pushed cells on the same spring; a cancelled drag returns
+  to the source the same way. Reduced motion jumps. A draw-phase translation (`homeItemSettle`), further than four cells
+  (another page) the item just lands.
+- **Frame stability.** Composition never reads the finger's place: the lifted icon and the edge hold read it in the layout
+  phase, and a cell recomposes only when its own item, landing marker or folder state changes.
 - **Cancel.** A drop with no valid landing (a blocker that cannot move) does nothing: the item stays where it was.

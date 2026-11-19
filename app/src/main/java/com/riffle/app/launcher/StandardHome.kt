@@ -35,13 +35,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,6 +82,7 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HandleAxis
 import com.riffle.core.domain.launcher.home.HandleStrip
+import com.riffle.core.domain.launcher.home.HomeDragPages
 import com.riffle.core.domain.launcher.home.HomeDragPlan
 import com.riffle.core.domain.launcher.home.HomeDragPush
 import com.riffle.core.domain.launcher.home.HomeDragTuning
@@ -92,6 +96,7 @@ import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.handleAxis
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -149,6 +154,32 @@ internal fun StandardHome(
         openedFolderId.value = created
     }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
+    // What composition sees of the drag: everything but where the finger is. The finger moves every frame; the lifted
+    // icon and the edge hold read it in the layout phase and from the latest session, so composition (and every cell
+    // of every page) only changes when the drag does: a new landing cell, a new push, a page turn.
+    // A surface above may hand in the motion (a test reads the settle through it); otherwise this one's own.
+    val itemMotion = LocalHomeItemMotion.current ?: remember { HomeItemMotion() }
+    val composedDragSession =
+        remember {
+            derivedStateOf(structuralEqualityPolicy()) { homeDragSession.value?.withoutPointer() }
+        }
+    // The page a drag offers past the last one: asked for (the pages before it noted), then found in the layout, kept
+    // when the drag ends on it and discarded otherwise.
+    val pagesBeforeCandidate = remember { mutableStateOf<Set<LauncherPageId>?>(null) }
+    val candidatePageId = remember { mutableStateOf<LauncherPageId?>(null) }
+    val discardCandidate = remember { mutableStateOf<LauncherPageId?>(null) }
+    LaunchedEffect(discardCandidate.value) {
+        val candidate = discardCandidate.value ?: return@LaunchedEffect
+        discardCandidate.value = null
+        onAction(LauncherShellAction.DiscardEmptyHomePage(candidate))
+    }
+    LaunchedEffect(layout.pages) {
+        val before = pagesBeforeCandidate.value ?: return@LaunchedEffect
+        layout.pages.firstOrNull { it.id !in before }?.let { added ->
+            candidatePageId.value = added.id
+            pagesBeforeCandidate.value = null
+        }
+    }
     // Read by the dock host as well as here, so they live in its state rather than this frame's.
     val widgetPickerDragInProgress = dockHostState.isWidgetDragInProgress
     val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
@@ -254,7 +285,15 @@ internal fun StandardHome(
             activeWidgetPickerEdgeHoverSide.value = null
         }
     }
-    val actions =
+    // A Dock item dragged out onto Home lands on the page and cell under the finger.
+    val latestHomeDrop = rememberUpdatedState(Pair(visibleLayout.selectedPage, workspaceGridBounds.value))
+    DisposableEffect(dockHostState) {
+        dockHostState.homeDropAt = { point ->
+            homeDropTargetAt(latestHomeDrop.value.first, latestHomeDrop.value.second, point)
+        }
+        onDispose { dockHostState.homeDropAt = null }
+    }
+    val freshActions =
         HomeWorkspaceActions(
             onFolderOpen = { folder ->
                 renameOpenedFolder.value = false
@@ -264,14 +303,39 @@ internal fun StandardHome(
                 renameOpenedFolder.value = true
                 openedFolderId.value = folder.id
             },
+            onDragNewPage = {
+                if (candidatePageId.value == null && pagesBeforeCandidate.value == null) {
+                    pagesBeforeCandidate.value = layout.pages.map { it.id }.toSet()
+                    onAction(LauncherShellAction.AddHomePage)
+                }
+            },
             onDragSessionChanged = { session ->
+                if (session == null) {
+                    homeDragSession.value?.let { ended -> itemMotion.letGo(ended.item.id, ended.pointerInRoot) }
+                    // The drop's own action follows this at once and keeps the page it lands on; whatever is still
+                    // pending after it (a cancel, a drop elsewhere) is discarded.
+                    discardCandidate.value = candidatePageId.value
+                    candidatePageId.value = null
+                    pagesBeforeCandidate.value = null
+                }
                 val planned = session?.planned(visibleLayout, workspaceGridBounds.value, presentation.dragTuning)
                 if (planned?.plan?.pushed?.keys != homeDragSession.value?.plan?.pushed?.keys &&
                     planned?.plan?.pushed?.isNotEmpty() == true
                 ) {
                     interactions.haptics.perform(LauncherHapticEvent.DETENT)
                 }
-                homeDragSession.value = planned
+                // Over the Dock, the slot the finger hovers is where the item is pinned.
+                val hovered =
+                    planned?.takeIf { it.isOverDock }?.let { over ->
+                        val slots = layout.dock.items.mapNotNull { item -> dockHostState.pinnedSlotBounds[item.id] }
+                        if (slots.size == layout.dock.items.size && slots.isNotEmpty()) {
+                            dockInsertionIndexAmong(over.pointerInRoot, dockBounds.value, slots, isRtl, dockPosition)
+                        } else {
+                            val count = layout.dock.items.size
+                            dockInsertionIndex(over.pointerInRoot, dockBounds.value, count, isRtl, dockPosition)
+                        }
+                    }
+                homeDragSession.value = planned?.copy(dockIndex = hovered)
                 dockHostState.isDropTargetHighlighted.value = planned?.isOverDock == true
             },
             currentDragSession = { homeDragSession.value },
@@ -285,28 +349,42 @@ internal fun StandardHome(
             },
             onBackgroundClick = dockHostState::dismissShelf,
             onAction = { action ->
-                if (action is LauncherShellAction.MoveHomeShortcutToCell) foldersBeforeDrop.value = folderIds
+                if (action is LauncherShellAction.DropHomeItem &&
+                    discardCandidate.value?.let { HomeDragPages.keepsCandidate(it, action.targetPageId) } == true
+                ) {
+                    discardCandidate.value = null
+                }
+                if (action is LauncherShellAction.MoveHomeShortcutToCell ||
+                    (action is LauncherShellAction.DropHomeItem && action.dropOnItemId != null)
+                ) {
+                    foldersBeforeDrop.value = folderIds
+                }
                 onAction(action)
             },
         )
+    // One instance for the life of the surface, which hands every call to the latest: the cells compare what they are
+    // given, and a fresh bundle of lambdas at every recomposition would make every cell recompose with it.
+    val actions = rememberStableWorkspaceActions(freshActions)
 
-    StandardHomeColumn(
-        state =
-            StandardHomeContentState(
-                layout = layout,
-                visibleLayout = visibleLayout,
-                dockPosition = dockPosition,
-                dragSession = homeDragSession.value,
-                widgetPickerDragPreview = widgetPickerDragPreview.value,
-                presentation = presentation,
-                dockReservation = dockHostState.reservedExtent(visibleLayout, dockPosition),
-            ),
-        appIconLoader = appIconLoader,
-        actions = actions,
-        modifier = surfaceModifier,
-    )
+    CompositionLocalProvider(LocalHomeItemMotion provides itemMotion) {
+        StandardHomeColumn(
+            state =
+                StandardHomeContentState(
+                    layout = layout,
+                    visibleLayout = visibleLayout,
+                    dockPosition = dockPosition,
+                    dragSession = composedDragSession.value,
+                    widgetPickerDragPreview = widgetPickerDragPreview.value,
+                    presentation = presentation,
+                    dockReservation = dockHostState.reservedExtent(visibleLayout, dockPosition),
+                ),
+            appIconLoader = appIconLoader,
+            actions = actions,
+            modifier = surfaceModifier,
+        )
+    }
     // The lifted icon above the pager (and so above a page turn), read in the layout phase.
-    if (homeDragSession.value != null) {
+    if (composedDragSession.value != null) {
         HomeLiftedItem(
             session = { homeDragSession.value },
             presentation = homeGridPresentationFor(layout, presentation, actions),
@@ -745,6 +823,7 @@ private fun StandardHomeColumn(
             actions = actions,
             vertical = layoutSettings.pageScroll == PageScrollDirection.VERTICAL,
             activeDragSession = state.dragSession,
+            onDragNewPage = actions.onDragNewPage,
             onDragPageTargetChanged = { pageId ->
                 actions.currentDragSession()?.let { session ->
                     if (session.targetPageId != pageId) {
@@ -1065,6 +1144,10 @@ private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspace
             ),
     )
 
+/** This drag as composition sees it: without where the finger is, which changes every frame. */
+internal fun HomeDragSession.withoutPointer(): HomeDragSession =
+    copy(pointerInRoot = Offset.Unspecified, dragOffsetX = 0f, dragOffsetY = 0f)
+
 internal data class HomeDragSession(
     val item: LauncherItem,
     val originPageId: com.riffle.core.domain.launcher.home.LauncherPageId =
@@ -1076,6 +1159,8 @@ internal data class HomeDragSession(
     val projectedCell: GridCell,
     /** Whether releasing right now would drop [item] on the dock instead of a home cell. */
     val isOverDock: Boolean = false,
+    /** Over the Dock: the slot the finger hovers, where the item is pinned (null: at the end). */
+    val dockIndex: Int? = null,
     /** Where the finger is, in the root; [Offset.Unspecified] until the first move. */
     val pointerInRoot: Offset = Offset.Unspecified,
     /** What dropping now would do on the target page (the push ring and dead zone); null: not planned. */
@@ -1196,6 +1281,34 @@ internal data class HomeItemDragState(
     val pageItems: List<LauncherItem>,
 )
 
+/** [latest], through one instance that never changes: each call goes to the latest actions given. */
+@Composable
+internal fun rememberStableWorkspaceActions(latest: HomeWorkspaceActions): HomeWorkspaceActions {
+    val current = rememberUpdatedState(latest)
+    return remember {
+        HomeWorkspaceActions(
+            onFolderOpen = { folder -> current.value.onFolderOpen(folder) },
+            onFolderRename = { folder -> current.value.onFolderRename(folder) },
+            onDragSessionChanged = { session -> current.value.onDragSessionChanged(session) },
+            currentDragSession = { current.value.currentDragSession() },
+            haptics =
+                object : LauncherHaptics {
+                    override fun longPress() = current.value.haptics.longPress()
+
+                    override fun perform(event: LauncherHapticEvent) = current.value.haptics.perform(event)
+                },
+            onDockInteractionExtentChanged = { extent -> current.value.onDockInteractionExtentChanged(extent) },
+            onDockAreaExtentChanged = { extent -> current.value.onDockAreaExtentChanged(extent) },
+            onBottomControlsHeightChanged = { height -> current.value.onBottomControlsHeightChanged(height) },
+            onWorkspaceGridBoundsChanged = { id, bounds -> current.value.onWorkspaceGridBoundsChanged(id, bounds) },
+            onDockBoundsChanged = { bounds -> current.value.onDockBoundsChanged(bounds) },
+            onBackgroundClick = { current.value.onBackgroundClick() },
+            onDragNewPage = { current.value.onDragNewPage() },
+            onAction = { action -> current.value.onAction(action) },
+        )
+    }
+}
+
 internal data class HomeWorkspaceActions(
     val onFolderOpen: (FolderItem) -> Unit,
     /** Opens the folder with its title in edit mode (a new folder; "Rename" in its menu). */
@@ -1210,6 +1323,8 @@ internal data class HomeWorkspaceActions(
     val onWorkspaceGridBoundsChanged: (LauncherPageId, Rect) -> Unit = { _, _ -> },
     val onDockBoundsChanged: (Rect) -> Unit = {},
     val onBackgroundClick: () -> Unit = {},
+    /** A drag held at the trailing edge on the last page: offer a new empty page (see [HomeDragPages]). */
+    val onDragNewPage: () -> Unit = {},
     val onAction: (LauncherShellAction) -> Unit,
 )
 
@@ -1278,11 +1393,28 @@ private fun FadingHandle(
 }
 
 /**
+ * The page and cell of [page] under [point] in the root, given the page's grid at [gridBounds]; null where the point is
+ * off the grid (or the page is generated, which takes no placed items).
+ */
+internal fun homeDropTargetAt(
+    page: LauncherPage,
+    gridBounds: Rect?,
+    point: Offset,
+): HomeDropTarget? {
+    if (gridBounds == null || page.type is LauncherPageType.Generated || !gridBounds.contains(point)) return null
+    val column = ((point.x - gridBounds.left) / (gridBounds.width / page.grid.columns)).toInt()
+    val row = ((point.y - gridBounds.top) / (gridBounds.height / page.grid.rows)).toInt()
+    val cell = GridCell(column.coerceIn(0, page.grid.columns - 1), row.coerceIn(0, page.grid.rows - 1))
+    return HomeDropTarget(page.id, cell, free = page.items.none { item -> item.occupies(cell) })
+}
+
+/**
  * This drag with its [HomeDragPlan] for the page it is over: the pointer in cells of that page's grid (whose bounds in
  * the root are [gridBounds]), through [HomeDragPush]. Unplanned while the pointer, the bounds or the page are unknown,
- * or over the Dock. Dropping on top is only offered on the item's own page: another page takes the item by the ring
- * alone (the existing placement rules reject a collision).
+ * or over the Dock. Dropping on top works on any page: on another page the item first joins it (the first free cell)
+ * and the folder is made there.
  */
+
 internal fun HomeDragSession.planned(
     layout: HomeLayout,
     gridBounds: Rect?,
@@ -1294,7 +1426,7 @@ internal fun HomeDragSession.planned(
     }
     val x = (pointerInRoot.x - gridBounds.left) / (gridBounds.width / page.grid.columns)
     val y = (pointerInRoot.y - gridBounds.top) / (gridBounds.height / page.grid.rows)
-    val numbers = tuning.coerced().let { if (targetPageId == originPageId) it else it.copy(deadZoneRadius = 0f) }
+    val numbers = tuning.coerced()
     val reserved = if (targetPageId == originPageId) setOf(originCell) else emptySet()
     val plan = HomeDragPush.plan(page, item, x, y, numbers, plan?.pushed?.keys.orEmpty(), reserved)
     return copy(plan = plan, projectedCell = plan.landing ?: originCell)

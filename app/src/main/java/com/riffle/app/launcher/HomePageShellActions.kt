@@ -21,11 +21,10 @@ fun HomePageEngine.applyEdit(
         LauncherShellAction.EnterHomePageOverview ->
             applyModeEdit(action = action, layout = layout)
 
-        LauncherShellAction.AddHomePage ->
-            applyPageCreationEdit(action = action, layout = layout)
-
-        LauncherShellAction.DuplicateSelectedHomePage ->
-            applyPageCreationEdit(action = action, layout = layout)
+        LauncherShellAction.AddHomePage,
+        LauncherShellAction.DuplicateSelectedHomePage,
+        is LauncherShellAction.DiscardEmptyHomePage,
+        -> applyPageCreationEdit(action = action, layout = layout)
 
         LauncherShellAction.SelectPreviousHomePage ->
             applyPageSelectionEdit(action = action, layout = layout)
@@ -89,6 +88,13 @@ private fun HomePageEngine.applyPageCreationEdit(
     when (action) {
         LauncherShellAction.AddHomePage -> addAndSelectHomePage(layout = layout)
         LauncherShellAction.DuplicateSelectedHomePage -> duplicateSelectedHomePage(layout = layout)
+        // A drag's candidate page that was not dropped on: removed while it is still empty.
+        is LauncherShellAction.DiscardEmptyHomePage ->
+            if (layout.pages.firstOrNull { it.id == action.pageId }?.items?.isEmpty() == true) {
+                deletePage(layout = layout, pageId = action.pageId)
+            } else {
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
+            }
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
     }
 

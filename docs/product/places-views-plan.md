@@ -334,5 +334,26 @@ The rules are in `gestures.md`, "Dragging on Home"; the rule is `HomeDragPush` (
 What the old pick-up got wrong (fixed): the pointer-input block captured the item, grid and page at the start of the
 gesture; the page turn was measured from the drag's origin offset, in the wrong direction (a drag to the right went to the
 previous page) and could happen once only; the pager dropped the page the drag started on after a turn, killing the gesture;
-the menu opened only at release. Not done: the Dock keeps its own reorder drag as it was, a drop does not yet spring
-to its cell, and a drag past the last page does not offer a new page.
+the menu opened only at release.
+
+Second batch (this slice):
+
+- **The Dock joins the same pick-up.** A pinned app or folder is lifted by a long-press then a move, with no edit mode
+  (the menu unless it moves: `HoldMenuRule`). A Home item dropped on the Dock is pinned at the slot it hovers; a Dock item
+  dragged out is placed on the Home cell under the finger. Both are moves. See `gestures.md`, "Pinned items".
+- **A new page past the last.** Held at the trailing edge on the last page (one with items), a drag offers an empty page
+  (`HomeDragPages`); it is created for the drag, kept when the item is dropped on it and discarded when the drag is
+  cancelled or ends elsewhere. The page dots show the target page.
+- **The dead zone works across pages.** After a page turn a drop on top of an item of the new page moves the item to that
+  page's first free cell and makes the folder there (`DropHomeItem.dropOnItemId`).
+- **Ghosts.** A folder leaves its desaturated, dimmed tile and four icons (built from the apps' baked ghosts); a widget
+  leaves the outline of its span with the card corners, at the source and at the landing.
+- **Frame stability.** Composition sees the drag without the finger's place; the lifted icon and the edge hold read it in the
+  layout phase. Moving within a cell recomposes no cell; crossing cells recomposes only those it touches
+  (`HomeDragFrameStabilityTest`).
+- **Drop and cancel motion.** An item that arrives in a cell from elsewhere settles on the existing spring
+  (`RiffleMotion.snappy`): the lifted item from where the finger let it go (a drop, or a cancel returning it to where it
+  was lifted from), and pushed neighbours from where they were, each time the preview moves them. A translation read in
+  the draw phase (`homeItemSettle`, `HomeItemMotion`); reduced motion jumps; further than four cells (another page) it just
+  lands.
+- **Not done:** the ghost and push ring for a Dock item dragged onto Home, and Home's source ghost for a Dock reorder.

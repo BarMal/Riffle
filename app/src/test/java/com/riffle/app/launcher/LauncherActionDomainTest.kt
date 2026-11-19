@@ -188,6 +188,7 @@ class LauncherActionDomainTest {
                 activity("ExitHomeEditMode", LauncherShellAction.ExitHomeEditMode),
                 activity("EnterHomePageOverview", LauncherShellAction.EnterHomePageOverview),
                 activity("AddHomePage", LauncherShellAction.AddHomePage),
+                activity("DiscardEmptyHomePage", LauncherShellAction.DiscardEmptyHomePage(pageId)),
                 activity("DuplicateSelectedHomePage", LauncherShellAction.DuplicateSelectedHomePage),
                 activity("SelectHomePage", LauncherShellAction.SelectHomePage(pageId)),
                 activity("SelectPreviousHomePage", LauncherShellAction.SelectPreviousHomePage),
