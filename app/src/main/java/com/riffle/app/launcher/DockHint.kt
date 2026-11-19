@@ -177,13 +177,12 @@ internal class HintLiveInputs(
 /**
  * The hint layer: the due hint ([Hints.due], from what the person has seen and done and what is on screen now) drawn
  * beside the Dock, or nothing. [legacyPressSeen] is the setting an earlier build kept for the press hint; it retires
- * that hint, and [onPressRetired] keeps the setting in step with the new state.
+ * that hint (nothing writes it any more, "Show hints again" clears it).
  */
 @Composable
 internal fun DockHintLayer(
     hints: HintsHost?,
     legacyPressSeen: Boolean,
-    onPressRetired: () -> Unit,
     facts: HintContext,
     live: HintLiveInputs,
     dockBounds: Rect?,
@@ -212,10 +211,6 @@ internal fun DockHintLayer(
                 }
             }
         }
-    val pressRetired = progress?.let { Hint.DOCK_PRESS in it.retired } == true
-    LaunchedEffect(pressRetired, legacyPressSeen) {
-        if (pressRetired && !legacyPressSeen) onPressRetired()
-    }
     due?.let { hint ->
         DockHint(
             hint = hint,

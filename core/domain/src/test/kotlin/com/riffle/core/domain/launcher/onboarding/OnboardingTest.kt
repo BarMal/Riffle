@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.onboarding
 import com.riffle.core.domain.launcher.hints.Hint
 import com.riffle.core.domain.launcher.hints.HintEvent
 import com.riffle.core.domain.launcher.hints.HintProgress
+import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.StoredValue
 import com.riffle.core.domain.launcher.workspace.arr
@@ -153,5 +154,29 @@ class OnboardingTest {
         assertEquals(SourceIds.NOTIFICATIONS, SourcePermission.NOTIFICATION_ACCESS.source)
         assertEquals(SourceIds.CALENDAR, SourcePermission.CALENDAR.source)
         assertEquals(SourceIds.RECENT_APPS, SourcePermission.USAGE_ACCESS.source)
+    }
+
+    @Test
+    fun eachSectionsPermissionSaysWhatItGains() {
+        assertEquals(PermissionGain.NOTIFICATIONS, PermissionGain.of(listOf(SourceIds.NOTIFICATIONS)))
+        assertEquals(PermissionGain.MEDIA, PermissionGain.of(listOf(SourceIds.MEDIA)))
+        assertEquals(PermissionGain.RECENT_APPS, PermissionGain.of(listOf(SourceIds.RECENT_APPS)))
+        assertEquals(PermissionGain.CALENDAR, PermissionGain.of(listOf(SourceIds.CALENDAR)))
+        assertEquals(PermissionGain.CALENDAR, PermissionGain.of(listOf(StreamSourceIds.AGENDA)))
+    }
+
+    @Test
+    fun anUnknownOrMissingSourceKeepsTheSentenceGeneral() {
+        assertEquals(PermissionGain.GENERIC, PermissionGain.of(emptyList()))
+        assertEquals(PermissionGain.GENERIC, PermissionGain.of(listOf(SourceIds.RSS)))
+        // The first source this knows decides, so an unknown one before it does not hide it.
+        assertEquals(PermissionGain.RECENT_APPS, PermissionGain.of(listOf(SourceIds.RSS, SourceIds.RECENT_APPS)))
+    }
+
+    @Test
+    fun everyPermissionTheOnboardingAsksForHasAGain() {
+        SourcePermission.entries.forEach { permission ->
+            assertEquals(false, PermissionGain.of(listOf(permission.source)) == PermissionGain.GENERIC)
+        }
     }
 }

@@ -59,8 +59,13 @@
     <string name="stream_pair_draft_spoken">New pair. Choose two apps</string>
     <string name="stream_empty_pairs">Open two apps side by side.</string>
     <string name="stream_empty_feeds">No articles yet. Add a feed in Settings.</string>
-    <string name="stream_permission_message">Allow access to show this</string>
-    <string name="stream_permission_action">Allow access</string>
+    <!-- What a section is waiting for: one sentence that says what is gained, and the same "Allow" button each time -->
+    <string name="stream_permission_message">Allow access to show this here.</string>
+    <string name="stream_permission_notifications">Allow notification access to see and act on your notifications here.</string>
+    <string name="stream_permission_media">Allow notification access to see what is playing here and control it.</string>
+    <string name="stream_permission_recents">Allow usage access to list the apps you used lately here.</string>
+    <string name="stream_permission_calendar">Allow calendar access to show today\'s events here.</string>
+    <string name="stream_permission_action">Allow</string>
     <string name="stream_not_connected_tasks">Todoist is not connected, so there are no tasks to show.</string>
     <string name="stream_unavailable">This can\'t be shown right now.</string>
     <string name="stream_off_message">This section is turned off.</string>

@@ -370,6 +370,8 @@ private fun LauncherDestination(
                                 (state.destination.isLibrary && state.libraryOverStream)
                         ),
                 onAction = settingsPageActionRouter.onAction,
+                // The hints wait for the set-up card to be done with.
+                hints = LocalHintsHost.current.takeUnless { state.shouldShowSetupCard },
             )
 
         ShellDestination.NOTIFICATIONS ->

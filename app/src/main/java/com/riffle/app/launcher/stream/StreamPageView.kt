@@ -388,11 +388,7 @@ private fun StreamStateBody(
                 onAction = { callbacks.onEnableSection(section) },
             )
         is StreamSectionResult.PermissionRequired ->
-            StreamStateMessage(
-                message = stringResource(R.string.stream_permission_message),
-                actionLabel = stringResource(R.string.stream_permission_action),
-                onAction = { callbacks.onRequestAccess(result.sources) },
-            )
+            StreamPermissionPrompt(sources = result.sources, onAllow = { callbacks.onRequestAccess(result.sources) })
         is StreamSectionResult.Ready -> Unit
     }
 }

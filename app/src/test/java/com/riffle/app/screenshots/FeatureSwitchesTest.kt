@@ -148,13 +148,15 @@ class FeatureSwitchesTest {
     // The Stream
 
     @Test
-    fun withTheStreamOffThereIsNoPressNoActionAndNoHint() {
+    fun withTheStreamOffThereIsNoPressNoActionAndNoPressHint() {
         show(FeatureSettings(stream = false))
 
         val labels = composeRule.dockActionLabels()
         assertFalse(labels.toString(), "Show live pages" in labels)
         assertTrue(labels.toString(), "Open Library" in labels)
-        composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertDoesNotExist()
+        // No press hint without a Stream; the Dock's own hint (its menu) is still due and stands in its place.
+        composeRule.onNodeWithText("Press the Dock down to see what's live").assertDoesNotExist()
+        composeRule.onNodeWithText("Touch and hold an app on the Dock for its menu").assertIsDisplayed()
 
         composeRule.pressDock(distancePx = 150f)
         assertTrue("pressing the Dock opens nothing: $actions", LauncherShellAction.OpenStream !in actions)

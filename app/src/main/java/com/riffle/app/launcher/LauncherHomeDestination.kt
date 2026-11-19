@@ -522,11 +522,9 @@ private fun HomeDestinationContent(
                 DockHintLayer(
                     hints = hints,
                     legacyPressSeen = state.launcherSettings.hints.dockPressSeen,
-                    onPressRetired = { onAction(LauncherShellAction.DismissDockPressHint) },
                     facts =
                         HintContext(
                             simpleMode = features.simpleMode,
-                            setUpShowing = state.shouldShowSetupCard,
                             streamAvailable = stream != null,
                             streamShown = shownStream,
                             libraryAvailable = features.library,
