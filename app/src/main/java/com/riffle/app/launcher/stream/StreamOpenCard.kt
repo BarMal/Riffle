@@ -54,8 +54,6 @@ internal fun OpenStreamCard(
     callbacks: StreamCallbacks,
     groupKey: String?,
     actionsOnCard: Boolean,
-    queueShown: Boolean,
-    onQueueShownChange: (Boolean) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     /** The scroll state of the card's body: the layer reads whether it scrolls to decide who takes a vertical drag. */
@@ -70,7 +68,7 @@ internal fun OpenStreamCard(
     newerTitle: String? = null,
 ) {
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
-    val actions = StreamCardActions.forContent(content, queueShown)
+    val actions = StreamCardActions.forContent(content)
     // A notification's card is swiped away by its header: the whole card follows the finger.
     val swipe = rememberSwipeDismissState(content, callbacks, env.reducedMotion)
     StreamCardSurface(
@@ -88,7 +86,7 @@ internal fun OpenStreamCard(
                 sourceModifier
                     .fillMaxWidth()
                     .streamHideActions(hideChoices, content, groupKey, callbacks)
-                    .cardActionAccessibility(content, actions, callbacks, onQueueShownChange, cardSteps.actions())
+                    .cardActionAccessibility(content, actions, callbacks, cardSteps.actions())
                     .streamClickable(onClose, stringResource(R.string.stream_card_close))
                     // A card measured shorter than its content (the stack is moving) is cut at its own edge.
                     .clipToBounds()
@@ -114,7 +112,7 @@ internal fun OpenStreamCard(
                     when (content) {
                         is NotificationContent -> OpenNotificationBody(content, env)
                         is MediaContent ->
-                            OpenMedia(content, env, callbacks, groupKey, hideChoices, queueShown)
+                            OpenMedia(content, env, callbacks, groupKey, hideChoices)
                         is EventContent -> OpenEvent(content, env, callbacks, groupKey, hideChoices)
                         is TaskContent -> OpenTask(content, env)
                         else -> Unit
@@ -125,7 +123,7 @@ internal fun OpenStreamCard(
                 }
             }
             if (actionsOnCard) {
-                CardActionControls(content, actions, callbacks, onQueueShownChange, Modifier.bodyFade(presence))
+                CardActionControls(content, actions, callbacks, Modifier.bodyFade(presence))
             }
         }
     }
@@ -231,7 +229,6 @@ private fun OpenMedia(
     callbacks: StreamCallbacks,
     groupKey: String?,
     hideChoices: List<com.riffle.core.domain.launcher.workspace.settings.HideChoice>,
-    queueShown: Boolean,
 ) {
     // The artwork large and square, only once it has loaded: a player that publishes none leaves no empty square.
     val artwork = rememberStreamImage(content.artwork, env.imageLoader, OpenArtworkMaxWidth).value
@@ -271,7 +268,6 @@ private fun OpenMedia(
         StreamHideMenuButton(hideChoices, content, groupKey, callbacks)
     }
     MediaScrubber(content, callbacks)
-    if (queueShown) MediaQueue(content, env)
 }
 
 @Composable

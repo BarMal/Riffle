@@ -10,6 +10,12 @@ internal interface ItemLaunchPort {
     /** An app target that does not name an activity (notifications): the package's launcher entry. */
     fun launchPackage(packageName: String): Boolean
 
+    /**
+     * An app with no launcher entry (a TV-only player, an app that only declares a main activity): its leanback launch
+     * intent, else any exported main activity it has. False when it has none.
+     */
+    fun launchAnyMainActivity(packageName: String): Boolean = false
+
     fun launchShortcut(shortcut: AppShortcut): Boolean
 
     fun openDeepLink(uri: String): Boolean

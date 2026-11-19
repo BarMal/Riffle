@@ -113,7 +113,7 @@ internal fun StreamSurface(
     callbacks: StreamCallbacks,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    failures: Flow<Unit> = emptyFlow(),
+    failures: Flow<StreamFailure> = emptyFlow(),
     /** Where to land, when the Dock opened the Stream on a live app or on now playing; handled once it has landed. */
     focusRequest: StreamFocusRequest? = null,
     onFocusHandled: (Long) -> Unit = {},
@@ -168,10 +168,13 @@ internal fun StreamSurface(
     val latestLayout by rememberUpdatedState(layout)
     val liveEnv = env.withLiveClock()
     val failedMessage = stringResource(R.string.stream_action_failed)
+    val resources = context.resources
+    val openFailedMessage = { app: String -> resources.getString(R.string.stream_open_failed, app) }
     LaunchedEffect(failures) {
-        failures.collect {
+        failures.collect { failure ->
             snackbar.currentSnackbarData?.dismiss()
-            snackbar.showSnackbar(failedMessage, duration = SnackbarDuration.Short)
+            val message = failure.openedApp?.let(openFailedMessage) ?: failedMessage
+            snackbar.showSnackbar(message, duration = SnackbarDuration.Short)
         }
     }
     val undo = stringResource(R.string.stream_undo)

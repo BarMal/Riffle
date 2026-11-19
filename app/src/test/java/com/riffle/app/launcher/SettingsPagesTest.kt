@@ -277,7 +277,7 @@ class SettingsPagesTest {
             SettingsPage.STREAM_AGENDA,
             index.matching("include calendar feeds").first { it.key == SettingKey.AGENDA_INCLUDE_FEEDS }.page,
         )
-        // Now's two rows are searchable and live on the Stream page, where its section is listed.
+        // Now's rows are searchable and live on the Stream page, where its section is listed.
         assertEquals(
             SettingsPage.STREAM,
             index.matching("recent players").first { it.key == SettingKey.NOW_RECENT_PLAYERS }.page,
@@ -287,6 +287,11 @@ class SettingsPagesTest {
             index.matching("clear recent players").first { it.key == SettingKey.NOW_CLEAR_RECENT_PLAYERS }.page,
         )
         assertTrue(index.matching("now playing").any { it.key == SettingKey.NOW_RECENT_PLAYERS })
+        assertEquals(
+            SettingsPage.STREAM,
+            index.matching("show up next").first { it.key == SettingKey.NOW_SHOW_UP_NEXT }.page,
+        )
+        assertTrue(index.matching("queue").any { it.key == SettingKey.NOW_SHOW_UP_NEXT })
     }
 
     @Test

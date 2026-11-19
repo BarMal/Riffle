@@ -105,16 +105,14 @@ internal class OpenCardHolder {
 }
 
 /**
- * What the Dock's actions row needs from the open card: the content, its controls, how to act and how to show or hide
- * the player's queue. Equal only to itself: a new value is published whenever the card's content or queue changes, so
- * the row redraws with it.
+ * What the Dock's actions row needs from the open card: the content, its controls and how to act. Equal only to
+ * itself: a new value is published whenever the card's content changes, so the row redraws with it.
  */
 @Stable
 internal class OpenCardActions(
     val content: StreamContent,
     val actions: List<CardAction>,
     val callbacks: StreamCallbacks,
-    val onToggleQueue: (Boolean) -> Unit,
 )
 
 /**
@@ -241,7 +239,7 @@ internal fun Map<StreamSection, StreamSectionResult>.dockLiveEntries(
     // Only an active player marks the Now tile: a recent player that has no session is not "playing".
     val media =
         (this[StreamSection.NOW] as? StreamSectionResult.Ready)?.items
-            ?.filterIsInstance<MediaContent>()?.firstOrNull { !it.source }
+            ?.filterIsInstance<MediaContent>()?.firstOrNull { !it.source && it.queueItem == null }
     return DockDynamicSide.entries(groups, media, liveAppSlots, pinnedGroupKeys = pinnedGroupKeys)
 }
 

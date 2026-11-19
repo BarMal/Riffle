@@ -159,6 +159,11 @@ internal fun MediaRow(
         MediaSourceRow(content, env, callbacks, groupKey, modifier)
         return
     }
+    val queueAction = content.playQueueAction()
+    if (queueAction != null) {
+        MediaQueueRow(content, queueAction, env, callbacks, groupKey, modifier)
+        return
+    }
     val playing = content.isPlaying == true
     val toggle = if (playing) StreamAction.Pause else StreamAction.Play
     StreamRowFrame(
@@ -183,6 +188,37 @@ internal fun MediaRow(
         },
     ) {
         RowTitle(content.title ?: stringResource(R.string.stream_hidden_content))
+        content.artist?.takeIf { it.isNotBlank() }?.let { RowSubtitle(it) }
+    }
+}
+
+/** One upcoming track of a player's queue as a row: its artwork, the track and artist, and a Play button. */
+@Composable
+private fun MediaQueueRow(
+    content: MediaContent,
+    action: StreamAction,
+    env: StreamEnvironment,
+    callbacks: StreamCallbacks,
+    groupKey: String?,
+    modifier: Modifier,
+) {
+    StreamRowFrame(
+        content = content,
+        groupKey = groupKey,
+        callbacks = callbacks,
+        onClick = { callbacks.onAction(content, action) },
+        modifier = modifier,
+        leading = { StreamIcon(content.artwork ?: content.icon, env, RowArtworkSize, shape = RiffleShapes.small) },
+        trailing = {
+            IconButton(
+                onClick = { callbacks.onAction(content, action) },
+                modifier = Modifier.size(StreamMinTarget),
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.stream_media_source_play))
+            }
+        },
+    ) {
+        RowTitle(content.title ?: stringResource(R.string.stream_media_unknown_title))
         content.artist?.takeIf { it.isNotBlank() }?.let { RowSubtitle(it) }
     }
 }

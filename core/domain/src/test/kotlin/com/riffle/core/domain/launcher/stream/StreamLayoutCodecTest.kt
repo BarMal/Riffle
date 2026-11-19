@@ -47,7 +47,7 @@ class StreamLayoutCodecTest {
                     ),
                 options =
                     StreamSectionOptions(
-                        now = NowOptions(maxActive = 2, recentPlayers = false),
+                        now = NowOptions(maxActive = 2, recentPlayers = false, showUpNext = false),
                         notifications = NotificationsOptions(maxApps = 3, maxPerApp = 2, maxAgeMillis = 3_600_000L),
                         recents = RecentsOptions(limit = 5, maxAgeMillis = 86_400_000L, frequentLimit = 0),
                         agenda = AgendaOptions(daysAhead = 3, maxEvents = 8, includeCalendarFeeds = false),
@@ -165,6 +165,18 @@ class StreamLayoutCodecTest {
         assertEquals(AgendaOptions().maxEvents, layout.options.agenda.maxEvents)
         assertEquals(FeedsOptions(maxFeeds = 2, perFeed = 7), layout.options.feeds)
         assertEquals(NowOptions(), layout.options.now)
+    }
+
+    @Test
+    fun aLayoutStoredBeforeTheQueueBecameCardsShowsUpNextAndKeepsItsOtherNowOptions() {
+        val options =
+            obj(
+                "now" to obj("maxActive" to StoredValue.Num(2), "recentPlayers" to StoredValue.Bool(false)),
+            )
+        val now =
+            assertNotNull(StreamLayoutCodec.decode(root(posture("PHONE", emptyList(), options))))
+                .forPosture(HomeLayoutDeviceClass.PHONE).options.now
+        assertEquals(NowOptions(maxActive = 2, recentPlayers = false, showUpNext = true), now)
     }
 
     @Test

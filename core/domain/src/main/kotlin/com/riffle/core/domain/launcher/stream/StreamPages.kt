@@ -67,7 +67,10 @@ fun StreamPage.ref(): StreamPageRef = StreamPageRef(key = key, section = section
 /**
  * Plans the Stream's pages from the layout and what each section delivered (ADR 0003, Views):
  *
- * - **Now**: one page, media only (the players with their queue; the next event and the alarm are on Today).
+ * - **Now**: media only (the next event and the alarm are on Today). Each active player is a page of its own, a
+ *   stack of its player card and the cards of its queue (key `now/player:package:profile`, so it is the same page
+ *   whatever it plays); the recent players are one more page, which has the section's own key (`now`), as does the
+ *   state page.
  * - **Notifications**: one page per app that has notifications, newest app first (the order the section delivers).
  * - **Recents**: one page. **Today** (the next event, the alarm, "To do today", later events and tomorrow): one page.
  * - **Feeds**: one page per feed with unread items, the feed with the newest article first.
@@ -116,7 +119,14 @@ object StreamPagePlanner {
                     withUnread.map { groupPage(section, view, it) }
                 }
             }
-            StreamSection.NOW,
+            StreamSection.NOW ->
+                result.groups.map { group ->
+                    if (group.key == StreamGroupKeys.NOW) {
+                        sectionPage(section, view, result.copy(groups = listOf(group)))
+                    } else {
+                        groupPage(section, view, group)
+                    }
+                }
             StreamSection.RECENTS,
             StreamSection.PAIRS,
             StreamSection.TODAY,

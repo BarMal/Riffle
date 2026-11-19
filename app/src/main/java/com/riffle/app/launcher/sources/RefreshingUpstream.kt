@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.workspace.SourceSubscription
 import com.riffle.core.domain.launcher.workspace.sources.SourceSink
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Something that can tell a source its data may have changed. Deliberately free of Android types so
@@ -40,21 +41,28 @@ fun interface SourceChangeSource {
 /**
  * The upstream behind one shared source stream. Runs [load] on [executor] (never the caller's thread, so
  * blocking platform reads stay off the main thread): once on connect and again after every change, with
- * bursts of changes coalesced into one reload. A failing [load] emits [SourceState.Unavailable].
+ * bursts of changes coalesced into one reload. A failing [load] emits [SourceState.Unavailable]. With [distinct] a
+ * reload that read exactly what was last emitted emits nothing, so a source whose platform reports changes far more
+ * often than its content changes (a media queue) does not make everything downstream recompute.
  */
 internal class RefreshingUpstream(
     private val executor: Executor,
     private val changes: SourceChangeSource,
+    private val distinct: Boolean = false,
     private val load: () -> SourceState,
 ) {
     fun connect(sink: SourceSink): SourceSubscription {
         val active = AtomicBoolean(true)
         val pending = AtomicBoolean(false)
+        val last = AtomicReference<SourceState?>(null)
         val refresh = {
             if (active.get() && pending.compareAndSet(false, true)) {
                 executor.execute {
                     pending.set(false)
-                    if (active.get()) sink.emit(runCatching(load).getOrDefault(SourceState.Unavailable))
+                    if (active.get()) {
+                        val state = runCatching(load).getOrDefault(SourceState.Unavailable)
+                        if (!distinct || last.getAndSet(state) != state) sink.emit(state)
+                    }
                 }
             }
         }

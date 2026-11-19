@@ -25,10 +25,18 @@ internal data class PlatformMediaSnapshot(
     val positionUpdatedAtElapsed: Long,
     val speed: Float,
     val durationMillis: Long,
-    /** The whole queue in order, as (title, subtitle). */
-    val queue: List<Pair<String?, String?>>,
-    /** Index of the queue entry that is playing, or -1 when unknown. */
+    /** The whole queue in order. */
+    val queue: List<PlatformQueueItem>,
+    /** Index of the queue entry that is playing, or -1 when unknown (then the whole queue is still to come). */
     val activeQueueIndex: Int,
+)
+
+/** One entry of a session's queue as the platform gave it: [queueId] is `QueueItem.getQueueId`. */
+internal data class PlatformQueueItem(
+    val queueId: Long,
+    val title: String?,
+    val subtitle: String?,
+    val hasArtwork: Boolean = false,
 )
 
 internal fun PlatformMediaSnapshot.toMediaSessionInfo(nowElapsed: Long): MediaSessionInfo {
@@ -48,7 +56,10 @@ internal fun PlatformMediaSnapshot.toMediaSessionInfo(nowElapsed: Long): MediaSe
                 }
             (positionMillis + advanced).let { if (duration != null) it.coerceAtMost(duration) else it }
         }
-    val upcoming = if (activeQueueIndex >= 0) queue.drop(activeQueueIndex + 1) else emptyList()
+    // The tracks after the one playing; when the active one is unknown the queue is taken from its top. A queue that
+    // cannot be skipped into is not shown: its cards could not be played, and a card that does nothing is worse.
+    val canSkipToItem = actions and PlaybackState.ACTION_SKIP_TO_QUEUE_ITEM != 0L
+    val upcoming = if (canSkipToItem) queue.drop(activeQueueIndex + 1).filter { it.queueId >= 0L } else emptyList()
     return MediaSessionInfo(
         packageName = packageName,
         title = title?.takeIf(String::isNotBlank),
@@ -59,9 +70,16 @@ internal fun PlatformMediaSnapshot.toMediaSessionInfo(nowElapsed: Long): MediaSe
         durationMillis = duration,
         controls = controls,
         queue =
-            upcoming.filter { (title, _) -> !title.isNullOrBlank() }
+            upcoming.filter { !it.title.isNullOrBlank() }
                 .take(MediaItemExt.MAX_QUEUE)
-                .map { (title, subtitle) -> MediaSessionQueueEntry(title, subtitle?.takeIf(String::isNotBlank)) },
+                .map { item ->
+                    MediaSessionQueueEntry(
+                        title = item.title,
+                        artist = item.subtitle?.takeIf(String::isNotBlank),
+                        queueId = item.queueId,
+                        hasArtwork = item.hasArtwork,
+                    )
+                },
     )
 }
 

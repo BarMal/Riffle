@@ -30,7 +30,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.GlassSurface
@@ -43,15 +42,13 @@ import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionPolicy
 import com.riffle.core.domain.launcher.workspace.settings.HideChoice
 
-private const val MAX_QUEUE_ROWS = 8
 private const val SCRUBBER_ACTIVE_ALPHA = 0.7f
 private const val SCRUBBER_INACTIVE_ALPHA = 0.2f
-private val QueueArtworkSize = RiffleSpacing.xxxl - RiffleSpacing.s
 
 /**
  * Now playing on a browse card: the artwork is the card's surface, a thick glass deck over it holds the title, the
  * scrubber and the transport. Every control is a plain button or slider (48 dp), so nothing here needs a gesture. A tap
- * on the title opens the player in place ([onOpen]: the queue and the large artwork are on the open card); without one
+ * on the title opens the player in place ([onOpen]: the large artwork is on the open card); without one
  * (a widget) it opens the player app.
  */
 @Composable
@@ -65,6 +62,10 @@ internal fun MediaCard(
 ) {
     if (content.source) {
         MediaSourceCard(content, env, callbacks, groupKey, modifier)
+        return
+    }
+    if (content.queueItem != null) {
+        MediaQueueCard(content, env, callbacks, groupKey, modifier)
         return
     }
     val hideChoices = rememberStreamHideChoices(content, groupKey, callbacks)
@@ -238,45 +239,5 @@ internal fun TransportButton(
 ) {
     IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(StreamMinTarget)) {
         Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(28.dp))
-    }
-}
-
-@Composable
-internal fun MediaQueue(
-    content: MediaContent,
-    env: StreamEnvironment,
-) {
-    if (content.queue.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(RiffleSpacing.xs)) {
-        Text(
-            text = stringResource(R.string.stream_media_up_next),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        content.queue.take(MAX_QUEUE_ROWS).forEach { entry ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-            ) {
-                entry.artwork?.let { StreamIcon(it, env, QueueArtworkSize) }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = entry.title ?: stringResource(R.string.stream_media_unknown_title),
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    entry.artist?.takeIf { it.isNotBlank() }?.let { artist ->
-                        Text(
-                            text = artist,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-        }
     }
 }

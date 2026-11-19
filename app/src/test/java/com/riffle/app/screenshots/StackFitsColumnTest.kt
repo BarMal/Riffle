@@ -28,8 +28,10 @@ import kotlin.math.abs
  */
 @Config(sdk = [ScreenshotDevices.SDK], qualifiers = OWNER_UNFOLDED)
 internal class StackFitsColumnTest : OpenCardPolishHarness(HomeLayoutDeviceClass.FOLDABLE, DockPosition.RIGHT) {
-    private val nowPage = StreamPagePlanner.keyOf(StreamSection.NOW)
     private val music = ScreenshotFixtures.notes.identity.packageName.value
+
+    // An active player is a Now page of its own (ADR 0003, Amendment 16).
+    private val nowPage = StreamPagePlanner.keyOf(StreamSection.NOW, "player:$music:personal")
 
     private val session =
         MediaSessionInfo(

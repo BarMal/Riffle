@@ -6,7 +6,6 @@ import com.riffle.core.domain.launcher.workspace.ItemTarget
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class StreamCardActionsTest {
@@ -44,7 +43,6 @@ class StreamCardActionsTest {
             artwork = null,
             icon = null,
             isPlaying = true,
-            queue = listOf(MediaQueueEntry("Next song")),
             target = ItemTarget.App("music", "personal"),
             actions = MediaAction.entries.toSet(),
             privacy = StreamPrivacy.VISIBLE,
@@ -200,13 +198,12 @@ class StreamCardActionsTest {
     }
 
     @Test
-    fun aPlayerHasTransportAndAQueueEntry() {
+    fun aPlayerHasTransportAndOpenPlayerAndNoQueueControl() {
         assertEquals(
             listOf(
                 CardAction.Previous,
                 CardAction.PlayPause(playing = true),
                 CardAction.Next,
-                CardAction.ToggleQueue(shown = true),
                 CardAction.OpenContent(player = true),
             ),
             StreamCardActions.forContent(player),
@@ -220,8 +217,8 @@ class StreamCardActionsTest {
     }
 
     @Test
-    fun aPlayerWithoutAQueueOrASeekableSessionDropsWhatItCannotDo() {
-        val bare = player.copy(queue = emptyList(), actions = setOf(MediaAction.PLAY, MediaAction.PAUSE))
+    fun aPlayerThatCannotSeekOrOpenDropsWhatItCannotDo() {
+        val bare = player.copy(actions = setOf(MediaAction.PLAY, MediaAction.PAUSE))
         assertEquals(listOf(CardAction.PlayPause(playing = true)), StreamCardActions.forContent(bare))
     }
 
@@ -250,13 +247,12 @@ class StreamCardActionsTest {
     }
 
     @Test
-    fun everyControlMapsToTheActionItPerformsAndTheQueueToggleToNone() {
+    fun everyControlMapsToTheActionItPerforms() {
         assertEquals(StreamAction.Reply("hi"), StreamCardActions.streamActionFor(CardAction.Reply, "hi"))
         assertEquals(StreamAction.Pause, StreamCardActions.streamActionFor(CardAction.PlayPause(playing = true)))
         assertEquals(StreamAction.Play, StreamCardActions.streamActionFor(CardAction.PlayPause(playing = false)))
         assertEquals(StreamAction.Open, StreamCardActions.streamActionFor(CardAction.OpenEvent(EventKind.CALENDAR)))
         assertEquals(StreamAction.Complete, StreamCardActions.streamActionFor(CardAction.Complete))
-        assertNull(StreamCardActions.streamActionFor(CardAction.ToggleQueue(shown = true)))
     }
 
     @Test

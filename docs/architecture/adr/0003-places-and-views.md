@@ -885,6 +885,31 @@ widget on Home got no touches. Nothing here adds a Place, a View or a stored fie
 - **Not done.** No source ghost in the Dock's origin slot (the run reflows), no "Move to page", no group drop that makes a
   folder of apps, no widget or stack selection, and nothing here has run on a device.
 
+## Amendment 16 (owner, 2026-11-19): one stack per player, the queue as cards, and a player that opens
+
+Device feedback (a folded phone, a music app playing with a queue): the Dock's row for the open player was packed to the
+left with "Open player" alone beneath it, "Open player" did nothing, and the queue was a list inside the card. The rest
+of Amendments 1 to 15 stands; this adds nothing to the Places, the Views or the eight kinds of content.
+
+- **One stack per player.** In Now each active player is a page of its own and a stack: its card in front (what is
+  playing), then the tracks after the one playing as cards behind it in queue order, so the stack's own gestures browse
+  them. A queue card is a `MediaContent` with a `queueItem`, not a ninth kind; it has the player's app and privacy rules
+  and one new typed action, `PlayQueueItem` ("Play": skip the session to that track), never Open. The recent players stay
+  together as one more page. The page and the stack are keyed by app and profile, so they do not re-key while tracks
+  change. Pages of a section are reached as a feed's are (the Dock's tile, the slide along the Dock, the pager actions).
+- **Settings.** Stream > Now > Show up next (on by default) turns the cards off. The list inside the open card and its
+  chevron are gone.
+- **The Dock's row for the player.** The transport is a centred group (play and pause the primary) and "Open player" is at
+  its end when it fits, else on a second row spread evenly (`ActionRowFit`).
+- **Open player.** The session's own activity sent with the Android 14 background-start opt-in, then the app's launcher
+  entry, then a leanback or any exported main activity, then a spoken failure ("Couldn't open <app>"). The PendingIntent
+  is resolved from the live controller at the time of the action and never enters the content.
+- **Privacy.** Queue cards follow the body level (their text is body text), hide text and sensitive profiles exactly as
+  the old list did: where the list was withheld there are no cards.
+
+Detail, tests and what a device must confirm: [dock-modes-plan.md](../../product/dock-modes-plan.md), "One stack per
+player".
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

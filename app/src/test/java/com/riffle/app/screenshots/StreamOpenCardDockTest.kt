@@ -75,7 +75,9 @@ class StreamOpenCardDockTest {
     private val chatPackage = ScreenshotFixtures.chat.identity.packageName.value
     private val musicPackage = ScreenshotFixtures.music.identity.packageName.value
     private val chatPage = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "$chatPackage:personal")
-    private val nowPage = StreamPagePlanner.keyOf(StreamSection.NOW)
+
+    // An active player is a Now page of its own (ADR 0003, Amendment 16).
+    private val nowPage = StreamPagePlanner.keyOf(StreamSection.NOW, "player:$musicPackage:personal")
 
     private val gateway =
         object : StreamActionGateway {
@@ -265,10 +267,9 @@ class StreamOpenCardDockTest {
         awaitPerformed(2)
 
         assertEquals(listOf(StreamAction.Pause, StreamAction.Next), performed.map { it.second })
-        // The queue is on the open player; the row's queue control hides it.
-        composeRule.onNodeWithText("Reunion").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Hide queue").performClick()
-        composeRule.onAllNodesWithText("Reunion").assertCountEquals(0)
+        // The queue is no list on the open player and has no control in the row: its tracks are cards behind it.
+        composeRule.onAllNodesWithText("Up next").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("Hide queue").assertCountEquals(0)
     }
 
     @Test
