@@ -11,6 +11,16 @@ installing. Entries are in the order they were built; where a later one changes 
 
 ### Added
 
+- Saved Home layouts, undo for backup import and Reset settings ([ADR 0003](docs/architecture/adr/0003-places-and-views.md),
+  Amendment 17). **Settings > Home > Home layouts** saves, renames, activates, replaces and deletes arrangements of
+  Home (pages, grids, apps, folders, widgets and widget stacks; not the Dock, settings or Stream) per device class,
+  twelve at most. Activating asks first, keeps the current Home as "Before <name>" (written to disk before Home
+  changes), offers Undo, drops apps that are gone or hidden, keeps Dock apps out of Home, and binds saved widgets
+  again where Android needs no prompt (others show "Not set up"). **Settings > Backup** keeps one copy of what an
+  import replaces and offers "Backup imported, Undo" and an "Undo last import" row; a failed import says whether the
+  file is not a backup, is from a newer version or is damaged. **Settings > About > Reset settings** puts every
+  setting back to its default (Developer options hidden again) and keeps Home, the Dock, saved layouts, hidden apps
+  and feeds and tokens, with Undo. Not run on a device: widget re-binding and the Undo window need one.
 - One stack per player, and a player that opens ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment
   16): in Now each active player is its own stack, its card in front and the tracks after the one playing as cards
   behind it (at most ten, in queue order, with artwork when the queue has it; "Play" on one skips to it), instead of a

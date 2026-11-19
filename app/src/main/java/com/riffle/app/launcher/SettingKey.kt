@@ -26,6 +26,16 @@ enum class SettingKey(
         R.string.setting_home_arrange_compact,
         R.string.setting_home_arrange_compact_keywords,
     ),
+    HOME_LAYOUTS_SAVE(
+        SettingsPage.HOME_LAYOUTS,
+        R.string.setting_home_layouts_save,
+        R.string.setting_home_layouts_save_keywords,
+    ),
+    HOME_LAYOUTS_LIST(
+        SettingsPage.HOME_LAYOUTS,
+        R.string.setting_home_layouts_list,
+        R.string.setting_home_layouts_list_keywords,
+    ),
     HOME_GRID_COLUMNS(
         SettingsPage.HOME,
         R.string.setting_home_grid_columns,
@@ -472,6 +482,16 @@ enum class SettingKey(
     ),
     BACKUP_EXPORT(SettingsPage.BACKUP, R.string.setting_backup_export, R.string.setting_backup_export_keywords),
     BACKUP_IMPORT(SettingsPage.BACKUP, R.string.setting_backup_import, R.string.setting_backup_import_keywords),
+    BACKUP_UNDO_IMPORT(
+        SettingsPage.BACKUP,
+        R.string.settings_backup_undo_import,
+        R.string.setting_backup_undo_import_keywords,
+    ),
+    BACKUP_DISMISS_UNDO(
+        SettingsPage.BACKUP,
+        R.string.settings_backup_dismiss_undo,
+        R.string.setting_backup_dismiss_undo_keywords,
+    ),
     LAYOUT_FOLDED_DOCK_EDGE(
         SettingsPage.POSTURE_LAYOUT,
         R.string.setting_layout_folded_dock_edge,
@@ -521,6 +541,11 @@ enum class SettingKey(
         SettingsPage.POSTURE_LAYOUT,
         R.string.setting_layout_unfolded_peek_through,
         R.string.setting_layout_unfolded_peek_through_keywords,
+    ),
+    ABOUT_RESET_SETTINGS(
+        SettingsPage.VERSION,
+        R.string.setting_about_reset_settings,
+        R.string.setting_about_reset_settings_keywords,
     ),
     ABOUT_DEVELOPER_OPTIONS(
         SettingsPage.VERSION,

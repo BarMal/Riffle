@@ -41,7 +41,9 @@ internal fun SettingsPageContent(
                     onSettingSelected = onSettingSelected,
                 )
 
-            SettingsPage.HOME -> SettingsHomePageContent(state = state, onAction = onAction)
+            SettingsPage.HOME ->
+                SettingsHomePageContent(state = state, onPageSelected = onPageSelected, onAction = onAction)
+            SettingsPage.HOME_LAYOUTS -> SettingsHomeLayoutsPageContent(state = state, onAction = onAction)
             SettingsPage.DOCK ->
                 SettingsDockPageContent(
                     state = state,
@@ -111,6 +113,7 @@ internal fun SettingsPostureTabs(
 @Composable
 private fun SettingsHomePageContent(
     state: SettingsSurfaceState,
+    onPageSelected: (SettingsPage) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val appearance = state.settings.appearance
@@ -123,6 +126,7 @@ private fun SettingsHomePageContent(
     )
     SettingsDeviceConfigurationTabs(state = state, onAction = onAction)
     SettingsHomeFillSection(state = state, onAction = onAction)
+    SettingsHomeLayoutsRow(state = state, onOpen = { onPageSelected(SettingsPage.HOME_LAYOUTS) })
     SettingsSection(title = stringResource(R.string.settings_section_grid)) {
         HomeGridSetting(
             grid = state.homeLayout.settings.grid,

@@ -7,12 +7,15 @@
   See issue #1409.
   Also excludes the encrypted Todoist token (riffle_todoist_token): it is bound to this device's Keystore and must
   never be backed up or transferred.
+  Also excludes the copy kept before the last backup import (before_import_backup.json): it is this install's only way
+  back from that import and holds the whole set-up, so it is never backed up or transferred.
   Also excludes the device-local onboarding state (riffle_onboarding): it describes this install only.
   Also excludes the after-update diagnostics (riffle_after_update): they describe this install's updates only.
 -->
 <full-backup-content>
     <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
     <exclude domain="file" path="datastore/riffle_ics_feeds.preferences_pb" />
+    <exclude domain="file" path="before_import_backup.json" />
     <exclude domain="sharedpref" path="riffle_onboarding.xml" />
     <exclude domain="sharedpref" path="riffle_after_update.xml" />
     <exclude domain="sharedpref" path="riffle_todoist_token.xml" />

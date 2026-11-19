@@ -76,7 +76,7 @@ class LauncherBackupDocumentHandlerTest {
         val result = handler.importBackup { input }
 
         assertEquals(
-            LauncherBackupImportHandlingResult.Failure(LauncherBackupMessage.IMPORT_FAILED),
+            LauncherBackupImportHandlingResult.Failure(LauncherBackupMessage.IMPORT_NOT_A_BACKUP),
             result,
         )
     }
@@ -90,7 +90,7 @@ class LauncherBackupDocumentHandlerTest {
         val result = handler.importBackup { input }
 
         assertEquals(
-            LauncherBackupImportHandlingResult.Failure(LauncherBackupMessage.IMPORT_FAILED),
+            LauncherBackupImportHandlingResult.Failure(LauncherBackupMessage.IMPORT_DAMAGED),
             result,
         )
     }

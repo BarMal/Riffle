@@ -11,6 +11,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -344,12 +345,21 @@ private fun WidgetResizeHandle(
 
 @Composable
 private fun BoxScope.HomeWidgetFallbackLabel(widget: WidgetItem) {
-    Text(
-        modifier = Modifier.align(Alignment.Center),
-        text = widget.label,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    Column(modifier = Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = widget.label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        // A widget with no host id (restored, or a saved layout's that could not be bound) says what to do.
+        if (widget.appWidgetId.value == 0 && widget.glance == null) {
+            Text(
+                text = stringResource(R.string.widget_not_set_up),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 private fun View.removeFromParent() {

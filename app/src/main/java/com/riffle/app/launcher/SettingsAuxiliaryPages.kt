@@ -5,13 +5,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -76,6 +80,7 @@ internal fun SettingsVersionPageContent(
             onClick = { onPageSelected(SettingsPage.AFTER_UPDATE) },
         )
     }
+    SettingsResetSection(settings = state.settings, onAction = onAction)
     if (diagnostics.developerOptionsRevealed) {
         SettingsSection(title = stringResource(R.string.settings_section_developer)) {
             SettingsSwitchRow(
@@ -249,4 +254,64 @@ internal fun SettingsBackupPageContent(onAction: (LauncherShellAction) -> Unit) 
     SettingsSection(title = stringResource(R.string.settings_page_backup)) {
         BackupSetting(onAction = onAction)
     }
+}
+
+internal const val RESET_SETTINGS_TEST_TAG = "about-reset-settings"
+internal const val RESET_SETTINGS_CONFIRM_TEST_TAG = "about-reset-settings-confirm"
+
+/** Settings > About > Reset settings: asks first, says what is kept, then "Settings reset" with Undo. */
+@Composable
+private fun SettingsResetSection(
+    settings: com.riffle.core.domain.launcher.settings.LauncherSettings,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val snackbar = LocalSettingsSnackbarHostState.current
+    val scope = rememberCoroutineScope()
+    val undo = stringResource(R.string.stream_undo)
+    val done = stringResource(R.string.settings_reset_done)
+    var confirm by remember { mutableStateOf(false) }
+    SettingsSection(title = stringResource(R.string.settings_section_reset)) {
+        SettingsClickableRow(
+            modifier = Modifier.settingAnchor(SettingKey.ABOUT_RESET_SETTINGS).testTag(RESET_SETTINGS_TEST_TAG),
+            title = SettingKey.ABOUT_RESET_SETTINGS.label(),
+            subtitle = stringResource(R.string.settings_reset_settings_subtitle),
+            onClick = { confirm = true },
+            trailingContent = { SettingsButtonText(text = stringResource(R.string.settings_reset_settings_action)) },
+        )
+    }
+    if (confirm) {
+        ResetSettingsDialog(
+            onConfirm = {
+                confirm = false
+                val before = settings
+                onAction(LauncherShellAction.ResetSettings)
+                scope.announceWithUndo(snackbar, done, undo) { onAction(LauncherShellAction.RestoreSettings(before)) }
+            },
+            onDismiss = { confirm = false },
+        )
+    }
+}
+
+/** "Reset settings?" with the exact list of what is kept, and Reset and Cancel. */
+@Composable
+internal fun ResetSettingsDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_reset_dialog_title)) },
+        text = { Text(stringResource(R.string.settings_reset_dialog_body)) },
+        confirmButton = {
+            TextButton(
+                modifier = Modifier.testTag(RESET_SETTINGS_CONFIRM_TEST_TAG),
+                onClick = onConfirm,
+            ) { Text(stringResource(R.string.settings_reset_dialog_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_reset_dialog_cancel))
+            }
+        },
+    )
 }

@@ -4,7 +4,9 @@ import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.ics.CachedIcsFeedRepository
 import com.riffle.app.launcher.pairs.AppPairsRepository
 import com.riffle.app.launcher.pool.CachedPoolRepository
+import com.riffle.app.launcher.savedhome.SavedHomeLayoutsStore
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
+import com.riffle.core.domain.launcher.home.saved.SavedHomeLayouts
 import com.riffle.core.domain.launcher.pairs.AppPair
 import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
@@ -37,6 +39,7 @@ internal class AndroidWorkspaceBackupPort(
      * backup's home layouts by the home's own restore (`withImportedBackup`), never on its own here.
      */
     private val poolOwnsHome: () -> Boolean = { false },
+    private val savedHomeLayouts: SavedHomeLayoutsStore? = null,
 ) : WorkspaceBackupPort {
     @Volatile
     private var storedSet: WorkspaceSet? = null
@@ -56,6 +59,7 @@ internal class AndroidWorkspaceBackupPort(
         storedPool = null
         storedStream = null
         scope.launch {
+            runCatching { savedHomeLayouts?.load() }.onFailure { if (it is CancellationException) throw it }
             runCatching { workspaces.currentOrStored() }
                 .onFailure { if (it is CancellationException) throw it }
                 .onSuccess { storedSet = it }
@@ -81,6 +85,16 @@ internal class AndroidWorkspaceBackupPort(
         stream?.layouts?.value?.takeIf {
             it.byPosture.isNotEmpty()
         } ?: storedStream
+
+    override fun currentSavedHomeLayouts(): SavedHomeLayouts? = savedHomeLayouts?.layouts?.value?.takeIf { !it.isEmpty }
+
+    override fun restoreSavedHomeLayouts(layouts: SavedHomeLayouts) {
+        val store = savedHomeLayouts ?: return
+        scope.launch {
+            runCatching { store.replaceAll(layouts) }
+                .onFailure { if (it is CancellationException) throw it }
+        }
+    }
 
     override fun currentPairs(): List<AppPair>? = pairs?.current()?.takeIf { it.isNotEmpty() }
 
