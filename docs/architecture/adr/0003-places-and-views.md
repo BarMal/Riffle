@@ -962,6 +962,37 @@ and no kind of content, and one stored value (a widget's optional provider in th
 
 Detail and tests: `settings.md` (Reset settings, Setting up a placeholder), `gestures.md`, `dock-modes-plan.md`.
 
+## Amendment 19 (owner, 2026-11-19): icon styles, themed icons, icon packs and per-app changes
+
+This adds no Place, no View and no kind of content. It adds one stored section (`icons` in the settings blob: the shape,
+legacy icon handling, themed icons, the chosen icon pack and per-app overrides), one Appearance sub-page (Icons) and one
+item in an app's long-press menu (Change icon).
+
+- **One icon pipeline.** Every surface that draws an app icon asks `AppIconPipeline` for (app identity with its profile,
+  size, current style); none decodes a drawable or clips an icon on its own. The loader's cache is bounded by bytes and
+  keyed by (app, size, style version, the app's own override). A change of style changes the key: old entries age out, an
+  icon on screen stays until its replacement has loaded, and nothing is resolved on the main thread. Surfaces outside
+  Compose (the Floating dock) load asynchronously through the same pipeline. Work-profile identity is part of the key and
+  the badging behaviour is as it was.
+- **Precedence.** The icon chosen for one app > the icon pack > the themed icon > the shape (`IconPrecedence`, pure,
+  `:core:domain`). The recipes are tried in that order and the last cannot fail. An override whose pack is gone is skipped
+  and kept; reinstalling the pack restores it.
+- **Defaults reproduce today's pixels.** System default, no themed icons, no pack: the drawable goes through the same
+  `Drawable.toBitmap` as before, and the existing goldens did not change.
+- **Shapes, themed icons, packs.** Pure geometry and rules in `:core:domain` (mask outlines, safe-zone scales, the
+  generated monochrome layer, the appfilter parser) with tests; Android drawing in `A/icons/`. Themed icons need API 33;
+  below it the switch is disabled with the reason and a stored value is ignored. A pack is read once per package version,
+  off the main thread, held in memory only, never stored and never in a backup, and re-read on the package change the
+  launcher already receives.
+- **Per-app changes.** Stored by app identity (package, activity, profile) as the pack's package and a drawable name, never
+  a bitmap; included in backup export and import; kept by Reset settings (the user's own data), cleared by Reset icon
+  changes (with Undo). A custom name is applied to what is drawn, not to the stored layout.
+- **Not decided here.** Calendar and dynamic-clock icons of packs, per-pack shapes and a disk cache of decoded icons are not
+  built. A pack's `iconmask` is applied by erasing where the mask is opaque, as the common launchers do; this needs
+  confirming against real packs on a device.
+
+Detail and tests: `settings.md` (Appearance > Icons), `design-language.md` (Icons).
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as
