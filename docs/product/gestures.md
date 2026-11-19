@@ -140,10 +140,6 @@ The Dock has two gestures along the axis across its run, in opposite directions 
   the pull. It reuses `DockChoiceState` (one selection that follows the finger) and the Dock's one pointer loop (`dockPullInput`).
   Draw-phase only: scrubbing recomposes no tile (the choice mark is drawn in the draw phase). Equivalents are unchanged (the
   tiles, "Previous page" and "Next page"); there is nothing gesture-only.
-- **App pairs (drop to pair).** While the Dock is rearranged, a pinned app held over the middle half of another for 350 ms
-  shows the pair it would make and a drop pairs them (`DockPairHold`, `dockHover`; the pure rules are in
-  `DockDropToPair.kt`). The non-gesture equivalent is the pinned app's menu item **"Pair with..."** (an app picker with
-  search), and a pair's menu has "Unpair". Neither exists where pairs are not available (Settings > Dock > App pairs).
 - **Expanded postures.** The P6 split and its divider are gone (dock modes U2): the press opens the Stream in a column attached
   to the Dock, as folded, with Home beside and under it.
 - **Library pull (P7).** Unchanged: the sheet rises from the Dock's edge as the finger moves, 1:1, while what is under it
@@ -354,8 +350,10 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Dock body | 1-finger toward the edge, then release past 28 dp | **Dock press**: toggles Home and the Stream (needs a Stream); a press that starts on a live app / now playing icon opens that page | same |
 | Dock body | the same press held 220 ms past 28 dp, or slid sideways more than 14 dp | **Hold to choose**: the selection follows the finger along the Dock; release opens (Home) or switches to (Stream out) the selected page; dragging more than a Dock thickness away cancels | same |
 | Dock, live app / now playing | tap | Home mode: launches the app (the player for now playing). Contextual mode: switches to its page | same |
-| Dock, app pair | tap | Opens both apps side by side (the first app, then the second 600 ms later); a second tap while it is starting is ignored | same |
-| Dock, app pair | long-press | Open side by side, Swap sides, Open <first>, Open <second>, Unpair, Remove from dock | same |
+| Pairs stack, front card | tap | Opens both apps side by side (the first app, then the second 600 ms later); a second tap while it is starting is ignored | same |
+| Pairs stack, front card | long-press | Open side by side, Swap sides, Change first app, Change second app, Remove | the card's custom actions |
+| Pairs stack, front card | sideways swipe | Removes the pair; "Pair removed" with Undo (no resist cue: a pair is always dismissible) | the Remove action |
+| Pairs stack, draft card | tap a half | Opens the app picker for that half | the halves are buttons, "Choose first app" and "Choose second app" |
 | Dock, pinned app (rearranging) | long-press, drag, hold over the middle half of another pinned app for 350 ms, drop | Pairs the two (the target's app first); over a gap or an edge of a tile it reorders. Nothing is dropped onto a pair | same |
 | Dock, contextual tile | tap | Switches the Stream to that page | same |
 | Dock, contextual row | 1-finger along the run | The row scrolls with fling (owns) | same |

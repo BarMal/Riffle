@@ -611,7 +611,10 @@ The owner asked why calendar and alarm cards showed behind the player under the 
   never stands in for Now: if the app also has notifications it leads to that app's notifications page like any live
   app. See "Media centre" in `docs/product/dock-modes-plan.md`.
 
-## Amendment 5 (owner, 2026-11-17): app pairs are Dock items
+## Amendment 5 (owner, 2026-11-17): app pairs are Dock items (superseded by Amendment 7)
+
+> **Superseded by Amendment 7**, which moves the pairs out of the Dock into a Stream stack of their own. The text below
+> is kept as the record of the earlier decision; nothing of it is built any more except the stored form's migration.
 
 The owner decided that two apps can be pinned as one Dock item that opens them side by side. This is the one place in
 this ADR that adds to what the Dock holds, so it is stated here as a rule, not as a feature. The rest of Amendments 1
@@ -639,7 +642,7 @@ Design canvas round 12, option "HA". Three decisions:
 - **The Dock itself moves between stacks.** While the Stream shows (the Dock in its contextual mode) a press on the Dock
   that slides along its run scrubs: the ring moves from tile to tile, the Stream lands on each page as the finger enters
   its tile, with a tick per tile. No new control. The rules (hysteresis, edge scrolling of a row that holds more tiles than
-  fit, a fling, pair tiles and pinned apps with no page passed over) are in `dock-modes-plan.md`, "The Dock as the stack
+  fit, a fling, pinned apps with no page passed over) are in `dock-modes-plan.md`, "The Dock as the stack
   handle".
 - **A sideways swipe on a card only dismisses.** The Stream's pager takes no touch drag. This supersedes the sentence of
   Amendment 3 that says swiping the cards moves to the neighbouring icon's stack, and the sideways drag in the page's empty
@@ -648,6 +651,29 @@ Design canvas round 12, option "HA". Three decisions:
 - **The Library pull defaults to off.** The "Library" feature switch (Settings > Features) now defaults off; a stored choice,
   on or off, is kept, and a missing value decodes to off. With it off the Dock pull claims nothing and "Open Library" is not
   offered; search stays (the handle's tap, swipe down on Home, the Dock's "Search" action).
+
+## Amendment 7 (owner, 2026-11-19): pairs are a Stream stack
+
+Design canvas round 14: "We should have just put pairs into a card stack that the user can add to and remove from; that way
+each app icon can take up half the card's ground." This supersedes Amendment 5. The rest of Amendments 1 to 6 stands.
+
+- **A pair is typed Stream content.** `AppPairContent` is its own kind of content with its own card (`StreamPairCard`), strip
+  and actions, in the Stream's list of sections (`StreamSection.PAIRS`, stored id `pairs`, on and last by default). What is
+  stored is the two apps (each as a pinned app was stored, profile included), their order (the first app is the start, left,
+  pane) and when the pair was last opened, in its own small list (`AppPair`, `AppPairsCodec`); nothing about windows is
+  stored. Most recently opened first, a new pair in front, at most 12.
+- **Nothing is a Dock item any more.** The Dock holds an app, a folder and a widget again. The Dock's tile for the stack
+  ("Pairs", two rounded panes) is the last of the contextual tiles. A tap on the front card opens both apps side by side
+  (`PairLauncher`, the recipe unchanged); a card never opens into the open-card overlay.
+- **Where a split is not possible the page and its tile are hidden, not removed.** The stored pairs are kept and are back
+  when a split is possible again. Settings > Stream > Pairs > "Show pairs" (Automatic, Always show, Off) says when that is,
+  and replaces Settings > Dock > "App pairs", whose stored value is read as it.
+- **Moving the old data.** Every pair a Dock stored (the pool's kind "pair") becomes a pair of the stack, in Dock order, the
+  first time it is read, and leaves the Dock; old data and backups still decode. A backup carries the pairs.
+- **No new place or layer.** A new content type for the Stream, as the rules ask. "Pairs" is not "layouts": that word is for
+  saved Home arrangements, a separate matter.
+
+See "Pairs" in `docs/product/dock-modes-plan.md`.
 
 ## Superseded documents
 
