@@ -196,7 +196,7 @@ internal fun StreamDestination(
     val failures =
         remember(
             host,
-        ) { MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST) }
+        ) { MutableSharedFlow<StreamFailure>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST) }
     val hider = LocalItemHider.current
     val callbacks =
         StreamCallbacks(
@@ -211,7 +211,7 @@ internal fun StreamDestination(
                             runCatching { host.actions.perform(content, action) }
                                 .getOrDefault(StreamActionResult.Failed)
                         if (outcome == StreamActionResult.Failed || outcome == StreamActionResult.Unavailable) {
-                            failures.tryEmit(Unit)
+                            failures.tryEmit(StreamFailure.of(content, action))
                         }
                     }
                 }
@@ -220,7 +220,7 @@ internal fun StreamDestination(
             onAddTask = { text ->
                 scope.launch(Dispatchers.Default) {
                     val outcome = runCatching { host.tasks?.add(text) }.getOrNull()
-                    if (outcome != TaskActionOutcome.DONE) failures.tryEmit(Unit)
+                    if (outcome != TaskActionOutcome.DONE) failures.tryEmit(StreamFailure())
                 }
             },
             onRefreshTasks = { scope.launch(Dispatchers.Default) { host.tasks?.refresh() } },

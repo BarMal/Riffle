@@ -19,6 +19,16 @@
 
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- A player with no launcher entry (a TV-only one, or only a main activity) still opens from the Stream's
+             "Open player": its leanback launcher and any main activity are visible to the fallback. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
         <!-- The Dock's first-run apps are found by role or intent (AndroidDockDefaultsResolver): dialer, SMS,
              browser and camera. -->
         <intent>

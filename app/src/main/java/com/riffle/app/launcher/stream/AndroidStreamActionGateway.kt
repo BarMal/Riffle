@@ -128,14 +128,14 @@ internal class AndroidStreamActionGateway(
                 if (resumer.resume(packageName) == StreamActionResult.Performed) {
                     StreamActionResult.Performed
                 } else {
-                    launch.launchPackage(packageName).result()
+                    openApp(packageName)
                 }
             StreamAction.Dismiss -> {
                 val control = recentPlayers ?: return StreamActionResult.Unavailable
                 control.dismiss(RecentPlayer.keyOf(packageName, content.app.profileId))
                 StreamActionResult.Performed
             }
-            else -> launch.launchPackage(packageName).result()
+            else -> openApp(packageName)
         }
     }
 
@@ -144,13 +144,25 @@ internal class AndroidStreamActionGateway(
         action: StreamAction,
     ): StreamActionResult {
         if (content.source) return mediaSource(content, action)
-        val result = media.perform(content.app.packageName, action)
-        return if (action == StreamAction.Open && result != StreamActionResult.Performed) {
-            launch.launchPackage(content.app.packageName).result()
-        } else {
-            result
-        }
+        val packageName = content.app.packageName
+        return if (action == StreamAction.Open) openPlayer(packageName) else media.perform(packageName, action)
     }
+
+    /**
+     * "Open player", in order: the live session's own activity (what the player app wants shown), the app's launcher
+     * entry, then any main activity it has; when none of them starts, [StreamActionResult.Failed], which the Stream
+     * says out loud. Every step after the first is a fallback, not a retry.
+     */
+    private fun openPlayer(packageName: String): StreamActionResult =
+        if (media.openSession(packageName) == StreamActionResult.Performed) {
+            StreamActionResult.Performed
+        } else {
+            openApp(packageName)
+        }
+
+    /** The app's launcher entry, else a leanback or any exported main activity. */
+    private fun openApp(packageName: String): StreamActionResult =
+        (launch.launchPackage(packageName) || launch.launchAnyMainActivity(packageName)).result()
 
     private fun article(
         content: ArticleContent,
