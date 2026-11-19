@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerInputScope
@@ -25,25 +26,7 @@ internal suspend fun PointerInputScope.detectDragAfterLongPressPassively(
 ) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        val slop = viewConfiguration.touchSlop
-        // Null: the long-press time passed in the clock; true: an event stamped after it arrived; false: not ours.
-        val held =
-            withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
-                while (true) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                    val change = event.changes.firstOrNull { it.id == down.id }
-                    if (change == null || change.changedToUpIgnoreConsumed() || event.changes.size > 1) {
-                        return@withTimeoutOrNull false
-                    }
-                    if (change.uptimeMillis - down.uptimeMillis >= viewConfiguration.longPressTimeoutMillis) {
-                        return@withTimeoutOrNull true
-                    }
-                    if ((change.position - down.position).getDistance() > slop) return@withTimeoutOrNull false
-                }
-                @Suppress("UNREACHABLE_CODE")
-                false
-            }
-        if (held == false) return@awaitEachGesture
+        if (!heldStillForLongPress(down)) return@awaitEachGesture
         onDragStart(down.position)
         while (true) {
             val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -62,4 +45,31 @@ internal suspend fun PointerInputScope.detectDragAfterLongPressPassively(
             onDrag(change, delta)
         }
     }
+}
+
+/**
+ * Whether the press [down] stays within touch slop, with one finger down, until the long-press time has passed,
+ * watching from the initial pass and consuming nothing. An event stamped after that time counts as well as the clock
+ * (a test or a delayed frame delivers it late). False: the press lifted, moved or grew a second finger first, so it
+ * is not a hold.
+ */
+internal suspend fun AwaitPointerEventScope.heldStillForLongPress(down: PointerInputChange): Boolean {
+    val slop = viewConfiguration.touchSlop
+    val timeout = viewConfiguration.longPressTimeoutMillis
+    // Null: the long-press time passed in the clock; true: an event stamped after it arrived; false: not a hold.
+    val held =
+        withTimeoutOrNull(timeout) {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val change = event.changes.firstOrNull { it.id == down.id }
+                val ended = change == null || change.changedToUpIgnoreConsumed() || event.changes.size > 1
+                val moved = change != null && (change.position - down.position).getDistance() > slop
+                val late = change != null && change.uptimeMillis - down.uptimeMillis >= timeout
+                if (ended || (moved && !late)) return@withTimeoutOrNull false
+                if (late) return@withTimeoutOrNull true
+            }
+            @Suppress("UNREACHABLE_CODE")
+            false
+        }
+    return held != false
 }

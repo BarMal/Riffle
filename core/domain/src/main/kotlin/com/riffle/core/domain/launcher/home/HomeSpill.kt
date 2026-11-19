@@ -15,7 +15,7 @@ import kotlin.math.max
  * "The next page" is the first Home page after the target with a free spot for the item's span; with none, a new page
  * is added after the last Home page. Generated pages never take an item.
  */
-@Suppress("TooManyFunctions") // Small private helpers around the two entry points.
+@Suppress("TooManyFunctions", "ReturnCount") // Small private helpers; early returns for the rejections.
 object HomeSpill {
     private val engine = GridPlacementEngine()
 

@@ -81,16 +81,15 @@ import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.HomeAppPlacement
-import com.riffle.core.domain.launcher.home.HomeSelection
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HandleAxis
 import com.riffle.core.domain.launcher.home.HandleStrip
+import com.riffle.core.domain.launcher.home.HomeAppPlacement
 import com.riffle.core.domain.launcher.home.HomeDragPages
 import com.riffle.core.domain.launcher.home.HomeDragPlan
 import com.riffle.core.domain.launcher.home.HomeDragPush
@@ -101,6 +100,7 @@ import com.riffle.core.domain.launcher.home.HomeHandleLayout
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HomeSelection
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -1631,6 +1631,7 @@ internal fun homeDropTargetAt(
  * and the folder is made there.
  */
 
+@Suppress("ReturnCount")
 internal fun HomeDragSession.planned(
     layout: HomeLayout,
     gridBounds: Rect?,

@@ -141,8 +141,8 @@ class DockPinnedDragTest {
     fun aPinnedItemHeldOverAnAppOfHomeOffersTheFolderLikeAnyHomeDrag() {
         show()
         val firstApp = shell.homeLayout.selectedPage.items.first()
-        val target = composeRule.onNodeWithText((firstApp as com.riffle.core.domain.launcher.home.AppShortcutItem).label)
-            .fetchSemanticsNode().boundsInRoot.center
+        val firstLabel = (firstApp as com.riffle.core.domain.launcher.home.AppShortcutItem).label
+        val target = composeRule.onNodeWithText(firstLabel).fetchSemanticsNode().boundsInRoot.center
         val start = itemBounds(0).center
         holdThenDrag(start, listOf(start + Offset(0f, -60f), target))
 
@@ -162,8 +162,9 @@ class DockPinnedDragTest {
         composeRule.mainClock.advanceTimeBy(HOLD_MILLIS)
         mainRoot().performTouchInput { moveTo(start + Offset(0f, -90f), delayMillis = 16) }
         composeRule.waitForIdle()
-        val target = composeRule.onNodeWithTag(com.riffle.app.launcher.HOME_REMOVE_TARGET_TEST_TAG)
-            .fetchSemanticsNode().boundsInRoot.center
+        val target =
+            composeRule.onNodeWithTag(com.riffle.app.launcher.HOME_REMOVE_TARGET_TEST_TAG)
+                .fetchSemanticsNode().boundsInRoot.center
         mainRoot().performTouchInput {
             moveTo(target, delayMillis = 16)
             up()

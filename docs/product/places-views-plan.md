@@ -406,7 +406,14 @@ Second batch (this slice):
   was lifted from), and pushed neighbours from where they were, each time the preview moves them. A translation read in
   the draw phase (`homeItemSettle`, `HomeItemMotion`); reduced motion jumps; further than four cells (another page) it just
   lands.
-- **Not done:** the ghost and push ring for a Dock item dragged onto Home, and Home's source ghost for a Dock reorder.
+- **Done after this (ADR 0003, Amendment 15):** the Dock reorder wears the ghost treatment and a Dock item carried onto
+  Home gets the push ring; drag from the Library; drop to remove; spill when the page is full; multi-select in Edit page;
+  hosted platform widgets receive taps and scrolls. See `gestures.md`, "Dragging on Home".
+- **Not done:** the Dock reorder shows the outline at the slot it would take and the dimmed icon while the finger is away
+  from the Dock, but not a source ghost in the origin slot (the run reflows live, so a neighbour takes it); a Dock
+  folder shows no ghost (an app does). "Move to page" for a selection (Home has no page picker). Group drops onto an
+  app (a folder of the whole group). Widget and stack selection. Undo for removing a single item by drop (the menu has
+  none). Every drag path was exercised through Robolectric touch injection; none has run on a device.
 
 ## The library view mode is retired
 

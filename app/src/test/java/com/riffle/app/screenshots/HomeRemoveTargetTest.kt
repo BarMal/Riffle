@@ -36,8 +36,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Drop to remove: while an item of Home is lifted the Remove target shows; dropping on it removes the item as the menu's
- * "Remove from Home" does, with one light tick as the finger enters it, and the target's hover recomposes nothing.
+ * Drop to remove: while an item of Home is lifted the Remove target shows; dropping on it removes the item as the
+ * menu's "Remove from Home" does, with one light tick as the finger enters it, and the hover recomposes nothing.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -77,7 +77,8 @@ class HomeRemoveTargetTest {
         composeRule.waitForIdle()
     }
 
-    private fun firstApp(): AppShortcutItem = shell.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>().first()
+    private fun firstApp(): AppShortcutItem =
+        shell.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>().first()
 
     private fun lift() {
         val start = composeRule.onNodeWithText(firstApp().label).fetchSemanticsNode().boundsInRoot.center
@@ -89,7 +90,8 @@ class HomeRemoveTargetTest {
         composeRule.waitForIdle()
     }
 
-    private fun targetCentre() = composeRule.onNodeWithTag(HOME_REMOVE_TARGET_TEST_TAG).fetchSemanticsNode().boundsInRoot.center
+    private fun targetCentre() =
+        composeRule.onNodeWithTag(HOME_REMOVE_TARGET_TEST_TAG).fetchSemanticsNode().boundsInRoot.center
 
     @Test
     fun theTargetIsOnlyThereWhileSomethingIsLifted() {

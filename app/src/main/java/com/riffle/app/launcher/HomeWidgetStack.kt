@@ -112,10 +112,11 @@ internal fun HomeWidgetStack(
         }
     // A platform widget keeps its taps and its own scrolls: the stack watches from above it (never over it) and the
     // long press, held still, lifts the stack and opens its menu. The strip's lift is this one.
+    val platformShown = !ownWidgetShown && !isEditing
     val platformMenuLabel =
-        if (!ownWidgetShown && !isEditing) stringResource(R.string.widget_actions_description, shownMember.label) else null
+        if (platformShown) stringResource(R.string.widget_actions_description, shownMember.label) else null
     val platformLift =
-        if (!ownWidgetShown && !isEditing && dragState != null && workspaceActions != null) {
+        if (platformShown && dragState != null && workspaceActions != null) {
             Modifier.homeItemDrag(
                 enabled = true,
                 item = widget,

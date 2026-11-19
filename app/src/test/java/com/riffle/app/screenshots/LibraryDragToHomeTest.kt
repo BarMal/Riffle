@@ -4,11 +4,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.down
 import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
@@ -23,8 +23,9 @@ import org.robolectric.annotation.Config
 
 /**
  * Dragging an app from the Library to Home (every View): a long-press opens the app's menu as before; moving on past
- * the drag distance dismisses it, closes the Library and continues as a Home drag of a new item. Released without moving
- * the menu stays; a drop on a target adds, a cancel adds nothing; an app Home shows already is not offered.
+ * the drag distance dismisses it, closes the Library and continues as a Home drag of a new item. Released without
+ * moving the menu stays; a drop on a target adds, a drop elsewhere adds nothing; an app Home shows already is not
+ * offered.
  */
 @Config(sdk = [ScreenshotDevices.SDK], qualifiers = ScreenshotDevices.COMPACT_PHONE)
 class LibraryDragToHomeTest : LongPressBehaviorBase() {

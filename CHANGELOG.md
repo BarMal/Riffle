@@ -11,6 +11,14 @@ installing. Entries are in the order they were built; where a later one changes 
 
 ### Added
 
+- Home dragging, finished ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 15): hold an app in the
+  Library (any View) and move on, and the menu gives way to a Home drag of a new item with the Library out of the way;
+  a **Remove** target shows at the top of the screen while anything on Home or in the Dock is lifted (dropping on it
+  removes the item as "Remove from Home" does, a stack asking first); a drop onto a full page sends the displaced app
+  to the next page (a new page when every one is full) instead of doing nothing; a pinned item dragged in the Dock wears
+  the ghost treatment and, over Home, gets the push ring; and in "Edit page" a tap ticks apps and folders so they can be
+  removed (asked once, with Undo), made into a folder, or dragged together as a stacked ghost with a count. Drag tuning
+  gains the Library drag distance. Not run on a device: see `gestures.md`, "Dragging on Home".
 - Widget stacks ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 14): up to ten widgets of one size
   share one Home slot and are swiped through. Drop a widget on another of the same size (the folder hold, then "will
   make a stack") or use "Add widget to stack" in its menu; swipe across the pager's axis (or the dots strip, always) to
@@ -21,6 +29,8 @@ installing. Entries are in the order they were built; where a later one changes 
 
 ### Changed
 
+- A platform widget on Home, alone or in a stack, now receives its own taps and scrolls: Home's gesture layer used to
+  cover it, so the widget's view got no touches at all. The long press still lifts it and opens its menu.
 - Release hygiene ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 13): the diagnostics pages (What
   apps publish, App pair experiment, Pair recipe, Drag tuning) moved under a "Developer options" page in About, shown
   only after the Version row is tapped seven times and the switch is turned on; "After-update starts" stays in About. One

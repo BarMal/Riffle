@@ -88,7 +88,8 @@ class HomeSelectionTest {
 
     @Test
     fun makeAFolderNeedsTwoAppsAndMakesOneAtTheFirstOne() {
-        val two = HomeSelection.toggle(HomeSelection.toggle(editing(app("b", 1, 0), app("a", 0, 0)), LauncherItemId("a")), LauncherItemId("b"))
+        val ticked = HomeSelection.toggle(editing(app("b", 1, 0), app("a", 0, 0)), LauncherItemId("a"))
+        val two = HomeSelection.toggle(ticked, LauncherItemId("b"))
         assertTrue(HomeSelection.canMakeFolder(two))
         val made = assertNotNull(HomeSelection.makeFolder(two, LauncherItemId("folder"), "Dossier"))
         val folder = made.pages[0].items.filterIsInstance<FolderItem>().single()
@@ -98,18 +99,16 @@ class HomeSelectionTest {
         val one = HomeSelection.toggle(editing(app("a", 0, 0)), LauncherItemId("a"))
         assertTrue(!HomeSelection.canMakeFolder(one))
         assertNull(HomeSelection.makeFolder(one, LauncherItemId("folder"), "Dossier"))
-        val withFolder =
-            HomeSelection.selectAll(
-                editing(app("a", 0, 0), FolderItem(LauncherItemId("f"), "F", emptyList(), GridPlacement(GridCell(1, 0)))),
-            )
+        val existing = FolderItem(LauncherItemId("f"), "F", emptyList(), GridPlacement(GridCell(1, 0)))
+        val withFolder = HomeSelection.selectAll(editing(app("a", 0, 0), existing))
         assertTrue(!HomeSelection.canMakeFolder(withFolder))
     }
 
     @Test
     fun aGroupDropLandsFromTheDropCellOnwardAndKeepsTheirOrder() {
         val layout = HomeSelection.selectAll(editing(app("a", 0, 0), app("b", 1, 0), app("c", 2, 0)))
-        val dropped =
-            assertIs<HomeShortcutResult.Updated>(HomeSelection.dropGroup(layout, LauncherPageId("p1"), GridCell(1, 1))).layout
+        val result = HomeSelection.dropGroup(layout, LauncherPageId("p1"), GridCell(1, 1))
+        val dropped = assertIs<HomeShortcutResult.Updated>(result).layout
         val cells = dropped.pages[0].items.associate { it.id.value to it.placement!!.cell }
         assertEquals(GridCell(1, 1), cells["a"])
         assertEquals(GridCell(2, 1), cells["b"])

@@ -117,8 +117,9 @@ class HomeMultiSelectTest {
     private fun selected() = HomeSelection.selectedIds(shell.homeLayout)
 
     private fun stateOf(label: String) =
-        composeRule.onNodeWithText(label, useUnmergedTree = false).fetchSemanticsNode().config
-            .let { config -> if (SemanticsProperties.StateDescription in config) config[SemanticsProperties.StateDescription] else null }
+        composeRule.onNodeWithText(label).fetchSemanticsNode().config.let { config ->
+            if (SemanticsProperties.StateDescription in config) config[SemanticsProperties.StateDescription] else null
+        }
 
     @Test
     fun aTapTicksAnAppWithAStateTheCountAndAnUntickRemovesIt() {

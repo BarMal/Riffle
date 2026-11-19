@@ -56,6 +56,7 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 
 @Composable
+@Suppress("LongParameterList")
 @OptIn(ExperimentalFoundationApi::class)
 internal fun HomeFolder(
     folder: FolderItem,

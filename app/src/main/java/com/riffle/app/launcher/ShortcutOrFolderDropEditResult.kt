@@ -11,12 +11,12 @@ import com.riffle.core.domain.launcher.home.HomeAppPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeSelection
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
-import com.riffle.core.domain.launcher.home.HomeSpill
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
+import com.riffle.core.domain.launcher.home.HomeSpill
 import com.riffle.core.domain.launcher.home.WidgetItem
-import com.riffle.core.domain.launcher.home.containsHomeApp
 import com.riffle.core.domain.launcher.home.WidgetStackEngine
 import com.riffle.core.domain.launcher.home.WidgetStackResult
+import com.riffle.core.domain.launcher.home.containsHomeApp
 
 internal fun applyShortcutOrFolderDropEdit(
     action: LauncherShellAction,
@@ -93,6 +93,7 @@ internal fun applyShortcutOrFolderDropEdit(
  * shows the app already, as "Add to Home" is), an item of the Dock moves to Home. It lands with the push and the
  * spill rule ([HomeSpill]), or, dropped on top of an app or folder, joins it in a folder there.
  */
+@Suppress("ReturnCount") // A rejection each time the drop cannot be made.
 private fun dropExternalItem(
     action: LauncherShellAction.DropExternalHomeItem,
     layout: HomeLayout,

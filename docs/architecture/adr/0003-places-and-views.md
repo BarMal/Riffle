@@ -857,6 +857,34 @@ setting.
   exists. Adding one later means a new stored field with a safe default.
 - **Home only.** The Dock and its panel never hold a stack; Simple mode's generated Home cannot be edited.
 
+## Amendment 15 (owner, 2026-11-19): Home dragging finished
+
+Dragging on Home worked for items already on a page. Standard muscle memory needs the rest, and a report said a platform
+widget on Home got no touches. Nothing here adds a Place, a View or a stored field except one Drag tuning number.
+
+- **One bridge for drags that start elsewhere.** `HomeExternalDrag` (offered by the Home surface through the Dock host's
+  state) takes a drag that began in the Library or the Dock and continues it as a Home drag: the same `HomeDragSession`,
+  push ring (`HomeDragPush`), folder hold, edge page turns and Dock target. The Library's row watches the press from the
+  initial pass and consumes nothing until the drag distance is passed, so tap, menu and scroll are unchanged; the Library
+  stays composed, drawing nothing, because it holds the finger. A drop is `DropExternalHomeItem`: a Library app becomes a
+  new item (an app Home shows already is not offered, as "Add to Home" is not), a Dock item moves.
+- **Spill.** `HomeSpill` (`:core:domain`) places a dropped item when its page cannot make room: the displaced app or
+  folder, else the dropped item, goes to the next Home page's first free cell, or a new page after the last. A widget or
+  stack is never moved unless it is dragged. `HomeDragPlan.spillLanding` names the cell; nothing is lost.
+- **Drop to remove.** A glass Remove target during any Home or Dock drag removes the item as the menu does (same
+  confirmation for a stack, same absence of Undo for one item); `RemoveHomeShortcut` can name the page the item is on.
+  The multi-select removal asks once and has one Undo (`UndoHomeBulkEdit`).
+- **Multi-select** lives in `HomeEditMode.EditingPage.selected` (never stored), with the rules in `HomeSelection`
+  (`:core:domain`): tick apps and folders (not widgets or stacks), remove, make a folder (apps only), drag as a group
+  (`HomeSpill.dropGroup`) or into a folder.
+- **Hosted widgets keep their touches.** Home's gesture layer was a sibling over a platform widget's view and took every
+  touch; the lift is now watched from the initial pass on the widget's frame, consuming nothing until the press has held
+  still for the long-press time. Editing still covers the widget with the layer.
+- **Tuning.** The Library drag distance is a new field of the Drag tuning model (Developer options), stored with a safe
+  default and read from data that has none.
+- **Not done.** No source ghost in the Dock's origin slot (the run reflows), no "Move to page", no group drop that makes a
+  folder of apps, no widget or stack selection, and nothing here has run on a device.
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

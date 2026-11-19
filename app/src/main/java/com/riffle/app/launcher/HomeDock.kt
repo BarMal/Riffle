@@ -1114,7 +1114,7 @@ private fun dockDragLift(
     return DockDragLift(scale, elevation)
 }
 
-@Suppress("LongParameterList", "CyclomaticComplexMethod")
+@Suppress("LongParameterList", "CyclomaticComplexMethod", "LongMethod")
 private fun Modifier.dockItemDrag(
     state: DockSlotState,
     enabled: Boolean,

@@ -10,13 +10,15 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * What a Library row needs to hand a held app over to Home as a drag (the Library's "Drag to Home"): the Home surface's
@@ -58,48 +60,34 @@ internal fun Modifier.libraryHomeDrag(
                 .pointerInput(app.identity) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                        val touchSlop = viewConfiguration.touchSlop
-                        val longPress = viewConfiguration.longPressTimeoutMillis
-                        val held =
-                            withTimeoutOrNull(longPress) {
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                                    val change = event.changes.firstOrNull { it.id == down.id }
-                                    if (change == null || change.changedToUpIgnoreConsumed() ||
-                                        event.changes.size > 1
-                                    ) {
-                                        return@withTimeoutOrNull false
-                                    }
-                                    if (change.uptimeMillis - down.uptimeMillis >= longPress) {
-                                        return@withTimeoutOrNull true
-                                    }
-                                    if ((change.position - down.position).getDistance() > touchSlop) {
-                                        return@withTimeoutOrNull false
-                                    }
-                                }
-                                @Suppress("UNREACHABLE_CODE")
-                                false
-                            }
-                        if (held == false) return@awaitEachGesture
-                        val dragSlop = latestDrag.slopDp * density
-                        // The menu is open now. Released without moving past the drag distance, it stays.
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: return@awaitEachGesture
-                            if (change.changedToUpIgnoreConsumed()) return@awaitEachGesture
-                            if ((change.position - down.position).getDistance() > dragSlop) {
-                                if (!startDrag(app, latestDrag, toRoot(change.position), latestDismiss)) {
-                                    return@awaitEachGesture
-                                }
-                                event.changes.forEach { it.consume() }
-                                break
-                            }
-                        }
-                        carryDrag(down.id, latestDrag, ::toRoot)
+                        // Not a hold (the list scrolls, a tap): not ours. Held, the platform opens the menu.
+                        if (!heldStillForLongPress(down)) return@awaitEachGesture
+                        val start = awaitDragDistance(down, latestDrag.slopDp * density) ?: return@awaitEachGesture
+                        val bridge = startDrag(app, latestDrag, toRoot(start.position), latestDismiss)
+                        if (bridge) carryDrag(down.id, latestDrag, ::toRoot)
                     }
                 }
         }
     }
+
+/**
+ * Waits, with the menu open, for the finger to move [distancePx] from where it landed: that event, or null when it
+ * lifted first (the menu stays) or the pointer is gone. The event is consumed, so the list beneath does not scroll.
+ */
+private suspend fun AwaitPointerEventScope.awaitDragDistance(
+    down: PointerInputChange,
+    distancePx: Float,
+): PointerInputChange? {
+    while (true) {
+        val event = awaitPointerEvent(PointerEventPass.Initial)
+        val change = event.changes.firstOrNull { it.id == down.id }
+        if (change == null || change.changedToUpIgnoreConsumed()) return null
+        if ((change.position - down.position).getDistance() > distancePx) {
+            event.changes.forEach { it.consume() }
+            return change
+        }
+    }
+}
 
 private fun startDrag(
     app: InstalledApp,
@@ -107,32 +95,34 @@ private fun startDrag(
     pointerInRoot: Offset,
     onMenuDismiss: () -> Unit,
 ): Boolean {
-    val bridge = drag.externalDrag() ?: return false
+    val bridge = drag.externalDrag()
     onMenuDismiss()
-    if (!bridge.start(ExternalHomeDragSource.Library(app), pointerInRoot)) return false
-    drag.active.value = true
-    return true
+    val started = bridge?.start(ExternalHomeDragSource.Library(app), pointerInRoot) == true
+    if (started) drag.active.value = true
+    return started
 }
 
-private suspend fun androidx.compose.ui.input.pointer.AwaitPointerEventScope.carryDrag(
-    pointerId: androidx.compose.ui.input.pointer.PointerId,
+private suspend fun AwaitPointerEventScope.carryDrag(
+    pointerId: PointerId,
     drag: LibraryHomeDrag,
     toRoot: (Offset) -> Offset,
 ) {
     var finished = false
     try {
-        while (true) {
+        var carrying = true
+        while (carrying) {
             val event = awaitPointerEvent(PointerEventPass.Initial)
             val change = event.changes.firstOrNull { it.id == pointerId }
-            if (change == null) break
-            val lifted = change.changedToUpIgnoreConsumed()
             event.changes.forEach { it.consume() }
-            if (lifted) {
+            if (change == null) {
+                carrying = false
+            } else if (change.changedToUpIgnoreConsumed()) {
                 drag.externalDrag()?.end()
                 finished = true
-                break
+                carrying = false
+            } else {
+                drag.externalDrag()?.move(toRoot(change.position))
             }
-            drag.externalDrag()?.move(toRoot(change.position))
         }
     } finally {
         if (!finished) drag.externalDrag()?.cancel()

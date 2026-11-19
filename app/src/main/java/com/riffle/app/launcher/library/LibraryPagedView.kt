@@ -60,9 +60,9 @@ import com.riffle.app.launcher.WallpaperReadableLabel
 import com.riffle.app.launcher.appListEmptyText
 import com.riffle.app.launcher.drawerKey
 import com.riffle.app.launcher.drawerRowState
+import com.riffle.app.launcher.gridFade
 import com.riffle.app.launcher.homeDragFor
 import com.riffle.app.launcher.libraryHomeDrag
-import com.riffle.app.launcher.gridFade
 import com.riffle.app.launcher.notificationCountFor
 import com.riffle.app.launcher.pressMenu
 import com.riffle.app.launcher.rememberGridFadeCell

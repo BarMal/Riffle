@@ -8,14 +8,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.down
-import androidx.compose.ui.test.moveBy
-import androidx.compose.ui.test.up
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.up
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.HomeDragSession
 import com.riffle.app.launcher.HomeItemDragState
@@ -152,7 +152,8 @@ class HostedWidgetTapTest {
         }
         composeRule.waitForIdle()
         assertTrue(sessions.toString(), sessions.any { it != null })
-        assertTrue("touches=$touches", touches.contains(MotionEvent.ACTION_CANCEL) || touches.last() != MotionEvent.ACTION_UP)
+        val cancelled = touches.contains(MotionEvent.ACTION_CANCEL) || touches.last() != MotionEvent.ACTION_UP
+        assertTrue("touches=$touches", cancelled)
         assertEquals(0, clicks)
     }
 

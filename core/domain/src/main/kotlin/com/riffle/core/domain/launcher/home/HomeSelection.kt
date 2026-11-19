@@ -8,7 +8,7 @@ package com.riffle.core.domain.launcher.home
  * as one: it is removed together, made into a folder together (apps only), and dragged together, landing from the
  * drop cell onward in reading order ([HomeSpill.dropGroup]) or in a folder it is dropped on.
  */
-@Suppress("TooManyFunctions") // One small rule per way a selection is changed or used.
+@Suppress("TooManyFunctions", "ReturnCount") // One small rule per way a selection is changed or used.
 object HomeSelection {
     private val folders = FolderEngine()
 
@@ -91,7 +91,7 @@ object HomeSelection {
         }
     }
 
-    /** The ticked apps added to the folder [folderId] of [targetPageId]; rejected unless every ticked item is an app. */
+    /** The ticked apps added to the folder [folderId] of [targetPageId]; rejected unless every one is an app. */
     fun dropGroupOnFolder(
         layout: HomeLayout,
         targetPageId: LauncherPageId,
@@ -111,7 +111,8 @@ object HomeSelection {
                 when (val added = folders.addShortcutToFolderOnSelectedPage(working, folderId, app)) {
                     is FolderEditResult.Updated -> added.layout
                     // An app that cannot join stays where it was: nothing is lost.
-                    is FolderEditResult.Rejected -> return HomeShortcutResult.Rejected(PlacementRejectionReason.COLLISION)
+                    is FolderEditResult.Rejected ->
+                        return HomeShortcutResult.Rejected(PlacementRejectionReason.COLLISION)
                 }
         }
         return HomeShortcutResult.Updated(working.copy(selectedPageId = layout.selectedPageId))
