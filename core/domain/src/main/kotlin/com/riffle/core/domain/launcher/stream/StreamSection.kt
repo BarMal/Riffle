@@ -46,7 +46,7 @@ enum class StreamSection(
     val readsAlarm: Boolean = false,
 ) {
     /**
-     * Now playing: media only (ADR 0003, Amendment 5). The active sessions with their queue, then the recent players
+     * Now playing: media only (ADR 0003, Amendment 4). The active sessions with their queue, then the recent players
      * that have no session. The next event and the alarm are on [TODAY].
      */
     NOW("now", listOf(SourceIds.MEDIA)),
