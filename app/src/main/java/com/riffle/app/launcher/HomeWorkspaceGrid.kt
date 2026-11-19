@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -34,6 +35,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
@@ -57,6 +59,13 @@ internal fun WorkspaceGrid(
     modifier: Modifier = Modifier,
     testTag: String = HOME_WORKSPACE_GRID_TEST_TAG,
 ) {
+    // The same instances while they are equal: what a cell is given must not change for nothing (the layout is
+    // rebuilt as it is filtered, so equal pages and presentations arrive as new objects).
+    @Suppress("NAME_SHADOWING")
+    val page = remember(page) { page }
+    CountRecomposition(homeGridProbeKey(page.id.value))
+    @Suppress("NAME_SHADOWING")
+    val presentation = remember(presentation) { presentation }
     BoxWithConstraints(
         modifier = modifier,
     ) {
@@ -109,20 +118,39 @@ internal fun WorkspaceGrid(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             repeat(page.grid.columns) { column ->
+                                val cell = GridCell(column = column, row = row)
+                                val source =
+                                    activeDragSession?.takeIf { it.originPageId == page.id && it.originCell == cell }
+                                val visibleItem = source?.item ?: previewItems.itemAt(cell = cell)
+                                val landing =
+                                    activeDragSession
+                                        ?.takeIf { it.projectedCell == cell && it.targetPageId == page.id }
+                                        ?.takeIf { it.plan?.dropOn == null }
+                                        ?.let { session ->
+                                            HomeCellLanding(
+                                                placeholder =
+                                                    HomeGridCellState(cell, previewItems)
+                                                        .dragPlaceholderAtProjectedCell(session),
+                                                ghostOf = (session.item as? AppShortcutItem)?.appIdentity,
+                                            )
+                                        }
+                                // Everything a cell reads is its own: a drag recomposes only the cells it changes.
                                 HomeGridCell(
-                                    state =
-                                        HomeGridCellState(
-                                            cell = GridCell(column = column, row = row),
-                                            cellSize = cellSize,
-                                            cellSizePx = cellSizePx,
-                                            page = page,
-                                            previewItems = previewItems,
-                                            activeDragSession = activeDragSession,
-                                            widgetPickerDragPreview =
-                                                gridState.widgetPickerDragPreview
-                                                    ?.takeIf { preview -> preview.targetPageId == page.id },
-                                            gridState = gridState,
-                                        ),
+                                    column = column,
+                                    row = row,
+                                    cellSize = cellSize,
+                                    cellSizePx = cellSizePx,
+                                    page = page,
+                                    visibleItem = visibleItem,
+                                    isDragSource = source != null,
+                                    landing = landing,
+                                    willMakeFolder =
+                                        activeDragSession?.plan?.dropOn.let { it != null && it == visibleItem?.id },
+                                    widgetPickerDragPreview =
+                                        gridState.widgetPickerDragPreview
+                                            ?.takeIf { preview -> preview.targetPageId == page.id }
+                                            ?.takeIf { preview -> preview.cell == cell },
+                                    isEditing = gridState.isEditing,
                                     presentation = presentation,
                                     appIconLoader = appIconLoader,
                                     actions = actions,
@@ -169,23 +197,45 @@ private fun GeneratedContentOverflowButton(
 private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
     get() = type is LauncherPageType.Generated && generatedContentOverflowCount > 0
 
-/** How dim the item a drag lifted stays where it was (folders and widgets; an app is a baked ghost). */
-private const val DRAG_SOURCE_DIM = 0.3f
-
 internal const val HOME_WORKSPACE_GRID_TEST_TAG = "home-workspace-grid"
 internal const val HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG = "home-workspace-grid-overflow"
+
+/** How far, in cells, an item still settles to its cell; further it lands (another page). */
+private const val SETTLE_MAX_CELLS = 4f
+
+/** The recomposition probe key of a whole Home page grid. */
+internal fun homeGridProbeKey(pageId: String): String = "home-grid:$pageId"
+
+/** The recomposition probe key of one cell of a Home page: a drag must recompose only the cells it touches. */
+internal fun homeGridCellProbeKey(
+    pageId: String,
+    cell: GridCell,
+): String = "home-cell:$pageId:${cell.column},${cell.row}"
 
 /** One cell of Home's placed grid (every cell, filled or not), for a test to measure the grid by. */
 internal const val HOME_GRID_CELL_TEST_TAG = "home-grid-cell"
 
-@Suppress("LongMethod")
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 private fun RowScope.HomeGridCell(
-    state: HomeGridCellState,
+    column: Int,
+    row: Int,
+    cellSize: Dp,
+    cellSizePx: Float,
+    page: LauncherPage,
+    visibleItem: LauncherItem?,
+    isDragSource: Boolean,
+    landing: HomeCellLanding?,
+    willMakeFolder: Boolean,
+    widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
+    isEditing: Boolean,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
 ) {
+    // The coordinates, not a GridCell: a domain class is unstable, so a fresh one at each call would never be skipped.
+    val cell = remember(column, row) { GridCell(column = column, row = row) }
+    CountRecomposition(homeGridCellProbeKey(page.id.value, cell))
     Box(
         modifier =
             Modifier
@@ -194,41 +244,28 @@ private fun RowScope.HomeGridCell(
                 .testTag(HOME_GRID_CELL_TEST_TAG),
         contentAlignment = Alignment.Center,
     ) {
-        val activeDragSession = state.activeDragSession
-        val activeDragSource =
-            activeDragSession
-                ?.takeIf { session -> session.originPageId == state.page.id && session.originCell == state.cell }
-                ?.item
-        val visibleItem = activeDragSource ?: state.previewItems.itemAt(cell = state.cell)
-
         val fade = rememberGridFadeCell()
         Box(
             modifier =
                 Modifier
-                    .width(state.cellSize)
+                    .width(cellSize)
                     .fillMaxHeight()
                     // Flows into the fade under the Stream's column when one stands; otherwise nothing.
                     .gridFade(fade),
             contentAlignment = Alignment.Center,
         ) {
-            if (activeDragSession?.projectedCell == state.cell &&
-                activeDragSession.targetPageId == state.page.id &&
-                activeDragSession.plan?.dropOn == null
-            ) {
-                state.dragPlaceholderAtProjectedCell(activeDragSession)?.let { placeholder ->
-                    HomeDragPlaceholder(
-                        span = placeholder.span,
-                        cellSize = state.cellSize,
-                        cellSizePx = state.cellSizePx,
-                        fillSpan = placeholder.fillSpan,
-                        iconSizeDp = presentation.labelSettings.iconSizeDp,
-                        ghostOf = (activeDragSession.item as? AppShortcutItem)?.appIdentity,
-                        appIconLoader = appIconLoader,
-                    )
-                }
+            landing?.placeholder?.let { placeholder ->
+                HomeDragPlaceholder(
+                    span = placeholder.span,
+                    cellSize = cellSize,
+                    cellSizePx = cellSizePx,
+                    fillSpan = placeholder.fillSpan,
+                    iconSizeDp = presentation.labelSettings.iconSizeDp,
+                    ghostOf = landing.ghostOf,
+                    appIconLoader = appIconLoader,
+                )
             }
 
-            val willMakeFolder = activeDragSession?.plan?.dropOn.let { it != null && it == visibleItem?.id }
             val folderState =
                 rememberFolderWillForm(
                     active = willMakeFolder,
@@ -244,25 +281,27 @@ private fun RowScope.HomeGridCell(
                                     scaleX = folderState.scale
                                     scaleY = folderState.scale
                                 }
-                                .folderWillFormOutline(folderState.armed, presentation.labelSettings.iconSizeDp),
+                                .folderWillFormOutline(folderState.armed, presentation.labelSettings.iconSizeDp)
+                                .homeItemSettle(
+                                    id = item.id,
+                                    isDragSource = isDragSource,
+                                    reducedMotion = presentation.reducedMotion,
+                                    maxDistancePx = cellSizePx * SETTLE_MAX_CELLS,
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         HomeGridItem(
                             item = item,
                             state =
                                 HomeGridItemState(
-                                    cell = state.cell,
-                                    cellSize = state.cellSize,
-                                    cellSizePx = state.cellSizePx,
-                                    grid = state.page.grid,
-                                    pageId = state.page.id,
-                                    pageItems = state.page.items,
-                                    isEditing = state.gridState.isEditing,
-                                    activeDragSession =
-                                        activeDragSession?.takeIf {
-                                                session ->
-                                            session.item.id == item.id
-                                        },
+                                    cell = cell,
+                                    cellSize = cellSize,
+                                    cellSizePx = cellSizePx,
+                                    grid = page.grid,
+                                    pageId = page.id,
+                                    pageItems = page.items,
+                                    isEditing = isEditing,
+                                    isDragSource = isDragSource,
                                 ),
                             presentation = presentation,
                             appIconLoader = appIconLoader,
@@ -272,26 +311,25 @@ private fun RowScope.HomeGridCell(
                 }
             }
 
-            state.widgetPickerDragPreview
-                ?.takeIf { preview -> preview.cell == state.cell }
-                ?.let { preview ->
-                    WidgetPickerDragPlaceholder(preview = preview, cellSize = state.cellSize)
-                }
+            widgetPickerDragPreview?.let { preview ->
+                WidgetPickerDragPlaceholder(preview = preview, cellSize = cellSize)
+            }
             // A cell faded out under the column or behind an open card takes no input.
             GridFadeInputBlock(fade, Modifier.matchParentSize())
         }
     }
 }
 
+/** The landing marker of a drag in the cell it would land in: its placeholder and the icon it is the outline of. */
+internal data class HomeCellLanding(
+    val placeholder: HomeDragPlaceholderState?,
+    val ghostOf: AppIdentity?,
+)
+
+/** What a landing cell needs to look at the page's items under the drag preview (the placeholder's occupant). */
 internal data class HomeGridCellState(
     val cell: GridCell,
-    val cellSize: Dp,
-    val cellSizePx: Float,
-    val page: LauncherPage,
     val previewItems: List<LauncherItem>,
-    val activeDragSession: HomeDragSession?,
-    val widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
-    val gridState: HomeGridState,
 )
 
 @Composable
@@ -331,12 +369,9 @@ private fun HomeGridItem(
             )
 
         is FolderItem ->
-            Box(
-                modifier =
-                    state.dragSourceModifier.fillMaxSize()
-                        .graphicsLayer { alpha = if (state.isDragSource) DRAG_SOURCE_DIM else 1f },
-            ) {
+            Box(modifier = state.dragSourceModifier.fillMaxSize()) {
                 HomeFolder(
+                    isDragSource = state.isDragSource,
                     folder = item,
                     dragState =
                         HomeItemDragState(
@@ -384,27 +419,31 @@ private fun HomeGridWidget(
                 .requiredWidth(state.cellSize * span.columns)
                 .requiredHeight(state.cellSize * span.rows)
                 .graphicsLayer {
-                    alpha = if (state.isDragSource) DRAG_SOURCE_DIM else 1f
                     translationX = ((span.columns - 1) * state.cellSizePx) / 2f
                     translationY = ((span.rows - 1) * state.cellSizePx) / 2f
                 },
     ) {
-        HomeWidgetPlaceholder(
-            widget = widget,
-            isEditing = state.isEditing,
-            contextSurface = presentation.contextSurface,
-            widgetViewFactory = presentation.widgetViewFactory,
-            dragState =
-                HomeItemDragState(
-                    pageId = state.pageId,
-                    cell = state.cell,
-                    cellSizePx = state.cellSizePx,
-                    grid = state.grid,
-                    pageItems = state.pageItems,
-                ),
-            workspaceActions = actions,
-            onAction = actions.onAction,
-        )
+        // Lifted, the widget leaves the outline of its span (the widget itself stays composed, unseen, to keep the
+        // gesture it started).
+        if (state.isDragSource) WidgetSpanOutline(modifier = Modifier.matchParentSize())
+        Box(modifier = Modifier.fillMaxSize().then(if (state.isDragSource) Modifier.alpha(0f) else Modifier)) {
+            HomeWidgetPlaceholder(
+                widget = widget,
+                isEditing = state.isEditing,
+                contextSurface = presentation.contextSurface,
+                widgetViewFactory = presentation.widgetViewFactory,
+                dragState =
+                    HomeItemDragState(
+                        pageId = state.pageId,
+                        cell = state.cell,
+                        cellSizePx = state.cellSizePx,
+                        grid = state.grid,
+                        pageItems = state.pageItems,
+                    ),
+                workspaceActions = actions,
+                onAction = actions.onAction,
+            )
+        }
     }
 }
 
@@ -527,11 +566,9 @@ internal data class HomeGridItemState(
     val grid: GridDimensions,
     val pageItems: List<LauncherItem>,
     val isEditing: Boolean,
-    val activeDragSession: HomeDragSession?,
-) {
     /** Whether this item is the one lifted: it stays where it was (as a ghost); the lifted icon is drawn above. */
-    val isDragSource: Boolean = activeDragSession != null
-
+    val isDragSource: Boolean,
+) {
     val dragSourceModifier: Modifier = Modifier
 }
 

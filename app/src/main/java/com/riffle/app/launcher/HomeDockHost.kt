@@ -93,6 +93,15 @@ internal class HomeDockHostState {
      */
     val dynamicEntryBounds: SnapshotStateMap<String, Rect> = mutableStateMapOf()
 
+    /**
+     * Where Home takes a Dock item dropped at a point in the root (the page and cell under it), or null for nowhere.
+     * Set by the Home surface while it is composed; null where no Home stands beside the Dock.
+     */
+    var homeDropAt: ((Offset) -> HomeDropTarget?)? = null
+
+    /** Where each pinned item's slot is in root coordinates, by item id: where a Home item dropped on the Dock goes. */
+    val pinnedSlotBounds: SnapshotStateMap<LauncherItemId, Rect> = mutableStateMapOf()
+
     /** Whether an item being dragged in the mode's content would land on the dock if released now. */
     val isDropTargetHighlighted: MutableState<Boolean> = mutableStateOf(false)
 
@@ -286,6 +295,17 @@ internal fun HomeDockHost(
         ) {
             CompositionLocalProvider(
                 LocalDockChoice provides choice,
+                LocalDockHomeDropAt provides remember(hostState) { { hostState.homeDropAt } },
+                LocalDockPinnedSlotBoundsSink provides
+                    remember(hostState) {
+                        { id: LauncherItemId, rect: Rect? ->
+                            if (rect == null) {
+                                hostState.pinnedSlotBounds.remove(id)
+                            } else if (hostState.pinnedSlotBounds[id] != rect) {
+                                hostState.pinnedSlotBounds[id] = rect
+                            }
+                        }
+                    },
                 LocalDockPinnedStream provides interpreter.pinnedStream,
                 LocalDockBackgroundAlpha provides dockBackgroundAlpha,
                 LocalDockDynamicBoundsSink provides rememberDynamicBoundsSink(hostState),

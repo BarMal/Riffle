@@ -1,23 +1,37 @@
 package com.riffle.app.screenshots
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.cancel
 import androidx.compose.ui.test.down
+import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.up
 import com.riffle.app.launcher.HOME_GRID_CELL_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
+import com.riffle.app.launcher.HomeItemMotion
 import com.riffle.app.launcher.LauncherShellAction
+import com.riffle.app.launcher.LocalHomeItemMotion
+import com.riffle.app.launcher.applyEdit
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.HomePageEditResult
+import com.riffle.core.domain.launcher.home.HomePageEngine
+import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -37,18 +51,22 @@ class HomeDragBehaviorTest {
     private val actions = mutableListOf<LauncherShellAction>()
     private var shell by mutableStateOf(ScreenshotFixtures.homeState().withManyApps())
 
+    private val itemMotion = HomeItemMotion()
+
     private fun show() {
         composeRule.setContent {
             ScreenshotBackdrop {
-                HomeDestination(
-                    state = shell,
-                    appIconLoader = SolidColorAppIconLoader(),
-                    stream = emptyStreamHost(),
-                    onAction = { action ->
-                        actions += action
-                        shell = shell.answering(action)
-                    },
-                )
+                CompositionLocalProvider(LocalHomeItemMotion provides itemMotion) {
+                    HomeDestination(
+                        state = shell,
+                        appIconLoader = SolidColorAppIconLoader(),
+                        stream = emptyStreamHost(),
+                        onAction = { action ->
+                            actions += action
+                            shell = shell.answering(action).answeringPages(action)
+                        },
+                    )
+                }
             }
         }
         composeRule.waitForIdle()
@@ -129,8 +147,7 @@ class HomeDragBehaviorTest {
         assertTrue(failures.joinToString("\n"), failures.isEmpty())
     }
 
-    @Test
-    fun anItemHeldAtTheEdgeTurnsThePageAndDropsOnTheNextOne() {
+    private fun withSecondPage() {
         val layout = shell.homeLayout
         val second =
             com.riffle.core.domain.launcher.home.LauncherPage(
@@ -153,6 +170,46 @@ class HomeDragBehaviorTest {
         shell = shell.copy(homeLayout = twoPages, homeLayoutSet = shell.homeLayoutSet.withActiveLayout(twoPages))
         show()
         assertTrue("needs two pages: ${shell.homeLayout.pages.size}", shell.homeLayout.pages.size >= 2)
+    }
+
+    @Test
+    fun aHeldDropOnAnItemOfThePageTurnedToMakesTheFolderThereWithTheDeadZone() {
+        withSecondPage()
+        val name = labels().first()
+        val rootRight = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.right
+        val start = composeRule.onNodeWithText(name).fetchSemanticsNode().boundsInRoot.center
+        composeRule.onRoot().performTouchInput {
+            down(start)
+            advanceEventTime(700)
+            moveBy(Offset(10f, 0f))
+            moveTo(Offset(rootRight - 6f, start.y))
+            moveBy(Offset(1f, 0f))
+        }
+        // Past the edge hold (500 ms) and before the next repeat (a new page is offered while still held on the last).
+        composeRule.mainClock.advanceTimeBy(900)
+        composeRule.waitForIdle()
+        val screen = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        // The first cell (column 0, row 0) of the page now on screen: the centre of its icon cell is the dead zone.
+        val target =
+            composeRule.onAllNodesWithTag(HOME_GRID_CELL_TEST_TAG).fetchSemanticsNodes()
+                .map { it.boundsInRoot }
+                .first { it.center.x in screen.left..screen.right && it.center.y in screen.top..screen.bottom }
+                .center
+        composeRule.onRoot().performTouchInput {
+            moveTo(target)
+            moveBy(Offset(1f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(600)
+        composeRule.onRoot().performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        val drop = actions.filterIsInstance<LauncherShellAction.DropHomeItem>().singleOrNull()
+        assertTrue(actions.toString(), drop != null && drop.dropOnItemId?.value == "second-app")
+    }
+
+    @Test
+    fun anItemHeldAtTheEdgeTurnsThePageAndDropsOnTheNextOne() {
+        withSecondPage()
         val first = shell.homeLayout.pages.first()
         val name = labels().first()
 
@@ -172,6 +229,195 @@ class HomeDragBehaviorTest {
 
         val drop = actions.filterIsInstance<LauncherShellAction.DropHomeItem>().singleOrNull()
         assertTrue(first.id.value + " " + actions, drop != null && drop.targetPageId != drop.sourcePageId)
+    }
+
+    /** The page actions a drag sends, answered by the real page engine. */
+    private fun com.riffle.core.domain.launcher.LauncherShellState.answeringPages(
+        action: LauncherShellAction,
+    ): com.riffle.core.domain.launcher.LauncherShellState {
+        val isPageAction =
+            action is LauncherShellAction.AddHomePage || action is LauncherShellAction.DiscardEmptyHomePage
+        val updated =
+            (HomePageEngine().applyEdit(action, homeLayout) as? HomePageEditResult.Updated)?.layout
+        return if (isPageAction && updated != null) {
+            copy(homeLayout = updated, homeLayoutSet = homeLayoutSet.withActiveLayout(updated))
+        } else {
+            this
+        }
+    }
+
+    private fun holdAtTheTrailingEdge() {
+        val rootRight = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.right
+        val name = labels().first()
+        val start = composeRule.onNodeWithText(name).fetchSemanticsNode().boundsInRoot.center
+        composeRule.onRoot().performTouchInput {
+            down(start)
+            advanceEventTime(700)
+            moveBy(Offset(10f, 0f))
+            moveTo(Offset(rootRight - 6f, start.y))
+            moveBy(Offset(1f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(2_500)
+        composeRule.waitForIdle()
+    }
+
+    private fun pageSelectorState() =
+        composeRule.onNodeWithContentDescription("Page selector").fetchSemanticsNode()
+            .config[androidx.compose.ui.semantics.SemanticsProperties.StateDescription]
+
+    @Test
+    fun heldAtTheTrailingEdgeOfTheLastPageOffersANewPageThatTheDropKeepsAndTheDotsShow() {
+        show()
+        val pagesBefore = shell.homeLayout.pages.size
+        holdAtTheTrailingEdge()
+        assertTrue(actions.toString(), actions.any { it is LauncherShellAction.AddHomePage })
+        assertEquals(pagesBefore + 1, shell.homeLayout.pages.size)
+        assertEquals(
+            "the dots show the new page as the target",
+            "Page ${pagesBefore + 1} of ${pagesBefore + 1}",
+            pageSelectorState(),
+        )
+
+        composeRule.onRoot().performTouchInput { up() }
+        composeRule.waitForIdle()
+        val drop = actions.filterIsInstance<LauncherShellAction.DropHomeItem>().singleOrNull()
+        assertTrue(actions.toString(), drop != null && drop.targetPageId == shell.homeLayout.pages.last().id)
+        assertTrue(actions.toString(), actions.none { it is LauncherShellAction.DiscardEmptyHomePage })
+    }
+
+    @Test
+    fun aCancelledDragDiscardsTheOfferedPage() {
+        show()
+        val pagesBefore = shell.homeLayout.pages.size
+        holdAtTheTrailingEdge()
+        assertEquals(pagesBefore + 1, shell.homeLayout.pages.size)
+
+        composeRule.onRoot().performTouchInput { cancel() }
+        composeRule.waitForIdle()
+        assertTrue(actions.toString(), actions.any { it is LauncherShellAction.DiscardEmptyHomePage })
+        assertEquals(pagesBefore, shell.homeLayout.pages.size)
+    }
+
+    /** A folder and a two-column widget on the page's lower rows, so a drag can lift each. */
+    private fun withFolderAndWidget() {
+        val layout = shell.homeLayout
+        val page = layout.selectedPage
+        val apps = page.items.filterIsInstance<AppShortcutItem>().take(2)
+        val folder =
+            FolderItem(
+                id = com.riffle.core.domain.launcher.home.LauncherItemId("folder-x"),
+                label = "Group",
+                items = apps.map { it.copy(placement = null) },
+                placement =
+                    com.riffle.core.domain.launcher.home.GridPlacement(
+                        com.riffle.core.domain.launcher.home.GridCell(0, 3),
+                    ),
+            )
+        val widget =
+            com.riffle.core.domain.launcher.home.WidgetItem(
+                id = com.riffle.core.domain.launcher.home.LauncherItemId("widget-x"),
+                appWidgetId = com.riffle.core.domain.launcher.home.HostedWidgetId(7),
+                label = "Gauge",
+                placement =
+                    com.riffle.core.domain.launcher.home.GridPlacement(
+                        com.riffle.core.domain.launcher.home.GridCell(2, 3),
+                        com.riffle.core.domain.launcher.home.GridSpan(2, 1),
+                    ),
+            )
+        val updated =
+            layout.copy(
+                pages = listOf(page.copy(items = page.items.drop(0) + folder + widget)) + layout.pages.drop(1),
+            )
+        shell = shell.copy(homeLayout = updated, homeLayoutSet = shell.homeLayoutSet.withActiveLayout(updated))
+        show()
+    }
+
+    @Test
+    fun aLiftedFolderLeavesADesaturatedGhostAndALiftedWidgetLeavesItsSpanOutline() {
+        withFolderAndWidget()
+        val step = cellWidth()
+        composeRule.onNodeWithText("Group").performTouchInput {
+            down(center)
+            advanceEventTime(700)
+            moveBy(Offset(step * 0.6f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(300)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(
+            com.riffle.app.launcher.HOME_DRAG_FOLDER_GHOST_TEST_TAG,
+            useUnmergedTree = true,
+        ).assertExists()
+        composeRule.onAllNodes(isRoot())[0].performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        val widgetPlace =
+            composeRule.onAllNodesWithTag(
+                HOME_GRID_CELL_TEST_TAG,
+            )[2 * 0 + 3 * 4 + 2].fetchSemanticsNode().boundsInRoot.center
+        composeRule.onAllNodes(isRoot())[0].performTouchInput {
+            down(widgetPlace)
+            advanceEventTime(700)
+            moveBy(Offset(0f, -step * 0.6f))
+        }
+        composeRule.mainClock.advanceTimeBy(300)
+        composeRule.waitForIdle()
+        val outlines =
+            composeRule.onAllNodesWithTag(
+                com.riffle.app.launcher.HOME_DRAG_WIDGET_OUTLINE_TEST_TAG,
+            ).fetchSemanticsNodes()
+        assertTrue("the widget left no outline at its source and its landing: ${outlines.size}", outlines.size >= 2)
+        composeRule.onAllNodes(isRoot())[0].performTouchInput { up() }
+    }
+
+    /** Calendar's centre in its grid cell (the lifted copy, parked off screen until the finger is known, is out). */
+    private fun calendarCentre() =
+        composeRule.onAllNodesWithText("Calendar").fetchSemanticsNodes()
+            .map { it.boundsInRoot.center }
+            .first { it.x > 0f }
+
+    /** Lifts Calendar, drags it over a cell and lets go; the harness answers nothing, so it returns to where it was. */
+    private fun liftDragAndLetGo(): Offset {
+        val rest = calendarCentre()
+        val step = cellWidth()
+        composeRule.onAllNodesWithText("Calendar")[0].performTouchInput {
+            down(center)
+            advanceEventTime(700)
+            moveBy(Offset(step * 0.6f, 0f))
+            moveBy(Offset(step * 0.6f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(300)
+        composeRule.waitForIdle()
+        composeRule.onAllNodes(isRoot())[0].performTouchInput { up() }
+        return rest
+    }
+
+    private val calendarId = com.riffle.core.domain.launcher.home.LauncherItemId("com.riffle.sample.calendar")
+
+    @Test
+    fun aLetGoItemSettlesBackToItsCellOnASpringInsteadOfJumping() {
+        show()
+        liftDragAndLetGo()
+        composeRule.mainClock.advanceTimeBy(1_500)
+        composeRule.waitForIdle()
+        val peak = itemMotion.settlePeaks[calendarId] ?: 0f
+        assertTrue("the item jumped back, never away from its cell (peak $peak)", peak > 8f)
+        assertEquals("the item did not come to rest", 0f, itemMotion.settleOffsets[calendarId]?.getDistance() ?: 0f, 1f)
+    }
+
+    @Test
+    fun underReducedMotionALetGoItemJumpsBack() {
+        shell =
+            shell.copy(
+                launcherSettings =
+                    shell.launcherSettings.copy(
+                        motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
+                    ),
+            )
+        show()
+        liftDragAndLetGo()
+        composeRule.mainClock.advanceTimeBy(1_500)
+        composeRule.waitForIdle()
+        assertEquals("the item animated under reduced motion", null, itemMotion.settlePeaks[calendarId])
     }
 
     private fun LauncherShellAction.isHomeDrop() =

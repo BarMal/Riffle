@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
+@Suppress("TooManyFunctions")
 class HomeShortcutEngine(
     private val gridPlacementEngine: GridPlacementEngine = GridPlacementEngine(),
 ) {
@@ -117,6 +118,32 @@ class HomeShortcutEngine(
                         PlacementRejectionReason.ITEM_NOT_FOUND
                 },
             )
+
+    /**
+     * Moves a placed Home item to the first free cell (row by row) of another editable page. Used by a drop on top of
+     * an item of that page (a folder made across pages): the item joins the page first, and the same-page rule that
+     * makes the folder then runs there. Rejected when the page has no free cell for it.
+     */
+    fun moveItemToFirstFreeCell(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        sourcePageId: LauncherPageId,
+        targetPageId: LauncherPageId,
+    ): HomeShortcutResult {
+        val grid =
+            layout.pages.firstOrNull { it.id == targetPageId }?.grid
+                ?: return HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+        val cells =
+            (0 until grid.rows).flatMap {
+                    row ->
+                (0 until grid.columns).map { column -> GridCell(column, row) }
+            }
+        return cells
+            .asSequence()
+            .map { cell -> moveItemToPage(layout, itemId, sourcePageId, targetPageId, cell) }
+            .firstOrNull { result -> result is HomeShortcutResult.Updated }
+            ?: HomeShortcutResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
+    }
 
     /** Moves any placed Home item between editable pages without relying on transient UI state. */
     @Suppress("ReturnCount")

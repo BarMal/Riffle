@@ -22,16 +22,33 @@ class DockScrubTest {
     ) = DockScrub.tileAt(x, items, selectable, current, hysteresisPx = 6f)
 
     @Test
-    fun aDragAlongABottomDockIsAScrubAndOneAcrossItIsNot() {
+    fun aSlideAlongABottomDockFromTheHoldIsAScrubAndOneAcrossItIsNot() {
         assertTrue(DockScrub.claims(DockPullDirection.UP, 30f, 5f, touchSlopPx = 8f))
         assertFalse(DockScrub.claims(DockPullDirection.UP, 5f, -30f, touchSlopPx = 8f))
         assertFalse(DockScrub.claims(DockPullDirection.UP, 4f, 2f, touchSlopPx = 8f))
     }
 
     @Test
-    fun aDragAlongASideDockRunsVertically() {
+    fun aSlideAlongASideDockRunsVertically() {
         assertTrue(DockScrub.claims(DockPullDirection.RIGHT, 3f, 30f, touchSlopPx = 8f))
         assertFalse(DockScrub.claims(DockPullDirection.LEFT, 30f, 3f, touchSlopPx = 8f))
+    }
+
+    @Test
+    fun aPressArmsTheScrubOnlyOnceHeldForTheTimeoutAndStillWithinSlop() {
+        fun armed(
+            held: Long,
+            travel: Float,
+        ) = DockScrub.armed(heldMillis = held, longPressMillis = 400, travelPx = travel, touchSlopPx = 8f)
+        assertFalse(armed(200, 0f), "a quick press")
+        assertTrue(armed(400, 3f), "held")
+        assertFalse(armed(900, 20f), "moved first")
+    }
+
+    @Test
+    fun aPlainDragIsNeverAScrubWithoutTheHold() {
+        // A fast drag along the run, a press that never waited: not armed, so the row scrolls.
+        assertFalse(DockScrub.armed(heldMillis = 60, longPressMillis = 400, travelPx = 40f, touchSlopPx = 8f))
     }
 
     @Test

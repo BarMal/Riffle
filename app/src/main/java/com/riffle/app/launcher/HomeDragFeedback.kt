@@ -29,6 +29,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -38,11 +39,15 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.gestures.HoldMenuRule
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -53,7 +58,6 @@ import com.riffle.core.domain.launcher.home.WidgetItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 /**
@@ -92,12 +96,38 @@ internal fun HomeDragPlaceholder(
         } else {
             Modifier.size(iconSizeDp.dp)
         }
+    if (fillSpan) {
+        // A widget: the outline of its span with the card corners.
+        WidgetSpanOutline(modifier = sizeModifier)
+        return
+    }
     Box(
         modifier =
             sizeModifier.drawBehind {
+                // A folder: the outline of its tile (the same corners as FolderPreviewIcon).
                 drawRoundRect(
                     color = outlineColor,
                     cornerRadius = CornerRadius(DRAG_PLACEHOLDER_CORNER_RADIUS_DP.dp.toPx()),
+                    style = Stroke(width = DRAG_PLACEHOLDER_STROKE_WIDTH_DP.dp.toPx()),
+                )
+            },
+    )
+}
+
+/**
+ * The outline of a widget's span, with the launcher's card corners (a widget is drawn in that shape): what a lifted
+ * widget leaves where it was, and where it would land. Stroke only, drawn in the draw phase.
+ */
+@Composable
+internal fun WidgetSpanOutline(modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.outline
+    val shape = LocalLauncherCardShape.current
+    Box(
+        modifier =
+            modifier.testTag(HOME_DRAG_WIDGET_OUTLINE_TEST_TAG).drawBehind {
+                drawOutline(
+                    outline = shape.createOutline(size, layoutDirection, this),
+                    color = color,
                     style = Stroke(width = DRAG_PLACEHOLDER_STROKE_WIDTH_DP.dp.toPx()),
                 )
             },
@@ -266,6 +296,7 @@ internal fun Modifier.homeItemDrag(
 
             fun toRoot(local: Offset): Offset = coordinates.value?.takeIf { it.isAttached }?.localToRoot(local) ?: local
             val slop = LocalViewConfiguration.current.touchSlop
+            val folderLabel = stringResource(R.string.home_folder_default_name)
             this
                 .onGloballyPositioned { coordinates.value = it }
                 .pointerInput(item.id) {
@@ -297,7 +328,7 @@ internal fun Modifier.homeItemDrag(
                             dragX += dragAmount.x
                             dragY += dragAmount.y
                             local = change.position
-                            if (!moved && hypot(dragX, dragY) > slop) {
+                            if (!moved && HoldMenuRule.leavesMenu(dragX, dragY, slop)) {
                                 moved = true
                                 latestDismiss?.invoke()
                             }
@@ -315,7 +346,7 @@ internal fun Modifier.homeItemDrag(
                             val session = latestActions.currentDragSession()
                             latestActions.onDragSessionChanged(null)
                             if (moved) {
-                                homeDropAction(latestItem, latestState, session, dragX, dragY)
+                                homeDropAction(latestItem, latestState, session, dragX, dragY, folderLabel)
                                     ?.let(latestActions.onAction)
                             }
                         },
@@ -330,21 +361,35 @@ internal fun Modifier.homeItemDrag(
  * or land at the planned cell with the pushed neighbours moved aside; nowhere valid (no landing), nothing, so the item
  * returns to where it was. Without a plan (no bounds known yet) the older cell-delta rule applies.
  */
+@Suppress("CyclomaticComplexMethod")
 internal fun homeDropAction(
     item: LauncherItem,
     dragState: HomeItemDragState,
     session: HomeDragSession?,
     dragX: Float,
     dragY: Float,
+    folderLabel: String? = null,
 ): LauncherShellAction? {
     val plan = session?.plan
     return when {
+        // Over the Dock there is no plan (nothing is pushed): the item is pinned where the finger hovers.
+        session != null && session.isOverDock && item.isDockTransferable ->
+            LauncherShellAction.MoveHomeItemToDock(item.id, targetIndex = session.dockIndex, pageId = dragState.pageId)
         session == null || plan == null ->
             homeItemDragDropAction(item, dragState, dragX, dragY, session?.targetPageId ?: dragState.pageId)
-        session.isOverDock && item.isDockTransferable ->
-            LauncherShellAction.MoveHomeItemToDock(item.id, pageId = dragState.pageId)
         plan.landing == null -> null
-        plan.dropOn != null -> LauncherShellAction.MoveHomeShortcutToCell(item.id, plan.landing!!)
+        plan.dropOn != null && session.targetPageId == dragState.pageId ->
+            LauncherShellAction.MoveHomeShortcutToCell(item.id, plan.landing!!, folderLabel)
+        // On top of an item of another page: the item joins that page and the folder is made there.
+        plan.dropOn != null ->
+            LauncherShellAction.DropHomeItem(
+                itemId = item.id,
+                sourcePageId = dragState.pageId,
+                targetPageId = session.targetPageId,
+                cell = plan.landing!!,
+                dropOnItemId = plan.dropOn,
+                folderLabel = folderLabel,
+            )
         plan.landing == dragState.cell && plan.pushed.isEmpty() && session.targetPageId == dragState.pageId -> null
         else ->
             LauncherShellAction.DropHomeItem(
@@ -490,6 +535,9 @@ private val LauncherItem.dragLabel: String
             is FolderItem -> label
             is WidgetItem -> label
         }
+
+/** The outline of a widget's span a drag leaves (where it was) and shows (where it would land). */
+internal const val HOME_DRAG_WIDGET_OUTLINE_TEST_TAG = "home-drag-widget-outline"
 
 private const val DRAG_PLACEHOLDER_STROKE_WIDTH_DP = 2
 private const val DRAG_PLACEHOLDER_CORNER_RADIUS_DP = 12

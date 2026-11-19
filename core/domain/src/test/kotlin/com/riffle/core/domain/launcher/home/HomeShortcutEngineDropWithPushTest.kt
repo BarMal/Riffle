@@ -86,4 +86,23 @@ class HomeShortcutEngineDropWithPushTest {
         assertIs<HomeShortcutResult.Rejected>(drop(before, "nope", "a", "a", GridCell(1, 1)))
         assertIs<HomeShortcutResult.Rejected>(drop(before, "x", "a", "zzz", GridCell(1, 1)))
     }
+
+    @Test
+    fun anItemMovedToAnotherPageTakesItsFirstFreeCell() {
+        val before = layout(listOf(app("x", 3, 1)), listOf(app("p", 0, 0), app("q", 1, 0)))
+        val result =
+            assertIs<HomeShortcutResult.Updated>(
+                engine.moveItemToFirstFreeCell(before, LauncherItemId("x"), LauncherPageId("a"), LauncherPageId("b")),
+            )
+        assertEquals("b" to GridCell(2, 0), result.layout.cell("x"))
+    }
+
+    @Test
+    fun aFullPageRefusesAnItemMovedToIt() {
+        val full = (0 until 2).flatMap { row -> (0 until 4).map { column -> app("f$column$row", column, row) } }
+        val before = layout(listOf(app("x", 0, 0)), full)
+        assertIs<HomeShortcutResult.Rejected>(
+            engine.moveItemToFirstFreeCell(before, LauncherItemId("x"), LauncherPageId("a"), LauncherPageId("b")),
+        )
+    }
 }

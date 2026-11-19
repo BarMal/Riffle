@@ -6,6 +6,7 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
         LauncherShellAction.ExitHomeEditMode,
         LauncherShellAction.EnterHomePageOverview,
         LauncherShellAction.AddHomePage,
+        is LauncherShellAction.DiscardEmptyHomePage,
         LauncherShellAction.DuplicateSelectedHomePage,
         LauncherShellAction.SelectPreviousHomePage,
         LauncherShellAction.SelectNextHomePage,

@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -38,7 +36,6 @@ import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -74,15 +71,9 @@ internal fun DockContextualRow(
     val choice = LocalDockChoice.current
     // Hold to choose: holding the finger near an end scrolls the row, and choosing from Home brings the live entries
     // and tiles into view as the open mode would.
-    val fling = ScrollableDefaults.flingBehavior()
-    val flingScope = rememberCoroutineScope()
     DockChoiceRowRegistration(
         choice = choice,
         scrollBy = { deltaPx -> scrollState.dispatchRawDelta(deltaPx) },
-        // A slide along the Dock scrubs instead of scrolling; the lift hands the row its inertia (the platform fling).
-        flingBy = { velocityPx ->
-            flingScope.launch { scrollState.scroll { with(fling) { performFling(-velocityPx) } } }
-        },
         canScrollTo = { direction ->
             if (direction < 0) scrollState.canScrollBackward else scrollState.canScrollForward
         },

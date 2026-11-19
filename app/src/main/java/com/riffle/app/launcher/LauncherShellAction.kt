@@ -124,6 +124,9 @@ sealed interface LauncherShellAction {
 
     data object AddHomePage : LauncherShellAction
 
+    /** A drag's candidate page that was not dropped on: removed when it is still empty, else left alone. */
+    data class DiscardEmptyHomePage(val pageId: LauncherPageId) : LauncherShellAction
+
     data object DuplicateSelectedHomePage : LauncherShellAction
 
     data class SelectHomePage(val pageId: LauncherPageId) : LauncherShellAction
@@ -328,6 +331,8 @@ sealed interface LauncherShellAction {
     data class MoveHomeShortcutToCell(
         val itemId: LauncherItemId,
         val cell: GridCell,
+        /** The localized name a folder made by this drop starts with when no shared category names it. */
+        val folderLabel: String? = null,
     ) : LauncherShellAction
 
     /** The drop of a Home drag: the item lands at [cell] on [targetPageId] after [pushed] neighbours moved aside. */
@@ -337,6 +342,13 @@ sealed interface LauncherShellAction {
         val targetPageId: LauncherPageId,
         val cell: GridCell,
         val pushed: Map<LauncherItemId, GridCell> = emptyMap(),
+        /**
+         * Dropped on top of this item of [targetPageId] (in its dead zone) from another page: the item joins that page
+         * and makes a folder with it (or joins the folder), exactly as a same-page drop on top does.
+         */
+        val dropOnItemId: LauncherItemId? = null,
+        /** The localized name a folder made by this drop starts with when no shared category names it. */
+        val folderLabel: String? = null,
     ) : LauncherShellAction
 
     data class MoveHomeItemToPage(

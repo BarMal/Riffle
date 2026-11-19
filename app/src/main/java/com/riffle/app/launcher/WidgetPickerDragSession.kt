@@ -13,7 +13,6 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
-import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlin.math.roundToInt
 
@@ -113,17 +112,8 @@ internal fun widgetPickerDockPlacementPreviewFor(
 ): WidgetPickerDockPlacementPreview? {
     val bounds = dockBounds?.takeIf { it.width > 0f && it.height > 0f }
     return bounds?.takeIf { it.contains(snapshot.position) }?.let {
-        val insertionCount = dock.items.size + 1
-        // Slots run down a side dock, so how far along the run the pointer is comes from y there
-        // and from x on a horizontal edge. Only the horizontal run mirrors in RTL.
-        val physicalFraction =
-            if (position.isHorizontalEdge) {
-                ((snapshot.position.x - it.left) / it.width).coerceIn(0f, 1f)
-            } else {
-                ((snapshot.position.y - it.top) / it.height).coerceIn(0f, 1f)
-            }
-        val logicalFraction = if (isRtl && position.isHorizontalEdge) 1f - physicalFraction else physicalFraction
-        val index = (logicalFraction * insertionCount).toInt().coerceIn(0, dock.items.size)
+        val index =
+            dockInsertionIndex(snapshot.position, it, dock.items.size, isRtl, position) ?: 0
         WidgetPickerDockPlacementPreview(
             provider = snapshot.provider,
             dockIndex = index,

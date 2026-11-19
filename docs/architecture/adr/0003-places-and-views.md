@@ -697,6 +697,22 @@ except what is said here about the Home mode and the Library default.
 - **Drag and drop always works** and has its own rules: see `gestures.md`, "Dragging on Home", and the defaults table in
   `places-views-plan.md`, "Home drag".
 
+## Amendment 9 (owner, 2026-11-19): hold, then slide to scrub; the Dock's pinned items lift without an edit mode
+
+- **The Dock scrub needs a hold first.** "There's conflict, the dock is scrollable, but also the dock is the scroll for the
+  cards" became "Hold, then slide to scrub". With the Stream showing, a plain drag along the Dock's contextual row scrolls the
+  row as it did before the scrub existed (and flings by inertia, with no page change and no ticks). A press held for the
+  long-press timeout arms the scrub (one light haptic and the choice mark on the tile under the finger); sliding along the
+  run from there scrubs between stacks by the rules of Amendment 6. This supersedes Amendment 6's "a press that slides along
+  its run scrubs" and its fling rule. Hold without moving is the tile's menu; moving past touch slop closes the menu and
+  scrubs: the rule "the menu unless it moves" is shared with the Home drag (`HoldMenuRule`).
+- **Pinned items lift in Home mode** with a long-press then a move, no edit mode, and reorder; a Home item dropped on the
+  Dock is pinned at the slot it hovers, a Dock item dragged out is placed on the Home cell under the finger (both are moves),
+  and one dropped where Home has nothing returns. In the contextual mode there is no reordering: hold then move is the scrub.
+  It does not meet hold to choose, which is a press claimed before the long-press timeout. See `gestures.md`.
+- Details: `dock-modes-plan.md`, "The Dock as the stack handle"; `gestures.md`, "Hold, then slide along the Dock" and
+  "Pinned items"; `places-views-plan.md`, "Home drag".
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

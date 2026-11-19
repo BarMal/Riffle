@@ -102,6 +102,7 @@ internal class LauncherShellRefreshActions(
     private var notificationRefreshJob: Job? = null
     private var widgetProviderRefreshJob: Job? = null
     private val notificationRefreshLock = Any()
+    private val appListCommitLock = Any()
     private var notificationRefreshGeneration = 0L
 
     fun refreshInstalledApps(beforeRefresh: () -> Unit = {}): Job =
@@ -113,8 +114,12 @@ internal class LauncherShellRefreshActions(
                 refreshCoordinator.fetchInstalledAppRefreshResult()
             },
             commitState = { result, context ->
-                context.ensureActive()
-                updateState(refreshCoordinator.applyInstalledAppRefresh(currentState(), result))
+                // One app-list commit at a time: it reads the state, writes the next one and may then place newly
+                // installed apps. Two committing together let the later write drop what the earlier had just placed.
+                synchronized(appListCommitLock) {
+                    context.ensureActive()
+                    updateState(refreshCoordinator.applyInstalledAppRefresh(currentState(), result))
+                }
             },
         )
 
