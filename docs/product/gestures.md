@@ -443,6 +443,7 @@ means no default binding, so nothing happens unless the user binds the gesture.
 | Grid / workspace | 1-finger vertical | Home (up: unbound, down: Search, which opens the Library with its field focused); a swipe that starts on a stack and moves along its axis is the stack's | – |
 | Grid / workspace | long-press + drag | Item drag (owns) | – |
 | Search results (card stack) | tap | A strip with quick actions or a notification comes to the front; a strip with only a name opens; the front card opens | Enter and the IME's search action open the front card |
+| Search results (any presentation), calculator answer | tap, long-press | Tap copies the answer; long-press copies it with what was asked (ADR 0003, Amendment 20) | The trailing "Copy sum" or "Copy both" button; Enter copies the answer |
 | Search results (card stack) | 1-finger vertical | Stack (owns): moves through the results as the Stream's stack does | Next card and Previous card as accessibility actions |
 | Grid / workspace | 2-finger swipe | Home (up: search, down: settings) | – |
 | Grid / workspace | pinch | Home (in: edit mode, out: unbound) | – |

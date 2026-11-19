@@ -11,6 +11,17 @@ installing. Entries are in the order they were built; where a later one changes 
 
 ### Added
 
+- Wider search ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 20): search now also **answers sums
+  and unit conversions** ("12 × 3 + 4", "12 km in miles", "70 f to c"; tap copies, long-press or "Copy sum" copies it with
+  the question), **opens system settings screens** (Wi-Fi, Display, Battery and about twenty more, those that exist on the
+  device), and, when turned on, **finds contacts by name** (open, Call, Message through the dialler and the messaging app)
+  and **recent photos, videos, audio and downloads** with a way into the Files app. Each is a switch in **Settings >
+  Library > Search**, which also orders the groups and sets Results per group (3, 5 or 8). Contacts and Files are off by
+  default, ask for their optional permission only from an inline "Allow" row in search, and never store, log or back up
+  what they read. Apps stay instant: the new sources run after them and are cancelled when the query changes. Added the
+  optional permissions `READ_CONTACTS`, `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO` and
+  `READ_EXTERNAL_STORAGE` (Android 12L and below). Personal profile contacts only. Not run on a device: the real
+  contacts and media providers, the permission dialogs and whether the Files app searches from the query need one.
 - Icon styles ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 19): **one icon pipeline** now draws
   every app icon (Home, Dock, folders, Library, search, Stream and pair cards, the widget stack editor, the Floating dock,
   Settings), keyed by a style version in a cache bounded by bytes. **Settings > Appearance > Icons** adds an icon shape
