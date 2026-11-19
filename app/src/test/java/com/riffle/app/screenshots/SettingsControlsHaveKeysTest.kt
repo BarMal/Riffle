@@ -121,6 +121,8 @@ class SettingsControlsHaveKeysTest {
         val text = describe()
         return shown == SettingsPage.APP_PUBLISH ||
             shown == SettingsPage.APP_PAIR ||
+            shown == SettingsPage.PAIR_RECIPE ||
+            shown == SettingsPage.DRAG_TUNING ||
             text in setOf("Back", "Home", "Folded", "Unfolded") ||
             text.startsWith("Open / ") ||
             text.startsWith("Reset / ")
