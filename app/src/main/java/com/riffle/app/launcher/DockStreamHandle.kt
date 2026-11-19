@@ -33,7 +33,6 @@ import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -54,7 +53,7 @@ private const val HANDLE_MARGIN_DP = 8
 /**
  * Where the Stream handle's top-left lies: beyond the Dock ([dock], root coordinates) toward the screen's interior
  * ([pull] is the way out), at the Dock's far end along it, held inside a root of [root] with [margin] px to spare.
- * [clearance] is the room the Home handle takes beside the Dock (the handle stands in that strip, not on it).
+ * It stands in the strip the Home handle stands in, level with it, so a hint above that strip never covers it.
  */
 internal fun dockStreamHandleOffset(
     dock: Rect,
@@ -63,9 +62,8 @@ internal fun dockStreamHandleOffset(
     root: IntSize,
     gap: Int,
     margin: Int,
-    clearance: Int = 0,
 ): IntOffset {
-    val beyond = gap + clearance
+    val beyond = gap
     val dockOnHorizontalEdge = pull.unitY != 0f
     val x =
         if (dockOnHorizontalEdge) {
@@ -114,8 +112,6 @@ internal fun DockStreamHandle(
     libraryAvailable: Boolean,
     actions: StreamHandleActions,
     modifier: Modifier = Modifier,
-    /** Room to leave beside the Dock, along [pull], for what stands there (the Home handle above a bottom Dock). */
-    clearance: Dp = 0.dp,
 ) {
     val gap = HANDLE_GAP_DP.dp
     val margin = HANDLE_MARGIN_DP.dp
@@ -137,7 +133,6 @@ internal fun DockStreamHandle(
                         root = IntSize(constraints.maxWidth, constraints.maxHeight),
                         gap = gap.roundToPx(),
                         margin = margin.roundToPx(),
-                        clearance = clearance.roundToPx(),
                     ),
                 )
             }
@@ -263,7 +258,6 @@ internal fun DockStreamHandleLayer(
     pull: DockPullDirection,
     libraryAvailable: Boolean,
     actions: StreamHandleActions,
-    clearance: Dp,
 ) {
     if (!enabled || busy()) return
     DockStreamHandle(
@@ -271,6 +265,5 @@ internal fun DockStreamHandleLayer(
         pull = pull,
         libraryAvailable = libraryAvailable,
         actions = actions,
-        clearance = clearance,
     )
 }

@@ -521,7 +521,6 @@ private fun HomeDestinationContent(
                                 )
                             },
                         ),
-                    clearance = handleClearance,
                 )
                 // The one-time Dock hints: at most one at a time, each retired once its gesture is performed.
                 DockHintLayer(

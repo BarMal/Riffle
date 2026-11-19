@@ -13,13 +13,12 @@ class DockStreamHandleTest {
     private val size = IntSize(120, 120)
 
     @Test
-    fun aBottomDockPutsItAboveTheDocksFarEndClearOfTheHomeHandle() {
+    fun aBottomDockPutsItAboveTheDocksFarEnd() {
         val dock = Rect(100f, 1800f, 900f, 1960f)
 
-        val offset =
-            dockStreamHandleOffset(dock, size, DockPullDirection.UP, root, gap = 8, margin = 16, clearance = 40)
+        val offset = dockStreamHandleOffset(dock, size, DockPullDirection.UP, root, gap = 8, margin = 16)
 
-        assertEquals(IntOffset(900 - 120, 1800 - 8 - 40 - 120), offset)
+        assertEquals(IntOffset(900 - 120, 1800 - 8 - 120), offset)
     }
 
     @Test

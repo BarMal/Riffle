@@ -197,7 +197,8 @@ Show hints again clears all of it. The old press hint's flag (`HintSettings.dock
   second one (its routes are the Dock pull, "Open Library", the handle's menu and search).
 - **Settings.** A gear in the Library header and an item in the Library's menu, and "Riffle settings" in search.
 - **Show as.** The Library header's view button (it was a "more" glyph) and, on the Stream, a small view button at the top
-  end of the page that opens the page options (Show as, Move, Hide) a tile's long-press opens. Settings > Stream > Show
+  end of the page that opens the page options (Show as, Move, Hide) a tile's long-press opens (it lies over the page's top
+  corner and takes no room: a stack is anchored to the bottom, and the strips behind its front card carry no control). Settings > Stream > Show
   view button turns the Stream's off. The long-presses stay.
 
 ### History: the Dock pull by side (P5, superseded)
