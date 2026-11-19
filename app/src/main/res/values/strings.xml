@@ -340,6 +340,16 @@
     <string name="settings_page_version">About</string>
     <string name="settings_page_version_summary">Version and build</string>
     <string name="settings_page_version_keywords">about version build</string>
+    <string name="settings_page_drag_tuning">Drag tuning</string>
+    <string name="settings_page_drag_tuning_summary">The ring, dead zone and holds of a Home drag</string>
+    <string name="settings_page_drag_tuning_keywords">diagnostics drag drop home ring dead zone folder hold edge page repeat push magnetism tuning</string>
+    <string name="drag_tuning_ring">Push ring (cells)</string>
+    <string name="drag_tuning_dead_zone">Dead zone (cells)</string>
+    <string name="drag_tuning_folder_hold">Folder hold</string>
+    <string name="drag_tuning_edge_hold">Edge hold</string>
+    <string name="drag_tuning_page_repeat">Page repeat</string>
+    <string name="drag_tuning_reset">Reset</string>
+    <string name="drag_tuning_values_title">Current values</string>
     <string name="settings_page_app_pair">App pair experiment</string>
     <string name="settings_page_app_pair_summary">Experimental: try launching two apps side by side</string>
     <string name="settings_page_app_pair_keywords">diagnostics experiment split screen pair side by side two apps multi-window adjacent custom preset flags scenario script run reset fresh reuse one call lifecycle trace recents duplicate verdict round 2</string>

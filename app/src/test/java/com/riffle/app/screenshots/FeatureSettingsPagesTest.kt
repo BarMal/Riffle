@@ -7,11 +7,14 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.riffle.app.launcher.ADD_NEW_APPS_TEST_TAG
+import com.riffle.app.launcher.DRAG_TUNING_RESET_TEST_TAG
+import com.riffle.app.launcher.DRAG_TUNING_VALUES_TEST_TAG
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LocalRecentPlayers
 import com.riffle.app.launcher.LocalStreamLayoutRepository
@@ -105,6 +108,22 @@ class FeatureSettingsPagesTest {
         render(SettingsPage.HOME, FeatureSettings(simpleMode = true), capture = true)
 
         composeRule.onNodeWithTag(SIMPLE_MODE_TEST_TAG).assertIsOn().assertIsEnabled()
+    }
+
+    @Test
+    fun theDragTuningPageShowsTheValuesAsCopyableTextAndResetSendsTheDefaults() {
+        render(SettingsPage.DRAG_TUNING, capture = true)
+
+        composeRule.onNodeWithTag(DRAG_TUNING_VALUES_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(DRAG_TUNING_VALUES_TEST_TAG).assertTextContains("ring=0.75", substring = true)
+        composeRule.onNodeWithTag(DRAG_TUNING_RESET_TEST_TAG).performClick()
+
+        assertEquals(
+            listOf<LauncherShellAction>(
+                LauncherShellAction.SetDragTuning(com.riffle.core.domain.launcher.home.HomeDragTuning()),
+            ),
+            actions,
+        )
     }
 
     @Test

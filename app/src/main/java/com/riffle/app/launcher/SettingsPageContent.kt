@@ -79,6 +79,7 @@ internal fun SettingsPageContent(
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state, onPageSelected = onPageSelected)
             SettingsPage.APP_PUBLISH -> SettingsAppPublishPageContent(state = state)
             SettingsPage.APP_PAIR -> SettingsAppPairPageContent(state = state)
+            SettingsPage.DRAG_TUNING -> SettingsDragTuningPageContent(state = state, onAction = onAction)
         }
     }
 }

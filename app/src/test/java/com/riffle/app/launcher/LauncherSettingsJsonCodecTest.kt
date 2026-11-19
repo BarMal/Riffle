@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.designsystem.CardTint
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
@@ -1542,6 +1543,21 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(HomeMode.AppLibrary, home("""{"home": {"mode": "app_library"}}""").mode)
         val off = LauncherSettings(home = HomeBehaviourSettings(addNewApps = false))
         assertEquals(off.home, decodeLauncherSettings(encodeLauncherSettings(off)).home)
+    }
+
+    @Test
+    fun theDragTuningRoundTripsDefaultsWhenMissingAndIsHeldToItsRanges() {
+        val home = { json: String -> decodeLauncherSettings(json).home.dragTuning }
+        assertEquals(HomeDragTuning(), home("""{"version": 11}"""))
+        assertEquals(HomeDragTuning(), home("""{"home": {"mode": "app_library"}}"""))
+        assertEquals(HomeDragTuning(), home("""{"home": {"dragTuning": "x"}}"""))
+        assertEquals(
+            HomeDragTuning(ringRadius = 1.2f, deadZoneRadius = 0.15f, folderHoldMillis = 600, edgeHoldMillis = 200),
+            home("""{"home": {"dragTuning": {"ring": 9, "deadZone": 0, "folderHold": 5000, "edgeHold": 1}}}"""),
+        )
+        val custom = HomeDragTuning(0.9f, 0.2f, 300, 400, 900)
+        val settings = LauncherSettings(home = HomeBehaviourSettings(dragTuning = custom))
+        assertEquals(custom, decodeLauncherSettings(encodeLauncherSettings(settings)).home.dragTuning)
     }
 
     @Test

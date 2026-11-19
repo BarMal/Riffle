@@ -120,6 +120,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectCardActionsPlacement,
         is LauncherShellAction.SetDockMotion,
         is LauncherShellAction.SetAddNewApps,
+        is LauncherShellAction.SetDragTuning,
         is LauncherShellAction.SelectPageScroll,
         is LauncherShellAction.SelectPageIndicator,
         is LauncherShellAction.SetQuickScroll,

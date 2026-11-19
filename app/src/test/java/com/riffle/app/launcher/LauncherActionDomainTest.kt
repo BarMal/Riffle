@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -404,6 +405,7 @@ class LauncherActionDomainTest {
                 ),
                 settings("SetDockMotion", LauncherShellAction.SetDockMotion(DockMotionSettings(speedMillis = 300))),
                 settings("SetAddNewApps", LauncherShellAction.SetAddNewApps(enabled = false)),
+                settings("SetDragTuning", LauncherShellAction.SetDragTuning(HomeDragTuning())),
                 settings(
                     "SelectPageScroll",
                     LauncherShellAction.SelectPageScroll(LayoutPosture.FOLDED, PageScrollDirection.VERTICAL),

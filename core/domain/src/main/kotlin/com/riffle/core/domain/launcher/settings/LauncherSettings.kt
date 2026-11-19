@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.library.LibraryView
@@ -41,6 +42,8 @@ data class HomeBehaviourSettings(
     val mode: HomeMode = HomeMode.DEFAULT,
     /** Settings > Home > "Add new apps to Home": a new app is placed after the last item (on by default). */
     val addNewApps: Boolean = true,
+    /** The numbers of a Home drag (Settings > About > Diagnostics > Drag tuning). Held to their ranges. */
+    val dragTuning: HomeDragTuning = HomeDragTuning(),
 )
 
 /**

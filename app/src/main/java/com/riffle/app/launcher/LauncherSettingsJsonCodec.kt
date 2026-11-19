@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
@@ -194,6 +195,7 @@ private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
         .put("returnBehavior", settings.returnBehavior.name)
         .put("mode", settings.mode.storedId)
         .put("addNewApps", settings.addNewApps)
+        .put("dragTuning", encodeDragTuning(settings.dragTuning))
 
 /*
  * The layout per posture (ADR 0003, Amendment 2): `layout.folded` and `layout.unfolded`, each `pageScroll`,
@@ -263,6 +265,24 @@ private fun JSONObject.toFeatures(defaults: FeatureSettings): FeatureSettings =
         simpleMode = (opt("simpleMode") as? Boolean) ?: defaults.simpleMode,
     )
 
+private fun encodeDragTuning(tuning: HomeDragTuning): JSONObject =
+    JSONObject()
+        .put("ring", tuning.ringRadius.toDouble())
+        .put("deadZone", tuning.deadZoneRadius.toDouble())
+        .put("folderHold", tuning.folderHoldMillis)
+        .put("edgeHold", tuning.edgeHoldMillis)
+        .put("pageRepeat", tuning.pageRepeatMillis)
+
+// A missing or malformed value keeps its default; every value is held to its range.
+private fun JSONObject.toDragTuning(defaults: HomeDragTuning): HomeDragTuning =
+    HomeDragTuning(
+        ringRadius = (opt("ring") as? Number)?.toFloat() ?: defaults.ringRadius,
+        deadZoneRadius = (opt("deadZone") as? Number)?.toFloat() ?: defaults.deadZoneRadius,
+        folderHoldMillis = (opt("folderHold") as? Number)?.toInt() ?: defaults.folderHoldMillis,
+        edgeHoldMillis = (opt("edgeHold") as? Number)?.toInt() ?: defaults.edgeHoldMillis,
+        pageRepeatMillis = (opt("pageRepeat") as? Number)?.toInt() ?: defaults.pageRepeatMillis,
+    ).coerced()
+
 private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBehaviourSettings =
     HomeBehaviourSettings(
         returnBehavior =
@@ -273,6 +293,7 @@ private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBeh
         // Absent (settings saved before Home mode) or a name this build does not know: Placed items.
         mode = HomeMode.fromStoredId(optString("mode").takeIf(String::isNotEmpty)) ?: defaults.mode,
         addNewApps = (opt("addNewApps") as? Boolean) ?: defaults.addNewApps,
+        dragTuning = optJSONObject("dragTuning")?.toDragTuning(defaults.dragTuning) ?: defaults.dragTuning,
     )
 
 private fun encodePrivacy(settings: PrivacySettings): JSONObject =

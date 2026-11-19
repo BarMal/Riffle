@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -457,6 +458,11 @@ sealed interface LauncherShellAction {
     /** Settings > Motion: the Dock's and the Stream's adjustable motion (held to its ranges when saved). */
     data class SetDockMotion(
         val settings: DockMotionSettings,
+    ) : LauncherShellAction
+
+    /** Settings > About > Diagnostics > Drag tuning: the numbers of a Home drag (held to their ranges). */
+    data class SetDragTuning(
+        val tuning: HomeDragTuning,
     ) : LauncherShellAction
 
     /** Settings > Home > "Add new apps to Home": a newly installed app is placed on Home, or only in the Library. */

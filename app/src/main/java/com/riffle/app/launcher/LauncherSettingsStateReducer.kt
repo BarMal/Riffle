@@ -155,6 +155,15 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SetDragTuning ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                home = state.launcherSettings.home.copy(dragTuning = action.tuning.coerced()),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SetAddNewApps ->
                     state.withLauncherSettings(
                         settings =
