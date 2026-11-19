@@ -22,7 +22,11 @@ data class IconPackMapping(
     fun drawableFor(
         packageName: String,
         activityName: String,
-    ): String? = drawables["$packageName/$activityName"]
+    ): String? {
+        // An activity written relative to its package (".Main") is the same activity as the full class name.
+        val full = if (activityName.startsWith(".")) packageName + activityName else activityName
+        return drawables["$packageName/$full"]
+    }
 
     /** The back plate for [packageName]: stable per package when the pack has several. */
     fun backFor(packageName: String): String? =

@@ -90,3 +90,61 @@ internal fun Bitmap.alphaAt(
     x: Int,
     y: Int,
 ): Int = Color.alpha(getPixel(x, y))
+
+/** An adaptive icon for the screenshots: a solid background, a white letter and a monochrome layer of the letter. */
+internal fun letterAdaptiveIcon(
+    background: Int,
+    letter: String,
+): AdaptiveIconDrawable =
+    AdaptiveIconDrawable(ColorDrawable(background), letterLayer(letter, Color.WHITE), letterLayer(letter, Color.BLACK))
+
+/** A legacy icon for the screenshots: a coloured rounded tile with a white letter, as a bitmap with its own corners. */
+internal fun letterLegacyIcon(
+    fill: Int,
+    letter: String,
+): Drawable {
+    val bitmap = Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    canvas.drawRoundRect(
+        8f,
+        8f,
+        184f,
+        184f,
+        36f,
+        36f,
+        android.graphics.Paint(
+            android.graphics.Paint.ANTI_ALIAS_FLAG,
+        ).apply {
+            color = fill
+        },
+    )
+    drawLetter(canvas, letter, Color.WHITE, 96f, 132f, 110f)
+    return BitmapDrawable(null, bitmap)
+}
+
+private fun letterLayer(
+    letter: String,
+    color: Int,
+): Drawable {
+    val bitmap = Bitmap.createBitmap(216, 216, Bitmap.Config.ARGB_8888)
+    drawLetter(Canvas(bitmap), letter, color, 108f, 142f, 80f)
+    return BitmapDrawable(null, bitmap)
+}
+
+private fun drawLetter(
+    canvas: Canvas,
+    letter: String,
+    color: Int,
+    x: Float,
+    baseline: Float,
+    sizePx: Float,
+) {
+    val paint =
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            textSize = sizePx
+            isFakeBoldText = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+    canvas.drawText(letter, x, baseline, paint)
+}

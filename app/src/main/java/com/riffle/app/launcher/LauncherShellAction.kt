@@ -33,6 +33,10 @@ import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
+import com.riffle.core.domain.launcher.icons.AppIconOverride
+import com.riffle.core.domain.launcher.icons.IconPackDrawableRef
+import com.riffle.core.domain.launcher.icons.IconShape
+import com.riffle.core.domain.launcher.icons.LegacyIconHandling
 import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
@@ -697,6 +701,31 @@ sealed interface LauncherShellAction {
     data class SelectLauncherThemeCornerStyle(val style: LauncherThemeCornerStyle) : LauncherShellAction
 
     data class SelectLauncherThemeTypography(val typography: LauncherThemeTypography) : LauncherShellAction
+
+    /** Settings > Appearance > Icons: the shape every app icon is drawn through. */
+    data class SelectIconShape(val shape: IconShape) : LauncherShellAction
+
+    /** Settings > Appearance > Icons: what happens to legacy icons under a shape. */
+    data class SelectLegacyIconHandling(val handling: LegacyIconHandling) : LauncherShellAction
+
+    data class SetThemedIcons(val enabled: Boolean) : LauncherShellAction
+
+    data class SetThemeAllIcons(val enabled: Boolean) : LauncherShellAction
+
+    /** The icon pack by its package name; null for none. */
+    data class SelectIconPack(val packPackage: String?) : LauncherShellAction
+
+    /** The icon the user picked for one app (a drawable of an icon pack), or null to go back to the style's. */
+    data class SetAppIconOverride(val identity: AppIdentity, val icon: IconPackDrawableRef?) : LauncherShellAction
+
+    /** A custom name for one app, or null to go back to its own. */
+    data class SetAppLabelOverride(val identity: AppIdentity, val label: String?) : LauncherShellAction
+
+    /** Undo of "Reset icon changes": the per-app choices as they were. */
+    data class RestoreIconOverrides(val overrides: Map<AppIdentity, AppIconOverride>) : LauncherShellAction
+
+    /** Settings > Appearance > Icons > Reset icon changes: every per-app icon choice is cleared (names are kept). */
+    data object ResetIconChanges : LauncherShellAction
 
     data class SelectWallpaperScrollMode(val mode: WallpaperScrollMode) : LauncherShellAction
 

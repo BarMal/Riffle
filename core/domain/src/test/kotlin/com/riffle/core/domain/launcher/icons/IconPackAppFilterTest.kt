@@ -40,6 +40,14 @@ class IconPackAppFilterTest {
     }
 
     @Test
+    fun anActivityWrittenRelativeToItsPackageIsTheSameActivity() {
+        val mapping = IconPackAppFilter.parse("com.example.pack", sample)
+
+        assertEquals("maps", mapping.drawableFor("com.example.maps", ".Main"))
+        assertEquals("maps", mapping.drawableFor("com.example.maps", "com.example.maps.Main"))
+    }
+
+    @Test
     fun aBackPlateIsStablePerPackage() {
         val mapping = IconPackAppFilter.parse("com.example.pack", sample)
 
