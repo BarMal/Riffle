@@ -11,7 +11,6 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.home.AppShortcutItem
-import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -46,75 +45,6 @@ class LauncherHomePageEditReducerTest {
         assertEquals(listOf(LauncherPageId("home"), LauncherPageId("home-2")), updated.homeLayout.pageIds)
         assertEquals(LauncherPageId("home-2"), updated.homeLayout.selectedPageId)
         assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
-    }
-
-    @Test
-    fun selectingCategoryPageImmediatelyPopulatesCategorizedInstalledApps() {
-        val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
-        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
-        val camera = app(label = "Camera", category = "Image")
-        val music = app(label = "Music", category = "Audio")
-        val uncategorized = app(label = "Notes")
-        val state = launcherState(repository.savedLayoutSet).copy(installedApps = listOf(camera, music, uncategorized))
-
-        val updated =
-            reducer.reduce(
-                state,
-                LauncherShellAction.SelectSelectedHomePageType(
-                    LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
-                ),
-            )
-
-        assertEquals(
-            LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
-            updated.homeLayout.selectedPage.type,
-        )
-        assertEquals(
-            listOf(music.identity, camera.identity),
-            updated.homeLayout.selectedPage.items.map { item -> (item as AppShortcutItem).appIdentity },
-        )
-        assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
-    }
-
-    @Test
-    fun categoryRefreshClearsGeneratedShortcutsWhenCategoriesBecomeUnavailable() {
-        val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
-        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
-        val categorizedApp = app(label = "Camera", category = "Image")
-        val categorizedState = launcherState(repository.savedLayoutSet).copy(installedApps = listOf(categorizedApp))
-        val generatedState =
-            reducer.reduce(
-                categorizedState,
-                LauncherShellAction.SelectSelectedHomePageType(
-                    LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
-                ),
-            )
-
-        val refreshed =
-            generatedState.copy(installedApps = emptyList()).withRefreshedGeneratedPages(repository)
-
-        assertEquals(emptyList<Any>(), refreshed.homeLayout.selectedPage.items)
-        assertEquals(0, refreshed.homeLayout.selectedPage.generatedContentOverflowCount)
-        assertEquals(refreshed.homeLayout, repository.savedLayoutSet?.activeLayout)
-    }
-
-    @Test
-    fun disabledContextualBehaviourPreservesTheConfiguredPageSelection() {
-        val baseLayout = HomeLayoutDefaults.standard()
-        val workPage =
-            baseLayout.selectedPage.copy(
-                id = LauncherPageId("work"),
-                type = LauncherPageType.Generated(GeneratedLauncherPageKind.WORK),
-            )
-        val layout = baseLayout.copy(pages = listOf(baseLayout.selectedPage, workPage))
-        val repository = FakeHomeLayoutRepository(layout)
-        val state =
-            launcherState(repository.savedLayoutSet)
-                .copy(installedApps = listOf(app(label = "Docs", profile = AppProfile.work())))
-
-        val refreshed = state.withRefreshedGeneratedPages(repository)
-
-        assertEquals(baseLayout.selectedPageId, refreshed.homeLayout.selectedPageId)
     }
 
     @Test
@@ -183,32 +113,6 @@ class LauncherHomePageEditReducerTest {
 
         assertEquals(state, updated)
         assertEquals(savedBefore, repository.savedLayoutSet)
-    }
-
-    @Test
-    fun launcherViewModeSelectionReflowsHomeScreenLibraryApps() {
-        val camera = app(label = "Camera")
-        val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
-        val reducer =
-            LauncherHomePageEditReducer(
-                homeLayoutRepository = repository,
-                viewModeAvailability =
-                    LauncherViewModeAvailability(
-                        enabledExperimentalModesByDeviceClass =
-                            mapOf(HomeLayoutDeviceClass.PHONE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY)),
-                    ),
-            )
-        val state = launcherState(repository.savedLayoutSet).copy(installedApps = listOf(camera))
-
-        val updated =
-            reducer.reduce(
-                state,
-                LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
-            )
-
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, updated.homeLayout.viewMode)
-        assertEquals(camera.identity, updated.homeLayout.selectedPage.items.singleAppShortcut().appIdentity)
-        assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
     }
 
     @Test
@@ -471,50 +375,6 @@ class LauncherHomePageEditReducerTest {
         assertEquals(phoneGrid, savedLayoutSet.layoutFor(phoneKey).settings.grid.dimensions)
         assertEquals(updatedFoldableGrid, savedLayoutSet.layoutFor(foldableKey).settings.grid.dimensions)
         assertEquals(phoneKey, savedLayoutSet.activeKey)
-    }
-
-    @Test
-    fun selectingCategoryPageFromSettingsRefreshesSettingsTargetLayout() {
-        val phoneKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
-        val foldableKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.FOLDABLE)
-        val phoneLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE)
-        val foldableLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE)
-        val layoutSet =
-            HomeLayoutSet(
-                activeKey = phoneKey,
-                layouts = mapOf(phoneKey to phoneLayout, foldableKey to foldableLayout),
-            )
-        val repository = FakeHomeLayoutRepository(layoutSet)
-        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
-        val camera = app(label = "Camera", category = "Image")
-        val state =
-            launcherState(layoutSet).copy(
-                destination = ShellDestination.SETTINGS,
-                settingsLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
-                availableLayoutDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
-                installedApps = listOf(camera),
-            )
-
-        val updated =
-            reducer.reduce(
-                state,
-                LauncherShellAction.SelectSelectedHomePageType(
-                    LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
-                ),
-            )
-
-        val savedLayoutSet = checkNotNull(repository.savedLayoutSet)
-        assertEquals(phoneLayout, updated.homeLayout)
-        assertEquals(
-            LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
-            savedLayoutSet.layoutFor(foldableKey).selectedPage.type,
-        )
-        assertEquals(
-            listOf(camera.identity),
-            savedLayoutSet.layoutFor(foldableKey).selectedPage.items.map { item ->
-                (item as AppShortcutItem).appIdentity
-            },
-        )
     }
 
     private class FakeHomeLayoutRepository : HomeLayoutRepository {

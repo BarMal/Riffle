@@ -37,8 +37,10 @@ import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
+import com.riffle.core.domain.launcher.home.LibraryViewRetirement
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WidgetEditResult
 import com.riffle.core.domain.launcher.home.WidgetEngine
@@ -176,6 +178,7 @@ class LauncherShellViewModel(
                     launcherSettingsRepository.saveLauncherSettings(state.launcherSettings)
                 }
                 if (state.installedApps !== previousState.installedApps) placePendingInstalls()
+                retireLibraryViewMode()
                 migrateAppLibraryHome()
             },
             refreshCoordinator = refreshCoordinator,
@@ -202,6 +205,8 @@ class LauncherShellViewModel(
             }
         }
         observePoolHome()
+        // A home without workspaces (read-only, or none yet) has nothing to wait for; the pool home waits for them.
+        retireLibraryViewMode()
         if (platformDependencies.loadInitialPlatformState) {
             refreshInstalledApps()
             refreshNotifications()
@@ -233,8 +238,20 @@ class LauncherShellViewModel(
     internal fun followActiveWorkspace() {
         val set = platformDependencies.workspaceRepository?.load() ?: return
         val poolHome = homeLayoutRepository as? PoolHomeLayoutRepository
-        // The mode first, derived from the placed items (what the workspace forked from or borrows), never from what
-        // a migrated workspace selected before; then which arrangement each key shows.
+
+        // Which arrangement each key shows first (the library layout's conversion needs the active workspace), then
+        // the library layout, if this install still has one, becomes the Standard Home, and last the mode, derived
+        // from the placed items (what the workspace forked from or borrows), never from what a migrated workspace
+        // selected before.
+        fun retarget() {
+            poolHome?.let {
+                val current = mutableState.value
+                val retargeted = it.retarget(set, current.homeLayoutSet.withActiveLayout(current.homeLayout))
+                mutableState.value = current.copy(homeLayout = retargeted.activeLayout, homeLayoutSet = retargeted)
+            }
+        }
+        retarget()
+        retireLibraryViewMode()
         val state = mutableState.value
         val deviceClass = state.homeLayoutSet.activeKey.deviceClass
         val workspace = WorkspaceHome.activeWorkspace(set, deviceClass)
@@ -247,18 +264,13 @@ class LauncherShellViewModel(
             )
         if (mode != state.homeLayout.viewMode) {
             mutableState.value =
-                state
-                    .withSelectedHomeLayoutMode(
-                        mode = mode,
-                        homeLayoutRepository = homeLayoutRepository,
-                        viewModeAvailability = viewModeAvailability,
-                        targetDeviceClass = deviceClass,
-                    ).withHomeScreenLibraryApps(homeLayoutRepository)
-        }
-        poolHome?.let {
-            val current = mutableState.value
-            val retargeted = it.retarget(set, current.homeLayoutSet.withActiveLayout(current.homeLayout))
-            mutableState.value = current.copy(homeLayout = retargeted.activeLayout, homeLayoutSet = retargeted)
+                state.withSelectedHomeLayoutMode(
+                    mode = mode,
+                    homeLayoutRepository = homeLayoutRepository,
+                    viewModeAvailability = viewModeAvailability,
+                    targetDeviceClass = deviceClass,
+                )
+            retarget()
         }
         placePendingInstalls()
     }
@@ -324,6 +336,53 @@ class LauncherShellViewModel(
     private fun PoolHomeLayoutRepository.isReadyForEdits(): Boolean =
         platformDependencies.workspaceRepository?.load() != null && !awaitingWorkspaces
 
+    /**
+     * The library view mode is retired (ADR 0003, Amendment 10, [LibraryViewRetirement]): a stored layout whose view
+     * mode is the library mode, and the pages of the retired types, become ordinary placed items of the Standard
+     * layout, once. The layout as it was is kept first, unused, in the same stored copy as the One Home migration's
+     * (written once, never over an earlier copy). Waits for the workspaces on the pool home, which decide which
+     * arrangement each device class shows; does nothing when there is nothing to convert, so it is idempotent.
+     */
+    private fun retireLibraryViewMode() {
+        val state = mutableState.value
+        val poolHome = homeLayoutRepository as? PoolHomeLayoutRepository
+        if (poolHome != null && !poolHome.isReadyForEdits()) return
+        val set = state.homeLayoutSet.withActiveLayout(state.homeLayout)
+        val derived = libraryClassesOfWorkspaces(set, poolHome)
+        if (!LibraryViewRetirement.isPending(set, derived)) return
+        poolHome?.keepBeforeOneHome(set)
+        // Step one retypes the pages in place, so the pool takes their items in as an ordinary edit; step two moves
+        // the library layout to the Standard key, which the pool only projects.
+        val placed = homeLayoutRepository.commitHomeLayoutSet(LibraryViewRetirement.withPlacedPages(set, derived))
+        val moved = LibraryViewRetirement.withStandardKeys(placed, derived)
+        val settled =
+            when {
+                moved == placed -> placed
+                poolHome != null -> poolHome.reproject(moved)
+                else -> homeLayoutRepository.commitHomeLayoutSet(moved)
+            }
+        mutableState.value = state.copy(homeLayout = settled.activeLayout, homeLayoutSet = settled)
+    }
+
+    /** The device classes whose active workspace brings the retired library mode back (what a build before showed). */
+    private fun libraryClassesOfWorkspaces(
+        set: HomeLayoutSet,
+        poolHome: PoolHomeLayoutRepository?,
+    ): Set<HomeLayoutDeviceClass> {
+        val workspaces = platformDependencies.workspaceRepository?.load() ?: return emptySet()
+        return set.layouts.keys
+            .map { it.deviceClass }
+            .distinct()
+            .filter { deviceClass ->
+                WorkspaceHome.legacyHomeModeFor(
+                    WorkspaceHome.activeWorkspace(workspaces, deviceClass),
+                    deviceClass,
+                    poolHome?.poolFor(deviceClass),
+                    set.preferredModesByDeviceClass[deviceClass] ?: LauncherViewMode.STANDARD_APP_DRAWER,
+                ) == LauncherViewMode.HOME_SCREEN_LIBRARY
+            }.toSet()
+    }
+
     private fun migrateAppLibraryHome() {
         val state = mutableState.value
         if (state.launcherSettings.home.mode != HomeMode.AppLibrary || state.installedApps.isEmpty()) return
@@ -359,8 +418,6 @@ class LauncherShellViewModel(
                     profile = profile,
                     homeLayoutRepository = homeLayoutRepository,
                 )
-                .withHomeScreenLibraryApps(homeLayoutRepository)
-                .withRefreshedGeneratedPages(homeLayoutRepository)
                 .withAppShortcuts(appShortcutRepository, appCatalog)
     }
 
@@ -535,6 +592,7 @@ class LauncherShellViewModel(
 
     fun onLauncherSettingsActionSelected(action: LauncherShellAction) {
         mutableState.value = settingsStateReducer.reduce(mutableState.value, action)
+        retireLibraryViewMode()
         migrateAppLibraryHome()
     }
 
@@ -671,9 +729,7 @@ private fun reduceHomeShortcutEdit(
                     )
             ) {
                 is ShortcutOrFolderDropEditResult.Updated ->
-                    previousState
-                        .withHomeLayout(result.layout, homeLayoutRepository)
-                        .withLibraryReflowAfterShortcutMove(action, homeLayoutRepository)
+                    previousState.withHomeLayout(result.layout, homeLayoutRepository)
 
                 ShortcutOrFolderDropEditResult.Rejected -> previousState
             }

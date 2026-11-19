@@ -357,3 +357,75 @@ Second batch (this slice):
   the draw phase (`homeItemSettle`, `HomeItemMotion`); reduced motion jumps; further than four cells (another page) it just
   lands.
 - **Not done:** the ghost and push ring for a Dock item dragged onto Home, and Home's source ghost for a Dock reorder.
+
+## The library view mode is retired
+
+ADR 0003, Amendment 10. Amendment 8 retired the app-library Home *mode* (settings); this retires the layout *view mode*
+`HOME_SCREEN_LIBRARY`, so nothing fills, sorts or compacts a Home the user can arrange.
+
+### What the trace found
+
+The view mode is read or written in: `HomeLayoutKey` and `HomeLayoutSet` (`layouts`, `activeKey`,
+`preferredModesByDeviceClass`, `modePairsByDeviceClass`), the three codecs of the set, `WorkspaceHome` (`homeModeFor`,
+`shown`, `borrowCandidates`), `HomeLayoutWorkspaceMapper.workspaceId` and `PoolHomeSync.workspaceOf` (the workspace and
+pool arrangement id `ws:<layout class>:<mode>`), `PoolHomeLayoutRepository`, `withSelectedHomeLayoutMode`,
+`LauncherShellViewModel.followActiveWorkspace`, `ModeSurface` and the dock edge of the Library surface, and the old
+auto-fill (`withHomeScreenLibraryApps`, `withCompactedLibraryApps`, `withoutTrailingEmptyLibraryPages`,
+`repackedForDockPosition`, run from refreshes, every home, dock, settings and folder edit, shortcut moves, restores) and
+`withRefreshedGeneratedPages` (re-filled the generated pages on every app or notification refresh).
+
+What a real install can be in, and what happened to it:
+
+| State | Stored as | Before | Now |
+| --- | --- | --- | --- |
+| (a) Fresh | Standard key, no library layout, nothing to convert | Nothing re-filled | Unchanged |
+| (b) Long-time Standard user | Standard key; maybe a dormant library layout from a visit long ago | Unchanged | Unchanged; the dormant layout is left alone |
+| (c) Settings `HomeMode.AppLibrary` | Settings value; Home was whatever the layout was | One-time A to Z placed Home (Amendment 8) | Unchanged; if (d) also holds, the library layout is converted first and the fill replaces the items, no app is placed twice |
+| (d) Layout view mode `HOME_SCREEN_LIBRARY` | `activeKey` or the device class's preferred mode, the library key's layout (Home pages in the pool; `library:n` pages, their widgets and folders only in the set store), the active workspace `ws:<class>:home_screen_library` or a preset forked from it | Re-filled and compacted on every refresh: removed items came back | Converted once to the Standard key as placed items; never re-filled |
+| (d') Stored Standard, workspace brings the library mode back | Active workspace is the migrated library one (or a preset that forked from it) | The shell flipped to the library mode on load | Shown by the Standard key; a stored library layout, if any, is converted |
+
+Per device class: every class of the stored set (phone, landscape phone, foldable, tablet, desktop) is converted by its own
+current mode. Per workspace: the conversion edits the arrangement of the workspace the layout shows (the migrated library
+one, or the preset's own, after its fork); other stored workspaces and arrangements are not touched.
+
+### What changed
+
+- `LibraryViewRetirement` (`:core:domain`) converts a stored set in two steps the shell runs together
+  (`LauncherShellViewModel.retireLibraryViewMode`, called after the workspaces are retargeted, after every state change
+  and after a settings action such as a backup import, until nothing is left): pages of retired types become placed pages,
+  committed as an ordinary edit so the pool takes their items in; then the library layout moves to the Standard key (a
+  projection only). The shell's whole layout set is kept first in `home_layout_before_one_home` (written once, never over an
+  existing copy).
+- Workspace ids are unchanged. `WorkspaceHome.shown` shows a migrated workspace of any mode for the active key;
+  `homeModeFor` never answers the library mode; `legacyHomeModeFor` is the old derivation the conversion reads.
+- Deleted: `withHomeScreenLibraryApps`, library compaction and repacking, `withoutTrailingEmptyLibraryPages`,
+  `withRefreshedGeneratedPages`, the library reflow after a shortcut move, the actions `SelectLibraryPageCompaction` and
+  `SelectSelectedHomePageType`, the "Page type" chips of the page overview, and the library mode from the default view mode
+  availability (nothing can select it). Kept so stored data decodes: `LauncherViewMode.HOME_SCREEN_LIBRARY`,
+  `LauncherPageType.AllApps` and `Generated`, `GridSettings.compactLibraryPages`, the library dock edge.
+
+### Stored pages of retired types
+
+| Type | Becomes | Why |
+| --- | --- | --- |
+| All apps (`AllApps`, `library:n`) | Placed page, items kept in place | What the user saw and may have arranged |
+| App, Category, Work, Personal | Placed page with the items it holds now; dropped when empty | App lists the user saw; no longer regenerated |
+| Favourites, Frequent | Placed page with the items it holds (usually none, then dropped) | Same |
+| Today | Dropped | Recent apps are the Stream's Recents section |
+| Cards (notification groups) | Dropped | Notifications are a Stream section; the items were notification groups, not apps |
+
+### Tests
+
+Deleted as obsolete (the behaviour is intentionally gone): `HomeScreenLibraryLayoutTest` (all 16: auto-fill, overflow
+pages, compaction, trimming, leaving the library mode), `HomeScreenLibraryCompactionTest` (both: repacking for a side dock),
+`HomePageControlsTest.pageTypeOptionsExposeClassicLibraryAndGeneratedPages`,
+`LauncherFolderEditReducerTest.createFolderUsesLibraryModeShortcutsBeforeEditing`,
+`LauncherHomePageEditReducerTest` (four: selecting a generated page type fills it, refreshes clear it, the settings target
+layout refreshes), `LauncherShellHomeGridViewModelTest` (two: library compaction after a toggle or a grid change),
+`LauncherShellMoveHomeShortcutToCellViewModelTest.reflowsCompactLibraryPagesAfterMovingGeneratedShortcut`,
+`LauncherShellPageOverviewViewModelTest` (two: choosing a page type, pinning a generated page). Rewritten: the two action
+lists (`LauncherActionDomainTest`, `LauncherShellHomePageActionRoutingTest`) lose the removed actions;
+`WorkspaceHomeTest` and `PoolHomeActiveWorkspaceTest` assert the old derivation through `legacyHomeModeFor` and the new
+answer through `homeModeFor`. Added: `LibraryViewRetirementTest`, `LibraryViewRetirementPoolTest` (removal and moving stick
+across a refresh and a restart, a new install is appended and nothing else moves, both migrations do not double-place) and
+the app-level tests listed in the commit that adds them.

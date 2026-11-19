@@ -8,15 +8,12 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
-import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
-import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WidgetItem
@@ -49,50 +46,6 @@ class LauncherShellMoveHomeShortcutToCellViewModelTest {
             viewModel.state.value.homeLayout.selectedPage.items.single().placement,
         )
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
-    }
-
-    @Test
-    fun reflowsCompactLibraryPagesAfterMovingGeneratedShortcut() {
-        val apps = listOf(app(label = "Camera"), app(label = "Calendar"), app(label = "Docs"))
-        val compactGrid = GridDimensions(columns = 2, rows = 1)
-        val libraryLayout =
-            HomeLayoutDefaults.standard()
-                .copy(
-                    viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
-                    pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(grid = compactGrid)),
-                    settings =
-                        HomeLayoutDefaults.standard().settings.copy(
-                            grid = GridSettings(dimensions = compactGrid, compactLibraryPages = true),
-                        ),
-                )
-                .withHomeScreenLibraryApps(apps)
-                .copy(selectedPageId = LauncherPageId("library:1"))
-        val repository = FakeHomeLayoutRepository(savedLayout = libraryLayout)
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = apps),
-                homeLayoutRepository = repository,
-                platformDependencies =
-                    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability),
-            )
-        val docs = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
-
-        viewModel.onHomeShortcutEdited(
-            LauncherShellAction.MoveHomeShortcutToCell(
-                itemId = docs.id,
-                cell = GridCell(column = 1, row = 0),
-            ),
-        )
-
-        val updatedLayout = viewModel.state.value.homeLayout
-        assertEquals(LauncherPageId("library:1"), updatedLayout.selectedPageId)
-        assertEquals(
-            GridPlacement(cell = GridCell(column = 0, row = 0)),
-            updatedLayout.selectedPage.items.single().placement,
-        )
-        assertEquals(listOf(2, 1), updatedLayout.pages.map { page -> page.items.size })
-        assertEquals(updatedLayout, repository.savedLayout)
     }
 
     @Test

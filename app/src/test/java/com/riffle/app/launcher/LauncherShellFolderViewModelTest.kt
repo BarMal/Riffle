@@ -154,39 +154,6 @@ class LauncherShellFolderViewModelTest {
     }
 
     @Test
-    fun createsHomeFolderFromLibraryModeShortcutsAndSavesLayout() {
-        val camera = app(label = "Camera")
-        val calendar = app(label = "Calendar")
-        val repository = FakeHomeLayoutRepository()
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
-                homeLayoutRepository = repository,
-                platformDependencies =
-                    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability),
-            )
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY))
-        val shortcuts = viewModel.state.value.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>()
-
-        viewModel.onHomeShortcutEdited(
-            LauncherShellAction.CreateHomeFolder(
-                itemIds = shortcuts.map { shortcut -> shortcut.id },
-                label = "Folder",
-            ),
-        )
-
-        val folder =
-            viewModel.state.value.homeLayout.selectedPage.items.single { item -> item is FolderItem } as FolderItem
-        assertEquals(
-            setOf(camera.identity, calendar.identity),
-            folder.items.map { item -> item.appIdentity }.toSet(),
-        )
-        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
-    }
-
-    @Test
     fun renamesHomeFolderAndSavesLayout() {
         val camera = app(label = "Camera")
         val calendar = app(label = "Calendar")

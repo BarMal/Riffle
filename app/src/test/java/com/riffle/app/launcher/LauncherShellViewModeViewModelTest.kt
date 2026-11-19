@@ -19,11 +19,8 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
-import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
-import com.riffle.core.domain.launcher.home.ModePair
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
-import com.riffle.core.domain.launcher.home.activeModePair
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
@@ -38,16 +35,11 @@ import org.junit.Test
 class LauncherShellViewModeViewModelTest {
     @Test
     fun importsBackupDocumentIntoStateAndRepositories() {
-        val libraryKey = HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY)
+        val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
         val layoutSet =
             HomeLayoutSet(
-                activeKey = libraryKey,
-                layouts =
-                    mapOf(
-                        libraryKey to
-                            HomeLayoutDefaults.standard()
-                                .copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
-                    ),
+                activeKey = standardKey,
+                layouts = mapOf(standardKey to HomeLayoutDefaults.standard()),
             )
         val settings =
             LauncherSettings(
@@ -115,201 +107,6 @@ class LauncherShellViewModeViewModelTest {
             )
 
         assertEquals(layoutSet, backupDocument.homeLayoutSet)
-    }
-
-    @Test
-    fun savesLauncherViewModeSelection() {
-        val camera = app(label = "Camera")
-        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
-                homeLayoutRepository = repository,
-                platformDependencies = libraryViewModePlatformDependencies,
-            )
-
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
-        )
-
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
-        assertEquals(
-            camera.identity,
-            viewModel.state.value.homeLayout.selectedPage.items.singleAppShortcut().appIdentity,
-        )
-        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
-    }
-
-    @Test
-    fun choosingTheHomeScreenInSettingsWhileOnLibraryKeepsLibraryAndChangesWhereThePullLeads() {
-        val camera = app(label = "Camera")
-        val repository =
-            FakeHomeLayoutRepository(
-                savedLayout =
-                    HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
-            )
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
-                homeLayoutRepository = repository,
-                platformDependencies = libraryAndCardsViewModePlatformDependencies,
-            )
-
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        assertEquals(ModePair.DEFAULT, viewModel.state.value.homeLayoutSet.activeModePair)
-
-        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeSurfaceMode(LauncherViewMode.STANDARD_APP_DRAWER))
-
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
-        assertEquals(
-            ModePair(LauncherViewMode.STANDARD_APP_DRAWER),
-            viewModel.state.value.homeLayoutSet.activeModePair,
-        )
-        assertEquals(
-            LauncherViewMode.STANDARD_APP_DRAWER,
-            viewModel.state.value.homeLayoutSet.activeModePair.counterpart(LauncherViewMode.HOME_SCREEN_LIBRARY),
-        )
-    }
-
-    @Test
-    fun refreshAddsNewInstalledAppsWhenLibraryModeIsActive() {
-        val camera = app(label = "Camera")
-        val calendar = app(label = "Calendar")
-        val installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera))
-        val repository =
-            FakeHomeLayoutRepository(
-                savedLayout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
-            )
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = installedAppRepository,
-                homeLayoutRepository = repository,
-                platformDependencies = libraryViewModePlatformDependencies,
-            )
-
-        installedAppRepository.apps = listOf(camera, calendar)
-        runBlocking { viewModel.refreshInstalledApps().join() }
-
-        assertEquals(
-            listOf(calendar.identity, camera.identity),
-            viewModel.state.value.homeLayout.selectedPage.items
-                .filterIsInstance<AppShortcutItem>()
-                .map { item -> item.appIdentity },
-        )
-        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
-    }
-
-    @Test
-    fun switchingBackToStandardRemovesGeneratedLibraryApps() {
-        val camera = app(label = "Camera")
-        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
-                homeLayoutRepository = repository,
-                platformDependencies = libraryViewModePlatformDependencies,
-            )
-
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
-        )
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
-        )
-
-        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, viewModel.state.value.homeLayout.viewMode)
-        assertEquals(emptyList<AppShortcutItem>(), viewModel.state.value.homeLayout.selectedPage.items)
-        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
-    }
-
-    @Test
-    fun switchingModesPreservesSeparateModeLayouts() {
-        val camera = app(label = "Camera")
-        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
-                homeLayoutRepository = repository,
-                platformDependencies = libraryViewModePlatformDependencies,
-            )
-
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
-        )
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
-        )
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
-        )
-
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
-        assertEquals(
-            camera.identity,
-            viewModel.state.value.homeLayout.selectedPage.items.singleAppShortcut().appIdentity,
-        )
-        assertEquals(
-            emptyList<AppShortcutItem>(),
-            repository.savedLayoutSet
-                ?.layoutFor(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER))
-                ?.selectedPage
-                ?.items,
-        )
-    }
-
-    @Test
-    fun switchingDeviceClassPreservesSeparateDeviceLayoutsForCurrentMode() {
-        val camera = app(label = "Camera")
-        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
-                homeLayoutRepository = repository,
-                platformDependencies = phoneAndFoldableLibraryViewModePlatformDependencies,
-            )
-
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
-        )
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
-        )
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.PHONE),
-        )
-
-        assertEquals(
-            HomeLayoutKey(
-                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
-                deviceClass = HomeLayoutDeviceClass.PHONE,
-            ),
-            repository.savedLayoutSet?.activeKey,
-        )
-        assertEquals(
-            camera.identity,
-            viewModel.state.value.homeLayout.selectedPage.items.singleAppShortcut().appIdentity,
-        )
-        assertEquals(
-            HomeLayoutDefaults.standard().selectedPageId,
-            repository.savedLayoutSet
-                ?.layoutFor(
-                    HomeLayoutKey(
-                        viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
-                        deviceClass = HomeLayoutDeviceClass.FOLDABLE,
-                    ),
-                )
-                ?.selectedPageId,
-        )
     }
 
     @Test
@@ -817,35 +614,3 @@ class LauncherShellViewModeViewModelTest {
 
     private fun List<Any>.singleAppShortcut(): AppShortcutItem = single() as AppShortcutItem
 }
-
-private val libraryViewModeAvailability =
-    LauncherViewModeAvailability(
-        enabledExperimentalModesByDeviceClass =
-            HomeLayoutDeviceClass.entries.associateWith { setOf(LauncherViewMode.HOME_SCREEN_LIBRARY) },
-    )
-
-private val libraryViewModePlatformDependencies =
-    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability)
-
-private val libraryAndCardsViewModePlatformDependencies =
-    LauncherShellPlatformDependencies(
-        viewModeAvailability =
-            LauncherViewModeAvailability(
-                enabledExperimentalModesByDeviceClass =
-                    HomeLayoutDeviceClass.entries.associateWith {
-                        setOf(LauncherViewMode.HOME_SCREEN_LIBRARY, LauncherViewMode.CARD_INTERFACE)
-                    },
-            ),
-    )
-
-private val phoneAndFoldableLibraryViewModePlatformDependencies =
-    LauncherShellPlatformDependencies(
-        viewModeAvailability =
-            LauncherViewModeAvailability(
-                enabledExperimentalModesByDeviceClass =
-                    mapOf(
-                        HomeLayoutDeviceClass.PHONE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY),
-                        HomeLayoutDeviceClass.FOLDABLE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY),
-                    ),
-            ),
-    )

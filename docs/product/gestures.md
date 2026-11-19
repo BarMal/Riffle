@@ -456,12 +456,6 @@ no longer be available for the hand-off.
 - **Home drag, not yet done:** the source ghost and the push ring for a Dock item dragged out onto Home (the Dock item is
   placed at the cell under the finger on release); the Dock reorder shows the lifted scale and shadow, not Home's source
   ghost.
-- **Legacy `HOME_SCREEN_LIBRARY` layouts keep auto-filling.** The One Home migration rewrites the stored Home *mode*
-  (`HomeMode`), not a layout's view mode. A layout whose view mode is `HOME_SCREEN_LIBRARY` (a workspace migrated from the old
-  Library mode brings it back through `WorkspaceHome.homeModeFor`) is still re-filled with every missing app and compacted
-  (`withHomeScreenLibraryApps`), so an item removed from Home can reappear there. Retiring the view mode means changing the
-  workspace ids that derive from it and about twenty legacy tests; it is a separate slice.
-
 - **Hand-off is vertical only.** Leftover horizontal travel (e.g. past the last stage in the
   `HorizontalPager`, or a horizontal side-rail stack) is not handed to home gestures. Enabling it
   would turn a pager overscroll into a page/stage action; that needs a product decision first.

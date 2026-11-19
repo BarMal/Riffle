@@ -129,7 +129,7 @@ key is ignored) and is covered by a codec test over a blob written by the P8 bui
 | `CardsSettings` (every field, including `unfoldedShowAllNotifications`, thread grouping and order, stage spine, page offset, pane arrangement and the adaptive stage appearance profiles), `AdaptiveStageAppearanceSettings` and its resolver, `LauncherSettings.cards`, the actions that set them, `LauncherShellState.appStageSnapshot` and `feedStageSnapshot`, and the adaptive stage haptic strength | Deleted. Nothing read them after P8: the Stream's Stack has fixed physics. Reduced transparency stored under the old `cards` motion block is still migrated |
 | The stage code in `D/cards` (planners, templates, preferences) and `D/rss/FeedStage*` | Left in place; only the settings fields and shell-state projections that fed it were removed. Deleting it is a later cleanup |
 | Expandable dock, Open the shelf with, Dock panel | Rows removed from Settings (they never rendered). The dock model's shelf fields stay: the shelf code that reads them is behind `DockShelfExpansion.enabled = false` and has device tests |
-| Compact library pages | Row removed from Settings (legacy mode only). `GridSettings.compactLibraryPages` stays: `HomeScreenLibraryCompaction` reads it |
+| Compact library pages | Row removed from Settings (legacy mode only). `GridSettings.compactLibraryPages` stays only so stored layouts decode; nothing reads it since the library view mode was retired (ADR 0003, Amendment 10) |
 | "Following the active Cards template" text | Gone |
 | Developer "Home from placed items" | Already gone (P8) |
 | Cards appearance page entry | Already gone (P8) |

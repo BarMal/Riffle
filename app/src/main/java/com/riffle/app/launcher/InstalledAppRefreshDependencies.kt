@@ -37,8 +37,6 @@ internal fun LauncherShellState.withRefreshedInstalledApps(
                 appVisibilityRepository = deps.appVisibilityRepository,
                 appCatalog = deps.appCatalog,
             )
-                .withHomeScreenLibraryApps(deps.homeLayoutRepository)
-                .withRefreshedGeneratedPages(deps.homeLayoutRepository)
                 .withAppShortcuts(deps.appShortcutRepository, deps.appCatalog)
                 .withAuthoritativeProfileContentVisibility(result.profileContentVisibility)
 

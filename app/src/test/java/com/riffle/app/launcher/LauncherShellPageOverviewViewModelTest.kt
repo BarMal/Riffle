@@ -1,13 +1,11 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherPageId
-import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -91,22 +89,6 @@ class LauncherShellPageOverviewViewModelTest {
     }
 
     @Test
-    fun updatesSelectedPageTypeFromOverview() {
-        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                homeLayoutRepository = repository,
-            )
-        viewModel.onHomePageEdited(LauncherShellAction.EnterHomePageOverview)
-
-        viewModel.onHomePageEdited(LauncherShellAction.SelectSelectedHomePageType(LauncherPageType.AllApps))
-
-        assertEquals(LauncherPageType.AllApps, viewModel.state.value.homeLayout.selectedPage.type)
-        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
-    }
-
-    @Test
     fun updatesSelectedPageGridFromOverviewWithoutChangingSiblingOrDefaultGrid() {
         val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
         val viewModel =
@@ -125,21 +107,6 @@ class LauncherShellPageOverviewViewModelTest {
         assertEquals(defaultGrid, viewModel.state.value.homeLayout.pages[0].grid)
         assertEquals(GridDimensions(columns = 5, rows = 6), viewModel.state.value.homeLayout.selectedPage.grid)
         assertEquals(defaultGrid, viewModel.state.value.homeLayout.settings.grid.dimensions)
-        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
-    }
-
-    @Test
-    fun pinsSelectedPageFromOverview() {
-        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
-        val viewModel = LauncherShellViewModel(FakeFirstRunRepository(), homeLayoutRepository = repository)
-        viewModel.onHomePageEdited(LauncherShellAction.EnterHomePageOverview)
-        viewModel.onHomePageEdited(
-            LauncherShellAction.SelectSelectedHomePageType(
-                LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
-            ),
-        )
-        viewModel.onHomePageEdited(LauncherShellAction.ToggleSelectedHomePagePinned)
-        assertTrue(viewModel.state.value.homeLayout.selectedPage.isPinned)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 

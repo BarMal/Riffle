@@ -28,7 +28,6 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
-import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
@@ -197,10 +196,6 @@ class LauncherActionDomainTest {
                 activity("MoveSelectedHomePageRight", LauncherShellAction.MoveSelectedHomePageRight),
                 activity("MoveHomePage", LauncherShellAction.MoveHomePage(pageId, targetIndex = 1)),
                 activity("DeleteSelectedHomePage", LauncherShellAction.DeleteSelectedHomePage),
-                activity(
-                    "SelectSelectedHomePageType",
-                    LauncherShellAction.SelectSelectedHomePageType(LauncherPageType.AllApps),
-                ),
                 activity("ToggleSelectedHomePagePinned", LauncherShellAction.ToggleSelectedHomePagePinned),
                 activity(
                     "SelectSelectedHomePageGridDimensions",
@@ -213,10 +208,6 @@ class LauncherActionDomainTest {
                 activity(
                     "SelectHomeGridMargin",
                     LauncherShellAction.SelectHomeGridMargin(horizontalDp = 12, verticalDp = 16),
-                ),
-                activity(
-                    "SelectLibraryPageCompaction",
-                    LauncherShellAction.SelectLibraryPageCompaction(enabled = true),
                 ),
                 activity(
                     "SelectHomeLabelBackgroundAlpha",

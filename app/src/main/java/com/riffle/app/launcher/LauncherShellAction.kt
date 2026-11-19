@@ -26,7 +26,6 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
-import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LibraryExitTrigger
@@ -146,8 +145,6 @@ sealed interface LauncherShellAction {
 
     data object DeleteSelectedHomePage : LauncherShellAction
 
-    data class SelectSelectedHomePageType(val type: LauncherPageType) : LauncherShellAction
-
     data object ToggleSelectedHomePagePinned : LauncherShellAction
 
     data class SelectSelectedHomePageGridDimensions(val dimensions: GridDimensions) : LauncherShellAction
@@ -158,8 +155,6 @@ sealed interface LauncherShellAction {
         val horizontalDp: Int,
         val verticalDp: Int,
     ) : LauncherShellAction
-
-    data class SelectLibraryPageCompaction(val enabled: Boolean) : LauncherShellAction
 
     data class SelectHomeLabelBackgroundAlpha(val alphaPercent: Int) : LauncherShellAction
 

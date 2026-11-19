@@ -3,12 +3,10 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
-import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherPageId
-import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,12 +29,8 @@ class LauncherShellHomePageActionRoutingTest {
                 LauncherShellAction.MoveSelectedHomePageRight,
                 LauncherShellAction.MoveHomePage(LauncherPageId("home"), targetIndex = 0),
                 LauncherShellAction.DeleteSelectedHomePage,
-                LauncherShellAction.SelectSelectedHomePageType(
-                    LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
-                ),
                 LauncherShellAction.SelectSelectedHomePageGridDimensions(GridDimensions(columns = 5, rows = 6)),
                 LauncherShellAction.SelectHomeGridDimensions(GridDimensions(columns = 5, rows = 6)),
-                LauncherShellAction.SelectLibraryPageCompaction(enabled = true),
                 LauncherShellAction.SelectHomeLabelBackgroundAlpha(alphaPercent = 75),
                 LauncherShellAction.SelectHomeLabelBackgroundVisible(visible = true),
                 LauncherShellAction.SelectHomeLabelTextSize(textSizeSp = 14),

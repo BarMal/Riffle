@@ -10,17 +10,13 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.GridPlacement
-import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.home.LauncherPage
-import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -116,108 +112,6 @@ class LauncherShellHomeGridViewModelTest {
 
         assertEquals(layoutBeforeResize, viewModel.state.value.homeLayout)
         assertEquals(layoutBeforeResize, repository.savedLayout)
-    }
-
-    @Test
-    fun enablingLibraryPageCompactionImmediatelyReflowsGeneratedApps() {
-        val camera = app(label = "Camera")
-        val calendar = app(label = "Calendar")
-        val clock = app(label = "Clock")
-        val grid = GridDimensions(columns = 2, rows = 1)
-        val savedLayout =
-            HomeLayoutDefaults.standard().copy(
-                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
-                pages =
-                    listOf(
-                        LauncherPage(
-                            id = LauncherPageId("home"),
-                            grid = grid,
-                            items = listOf(camera.libraryShortcut()),
-                        ),
-                        LauncherPage(
-                            id = LauncherPageId("library:1"),
-                            grid = grid,
-                            items = listOf(clock.libraryShortcut()),
-                        ),
-                        LauncherPage(
-                            id = LauncherPageId("library:2"),
-                            grid = grid,
-                            items = listOf(calendar.libraryShortcut()),
-                        ),
-                    ),
-                settings =
-                    HomeLayoutDefaults.standard().settings.copy(
-                        grid = GridSettings(dimensions = grid),
-                    ),
-            )
-        val repository = FakeHomeLayoutRepository(savedLayout = savedLayout)
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(listOf(camera, calendar, clock)),
-                homeLayoutRepository = repository,
-                platformDependencies =
-                    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability),
-            )
-
-        viewModel.onHomePageEdited(LauncherShellAction.SelectLibraryPageCompaction(enabled = true))
-
-        assertEquals(
-            listOf(LauncherPageId("home"), LauncherPageId("library:1")),
-            viewModel.state.value.homeLayout.pages.map { page -> page.id },
-        )
-        assertEquals(
-            listOf(calendar.identity, camera.identity),
-            viewModel.state.value.homeLayout.pages[0].items.appIdentities,
-        )
-        assertEquals(listOf(clock.identity), viewModel.state.value.homeLayout.pages[1].items.appIdentities)
-        assertEquals(true, viewModel.state.value.homeLayout.settings.grid.compactLibraryPages)
-        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
-    }
-
-    @Test
-    fun compactLibraryPagesReflowGeneratedAppsAfterGridChanges() {
-        val camera = app(label = "Camera")
-        val calendar = app(label = "Calendar")
-        val clock = app(label = "Clock")
-        val compactGrid = GridDimensions(columns = 2, rows = 1)
-        val expandedGrid = GridDimensions(columns = 3, rows = 1)
-        val savedLayout =
-            HomeLayoutDefaults.standard().copy(
-                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
-                pages =
-                    listOf(
-                        LauncherPage(
-                            id = LauncherPageId("home"),
-                            grid = compactGrid,
-                        ),
-                    ),
-                settings =
-                    HomeLayoutDefaults.standard().settings.copy(
-                        grid = GridSettings(dimensions = compactGrid),
-                    ),
-            ).withHomeScreenLibraryApps(listOf(camera, calendar, clock))
-        val repository = FakeHomeLayoutRepository(savedLayout = savedLayout)
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                installedAppRepository = FakeInstalledAppRepository(listOf(camera, calendar, clock)),
-                homeLayoutRepository = repository,
-                platformDependencies =
-                    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability),
-            )
-
-        runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onHomePageEdited(LauncherShellAction.SelectLibraryPageCompaction(enabled = true))
-        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeGridDimensions(expandedGrid))
-
-        assertEquals(listOf(LauncherPageId("home")), viewModel.state.value.homeLayout.pages.map { page -> page.id })
-        assertEquals(
-            listOf(calendar.identity, camera.identity, clock.identity),
-            viewModel.state.value.homeLayout.selectedPage.items.appIdentities,
-        )
-        assertEquals(true, viewModel.state.value.homeLayout.settings.grid.compactLibraryPages)
-        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
     private class FakeFirstRunRepository(

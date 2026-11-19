@@ -39,8 +39,14 @@ class WorkspaceHomeTest {
             LauncherViewMode.STANDARD_APP_DRAWER,
             WorkspaceHome.homeModeFor(standard, phone, null, LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
+        // What a build before the retirement of the library mode showed, which the retirement reads...
         assertEquals(
             LauncherViewMode.HOME_SCREEN_LIBRARY,
+            WorkspaceHome.legacyHomeModeFor(nova, phone, null, LauncherViewMode.HOME_SCREEN_LIBRARY),
+        )
+        // ...and the mode now: the library mode is retired, so it is Standard (ADR 0003, Amendment 10).
+        assertEquals(
+            LauncherViewMode.STANDARD_APP_DRAWER,
             WorkspaceHome.homeModeFor(nova, phone, null, LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
         assertEquals(

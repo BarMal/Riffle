@@ -12,7 +12,7 @@ import org.junit.Test
 
 class LauncherShellViewModeAvailabilityViewModelTest {
     @Test
-    fun startsWithStoredLibraryLayoutWhenAppDefaultAllowsLibraryMode() {
+    fun startsWithStoredLibraryLayoutConvertedToTheStandardHome() {
         val libraryPage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("library-home"))
         val libraryKey = HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY)
         val libraryLayout =
@@ -35,8 +35,11 @@ class LauncherShellViewModeAvailabilityViewModelTest {
                 homeLayoutRepository = repository,
             )
 
-        assertEquals(libraryKey, viewModel.state.value.homeLayoutSet.activeKey)
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
+        // The library view mode is retired (ADR 0003, Amendment 10): its layout is the Standard Home, page for page.
+        val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
+        assertEquals(standardKey, viewModel.state.value.homeLayoutSet.activeKey)
+        assertEquals(setOf(standardKey), viewModel.state.value.homeLayoutSet.layouts.keys)
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, viewModel.state.value.homeLayout.viewMode)
         assertEquals(libraryPage.id, viewModel.state.value.homeLayout.selectedPageId)
     }
 
