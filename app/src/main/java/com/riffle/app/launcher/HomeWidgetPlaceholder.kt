@@ -28,7 +28,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -135,7 +138,13 @@ private fun HostedHomeWidget(
         } else {
             Modifier
         }
-    HostedWidgetFrame(widget = widget, widgetViewFactory = widgetViewFactory, modifier = lift) {
+    val support = LocalWidgetSetUpSupport.current
+    HostedWidgetFrame(
+        widget = widget,
+        widgetViewFactory = widgetViewFactory,
+        modifier = lift,
+        setUp = WidgetSetUpHandle(widget.id, memberIndex = 0, onAction = onAction),
+    ) {
         if (isEditing) {
             WidgetGestureLayer(
                 widget = widget,
@@ -161,6 +170,7 @@ private fun HostedHomeWidget(
                     pageItems = dragState?.pageItems ?: listOf(widget),
                     contextSurface = contextSurface,
                     text = rememberSettingsText(),
+                    setUp = support.requestForShown(widget).takeIf { contextSurface == ShortcutContextSurface.HOME },
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = onAction,
@@ -171,13 +181,15 @@ private fun HostedHomeWidget(
 /**
  * A platform widget in the launcher's glass frame: its host view, sized to the frame, or its name where it has none.
  * [overlay] draws inside the frame, over the widget (a lone widget's gestures, handles and menu). A stack draws one of
- * these for each of the widgets it holds.
+ * these for each of the widgets it holds. A widget with no host id draws a placeholder; given [setUp] and a known
+ * provider, tapping it sets the widget up in place.
  */
 @Composable
 internal fun HostedWidgetFrame(
     widget: WidgetItem,
     widgetViewFactory: HomeWidgetViewFactory,
     modifier: Modifier = Modifier,
+    setUp: WidgetSetUpHandle? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -214,7 +226,7 @@ internal fun HostedWidgetFrame(
                 )
             }
             if (hostedWidgetView == null) {
-                HomeWidgetFallbackLabel(widget)
+                HomeWidgetFallbackLabel(widget, setUp)
             } else {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -344,20 +356,53 @@ private fun WidgetResizeHandle(
 }
 
 @Composable
-private fun BoxScope.HomeWidgetFallbackLabel(widget: WidgetItem) {
-    Column(modifier = Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = widget.label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        // A widget with no host id (restored, or a saved layout's that could not be bound) says what to do.
-        if (widget.appWidgetId.value == 0 && widget.glance == null) {
+private fun BoxScope.HomeWidgetFallbackLabel(
+    widget: WidgetItem,
+    setUp: WidgetSetUpHandle?,
+) {
+    val member = widget.members.first()
+    val state = LocalWidgetSetUpSupport.current.stateOf(member)
+    val request =
+        setUp?.let { LocalWidgetSetUpSupport.current.requestFor(it.itemId, it.memberIndex, member) }
+    val setUpLabel = stringResource(R.string.widget_set_up_description, widget.label)
+    val tap =
+        if (setUp != null && request != null) {
+            Modifier
+                .clickable(onClickLabel = setUpLabel, role = Role.Button) { setUp.onAction(request) }
+                .semantics {
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction(setUpLabel) {
+                                setUp.onAction(request)
+                                true
+                            },
+                        )
+                }
+        } else {
+            Modifier
+        }
+    Box(modifier = Modifier.matchParentSize().then(tap), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = stringResource(R.string.widget_not_set_up),
-                style = MaterialTheme.typography.labelSmall,
+                text = widget.label,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // A widget with no host id (restored, or a saved layout's that could not be bound) says what to do.
+            val hint =
+                when (state) {
+                    PlaceholderState.NOT_A_PLACEHOLDER -> null
+                    PlaceholderState.NO_PROVIDER -> R.string.widget_not_set_up
+                    PlaceholderState.PROVIDER_GONE -> R.string.widget_not_set_up_provider_gone
+                    PlaceholderState.CAN_SET_UP -> R.string.widget_not_set_up_tap
+                }
+            hint?.let {
+                Text(
+                    text = stringResource(it),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -372,8 +417,12 @@ internal fun widgetPlaceholderContextMenuItems(
     pageItems: List<LauncherItem> = listOf(widget),
     contextSurface: ShortcutContextSurface = ShortcutContextSurface.HOME,
     text: SettingsText,
+    /** The request that sets a placeholder up in place; null for a bound widget, and when it cannot be set up. */
+    setUp: LauncherShellAction.RequestAddWidget? = null,
 ): List<ShortcutContextMenuItem> {
-    return widget.stackMenuItems(contextSurface, text) +
+    return listOfNotNull(
+        setUp?.let { ShortcutContextMenuItem(label = text.text(R.string.menu_set_up_widget), action = it) },
+    ) + widget.stackMenuItems(contextSurface, text) +
         listOf(
             ShortcutContextMenuItem(
                 label = text.text(R.string.menu_make_wider),

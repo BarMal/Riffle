@@ -776,6 +776,7 @@ private fun reduceHomeShortcutEdit(
         is LauncherShellAction.RemoveStackedWidget,
         is LauncherShellAction.MoveStackedWidgetOut,
         is LauncherShellAction.AddHostedWidgetToStack,
+        is LauncherShellAction.BindHostedWidgetToPlaceholder,
         is LauncherShellAction.AddGlanceWidgetToStack,
         -> previousState.withWidgetStackEdit(action, WidgetStackEngine(), homeLayoutRepository)
 

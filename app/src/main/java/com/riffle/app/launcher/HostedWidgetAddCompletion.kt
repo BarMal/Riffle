@@ -18,7 +18,22 @@ internal fun LauncherShellViewModel.completeWidgetAdd(action: HostedWidgetAddAct
         is LauncherShellAction.AddHostedWidgetToDock -> completeDockWidgetAdd(action)
         is LauncherShellAction.AddHostedWidgetToDockPanel -> completeDockPanelWidgetAdd(action)
         is LauncherShellAction.AddHostedWidgetToStack -> completeStackWidgetAdd(action)
+        is LauncherShellAction.BindHostedWidgetToPlaceholder -> completePlaceholderSetUp(action)
     }
+
+/** Gives a placeholder the host id it was just bound with, in place (the engine refuses a non-placeholder). */
+private fun LauncherShellViewModel.completePlaceholderSetUp(
+    action: LauncherShellAction.BindHostedWidgetToPlaceholder,
+): HostedWidgetAddCompletionResult {
+    val hadHostedWidgetBeforeAdd = state.value.homeLayout.hostsWidget(action.hostedWidgetId)
+    onHomeShortcutEdited(action)
+    val wasPlaced = !hadHostedWidgetBeforeAdd && state.value.homeLayout.hostsWidget(action.hostedWidgetId)
+    return if (wasPlaced) {
+        HostedWidgetAddCompletionResult.Placed(message = null)
+    } else {
+        HostedWidgetAddCompletionResult.Rejected
+    }
+}
 
 /**
  * Joins a platform widget to a stack (the picker was opened for it). The engine refuses a full stack, a widget that

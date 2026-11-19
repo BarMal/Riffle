@@ -458,7 +458,14 @@ internal fun StandardHome(
         }
     }
 
-    CompositionLocalProvider(LocalHomeItemMotion provides itemMotion) {
+    val widgetSetUp =
+        remember(presentation.widgetPicker.providers, presentation.widgetPicker.catalogStatus) {
+            WidgetSetUpSupport(
+                catalogReady = presentation.widgetPicker.catalogStatus == WidgetProviderCatalogStatus.READY,
+                providers = presentation.widgetPicker.providers,
+            )
+        }
+    CompositionLocalProvider(LocalHomeItemMotion provides itemMotion, LocalWidgetSetUpSupport provides widgetSetUp) {
         StandardHomeColumn(
             state =
                 StandardHomeContentState(

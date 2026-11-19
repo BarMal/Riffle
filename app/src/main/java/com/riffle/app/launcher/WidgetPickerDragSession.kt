@@ -132,7 +132,7 @@ internal fun widgetPickerDropIsValid(
         WidgetAddTarget.DOCK -> dockPreview?.isValid == true
         // The picker covers the shelf, so the panel is never under the pointer. It is placed
         // through the guided path instead.
-        WidgetAddTarget.DOCK_PANEL, WidgetAddTarget.HOME_STACK -> false
+        WidgetAddTarget.DOCK_PANEL, WidgetAddTarget.HOME_STACK, WidgetAddTarget.HOME_PLACEHOLDER -> false
         null -> false
     }
 

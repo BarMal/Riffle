@@ -48,6 +48,7 @@ object ArrangementAdapter {
                     glance = GlanceWidgets.kindOf(item.provider),
                     stack = item.stack.map(::toStackedWidget),
                     shownIndex = item.shown,
+                    provider = item.provider.takeIf { GlanceWidgets.kindOf(it) == null },
                 )
         }
 
@@ -57,13 +58,14 @@ object ArrangementAdapter {
             label = member.label,
             resizeConstraints = member.resizeConstraints,
             glance = GlanceWidgets.kindOf(member.provider),
+            provider = member.provider.takeIf { GlanceWidgets.kindOf(it) == null },
         )
 
     fun toStackMember(member: StackedWidget): PoolStackMember =
         PoolStackMember(
             label = member.label,
             resizeConstraints = member.resizeConstraints,
-            provider = member.glance?.let(GlanceWidgets::identity),
+            provider = member.glance?.let(GlanceWidgets::identity) ?: member.provider,
             hostedId = hostedIdOrNull(member.appWidgetId),
         )
 

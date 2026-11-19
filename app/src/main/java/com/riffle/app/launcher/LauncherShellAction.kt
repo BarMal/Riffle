@@ -490,7 +490,26 @@ sealed interface LauncherShellAction {
         val dockIndex: Int? = null,
         /** With [WidgetAddTarget.HOME_STACK]: the stack the widget joins. */
         val targetStackId: LauncherItemId? = null,
+        /**
+         * With [WidgetAddTarget.HOME_PLACEHOLDER]: the Home item holding the placeholder, and which of its widgets
+         * ([targetMemberIndex], 0 for a lone widget) is to be set up in place.
+         */
+        val targetItemId: LauncherItemId? = null,
+        val targetMemberIndex: Int = 0,
     ) : LauncherShellAction
+
+    /**
+     * The set-up of a placeholder, bound (and configured) at last: member [memberIndex] of [itemId] takes the host id
+     * where it is, so the cell, span, stack membership and position stay as they were.
+     */
+    data class BindHostedWidgetToPlaceholder(
+        val itemId: LauncherItemId,
+        val memberIndex: Int,
+        override val hostedWidgetId: HostedWidgetId,
+        override val label: String,
+        val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
+    ) : LauncherShellAction,
+        HostedWidgetAddAction
 
     data class AddHostedWidgetToHome(
         override val hostedWidgetId: HostedWidgetId,
@@ -814,6 +833,9 @@ enum class WidgetAddTarget {
 
     /** A widget stack of Home: the widget joins it instead of taking a cell. */
     HOME_STACK,
+
+    /** A placeholder already on Home (a widget that could not be bound): the widget is set up in place. */
+    HOME_PLACEHOLDER,
 }
 
 sealed interface HostedWidgetAddAction {

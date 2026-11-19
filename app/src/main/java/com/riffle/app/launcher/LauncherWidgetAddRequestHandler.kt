@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
+@Suppress("LongParameterList")
 class LauncherWidgetAddRequestHandler(
     private val widgetBindingCoordinator: WidgetBindingCoordinator,
     private val selectedGrid: () -> GridDimensions,
@@ -20,9 +21,17 @@ class LauncherWidgetAddRequestHandler(
         LauncherShellAction.AddGlanceWidgetToStack,
     ) -> HostedWidgetAddCompletionResult =
         { HostedWidgetAddCompletionResult.Rejected },
+    /** Whether the provider is known to be uninstalled (false while that is not known), asked before a set-up. */
+    private val isProviderGone: (WidgetProviderIdentity) -> Boolean = { false },
 ) {
-    fun handle(action: LauncherShellAction.RequestAddWidget): LauncherWidgetAddHandlingResult {
-        GlanceWidgets.kindOf(action.provider)?.let { kind -> return handleGlance(kind, action) }
+    fun handle(action: LauncherShellAction.RequestAddWidget): LauncherWidgetAddHandlingResult =
+        GlanceWidgets.kindOf(action.provider)?.let { kind -> handleGlance(kind, action) }
+            ?: LauncherWidgetAddHandlingResult.ProviderGone.takeIf {
+                action.target == WidgetAddTarget.HOME_PLACEHOLDER && isProviderGone(action.provider)
+            }
+            ?: handlePlatform(action)
+
+    private fun handlePlatform(action: LauncherShellAction.RequestAddWidget): LauncherWidgetAddHandlingResult {
         val size = windowSize()
         return when (
             val requestResult =
@@ -113,6 +122,9 @@ data class LauncherWidgetAddWindowSize(
 
 sealed interface LauncherWidgetAddHandlingResult {
     data object Cancelled : LauncherWidgetAddHandlingResult
+
+    /** A placeholder's provider is no longer installed: nothing was allocated, and the placeholder stays. */
+    data object ProviderGone : LauncherWidgetAddHandlingResult
 
     data class Completed(
         val message: String?,

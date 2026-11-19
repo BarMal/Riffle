@@ -93,7 +93,8 @@ object SavedHomeCapture {
             resizeConstraints = resizeConstraints,
             provider =
                 glance?.let(GlanceWidgets::identity)
-                    ?: appWidgetId.takeIf { it != ArrangementAdapter.UNBOUND_HOST_ID }?.let(providerOf),
+                    ?: appWidgetId.takeIf { it != ArrangementAdapter.UNBOUND_HOST_ID }?.let(providerOf)
+                    ?: provider,
             hostedId = null,
         )
 }

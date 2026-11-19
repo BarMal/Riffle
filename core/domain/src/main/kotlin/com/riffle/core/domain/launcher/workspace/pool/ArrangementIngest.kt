@@ -101,7 +101,12 @@ object ArrangementIngest {
         edited: WidgetItem,
     ): PoolWidget {
         if (!edited.isStack && existing.stack.isEmpty()) {
-            return existing.copy(resizeConstraints = edited.resizeConstraints)
+            // A placeholder set up in place takes its host id (and a provider it did not know); nothing else changes.
+            return existing.copy(
+                resizeConstraints = edited.resizeConstraints,
+                hostedId = existing.hostedId ?: ArrangementAdapter.hostedIdOrNull(edited.appWidgetId),
+                provider = existing.provider ?: edited.provider,
+            )
         }
         val known =
             existing.stack.ifEmpty {
@@ -138,7 +143,7 @@ object ArrangementIngest {
                     id = id,
                     label = item.label,
                     resizeConstraints = item.resizeConstraints,
-                    provider = item.glance?.let(GlanceWidgets::identity),
+                    provider = item.glance?.let(GlanceWidgets::identity) ?: item.provider,
                     hostedId = ArrangementAdapter.hostedIdOrNull(item.appWidgetId),
                     stack = item.stack.takeIf { it.size > 1 }?.map(ArrangementAdapter::toStackMember).orEmpty(),
                     shown = if (item.isStack) item.shownIndex else 0,

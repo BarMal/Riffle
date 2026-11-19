@@ -127,6 +127,7 @@ import com.riffle.core.domain.launcher.stream.TaskConnectionState
 import com.riffle.core.domain.launcher.stream.TaskConnectionStatus
 import com.riffle.core.domain.launcher.stream.TaskTimer
 import com.riffle.core.domain.launcher.stream.TodoistTaskProvider
+import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.container.SharedSourceRegistry
 import com.riffle.core.domain.launcher.workspace.lens.ZoneDayBucketer
@@ -633,6 +634,7 @@ internal class MainActivityDependencies(
         completeGlanceAdd: (LauncherShellAction.AddGlanceWidgetToHome) -> HostedWidgetAddCompletionResult,
         completeGlanceStackAdd: (LauncherShellAction.AddGlanceWidgetToStack) -> HostedWidgetAddCompletionResult =
             { HostedWidgetAddCompletionResult.Rejected },
+        isProviderGone: (WidgetProviderIdentity) -> Boolean = { false },
     ): LauncherWidgetAddRequestHandler =
         LauncherWidgetAddRequestHandler(
             widgetBindingCoordinator = widgetBindingCoordinator,
@@ -642,6 +644,7 @@ internal class MainActivityDependencies(
             deleteHostedWidgetId = hostIdDeletion::ifAllowed,
             completeGlanceAdd = completeGlanceAdd,
             completeGlanceStackAdd = completeGlanceStackAdd,
+            isProviderGone = isProviderGone,
         )
 }
 

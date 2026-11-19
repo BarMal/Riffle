@@ -136,6 +136,7 @@ are not, except the product's own nouns, which are always capitalised as the pro
 | Put a widget in a widget stack | Add widget to stack | "Add to stack", "Stack with" |
 | Change the widgets of a stack | Edit stack | "Edit widgets" |
 | Take a widget out of a stack onto Home | Move out to Home | "Unstack", "Move out" |
+| Bind a widget that could not be bound again, in place | Set up widget (its placeholder says "Not set up. Tap to set up.") | "Re-add", "Retry" |
 
 Settings labels follow the same rule ("Show the Dock", "Dock position", "Floating dock", "Hidden apps"). A test
 (`SettingsPagesTest`) holds the page and setting names; the menus' wording is held by `ShortcutContextMenuTest`,

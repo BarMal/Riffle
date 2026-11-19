@@ -1303,6 +1303,12 @@
     <string name="home_layout_apps_loading_message">Apps are still loading. Try again in a moment.</string>
     <string name="home_layout_failed_message">That didn\u2019t work. Home is unchanged.</string>
     <string name="widget_not_set_up">Not set up. Add it again from Widgets.</string>
+    <string name="widget_not_set_up_tap">Not set up. Tap to set up.</string>
+    <string name="widget_not_set_up_provider_gone">Its app isn\'t installed. You can remove it.</string>
+    <string name="menu_set_up_widget">Set up widget</string>
+    <string name="widget_set_up_description">Set up %1$s</string>
+    <string name="widget_set_up_failed">Couldn\'t set up %1$s</string>
+    <string name="widget_set_up_provider_gone">%1$s can\'t be set up: its app isn\'t installed</string>
 
     <!-- Backup messages -->
     <string name="backup_message_exported">Backup exported</string>
