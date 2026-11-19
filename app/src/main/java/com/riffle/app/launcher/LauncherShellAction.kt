@@ -328,6 +328,15 @@ sealed interface LauncherShellAction {
         val cell: GridCell,
     ) : LauncherShellAction
 
+    /** The drop of a Home drag: the item lands at [cell] on [targetPageId] after [pushed] neighbours moved aside. */
+    data class DropHomeItem(
+        val itemId: LauncherItemId,
+        val sourcePageId: LauncherPageId,
+        val targetPageId: LauncherPageId,
+        val cell: GridCell,
+        val pushed: Map<LauncherItemId, GridCell> = emptyMap(),
+    ) : LauncherShellAction
+
     data class MoveHomeItemToPage(
         val itemId: LauncherItemId,
         val sourcePageId: LauncherPageId,

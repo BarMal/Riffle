@@ -331,6 +331,16 @@ class LauncherActionDomainTest {
                     "MoveHomeItemToPage",
                     LauncherShellAction.MoveHomeItemToPage(itemId, pageId, LauncherPageId("page-2"), GridCell(1, 2)),
                 ),
+                activity(
+                    "DropHomeItem",
+                    LauncherShellAction.DropHomeItem(
+                        itemId,
+                        pageId,
+                        LauncherPageId("page-2"),
+                        GridCell(1, 2),
+                        mapOf(itemId to GridCell(2, 2)),
+                    ),
+                ),
                 activity("ResizeHomeWidget", LauncherShellAction.ResizeHomeWidget(itemId, GridSpan(2, 2))),
                 app("OpenWidgetPicker", LauncherShellAction.OpenWidgetPicker),
                 app("OpenWidgetPickerForDockPanel", LauncherShellAction.OpenWidgetPickerForDockPanel),

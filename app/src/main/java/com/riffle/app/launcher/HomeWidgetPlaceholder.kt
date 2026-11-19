@@ -141,6 +141,7 @@ private fun HostedHomeWidget(
                 dragState = dragState,
                 workspaceActions = workspaceActions,
                 onStationaryLongPress = { isContextMenuExpanded.value = true },
+                onMenuDismiss = { isContextMenuExpanded.value = false },
             )
             if (isEditing) {
                 WidgetEditHandles(
@@ -174,6 +175,7 @@ internal fun BoxScope.WidgetGestureLayer(
     dragState: HomeItemDragState?,
     workspaceActions: HomeWorkspaceActions?,
     onStationaryLongPress: () -> Unit,
+    onMenuDismiss: () -> Unit = {},
 ) {
     val dragModifier =
         when {
@@ -184,6 +186,7 @@ internal fun BoxScope.WidgetGestureLayer(
                     dragState = dragState,
                     actions = workspaceActions,
                     onStationaryLongPress = onStationaryLongPress,
+                    onMenuDismiss = onMenuDismiss,
                 )
 
             else -> Modifier

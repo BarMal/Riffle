@@ -9,11 +9,21 @@ import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.WidgetItem
 
-internal fun LauncherPage.itemsForDragPreview(session: HomeDragSession?): List<LauncherItem> =
-    session
-        ?.takeIf { dragSession -> items.any { item -> item.id == dragSession.item.id } }
-        ?.let(::itemsForActiveDragPreview)
-        ?: items
+internal fun LauncherPage.itemsForDragPreview(session: HomeDragSession?): List<LauncherItem> {
+    val plan = session?.plan
+    return when {
+        session == null -> items
+        // The push ring (HomeDragPush): the dragged item leaves its place and the pushed neighbours show where they
+        // would go. Nothing is committed until the drop; moving away puts them back (the plan follows the pointer).
+        plan != null && session.targetPageId == id ->
+            items.filter { it.id != session.item.id }.map { item ->
+                plan.pushed[item.id]?.let { cell -> item.withPreviewCell(cell) } ?: item
+            }
+        plan != null -> items
+        items.any { item -> item.id == session.item.id } -> itemsForActiveDragPreview(session)
+        else -> items
+    }
+}
 
 private fun LauncherPage.itemsForActiveDragPreview(dragSession: HomeDragSession): List<LauncherItem> {
     val draggedItem = items.first { item -> item.id == dragSession.item.id }

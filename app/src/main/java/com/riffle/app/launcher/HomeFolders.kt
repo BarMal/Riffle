@@ -86,6 +86,7 @@ internal fun HomeFolder(
                         dragState = dragState,
                         actions = actions,
                         onStationaryLongPress = pressHandlers.onLongPress,
+                        onMenuDismiss = { isContextMenuExpanded.value = false },
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),

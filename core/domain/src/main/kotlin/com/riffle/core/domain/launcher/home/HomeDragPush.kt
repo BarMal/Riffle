@@ -91,6 +91,8 @@ object HomeDragPush {
         y: Float,
         tuning: HomeDragTuning = HomeDragTuning(),
         pushedBefore: Set<LauncherItemId> = emptySet(),
+        /** Cells nothing may be pushed into (the cell the dragged item is lifted from, which stays on screen). */
+        reserved: Set<GridCell> = emptySet(),
     ): HomeDragPlan {
         val grid = page.grid
         val span = dragged.placement?.span ?: GridSpan()
@@ -114,6 +116,7 @@ object HomeDragPush {
             }.sortedBy { distanceTo(it, x, y) }
         val occupied = others.filter { it !in pushing }.flatMap { it.cells() }.toMutableSet()
         occupied += landingCells
+        occupied += reserved
         val moved = LinkedHashMap<LauncherItemId, GridCell>()
         for (item in pushing) {
             val cell = freeCellAway(item, grid, occupied, x, y)

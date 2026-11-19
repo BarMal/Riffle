@@ -79,6 +79,9 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HandleAxis
 import com.riffle.core.domain.launcher.home.HandleStrip
+import com.riffle.core.domain.launcher.home.HomeDragPlan
+import com.riffle.core.domain.launcher.home.HomeDragPush
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeHandle
 import com.riffle.core.domain.launcher.home.HomeHandleLayout
@@ -243,8 +246,14 @@ internal fun StandardHome(
         HomeWorkspaceActions(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
             onDragSessionChanged = { session ->
-                homeDragSession.value = session
-                dockHostState.isDropTargetHighlighted.value = session?.isOverDock == true
+                val planned = session?.planned(visibleLayout, workspaceGridBounds.value, presentation.dragTuning)
+                if (planned?.plan?.pushed?.keys != homeDragSession.value?.plan?.pushed?.keys &&
+                    planned?.plan?.pushed?.isNotEmpty() == true
+                ) {
+                    interactions.haptics.perform(LauncherHapticEvent.DETENT)
+                }
+                homeDragSession.value = planned
+                dockHostState.isDropTargetHighlighted.value = planned?.isOverDock == true
             },
             currentDragSession = { homeDragSession.value },
             haptics = interactions.haptics,
@@ -274,6 +283,14 @@ internal fun StandardHome(
         actions = actions,
         modifier = surfaceModifier,
     )
+    // The lifted icon above the pager (and so above a page turn), read in the layout phase.
+    if (homeDragSession.value != null) {
+        HomeLiftedItem(
+            session = { homeDragSession.value },
+            presentation = homeGridPresentationFor(layout, presentation, actions),
+            appIconLoader = appIconLoader,
+        )
+    }
     if (dockHost == null) {
         HomeDockHost(
             layout = layout,
@@ -706,7 +723,7 @@ private fun StandardHomeColumn(
             vertical = layoutSettings.pageScroll == PageScrollDirection.VERTICAL,
             activeDragSession = state.dragSession,
             onDragPageTargetChanged = { pageId ->
-                state.dragSession?.let { session ->
+                actions.currentDragSession()?.let { session ->
                     if (session.targetPageId != pageId) {
                         actions.onDragSessionChanged(session.copy(targetPageId = pageId))
                         actions.onAction(LauncherShellAction.SelectHomePage(pageId))
@@ -1015,6 +1032,7 @@ private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspace
         reducedMotion = presentation.reducedMotion,
         widgetViewFactory = presentation.widgetViewFactory,
         libraryEnabled = presentation.libraryEnabled,
+        dragTuning = presentation.dragTuning,
         generatedPage =
             GeneratedPagePresentation(
                 notificationGroupsByApp = presentation.notificationGroupsByApp,
@@ -1035,6 +1053,10 @@ internal data class HomeDragSession(
     val projectedCell: GridCell,
     /** Whether releasing right now would drop [item] on the dock instead of a home cell. */
     val isOverDock: Boolean = false,
+    /** Where the finger is, in the root; [Offset.Unspecified] until the first move. */
+    val pointerInRoot: Offset = Offset.Unspecified,
+    /** What dropping now would do on the target page (the push ring and dead zone); null: not planned. */
+    val plan: HomeDragPlan? = null,
 )
 
 internal data class StandardHomeInteractions(
@@ -1065,6 +1087,8 @@ internal data class StandardHomePresentation(
      * with the handle whenever the Stream is out.
      */
     val handleHidden: Boolean = false,
+    /** The numbers of a Home drag (Settings > About > Diagnostics > Drag tuning). */
+    val dragTuning: HomeDragTuning = HomeDragTuning(),
 )
 
 internal data class StandardHomeWidgetPickerState(
@@ -1125,6 +1149,8 @@ internal data class HomeGridPresentation(
     val generatedPage: GeneratedPagePresentation = GeneratedPagePresentation(),
     /** Whether the Library is on, for a generated page's "More apps" button (search stands in while it is off). */
     val libraryEnabled: Boolean = true,
+    /** The numbers of a Home drag (the folder hold). */
+    val dragTuning: HomeDragTuning = HomeDragTuning(),
     /**
      * Which surface these cells belong to, so an item's own menu removes it from the right place.
      * The dock's panel renders through the same grid but is not one of the layout's pages.
@@ -1225,3 +1251,42 @@ private fun FadingHandle(
         ) { content() }
     }
 }
+
+/**
+ * This drag with its [HomeDragPlan] for the page it is over: the pointer in cells of that page's grid (whose bounds in
+ * the root are [gridBounds]), through [HomeDragPush]. Unplanned while the pointer, the bounds or the page are unknown,
+ * or over the Dock. Dropping on top is only offered on the item's own page: another page takes the item by the ring
+ * alone (the existing placement rules reject a collision).
+ */
+internal fun HomeDragSession.planned(
+    layout: HomeLayout,
+    gridBounds: Rect?,
+    tuning: HomeDragTuning,
+): HomeDragSession {
+    val page = layout.pages.firstOrNull { it.id == targetPageId }
+    if (gridBounds == null || pointerInRoot == Offset.Unspecified || page == null || isOverDock) {
+        return copy(plan = null)
+    }
+    val x = (pointerInRoot.x - gridBounds.left) / (gridBounds.width / page.grid.columns)
+    val y = (pointerInRoot.y - gridBounds.top) / (gridBounds.height / page.grid.rows)
+    val numbers = tuning.coerced().let { if (targetPageId == originPageId) it else it.copy(deadZoneRadius = 0f) }
+    val reserved = if (targetPageId == originPageId) setOf(originCell) else emptySet()
+    val plan = HomeDragPush.plan(page, item, x, y, numbers, plan?.pushed?.keys.orEmpty(), reserved)
+    return copy(plan = plan, projectedCell = plan.landing ?: originCell)
+}
+
+private fun homeGridPresentationFor(
+    layout: HomeLayout,
+    presentation: StandardHomePresentation,
+    actions: HomeWorkspaceActions,
+): HomeGridPresentation =
+    HomeGridPresentation(
+        notificationGroupsByApp = presentation.notificationGroupsByApp,
+        appShortcutsByApp = presentation.appShortcutsByApp,
+        labelSettings = layout.settings.labels,
+        reducedMotion = presentation.reducedMotion,
+        widgetViewFactory = presentation.widgetViewFactory,
+        libraryEnabled = presentation.libraryEnabled,
+        dragTuning = presentation.dragTuning,
+        generatedPage = GeneratedPagePresentation(onAction = actions.onAction),
+    )

@@ -180,6 +180,17 @@ class HomeDragPushTest {
     }
 
     @Test
+    fun aReservedCellIsNeverPushedInto() {
+        val dragged = app("a", 0, 0)
+        val other = app("b", 1, 0)
+        // Pointer right of b: b is pushed left, into a's own cell; reserved, so it goes elsewhere.
+        val result =
+            HomeDragPush.plan(page(dragged, other), dragged, 1.9f, 0.5f, tuning, reserved = setOf(GridCell(0, 0)))
+        assertTrue(result.pushed[other.id] != GridCell(0, 0))
+        assertNotNull(result.pushed[other.id])
+    }
+
+    @Test
     fun theTuningIsHeldToItsRangesAndPrintsItsValues() {
         val wild = HomeDragTuning(5f, 0f, 1, 99999, 5).coerced()
         assertEquals(HomeDragTuning(1.2f, 0.15f, 100, 1000, 300), wild)
