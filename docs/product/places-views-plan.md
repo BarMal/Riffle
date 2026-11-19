@@ -351,5 +351,9 @@ Second batch (this slice):
 - **Frame stability.** Composition sees the drag without the finger's place; the lifted icon and the edge hold read it in the
   layout phase. Moving within a cell recomposes no cell; crossing cells recomposes only those it touches
   (`HomeDragFrameStabilityTest`).
-- **Not done:** the drop and cancel spring (the item and the pushed neighbours settling on the existing spring) and the
-  ghost and push ring for a Dock item dragged onto Home.
+- **Drop and cancel motion.** An item that arrives in a cell from elsewhere settles on the existing spring
+  (`RiffleMotion.snappy`): the lifted item from where the finger let it go (a drop, or a cancel returning it to where it
+  was lifted from), and pushed neighbours from where they were, each time the preview moves them. A translation read in
+  the draw phase (`homeItemSettle`, `HomeItemMotion`); reduced motion jumps; further than four cells (another page) it just
+  lands.
+- **Not done:** the ghost and push ring for a Dock item dragged onto Home, and Home's source ghost for a Dock reorder.

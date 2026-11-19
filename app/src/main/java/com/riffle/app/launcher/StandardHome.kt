@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -156,6 +157,8 @@ internal fun StandardHome(
     // What composition sees of the drag: everything but where the finger is. The finger moves every frame; the lifted
     // icon and the edge hold read it in the layout phase and from the latest session, so composition (and every cell
     // of every page) only changes when the drag does: a new landing cell, a new push, a page turn.
+    // A surface above may hand in the motion (a test reads the settle through it); otherwise this one's own.
+    val itemMotion = LocalHomeItemMotion.current ?: remember { HomeItemMotion() }
     val composedDragSession =
         remember {
             derivedStateOf(structuralEqualityPolicy()) { homeDragSession.value?.withoutPointer() }
@@ -308,6 +311,7 @@ internal fun StandardHome(
             },
             onDragSessionChanged = { session ->
                 if (session == null) {
+                    homeDragSession.value?.let { ended -> itemMotion.letGo(ended.item.id, ended.pointerInRoot) }
                     // The drop's own action follows this at once and keeps the page it lands on; whatever is still
                     // pending after it (a cancel, a drop elsewhere) is discarded.
                     discardCandidate.value = candidatePageId.value
@@ -362,21 +366,23 @@ internal fun StandardHome(
     // given, and a fresh bundle of lambdas at every recomposition would make every cell recompose with it.
     val actions = rememberStableWorkspaceActions(freshActions)
 
-    StandardHomeColumn(
-        state =
-            StandardHomeContentState(
-                layout = layout,
-                visibleLayout = visibleLayout,
-                dockPosition = dockPosition,
-                dragSession = composedDragSession.value,
-                widgetPickerDragPreview = widgetPickerDragPreview.value,
-                presentation = presentation,
-                dockReservation = dockHostState.reservedExtent(visibleLayout, dockPosition),
-            ),
-        appIconLoader = appIconLoader,
-        actions = actions,
-        modifier = surfaceModifier,
-    )
+    CompositionLocalProvider(LocalHomeItemMotion provides itemMotion) {
+        StandardHomeColumn(
+            state =
+                StandardHomeContentState(
+                    layout = layout,
+                    visibleLayout = visibleLayout,
+                    dockPosition = dockPosition,
+                    dragSession = composedDragSession.value,
+                    widgetPickerDragPreview = widgetPickerDragPreview.value,
+                    presentation = presentation,
+                    dockReservation = dockHostState.reservedExtent(visibleLayout, dockPosition),
+                ),
+            appIconLoader = appIconLoader,
+            actions = actions,
+            modifier = surfaceModifier,
+        )
+    }
     // The lifted icon above the pager (and so above a page turn), read in the layout phase.
     if (composedDragSession.value != null) {
         HomeLiftedItem(

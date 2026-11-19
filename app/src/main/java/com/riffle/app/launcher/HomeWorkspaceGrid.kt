@@ -200,6 +200,9 @@ private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
 internal const val HOME_WORKSPACE_GRID_TEST_TAG = "home-workspace-grid"
 internal const val HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG = "home-workspace-grid-overflow"
 
+/** How far, in cells, an item still settles to its cell; further it lands (another page). */
+private const val SETTLE_MAX_CELLS = 4f
+
 /** The recomposition probe key of a whole Home page grid. */
 internal fun homeGridProbeKey(pageId: String): String = "home-grid:$pageId"
 
@@ -278,7 +281,13 @@ private fun RowScope.HomeGridCell(
                                     scaleX = folderState.scale
                                     scaleY = folderState.scale
                                 }
-                                .folderWillFormOutline(folderState.armed, presentation.labelSettings.iconSizeDp),
+                                .folderWillFormOutline(folderState.armed, presentation.labelSettings.iconSizeDp)
+                                .homeItemSettle(
+                                    id = item.id,
+                                    isDragSource = isDragSource,
+                                    reducedMotion = presentation.reducedMotion,
+                                    maxDistancePx = cellSizePx * SETTLE_MAX_CELLS,
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         HomeGridItem(

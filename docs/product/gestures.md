@@ -453,10 +453,9 @@ no longer be available for the hand-off.
 
 ## Known limitations / remaining work
 
-- **Home drag, not yet done:** the drop and cancel spring (the lifted item springing to its cell, pushed neighbours settling
-  on the same spring, reduced motion jumping); the source ghost and the push ring for a Dock item dragged out onto Home (the
-  Dock item is placed at the cell under the finger on release); the Dock reorder shows the lifted scale and shadow, not Home's
-  source ghost.
+- **Home drag, not yet done:** the source ghost and the push ring for a Dock item dragged out onto Home (the Dock item is
+  placed at the cell under the finger on release); the Dock reorder shows the lifted scale and shadow, not Home's source
+  ghost.
 - **Legacy `HOME_SCREEN_LIBRARY` layouts keep auto-filling.** The One Home migration rewrites the stored Home *mode*
   (`HomeMode`), not a layout's view mode. A layout whose view mode is `HOME_SCREEN_LIBRARY` (a workspace migrated from the old
   Library mode brings it back through `WorkspaceHome.homeModeFor`) is still re-filled with every missing app and compacted
@@ -516,6 +515,10 @@ outline of its span); the lifted icon follows the finger, slightly enlarged, abo
 - **Ghosts.** An app leaves a baked desaturated, dimmed icon and shows the baked outline of the same icon at its landing; a
   folder leaves its desaturated, dimmed tile and four icons (the apps' baked ghosts); a widget leaves the outline of its span
   with the card corners at the source and at the landing. Nothing is tinted or blurred at runtime.
+- **Drop and cancel.** On a drop the lifted item springs from where the finger let go to its cell on the existing spring
+  (`RiffleMotion.snappy`), and pushed items move to and from their pushed cells on the same spring; a cancelled drag returns
+  to the source the same way. Reduced motion jumps. A draw-phase translation (`homeItemSettle`), further than four cells
+  (another page) the item just lands.
 - **Frame stability.** Composition never reads the finger's place: the lifted icon and the edge hold read it in the layout
   phase, and a cell recomposes only when its own item, landing marker or folder state changes.
 - **Cancel.** A drop with no valid landing (a blocker that cannot move) does nothing: the item stays where it was.

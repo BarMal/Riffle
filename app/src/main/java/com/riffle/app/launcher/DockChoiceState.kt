@@ -126,6 +126,9 @@ internal class DockChoiceState {
 
     private var scrubbedKey: String? = null
 
+    /** The ringed (current) tile when the hold armed the scrub. */
+    private var armedFrom: String? = null
+
     /**
      * Whether the ring arriving on [key] is the scrub's own landing (taken once): the row then keeps where the
      * finger or its fling put it, rather than scrolling back to show a tile the finger was just on.
@@ -215,7 +218,10 @@ internal class DockChoiceState {
         finger = env.toRoot(position)
         val ringed = env.scrubPages(env.entryBounds().keys).ringed
         selectedKey = ringed
-        reselectScrub(env, tickOnSelect = true, tickOnly = false)
+        armedFrom = ringed
+        // The mark only: holding opens the tile's menu too, and the page must not change under it. The tile under the
+        // finger becomes the page when the slide starts.
+        reselectScrub(env, tickOnSelect = false, tickOnly = false)
         onTick()
     }
 
@@ -224,6 +230,11 @@ internal class DockChoiceState {
         if (!scrubbing || sliding) return
         sliding = true
         dismissMenus()
+        // The tile the hold armed on, when it is not the page already showing, becomes the page now.
+        selectedKey?.takeIf { it != armedFrom }?.let { key ->
+            scrubbedKey = key
+            onScrubTo(key)
+        }
     }
 
     /** The finger is at [position] (the gesture's own coordinates). */

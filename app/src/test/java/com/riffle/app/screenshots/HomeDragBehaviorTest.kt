@@ -1,5 +1,6 @@
 package com.riffle.app.screenshots
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -19,12 +21,16 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.up
 import com.riffle.app.launcher.HOME_GRID_CELL_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
+import com.riffle.app.launcher.HomeItemMotion
 import com.riffle.app.launcher.LauncherShellAction
+import com.riffle.app.launcher.LocalHomeItemMotion
 import com.riffle.app.launcher.applyEdit
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
+import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -45,18 +51,22 @@ class HomeDragBehaviorTest {
     private val actions = mutableListOf<LauncherShellAction>()
     private var shell by mutableStateOf(ScreenshotFixtures.homeState().withManyApps())
 
+    private val itemMotion = HomeItemMotion()
+
     private fun show() {
         composeRule.setContent {
             ScreenshotBackdrop {
-                HomeDestination(
-                    state = shell,
-                    appIconLoader = SolidColorAppIconLoader(),
-                    stream = emptyStreamHost(),
-                    onAction = { action ->
-                        actions += action
-                        shell = shell.answering(action).answeringPages(action)
-                    },
-                )
+                CompositionLocalProvider(LocalHomeItemMotion provides itemMotion) {
+                    HomeDestination(
+                        state = shell,
+                        appIconLoader = SolidColorAppIconLoader(),
+                        stream = emptyStreamHost(),
+                        onAction = { action ->
+                            actions += action
+                            shell = shell.answering(action).answeringPages(action)
+                        },
+                    )
+                }
             }
         }
         composeRule.waitForIdle()
@@ -357,6 +367,57 @@ class HomeDragBehaviorTest {
             ).fetchSemanticsNodes()
         assertTrue("the widget left no outline at its source and its landing: ${outlines.size}", outlines.size >= 2)
         composeRule.onAllNodes(isRoot())[0].performTouchInput { up() }
+    }
+
+    /** Calendar's centre in its grid cell (the lifted copy, parked off screen until the finger is known, is out). */
+    private fun calendarCentre() =
+        composeRule.onAllNodesWithText("Calendar").fetchSemanticsNodes()
+            .map { it.boundsInRoot.center }
+            .first { it.x > 0f }
+
+    /** Lifts Calendar, drags it over a cell and lets go; the harness answers nothing, so it returns to where it was. */
+    private fun liftDragAndLetGo(): Offset {
+        val rest = calendarCentre()
+        val step = cellWidth()
+        composeRule.onAllNodesWithText("Calendar")[0].performTouchInput {
+            down(center)
+            advanceEventTime(700)
+            moveBy(Offset(step * 0.6f, 0f))
+            moveBy(Offset(step * 0.6f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(300)
+        composeRule.waitForIdle()
+        composeRule.onAllNodes(isRoot())[0].performTouchInput { up() }
+        return rest
+    }
+
+    private val calendarId = com.riffle.core.domain.launcher.home.LauncherItemId("com.riffle.sample.calendar")
+
+    @Test
+    fun aLetGoItemSettlesBackToItsCellOnASpringInsteadOfJumping() {
+        show()
+        liftDragAndLetGo()
+        composeRule.mainClock.advanceTimeBy(1_500)
+        composeRule.waitForIdle()
+        val peak = itemMotion.settlePeaks[calendarId] ?: 0f
+        assertTrue("the item jumped back, never away from its cell (peak $peak)", peak > 8f)
+        assertEquals("the item did not come to rest", 0f, itemMotion.settleOffsets[calendarId]?.getDistance() ?: 0f, 1f)
+    }
+
+    @Test
+    fun underReducedMotionALetGoItemJumpsBack() {
+        shell =
+            shell.copy(
+                launcherSettings =
+                    shell.launcherSettings.copy(
+                        motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
+                    ),
+            )
+        show()
+        liftDragAndLetGo()
+        composeRule.mainClock.advanceTimeBy(1_500)
+        composeRule.waitForIdle()
+        assertEquals("the item animated under reduced motion", null, itemMotion.settlePeaks[calendarId])
     }
 
     private fun LauncherShellAction.isHomeDrop() =
