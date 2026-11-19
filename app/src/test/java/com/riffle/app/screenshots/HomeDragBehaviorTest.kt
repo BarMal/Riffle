@@ -176,4 +176,64 @@ class HomeDragBehaviorTest {
 
     private fun LauncherShellAction.isHomeDrop() =
         this is LauncherShellAction.MoveHomeShortcutToCell || this is LauncherShellAction.DropHomeItem
+
+    private fun cellCentre(
+        column: Int,
+        row: Int,
+    ): Offset {
+        val columns = shell.homeLayout.selectedPage.grid.columns
+        return composeRule.onAllNodesWithTag(HOME_GRID_CELL_TEST_TAG)[row * columns + column]
+            .fetchSemanticsNode().boundsInRoot.center
+    }
+
+    private fun itemCell(name: String) =
+        shell.homeLayout.selectedPage.items.first { (it as? AppShortcutItem)?.label == name }.placement!!.cell
+
+    @Test
+    fun aDragInProgressShowsTheGhostTheLandingOutlineAndPushedNeighbours() {
+        show()
+        val names = labels()
+        val dragged = names.first()
+        val from = cellCentre(itemCell(dragged).column, itemCell(dragged).row)
+        // Between the second item and its neighbour (outside both dead zones, inside the ring of both).
+        val other = itemCell(names[1])
+        val centre = cellCentre(other.column, other.row)
+        val step = cellWidth()
+        composeRule.onRoot().performTouchInput {
+            down(from)
+            advanceEventTime(700)
+            moveBy(Offset(1f, 1f))
+            moveTo(Offset(centre.x - step * 0.4f, centre.y))
+            moveBy(Offset(1f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(300)
+        composeRule.waitForIdle()
+        composeRule.captureScreen()
+        composeRule.onRoot().performTouchInput { up() }
+    }
+
+    @Test
+    fun holdingOverAnAppsCentreShowsTheFolderStateAndDroppingThereMakesAFolder() {
+        show()
+        val names = labels()
+        val dragged = names.first()
+        val from = cellCentre(itemCell(dragged).column, itemCell(dragged).row)
+        val other = itemCell(names[1])
+        val centre = cellCentre(other.column, other.row)
+        composeRule.onRoot().performTouchInput {
+            down(from)
+            advanceEventTime(700)
+            moveBy(Offset(1f, 1f))
+            moveTo(centre)
+            moveBy(Offset(1f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(600)
+        composeRule.waitForIdle()
+        composeRule.captureScreen()
+        composeRule.onRoot().performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        val drop = actions.filterIsInstance<LauncherShellAction.MoveHomeShortcutToCell>().single()
+        assertTrue(drop.cell == other)
+    }
 }

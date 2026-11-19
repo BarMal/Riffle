@@ -451,3 +451,27 @@ no longer be available for the hand-off.
   direction-selective claiming that `detectVerticalDragGestures`/`AnchoredDraggable` cannot
   express). This change moves their decision math into tested domain code and adds a platform
   nested-scroll hand-off; it does not rewrite the loops.
+
+## Dragging on Home
+
+One pick-up, no edit mode: a long press on any Home item (an app, a folder, a widget) lifts it. The arbitration is the
+platform's long-press drag detector and nothing else (ADR 0002): a quick move before the long press is not the item's (the
+pager scrolls); at the long press the item lifts and its menu opens; hold still and the menu stays; move past the touch slop
+while pressed and the menu closes and the lift is a drag. The item stays where it was as a desaturated, dimmed ghost of its
+own icon (a folder or widget: dimmed); the cell it would land in shows the outline of the same icon (a widget: a rounded
+outline of its span); the lifted icon follows the finger, slightly enlarged, above the pager.
+
+- **Push ring.** Around the finger there is a tight ring (0.75 cell by default). An app whose cell centre is inside the ring
+  but outside its dead zone is pushed to the nearest free cell away from the finger (whole spans for widgets, never off the
+  page; a full page refuses the push and the item stays and blocks; no overflow to another page, as a collision is rejected
+  today). Pushed items are a preview: moving away puts them back, and nothing is committed until the drop. The ring has
+  hysteresis (an item already pushed stays pushed 0.12 cell further out) and one light detent when the pushed set changes.
+- **Dead zone = drop on top.** The centre of another app's cell (0.30 cell by default) is a dead zone: it is not pushed; after
+  the folder hold (250 ms) it shows "will make a folder" (the target icon scales down inside a folder outline). Dropping
+  there makes a folder of the two (target first, at its cell), named after their shared category or "Folder", opened with the
+  name ready to type; a folder's dead zone is its whole icon (the app is added). Empty space: the item is placed there.
+- **Edges.** Held within 24 dp of the trailing screen edge for the edge hold (500 ms) turns to the next page, and keeps
+  turning every 700 ms while held; the leading edge goes back (top and bottom when the pages scroll up and down; mirrored in
+  right-to-left). Every page stays composed during a drag so the gesture survives. Dragging past the last page does not
+  create a page yet.
+- **Cancel.** A drop with no valid landing (a blocker that cannot move) does nothing: the item stays where it was.

@@ -229,7 +229,6 @@ internal fun HomeLiftedItem(
                     .graphicsLayer {
                         scaleX = LIFTED_SCALE
                         scaleY = LIFTED_SCALE
-                        shadowElevation = DRAG_GHOST_ELEVATION
                     },
         ) {
             HomeDraggedItemContent(current.item, presentation, appIconLoader)
@@ -494,7 +493,6 @@ private val LauncherItem.dragLabel: String
 
 private const val DRAG_PLACEHOLDER_STROKE_WIDTH_DP = 2
 private const val DRAG_PLACEHOLDER_CORNER_RADIUS_DP = 12
-private const val DRAG_GHOST_ELEVATION = 12f
 private const val FOLDER_WILL_FORM_SCALE = 0.8f
 private const val FOLDER_OUTLINE_RATIO = 1.15f
 private const val LIFTED_SCALE = 1.1f

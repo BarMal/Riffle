@@ -21,7 +21,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 
 | Page | Section | Settings |
 | --- | --- | --- |
-| **Home** | Home screen | Simple mode (an override of Home shows, the Stream, live apps and the Library) and Home shows (Placed items or App library) |
+| **Home** | Home screen | Simple mode (the locked-down Home: every app A to Z, not arrangeable; it overrides the Stream, live apps and the Library) and Add new apps to Home (a switch, on by default: a new app is placed after the last item, off keeps it in the Library only). There is no "Home shows" choice any more (ADR 0003, Amendment 8) |
 | | Grid | Columns, rows (a stepper), horizontal margin, vertical margin (per device class) |
 | | Icons and labels | Icon size, show labels, label background (with its strength while it is on), label text size, label width, label sizing, label lines |
 | | Behaviour | Returning to Home (restore, first page, start page) |
@@ -34,7 +34,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | | Floating dock | Opens the sub-page |
 | Floating dock (under Dock) | | Floating dock on or off, apps, edge, handle thickness, size, position, opacity, expanded icon size, orientation, labels |
 | **Layout** | Folded, Unfolded | Per posture (a tablet and a desktop window use Unfolded): Dock position (Bottom, Left, Right), App pages scroll (Sideways, Up and down; the pages of Home and of the paged Library, not the Stream, whose stacks change from the Dock), Page dots (Beside the Dock, Off), Drag the dots to scroll (a switch, disabled while the dots are off) and Show apps behind the cards (a switch). Defaults: folded Bottom, Sideways, apps behind the cards off; unfolded Right, Up and down, apps behind the cards on; dots beside the Dock and quick scroll on in both. The Dock position and Show apps behind the cards are the same rows, with the same wording, as on the Dock page and the Stream cards page, and one stored value each. Stored in `LauncherSettings.layout` (`LayoutSettings`), reduced by `SelectPageScroll`, `SelectPageIndicator`, `SetQuickScroll` and `SelectPostureDockEdge`. See [dock-modes-plan.md](dock-modes-plan.md), "U1" |
-| **Library** | Features | Library (a switch; **off by default** since the Dock became the handle for the stacks, and off in Simple mode; a stored choice is kept) |
+| **Library** | Features | Library (a switch; **on by default** again, since the Library holds every app, and off in Simple mode; a stored choice is kept) |
 | | View | Show as (Categories, A-Z, Grid, Pages), grid columns (used by Grid, disabled otherwise) |
 | | Search | Search results as a card stack (the default), icons or a list. The stack is the Dock's search; the Library's own search field draws the stack's choice as icons |
 | | Apps | Hidden apps (opens the sub-page), refresh installed apps |
@@ -205,3 +205,10 @@ so the links are included and the Backup page and the feed page say to keep the 
 - **Gestures.** The Gestures page keeps the four groups of the old panel (one finger, two, pinch, three), each row a
   menu, plus a Reset.
 - **Backup of calendar feeds.** See Backup above.
+
+## About > Diagnostics > Drag tuning
+
+Sliders for the numbers a Home drag reads at runtime, with Reset and the current values as text to copy: push ring radius
+(0.5 to 1.2 cell, default 0.75), dead-zone radius (0.15 to 0.45, default 0.30), folder hold (100 to 600 ms, default 250),
+edge hold (200 to 1000 ms, default 500) and page repeat (300 to 1500 ms, default 700). Stored in `LauncherSettings.home`
+(`HomeBehaviourSettings.dragTuning`, held to its ranges when decoded and when saved).

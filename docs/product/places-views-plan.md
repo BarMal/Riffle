@@ -315,3 +315,24 @@ header; with Undo) and in Settings > Stream. A phone always shows Pages.
   and non-interactive; their tab semantics name the page and its item count.
 
 Not built: dragging a stage out of the rail to reorder it, and a thumbnail that shows the actual card scaled down.
+
+## Home drag
+
+The rules are in `gestures.md`, "Dragging on Home"; the rule is `HomeDragPush` (`:core:domain`) and its numbers
+`HomeDragTuning`, set in Settings > About > Diagnostics > Drag tuning.
+
+| Number | Default | Range |
+| --- | --- | --- |
+| Push ring radius (outer, cells) | 0.75 | 0.5 to 1.2 |
+| Dead-zone radius (cells) | 0.30 | 0.15 to 0.45 |
+| Folder hold | 250 ms | 100 to 600 ms |
+| Edge hold | 500 ms | 200 to 1000 ms |
+| Page repeat | 700 ms | 300 to 1500 ms |
+| Edge zone | 24 dp | fixed |
+| Ring hysteresis | 0.12 cell | fixed |
+
+What the old pick-up got wrong (fixed): the pointer-input block captured the item, grid and page at the start of the
+gesture; the page turn was measured from the drag's origin offset, in the wrong direction (a drag to the right went to the
+previous page) and could happen once only; the pager dropped the page the drag started on after a turn, killing the gesture;
+the menu opened only at release. Not done: the Dock keeps its own reorder drag as it was, a drop does not yet spring
+to its cell, and a drag past the last page does not offer a new page.
