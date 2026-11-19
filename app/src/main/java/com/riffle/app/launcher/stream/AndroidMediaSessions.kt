@@ -17,6 +17,7 @@ import com.riffle.app.launcher.notifications.mediaCommandsForPlaybackActions
 import com.riffle.app.launcher.sources.SourceChangeSource
 import com.riffle.core.domain.launcher.stream.StreamAction
 import com.riffle.core.domain.launcher.stream.StreamActionResult
+import com.riffle.core.domain.launcher.workspace.sources.MediaItemExt
 import com.riffle.core.domain.launcher.workspace.sources.MediaSessionInfo
 import com.riffle.core.domain.launcher.workspace.sources.MediaSessionReader
 
@@ -49,6 +50,7 @@ internal class AndroidMediaSessions(
     private val elapsedRealtime: () -> Long = SystemClock::elapsedRealtime,
     private val sessionSender: SessionActivitySender = SessionActivitySender(context),
 ) : MediaSessionReader, MediaTransport, SourceChangeSource {
+    private val queueArtwork = MediaQueueArtwork(context.contentResolver)
     private val manager = context.getSystemService(MediaSessionManager::class.java)
     private val listener = ComponentName(context, RiffleNotificationListenerService::class.java)
 
@@ -63,11 +65,28 @@ internal class AndroidMediaSessions(
                 runCatching {
                     val snapshot = controller.snapshot()
                     controller.metadata?.artwork()?.let { artwork[controller.packageName] = it }
-                    snapshot.toMediaSessionInfo(now)
+                    snapshot.toMediaSessionInfo(now).also { info ->
+                        queueThumbnails(controller, info, artwork)
+                    }
                 }.getOrNull()
             }
         MediaArtworkStore.replaceAll(artwork)
         return sessions
+    }
+
+    /** The thumbnails of the queue cards that will be drawn, in memory with the session's artwork. */
+    private fun queueThumbnails(
+        controller: MediaController,
+        info: MediaSessionInfo,
+        into: MutableMap<String, Bitmap>,
+    ) {
+        val wanted = info.queue.filter { it.hasArtwork }.map { it.queueId }.toSet()
+        if (wanted.isEmpty()) return
+        controller.queue.orEmpty().filter { it.queueId in wanted }.forEach { item ->
+            queueArtwork.bitmapOf(controller.packageName, item.description)?.let {
+                into[MediaItemExt.queueArtworkKey(controller.packageName, item.queueId)] = it
+            }
+        }
     }
 
     override fun observe(onChanged: () -> Unit): () -> Unit {
@@ -149,6 +168,12 @@ internal class AndroidMediaSessions(
             StreamAction.Pause -> controls::pause.takeIf { MediaCommand.PAUSE in allowed }
             StreamAction.Previous -> controls::skipToPrevious.takeIf { MediaCommand.PREVIOUS in allowed }
             StreamAction.Next -> controls::skipToNext.takeIf { MediaCommand.NEXT in allowed }
+            is StreamAction.PlayQueueItem ->
+                if (state != null && state.actions and PlaybackState.ACTION_SKIP_TO_QUEUE_ITEM != 0L) {
+                    { controls.skipToQueueItem(action.queueId) }
+                } else {
+                    null
+                }
             is StreamAction.SeekTo ->
                 if (state != null && state.actions and PlaybackState.ACTION_SEEK_TO != 0L) {
                     { controls.seekTo(action.positionMillis) }
@@ -179,7 +204,15 @@ internal class AndroidMediaSessions(
             positionUpdatedAtElapsed = state?.lastPositionUpdateTime ?: 0L,
             speed = state?.playbackSpeed ?: 1f,
             durationMillis = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L,
-            queue = queue.map { item -> item.description.title?.toString() to item.description.subtitle?.toString() },
+            queue =
+                queue.map { item ->
+                    PlatformQueueItem(
+                        queueId = item.queueId,
+                        title = item.description.title?.toString(),
+                        subtitle = item.description.subtitle?.toString(),
+                        hasArtwork = queueArtwork.has(item.description),
+                    )
+                },
             activeQueueIndex = queue.indexOfFirst { it.queueId == activeId },
         )
     }

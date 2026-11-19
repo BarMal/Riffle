@@ -26,6 +26,8 @@ data class NowOptions(
     val maxActive: Int = 3,
     /** Whether players that are not active stay in the stack as quiet "source" cards (the recent players). */
     val recentPlayers: Boolean = true,
+    /** Whether each active player's queue (its "up next") is cards behind the player's own (at most 10). */
+    val showUpNext: Boolean = true,
 ) {
     init {
         require(maxActive >= 0) { "maxActive cannot be negative." }

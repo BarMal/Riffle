@@ -25,9 +25,6 @@ sealed interface CardAction {
 
     data object Next : CardAction
 
-    /** Shows or hides the queue on the open player. */
-    data class ToggleQueue(val shown: Boolean) : CardAction
-
     /** "Open" (the notification's app) or "Open player" ([player]): the content's own open action. */
     data class OpenContent(val player: Boolean) : CardAction
 
@@ -54,22 +51,16 @@ object StreamCardActions {
      */
     fun opensInPlace(content: StreamContent): Boolean =
         when (content) {
-            is MediaContent -> !content.source
+            is MediaContent -> !content.source && content.queueItem == null
             is NotificationContent, is EventContent, is TaskContent -> true
             is ArticleContent, is RecentAppContent, is AppShortcutContent, is AppPairContent -> false
         }
 
-    /**
-     * The controls of the open card of [content]. [queueShown] is whether an open player shows its queue now (a player
-     * with no queue has no queue control).
-     */
-    fun forContent(
-        content: StreamContent,
-        queueShown: Boolean = true,
-    ): List<CardAction> =
+    /** The controls of the open card of [content]. A queue card does not open, so it has none. */
+    fun forContent(content: StreamContent): List<CardAction> =
         when (content) {
             is NotificationContent -> notification(content)
-            is MediaContent -> if (content.source) emptyList() else media(content, queueShown)
+            is MediaContent -> if (content.source || content.queueItem != null) emptyList() else media(content)
             is EventContent ->
                 listOfNotNull(
                     CardAction.OpenEvent(content.kind).takeIf { StreamActionPolicy.offers(content, StreamAction.Open) },
@@ -121,29 +112,22 @@ object StreamCardActions {
     private val SNOOZE_TITLES = setOf("snooze", "remind me", "remind me later")
     private val DISMISS_TITLES = setOf("dismiss", "close", "clear")
 
-    private fun media(
-        content: MediaContent,
-        queueShown: Boolean,
-    ): List<CardAction> {
+    private fun media(content: MediaContent): List<CardAction> {
         val playing = content.isPlaying == true
         val toggle = if (playing) StreamAction.Pause else StreamAction.Play
         return listOfNotNull(
             CardAction.Previous.takeIf { StreamActionPolicy.offers(content, StreamAction.Previous) },
             CardAction.PlayPause(playing).takeIf { StreamActionPolicy.offers(content, toggle) },
             CardAction.Next.takeIf { StreamActionPolicy.offers(content, StreamAction.Next) },
-            CardAction.ToggleQueue(queueShown).takeIf { content.queue.isNotEmpty() },
             CardAction.OpenContent(player = true).takeIf { StreamActionPolicy.offers(content, StreamAction.Open) },
         )
     }
 
-    /**
-     * The [StreamAction] [action] performs on the content, or null for a control that does not act on it
-     * ([CardAction.ToggleQueue], and [CardAction.Reply], which needs [replyText]).
-     */
+    /** The [StreamAction] [action] performs on the content; [CardAction.Reply] needs [replyText]. */
     fun streamActionFor(
         action: CardAction,
         replyText: String = "",
-    ): StreamAction? =
+    ): StreamAction =
         when (action) {
             CardAction.Reply -> StreamAction.Reply(replyText)
             CardAction.Dismiss -> StreamAction.Dismiss
@@ -151,7 +135,6 @@ object StreamCardActions {
             CardAction.Previous -> StreamAction.Previous
             is CardAction.PlayPause -> if (action.playing) StreamAction.Pause else StreamAction.Play
             CardAction.Next -> StreamAction.Next
-            is CardAction.ToggleQueue -> null
             is CardAction.OpenEvent, is CardAction.OpenContent -> StreamAction.Open
             CardAction.Complete -> StreamAction.Complete
             is CardAction.Own -> StreamAction.OwnAction(action.id)

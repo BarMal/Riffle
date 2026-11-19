@@ -203,6 +203,11 @@ enum class SettingKey(
         R.string.setting_stream_section_now,
         R.string.setting_stream_section_now_keywords,
     ),
+    NOW_SHOW_UP_NEXT(
+        SettingsPage.STREAM,
+        R.string.setting_now_show_up_next,
+        R.string.setting_now_show_up_next_keywords,
+    ),
     NOW_RECENT_PLAYERS(
         SettingsPage.STREAM,
         R.string.setting_now_recent_players,

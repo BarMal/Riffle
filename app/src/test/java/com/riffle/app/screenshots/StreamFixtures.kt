@@ -19,7 +19,6 @@ import com.riffle.core.domain.launcher.stream.EventContent
 import com.riffle.core.domain.launcher.stream.EventKind
 import com.riffle.core.domain.launcher.stream.MediaAction
 import com.riffle.core.domain.launcher.stream.MediaContent
-import com.riffle.core.domain.launcher.stream.MediaQueueEntry
 import com.riffle.core.domain.launcher.stream.NotificationAction
 import com.riffle.core.domain.launcher.stream.NotificationContent
 import com.riffle.core.domain.launcher.stream.NotificationMessage
@@ -146,12 +145,6 @@ internal object StreamFixtures {
             isPlaying = true,
             positionMillis = 83_000L,
             durationMillis = 244_000L,
-            queue =
-                listOf(
-                    MediaQueueEntry("Reunion", "M83"),
-                    MediaQueueEntry("Wait", "M83"),
-                    MediaQueueEntry("Steve McQueen", "M83"),
-                ),
             target = ItemTarget.App(music.identity.packageName.value, "personal"),
             actions = MediaAction.entries.toSet() - MediaAction.DISMISS,
             postedAtEpochMillis = NOW - MINUTE,

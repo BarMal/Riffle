@@ -216,8 +216,9 @@ private fun sectionSwitchSubtitle(
     }
 
 /**
- * Now's two settings: whether the recent players stay in it as source cards (a Stream option, stored with the layout)
- * and clearing the list they are remembered in. Off keeps Now to the active sessions and the empty card.
+ * Now's settings: whether each player's queue is cards behind it ("Show up next"), whether the recent players stay in
+ * it as source cards (Stream options, stored with the layout) and clearing the list they are remembered in. Recent
+ * players off keeps Now to the active sessions and the empty card.
  */
 @Composable
 private fun NowRecentPlayersRows(
@@ -226,6 +227,19 @@ private fun NowRecentPlayersRows(
 ) {
     val control = LocalRecentPlayers.current
     val scope = rememberCoroutineScope()
+    SettingsSwitchRow(
+        modifier = Modifier.settingAnchor(SettingKey.NOW_SHOW_UP_NEXT).testTag(NOW_SHOW_UP_NEXT_TEST_TAG),
+        title = SettingKey.NOW_SHOW_UP_NEXT.label(),
+        subtitle = stringResource(R.string.settings_now_show_up_next_subtitle),
+        checked = layout.options.now.showUpNext,
+        onCheckedChange = { shown ->
+            onLayoutAction(
+                StreamLayoutAction.SetOptions(
+                    layout.options.copy(now = layout.options.now.copy(showUpNext = shown)),
+                ),
+            )
+        },
+    )
     SettingsSwitchRow(
         modifier = Modifier.settingAnchor(SettingKey.NOW_RECENT_PLAYERS).testTag(NOW_RECENT_PLAYERS_TEST_TAG),
         title = SettingKey.NOW_RECENT_PLAYERS.label(),
@@ -253,6 +267,7 @@ private fun NowRecentPlayersRows(
     )
 }
 
+internal const val NOW_SHOW_UP_NEXT_TEST_TAG = "settings-now-show-up-next"
 internal const val NOW_RECENT_PLAYERS_TEST_TAG = "settings-now-recent-players"
 internal const val NOW_CLEAR_RECENT_PLAYERS_TEST_TAG = "settings-now-clear-recent-players"
 

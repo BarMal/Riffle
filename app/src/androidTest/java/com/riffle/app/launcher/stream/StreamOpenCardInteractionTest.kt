@@ -357,6 +357,8 @@ class StreamOpenCardInteractionTest {
         const val SETTLE_MILLIS = 1_000L
         const val PRESS_FRACTION = 0.2f
         val CHAT_PAGE = StreamPagePlanner.keyOf(StreamSection.NOTIFICATIONS, "com.riffle.test.chat:personal")
-        val NOW_PAGE = StreamPagePlanner.keyOf(StreamSection.NOW)
+
+        // An active player is a Now page of its own (ADR 0003, Amendment 16): `player:<package>:<profile>`.
+        val NOW_PAGE = StreamPagePlanner.keyOf(StreamSection.NOW, "player:com.riffle.test.music:personal")
     }
 }

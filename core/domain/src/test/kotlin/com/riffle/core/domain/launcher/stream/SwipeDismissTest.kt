@@ -71,7 +71,6 @@ class SwipeDismissTest {
                 isPlaying = true,
                 positionMillis = null,
                 durationMillis = null,
-                queue = emptyList(),
                 target = ItemTarget.None,
                 actions = MediaAction.entries.toSet(),
                 postedAtEpochMillis = 0L,

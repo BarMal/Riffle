@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -54,7 +52,6 @@ internal fun MediaActionRow(
     content: StreamContent,
     actions: List<CardAction>,
     callbacks: StreamCallbacks,
-    onToggleQueue: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val transport = actions.filter { it.isTransport() }
@@ -72,11 +69,11 @@ internal fun MediaActionRow(
             Row(
                 modifier = Modifier.layoutId(START).testTag(MEDIA_SECONDARY_TEST_TAG),
                 verticalAlignment = Alignment.CenterVertically,
-            ) { start.forEach { SecondaryAction(content, it, callbacks, onToggleQueue) } }
+            ) { start.forEach { SecondaryAction(content, it, callbacks) } }
             Row(
                 modifier = Modifier.layoutId(END),
                 verticalAlignment = Alignment.CenterVertically,
-            ) { end.forEach { SecondaryAction(content, it, callbacks, onToggleQueue) } }
+            ) { end.forEach { SecondaryAction(content, it, callbacks) } }
         },
     ) { measurables, constraints ->
         val width = constraints.maxWidth
@@ -154,7 +151,6 @@ private fun SecondaryAction(
     content: StreamContent,
     action: CardAction,
     callbacks: StreamCallbacks,
-    onToggleQueue: (Boolean) -> Unit,
 ) {
     when (action) {
         is CardAction.OpenContent ->
@@ -162,16 +158,6 @@ private fun SecondaryAction(
                 stringResource(if (action.player) R.string.stream_media_open_player else R.string.stream_open),
                 { callbacks.onAction(content, StreamAction.Open) },
             )
-        is CardAction.ToggleQueue ->
-            IconButton(onClick = { onToggleQueue(!action.shown) }, modifier = Modifier.size(StreamMinTarget)) {
-                Icon(
-                    if (action.shown) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    stringResource(
-                        if (action.shown) R.string.stream_media_hide_queue else R.string.stream_media_show_queue,
-                    ),
-                    Modifier.size(24.dp),
-                )
-            }
         else -> Unit
     }
 }

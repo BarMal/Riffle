@@ -123,7 +123,12 @@ internal fun StreamContent.iconHandle(): ItemImageHandle? =
 internal fun StreamContent.cardHeight(): Dp =
     when (this) {
         is NotificationContent -> StreamCardHeights.notification
-        is MediaContent -> if (source) StreamCardHeights.mediaSource else StreamCardHeights.media
+        is MediaContent ->
+            when {
+                source -> StreamCardHeights.mediaSource
+                queueItem != null -> StreamCardHeights.mediaQueue
+                else -> StreamCardHeights.media
+            }
         is EventContent -> StreamCardHeights.event
         is ArticleContent -> if (image != null) StreamCardHeights.article else StreamCardHeights.articleWithoutImage
         is TaskContent -> StreamCardHeights.task
@@ -306,18 +311,16 @@ private fun StreamStackContent(
             derivedStateOf { openableIndicesAround(stackState.position, latestEntries, latestReduced) }
         }
     BackHandler(enabled = openEntry != null) { cards.dispatch(OpenCardEvent.CloseByBack) }
-    var queueShown by remember(stackKey) { mutableStateOf(true) }
     val actionsOnCard = !LocalActionsInDock.current
     // The Dock's row: this card's content, its controls and how to act on them. Published while the card is open.
     val openContent = (openEntry as? ContentEntry)?.content
     val dockActions =
-        remember(openContent, queueShown, callbacks) {
+        remember(openContent, callbacks) {
             openContent?.takeIf { !actionsOnCard }?.let {
                 OpenCardActions(
                     content = it,
-                    actions = StreamCardActions.forContent(it, queueShown),
+                    actions = StreamCardActions.forContent(it),
                     callbacks = callbacks,
-                    onToggleQueue = { show -> queueShown = show },
                 )
             }
         }
@@ -494,7 +497,7 @@ private fun StreamStackContent(
     SideEffect { if (openedHere) retained.cards = layerCards }
     val layer =
         remember(
-            drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, queueShown, geometry,
+            drawnCards, layerActive.value, env, callbacks, groupKey, actionsOnCard, geometry,
             placement, dragModifier, entries.size, previous, next, sizes, footer, peeks, belowIndices.value, pageInsets,
         ) {
             if (!layerActive.value || drawnCards.isEmpty()) {
@@ -543,8 +546,6 @@ private fun StreamStackContent(
                                     callbacks = callbacks,
                                     groupKey = groupKey,
                                     actionsOnCard = actionsOnCard,
-                                    queueShown = queueShown,
-                                    onQueueShownChange = { queueShown = it },
                                     onClose = close,
                                     bodyScroll = scroll,
                                     cardSteps =
@@ -717,7 +718,11 @@ internal fun StreamContent.spokenText(env: StreamEnvironment): String =
                 env.formats.age(postedAtEpochMillis),
             )
         is MediaContent ->
-            if (source) mediaSourceSpoken(env) else listOfNotNull(appLabel, peekText(), artist)
+            when {
+                source -> mediaSourceSpoken(env)
+                queueItem != null -> listOf(queueSpoken())
+                else -> listOfNotNull(appLabel, peekText(), artist)
+            }
         is EventContent ->
             listOfNotNull(
                 eventSpanText(this, env),

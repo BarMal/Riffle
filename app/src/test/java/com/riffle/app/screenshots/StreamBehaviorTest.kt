@@ -688,17 +688,16 @@ class StreamBehaviorTest {
     }
 
     @Test
-    fun theQueueIsOnTheOpenPlayerAndCollapses() {
+    fun theOpenPlayerHasNoUpNextListAndNoQueueControl() {
         show(initialPageKey = StreamPageKeys.NOW)
-        // The browse card has no queue; a tap on the player opens it, with the queue (and, with no Dock to hold them,
-        // its controls, one of which hides the queue).
-        composeRule.onAllNodesWithText("Reunion").assertCountEquals(0)
+        // The queue is cards behind the player now (see MediaQueueStackTest): neither the browse card nor the open
+        // player lists it, and there is no control to show or hide it. A tap on the player opens it, with its controls.
+        composeRule.onAllNodesWithText("Up next").assertCountEquals(0)
         composeRule.onNodeWithText("Midnight City").performClick()
-        composeRule.onNodeWithText("Reunion").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Hide queue").performClick()
-        composeRule.onAllNodesWithText("Reunion").assertCountEquals(0)
-        composeRule.onNodeWithContentDescription("Show queue").performClick()
-        composeRule.onNodeWithText("Reunion").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Up next").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("Hide queue").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("Show queue").assertCountEquals(0)
+        composeRule.onNodeWithText("Open player").assertIsDisplayed()
     }
 
     @Test

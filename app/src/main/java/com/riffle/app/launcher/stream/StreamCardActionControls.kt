@@ -15,8 +15,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,8 +55,7 @@ import com.riffle.core.domain.launcher.stream.StreamContent
  * The controls of an open card's actions in one row: the inline reply field and its send button, Dismiss, Snooze, the
  * transport, "Open in calendar", Complete. The same row is the Dock's actions row (the Dock draws it above its icons)
  * and, when the actions sit on the card, the card's own. Every control is a real focusable control with a 48 dp target
- * (the field is at least that tall) and a spoken label; none needs a gesture. [onToggleQueue] shows or hides the open
- * player's queue (it is no action on the content); everything else goes out through [callbacks].
+ * (the field is at least that tall) and a spoken label; none needs a gesture. Everything goes out through [callbacks].
  */
 @Composable
 @Suppress("CyclomaticComplexMethod")
@@ -66,12 +63,11 @@ internal fun CardActionControls(
     content: StreamContent,
     actions: List<CardAction>,
     callbacks: StreamCallbacks,
-    onToggleQueue: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (actions.isEmpty()) return
     if (content is MediaContent && !content.source) {
-        MediaActionRow(content, actions, callbacks, onToggleQueue, modifier)
+        MediaActionRow(content, actions, callbacks, modifier)
         return
     }
     val own = actions.filterIsInstance<CardAction.Own>()
@@ -80,13 +76,12 @@ internal fun CardActionControls(
         // notification's own buttons, whole labels) on one line of its own that scrolls sideways when they do not fit.
         val text = actions.filter { it.isTextAction() }
         val main = actions - own.toSet() - text.toSet()
-        if (main.isNotEmpty()) ActionRow(content, main, callbacks, onToggleQueue)
+        if (main.isNotEmpty()) ActionRow(content, main, callbacks)
         if (text.isNotEmpty() || own.isNotEmpty()) {
             ActionRow(
                 content,
                 text + own,
                 callbacks,
-                onToggleQueue,
                 Modifier.fillMaxWidth()
                     .then(if (own.isNotEmpty()) Modifier.testTag(CARD_OWN_ACTIONS_TEST_TAG) else Modifier)
                     .horizontalScroll(rememberScrollState()),
@@ -166,7 +161,6 @@ private fun ActionRow(
     content: StreamContent,
     actions: List<CardAction>,
     callbacks: StreamCallbacks,
-    onToggleQueue: (Boolean) -> Unit,
     modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     Row(
@@ -202,13 +196,6 @@ private fun ActionRow(
                         StreamIcons.SkipNext,
                         stringResource(R.string.stream_media_next),
                     ) { callbacks.onAction(content, StreamAction.Next) }
-                is CardAction.ToggleQueue ->
-                    ActionIcon(
-                        if (action.shown) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                        stringResource(
-                            if (action.shown) R.string.stream_media_hide_queue else R.string.stream_media_show_queue,
-                        ),
-                    ) { onToggleQueue(!action.shown) }
                 is CardAction.OpenEvent ->
                     StreamTextButton(
                         stringResource(
@@ -302,7 +289,6 @@ internal fun Modifier.cardActionAccessibility(
     content: StreamContent,
     actions: List<CardAction>,
     callbacks: StreamCallbacks,
-    onToggleQueue: (Boolean) -> Unit,
     /** More actions of the card that are no action on its content (Previous and Next card). */
     extraActions: List<CustomAccessibilityAction> = emptyList(),
 ): Modifier {
@@ -312,8 +298,6 @@ internal fun Modifier.cardActionAccessibility(
     val next = stringResource(R.string.stream_media_next)
     val play = stringResource(R.string.stream_media_play)
     val pause = stringResource(R.string.stream_media_pause)
-    val showQueue = stringResource(R.string.stream_media_show_queue)
-    val hideQueue = stringResource(R.string.stream_media_hide_queue)
     val calendar = stringResource(R.string.stream_event_open_in_calendar)
     val clock = stringResource(R.string.stream_event_open_clock)
     val complete = stringResource(R.string.stream_task_complete_action)
@@ -329,7 +313,6 @@ internal fun Modifier.cardActionAccessibility(
                     CardAction.Previous -> previous
                     is CardAction.PlayPause -> if (action.playing) pause else play
                     CardAction.Next -> next
-                    is CardAction.ToggleQueue -> if (action.shown) hideQueue else showQueue
                     is CardAction.OpenEvent -> if (action.kind == EventKind.ALARM) clock else calendar
                     CardAction.Complete -> complete
                     is CardAction.OpenContent -> if (action.player) openPlayer else open
@@ -341,12 +324,7 @@ internal fun Modifier.cardActionAccessibility(
         customActions =
             labelled.map { (action, label) ->
                 CustomAccessibilityAction(label) {
-                    val streamAction = StreamCardActions.streamActionFor(action)
-                    if (streamAction != null) {
-                        callbacks.onAction(content, streamAction)
-                    } else if (action is CardAction.ToggleQueue) {
-                        onToggleQueue(!action.shown)
-                    }
+                    callbacks.onAction(content, StreamCardActions.streamActionFor(action))
                     true
                 }
             } + extraActions

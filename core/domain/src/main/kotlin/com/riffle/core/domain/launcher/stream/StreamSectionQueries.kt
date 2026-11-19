@@ -5,8 +5,11 @@ package com.riffle.core.domain.launcher.stream
  * returns (ADR 0003: no query language). Every function is pure over already excluded and redacted content;
  * ordering is total (ties break on the content id) so a refresh never shuffles equal items.
  *
- * - Now: media only, one group: the active sessions, playing first, then newest (up to `maxActive`), then the recent
- *   players that have no session (newest first, at most [RecentPlayers.CAP]) unless `recentPlayers` is off.
+ * - Now: media only. Each active session (playing first, then newest, up to `maxActive`) is a group of its own, a
+ *   stack: the player's card in front, then the cards of its queue after the track playing, in queue order (at most
+ *   [MAX_UP_NEXT], none when `showUpNext` is off). The group's key is the player's (`player:package:profile`), so the
+ *   stack is the same stack while its tracks change. Then one group of the recent players that have no session (newest
+ *   first, at most [RecentPlayers.CAP]) unless `recentPlayers` is off.
  * - Notifications: not older than `maxAgeMillis`; grouped by app, newest app first; within an app by priority
  *   then newest; limited to `maxApps` apps and `maxPerApp` each.
  * - Recents: not older than `maxAgeMillis`; one per app, most recently used first, `limit`; then up to
@@ -17,6 +20,9 @@ package com.riffle.core.domain.launcher.stream
  * - Feeds: grouped by feed, the feed with the newest article first; newest article first; `maxFeeds`, `perFeed`.
  */
 internal object StreamSectionQueries {
+    /** The most cards of a player's queue behind it. */
+    const val MAX_UP_NEXT = 10
+
     private const val DAY_MILLIS = 24L * 60L * 60L * 1000L
 
     fun run(
@@ -40,15 +46,28 @@ internal object StreamSectionQueries {
         val options = context.options.now
         val media = content.filterIsInstance<MediaContent>()
         val active =
-            media.filter { !it.source }
+            media.filter { !it.source && it.queueItem == null }
                 .sortedWith(
                     compareByDescending<MediaContent> { it.isPlaying == true }
                         .thenByDescending { it.postedAtEpochMillis ?: 0L }
                         .thenBy { it.id.value },
                 )
                 .take(options.maxActive)
+        val queues = media.filter { it.queueItem != null }.groupBy { it.app }
+        val players =
+            active.map { player ->
+                val upNext =
+                    if (options.showUpNext) {
+                        queues[player.app].orEmpty()
+                            .sortedBy { it.queueItem?.position ?: 0 }
+                            .take(MAX_UP_NEXT)
+                    } else {
+                        emptyList()
+                    }
+                StreamGroup(StreamGroupKeys.player(player.app), player.appLabel, listOf(player) + upNext)
+            }
         // An app with a session has its player card: never also a source.
-        val activePackages = media.filter { !it.source }.map { it.app.packageName }.toSet()
+        val activePackages = media.filter { !it.source && it.queueItem == null }.map { it.app.packageName }.toSet()
         val sources =
             if (options.recentPlayers) {
                 media.filter { it.source && it.app.packageName !in activePackages }
@@ -60,7 +79,7 @@ internal object StreamSectionQueries {
             } else {
                 emptyList()
             }
-        return listOf(StreamGroup(NOW_GROUP, null, active + sources))
+        return players + StreamGroup(NOW_GROUP, null, sources)
     }
 
     fun notifications(
@@ -203,7 +222,12 @@ internal object StreamSectionQueries {
 
 /** The keys of the groups that are not an app, a feed or a day, for a UI that labels them. */
 object StreamGroupKeys {
+    /** The recent players of Now (the section's own group: its page has the section's key). */
     const val NOW = "now"
+
+    /** An active player's stack on Now: stable for the app and profile, whatever it plays. */
+    fun player(app: StreamAppRef): String = "player:${app.packageName}:${app.profileId.orEmpty()}"
+
     const val RECENTS = "recents"
 
     /** The apps used most, after the recent ones. */

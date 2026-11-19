@@ -9,10 +9,12 @@ import org.junit.Test
 class MediaSessionMappingTest {
     private fun snapshot(
         state: Int? = PlaybackState.STATE_PLAYING,
-        actions: Long = PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SEEK_TO,
+        actions: Long =
+            PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_SKIP_TO_NEXT or PlaybackState.ACTION_SEEK_TO or
+                PlaybackState.ACTION_SKIP_TO_QUEUE_ITEM,
         position: Long = 10_000,
         duration: Long = 100_000,
-        queue: List<Pair<String?, String?>> = emptyList(),
+        queue: List<PlatformQueueItem> = emptyList(),
         active: Int = -1,
     ) = PlatformMediaSnapshot(
         packageName = "player",
@@ -64,13 +66,44 @@ class MediaSessionMappingTest {
         assertNull(info.positionMillis)
     }
 
+    private val queue =
+        listOf(
+            PlatformQueueItem(1, "One", null),
+            PlatformQueueItem(2, "Two", "Band", hasArtwork = true),
+            PlatformQueueItem(3, null, "x"),
+            PlatformQueueItem(4, "Four", null),
+        )
+
     @Test
-    fun theQueueIsWhatComesAfterTheActiveEntry() {
-        val queue = listOf("One" to null, "Two" to "Band", null to "x", "Four" to null)
+    fun theQueueIsWhatComesAfterTheActiveEntryWithItsIdsAndThumbnails() {
         val info = snapshot(queue = queue, active = 0).toMediaSessionInfo(nowElapsed = 1_000)
         assertEquals(listOf("Two", "Four"), info.queue.map { it.title })
+        assertEquals(listOf(2L, 4L), info.queue.map { it.queueId })
         assertEquals("Band", info.queue.first().artist)
+        assertEquals(listOf(true, false), info.queue.map { it.hasArtwork })
+    }
 
-        assertEquals(emptyList<Any>(), snapshot(queue = queue, active = -1).toMediaSessionInfo(1_000).queue)
+    @Test
+    fun anUnknownActiveEntryTakesTheQueueFromItsTop() {
+        val info = snapshot(queue = queue, active = -1).toMediaSessionInfo(1_000)
+        assertEquals(listOf("One", "Two", "Four"), info.queue.map { it.title })
+    }
+
+    @Test
+    fun theLastEntryPlayingLeavesNothingUpNext() {
+        assertEquals(emptyList<Any>(), snapshot(queue = queue, active = 3).toMediaSessionInfo(1_000).queue)
+    }
+
+    @Test
+    fun aQueueThatCannotBeSkippedIntoShowsNoCards() {
+        val noSkip = snapshot(queue = queue, active = 0, actions = PlaybackState.ACTION_PAUSE)
+        assertEquals(emptyList<Any>(), noSkip.toMediaSessionInfo(1_000).queue)
+    }
+
+    @Test
+    fun entriesWithNoPlatformIdAreNotShownAndAtMostTenAre() {
+        val long = (0L..14L).map { PlatformQueueItem(it, "Track $it", null) } + PlatformQueueItem(-1, "No id", null)
+        val info = snapshot(queue = long, active = -1).toMediaSessionInfo(1_000)
+        assertEquals((0L..9L).toList(), info.queue.map { it.queueId })
     }
 }

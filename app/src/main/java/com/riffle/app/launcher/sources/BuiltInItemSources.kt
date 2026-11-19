@@ -183,11 +183,12 @@ internal fun stream(
     id: SourceId,
     capabilities: Set<SourceCapability>,
     changes: SourceChangeSource,
+    distinct: Boolean = false,
     load: () -> SourceState,
 ): SharedSourceStream =
     SharedSourceStream(
         descriptor = SourceDescriptor(id, capabilities + liveIf(changes)),
-    ) { sink -> RefreshingUpstream(deps.executor, changes, load).connect(sink) }
+    ) { sink -> RefreshingUpstream(deps.executor, changes, distinct, load).connect(sink) }
 
 private fun liveIf(changes: SourceChangeSource): Set<SourceCapability> =
     if (changes.isLive) setOf(SourceCapability.LIVE) else emptySet()
@@ -230,11 +231,12 @@ private fun notificationsSource(deps: BuiltInSourceDependencies): SharedSourceSt
 
 /**
  * Media notifications, enriched with the live session behind them (play state, position, transport controls,
- * queue, artwork). A session without a visible media notification adds nothing, so the hide rules and profile
- * visibility that decide the notifications still decide what shows.
+ * artwork) and followed by one item per upcoming track of its queue. A reload that reads what was last published
+ * publishes nothing (queue callbacks are frequent). A session without a visible media notification adds nothing, so
+ * the hide rules and profile visibility that decide the notifications still decide what shows.
  */
 private fun mediaSource(deps: BuiltInSourceDependencies): SharedSourceStream =
-    notificationStream(deps, SourceIds.MEDIA, emptySet(), deps.media.changes) { input ->
+    notificationStream(deps, SourceIds.MEDIA, emptySet(), deps.media.changes, distinct = true) { input ->
         val sessions = deps.media.sessions.activeSessions()
         val items = MediaSessionItems.enrich(NotificationItemMapper().mediaItems(input), sessions)
         items + recentPlayerItems(deps.media, deps.apps.installedApps, items, sessions)
@@ -245,11 +247,12 @@ private fun notificationStream(
     id: SourceId,
     capabilities: Set<SourceCapability>,
     extraChanges: SourceChangeSource = SourceChangeSource.NONE,
+    distinct: Boolean = false,
     map: (NotificationItemInput) -> List<Item>,
 ): SharedSourceStream {
     val notifications = deps.notifications
     val changes = SourceChangeSource.merge(listOf(notifications.changes, deps.apps.changes, extraChanges))
-    return stream(deps, id, capabilities + SourceCapability.PRIVACY_SENSITIVE, changes) {
+    return stream(deps, id, capabilities + SourceCapability.PRIVACY_SENSITIVE, changes, distinct) {
         sourceStateFor(notifications.access().toSourceAccess()) {
             val snapshot = deps.apps.installedApps.snapshot()
             val labels = snapshot?.apps.orEmpty().associate { app -> app.identity.packageName to app.label }

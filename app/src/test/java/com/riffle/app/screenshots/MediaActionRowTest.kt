@@ -92,17 +92,13 @@ class MediaActionRowTest {
     }
 
     @Test
-    fun onTheNarrowestScreenTheSecondRowIsBelowAndSpreadEvenlyNotLeftPacked() {
+    fun onTheNarrowestScreenTheSecondRowIsBelowAndCentredNotLeftPacked() {
         show(width = 320, capture = false)
         val secondary = composeRule.onNodeWithTag(MEDIA_SECONDARY_TEST_TAG).getUnclippedBoundsInRoot()
         val transport = composeRule.onNodeWithTag(MEDIA_TRANSPORT_TEST_TAG).getUnclippedBoundsInRoot()
         assertTrue("below the transport", secondary.top >= transport.bottom)
-        val chevron = bounds("Show queue")
-        val left = secondary.left - hostLeft() - 8.dp
-        val between = chevron.left - secondary.right
-        val right = hostLeft() + 320.dp - 8.dp - chevron.right
-        assertEquals("even space before, between and after", left.value, between.value, 1f)
-        assertEquals("even space before, between and after", between.value, right.value, 1f)
+        val centre = (secondary.left + secondary.right) / 2
+        assertEquals("one action spread evenly is centred", 160f, (centre - hostLeft()).value, 1f)
     }
 
     @Test
@@ -167,9 +163,8 @@ private fun mediaRow(
                 ) {
                     CardActionControls(
                         content = content,
-                        actions = StreamCardActions.forContent(content, queueShown = false),
+                        actions = StreamCardActions.forContent(content),
                         callbacks = StreamCallbacks(onAction = { c, a -> performed += c to a }),
-                        onToggleQueue = {},
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
