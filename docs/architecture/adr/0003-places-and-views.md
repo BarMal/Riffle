@@ -910,6 +910,31 @@ of Amendments 1 to 15 stands; this adds nothing to the Places, the Views or the 
 Detail, tests and what a device must confirm: [dock-modes-plan.md](../../product/dock-modes-plan.md), "One stack per
 player".
 
+## Amendment 17 (owner, 2026-11-19): saved Home layouts, and a way back from import and reset
+
+Decision 3 of the model holds one arrangement per device class. This amends it: there is still exactly one **live**
+arrangement of Home per device class, and the user may now also keep **saved snapshots** of it. The rest of Amendments 1
+to 16 stands; this adds no Place and no View.
+
+- **A saved layout is a snapshot, not a mode.** It holds the pages of Home (grids, apps, folders, widgets, widget
+  stacks), never the Dock, settings or Stream, and it belongs to the device class it was saved on. Changes to Home never
+  change it. Twelve per device class, plus one automatic "Before <name>" copy that does not count and is replaced by
+  the next activation. It is its own stored document, version 1, decodable forever, in backup export and import.
+- **Activating replaces the live arrangement** after a confirmation. The Home it replaces is written, durably, as the
+  automatic copy first; then Home changes; Undo puts the previous Home back exactly. A pure rule makes the snapshot valid
+  today (uninstalled and hidden apps dropped, Dock apps not duplicated, items fitted to the grid, empty pages trimmed).
+- **Widgets are descriptions, not ids.** A host id is one live instance and cannot be shared between two arrangements, so
+  a snapshot stores provider, constraints and stack order only. Activation keeps a live widget that matches (same
+  provider, page, cell and span), binds the others again where Android needs no prompt, and leaves a placeholder
+  otherwise. Ids of widgets that leave Home are held until the Undo window closes.
+- **Import and reset have a way back.** An import keeps one local "before import" copy first (the export document,
+  excluded from Android's backup); Undo re-imports it through the normal validated path. "Reset settings" restores
+  defaults and keeps Home, the Dock, saved layouts, hidden apps and feeds and tokens, with Undo.
+- **Not built:** prompts and configuration screens during activation, resetting the Stream's sections, and a device
+  run of any of it.
+
+Detail: `settings.md`, "Home > Home layouts", "Backup > Undo last import", "About > Reset settings".
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as
