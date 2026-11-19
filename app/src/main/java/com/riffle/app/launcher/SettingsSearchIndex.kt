@@ -113,15 +113,16 @@ internal fun List<SettingsSearchEntry>.matching(query: String): List<SettingsSea
 
 /** The launcher's own search offers the same entries: page and setting, each opening Settings scrolled to it. */
 internal fun settingsLauncherSearchEntries(text: SettingsText): List<LauncherSearchSettingsEntry> =
-    listOf(settingsHomeSearchEntry(text)) + settingsSearchIndex(text).map { entry ->
-        LauncherSearchSettingsEntry(
-            id = LauncherSearchSettingsEntryId(entry.id),
-            title = entry.label,
-            subtitle = entry.path,
-            section = text.text(entry.page.titleRes),
-            searchAliases = entry.keywords.split(' ').filter(String::isNotBlank),
-        )
-    }
+    listOf(settingsHomeSearchEntry(text)) +
+        settingsSearchIndex(text).map { entry ->
+            LauncherSearchSettingsEntry(
+                id = LauncherSearchSettingsEntryId(entry.id),
+                title = entry.label,
+                subtitle = entry.path,
+                section = text.text(entry.page.titleRes),
+                searchAliases = entry.keywords.split(' ').filter(String::isNotBlank),
+            )
+        }
 
 /**
  * "Riffle settings": the way into Settings itself from the launcher's search and the Library, for someone who has not

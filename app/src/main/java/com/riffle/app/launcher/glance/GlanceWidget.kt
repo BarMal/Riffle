@@ -23,12 +23,12 @@ import com.riffle.app.launcher.stream.EventCard
 import com.riffle.app.launcher.stream.MediaCard
 import com.riffle.app.launcher.stream.StreamCallbacks
 import com.riffle.app.launcher.stream.StreamEnvironment
-import com.riffle.app.launcher.stream.permissionMessage
 import com.riffle.app.launcher.stream.articleMeta
 import com.riffle.app.launcher.stream.eventCountdownText
 import com.riffle.app.launcher.stream.eventSpanText
 import com.riffle.app.launcher.stream.eventTitle
 import com.riffle.app.launcher.stream.hiddenText
+import com.riffle.app.launcher.stream.permissionMessage
 import com.riffle.app.launcher.stream.withLiveClock
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.glance.GlanceLayout

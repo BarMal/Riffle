@@ -31,7 +31,6 @@ import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.stream.StreamCardSurface
 import com.riffle.app.launcher.stream.StreamEnvironment
-import com.riffle.app.launcher.stream.permissionMessage
 import com.riffle.app.launcher.stream.StreamIcon
 import com.riffle.app.launcher.stream.StreamIcons
 import com.riffle.app.launcher.stream.StreamMinTarget
@@ -42,6 +41,7 @@ import com.riffle.app.launcher.stream.eventCountdownText
 import com.riffle.app.launcher.stream.eventSpanText
 import com.riffle.app.launcher.stream.eventTitle
 import com.riffle.app.launcher.stream.hiddenText
+import com.riffle.app.launcher.stream.permissionMessage
 import com.riffle.app.launcher.stream.streamClickable
 import com.riffle.core.domain.launcher.glance.GlanceLayout
 import com.riffle.core.domain.launcher.glance.GlanceState

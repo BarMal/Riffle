@@ -94,6 +94,13 @@ internal fun DockPullDirection.chevronDegrees(): Float =
         DockPullDirection.LEFT -> 270f
     }
 
+/** What the Stream handle does: a tap opens the Stream; the long-press offers the Library and hiding the handle. */
+internal class StreamHandleActions(
+    val onOpenStream: () -> Unit,
+    val onOpenLibrary: () -> Unit,
+    val onHide: () -> Unit,
+)
+
 /**
  * The Stream handle (ADR 0003, Amendment 12): a small chevron on Thin glass at the far end of the Dock, on the side
  * the Dock is pulled toward. A tap opens the Stream (what pressing the Dock does), and a touch and hold offers the
@@ -105,9 +112,7 @@ internal fun DockStreamHandle(
     dockBounds: () -> Rect?,
     pull: DockPullDirection,
     libraryAvailable: Boolean,
-    onOpenStream: () -> Unit,
-    onOpenLibrary: () -> Unit,
-    onHide: () -> Unit,
+    actions: StreamHandleActions,
     modifier: Modifier = Modifier,
     /** Room to leave beside the Dock, along [pull], for what stands there (the Home handle above a bottom Dock). */
     clearance: Dp = 0.dp,
@@ -117,13 +122,7 @@ internal fun DockStreamHandle(
     Layout(
         modifier = modifier.fillMaxSize(),
         content = {
-            Handle(
-                pull = pull,
-                libraryAvailable = libraryAvailable,
-                onOpenStream = onOpenStream,
-                onOpenLibrary = onOpenLibrary,
-                onHide = onHide,
-            )
+            Handle(pull = pull, libraryAvailable = libraryAvailable, actions = actions)
         },
     ) { measurables, constraints ->
         val placeable = measurables.single().measure(Constraints())
@@ -150,33 +149,13 @@ internal fun DockStreamHandle(
 private fun Handle(
     pull: DockPullDirection,
     libraryAvailable: Boolean,
-    onOpenStream: () -> Unit,
-    onOpenLibrary: () -> Unit,
-    onHide: () -> Unit,
+    actions: StreamHandleActions,
 ) {
     var menu by remember { mutableStateOf(false) }
-    val latestOpen by rememberUpdatedState(onOpenStream)
+    val latestOpen by rememberUpdatedState(actions.onOpenStream)
     val label = stringResource(R.string.dock_stream_handle_open)
     val optionsLabel = stringResource(R.string.dock_stream_handle_options)
-    val libraryLabel = stringResource(R.string.dock_open_library_action)
-    val hideLabel = stringResource(R.string.dock_stream_handle_hide)
-    val actions =
-        buildList {
-            if (libraryAvailable) {
-                add(
-                    CustomAccessibilityAction(libraryLabel) {
-                        onOpenLibrary()
-                        true
-                    },
-                )
-            }
-            add(
-                CustomAccessibilityAction(hideLabel) {
-                    onHide()
-                    true
-                },
-            )
-        }
+    val spokenActions = handleCustomActions(libraryAvailable, actions)
     Box(
         modifier =
             Modifier
@@ -196,7 +175,7 @@ private fun Handle(
                         menu = true
                         true
                     }
-                    customActions = actions
+                    customActions = spokenActions
                 },
         contentAlignment = Alignment.Center,
     ) {
@@ -215,24 +194,60 @@ private fun Handle(
                 )
             }
         }
-        RiffleContextMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            if (libraryAvailable) {
-                DropdownMenuItem(
-                    text = { Text(libraryLabel) },
-                    onClick = {
-                        menu = false
-                        onOpenLibrary()
-                    },
-                )
-            }
-            DropdownMenuItem(
-                text = { Text(hideLabel) },
-                onClick = {
-                    menu = false
-                    onHide()
+        HandleMenu(expanded = menu, libraryAvailable = libraryAvailable, actions = actions) { menu = false }
+    }
+}
+
+/** "Open Library" (while the Library is on) and "Hide this handle": the handle's long-press, as custom actions. */
+@Composable
+private fun handleCustomActions(
+    libraryAvailable: Boolean,
+    actions: StreamHandleActions,
+): List<CustomAccessibilityAction> {
+    val libraryLabel = stringResource(R.string.dock_open_library_action)
+    val hideLabel = stringResource(R.string.dock_stream_handle_hide)
+    return buildList {
+        if (libraryAvailable) {
+            add(
+                CustomAccessibilityAction(libraryLabel) {
+                    actions.onOpenLibrary()
+                    true
                 },
             )
         }
+        add(
+            CustomAccessibilityAction(hideLabel) {
+                actions.onHide()
+                true
+            },
+        )
+    }
+}
+
+@Composable
+private fun HandleMenu(
+    expanded: Boolean,
+    libraryAvailable: Boolean,
+    actions: StreamHandleActions,
+    onDismiss: () -> Unit,
+) {
+    RiffleContextMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        if (libraryAvailable) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.dock_open_library_action)) },
+                onClick = {
+                    onDismiss()
+                    actions.onOpenLibrary()
+                },
+            )
+        }
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.dock_stream_handle_hide)) },
+            onClick = {
+                onDismiss()
+                actions.onHide()
+            },
+        )
     }
 }
 
@@ -247,9 +262,7 @@ internal fun DockStreamHandleLayer(
     dockBounds: () -> Rect?,
     pull: DockPullDirection,
     libraryAvailable: Boolean,
-    onOpenStream: () -> Unit,
-    onOpenLibrary: () -> Unit,
-    onHide: () -> Unit,
+    actions: StreamHandleActions,
     clearance: Dp,
 ) {
     if (!enabled || busy()) return
@@ -257,9 +270,7 @@ internal fun DockStreamHandleLayer(
         dockBounds = dockBounds,
         pull = pull,
         libraryAvailable = libraryAvailable,
-        onOpenStream = onOpenStream,
-        onOpenLibrary = onOpenLibrary,
-        onHide = onHide,
+        actions = actions,
         clearance = clearance,
     )
 }

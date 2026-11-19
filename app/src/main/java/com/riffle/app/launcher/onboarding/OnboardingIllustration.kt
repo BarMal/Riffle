@@ -131,7 +131,16 @@ internal object TourMotion {
         val slide = ease(segment(t, 0.4f, 0.8f))
         val x = TILE_X[0] + (TILE_X[2] - TILE_X[0]) * slide
         val ringed = t >= 0.3f
-        val index = if (!ringed) -1 else if (slide < 0.35f) 0 else if (slide < 0.85f) 1 else 2
+        val index =
+            if (!ringed) {
+                -1
+            } else if (slide < 0.35f) {
+                0
+            } else if (slide < 0.85f) {
+                1
+            } else {
+                2
+            }
         return TourFrame(
             finger = Offset(x, DOCK_Y),
             fingerAlpha = ease(segment(t, 0f, 0.1f)) * (1f - ease(segment(t, 0.9f, 1f))),

@@ -53,8 +53,8 @@ import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.dock.DockRing
-import com.riffle.core.domain.launcher.hints.HintContext
 import com.riffle.core.domain.launcher.dockpull.pullDirection
+import com.riffle.core.domain.launcher.hints.HintContext
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeHandle
@@ -509,13 +509,18 @@ private fun HomeDestinationContent(
                     dockBounds = { dockHost.bounds.value },
                     pull = plan.dockEdge.pullDirection,
                     libraryAvailable = features.library,
-                    onOpenStream = {
-                        openStream(stream, StreamSwitch(motion), null, shownStream, state.reducedMotion())
-                    },
-                    onOpenLibrary = { onAction(LauncherShellAction.OpenAppDrawer) },
-                    onHide = {
-                        onAction(LauncherShellAction.SetFeatureEnabled(LauncherFeature.DOCK_STREAM_HANDLE, false))
-                    },
+                    actions =
+                        StreamHandleActions(
+                            onOpenStream = {
+                                openStream(stream, StreamSwitch(motion), null, shownStream, state.reducedMotion())
+                            },
+                            onOpenLibrary = { onAction(LauncherShellAction.OpenAppDrawer) },
+                            onHide = {
+                                onAction(
+                                    LauncherShellAction.SetFeatureEnabled(LauncherFeature.DOCK_STREAM_HANDLE, false),
+                                )
+                            },
+                        ),
                     clearance = handleClearance,
                 )
                 // The one-time Dock hints: at most one at a time, each retired once its gesture is performed.

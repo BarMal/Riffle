@@ -12,13 +12,14 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
+import com.riffle.core.domain.launcher.hints.Hint
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** The first-run hint on a device: it is there, its button is a click target, and pressing it removes it. */
+/** A Dock hint on a device: it is there, its button is a click target, and pressing it removes it. */
 @RunWith(AndroidJUnit4::class)
-class DockPressHintInteractionTest {
+class DockHintInteractionTest {
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -29,7 +30,8 @@ class DockPressHintInteractionTest {
         composeRule.setContent {
             MaterialTheme {
                 if (!seen) {
-                    DockPressHint(
+                    DockHint(
+                        hint = Hint.DOCK_PRESS,
                         dockBounds = Rect(24f, 1500f, 1000f, 1700f),
                         pull = DockPullDirection.UP,
                         onDismiss = { seen = true },

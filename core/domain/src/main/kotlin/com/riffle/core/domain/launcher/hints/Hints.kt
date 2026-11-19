@@ -83,6 +83,10 @@ data class HintContext(
     val stackCount: Int = 0,
 )
 
+/** Whether nothing may speak now: Simple mode, the set-up, a drag, or the Dock moving. */
+private val HintContext.keepsQuiet: Boolean
+    get() = simpleMode || setUpShowing || (dragging || dockBusy)
+
 /**
  * The hint rules, pure. At most one hint is due at a time ([due]); each retires for good once it is dismissed or the
  * gesture it teaches is performed ([reduce]); none shows in Simple mode, over the set-up, or while something is being
@@ -100,7 +104,7 @@ object Hints {
         progress: HintProgress,
         context: HintContext,
     ): Hint? {
-        if (context.simpleMode || context.setUpShowing || context.dragging || context.dockBusy) return null
+        if (context.keepsQuiet) return null
         return Hint.entries.firstOrNull { hint -> hint !in progress.retired && eligible(hint, progress, context) }
     }
 
@@ -108,19 +112,30 @@ object Hints {
         hint: Hint,
         progress: HintProgress,
         context: HintContext,
-    ): Boolean {
-        if (context.libraryShown) return false
-        // The next Home hint waits for a later visit than the one a hint was last put away on.
-        val paced = !hint.onHome || progress.lastRetiredVisit?.let { progress.homeVisits > it } != false
-        return paced &&
+    ): Boolean =
+        !context.libraryShown && isPaced(hint, progress) &&
             when (hint) {
                 Hint.DOCK_PRESS -> context.streamAvailable && !context.streamShown
                 Hint.DOCK_MENU -> !context.streamShown && context.dockHasItems
-                Hint.DOCK_PULL ->
-                    context.libraryAvailable && !context.streamShown &&
-                        (progress.libraryOpenedElsewhere || progress.homeVisits >= PULL_AFTER_HOME_VISITS)
+                Hint.DOCK_PULL -> pullIsDue(progress, context)
                 Hint.DOCK_SCRUB -> context.streamShown && context.stackCount >= 2
             }
+
+    /** The next Home hint waits for a later visit than the one a hint was last put away on. */
+    private fun isPaced(
+        hint: Hint,
+        progress: HintProgress,
+    ): Boolean {
+        val last = progress.lastRetiredVisit
+        return !hint.onHome || last == null || progress.homeVisits > last
+    }
+
+    private fun pullIsDue(
+        progress: HintProgress,
+        context: HintContext,
+    ): Boolean {
+        val reasonToTeachIt = progress.libraryOpenedElsewhere || progress.homeVisits >= PULL_AFTER_HOME_VISITS
+        return context.libraryAvailable && !context.streamShown && reasonToTeachIt
     }
 
     fun reduce(

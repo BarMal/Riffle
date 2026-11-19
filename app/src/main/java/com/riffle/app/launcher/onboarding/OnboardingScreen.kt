@@ -58,6 +58,7 @@ internal fun interface PermissionGranted {
  * step, and "Skip set-up", leave without finishing; neither changes anything the user placed.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun OnboardingScreen(
     granted: PermissionGranted,
     onAllow: (SourcePermission) -> Unit,
@@ -127,6 +128,7 @@ internal fun OnboardingScreen(
 
 /** The step's text (or the Home question when [startChoice] is not null) in a scrolling column. */
 @Composable
+@Suppress("LongParameterList")
 private fun OnboardingContent(
     progress: String,
     step: OnboardingStep,

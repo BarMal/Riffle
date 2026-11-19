@@ -237,7 +237,13 @@ private fun DockDynamicEntry.withAppActions(
         openLabel = name?.let { resources.getString(R.string.dock_live_app_open_action, it) },
         showInStreamLabel = name?.let { resources.getString(R.string.dock_live_app_show_in_stream_action, it) },
         appMenu =
-            app?.let { liveAppMenuItems(it, appShortcuts, resources.getString(R.string.menu_more_shortcuts)) }.orEmpty(),
+            app?.let {
+                liveAppMenuItems(
+                    it,
+                    appShortcuts,
+                    resources.getString(R.string.menu_more_shortcuts),
+                )
+            }.orEmpty(),
         openInStreamMenuLabel = resources.getString(R.string.dock_live_app_open_in_stream_menu),
     )
 

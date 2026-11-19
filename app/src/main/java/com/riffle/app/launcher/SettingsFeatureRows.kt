@@ -49,37 +49,41 @@ internal fun SettingsFeatureSwitchRow(
     features: FeatureSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val key =
-        when (feature) {
-            LauncherFeature.STREAM -> SettingKey.FEATURE_STREAM
-            LauncherFeature.DOCK_LIVE_APPS -> SettingKey.FEATURE_DOCK_LIVE_APPS
-            LauncherFeature.LIBRARY -> SettingKey.FEATURE_LIBRARY
-            LauncherFeature.DOCK_STREAM_HANDLE -> SettingKey.FEATURE_DOCK_STREAM_HANDLE
-            LauncherFeature.STREAM_VIEW_BUTTON -> SettingKey.FEATURE_STREAM_VIEW_BUTTON
-        }
-    val subtitle =
-        when {
-            features.simpleMode -> R.string.settings_feature_off_in_simple_mode
-            feature == LauncherFeature.STREAM -> R.string.settings_feature_stream_subtitle
-            feature == LauncherFeature.DOCK_LIVE_APPS -> R.string.settings_feature_live_apps_subtitle
-            feature == LauncherFeature.DOCK_STREAM_HANDLE -> R.string.settings_feature_stream_handle_subtitle
-            feature == LauncherFeature.STREAM_VIEW_BUTTON -> R.string.settings_feature_stream_view_button_subtitle
-            else -> R.string.settings_feature_library_subtitle
-        }
-    val stored =
-        when (feature) {
-            LauncherFeature.STREAM -> features.stream
-            LauncherFeature.DOCK_LIVE_APPS -> features.dockLiveApps
-            LauncherFeature.LIBRARY -> features.library
-            LauncherFeature.DOCK_STREAM_HANDLE -> features.dockStreamHandle
-            LauncherFeature.STREAM_VIEW_BUTTON -> features.streamViewButton
-        }
+    val key = feature.settingKey()
+    val subtitle = if (features.simpleMode) R.string.settings_feature_off_in_simple_mode else feature.subtitleRes()
     SettingsSwitchRow(
         modifier = Modifier.settingAnchor(key).testTag(featureSwitchTestTag(feature)),
         title = key.label(),
         subtitle = stringResource(subtitle),
-        checked = stored && !features.simpleMode,
+        checked = feature.storedIn(features) && !features.simpleMode,
         enabled = !features.simpleMode,
         onCheckedChange = { on -> onAction(LauncherShellAction.SetFeatureEnabled(feature, on)) },
     )
 }
+
+private fun LauncherFeature.settingKey(): SettingKey =
+    when (this) {
+        LauncherFeature.STREAM -> SettingKey.FEATURE_STREAM
+        LauncherFeature.DOCK_LIVE_APPS -> SettingKey.FEATURE_DOCK_LIVE_APPS
+        LauncherFeature.LIBRARY -> SettingKey.FEATURE_LIBRARY
+        LauncherFeature.DOCK_STREAM_HANDLE -> SettingKey.FEATURE_DOCK_STREAM_HANDLE
+        LauncherFeature.STREAM_VIEW_BUTTON -> SettingKey.FEATURE_STREAM_VIEW_BUTTON
+    }
+
+private fun LauncherFeature.subtitleRes(): Int =
+    when (this) {
+        LauncherFeature.STREAM -> R.string.settings_feature_stream_subtitle
+        LauncherFeature.DOCK_LIVE_APPS -> R.string.settings_feature_live_apps_subtitle
+        LauncherFeature.LIBRARY -> R.string.settings_feature_library_subtitle
+        LauncherFeature.DOCK_STREAM_HANDLE -> R.string.settings_feature_stream_handle_subtitle
+        LauncherFeature.STREAM_VIEW_BUTTON -> R.string.settings_feature_stream_view_button_subtitle
+    }
+
+private fun LauncherFeature.storedIn(features: FeatureSettings): Boolean =
+    when (this) {
+        LauncherFeature.STREAM -> features.stream
+        LauncherFeature.DOCK_LIVE_APPS -> features.dockLiveApps
+        LauncherFeature.LIBRARY -> features.library
+        LauncherFeature.DOCK_STREAM_HANDLE -> features.dockStreamHandle
+        LauncherFeature.STREAM_VIEW_BUTTON -> features.streamViewButton
+    }
