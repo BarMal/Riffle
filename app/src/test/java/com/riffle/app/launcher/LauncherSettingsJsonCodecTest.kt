@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.search.wider.SearchSourceId
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
@@ -163,6 +164,60 @@ class LauncherSettingsJsonCodecTest {
             SearchResultPresentation.STACK,
             decodeLauncherSettings("{\"search\": {\"resultPresentation\": \"UNKNOWN\"}}").search.resultPresentation,
         )
+    }
+
+    @Test
+    fun searchSourcesRoundTripAndSettingsStoredBeforeThemReadTheDefaults() {
+        val settings =
+            LauncherSettings(
+                search =
+                    SearchSettings(
+                        launcherSettings = false,
+                        calculator = false,
+                        systemSettings = false,
+                        contacts = true,
+                        files = true,
+                        webHandoff = false,
+                        groupOrder =
+                            listOf(
+                                SearchSourceId.FILES,
+                                SearchSourceId.CONTACTS,
+                                SearchSourceId.SYSTEM_SETTINGS,
+                            ),
+                        resultsPerGroup = 8,
+                    ),
+            )
+        assertEquals(settings.search, decodeLauncherSettings(encodeLauncherSettings(settings)).search)
+
+        val old = decodeLauncherSettings("{\"search\": {\"resultPresentation\": \"LIST\"}}").search
+        assertEquals(SearchResultPresentation.LIST, old.resultPresentation)
+        assertEquals(
+            SearchSettings(resultPresentation = SearchResultPresentation.LIST),
+            old,
+        )
+        assertEquals(true, old.launcherSettings)
+        assertEquals(true, old.calculator)
+        assertEquals(true, old.systemSettings)
+        assertEquals(false, old.contacts)
+        assertEquals(false, old.files)
+        assertEquals(true, old.webHandoff)
+        assertEquals(SearchSourceId.DEFAULT_GROUP_ORDER, old.groupOrder)
+        assertEquals(5, old.resultsPerGroup)
+        assertEquals(SearchSettings(), decodeLauncherSettings("{}").search)
+    }
+
+    @Test
+    fun aDamagedSearchSourceOrderOrCountReadsTheDefault() {
+        val decoded =
+            decodeLauncherSettings(
+                "{\"search\": {\"groupOrder\": [\"FILES\", \"NOPE\", \"FILES\", \"CALCULATOR\"]," +
+                    " \"resultsPerGroup\": 4}}",
+            ).search
+        assertEquals(
+            listOf(SearchSourceId.FILES, SearchSourceId.SYSTEM_SETTINGS, SearchSourceId.CONTACTS),
+            decoded.groupOrder,
+        )
+        assertEquals(5, decoded.resultsPerGroup)
     }
 
     @Test

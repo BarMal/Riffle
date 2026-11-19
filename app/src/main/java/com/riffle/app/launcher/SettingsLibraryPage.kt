@@ -74,6 +74,7 @@ internal fun SettingsLibraryPageContent(
             },
             optionTag = { presentation -> "$SEARCH_RESULTS_TEST_TAG_PREFIX${presentation.name}" },
         )
+        SettingsSearchSourceRows(settings = state.settings.search, onAction = onAction)
     }
     SettingsSection(title = stringResource(R.string.settings_section_hidden_and_refresh)) {
         SettingsClickableRow(
