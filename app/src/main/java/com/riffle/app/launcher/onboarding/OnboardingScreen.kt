@@ -27,13 +27,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
+import com.riffle.core.domain.launcher.home.HomeStart
 import com.riffle.core.domain.launcher.onboarding.OnboardingStep
 import com.riffle.core.domain.launcher.onboarding.SourcePermission
 
@@ -49,10 +52,10 @@ internal fun interface PermissionGranted {
 }
 
 /**
- * The four-step set-up: one short step per Place (Home, Dock, Library, Stream). The Stream step asks for
- * notification access, calendar and usage access, each after a one-line explanation and each skippable; nothing is
- * requested until the user taps Allow. Back on the first step, and "Skip set-up", leave without finishing; neither
- * changes anything the user placed.
+ * The four-step set-up (five on a fresh install, which opens with "How should Home start?"): one short step per
+ * Place (Home, Dock, Library, Stream). The Stream step asks for notification access, calendar and usage access, each
+ * after a one-line explanation and each skippable; nothing is requested until the user taps Allow. Back on the first
+ * step, and "Skip set-up", leave without finishing; neither changes anything the user placed.
  */
 @Composable
 internal fun OnboardingScreen(
@@ -61,17 +64,27 @@ internal fun OnboardingScreen(
     onFinished: () -> Unit,
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
+    askHomeStart: Boolean = false,
+    onHomeStart: (HomeStart) -> Unit = {},
 ) {
     var stepName by rememberSaveable { mutableStateOf(OnboardingStep.HOME.name) }
     val step = OnboardingStep.valueOf(stepName)
-    val goBack: () -> Unit = { step.previous()?.let { stepName = it.name } ?: onSkip() }
+    // Frozen at the first composition: answering the question flips the controller's flag, not this screen's count.
+    val withStart = rememberSaveable { askHomeStart }
+    var startPending by rememberSaveable { mutableStateOf(askHomeStart) }
+    var choice by rememberSaveable { mutableStateOf(HomeStart.ALL_APPS.name) }
+    val goBack: () -> Unit = {
+        if (startPending) onSkip() else step.previous()?.let { stepName = it.name } ?: onSkip()
+    }
     androidx.activity.compose.BackHandler(onBack = goBack)
+    val title = if (startPending) stringResource(R.string.onboarding_home_start_title) else OnboardingText.title(step)
+    val position = if (startPending) 1 else step.ordinal + 1 + if (withStart) 1 else 0
     Surface(
         modifier =
             modifier
                 .fillMaxSize()
                 .testTag(ONBOARDING_TEST_TAG)
-                .semantics { paneTitle = OnboardingText.title(step) },
+                .semantics { paneTitle = title },
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
@@ -82,54 +95,117 @@ internal fun OnboardingScreen(
                     .padding(horizontal = RiffleSpacing.xl, vertical = RiffleSpacing.l),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .widthIn(max = 560.dp)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
-            ) {
-                Text(
-                    text = OnboardingText.progress(step),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                )
-                Text(
-                    text = OnboardingText.title(step),
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.semantics { heading() },
-                )
-                Text(text = OnboardingText.body(step), style = MaterialTheme.typography.bodyLarge)
-                if (step == OnboardingStep.STREAM) {
-                    PermissionRows(granted = granted, onAllow = onAllow)
-                }
-            }
-            Row(
-                modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(
-                    modifier = Modifier.heightIn(min = RiffleSpacing.xxxl).testTag(ONBOARDING_SKIP_TEST_TAG),
-                    onClick = onSkip,
-                ) { Text(OnboardingText.SKIP) }
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s, alignment = Alignment.End),
-                ) {
-                    if (step.previous() != null) {
-                        TextButton(onClick = goBack) { Text(OnboardingText.BACK) }
+            OnboardingContent(
+                modifier = Modifier.weight(1f),
+                progress = OnboardingText.progress(position, OnboardingStep.entries.size + if (withStart) 1 else 0),
+                step = step,
+                startChoice = if (startPending) HomeStart.valueOf(choice) else null,
+                onStartChoice = { choice = it.name },
+                granted = granted,
+                onAllow = onAllow,
+            )
+            OnboardingButtons(
+                step = step,
+                startPending = startPending,
+                onSkip = onSkip,
+                onBack = goBack,
+                onNext = {
+                    if (startPending) {
+                        onHomeStart(HomeStart.valueOf(choice))
+                        startPending = false
+                    } else {
+                        step.next()?.let { stepName = it.name } ?: onFinished()
                     }
-                    Button(
-                        modifier = Modifier.testTag(ONBOARDING_NEXT_TEST_TAG),
-                        onClick = { step.next()?.let { stepName = it.name } ?: onFinished() },
-                    ) { Text(if (step.isLast) OnboardingText.DONE else OnboardingText.NEXT) }
-                }
+                },
+            )
+        }
+    }
+}
+
+/** The step's text (or the Home question when [startChoice] is not null) in a scrolling column. */
+@Composable
+private fun OnboardingContent(
+    progress: String,
+    step: OnboardingStep,
+    startChoice: HomeStart?,
+    onStartChoice: (HomeStart) -> Unit,
+    granted: PermissionGranted,
+    onAllow: (SourcePermission) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val title =
+        if (startChoice != null) {
+            stringResource(
+                R.string.onboarding_home_start_title,
+            )
+        } else {
+            OnboardingText.title(step)
+        }
+    Column(
+        modifier =
+            modifier
+                .widthIn(max = 560.dp)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(RiffleSpacing.m),
+    ) {
+        Text(
+            text = progress,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.semantics { heading() },
+        )
+        if (startChoice != null) {
+            HomeStartChoice(selected = startChoice, onSelect = onStartChoice)
+        } else {
+            Text(text = OnboardingText.body(step), style = MaterialTheme.typography.bodyLarge)
+            if (step == OnboardingStep.STREAM) PermissionRows(granted = granted, onAllow = onAllow)
+        }
+    }
+}
+
+/** Skip, Back and Next; while the Home question is open, a line under them says what Skip does. */
+@Composable
+private fun OnboardingButtons(
+    step: OnboardingStep,
+    startPending: Boolean,
+    onSkip: () -> Unit,
+    onBack: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(
+            modifier = Modifier.heightIn(min = RiffleSpacing.xxxl).testTag(ONBOARDING_SKIP_TEST_TAG),
+            onClick = onSkip,
+        ) { Text(OnboardingText.SKIP) }
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(RiffleSpacing.s, alignment = Alignment.End),
+        ) {
+            if (step.previous() != null) {
+                TextButton(onClick = onBack) { Text(OnboardingText.BACK) }
+            }
+            Button(modifier = Modifier.testTag(ONBOARDING_NEXT_TEST_TAG), onClick = onNext) {
+                Text(if (!startPending && step.isLast) OnboardingText.DONE else OnboardingText.NEXT)
             }
         }
+    }
+    if (startPending) {
+        Text(
+            text = stringResource(R.string.onboarding_home_start_skip_supporting),
+            modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(start = RiffleSpacing.m),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

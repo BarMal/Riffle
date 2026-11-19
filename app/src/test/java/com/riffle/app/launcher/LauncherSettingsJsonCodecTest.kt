@@ -1548,6 +1548,20 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun compactArrangeDefaultsOnAndTheEmptyHomeHintDefaultsToNotDismissedAndBothRoundTrip() {
+        val home = { json: String -> decodeLauncherSettings(json).home }
+        // Settings written before these existed: compact on, hint not dismissed.
+        assertEquals(true, home("""{"version": 11}""").compactArrange)
+        assertEquals(false, home("""{"home": {"addNewApps": false}}""").emptyHomeHintDismissed)
+        assertEquals(true, home("""{"home": {"compactArrange": "no"}}""").compactArrange)
+        assertEquals(false, home("""{"home": {"compactArrange": false}}""").compactArrange)
+        assertEquals(true, home("""{"home": {"emptyHomeHintDismissed": true}}""").emptyHomeHintDismissed)
+        val changed =
+            LauncherSettings(home = HomeBehaviourSettings(compactArrange = false, emptyHomeHintDismissed = true))
+        assertEquals(changed.home, decodeLauncherSettings(encodeLauncherSettings(changed)).home)
+    }
+
+    @Test
     fun theDragTuningRoundTripsDefaultsWhenMissingAndIsHeldToItsRanges() {
         val home = { json: String -> decodeLauncherSettings(json).home.dragTuning }
         assertEquals(HomeDragTuning(), home("""{"version": 11}"""))

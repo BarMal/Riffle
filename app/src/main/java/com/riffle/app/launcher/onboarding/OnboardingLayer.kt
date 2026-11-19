@@ -12,6 +12,7 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.RiffleLauncherTheme
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.home.HomeStart
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.onboarding.SourcePermission
 import com.riffle.core.domain.launcher.settings.resolveLiquidGlass
@@ -23,7 +24,7 @@ import com.riffle.core.domain.launcher.workspace.sources.CalendarAccessStatus
  * Order with the first-run flow: the Home-role card ("Set up Riffle") comes first. Onboarding decides what to show
  * only once the workspaces have loaded and that card is gone (dismissed, or Riffle is the Home app) and no Home-role
  * request is in flight, so the two never stack and the Home-role request is never delayed. A fresh install then gets
- * the four-step set-up; an existing user gets nothing, and finds it again in Settings.
+ * the set-up (with "How should Home start?" first); an existing user gets nothing, and finds it again in Settings.
  */
 @Composable
 internal fun OnboardingLayer(
@@ -31,6 +32,7 @@ internal fun OnboardingLayer(
     state: LauncherShellState,
     workspacesLoaded: Boolean,
     onAction: (LauncherShellAction) -> Unit,
+    onSeedHome: (HomeStart) -> Unit = {},
 ) {
     val ready =
         workspacesLoaded && !state.shouldShowSetupCard && state.firstRunStatus != FirstRunStatus.REQUESTING_HOME_ROLE
@@ -38,6 +40,7 @@ internal fun OnboardingLayer(
         if (ready) host.controller.decideAtLaunch(host.freshInstall)
     }
     val surface by host.controller.surface.collectAsState()
+    val askHomeStart by host.controller.askHomeStart.collectAsState()
     if (surface != OnboardingSurface.SetUp) return
     val appearance = state.launcherSettings.appearance
     RiffleLauncherTheme(
@@ -65,12 +68,18 @@ internal fun OnboardingLayer(
             OnboardingScreen(
                 granted = granted,
                 onAllow = host.launchPermission,
+                askHomeStart = askHomeStart,
+                onHomeStart = { start ->
+                    host.controller.homeStartChosen()
+                    onSeedHome(start)
+                },
                 onFinished = {
                     host.controller.completed()
                     onAction(LauncherShellAction.OpenHome)
                 },
                 onSkip = {
-                    host.controller.cancelled()
+                    // Skipping with the Home question open starts with all apps rather than an empty screen.
+                    host.controller.cancelled()?.let(onSeedHome)
                     onAction(LauncherShellAction.OpenHome)
                 },
             )

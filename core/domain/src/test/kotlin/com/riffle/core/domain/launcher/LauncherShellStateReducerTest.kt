@@ -275,4 +275,31 @@ class LauncherShellStateReducerTest {
             reducer.navigationActionSelected(state, ShellNavigationAction.OpenSettings).destination,
         )
     }
+
+    @Test
+    fun theHomeButtonCaveatIsOnlyKnownAfterTheRoleRequestWasDeclined() {
+        val fresh = LauncherShellState(homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME)
+        assertFalse(fresh.homeRoleRequestDeclined)
+
+        val requesting = reducer.defaultHomeRequestStarted(fresh)
+        assertFalse(requesting.homeRoleRequestDeclined)
+
+        val declined = reducer.defaultHomeRequestReturned(requesting)
+        assertTrue(declined.homeRoleRequestDeclined)
+        // The live role check that follows: still not the Home app keeps it, being the Home app clears it.
+        assertTrue(reducer.homeRoleChanged(declined, HomeRoleStatus.NOT_DEFAULT_HOME).homeRoleRequestDeclined)
+        assertFalse(reducer.homeRoleChanged(declined, HomeRoleStatus.DEFAULT_HOME).homeRoleRequestDeclined)
+        // A new request starts clean.
+        assertFalse(reducer.defaultHomeRequestStarted(declined).homeRoleRequestDeclined)
+    }
+
+    @Test
+    fun aRequestThatCouldNotStartCountsAsDeclinedSoTheCaveatExplainsItself() {
+        val state =
+            reducer.defaultHomeRequestLaunchFailed(
+                reducer.defaultHomeRequestStarted(LauncherShellState(homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME)),
+            )
+
+        assertTrue(state.homeRoleRequestDeclined)
+    }
 }

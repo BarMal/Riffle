@@ -66,6 +66,11 @@ data class LauncherShellState(
     val isWidgetPickerOpen: Boolean = false,
     /** Whether the open picker is placing onto the dock's panel rather than onto home or the dock. */
     val isWidgetPickerTargetingDockPanel: Boolean = false,
+    /**
+     * The Home-role request came back (or could not start) and Riffle is still not the Home app: the setup card then
+     * explains, in one line, that the Home button may open another launcher. Never shown before a request.
+     */
+    val homeRoleRequestDeclined: Boolean = false,
     /** The latest rejected Dock edit, retained until another Dock edit succeeds. */
     val dockEditRejectionReason: DockEditRejectionReason? = null,
 ) {

@@ -15,6 +15,17 @@ enum class SettingKey(
 ) {
     SIMPLE_MODE(SettingsPage.HOME, R.string.setting_simple_mode, R.string.setting_simple_mode_keywords),
     ADD_NEW_APPS(SettingsPage.HOME, R.string.setting_add_new_apps, R.string.setting_add_new_apps_keywords),
+    HOME_ADD_ALL_APPS(
+        SettingsPage.HOME,
+        R.string.setting_home_add_all_apps,
+        R.string.setting_home_add_all_apps_keywords,
+    ),
+    HOME_ARRANGE(SettingsPage.HOME, R.string.setting_home_arrange, R.string.setting_home_arrange_keywords),
+    HOME_ARRANGE_COMPACT(
+        SettingsPage.HOME,
+        R.string.setting_home_arrange_compact,
+        R.string.setting_home_arrange_compact_keywords,
+    ),
     HOME_GRID_COLUMNS(
         SettingsPage.HOME,
         R.string.setting_home_grid_columns,

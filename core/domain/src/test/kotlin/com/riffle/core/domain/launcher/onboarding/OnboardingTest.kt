@@ -72,6 +72,20 @@ class OnboardingTest {
     }
 
     @Test
+    fun theHomeStartChoiceDefaultsToNotChosenInOldDataRoundTripsAndIsSetOnce() {
+        val old = obj("origin" to str("FRESH_INSTALL"), "walkthrough" to str("STARTED"))
+        assertEquals(false, OnboardingCodec.decode(old).homeStartChosen)
+        assertEquals(false, OnboardingCodec.decode(obj("homeStartChosen" to str("yes"))).homeStartChosen)
+
+        val chosen = Onboarding.homeStartChosen(OnboardingState(OnboardingOrigin.FRESH_INSTALL))
+        assertEquals(true, OnboardingCodec.decode(OnboardingCodec.encode(chosen)).homeStartChosen)
+        // Neither finishing, skipping nor re-running clears it.
+        assertEquals(true, Onboarding.skipped(chosen).homeStartChosen)
+        assertEquals(true, Onboarding.completed(chosen).homeStartChosen)
+        assertEquals(true, Onboarding.rerun(chosen).homeStartChosen)
+    }
+
+    @Test
     fun theStateRoundTrips() {
         val state = OnboardingState(OnboardingOrigin.FRESH_INSTALL, OnboardingProgress.SKIPPED, completedRuns = 4)
         assertEquals(state, OnboardingCodec.decode(OnboardingCodec.encode(state)))

@@ -14,7 +14,6 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -126,9 +125,11 @@ class PreviewFirstSetupTest {
         composeRule.onNodeWithText("You'll be asked when you turn on Cards.").assertDoesNotExist()
         composeRule.onNodeWithText("Floating dock (optional)").assertDoesNotExist()
         composeRule.onNodeWithText("You'll be asked when you turn on Floating dock.").assertDoesNotExist()
+        // Changed on purpose: the card is one sentence of purpose, the action and "Not now"; the line about optional
+        // features asking for access later is no longer on it.
         composeRule
             .onNodeWithText("Optional features ask for access only when you turn them on.")
-            .assertExists()
+            .assertDoesNotExist()
         assertTrue(actions.isEmpty())
     }
 
@@ -141,10 +142,28 @@ class PreviewFirstSetupTest {
             )
         }
 
+        // Changed on purpose: the status row is gone from the card; the card itself carries the status as its state.
         composeRule
-            .onNodeWithContentDescription(
-                "Home app: Riffle is not your Home app yet.",
+            .onNode(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.StateDescription,
+                    "Riffle is not your Home app yet.",
+                ),
             ).assertExists()
+    }
+
+    @Test
+    fun theHomeButtonCaveatIsNotOnTheCardBeforeARequestAndShowsOnceTheRequestWasDeclined() {
+        var state by mutableStateOf(previewState())
+        composeRule.setContent { LauncherShellContent(state = state, onAction = {}) }
+        val caveat = "Until you do, pressing the Home button may still open your current launcher."
+
+        composeRule.onNodeWithText("pressing your device Home button", substring = true).assertDoesNotExist()
+        composeRule.onNodeWithText(caveat).assertDoesNotExist()
+
+        composeRule.runOnIdle { state = state.copy(homeRoleRequestDeclined = true) }
+
+        composeRule.onNodeWithText(caveat).assertExists()
     }
 
     @Test

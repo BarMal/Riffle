@@ -69,6 +69,13 @@ data class HomeBehaviourSettings(
     val mode: HomeMode = HomeMode.DEFAULT,
     /** Settings > Home > "Add new apps to Home": a new app is placed after the last item (on by default). */
     val addNewApps: Boolean = true,
+    /**
+     * Settings > Home > "Compact: fill each page completely" (on by default): "Arrange Home A to Z" and the first-run
+     * seed fill each page fully; off leaves room (about 75% of each page's cells) before the next page starts.
+     */
+    val compactArrange: Boolean = true,
+    /** The empty-Home hint was dismissed, or Home has held an item (or was started empty): it is never shown again. */
+    val emptyHomeHintDismissed: Boolean = false,
     /** The numbers of a Home drag (Settings > About > Diagnostics > Drag tuning). Held to their ranges. */
     val dragTuning: HomeDragTuning = HomeDragTuning(),
 )

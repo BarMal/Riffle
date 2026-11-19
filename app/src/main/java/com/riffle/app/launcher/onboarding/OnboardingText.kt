@@ -20,9 +20,9 @@ internal object OnboardingText {
     const val STREAM_PERMISSIONS_HEADING = "Optional access"
 
     fun progress(
-        step: OnboardingStep,
+        position: Int,
         count: Int = OnboardingStep.entries.size,
-    ): String = "Step ${step.ordinal + 1} of $count"
+    ): String = "Step $position of $count"
 
     fun title(step: OnboardingStep): String =
         when (step) {

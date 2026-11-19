@@ -3,7 +3,10 @@ package com.riffle.app.launcher
 import com.riffle.app.launcher.rss.FeedArticleCacheRepository
 import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
+import com.riffle.core.domain.launcher.home.HomeArrangement
+import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
@@ -182,6 +185,39 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                LauncherShellAction.AddAllAppsToHome ->
+                    HomeArrangement.addAll(state.bulkEditLayout, state.installedApps)
+                        .takeIf { it.added > 0 }
+                        ?.let { state.withBulkEditLayout(it.layout, homeLayoutRepository) }
+                        ?: state
+
+                LauncherShellAction.ArrangeHomeAtoZ ->
+                    state.withBulkEditLayout(
+                        HomeArrangement.arrange(state.bulkEditLayout, state.launcherSettings.home.compactArrange),
+                        homeLayoutRepository,
+                    )
+
+                is LauncherShellAction.UndoHomeBulkEdit ->
+                    state.withBulkEditLayout(action.before, homeLayoutRepository)
+
+                is LauncherShellAction.SetCompactArrange ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                home = state.launcherSettings.home.copy(compactArrange = action.enabled),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                LauncherShellAction.DismissEmptyHomeHint ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                home = state.launcherSettings.home.copy(emptyHomeHintDismissed = true),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectPageScroll ->
                     state.withLayoutSettings(launcherSettingsRepository) {
                         it.withPageScroll(action.posture, action.direction)
@@ -351,3 +387,17 @@ private fun LauncherShellState.withLayoutSettings(
         settings = launcherSettings.copy(layout = change(launcherSettings.layout)),
         launcherSettingsRepository = repository,
     )
+
+/** The layout "Add all apps" and "Arrange A to Z" act on: the one Settings shows, or the one on screen elsewhere. */
+private val LauncherShellState.bulkEditLayout: HomeLayout
+    get() = if (destination == ShellDestination.SETTINGS) settingsTargetLayout else homeLayout
+
+private fun LauncherShellState.withBulkEditLayout(
+    layout: HomeLayout,
+    homeLayoutRepository: HomeLayoutRepository,
+): LauncherShellState =
+    if (destination == ShellDestination.SETTINGS) {
+        withSettingsTargetLayout(layout, homeLayoutRepository)
+    } else {
+        withHomeLayout(layout, homeLayoutRepository)
+    }

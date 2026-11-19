@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ComponentName
 import android.content.ContentResolver
 import android.service.notification.NotificationListenerService
+import com.riffle.app.launcher.AndroidDockDefaultsResolver
 import com.riffle.app.launcher.AndroidHomeLayoutDeviceClassObserver
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
@@ -267,6 +268,7 @@ internal class MainActivityDependencies(
             deleteHostedWidgetId = hostIdDeletion::unlessReferenced,
             feedArticleCacheRepository = feedArticleCacheRepository,
             workspaceRepository = workspaceRepository,
+            dockDefaultsResolver = AndroidDockDefaultsResolver(activity),
         )
     }
 
