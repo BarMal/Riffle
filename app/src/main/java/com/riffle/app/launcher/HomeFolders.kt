@@ -169,14 +169,14 @@ internal fun HomeFolderContextMenu(
             },
         )
         DropdownMenuItem(
-            text = { Text(text = "Move to dock") },
+            text = { Text(text = "Move to Dock") },
             onClick = {
                 onDismissRequest()
                 actions.onAction(LauncherShellAction.MoveHomeItemToDock(folder.id))
             },
         )
         DropdownMenuItem(
-            text = { Text(text = "Remove from home") },
+            text = { Text(text = "Remove from Home") },
             onClick = {
                 onDismissRequest()
                 actions.onAction(LauncherShellAction.RemoveHomeShortcut(folder.id))
@@ -557,7 +557,7 @@ internal fun folderShortcutContextMenuItems(
             enabled = shortcutIndex in 0 until folder.items.lastIndex,
         ),
         ShortcutContextMenuItem(
-            label = "Move to home",
+            label = "Move to Home",
             action =
                 LauncherShellAction.MoveAppOutOfFolder(
                     folderId = folder.id,

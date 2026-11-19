@@ -684,7 +684,7 @@ internal fun WidgetPickerAccessiblePlacement.accessiblePlacementAnnouncement(): 
                 "${selectedCandidate?.placementPositionLabel()}; placement is ready."
 
         target == WidgetAddTarget.DOCK_PANEL ->
-            "${accessibleWidgetLabel()} on the dock's Panel at " +
+            "${accessibleWidgetLabel()} on the Dock's Panel at " +
                 "${selectedCandidate?.placementPositionLabel()}; placement is ready."
 
         else -> "${accessibleWidgetLabel()} placement is ready."

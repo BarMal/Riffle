@@ -111,6 +111,29 @@ the "Settings audit" section of [dock-modes-plan.md](dock-modes-plan.md). The ru
 | Live apps | "Dynamic side" |
 | Swipes and pinches on Home | "Home swipe actions" |
 
+## Wording
+
+One name per action across every menu, button and setting. Sentence case: the first word is capitalised and the rest
+are not, except the product's own nouns, which are always capitalised as the product writes them: **Home**, **Dock**,
+**Library**, **Stream**, and **Floating dock** (the name of its page). Folders, pages and widgets are ordinary words.
+
+| Action | Wording | Never |
+| --- | --- | --- |
+| Put an app on Home | Add to Home (once it is there: Added to Home) | "Add to home", "Pin to Home" |
+| Put an app in the Dock | Add to Dock | "Pin to Dock", "Add to dock" |
+| Take an item off the Dock | Remove from Dock | "Unpin from Dock", "Remove from dock" |
+| Put an app in the Floating dock | Add to Floating dock, Remove from Floating dock | "Add to floating dock" |
+| Take an item off Home | Remove from Home | "Remove from home" |
+| Move an item between Home and the Dock | Move to Home, Move to Dock | "Move to home", "Move to dock" |
+| Take an app out of a folder | Remove from folder | |
+| Hide an app from the Library and Home | Hide app (undo from Hidden apps: Unhide) | a bare "Hide" |
+| Hide a Stream item or section | Hide (the menu says what it hides) | |
+| Open a page or sub-page | Open | |
+
+Settings labels follow the same rule ("Show the Dock", "Dock position", "Floating dock", "Hidden apps"). A test
+(`SettingsPagesTest`) holds the page and setting names; the menus' wording is held by `ShortcutContextMenuTest`,
+`HomeDockContextMenuTest`, `HomeFolderContextMenuTest` and `PagedLibraryTest`.
+
 ## What the audit found, and what happened to it
 
 The audit of 2026-11-12 listed about 30 `SettingsPage` entries, about 140 controls and about 11,400 lines of settings UI.

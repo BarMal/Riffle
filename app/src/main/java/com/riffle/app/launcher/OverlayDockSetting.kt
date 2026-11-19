@@ -111,7 +111,7 @@ internal fun overlayDockAccessPresentation(
     enabled: Boolean,
     permissionStatus: OverlayDockPermissionStatus,
 ): OverlayDockAccessPresentation {
-    if (!enabled) return OverlayDockAccessPresentation(subtitle = "Only use the home dock")
+    if (!enabled) return OverlayDockAccessPresentation(subtitle = "Only use the Dock")
 
     return when (permissionStatus) {
         OverlayDockPermissionStatus.GRANTED ->

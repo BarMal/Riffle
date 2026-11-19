@@ -222,8 +222,8 @@ class PagedLibraryTest {
 
         composeRule.onNodeWithText("Alarm").performTouchInput { longClick() }
 
-        composeRule.onNodeWithText("Add to home").assertIsDisplayed()
-        composeRule.onNodeWithText("Hide").assertIsDisplayed()
+        composeRule.onNodeWithText("Add to Home").assertIsDisplayed()
+        composeRule.onNodeWithText("Hide app").assertIsDisplayed()
     }
 
     @Test

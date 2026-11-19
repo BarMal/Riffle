@@ -73,7 +73,7 @@ private fun HomeLabelVisibilitySetting(
     SettingsSwitchRow(
         modifier = Modifier.settingAnchor(SettingKey.HOME_SHOW_LABELS),
         title = SettingKey.HOME_SHOW_LABELS.label(),
-        subtitle = if (settings.showText) "Labels visible on home" else "Icon-only home",
+        subtitle = if (settings.showText) "Labels visible on Home" else "Icon-only Home",
         checked = settings.showText,
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectHomeLabelTextVisible(value)) },
     )

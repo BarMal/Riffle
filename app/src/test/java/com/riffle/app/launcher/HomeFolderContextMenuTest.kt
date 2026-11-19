@@ -47,7 +47,7 @@ class HomeFolderContextMenuTest {
                     enabled = false,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to home",
+                    label = "Move to Home",
                     action =
                         LauncherShellAction.MoveAppOutOfFolder(
                             folderId = folder.id,

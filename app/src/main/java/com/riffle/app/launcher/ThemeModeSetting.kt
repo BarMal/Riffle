@@ -45,7 +45,7 @@ internal fun ThemeCornerStyleSetting(
     SettingsChoiceRow(
         modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_CORNERS),
         title = SettingKey.APPEARANCE_CORNERS.label(),
-        subtitle = "Corner radius of cards, panels, the dock and rows",
+        subtitle = "Corner radius of cards, panels, the Dock and rows",
         options = LauncherThemeCornerStyle.entries,
         selected = selectedStyle,
         onSelect = { style -> onAction(LauncherShellAction.SelectLauncherThemeCornerStyle(style)) },

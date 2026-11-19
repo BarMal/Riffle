@@ -556,9 +556,9 @@ private fun SearchResultContextMenu(
                     text = {
                         Text(
                             if (appListContext.homeLayout.containsHomeApp(result.app.identity)) {
-                                "Added to home"
+                                "Added to Home"
                             } else {
-                                "Add to home"
+                                "Add to Home"
                             },
                         )
                     },
@@ -579,7 +579,7 @@ private fun SearchResultContextMenu(
 
             is SearchGridResult.Shortcut ->
                 DropdownMenuItem(
-                    text = { Text("Add shortcut to home") },
+                    text = { Text("Add shortcut to Home") },
                     enabled =
                         !appListContext.homeLayout.containsHomeAppShortcut(
                             result.shortcut.appIdentity,

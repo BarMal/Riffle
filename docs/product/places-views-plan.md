@@ -159,7 +159,7 @@ state), removal of the old lens pages and adaptive stage surface (P8).
 
 ### P7. The Library
 
-**Outcome:** done (#1448). Categories, A-Z and Grid, search at the top, one hidden-apps list. Left out: drag from the Library onto Home (Add to Home and Pin to Dock are the equivalents); the Personal and Work split is a filter in the Library, not a stored setting.
+**Outcome:** done (#1448). Categories, A-Z and Grid, search at the top, one hidden-apps list. Left out: drag from the Library onto Home (Add to Home and Add to Dock are the equivalents); the Personal and Work split is a filter in the Library, not a stored setting.
 
 - Views: Categories (iOS-style tiles, the default), A–Z list, Grid, from the existing `CATEGORIES`,
   `ALPHA_LIST` and `ICON_GRID` expressions; "Show as" by long-press on the header and in Settings.

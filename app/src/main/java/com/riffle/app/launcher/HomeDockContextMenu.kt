@@ -38,7 +38,7 @@ internal fun dockFolderContextMenuItems(
                     enabled = shortcutIndex < shortcutCount - 1,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to home",
+                    label = "Move to Home",
                     action = LauncherShellAction.MoveDockItemToHome(folder.id),
                 ),
             )
@@ -46,7 +46,7 @@ internal fun dockFolderContextMenuItems(
             emptyList()
         }
 
-    return editItems + ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(folder.id))
+    return editItems + ShortcutContextMenuItem("Remove from Dock", LauncherShellAction.RemoveDockShortcut(folder.id))
 }
 
 internal fun dockWidgetContextMenuItems(
@@ -97,7 +97,7 @@ internal fun dockWidgetContextMenuItems(
 
     return editItems +
         ShortcutContextMenuItem(
-            label = "Remove from dock",
+            label = "Remove from Dock",
             action = LauncherShellAction.RemoveDockShortcut(widget.id),
         )
 }

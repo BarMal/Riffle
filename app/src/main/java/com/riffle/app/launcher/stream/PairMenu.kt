@@ -21,7 +21,7 @@ import com.riffle.core.domain.launcher.stream.StreamAction
 
 /**
  * The long-press menu of a saved pair and its accessibility actions: Open side by side, Swap sides, Change first app,
- * Change second app and Remove. No "Pin to the Dock": the stack replaced the Dock's pairs. A draft and the New card
+ * Change second app and Remove. No "Add to Dock": the stack replaced the Dock's pairs. A draft and the New card
  * have no menu.
  */
 internal class PairMenu(

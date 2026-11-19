@@ -289,7 +289,7 @@ private fun DockVisibilitySetting(
     SettingsSwitchRow(
         modifier = Modifier.settingAnchor(SettingKey.DOCK_SHOW),
         title = SettingKey.DOCK_SHOW.label(),
-        subtitle = if (enabled) "Dock visible on home" else "Home grid uses dock space",
+        subtitle = if (enabled) "Dock visible on Home" else "Home grid uses Dock space",
         checked = enabled,
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockEnabled(value)) },
     )
@@ -350,7 +350,7 @@ private fun dockPositionSubtitle(
     when {
         position == null -> "Bottom edge"
         position in placeablePositions -> position.label()
-        else -> "${position.label()} is not available on this layout, so the dock is on the bottom edge"
+        else -> "${position.label()} is not available on this layout, so the Dock is on the bottom edge"
     }
 
 private fun DockPosition.label(): String =

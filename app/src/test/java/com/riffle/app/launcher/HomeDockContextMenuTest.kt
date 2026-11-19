@@ -104,8 +104,8 @@ class HomeDockContextMenuTest {
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
-                ShortcutContextMenuItem("Move to home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
-                ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
+                ShortcutContextMenuItem("Move to Home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
+                ShortcutContextMenuItem("Remove from Dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
             ),
             items,
         )
@@ -172,7 +172,7 @@ class HomeDockContextMenuTest {
         assertEquals(
             listOf(
                 ShortcutContextMenuItem(
-                    label = "Remove from dock",
+                    label = "Remove from Dock",
                     action = LauncherShellAction.RemoveDockShortcut(widget.id),
                 ),
             ),
@@ -211,7 +211,7 @@ class HomeDockContextMenuTest {
                     action = LauncherShellAction.MoveDockShortcutToIndex(widget.id, targetIndex = 2),
                 ),
                 ShortcutContextMenuItem(
-                    label = "Remove from dock",
+                    label = "Remove from Dock",
                     action = LauncherShellAction.RemoveDockShortcut(widget.id),
                 ),
             ),
@@ -247,11 +247,11 @@ class HomeDockContextMenuTest {
                     action = LauncherShellAction.MoveDockShortcutToIndex(folder.id, targetIndex = 2),
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to home",
+                    label = "Move to Home",
                     action = LauncherShellAction.MoveDockItemToHome(folder.id),
                 ),
                 ShortcutContextMenuItem(
-                    label = "Remove from dock",
+                    label = "Remove from Dock",
                     action = LauncherShellAction.RemoveDockShortcut(folder.id),
                 ),
             ),

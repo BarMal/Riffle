@@ -189,8 +189,8 @@ internal const val RIFFLE_CONTEXT_MENU_TEST_TAG = "riffle-context-menu"
 private val ShortcutContextSurface.removeLabel: String
     get() =
         when (this) {
-            ShortcutContextSurface.HOME -> "Remove from home"
-            ShortcutContextSurface.DOCK -> "Remove from dock"
+            ShortcutContextSurface.HOME -> "Remove from Home"
+            ShortcutContextSurface.DOCK -> "Remove from Dock"
             ShortcutContextSurface.DOCK_PANEL -> "Remove from panel"
         }
 
@@ -215,7 +215,7 @@ internal val ShortcutContextSurface.widgetRemoveLabel: String
     get() =
         when (this) {
             ShortcutContextSurface.DOCK_PANEL -> "Remove from panel"
-            ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> "Remove from home"
+            ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> "Remove from Home"
         }
 
 private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem): List<ShortcutContextMenuItem> =
@@ -223,7 +223,7 @@ private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem
         ShortcutContextSurface.HOME ->
             listOf(
                 ShortcutContextMenuItem(
-                    label = "Add to dock",
+                    label = "Add to Dock",
                     action =
                         LauncherShellAction.AddAppToDock(
                             InstalledApp(
@@ -233,7 +233,7 @@ private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem
                         ),
                 ),
                 ShortcutContextMenuItem(
-                    label = "Add to floating dock",
+                    label = "Add to Floating dock",
                     action =
                         LauncherShellAction.AddAppToFloatingDock(
                             InstalledApp(
@@ -247,7 +247,7 @@ private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem
         ShortcutContextSurface.DOCK ->
             listOf(
                 ShortcutContextMenuItem(
-                    label = "Move to home",
+                    label = "Move to Home",
                     action = LauncherShellAction.MoveDockItemToHome(shortcut.id),
                 ),
             )

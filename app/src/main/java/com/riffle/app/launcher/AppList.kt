@@ -306,13 +306,13 @@ private fun AppDrawerMainMenuItems(
         )
     }
     AppDrawerRowMenuItem(
-        text = if (state.isOnHome) "Added to home" else "Add to home",
+        text = if (state.isOnHome) "Added to Home" else "Add to Home",
         enabled = !state.isOnHome,
         onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
         onExpandedChange = onExpandedChange,
     )
     AppDrawerRowMenuItem(
-        text = if (state.dockItemId == null) "Pin to Dock" else "Unpin from Dock",
+        text = if (state.dockItemId == null) "Add to Dock" else "Remove from Dock",
         onClick = {
             when (state.dockItemId) {
                 null -> onAction(LauncherShellAction.AddAppToDock(state.app))
@@ -322,7 +322,7 @@ private fun AppDrawerMainMenuItems(
         onExpandedChange = onExpandedChange,
     )
     AppDrawerRowMenuItem(
-        text = if (state.floatingDockItemId == null) "Add to floating dock" else "Remove from floating dock",
+        text = if (state.floatingDockItemId == null) "Add to Floating dock" else "Remove from Floating dock",
         onClick = {
             when (state.floatingDockItemId) {
                 null -> onAction(LauncherShellAction.AddAppToFloatingDock(state.app))
@@ -337,7 +337,7 @@ private fun AppDrawerMainMenuItems(
         onExpandedChange = onExpandedChange,
     )
     AppDrawerRowMenuItem(
-        text = "Hide",
+        text = "Hide app",
         onClick = { onAction(LauncherShellAction.HideApp(state.app.identity)) },
         onExpandedChange = onExpandedChange,
     )

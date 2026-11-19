@@ -26,18 +26,18 @@ class ShortcutContextMenuTest {
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem(
-                    "Add to dock",
+                    "Add to Dock",
                     LauncherShellAction.AddAppToDock(
                         InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
                     ),
                 ),
                 ShortcutContextMenuItem(
-                    "Add to floating dock",
+                    "Add to Floating dock",
                     LauncherShellAction.AddAppToFloatingDock(
                         InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
                     ),
                 ),
-                ShortcutContextMenuItem("Remove from home", LauncherShellAction.RemoveHomeShortcut(shortcut.id)),
+                ShortcutContextMenuItem("Remove from Home", LauncherShellAction.RemoveHomeShortcut(shortcut.id)),
             ),
             items,
         )
@@ -49,13 +49,13 @@ class ShortcutContextMenuTest {
 
         val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.DOCK)
 
-        assertFalse(items.any { it.label == "Move to dock" })
+        assertFalse(items.any { it.label == "Move to Dock" })
         assertEquals(
-            ShortcutContextMenuItem("Move to home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
+            ShortcutContextMenuItem("Move to Home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
             items[3],
         )
         assertEquals(
-            ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
+            ShortcutContextMenuItem("Remove from Dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
             items.last(),
         )
     }
@@ -71,8 +71,8 @@ class ShortcutContextMenuTest {
             ShortcutContextMenuItem("Remove from panel", LauncherShellAction.RemoveDockPanelItem(shortcut.id)),
             items.last(),
         )
-        assertFalse(items.any { it.label == "Move to home" })
-        assertFalse(items.any { it.label == "Move to dock" })
+        assertFalse(items.any { it.label == "Move to Home" })
+        assertFalse(items.any { it.label == "Move to Dock" })
     }
 
     @Test
@@ -91,18 +91,18 @@ class ShortcutContextMenuTest {
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem(
-                    "Add to dock",
+                    "Add to Dock",
                     LauncherShellAction.AddAppToDock(
                         InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
                     ),
                 ),
                 ShortcutContextMenuItem(
-                    "Add to floating dock",
+                    "Add to Floating dock",
                     LauncherShellAction.AddAppToFloatingDock(
                         InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
                     ),
                 ),
-                ShortcutContextMenuItem("Remove from home", LauncherShellAction.RemoveHomeShortcut(shortcut.id)),
+                ShortcutContextMenuItem("Remove from Home", LauncherShellAction.RemoveHomeShortcut(shortcut.id)),
             ),
             items,
         )

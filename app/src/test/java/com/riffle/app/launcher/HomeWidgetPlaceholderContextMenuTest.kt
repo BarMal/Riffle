@@ -104,7 +104,7 @@ class HomeWidgetPlaceholderContextMenuTest {
                     enabled = false,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Remove from home",
+                    label = "Remove from Home",
                     action = LauncherShellAction.RemoveHomeShortcut(widget.id),
                 ),
             ),
