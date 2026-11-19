@@ -272,12 +272,12 @@ class HomeSwipeGestureInterpreterTest {
 
     @Test
     fun labelsPageOverviewGestureActionForSettings() {
-        assertEquals("Page overview", LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW.label)
+        assertEquals("Page overview", LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW.label(SettingsTestText))
     }
 
     @Test
     fun labelsFullscreenGestureActionForSettings() {
-        assertEquals("Full-screen Home", LauncherGestureAction.ENTER_FULLSCREEN_HOME.label)
+        assertEquals("Full-screen Home", LauncherGestureAction.ENTER_FULLSCREEN_HOME.label(SettingsTestText))
     }
 
     @Test
@@ -293,7 +293,7 @@ class HomeSwipeGestureInterpreterTest {
 
         assertEquals(
             "Conflicting gestures: Open Stream: One-finger swipe up, Pinch out",
-            homeGestureConflictSummary(GestureSettings(homeGestures = settings)),
+            homeGestureConflictSummary(GestureSettings(homeGestures = settings), text = SettingsTestText),
         )
     }
 
@@ -309,7 +309,7 @@ class HomeSwipeGestureInterpreterTest {
                     ),
             )
 
-        assertNull(homeGestureConflictSummary(GestureSettings(homeGestures = settings)))
+        assertNull(homeGestureConflictSummary(GestureSettings(homeGestures = settings), text = SettingsTestText))
     }
 
     private fun appIdentity(): AppIdentity =

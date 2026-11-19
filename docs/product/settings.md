@@ -30,7 +30,6 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | | Full screen | Hide status bar, hide navigation bar |
 | | Set up | Set up Riffle again; Show hints again (brings back the Dock's one-time tips; the row shows where the launcher runs the set-up) |
 | **Dock** | Dock | Show the Dock, Dock position, icon size, pinned icons, Dock width, Dock alignment (along the top or bottom edge: left, middle, right; down a side: top, middle, bottom), Dock corner radius, Dock background strength, spacing to the grid (per device class) |
-| | Pairs | Show pairs (Automatic, Always show, Off): whether the Pairs stack (two apps that open side by side) and its Dock tile show. Automatic shows them where the system can split (SDK 37 or later, a window at least 600 dp wide, the launcher not in multi-window mode); Always show is for a device the rule gets wrong; Off hides them (the stored pairs are kept). Stored in `StreamSettings.showPairs`, reduced by `SelectPairsMode`; it replaces Settings > Dock > "App pairs", whose stored value (`dock.appPairs`) is read as it. One row in the Pairs section of Settings > Stream, beside the section's on and off and its order (the Pairs stack has no "Show as": it is a stack). See [dock-modes-plan.md](dock-modes-plan.md), "Pairs" |
 | | Live apps | Show live apps (a switch), Number of live apps |
 | | Stream handle | Show Stream handle (a switch, on by default; off in Simple mode and without the Stream): the small chevron beside the Dock on Home that opens the Stream with a tap (touch and hold: Open Library, Hide this handle). A feature switch like Show live apps, stored in `FeatureSettings.dockStreamHandle` |
 | | Floating dock | Opens the sub-page |
@@ -43,6 +42,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | Hidden apps (under Library) | | The one list of hidden apps |
 | **Stream** | Features | Stream (a switch; off in Simple mode); Show view button (a switch, on by default): the small button on the Stream that opens the page options a Dock tile's long-press opens (Show as, Move, Hide). Stored in `FeatureSettings.streamViewButton` |
 | | Look | Opens the Stream cards sub-page |
+| | Pairs (the Pairs section) | Show pairs (Automatic, Always show, Off): whether the Pairs stack (two apps that open side by side) and its Dock tile show. Automatic shows them where the system can split (SDK 37 or later, a window at least 600 dp wide, the launcher not in multi-window mode); Always show is for a device the rule gets wrong; Off hides them (the stored pairs are kept). Stored in `StreamSettings.showPairs`, reduced by `SelectPairsMode`; it replaces Settings > Dock > "App pairs", whose stored value (`dock.appPairs`) is read as it. The row is on the Stream page (not under Dock), in the Pairs section, beside the section's on and off and its order (the Pairs stack has no "Show as": it is a stack). See [dock-modes-plan.md](dock-modes-plan.md), "Pairs" |
 | | each of Now, Notifications, Recents, Today, Feeds | On or off, order (move up, move down), Show as (Stack, List: it applies to every page of the section); a row opening each of the section's sub-pages where it has them (Today has two: Agenda and Tasks). The whole section is the search target of its setting |
 | | Now: Recent players, Clear recent players | Under Now, whose description reads "Now playing and your recent players". **Recent players** is a switch (on by default; stored with the Stream layout as `NowOptions.recentPlayers`, per posture): off, Now shows only the active sessions and its "Nothing playing" card. **Clear recent players** forgets the list Now keeps (package, profile and last-played time; nothing else is stored). Both are searchable ("recent players", "now playing") and are one row each: Settings is the only place they live. See [dock-modes-plan.md](dock-modes-plan.md), "Media centre" |
 | Stream cards (under Stream) | Preview | A sample card drawn with the same glass and tint a Stream card gets |
@@ -57,14 +57,14 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | Feeds (under Stream) | | The feeds source (on or off), background refresh, only on Wi-Fi, only while charging, refresh now, the feed list, add a feed |
 | **Appearance** | Colour | Colour mode, accent, custom accent |
 | | Glass | Reduced transparency, spotlight flow (reduced transparency is read by every glass surface) |
-| | Shape and type | Corners (standard, compact, rounded), typography (standard, system, monospace) |
+| | Shape and type | Corners (standard, compact, rounded), typography (standard, monospace; the old "System" choice was the same typeface as standard, and a stored one reads as standard) |
 | **Gestures** | One finger, Two fingers, Pinch, Three fingers | The 14 swipe and pinch bindings on Home. Actions: None, Open search, Open Library, Open Stream, Open settings, Edit Home, Page overview, Full-screen Home, Next page, Previous page, Launch app, Launch shortcut. Reset |
 | **Motion and haptics** | Motion | Animation performance, reduced motion, feedback strength (all choice rows) |
 | | Dock and Stream | Opening speed (also the grid fade under the stack, the Home entrance and a swiped card), Dock bounce, Card stack coasting, Card snapping, Hold time to choose, Light ticks |
 | **Privacy and access** | Access | Default home app, notification access, usage access, calendar, floating dock access, each with its state and a way to change it |
 | | Privacy | Hide launcher content in screenshots and recents; how much the Stream shows (content level) for each source that can show private content |
 | **Backup** | | Export, import. Includes calendar feeds and which Stream sections are on. Never content, never any token |
-| **About** | | Version and build. Diagnostics: **What apps publish** (opens a read-only sub-page listing what each app exposes to a launcher: shortcuts, notification shapes, media session, widgets, with a redacted Copy report; never notification text or contact names) |
+| **About** | | Version and build (tap the Version row seven times and a "Developer options" switch appears; default off, stored with the diagnostics settings). **After-update starts** stays here, always (see below). While the switch is on, a **Developer options** sub-page holds the diagnostics: **What apps publish** (a read-only list of what each app exposes to a launcher: shortcuts, notification shapes, media session, widgets, with a redacted Copy report; never notification text or contact names), **App pair experiment**, **Pair recipe** and **Drag tuning**. Search leaves those pages out while the switch is off; what they store (the pair recipe, the drag tuning) keeps working while they are hidden |
 
 Removed rows: "Show the Stream as" (Pages or Stage; removed with the split in dock modes U2), "Open notifications" as a Gestures action, "Grows out of the Dock" as an open card position. Removed pages: Workspaces, Sources and its nine source detail pages, Saved lenses, Contextual, Cards appearance
 (redirect), RSS feeds and Calendar feeds as top-level pages, Permissions and Privacy as two pages (merged), the
@@ -111,6 +111,29 @@ the "Settings audit" section of [dock-modes-plan.md](dock-modes-plan.md). The ru
 | Live apps | "Dynamic side" |
 | Swipes and pinches on Home | "Home swipe actions" |
 
+## Wording
+
+One name per action across every menu, button and setting. Sentence case: the first word is capitalised and the rest
+are not, except the product's own nouns, which are always capitalised as the product writes them: **Home**, **Dock**,
+**Library**, **Stream**, and **Floating dock** (the name of its page). Folders, pages and widgets are ordinary words.
+
+| Action | Wording | Never |
+| --- | --- | --- |
+| Put an app on Home | Add to Home (once it is there: Added to Home) | "Add to home", "Pin to Home" |
+| Put an app in the Dock | Add to Dock | "Pin to Dock", "Add to dock" |
+| Take an item off the Dock | Remove from Dock | "Unpin from Dock", "Remove from dock" |
+| Put an app in the Floating dock | Add to Floating dock, Remove from Floating dock | "Add to floating dock" |
+| Take an item off Home | Remove from Home | "Remove from home" |
+| Move an item between Home and the Dock | Move to Home, Move to Dock | "Move to home", "Move to dock" |
+| Take an app out of a folder | Remove from folder | |
+| Hide an app from the Library and Home | Hide app (undo from Hidden apps: Unhide) | a bare "Hide" |
+| Hide a Stream item or section | Hide (the menu says what it hides) | |
+| Open a page or sub-page | Open | |
+
+Settings labels follow the same rule ("Show the Dock", "Dock position", "Floating dock", "Hidden apps"). A test
+(`SettingsPagesTest`) holds the page and setting names; the menus' wording is held by `ShortcutContextMenuTest`,
+`HomeDockContextMenuTest`, `HomeFolderContextMenuTest` and `PagedLibraryTest`.
+
 ## What the audit found, and what happened to it
 
 The audit of 2026-11-12 listed about 30 `SettingsPage` entries, about 140 controls and about 11,400 lines of settings UI.
@@ -146,8 +169,10 @@ page and every individual setting, including the ones on the sub-pages, and the 
 gesture, is gone. The bespoke controls the audit listed are replaced by the shared rows: TextButton choice lists
 (Dock position, width and alignment), plus and minus buttons (Home grid), hand-rolled radio rows (returning to Home,
 content levels), raw FilterChips (Library, search results) and tap-to-cycle rows (reduced motion, animation
-performance). Strings: every page title, summary, setting label and search keyword is a string resource, as is new
-text; untouched hints and the Hidden items page's internals are still literals. The settings codec reads its
+performance). Strings: every page title, summary, setting label and search keyword is a string resource, and so are the menus, the
+Home page controls, the gesture names and the version rows. `HardCodedStringsGuardTest` stops a UI file from gaining a
+literal; what is still literal is listed there (sample data, glyphs, a few helpers with pure tests), plus the Hidden items
+page's internals, the text helpers of Privacy and Permissions, and the pages behind Developer options. The settings codec reads its
 `version`. Backup now carries calendar feeds and the enabled Stream sections.
 
 ## Rules for the implementation (as followed)
@@ -194,8 +219,8 @@ so the links are included and the Backup page and the feed page say to keep the 
   notifications source and Hidden items.
 - **Agenda sub-page.** "Calendars shown" is the device calendar source (status, allow access, on or off) plus the
   existing Agenda option "include calendar feeds"; there is no per-calendar list.
-- **Home > Behaviour.** "New apps go to Home or Library only" is not built: no global setting exists (the per-workspace
-  one went with workspaces), so it needs a new setting and a placement change of its own.
+- **Home > Behaviour.** "New apps go to Home or Library only" was built later as Home > "Add new apps to Home" (ADR 0003,
+  Amendment 8).
 - **Dock > Dynamic side.** "Show now playing" is not built: now playing always shows while media is active. Only Live
   apps is a setting.
 - **Library > View.** "Personal and work split" is the profile filter in the Library itself, which is not stored, so it
@@ -207,6 +232,21 @@ so the links are included and the Backup page and the feed page say to keep the 
 - **Gestures.** The Gestures page keeps the four groups of the old panel (one finger, two, pinch, three), each row a
   menu, plus a Reset.
 - **Backup of calendar feeds.** See Backup above.
+
+## Planned and not built
+
+Settings that earlier plans or this document's first design named and that do not exist; none is offered, and none is
+silently stored.
+
+| Setting | Why it is not there |
+| --- | --- |
+| Show now playing (Dock > Dynamic side) | Now playing always shows while media is active |
+| Calendars shown, a per-calendar list (Agenda) | The device calendar is one source with an on or off |
+| Group notifications by message or thread, notification order | The Stream draws one card per notification with its thread inside |
+| Stack feel page (card-stack geometry and fan controls) | The Stream's Stack has fixed physics |
+| Personal and work split (Library > View) | It is the profile filter in the Library itself, not stored |
+| Behind the cards: Home blurred | Glass over the wallpaper cannot blur it; see `dock-modes-plan.md` |
+| Grows out of the Dock (open card position) | Not built; a stored one reads as Above the Dock |
 
 ## Visible ways in (ADR 0003, Amendment 12)
 
@@ -235,7 +275,7 @@ Two buttons and one switch (`SettingsHomeFillSection`; the rules are `HomeArrang
   a widget count) before the next starts. It decides what Arrange does and what the first-run seed does.
 - Also stored there: `emptyHomeHintDismissed`, for the empty-Home hint (see `places-views-plan.md`, "First run").
 
-## About > Diagnostics > After-update starts
+## About > After-update starts (always available)
 
 What the first start after each update looked like, for the last ten updates, with a Copy button: time, old and new
 version code, the intent the activity was started with (action, categories, flags, component), whether it was the task
@@ -244,7 +284,7 @@ start to the first frame, and the time of each new intent that carried `CATEGORY
 device-local (`riffle_after_update`, outside the launcher settings, the backup document and Auto Backup). See
 `places-views-plan.md`, "After-update starts".
 
-## About > Diagnostics > Drag tuning
+## About > Developer options > Drag tuning
 
 Sliders for the numbers a Home drag reads at runtime, with Reset and the current values as text to copy: push ring radius
 (0.5 to 1.2 cell, default 0.75), dead-zone radius (0.15 to 0.45, default 0.30), folder hold (100 to 600 ms, default 250),

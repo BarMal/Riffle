@@ -53,6 +53,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -66,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.glance.GlanceWidgetPreview
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
@@ -170,18 +172,18 @@ fun WidgetPickerSurface(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Widgets",
+                            text = stringResource(R.string.menu_widgets),
                             style = MaterialTheme.typography.headlineMedium,
                         )
                         TextButton(onClick = onCloseRequested) {
-                            Text(text = "Close")
+                            Text(text = stringResource(R.string.action_close))
                         }
                     }
                     AppSearchField(
                         modifier = Modifier.fillMaxWidth(),
                         query = query,
                         onQueryChanged = { value -> query = value },
-                        label = "Search widgets",
+                        label = stringResource(R.string.widgets_search),
                     )
                     Text(
                         text =
@@ -279,7 +281,7 @@ private fun WidgetPickerContent(
 ) {
     when {
         catalogStatus == WidgetProviderCatalogStatus.LOADING && providers.isEmpty() ->
-            WidgetPickerEmptyMessage(text = "Loading widgets…")
+            WidgetPickerEmptyMessage(text = stringResource(R.string.widgets_loading))
 
         catalogStatus == WidgetProviderCatalogStatus.FAILED && providers.isEmpty() ->
             WidgetPickerProviderReadFailure(onRetryRequested)
@@ -362,12 +364,12 @@ private fun WidgetPickerProviderReadFailure(onRetryRequested: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "Widgets couldn’t be loaded",
+            text = stringResource(R.string.widgets_load_failed),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         TextButton(onClick = onRetryRequested) {
-            Text("Try again")
+            Text(stringResource(R.string.action_try_again))
         }
     }
 }
@@ -470,7 +472,7 @@ private fun WidgetProviderTile(
                         ?.takeIf { isAvailable }
                         ?.let { target ->
                             Modifier.clickable(
-                                onClickLabel = "Add ${provider.label}",
+                                onClickLabel = stringResource(R.string.widgets_add_named, provider.label),
                                 onClick = { onAccessiblePlacementRequested(provider, target) },
                             )
                         } ?: Modifier,
@@ -591,7 +593,10 @@ private fun WidgetPickerAccessiblePlacementControls(
         contentColor = launcherPanelContentColor(),
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "Placement preview", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = stringResource(R.string.widgets_placement_preview),
+                style = MaterialTheme.typography.titleMedium,
+            )
             Text(
                 text = placement.accessiblePlacementAnnouncement(),
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
@@ -602,7 +607,12 @@ private fun WidgetPickerAccessiblePlacementControls(
                 if (placement.target == WidgetAddTarget.HOME) {
                     Box {
                         TextButton(onClick = { pageMenuExpanded = true }) {
-                            Text("Page ${selected?.pageId?.value ?: "unavailable"}")
+                            Text(
+                                stringResource(
+                                    R.string.widgets_page_named,
+                                    selected?.pageId?.value ?: stringResource(R.string.widgets_page_unavailable),
+                                ),
+                            )
                         }
                         RiffleContextMenu(
                             expanded = pageMenuExpanded,
@@ -610,7 +620,14 @@ private fun WidgetPickerAccessiblePlacementControls(
                         ) {
                             pageCandidates.forEach { candidate ->
                                 DropdownMenuItem(
-                                    text = { Text("Page ${candidate.pageId?.value}") },
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                R.string.widgets_page_named,
+                                                candidate.pageId?.value.toString(),
+                                            ),
+                                        )
+                                    },
                                     onClick = {
                                         pageMenuExpanded = false
                                         onSelect(placement.selectCandidate(candidate))
@@ -645,7 +662,7 @@ private fun WidgetPickerAccessiblePlacementControls(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onConfirm, enabled = placement.isValid) {
-                    Text("Place")
+                    Text(stringResource(R.string.action_place))
                 }
                 TextButton(
                     modifier =
@@ -655,7 +672,7 @@ private fun WidgetPickerAccessiblePlacementControls(
                             .onGloballyPositioned { isLaidOut = true },
                     onClick = onCancel,
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         }
@@ -684,7 +701,7 @@ internal fun WidgetPickerAccessiblePlacement.accessiblePlacementAnnouncement(): 
                 "${selectedCandidate?.placementPositionLabel()}; placement is ready."
 
         target == WidgetAddTarget.DOCK_PANEL ->
-            "${accessibleWidgetLabel()} on the dock's Panel at " +
+            "${accessibleWidgetLabel()} on the Dock's Panel at " +
                 "${selectedCandidate?.placementPositionLabel()}; placement is ready."
 
         else -> "${accessibleWidgetLabel()} placement is ready."
@@ -719,21 +736,21 @@ private fun WidgetProviderAddMenu(
             onClick = { menuExpanded = true },
             enabled = enabled,
         ) {
-            Text(text = "Add ${provider.label}")
+            Text(text = stringResource(R.string.widgets_add_named, provider.label))
         }
         RiffleContextMenu(
             expanded = menuExpanded,
             onDismissRequest = { menuExpanded = false },
         ) {
             DropdownMenuItem(
-                text = { Text("Choose Home position") },
+                text = { Text(stringResource(R.string.widgets_choose_home_position)) },
                 onClick = {
                     menuExpanded = false
                     onAccessiblePlacementRequested(provider, WidgetAddTarget.HOME)
                 },
             )
             DropdownMenuItem(
-                text = { Text("Choose Dock position") },
+                text = { Text(stringResource(R.string.widgets_choose_dock_position)) },
                 onClick = {
                     menuExpanded = false
                     onAccessiblePlacementRequested(provider, WidgetAddTarget.DOCK)
@@ -780,7 +797,7 @@ private fun WidgetProviderPreview(
         } else if (preview != null) {
             Image(
                 bitmap = preview,
-                contentDescription = "${provider.label} widget preview",
+                contentDescription = stringResource(R.string.widgets_preview_description, provider.label),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.widgetPickerPreviewBounds(previewSize),
             )

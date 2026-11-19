@@ -14,7 +14,7 @@ import com.riffle.core.domain.launcher.settings.PairRecipeKind
 
 internal const val PAIR_RECIPE_TEST_TAG_PREFIX = "pair-recipe-"
 
-/** Settings > About > Diagnostics > Pair recipe: three radio rows, read by the Pairs stack at launch time. */
+/** Settings > About > Developer options > Pair recipe: three radio rows, read by the Pairs stack at launch time. */
 @Composable
 internal fun SettingsPairRecipePageContent(
     state: SettingsSurfaceState,

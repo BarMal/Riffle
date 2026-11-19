@@ -30,7 +30,7 @@ internal const val AFTER_UPDATE_TEXT_TEST_TAG = "after-update-text"
 internal const val AFTER_UPDATE_COPY_TEST_TAG = "after-update-copy"
 
 /**
- * Settings > About > Diagnostics > After-update starts: what the first start after each update looked like (the last
+ * Settings > About > After-update starts: what the first start after each update looked like (the last
  * ten), with a Copy button. Read-only: it changes nothing. See `places-views-plan.md`, "After-update starts".
  */
 @Composable

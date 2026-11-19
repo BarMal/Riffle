@@ -62,7 +62,7 @@ class LauncherSearchSurfaceTest {
         composeRule.onNodeWithTag(SEARCH_RESULT_ICON_GRID_TEST_TAG).assertExists()
         composeRule.onNodeWithTag(SEARCH_RESULT_LIST_TEST_TAG).assertDoesNotExist()
         composeRule.onNodeWithText(camera.label).performTouchInput { longClick() }
-        composeRule.onNodeWithText("Add to home").assertExists()
+        composeRule.onNodeWithText("Add to Home").assertExists()
     }
 
     @Test

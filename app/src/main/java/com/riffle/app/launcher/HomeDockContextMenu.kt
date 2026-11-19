@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.WidgetItem
@@ -9,27 +10,28 @@ internal fun dockFolderContextMenuItems(
     isEditing: Boolean = false,
     shortcutIndex: Int = 0,
     shortcutCount: Int = 1,
+    text: SettingsText,
 ): List<ShortcutContextMenuItem> {
     val editItems =
         if (isEditing) {
             listOf(
                 ShortcutContextMenuItem(
-                    label = "Move left",
+                    label = text.text(R.string.menu_move_left),
                     action = LauncherShellAction.MoveDockShortcut(folder.id, DockItemMoveDirection.LEFT),
                     enabled = shortcutIndex > 0,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move right",
+                    label = text.text(R.string.menu_move_right),
                     action = LauncherShellAction.MoveDockShortcut(folder.id, DockItemMoveDirection.RIGHT),
                     enabled = shortcutIndex < shortcutCount - 1,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to start",
+                    label = text.text(R.string.menu_move_to_start),
                     action = LauncherShellAction.MoveDockShortcutToIndex(folder.id, targetIndex = 0),
                     enabled = shortcutIndex > 0,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to end",
+                    label = text.text(R.string.menu_move_to_end),
                     action =
                         LauncherShellAction.MoveDockShortcutToIndex(
                             folder.id,
@@ -38,7 +40,7 @@ internal fun dockFolderContextMenuItems(
                     enabled = shortcutIndex < shortcutCount - 1,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to home",
+                    label = text.text(R.string.menu_move_to_home),
                     action = LauncherShellAction.MoveDockItemToHome(folder.id),
                 ),
             )
@@ -46,7 +48,11 @@ internal fun dockFolderContextMenuItems(
             emptyList()
         }
 
-    return editItems + ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(folder.id))
+    return editItems +
+        ShortcutContextMenuItem(
+            text.text(R.string.menu_remove_from_dock),
+            LauncherShellAction.RemoveDockShortcut(folder.id),
+        )
 }
 
 internal fun dockWidgetContextMenuItems(
@@ -54,12 +60,13 @@ internal fun dockWidgetContextMenuItems(
     isEditing: Boolean = false,
     shortcutIndex: Int = 0,
     shortcutCount: Int = 1,
+    text: SettingsText,
 ): List<ShortcutContextMenuItem> {
     val editItems =
         if (isEditing) {
             listOf(
                 ShortcutContextMenuItem(
-                    label = "Move left",
+                    label = text.text(R.string.menu_move_left),
                     action =
                         LauncherShellAction.MoveDockShortcut(
                             itemId = widget.id,
@@ -68,7 +75,7 @@ internal fun dockWidgetContextMenuItems(
                     enabled = shortcutIndex > 0,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move right",
+                    label = text.text(R.string.menu_move_right),
                     action =
                         LauncherShellAction.MoveDockShortcut(
                             itemId = widget.id,
@@ -77,12 +84,12 @@ internal fun dockWidgetContextMenuItems(
                     enabled = shortcutIndex < shortcutCount - 1,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to start",
+                    label = text.text(R.string.menu_move_to_start),
                     action = LauncherShellAction.MoveDockShortcutToIndex(widget.id, targetIndex = 0),
                     enabled = shortcutIndex > 0,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to end",
+                    label = text.text(R.string.menu_move_to_end),
                     action =
                         LauncherShellAction.MoveDockShortcutToIndex(
                             widget.id,
@@ -97,7 +104,7 @@ internal fun dockWidgetContextMenuItems(
 
     return editItems +
         ShortcutContextMenuItem(
-            label = "Remove from dock",
+            label = text.text(R.string.menu_remove_from_dock),
             action = LauncherShellAction.RemoveDockShortcut(widget.id),
         )
 }

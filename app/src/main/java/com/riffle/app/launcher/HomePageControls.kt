@@ -110,10 +110,10 @@ fun PageEditControls(
             enabled = selectedPageIndex > 0,
             onClick = { onAction(LauncherShellAction.SelectPreviousHomePage) },
         ) {
-            Text(text = "Previous")
+            Text(text = stringResource(R.string.page_previous))
         }
         TextButton(onClick = { isPageMenuExpanded.value = true }) {
-            Text(text = "Page ${selectedPageIndex + 1} / $pageCount")
+            Text(text = stringResource(R.string.home_pages_position, selectedPageIndex + 1, pageCount))
         }
         ShortcutContextMenu(
             expanded = isPageMenuExpanded.value,
@@ -121,6 +121,7 @@ fun PageEditControls(
                 pageManagementMenuItems(
                     pageCount = pageCount,
                     selectedPageIndex = selectedPageIndex,
+                    text = rememberSettingsText(),
                 ),
             onDismissRequest = { isPageMenuExpanded.value = false },
             onAction = onAction,
@@ -129,10 +130,10 @@ fun PageEditControls(
             enabled = selectedPageIndex < pageCount - 1,
             onClick = { onAction(LauncherShellAction.SelectNextHomePage) },
         ) {
-            Text(text = "Next")
+            Text(text = stringResource(R.string.page_next))
         }
         TextButton(onClick = { onAction(LauncherShellAction.ExitHomeEditMode) }) {
-            Text(text = "Done")
+            Text(text = stringResource(R.string.action_done))
         }
     }
 }
@@ -173,16 +174,16 @@ fun PageOverviewControls(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             FilledTonalButton(onClick = { onAction(LauncherShellAction.EnterHomeEditMode) }) {
-                Text(text = "Edit page")
+                Text(text = stringResource(R.string.menu_edit_page))
             }
             OutlinedButton(onClick = { onAction(LauncherShellAction.AddHomePage) }) {
-                Text(text = "Add page")
+                Text(text = stringResource(R.string.menu_add_page))
             }
             TextButton(onClick = { isPageMenuExpanded.value = true }) {
-                Text(text = "More")
+                Text(text = stringResource(R.string.action_more))
             }
             TextButton(onClick = { onAction(LauncherShellAction.ExitHomeEditMode) }) {
-                Text(text = "Done")
+                Text(text = stringResource(R.string.action_done))
             }
             ShortcutContextMenu(
                 expanded = isPageMenuExpanded.value,
@@ -191,6 +192,7 @@ fun PageOverviewControls(
                         pageCount = layout.pages.size,
                         selectedPageIndex = layout.selectedPageIndex,
                         selectedPage = selectedPage,
+                        text = rememberSettingsText(),
                     ),
                 onDismissRequest = { isPageMenuExpanded.value = false },
                 onAction = onAction,
@@ -318,7 +320,7 @@ private fun PageOverviewCard(
                 style = MaterialTheme.typography.labelMedium,
             )
             Text(
-                text = "Press and hold, then drag to reorder",
+                text = stringResource(R.string.page_overview_reorder_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -329,7 +331,12 @@ private fun PageOverviewCard(
             )
             ShortcutContextMenu(
                 expanded = isMenuExpanded.value,
-                items = pageOverviewCardMenuItems(index = state.index, pageCount = state.pageCount),
+                items =
+                    pageOverviewCardMenuItems(
+                        index = state.index,
+                        pageCount = state.pageCount,
+                        text = rememberSettingsText(),
+                    ),
                 onDismissRequest = { isMenuExpanded.value = false },
                 onAction = onAction,
             )
@@ -352,7 +359,7 @@ private fun PageOverviewCardHeader(
             style = MaterialTheme.typography.titleSmall,
         )
         TextButton(onClick = onMoreClick) {
-            Text(text = "More")
+            Text(text = stringResource(R.string.action_more))
         }
     }
 }
@@ -367,7 +374,7 @@ private fun PageGridControls(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = "Page grid",
+            text = stringResource(R.string.page_grid_title),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -395,48 +402,52 @@ private fun PageGridControls(
 internal fun pageManagementMenuItems(
     pageCount: Int,
     selectedPageIndex: Int,
+    text: SettingsText,
     includeOverview: Boolean = true,
     includeCreationActions: Boolean = true,
 ): List<ShortcutContextMenuItem> =
     listOfNotNull(
         if (includeCreationActions) {
             ShortcutContextMenuItem(
-                label = "Add page",
+                label = text.text(R.string.menu_add_page),
                 action = LauncherShellAction.AddHomePage,
             )
         } else {
             null
         },
-        overviewMenuItem(includeOverview),
+        overviewMenuItem(includeOverview, text),
         if (includeCreationActions) {
             ShortcutContextMenuItem(
-                label = "Duplicate page",
+                label = text.text(R.string.menu_duplicate_page),
                 action = LauncherShellAction.DuplicateSelectedHomePage,
             )
         } else {
             null
         },
         ShortcutContextMenuItem(
-            label = "Move page left",
+            label = text.text(R.string.menu_move_page_left),
             action = LauncherShellAction.MoveSelectedHomePageLeft,
             enabled = selectedPageIndex > 0,
         ),
         ShortcutContextMenuItem(
-            label = "Move page right",
+            label = text.text(R.string.menu_move_page_right),
             action = LauncherShellAction.MoveSelectedHomePageRight,
             enabled = selectedPageIndex < pageCount - 1,
         ),
         ShortcutContextMenuItem(
-            label = "Delete page",
+            label = text.text(R.string.menu_delete_page),
             action = LauncherShellAction.DeleteSelectedHomePage,
             enabled = pageCount > 1,
         ),
     )
 
-private fun overviewMenuItem(includeOverview: Boolean): ShortcutContextMenuItem? =
+private fun overviewMenuItem(
+    includeOverview: Boolean,
+    text: SettingsText,
+): ShortcutContextMenuItem? =
     if (includeOverview) {
         ShortcutContextMenuItem(
-            label = "Manage pages",
+            label = text.text(R.string.menu_manage_pages),
             action = LauncherShellAction.EnterHomePageOverview,
         )
     } else {
@@ -446,8 +457,10 @@ private fun overviewMenuItem(includeOverview: Boolean): ShortcutContextMenuItem?
 internal fun pageOverviewCardMenuItems(
     index: Int,
     pageCount: Int,
+    text: SettingsText,
 ): List<ShortcutContextMenuItem> =
     pageManagementMenuItems(
+        text = text,
         pageCount = pageCount,
         selectedPageIndex = index,
         includeOverview = false,
@@ -457,8 +470,10 @@ internal fun pageOverviewActionsMenuItems(
     pageCount: Int,
     selectedPageIndex: Int,
     selectedPage: com.riffle.core.domain.launcher.home.LauncherPage,
+    text: SettingsText,
 ): List<ShortcutContextMenuItem> =
     pageManagementMenuItems(
+        text = text,
         pageCount = pageCount,
         selectedPageIndex = selectedPageIndex,
         includeOverview = false,
@@ -501,10 +516,9 @@ fun PageIndicator(
     axis: HandleAxis = HandleAxis.HORIZONTAL,
     dragEnabled: Boolean = true,
 ) {
-    val layoutDirection = LocalLayoutDirection.current
     val vertical = axis == HandleAxis.VERTICAL
     // Only a row mirrors; a column always reads from the top.
-    val trackDirection = if (vertical) LayoutDirection.Ltr else layoutDirection
+    val trackDirection = if (vertical) LayoutDirection.Ltr else LocalLayoutDirection.current
     val dotPx = with(LocalDensity.current) { PAGE_INDICATOR_DOT_DIAMETER_DP.dp.toPx() }
 
     Box(
@@ -523,6 +537,7 @@ fun PageIndicator(
                     selectedPageIndex = selectedPageIndex,
                     previousPageLabel = stringResource(R.string.home_handle_previous_page),
                     nextPageLabel = stringResource(R.string.home_handle_next_page),
+                    selectorDescription = stringResource(R.string.page_selector_description),
                     onPageSelected = onPageSelected,
                     canSetPage = dragEnabled,
                 ),
@@ -788,11 +803,12 @@ private fun Modifier.pageIndicatorSemantics(
     selectedPageIndex: Int,
     previousPageLabel: String,
     nextPageLabel: String,
+    selectorDescription: String,
     onPageSelected: (Int) -> Unit,
     canSetPage: Boolean = true,
 ): Modifier =
     semantics {
-        contentDescription = "Page selector"
+        contentDescription = selectorDescription
         stateDescription = pageIndicatorStateDescription(selectedPageIndex, pageCount)
         progressBarRangeInfo =
             ProgressBarRangeInfo(

@@ -11,7 +11,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.app.launcher.rss.backgroundRefreshStatus
 import com.riffle.app.launcher.rss.chipLabel
 import com.riffle.app.launcher.rss.explanation
@@ -50,7 +52,7 @@ internal fun RssBackgroundRefreshSettings(
                 modifier = Modifier.settingAnchor(SettingKey.FEEDS_WIFI_ONLY),
                 enabled = intervalOn,
                 title = SettingKey.FEEDS_WIFI_ONLY.label(),
-                subtitle = "Skip background refresh on mobile data or other metered networks.",
+                subtitle = stringResource(R.string.feeds_background_wifi_subtitle),
                 checked = settings.backgroundWifiOnly,
                 onCheckedChange = { enabled -> onAction(LauncherShellAction.SetRssBackgroundWifiOnly(enabled)) },
             )
@@ -58,7 +60,7 @@ internal fun RssBackgroundRefreshSettings(
                 modifier = Modifier.settingAnchor(SettingKey.FEEDS_CHARGING_ONLY),
                 enabled = intervalOn,
                 title = SettingKey.FEEDS_CHARGING_ONLY.label(),
-                subtitle = "Skip background refresh unless the device is plugged in.",
+                subtitle = stringResource(R.string.feeds_background_charging_subtitle),
                 checked = settings.backgroundChargingOnly,
                 onCheckedChange = { enabled -> onAction(LauncherShellAction.SetRssBackgroundChargingOnly(enabled)) },
             )
@@ -77,7 +79,7 @@ private fun RssBackgroundStatusLine() {
     }
     SettingsTextColumn(
         modifier = Modifier.testTag(RSS_BACKGROUND_STATUS_TAG),
-        title = "Background status",
+        title = stringResource(R.string.feeds_background_status),
         subtitle = backgroundRefreshStatus(record) { at -> DateUtils.getRelativeTimeSpanString(at) },
     )
 }

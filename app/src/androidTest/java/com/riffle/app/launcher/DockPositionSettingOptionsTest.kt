@@ -82,7 +82,7 @@ class DockPositionSettingOptionsTest {
         setContent(position = DockPosition.TOP)
 
         composeRule
-            .onNodeWithText("Top edge is not available on this layout, so the dock is on the bottom edge")
+            .onNodeWithText("Top edge is not available on this layout, so the Dock is on the bottom edge")
             .performScrollTo()
             .assertIsDisplayed()
     }

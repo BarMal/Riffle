@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.riffle.app.R
 
 /**
  * What a tap on Home's empty room (the background under and between the apps, folders and widgets) does besides its own
@@ -24,8 +26,8 @@ internal fun HomeBackgroundContextMenu(
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
-    items: List<ShortcutContextMenuItem> = homeWorkspaceContextMenuItems(),
-    longClickLabel: String = "Show home actions",
+    items: List<ShortcutContextMenuItem> = homeWorkspaceContextMenuItems(rememberSettingsText()),
+    longClickLabel: String = stringResource(R.string.menu_show_home_actions),
     onClick: () -> Unit = {},
     state: PressMenuState = remember { PressMenuState() },
 ) {
@@ -62,46 +64,49 @@ internal fun HomeBackgroundContextMenu(
  * not apply to it, and adding a widget has to say so, because the picker covers the shelf and the
  * widget cannot simply be dragged back onto it.
  */
-internal fun backgroundContextMenuItems(surface: ShortcutContextSurface): List<ShortcutContextMenuItem> =
+internal fun backgroundContextMenuItems(
+    surface: ShortcutContextSurface,
+    text: SettingsText,
+): List<ShortcutContextMenuItem> =
     when (surface) {
         ShortcutContextSurface.DOCK_PANEL ->
             listOf(
                 ShortcutContextMenuItem(
-                    label = "Add widget",
+                    label = text.text(R.string.menu_add_widget),
                     action = LauncherShellAction.OpenWidgetPickerForDockPanel,
                 ),
             )
 
-        ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> homeWorkspaceContextMenuItems()
+        ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> homeWorkspaceContextMenuItems(text)
     }
 
-internal val ShortcutContextSurface.backgroundLongClickLabel: String
-    get() =
-        when (this) {
-            ShortcutContextSurface.DOCK_PANEL -> "Show panel actions"
-            ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> "Show home actions"
-        }
+@Composable
+internal fun ShortcutContextSurface.backgroundLongClickLabel(): String =
+    when (this) {
+        ShortcutContextSurface.DOCK_PANEL -> stringResource(R.string.menu_show_panel_actions)
+        ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> stringResource(R.string.menu_show_home_actions)
+    }
 
-internal fun homeWorkspaceContextMenuItems(): List<ShortcutContextMenuItem> =
+internal fun homeWorkspaceContextMenuItems(text: SettingsText): List<ShortcutContextMenuItem> =
     listOf(
         ShortcutContextMenuItem(
-            label = "Create folder",
-            action = LauncherShellAction.CreateEmptyHomeFolder(label = "Folder"),
+            label = text.text(R.string.menu_create_folder),
+            action = LauncherShellAction.CreateEmptyHomeFolder(label = text.text(R.string.default_folder_name)),
         ),
         ShortcutContextMenuItem(
-            label = "Widgets",
+            label = text.text(R.string.menu_widgets),
             action = LauncherShellAction.OpenWidgetPicker,
         ),
         ShortcutContextMenuItem(
-            label = "Settings",
+            label = text.text(R.string.menu_settings),
             action = LauncherShellAction.OpenSettings,
         ),
         ShortcutContextMenuItem(
-            label = "Edit page",
+            label = text.text(R.string.menu_edit_page),
             action = LauncherShellAction.EnterHomeEditMode,
         ),
         ShortcutContextMenuItem(
-            label = "Manage pages",
+            label = text.text(R.string.menu_manage_pages),
             action = LauncherShellAction.EnterHomePageOverview,
         ),
     )

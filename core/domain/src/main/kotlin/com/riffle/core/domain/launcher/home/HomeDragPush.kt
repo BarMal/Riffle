@@ -5,7 +5,7 @@ import kotlin.math.floor
 import kotlin.math.hypot
 
 /**
- * The numbers of a Home drag (Settings > About > Diagnostics > "Drag tuning"): radii are in cells (the smaller
+ * The numbers of a Home drag (Settings > About > Developer options > "Drag tuning"): radii are in cells (the smaller
  * dimension of a cell), times in milliseconds. [coerced] holds each to its range.
  */
 data class HomeDragTuning(

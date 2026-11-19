@@ -33,6 +33,7 @@ internal fun DockWidgetSlot(
                 isEditing = isEditing,
                 shortcutIndex = shortcutIndex,
                 shortcutCount = shortcutCount,
+                text = rememberSettingsText(),
             ),
         onDismissRequest = { isContextMenuExpanded.value = false },
         onAction = presentation.interactions.onAction,

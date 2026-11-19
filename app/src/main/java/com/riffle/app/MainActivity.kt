@@ -528,7 +528,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         wallpaperController.applySource(shellViewModel.state.value.launcherSettings.appearance.wallpaper.source)
-        // Diagnostics only (Settings > About > Diagnostics > After-update starts): what this start looked like.
+        // Diagnostics only (Settings > About > After-update starts): what this start looked like.
         AfterUpdateProcess.start(this)
         activeNotificationRefreshCoordinator.start()
         lifecycle.addObserver(activeNotificationRefreshCoordinator)

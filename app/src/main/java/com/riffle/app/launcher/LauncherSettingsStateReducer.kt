@@ -167,6 +167,29 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                LauncherShellAction.RevealDeveloperOptions ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                diagnostics =
+                                    state.launcherSettings.diagnostics.copy(developerOptionsRevealed = true),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SetDeveloperOptions ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                diagnostics =
+                                    state.launcherSettings.diagnostics.copy(
+                                        developerOptionsRevealed = true,
+                                        developerOptions = action.enabled,
+                                    ),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SetDragTuning ->
                     state.withLauncherSettings(
                         settings =
@@ -253,12 +276,6 @@ internal class LauncherSettingsStateReducer(
                             state.launcherSettings.copy(
                                 features = state.launcherSettings.features.copy(simpleMode = action.enabled),
                             ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.DismissDockPressHint ->
-                    state.withLauncherSettings(
-                        settings = state.launcherSettings.copy(hints = HintSettings(dockPressSeen = true)),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 

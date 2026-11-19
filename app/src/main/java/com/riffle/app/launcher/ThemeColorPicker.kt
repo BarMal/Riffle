@@ -35,11 +35,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -55,7 +57,7 @@ internal fun ThemeColorsSetting(
     ) {
         SettingsTextColumn(
             title = SettingKey.APPEARANCE_CUSTOM_ACCENT.label(),
-            subtitle = "Pick your own accent colour. Hex values include alpha.",
+            subtitle = stringResource(R.string.settings_accent_custom_subtitle),
         )
         ThemeColorPicker(
             argb = colors.accentArgb,
@@ -81,6 +83,7 @@ internal fun ThemeColorPicker(
     var alpha by remember(argb, defaultColor) { mutableFloatStateOf(initial.alpha) }
     var hexValue by remember(argb, defaultColor) { mutableStateOf(initial.toThemeHex()) }
     var wheelSize by remember { mutableStateOf(IntSize.Zero) }
+    val wheelDescription = stringResource(R.string.color_wheel_description)
 
     fun publish() {
         val selected = Color.hsv(hue, saturation, value, alpha)
@@ -117,7 +120,7 @@ internal fun ThemeColorPicker(
                             )
                         }
                         .semantics {
-                            contentDescription = "Hue and saturation wheel for the custom accent"
+                            contentDescription = wheelDescription
                         },
             ) {
                 drawCircle(
@@ -134,6 +137,7 @@ internal fun ThemeColorPicker(
                     )
                 drawCircle(Color.White, radius = 7.dp.toPx(), center = marker, style = Stroke(width = 2.dp.toPx()))
             }
+            val selectedDescription = stringResource(R.string.color_selected_description, hexValue)
             Box(
                 modifier =
                     Modifier
@@ -142,12 +146,12 @@ internal fun ThemeColorPicker(
                         .background(Color.hsv(hue, saturation, value, alpha))
                         .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
                         .semantics {
-                            contentDescription = "Selected accent colour $hexValue"
+                            contentDescription = selectedDescription
                         },
             )
         }
         ThemeColorSlider(
-            label = "Hue",
+            label = stringResource(R.string.color_hue),
             value = hue,
             valueRange = 0f..360f,
             valueLabel = "${hue.toInt()} degrees",
@@ -155,15 +159,15 @@ internal fun ThemeColorPicker(
             hue = it
             publish()
         }
-        ThemeColorSlider(label = "Saturation", value = saturation) {
+        ThemeColorSlider(label = stringResource(R.string.color_saturation), value = saturation) {
             saturation = it
             publish()
         }
-        ThemeColorSlider(label = "Brightness", value = value) {
+        ThemeColorSlider(label = stringResource(R.string.color_brightness), value = value) {
             value = it
             publish()
         }
-        ThemeColorSlider(label = "Alpha", value = alpha) {
+        ThemeColorSlider(label = stringResource(R.string.color_alpha), value = alpha) {
             alpha = it
             publish()
         }
@@ -182,9 +186,9 @@ internal fun ThemeColorPicker(
                 }
             },
             singleLine = true,
-            label = { Text("Hex colour (#RRGGBB or #AARRGGBB)") },
+            label = { Text(stringResource(R.string.color_hex_label)) },
         )
-        TextButton(onClick = onReset) { SettingsButtonText("Use theme default") }
+        TextButton(onClick = onReset) { SettingsButtonText(stringResource(R.string.color_use_default)) }
     }
 }
 
@@ -196,12 +200,16 @@ private fun ThemeColorSlider(
     valueLabel: String = "${(value * 100).toInt()}%",
     onValueChanged: (Float) -> Unit,
 ) {
+    val controlDescription = stringResource(R.string.color_slider_control, label)
     Column {
-        Text("$label $valueLabel", style = MaterialTheme.typography.labelLarge)
+        Text(
+            stringResource(R.string.color_slider_label, label, valueLabel),
+            style = MaterialTheme.typography.labelLarge,
+        )
         Slider(
             modifier =
                 Modifier.semantics {
-                    contentDescription = "$label colour control"
+                    contentDescription = controlDescription
                     stateDescription = valueLabel
                 },
             value = value,

@@ -157,7 +157,7 @@ class PairsStackTest {
         composeRule.onNodeWithText("Change first app").assertExists()
         composeRule.onNodeWithText("Change second app").assertExists()
         composeRule.onNodeWithText("Remove").assertExists()
-        composeRule.onAllNodesWithText("Pin to the Dock").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Add to Dock").assertCountEquals(0)
         composeRule.onNodeWithText("Swap sides").performClick()
 
         assertEquals(listOf<PairEdit>(PairEdit.SwapSides("a")), edits)

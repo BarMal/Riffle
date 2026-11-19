@@ -775,18 +775,24 @@ private fun DockToHomeDestinationDialog(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Move to Home") },
+        title = { Text(stringResource(R.string.menu_move_to_home)) },
         text = {
             Column {
-                Text("Choose page")
+                Text(stringResource(R.string.move_to_home_choose_page))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     pages.forEachIndexed { index, page ->
                         TextButton(onClick = { selectedPageId.value = page.id }) {
-                            Text(if (page.id == selectedPage.id) "Page ${index + 1}" else "${index + 1}")
+                            Text(
+                                if (page.id == selectedPage.id) {
+                                    stringResource(R.string.home_page_number, index + 1)
+                                } else {
+                                    "${index + 1}"
+                                },
+                            )
                         }
                     }
                 }
-                Text("Choose cell")
+                Text(stringResource(R.string.move_to_home_choose_cell))
                 repeat(selectedPage.grid.rows) { row ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         repeat(selectedPage.grid.columns) { column ->
@@ -800,7 +806,7 @@ private fun DockToHomeDestinationDialog(
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismissRequest) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismissRequest) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -1302,6 +1308,7 @@ private fun DockFolder(
                     isEditing = state.isEditing,
                     shortcutIndex = state.shortcutIndex,
                     shortcutCount = state.shortcutCount,
+                    text = rememberSettingsText(),
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = presentation.interactions.onAction,
@@ -1445,6 +1452,7 @@ private fun DockShortcut(
                     shortcutIndex = state.shortcutIndex,
                     shortcutCount = state.shortcutCount,
                     modeItems = presentation.interactions.staticItemMenuExtras.forApp(shortcut.appIdentity),
+                    text = rememberSettingsText(),
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = presentation.interactions.onAction,
@@ -1459,12 +1467,13 @@ internal fun dockShortcutContextMenuItems(
     shortcutIndex: Int = 0,
     shortcutCount: Int = 1,
     modeItems: List<ShortcutContextMenuItem> = emptyList(),
+    text: SettingsText,
 ): List<ShortcutContextMenuItem> {
     val editItems =
         if (isEditing) {
             listOf(
                 ShortcutContextMenuItem(
-                    label = "Move left",
+                    label = text.text(R.string.menu_move_left),
                     action =
                         LauncherShellAction.MoveDockShortcut(
                             itemId = shortcut.id,
@@ -1473,7 +1482,7 @@ internal fun dockShortcutContextMenuItems(
                     enabled = shortcutIndex > 0,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move right",
+                    label = text.text(R.string.menu_move_right),
                     action =
                         LauncherShellAction.MoveDockShortcut(
                             itemId = shortcut.id,
@@ -1482,12 +1491,12 @@ internal fun dockShortcutContextMenuItems(
                     enabled = shortcutIndex < shortcutCount - 1,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to start",
+                    label = text.text(R.string.menu_move_to_start),
                     action = LauncherShellAction.MoveDockShortcutToIndex(shortcut.id, targetIndex = 0),
                     enabled = shortcutIndex > 0,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to end",
+                    label = text.text(R.string.menu_move_to_end),
                     action =
                         LauncherShellAction.MoveDockShortcutToIndex(
                             shortcut.id,
@@ -1510,6 +1519,7 @@ internal fun dockShortcutContextMenuItems(
             shortcut = shortcut,
             surface = ShortcutContextSurface.DOCK,
             appShortcuts = appShortcuts,
+            text = text,
         )
 }
 

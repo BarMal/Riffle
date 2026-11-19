@@ -1,9 +1,10 @@
 package com.riffle.core.domain.launcher.settings
 
 /**
- * What Home shows (ADR 0003, Amendment 1, "Home mode"). [PlacedItems] is Home as it always was: the apps, folders and
- * widgets the user placed. [AppLibrary] shows the app library pages (the paged Library View) as Home. The placed layout
- * is kept either way, so it is back when the mode is.
+ * What Home shows. Retired as a choice (ADR 0003, Amendment 8: one Home); only Simple mode still draws [AppLibrary],
+ * and a stored [AppLibrary] is read once to build a placed Home from the apps. [PlacedItems] is Home as it always
+ * was: the apps, folders and widgets the user placed. [AppLibrary] shows the app library pages (the paged Library
+ * View) as Home.
  *
  * [storedId] is a stored contract: never rename one, only add new ids.
  */
@@ -26,11 +27,12 @@ enum class HomeMode(
 
 /**
  * The feature switches (ADR 0003, Amendment 1): the Stream, the Dock's live apps and the Library each on or off, and
- * Simple mode, the preset that leaves only the app library (as Home) and the Dock. Each switch defaults to today's
- * behaviour (on); Simple mode defaults off.
+ * Simple mode, the locked-down Home: every app A to Z on the paged Library, not arrangeable, with the Stream, the live
+ * apps and the Library pull off. Each switch defaults to today's behaviour (on); Simple mode defaults off.
  *
- * Simple mode is not a copy of other values: while it is on it overrides the switches ([effective]), and the stored
- * switches and the Home mode come back untouched when it is turned off.
+ * Simple mode is not a copy of other values: while it is on it overrides the switches ([effective], which reads the
+ * Home mode as [HomeMode.AppLibrary]), and the stored switches and the Home mode come back untouched when it is turned
+ * off.
  */
 data class FeatureSettings(
     val stream: Boolean = true,

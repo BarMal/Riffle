@@ -3,38 +3,32 @@
 Standard launcher mode is Riffle's default configuration. It keeps the familiar Android
 launcher experience fully usable without contextual pages, cards, or smart behaviour.
 
-> **Since S9 (WS10, [`workspaces-default.md`](workspaces-default.md))** there is no separate "Standard mode": the
-> launcher's home is the active workspace, and the default is the **Nova-style workspace** (home pages plus the app
-> drawer as its Finder). This page's parity contract applies to that default workspace (`workspaces-configuration.md`
-> 10.2): its home pages are drawn and edited by the standard home surface (drag, folders, widgets, pages, dock), the
-> drawer and search are the standard ones, and everything below holds with every workspace feature left alone. Any
-> other workspace (a preset, a lens page) is an optional enhancement in the sense of this page.
-
-> **Since ADR 0003 (P8).** Presets, lens pages, the Finder and the drawer as a page are gone: Home is the pool arrangement
-> of each layout, the Library is its own surface (the drawer's replacement) and the Stream holds the dynamic content.
-> The parity contract below still applies to Home, the Dock and the Library; "contextual pages, cards" now means the
-> Stream, which is reached only through the Dock and the gestures bound to it.
+> **Since ADR 0003.** There is no separate "Standard mode" and no workspace to choose. Home is the pool arrangement of
+> each layout (the apps, folders and widgets the user placed), the Dock is the handle for the other Places, the Library
+> (every app, and search) replaced the app drawer, and the Stream holds the dynamic content. This page's parity contract
+> applies to Home, the Dock and the Library; "contextual pages, cards" means the Stream, which is reached only through
+> the Dock, its handle and the gestures bound to it. Earlier text about the Nova-style workspace, the app drawer as the
+> Finder, presets and lens pages is history (`workspaces-default.md`).
 
 ## Default behaviour
 
-- Contextual behaviour and expanded dock notification cards are off by default. They can remain
-  off in **Settings > Contextual** and **Settings > Dock**, respectively.
-- Home screens, the app drawer, dock, folders, widgets, wallpaper, search, shortcuts,
-  grid editing, gestures, backup/restore, profiles, hidden apps, and notification indicators
-  continue to work as standard launcher features.
-- Dynamic pages, cards, and TimeScape-inspired surfaces are optional enhancements. They must
-  not be required for navigation, layout persistence, settings, or launcher performance.
+- The Stream, the Dock's live apps and the Library are each a switch (Settings > Stream, Settings > Dock, Settings >
+  Library). Simple mode (Settings > Home) is the locked-down Home: every app A to Z, not arrangeable, with the Stream,
+  the live apps and the Library pull off.
+- Home screens, the Library and its search, the Dock, folders, widgets, wallpaper, shortcuts, grid editing, gestures,
+  backup and restore, profiles, hidden apps and notification indicators continue to work as standard launcher features.
+- Dynamic pages, cards and TimeScape-inspired surfaces are optional enhancements. They must not be required for
+  navigation, layout persistence, settings or launcher performance.
 
 ## Disabled-feature contract
 
-With contextual behaviour and expanded dock notification cards disabled, Riffle must keep the
-standard home, app drawer, dock, and settings surfaces available. Disabled notification cards
-must not produce a notification-access prompt; enabling them is an explicit user choice.
+With the Stream and the live apps switched off (or Simple mode on), Riffle must keep the standard Home, Library, Dock
+and Settings surfaces available. A Stream section that needs access (notifications, calendar, usage) asks only when the
+person taps its "Allow" button or the matching step of the set-up tour; nothing is requested at launch.
 
-Calendar access (`READ_CALENDAR`) follows the same rule: it is never requested at launch or because a
-calendar source exists, only from Settings > Permissions or an explicit action on a surface that needs it.
-Standard surfaces are fully functional without it. See the Calendar access policy in
-`workspaces-sources-lenses.md`.
+Calendar access (`READ_CALENDAR`) follows the same rule: it is never requested at launch or because a calendar source
+exists, only from Settings > Privacy and access or an explicit action on a surface that needs it. Standard surfaces are
+fully functional without it. See the Calendar access policy in `workspaces-sources-lenses.md`.
 
 ## Product and design guardrails
 
@@ -49,7 +43,7 @@ Standard surfaces are fully functional without it. See the Calendar access polic
 
 ## Change checklist
 
-When changing a dynamic or smart feature, verify that the default Nova workspace still has a
-complete home-to-app-drawer-to-launch flow, full home editing (move, folders, widgets, pages,
+When changing a dynamic or smart feature, verify that the default Home still has a
+complete Home-to-Library-to-launch flow, full home editing (move, folders, widgets, pages,
 dock) and that disabled features leave no empty or blocked launcher surfaces. Add regression coverage at the domain or UI boundary that owns
 the behaviour.

@@ -23,7 +23,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 
@@ -83,7 +85,7 @@ fun LauncherPanel(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (showSettingsAction) {
                             TextButton(onClick = { onAction(LauncherShellAction.OpenSettings) }) {
-                                Text(text = "Settings")
+                                Text(text = stringResource(R.string.menu_settings))
                             }
                         }
                     }

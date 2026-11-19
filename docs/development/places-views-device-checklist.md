@@ -104,7 +104,7 @@ Use a busy, bright wallpaper and then a dark one.
       settings); Enter launches the top hit; clearing restores the view; the keyboard does not cover the results.
 - [ ] **Hidden apps after upgrade.** Apps you had hidden, or hidden by an exclusion rule, are still hidden; none is
       newly visible. Unhide one in Settings > Library > Hidden apps and restart: it stays unhidden.
-- [ ] **Long-press an app**: Add to Home, Pin to Dock, shortcuts, App info, Hide, Uninstall. (There is no drag out to
+- [ ] **Long-press an app**: Add to Home, Add to Dock, shortcuts, App info, Hide app, Uninstall. (There is no drag out to
       Home.)
 
 ## Stream

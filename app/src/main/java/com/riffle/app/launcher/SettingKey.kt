@@ -517,6 +517,11 @@ enum class SettingKey(
         R.string.setting_layout_unfolded_peek_through,
         R.string.setting_layout_unfolded_peek_through_keywords,
     ),
+    ABOUT_DEVELOPER_OPTIONS(
+        SettingsPage.VERSION,
+        R.string.setting_about_developer_options,
+        R.string.setting_about_developer_options_keywords,
+    ),
 }
 
 /** The name this setting is shown under, the same string the search index uses. */

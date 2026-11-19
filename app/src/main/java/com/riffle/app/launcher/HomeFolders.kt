@@ -155,28 +155,28 @@ internal fun HomeFolderContextMenu(
         onDismissRequest = onDismissRequest,
     ) {
         DropdownMenuItem(
-            text = { Text(text = "Edit folder") },
+            text = { Text(text = stringResource(R.string.menu_edit_folder)) },
             onClick = {
                 onDismissRequest()
                 actions.onFolderOpen(folder)
             },
         )
         DropdownMenuItem(
-            text = { Text(text = "Rename") },
+            text = { Text(text = stringResource(R.string.menu_rename)) },
             onClick = {
                 onDismissRequest()
                 actions.onFolderRename(folder)
             },
         )
         DropdownMenuItem(
-            text = { Text(text = "Move to dock") },
+            text = { Text(text = stringResource(R.string.menu_move_to_dock)) },
             onClick = {
                 onDismissRequest()
                 actions.onAction(LauncherShellAction.MoveHomeItemToDock(folder.id))
             },
         )
         DropdownMenuItem(
-            text = { Text(text = "Remove from home") },
+            text = { Text(text = stringResource(R.string.menu_remove_from_home)) },
             onClick = {
                 onDismissRequest()
                 actions.onAction(LauncherShellAction.RemoveHomeShortcut(folder.id))
@@ -292,7 +292,7 @@ private fun FolderSurfaceHeader(
             onRename = { label -> onAction(LauncherShellAction.RenameHomeFolder(itemId = folder.id, label = label)) },
         )
         TextButton(onClick = onDismiss) {
-            Text(text = "Close")
+            Text(text = stringResource(R.string.action_close))
         }
     }
 }
@@ -359,12 +359,12 @@ fun HomeFolderEditControls(onAction: (LauncherShellAction) -> Unit) {
                 )
             },
         ) {
-            Text(text = "Create folder")
+            Text(text = stringResource(R.string.menu_create_folder))
         }
         TextButton(
             onClick = { onAction(LauncherShellAction.OpenWidgetPicker) },
         ) {
-            Text(text = "Widgets")
+            Text(text = stringResource(R.string.menu_widgets))
         }
     }
 }
@@ -440,7 +440,12 @@ private fun FolderContentRows(
             FolderAppRow(
                 shortcut = shortcut,
                 appIconLoader = appIconLoader,
-                menuItems = folderShortcutContextMenuItems(folder = folder, shortcut = shortcut),
+                menuItems =
+                    folderShortcutContextMenuItems(
+                        folder = folder,
+                        shortcut = shortcut,
+                        text = rememberSettingsText(),
+                    ),
                 onClick = {
                     onAction(shortcut.launchAction())
                     onDismiss()
@@ -518,7 +523,7 @@ private fun FolderAddAppRow(
             )
         }
         TextButton(onClick = onClick) {
-            Text(text = "Add")
+            Text(text = stringResource(R.string.action_add))
         }
     }
 }
@@ -528,16 +533,17 @@ private const val FOLDER_SURFACE_PADDING_DP = 20
 internal fun folderShortcutContextMenuItems(
     folder: FolderItem,
     shortcut: AppShortcutItem,
+    text: SettingsText,
 ): List<ShortcutContextMenuItem> {
     val shortcutIndex = folder.items.indexOfFirst { item -> item.id == shortcut.id }
 
     return listOf(
         ShortcutContextMenuItem(
-            label = "App info",
+            label = text.text(R.string.menu_app_info),
             action = shortcut.openAppInfoAction(),
         ),
         ShortcutContextMenuItem(
-            label = "Move up",
+            label = text.text(R.string.menu_move_up),
             action =
                 LauncherShellAction.MoveAppInFolder(
                     folderId = folder.id,
@@ -547,7 +553,7 @@ internal fun folderShortcutContextMenuItems(
             enabled = shortcutIndex > 0,
         ),
         ShortcutContextMenuItem(
-            label = "Move down",
+            label = text.text(R.string.menu_move_down),
             action =
                 LauncherShellAction.MoveAppInFolder(
                     folderId = folder.id,
@@ -557,7 +563,7 @@ internal fun folderShortcutContextMenuItems(
             enabled = shortcutIndex in 0 until folder.items.lastIndex,
         ),
         ShortcutContextMenuItem(
-            label = "Move to home",
+            label = text.text(R.string.menu_move_to_home),
             action =
                 LauncherShellAction.MoveAppOutOfFolder(
                     folderId = folder.id,
@@ -565,7 +571,7 @@ internal fun folderShortcutContextMenuItems(
                 ),
         ),
         ShortcutContextMenuItem(
-            label = "Remove from folder",
+            label = text.text(R.string.menu_remove_from_folder),
             action =
                 LauncherShellAction.RemoveAppFromFolder(
                     folderId = folder.id,

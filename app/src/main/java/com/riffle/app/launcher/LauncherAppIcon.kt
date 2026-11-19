@@ -20,7 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -74,7 +76,7 @@ fun LauncherAppIcon(
     if (loadedIcon != null) {
         Image(
             bitmap = loadedIcon,
-            contentDescription = "$label icon",
+            contentDescription = stringResource(R.string.app_icon_description, label),
             contentScale = ContentScale.Fit,
             modifier = modifier.clip(shape),
         )

@@ -21,7 +21,7 @@ class HomeFolderContextMenuTest {
                 items = listOf(shortcut),
             )
 
-        val items = folderShortcutContextMenuItems(folder = folder, shortcut = shortcut)
+        val items = folderShortcutContextMenuItems(folder = folder, shortcut = shortcut, text = SettingsTestText)
 
         assertEquals(
             listOf(
@@ -47,7 +47,7 @@ class HomeFolderContextMenuTest {
                     enabled = false,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to home",
+                    label = "Move to Home",
                     action =
                         LauncherShellAction.MoveAppOutOfFolder(
                             folderId = folder.id,

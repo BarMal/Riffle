@@ -84,7 +84,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <!-- App pair experiment (Settings > About > Diagnostics): starts two apps from a window that is on screen. -->
+        <!-- App pair experiment (Settings > About > Developer options): starts two apps from a window that is on screen. -->
         <activity
             android:name=".launcher.diagnostics.pair.PairTrampolineActivity"
             android:excludeFromRecents="true"

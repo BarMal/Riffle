@@ -257,7 +257,7 @@ class AppPairExperimentPageTest {
         render()
         composeRule.onNodeWithTag(APP_PAIR_SCRIPT_RUN_TAG).assertIsDisplayed()
             .assertTextContains("Run the whole script")
-        scriptStatus().assertTextContains("Opens GitHub and Waterfox in every combination", substring = true)
+        scriptStatus().assertTextContains("Opens the preset pair of apps in every combination", substring = true)
         composeRule.onNodeWithTag(APP_PAIR_FIRST_TAG).performScrollTo().assertTextContains("Choose an app", true)
         pressRunScript()
         composeRule.waitForIdle()
@@ -282,7 +282,7 @@ class AppPairExperimentPageTest {
         composeRule.onNodeWithTag(APP_PAIR_HELD_RUN_TAG).assertIsDisplayed()
             .assertTextContains("Run the held-trampoline script")
         composeRule.onNodeWithTag(APP_PAIR_HELD_HINT_TAG).assertTextEquals(
-            "Six tries with a holding window. About 45 seconds. Start a screen recording first.",
+            "Six tries with a holding window. Takes about 45 seconds.",
         )
         val held = composeRule.onNodeWithTag(APP_PAIR_HELD_RUN_TAG).fetchSemanticsNode().boundsInRoot
         val nine = composeRule.onNodeWithTag(APP_PAIR_SCRIPT_RUN_TAG).fetchSemanticsNode().boundsInRoot

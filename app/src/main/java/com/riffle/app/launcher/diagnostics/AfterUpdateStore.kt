@@ -9,7 +9,7 @@ import org.json.JSONObject
 import org.json.JSONTokener
 
 /**
- * Where the after-update diagnostics live (Settings > About > Diagnostics > After-update starts). Device local, like
+ * Where the after-update diagnostics live (Settings > About > After-update starts). Device local, like
  * the onboarding state: in its own preferences file (`riffle_after_update`), never in the launcher settings or the
  * backup document, and excluded from Auto Backup. Reads never throw; nothing stored reads as an empty state.
  */

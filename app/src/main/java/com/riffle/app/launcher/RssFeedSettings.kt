@@ -44,7 +44,7 @@ private fun RssFeedSettings(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SettingsListRow(
-            title = "Privacy",
+            title = stringResource(R.string.feeds_privacy_title),
             subtitle =
                 "Riffle stores only the feed URLs you add, their enabled state, and your background " +
                     "refresh options; this is the only feed data included in launcher backups. Cached " +
@@ -108,7 +108,7 @@ private fun RssFeedRow(
                     SettingsButtonText(text = if (feed.enabled) "Disable" else "Enable")
                 }
                 TextButton(onClick = { onAction(LauncherShellAction.RemoveRssFeed(feed.id)) }) {
-                    SettingsButtonText(text = "Remove")
+                    SettingsButtonText(text = stringResource(R.string.action_remove))
                 }
             }
         },
@@ -130,7 +130,7 @@ private fun RssAddFeedSetting(onAction: (LauncherShellAction) -> Unit) {
                 url = value
                 errorText = null
             },
-            label = { Text("Feed URL") },
+            label = { Text(stringResource(R.string.feeds_url_label)) },
             isError = errorText != null,
             supportingText = { errorText?.let { message -> Text(message) } },
             singleLine = true,
@@ -148,7 +148,7 @@ private fun RssAddFeedSetting(onAction: (LauncherShellAction) -> Unit) {
                     )
                 },
             ) {
-                SettingsButtonText(text = "Add feed")
+                SettingsButtonText(text = stringResource(R.string.action_add_feed))
             }
         }
     }

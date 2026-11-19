@@ -173,7 +173,6 @@ class LauncherActionDomainTest {
                 activity("OpenDefaultHome", LauncherShellAction.OpenDefaultHome),
                 activity("OpenAppDrawer", LauncherShellAction.OpenAppDrawer),
                 activity("OpenSearch", LauncherShellAction.OpenSearch),
-                activity("OpenNotifications", LauncherShellAction.OpenNotifications),
                 activity("OpenSettings", LauncherShellAction.OpenSettings),
                 activity("OpenStream", LauncherShellAction.OpenStream),
                 activity("OpenSettingsPage", LauncherShellAction.OpenSettingsPage(SettingsPage.APPEARANCE)),
@@ -406,6 +405,8 @@ class LauncherActionDomainTest {
                 settings("DismissEmptyHomeHint", LauncherShellAction.DismissEmptyHomeHint),
                 settings("SetDragTuning", LauncherShellAction.SetDragTuning(HomeDragTuning())),
                 settings("SetPairRecipe", LauncherShellAction.SetPairRecipe(PairRecipeKind.TWO_STARTS)),
+                settings("RevealDeveloperOptions", LauncherShellAction.RevealDeveloperOptions),
+                settings("SetDeveloperOptions", LauncherShellAction.SetDeveloperOptions(enabled = true)),
                 settings(
                     "SelectPageScroll",
                     LauncherShellAction.SelectPageScroll(LayoutPosture.FOLDED, PageScrollDirection.VERTICAL),
@@ -424,7 +425,6 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SetFeatureEnabled(LauncherFeature.STREAM, enabled = false),
                 ),
                 settings("SetSimpleMode", LauncherShellAction.SetSimpleMode(enabled = true)),
-                settings("DismissDockPressHint", LauncherShellAction.DismissDockPressHint),
                 settings("ShowHintsAgain", LauncherShellAction.ShowHintsAgain),
                 settings(
                     "SetScreenContentProtection",

@@ -43,7 +43,6 @@ class LauncherActivityRouteTest {
                 LauncherShellAction.OpenHome to ShellNavigationAction.OpenHome,
                 LauncherShellAction.OpenAppDrawer to ShellNavigationAction.OpenAppDrawer,
                 LauncherShellAction.OpenSearch to ShellNavigationAction.OpenSearch,
-                LauncherShellAction.OpenNotifications to ShellNavigationAction.OpenNotifications,
                 LauncherShellAction.OpenSettings to ShellNavigationAction.OpenSettings,
                 LauncherShellAction.OpenStream to ShellNavigationAction.OpenStream,
                 LauncherShellAction.OpenSettingsPage(SettingsPage.APPEARANCE) to ShellNavigationAction.OpenSettings,

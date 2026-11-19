@@ -108,7 +108,7 @@ class HomeWorkspaceContextMenuTest {
             }
         }
 
-        composeRule.onNodeWithText("Move to dock").performClick()
+        composeRule.onNodeWithText("Move to Dock").performClick()
 
         composeRule.runOnIdle {
             assertEquals(listOf(LauncherShellAction.MoveHomeItemToDock(folder.id)), actions)
