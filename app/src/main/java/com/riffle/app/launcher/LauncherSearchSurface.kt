@@ -43,8 +43,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
@@ -184,7 +186,7 @@ private fun SearchTopControls(
             )
             if (shouldShowSearchFilterReset(state.filters)) {
                 TextButton(onClick = { onResetFilters(searchFilterResetAction()) }) {
-                    Text(text = "Reset filters")
+                    Text(text = stringResource(R.string.filter_reset))
                 }
             }
         }
@@ -556,9 +558,9 @@ private fun SearchResultContextMenu(
                     text = {
                         Text(
                             if (appListContext.homeLayout.containsHomeApp(result.app.identity)) {
-                                "Added to Home"
+                                stringResource(R.string.menu_added_to_home)
                             } else {
-                                "Add to Home"
+                                stringResource(R.string.menu_add_to_home)
                             },
                         )
                     },
@@ -569,7 +571,7 @@ private fun SearchResultContextMenu(
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("App info") },
+                    text = { Text(stringResource(R.string.menu_app_info)) },
                     onClick = {
                         onExpandedChange(false)
                         appListContext.onAction(LauncherShellAction.OpenAppInfo(result.app.identity))
@@ -579,7 +581,7 @@ private fun SearchResultContextMenu(
 
             is SearchGridResult.Shortcut ->
                 DropdownMenuItem(
-                    text = { Text("Add shortcut to Home") },
+                    text = { Text(stringResource(R.string.menu_add_shortcut_to_home)) },
                     enabled =
                         !appListContext.homeLayout.containsHomeAppShortcut(
                             result.shortcut.appIdentity,

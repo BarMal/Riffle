@@ -18,7 +18,7 @@ class ShortcutContextMenuTest {
     fun homeShortcutMenuAddsToDockWithoutRemovingTheHomeShortcut() {
         val shortcut = shortcut()
 
-        val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.HOME)
+        val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.HOME, text = SettingsTestText)
 
         assertEquals(
             listOf(
@@ -47,7 +47,7 @@ class ShortcutContextMenuTest {
     fun dockShortcutMenuRemovesFromDock() {
         val shortcut = shortcut()
 
-        val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.DOCK)
+        val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.DOCK, text = SettingsTestText)
 
         assertFalse(items.any { it.label == "Move to Dock" })
         assertEquals(
@@ -65,7 +65,7 @@ class ShortcutContextMenuTest {
         // The panel is not one of the layout's pages, so the home removal would match nothing on it.
         val shortcut = shortcut()
 
-        val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.DOCK_PANEL)
+        val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.DOCK_PANEL, text = SettingsTestText)
 
         assertEquals(
             ShortcutContextMenuItem("Remove from panel", LauncherShellAction.RemoveDockPanelItem(shortcut.id)),
@@ -83,6 +83,7 @@ class ShortcutContextMenuTest {
             shortcutContextMenuItems(
                 shortcut = shortcut,
                 surface = ShortcutContextSurface.HOME,
+                text = SettingsTestText,
             )
 
         assertEquals(
@@ -124,6 +125,7 @@ class ShortcutContextMenuTest {
                 shortcut = shortcut,
                 surface = ShortcutContextSurface.HOME,
                 appShortcuts = listOf(platformShortcut),
+                text = SettingsTestText,
             )
 
         assertEquals(
@@ -151,6 +153,7 @@ class ShortcutContextMenuTest {
                 shortcut = shortcut,
                 surface = ShortcutContextSurface.HOME,
                 appShortcuts = listOf(platformShortcut),
+                text = SettingsTestText,
             )
 
         assertEquals(
@@ -171,6 +174,7 @@ class ShortcutContextMenuTest {
                 shortcut = shortcut,
                 surface = ShortcutContextSurface.HOME,
                 appShortcuts = platformShortcuts(shortcut, 4),
+                text = SettingsTestText,
             )
 
         assertEquals(
@@ -188,6 +192,7 @@ class ShortcutContextMenuTest {
                 shortcut = shortcut,
                 surface = ShortcutContextSurface.HOME,
                 appShortcuts = platformShortcuts(shortcut, 6),
+                text = SettingsTestText,
             )
 
         assertEquals(
@@ -200,7 +205,7 @@ class ShortcutContextMenuTest {
 
     @Test
     fun anAppWithNoShortcutsStartsWithItsOwnActions() {
-        val items = shortcutContextMenuItems(shortcut(), ShortcutContextSurface.HOME)
+        val items = shortcutContextMenuItems(shortcut(), ShortcutContextSurface.HOME, text = SettingsTestText)
 
         assertEquals("App info", items.first().label)
     }

@@ -16,7 +16,7 @@ internal const val DRAG_TUNING_RESET_TEST_TAG = "drag-tuning-reset"
 
 private const val PERCENT = 100f
 
-/** Settings > About > Developer options > Drag tuning: sliders for the numbers a Home drag reads at runtime, and Reset. */
+/** Settings > About > Developer options > Drag tuning: sliders for the numbers a Home drag reads, and Reset. */
 @Composable
 internal fun SettingsDragTuningPageContent(
     state: SettingsSurfaceState,

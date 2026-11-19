@@ -12,7 +12,6 @@ import com.riffle.app.launcher.DockDynamicEntry
 import com.riffle.app.launcher.DockDynamicEntryIntent
 import com.riffle.app.launcher.DockInteractions
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import org.junit.Rule
@@ -111,7 +110,6 @@ class DockScreenshotTest {
         badgeCount: Int,
         isSelected: Boolean,
     ): DockDynamicEntry {
-        val stageId = AppStageId(packageName = app.identity.packageName, profileId = app.identity.profile.id)
         return DockDynamicEntry(
             key = "stage:${app.identity.packageName.value}",
             label = app.label,

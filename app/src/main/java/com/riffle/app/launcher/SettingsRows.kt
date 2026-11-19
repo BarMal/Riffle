@@ -37,7 +37,7 @@ internal fun SettingsClickableRow(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     trailingContent: @Composable (() -> Unit)? = {
-        SettingsButtonText(text = "Open")
+        SettingsButtonText(text = stringResource(R.string.action_open))
     },
 ) {
     SettingsListItem(

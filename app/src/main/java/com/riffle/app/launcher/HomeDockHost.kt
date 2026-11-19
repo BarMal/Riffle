@@ -25,10 +25,12 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.riffle.app.R
 import com.riffle.app.launcher.stream.OpenCardActions
 import com.riffle.app.launcher.stream.PageQuickActions
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -295,7 +297,7 @@ internal fun HomeDockHost(
                     // dock a little further that way and comes back; it moves nothing in layout.
                     translationX = -pull.unitX * dipPx + (arriving?.translationXDp ?: 0f) * density
                     translationY = -pull.unitY * dipPx + (arriving?.translationYDp ?: 0f) * density
-                }.pressMenu(dockMenu, haptics, longClickLabel = DOCK_MENU_LONG_CLICK_LABEL),
+                }.pressMenu(dockMenu, haptics, longClickLabel = stringResource(R.string.menu_show_home_actions)),
         ) {
             CompositionLocalProvider(
                 LocalDockChoice provides choice,
@@ -341,7 +343,7 @@ internal fun HomeDockHost(
             PressMenuAnchor(dockMenu) {
                 ShortcutContextMenu(
                     expanded = dockMenu.expanded,
-                    items = homeWorkspaceContextMenuItems(),
+                    items = homeWorkspaceContextMenuItems(rememberSettingsText()),
                     onDismissRequest = dockMenu::dismiss,
                     onAction = dockOnAction,
                 )
@@ -505,8 +507,6 @@ private data class DockShelfController(
 private val FullyRevealedDockContent: () -> Float = { 1f }
 
 internal const val UNMEASURED_DOCK_EXTENT_PX = -1
-
-private const val DOCK_MENU_LONG_CLICK_LABEL = "Show home actions"
 
 /**
  * Where a full-screen mode frame sits relative to its siblings: below the dock, which is composed

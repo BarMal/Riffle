@@ -2,6 +2,8 @@ package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
@@ -45,7 +47,7 @@ internal fun ThemeCornerStyleSetting(
     SettingsChoiceRow(
         modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_CORNERS),
         title = SettingKey.APPEARANCE_CORNERS.label(),
-        subtitle = "Corner radius of cards, panels, the Dock and rows",
+        subtitle = stringResource(R.string.settings_corners_subtitle),
         options = LauncherThemeCornerStyle.entries,
         selected = selectedStyle,
         onSelect = { style -> onAction(LauncherShellAction.SelectLauncherThemeCornerStyle(style)) },

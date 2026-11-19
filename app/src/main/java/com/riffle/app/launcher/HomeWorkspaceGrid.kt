@@ -33,8 +33,10 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -75,8 +77,8 @@ internal fun WorkspaceGrid(
         HomeBackgroundContextMenu(
             haptics = actions.haptics,
             onAction = actions.onAction,
-            items = backgroundContextMenuItems(presentation.contextSurface),
-            longClickLabel = presentation.contextSurface.backgroundLongClickLabel,
+            items = backgroundContextMenuItems(presentation.contextSurface, rememberSettingsText()),
+            longClickLabel = presentation.contextSurface.backgroundLongClickLabel(),
             modifier = Modifier.matchParentSize(),
             onClick = actions.onBackgroundClick,
         )
@@ -190,7 +192,7 @@ private fun GeneratedContentOverflowButton(
             onAction(if (libraryEnabled) LauncherShellAction.OpenAppDrawer else LauncherShellAction.OpenSearch)
         },
     ) {
-        Text(text = "More apps ($overflowCount more)")
+        Text(text = stringResource(R.string.home_overflow_more_apps, overflowCount))
     }
 }
 
@@ -543,6 +545,7 @@ private fun HomeShortcut(
                     shortcut = shortcut,
                     surface = presentation.contextSurface,
                     appShortcuts = presentation.appShortcuts,
+                    text = rememberSettingsText(),
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = actions.onAction,

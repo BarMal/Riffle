@@ -20,9 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
@@ -166,7 +168,7 @@ private fun DockNotificationPermissionCard(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = "Notifications",
+                text = stringResource(R.string.dock_notifications_title),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -280,7 +282,7 @@ private fun DockNotificationCard(
                             },
                         onClick = { onAction(clearAction) },
                     ) {
-                        Text(text = "Clear")
+                        Text(text = stringResource(R.string.action_clear))
                     }
                 }
             }

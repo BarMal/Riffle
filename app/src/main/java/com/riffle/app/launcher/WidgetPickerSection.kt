@@ -4,6 +4,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.glance.GlanceWidgets
@@ -85,7 +87,12 @@ internal fun WidgetPickerSectionHeader(
 ) {
     TextButton(onClick = { onExpandedChange(!expanded) }) {
         Text(
-            text = "$title, ${if (expanded) "collapse" else "expand"}",
+            text =
+                if (expanded) {
+                    stringResource(R.string.widgets_section_collapse, title)
+                } else {
+                    stringResource(R.string.widgets_section_expand, title)
+                },
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )

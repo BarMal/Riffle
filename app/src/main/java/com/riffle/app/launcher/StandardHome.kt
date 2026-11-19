@@ -57,6 +57,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -65,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.glance.rememberRiffleGlanceProviders
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
@@ -1097,6 +1099,7 @@ fun BoxScope.RemoveShortcutButton(
     label: String,
     onClick: () -> Unit,
 ) {
+    val removeDescription = stringResource(R.string.home_remove_item_description, label)
     Box(
         modifier =
             Modifier
@@ -1105,7 +1108,7 @@ fun BoxScope.RemoveShortcutButton(
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.errorContainer)
                 .clickable(onClick = onClick)
-                .semantics { contentDescription = "Remove $label" },
+                .semantics { contentDescription = removeDescription },
         contentAlignment = Alignment.Center,
     ) {
         Text(

@@ -169,7 +169,7 @@ private fun HiddenAppsSetting(
             modifier = Modifier.fillMaxWidth(),
             query = query.value,
             onQueryChanged = { value -> query.value = value },
-            label = "Search hidden apps",
+            label = stringResource(R.string.settings_hidden_apps_search),
         )
         AppProfileFilterChips(
             selectedFilter = profileFilter.value,
@@ -194,7 +194,7 @@ private fun HiddenAppsSetting(
                     profileFilter.value = AppDrawerProfileFilter.ALL
                 },
             ) {
-                Text(text = "Clear filters")
+                Text(text = stringResource(R.string.filter_clear))
             }
         }
         if (filteredApps.isEmpty()) {
@@ -229,7 +229,7 @@ private fun HiddenAppRow(
         subtitle = app.drawerSubtitle(),
         onClick = { onAction(LauncherShellAction.UnhideApp(app.identity)) },
         trailingContent = {
-            SettingsButtonText(text = "Unhide")
+            SettingsButtonText(text = stringResource(R.string.action_unhide))
         },
     )
 }

@@ -1525,7 +1525,7 @@ had (one on the strip, one on the shelf) are gone for this one.
 
 ### Accessibility
 
-Every handler is also a long-click action on its node (label: "Show home actions", "Show options for the Library", "Show
+Every handler is also a long-click action on its node (label: "Show Home actions", "Show options for the Library", "Show
 options for this page"), opening the same menu, so the menus reach a screen reader from the regions that used to be dead
 (the Library's sheet and scrim, the Stream's room, the Dock). The existing custom actions stay: the Library's "Close
 Library" and "Show as <view>", the App library Home's actions, the Dock's.

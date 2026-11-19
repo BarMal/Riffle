@@ -37,9 +37,11 @@ import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
@@ -360,10 +362,12 @@ private fun StreamRedirectPage(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "Notifications are in the Stream",
+            text = stringResource(R.string.home_notifications_in_stream),
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )
-        TextButton(onClick = { onAction(LauncherShellAction.OpenStream) }) { Text("Open Stream") }
+        TextButton(onClick = { onAction(LauncherShellAction.OpenStream) }) {
+            Text(stringResource(R.string.action_open_stream))
+        }
     }
 }

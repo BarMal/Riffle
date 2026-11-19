@@ -179,7 +179,7 @@ class HomePageControlsTest {
 
     @Test
     fun pageManagementMenuDisablesUnavailablePageMovement() {
-        val items = pageManagementMenuItems(pageCount = 1, selectedPageIndex = 0)
+        val items = pageManagementMenuItems(pageCount = 1, selectedPageIndex = 0, text = SettingsTestText)
 
         assertEquals(
             listOf(
@@ -213,6 +213,7 @@ class HomePageControlsTest {
                 pageCount = 3,
                 selectedPageIndex = 1,
                 includeOverview = false,
+                text = SettingsTestText,
             )
 
         assertEquals(
@@ -235,6 +236,7 @@ class HomePageControlsTest {
                 selectedPageIndex = 1,
                 includeOverview = false,
                 includeCreationActions = false,
+                text = SettingsTestText,
             )
 
         assertEquals(
@@ -269,13 +271,14 @@ class HomePageControlsTest {
                 pageCount = 3,
                 selectedPageIndex = 1,
                 selectedPage = page,
+                text = SettingsTestText,
             ),
         )
     }
 
     @Test
     fun pageOverviewCardMenuReflectsCardPosition() {
-        val items = pageOverviewCardMenuItems(index = 0, pageCount = 3)
+        val items = pageOverviewCardMenuItems(index = 0, pageCount = 3, text = SettingsTestText)
 
         assertEquals(
             listOf(
@@ -295,7 +298,7 @@ class HomePageControlsTest {
 
     @Test
     fun emptyHomeCellMenuOnlyExposesEntryPointToPageManagement() {
-        val items = homeWorkspaceContextMenuItems()
+        val items = homeWorkspaceContextMenuItems(text = SettingsTestText)
 
         assertEquals(
             listOf(
@@ -316,7 +319,7 @@ class HomePageControlsTest {
     fun emptyPanelCellMenuOnlyOffersAddingAWidget() {
         // Page management and folders belong to home pages; the panel is neither. Adding a widget
         // has to name the panel, because the picker covers the shelf and cannot be dragged onto.
-        val items = backgroundContextMenuItems(ShortcutContextSurface.DOCK_PANEL)
+        val items = backgroundContextMenuItems(ShortcutContextSurface.DOCK_PANEL, text = SettingsTestText)
 
         assertEquals(
             listOf(ShortcutContextMenuItem("Add widget", LauncherShellAction.OpenWidgetPickerForDockPanel)),
@@ -326,8 +329,9 @@ class HomePageControlsTest {
 
     @Test
     fun emptyHomeCellMenuIsUnchangedForHomeAndDock() {
-        assertEquals(homeWorkspaceContextMenuItems(), backgroundContextMenuItems(ShortcutContextSurface.HOME))
-        assertEquals(homeWorkspaceContextMenuItems(), backgroundContextMenuItems(ShortcutContextSurface.DOCK))
+        val homeItems = homeWorkspaceContextMenuItems(text = SettingsTestText)
+        assertEquals(homeItems, backgroundContextMenuItems(ShortcutContextSurface.HOME, text = SettingsTestText))
+        assertEquals(homeItems, backgroundContextMenuItems(ShortcutContextSurface.DOCK, text = SettingsTestText))
     }
 
     @Test

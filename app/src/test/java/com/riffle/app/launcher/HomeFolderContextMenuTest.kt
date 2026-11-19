@@ -21,7 +21,7 @@ class HomeFolderContextMenuTest {
                 items = listOf(shortcut),
             )
 
-        val items = folderShortcutContextMenuItems(folder = folder, shortcut = shortcut)
+        val items = folderShortcutContextMenuItems(folder = folder, shortcut = shortcut, text = SettingsTestText)
 
         assertEquals(
             listOf(

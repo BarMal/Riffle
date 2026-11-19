@@ -26,11 +26,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import com.riffle.app.R
 import com.riffle.app.launcher.glance.GlanceHomeWidget
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -160,6 +162,7 @@ private fun HostedHomeWidget(
                         grid = dragState?.grid,
                         pageItems = dragState?.pageItems ?: listOf(widget),
                         contextSurface = contextSurface,
+                        text = rememberSettingsText(),
                     ),
                 onDismissRequest = { isContextMenuExpanded.value = false },
                 onAction = onAction,
@@ -223,14 +226,14 @@ internal fun BoxScope.WidgetEditHandles(
         WidgetResizeHandle(
             modifier = Modifier.align(Alignment.CenterEnd),
             label = "+",
-            contentDescription = "Make ${widget.label} wider",
+            contentDescription = stringResource(R.string.widget_make_wider_description, widget.label),
             enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
             onClick = { onAction(widget.resizeAction(columnsDelta = 1, rowsDelta = 0)) },
         )
         WidgetResizeHandle(
             modifier = Modifier.align(Alignment.CenterStart),
             label = "-",
-            contentDescription = "Make ${widget.label} narrower",
+            contentDescription = stringResource(R.string.widget_make_narrower_description, widget.label),
             enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
             onClick = { onAction(widget.resizeAction(columnsDelta = -1, rowsDelta = 0)) },
         )
@@ -239,14 +242,14 @@ internal fun BoxScope.WidgetEditHandles(
         WidgetResizeHandle(
             modifier = Modifier.align(Alignment.BottomCenter),
             label = "+",
-            contentDescription = "Make ${widget.label} taller",
+            contentDescription = stringResource(R.string.widget_make_taller_description, widget.label),
             enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
             onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = 1)) },
         )
         WidgetResizeHandle(
             modifier = Modifier.align(Alignment.TopCenter),
             label = "-",
-            contentDescription = "Make ${widget.label} shorter",
+            contentDescription = stringResource(R.string.widget_make_shorter_description, widget.label),
             enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
             onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = -1)) },
         )
@@ -301,30 +304,31 @@ internal fun widgetPlaceholderContextMenuItems(
     grid: GridDimensions? = null,
     pageItems: List<LauncherItem> = listOf(widget),
     contextSurface: ShortcutContextSurface = ShortcutContextSurface.HOME,
+    text: SettingsText,
 ): List<ShortcutContextMenuItem> {
     return listOf(
         ShortcutContextMenuItem(
-            label = "Make wider",
+            label = text.text(R.string.menu_make_wider),
             action = widget.resizeAction(columnsDelta = 1, rowsDelta = 0),
             enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
         ),
         ShortcutContextMenuItem(
-            label = "Make narrower",
+            label = text.text(R.string.menu_make_narrower),
             action = widget.resizeAction(columnsDelta = -1, rowsDelta = 0),
             enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
         ),
         ShortcutContextMenuItem(
-            label = "Make taller",
+            label = text.text(R.string.menu_make_taller),
             action = widget.resizeAction(columnsDelta = 0, rowsDelta = 1),
             enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
         ),
         ShortcutContextMenuItem(
-            label = "Make shorter",
+            label = text.text(R.string.menu_make_shorter),
             action = widget.resizeAction(columnsDelta = 0, rowsDelta = -1),
             enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
         ),
         ShortcutContextMenuItem(
-            label = contextSurface.widgetRemoveLabel,
+            label = contextSurface.widgetRemoveLabel(text),
             action = widget.removeActionFor(contextSurface),
         ),
     )

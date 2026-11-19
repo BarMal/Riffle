@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.view.setPadding
+import com.riffle.app.R
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -32,7 +33,7 @@ internal class OverlayDockViewFactory(
         onVerticalOffsetCommit: (Int) -> Unit,
     ): View =
         FrameLayout(context).apply {
-            contentDescription = "Open Riffle overlay dock"
+            contentDescription = context.getString(R.string.overlay_dock_open_description)
             addView(
                 View(context).apply {
                     background = context.handleGripBackground(settings)
@@ -62,7 +63,7 @@ internal class OverlayDockViewFactory(
         FrameLayout(context).apply {
             background = context.roundedBackground(alphaPercent = settings.handleAlphaPercent)
             setPadding(context.dp(8))
-            contentDescription = "Riffle overlay dock"
+            contentDescription = context.getString(R.string.overlay_dock_description)
 
             addView(
                 expandedDockScrollView(
@@ -269,7 +270,7 @@ internal class OverlayDockViewFactory(
 
     private fun emptyDockText(): TextView =
         TextView(context).apply {
-            text = "Dock empty"
+            text = context.getString(R.string.overlay_dock_empty)
             textSize = 14f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
@@ -278,14 +279,14 @@ internal class OverlayDockViewFactory(
 
     private fun usageAccessButton(onRequestUsageAccess: () -> Unit): TextView =
         TextView(context).apply {
-            text = "Enable recent apps"
+            text = context.getString(R.string.overlay_dock_enable_recents)
             textSize = 14f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             setPadding(horizontal = context.dp(12), vertical = context.dp(8))
             minHeight = context.dp(USAGE_ACCESS_ACTION_MIN_TOUCH_TARGET_DP)
             minWidth = context.dp(USAGE_ACCESS_ACTION_MIN_TOUCH_TARGET_DP)
-            contentDescription = "Allow Usage Access to show recent apps"
+            contentDescription = context.getString(R.string.overlay_dock_usage_access_description)
             setOnClickListener { onRequestUsageAccess() }
         }
 
@@ -296,7 +297,7 @@ internal class OverlayDockViewFactory(
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             setPadding(context.dp(12))
-            contentDescription = "Close Riffle overlay dock"
+            contentDescription = context.getString(R.string.overlay_dock_close_description)
             setOnClickListener { onCollapse() }
         }
 }

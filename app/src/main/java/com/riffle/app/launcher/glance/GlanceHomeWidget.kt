@@ -15,6 +15,7 @@ import com.riffle.app.launcher.ShortcutContextSurface
 import com.riffle.app.launcher.WidgetEditHandles
 import com.riffle.app.launcher.WidgetGestureLayer
 import com.riffle.app.launcher.homeItemDrag
+import com.riffle.app.launcher.rememberSettingsText
 import com.riffle.app.launcher.widgetPlaceholderContextMenuItems
 import com.riffle.core.domain.launcher.glance.GlanceWidgetKind
 import com.riffle.core.domain.launcher.home.WidgetItem
@@ -83,6 +84,7 @@ internal fun GlanceHomeWidget(
                     grid = dragState?.grid,
                     pageItems = dragState?.pageItems ?: listOf(widget),
                     contextSurface = contextSurface,
+                    text = rememberSettingsText(),
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = onAction,

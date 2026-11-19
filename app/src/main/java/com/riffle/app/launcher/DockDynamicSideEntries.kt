@@ -241,7 +241,9 @@ private fun DockDynamicEntry.withAppActions(
                 liveAppMenuItems(
                     it,
                     appShortcuts,
-                    resources.getString(R.string.menu_more_shortcuts),
+                    moreLabel = resources.getString(R.string.menu_more_shortcuts),
+                    appInfoLabel = resources.getString(R.string.menu_app_info),
+                    hideLabel = resources.getString(R.string.menu_hide_app),
                 )
             }.orEmpty(),
         openInStreamMenuLabel = resources.getString(R.string.dock_live_app_open_in_stream_menu),
@@ -254,7 +256,9 @@ private fun DockDynamicEntry.withAppActions(
 internal fun liveAppMenuItems(
     app: InstalledApp,
     appShortcuts: AppShortcutsByApp,
-    moreLabel: String = "More",
+    moreLabel: String,
+    appInfoLabel: String,
+    hideLabel: String,
 ): List<ShortcutContextMenuItem> {
     val shortcuts =
         appShortcuts[app.identity].orEmpty().map { shortcut ->
@@ -266,8 +270,8 @@ internal fun liveAppMenuItems(
         }
     return appShortcutMenuItems(shortcuts, moreLabel) +
         listOf(
-            ShortcutContextMenuItem(label = "App info", action = LauncherShellAction.OpenAppInfo(app.identity)),
-            ShortcutContextMenuItem(label = "Hide app", action = LauncherShellAction.HideApp(app.identity)),
+            ShortcutContextMenuItem(label = appInfoLabel, action = LauncherShellAction.OpenAppInfo(app.identity)),
+            ShortcutContextMenuItem(label = hideLabel, action = LauncherShellAction.HideApp(app.identity)),
         )
 }
 

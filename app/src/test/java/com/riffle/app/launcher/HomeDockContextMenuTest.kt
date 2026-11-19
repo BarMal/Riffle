@@ -73,6 +73,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 1,
                 shortcutCount = 3,
+                text = SettingsTestText,
             )
 
         assertEquals(
@@ -118,7 +119,12 @@ class HomeDockContextMenuTest {
         val shortcut = shortcut()
         val showStage = ShortcutContextMenuItem("Show stage", LauncherShellAction.OpenSettings)
 
-        val items = dockShortcutContextMenuItems(shortcut = shortcut, modeItems = listOf(showStage))
+        val items =
+            dockShortcutContextMenuItems(
+                shortcut = shortcut,
+                modeItems = listOf(showStage),
+                text = SettingsTestText,
+            )
 
         assertEquals(showStage, items.first())
         assertEquals(false, items.any { item -> item.label == "Open" })
@@ -131,6 +137,7 @@ class HomeDockContextMenuTest {
                 shortcut = shortcut(),
                 isEditing = true,
                 modeItems = listOf(ShortcutContextMenuItem("Show stage", LauncherShellAction.OpenSettings)),
+                text = SettingsTestText,
             )
 
         assertEquals(false, items.any { item -> item.label == "Show stage" })
@@ -146,6 +153,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 0,
                 shortcutCount = 2,
+                text = SettingsTestText,
             )
         val lastItems =
             dockShortcutContextMenuItems(
@@ -153,6 +161,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 1,
                 shortcutCount = 2,
+                text = SettingsTestText,
             )
 
         assertEquals(false, firstItems.first { it.label == "Move left" }.enabled)
@@ -176,7 +185,7 @@ class HomeDockContextMenuTest {
                     action = LauncherShellAction.RemoveDockShortcut(widget.id),
                 ),
             ),
-            dockWidgetContextMenuItems(widget),
+            dockWidgetContextMenuItems(widget, text = SettingsTestText),
         )
     }
 
@@ -220,6 +229,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 1,
                 shortcutCount = 3,
+                text = SettingsTestText,
             ),
         )
     }
@@ -260,6 +270,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 1,
                 shortcutCount = 3,
+                text = SettingsTestText,
             ),
         )
     }
