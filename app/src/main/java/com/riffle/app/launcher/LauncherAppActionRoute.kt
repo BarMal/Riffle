@@ -5,10 +5,6 @@ internal sealed interface LauncherAppActionRoute {
         val action: LauncherShellAction.LaunchApp,
     ) : LauncherAppActionRoute
 
-    data class LaunchAppPair(
-        val action: LauncherShellAction.LaunchAppPair,
-    ) : LauncherAppActionRoute
-
     data class LaunchAppShortcut(
         val action: LauncherShellAction.LaunchAppShortcut,
     ) : LauncherAppActionRoute
@@ -52,7 +48,6 @@ internal fun LauncherShellAction.launcherAppActionRoute(): LauncherAppActionRout
     when (this) {
         is LauncherShellAction.LaunchApp -> LauncherAppActionRoute.LaunchApp(this)
         is LauncherShellAction.LaunchAppShortcut -> LauncherAppActionRoute.LaunchAppShortcut(this)
-        is LauncherShellAction.LaunchAppPair -> LauncherAppActionRoute.LaunchAppPair(this)
         is LauncherShellAction.SearchWeb -> LauncherAppActionRoute.SearchWeb(this)
         is LauncherShellAction.OpenAppInfo -> LauncherAppActionRoute.OpenAppInfo(this)
         is LauncherShellAction.UninstallApp -> LauncherAppActionRoute.UninstallApp(this)

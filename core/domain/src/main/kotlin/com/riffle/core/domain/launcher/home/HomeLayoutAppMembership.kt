@@ -40,8 +40,6 @@ private fun LauncherItem.containsApp(identity: AppIdentity): Boolean =
             items.any { shortcut ->
                 shortcut.appIdentity == identity && shortcut.appShortcutId == null
             }
-        // A pair never counts: it may exist alongside its apps pinned singly (App pairs are Dock items).
-        is AppPairItem -> false
         is WidgetItem -> false
     }
 
@@ -55,6 +53,5 @@ private fun LauncherItem.containsAppShortcut(
             items.any { shortcut ->
                 shortcut.appIdentity == identity && shortcut.appShortcutId == shortcutId
             }
-        is AppPairItem -> false
         is WidgetItem -> false
     }

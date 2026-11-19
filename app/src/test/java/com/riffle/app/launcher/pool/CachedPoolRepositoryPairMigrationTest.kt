@@ -8,9 +8,9 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.layouts.AppLayout
 import com.riffle.core.domain.launcher.workspace.pool.FolderEntry
+import com.riffle.core.domain.launcher.workspace.pool.LegacyAppPair
 import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.PoolApp
-import com.riffle.core.domain.launcher.workspace.pool.PoolAppPair
 import com.riffle.core.domain.launcher.workspace.pool.PoolDock
 import com.riffle.core.domain.launcher.workspace.pool.PoolItemId
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
@@ -30,7 +30,7 @@ class CachedPoolRepositoryPairMigrationTest {
         id: String,
         first: String,
         second: String,
-    ) = PoolAppPair(
+    ) = LegacyAppPair(
         PoolItemId(id),
         FolderEntry("e-$first", identity(first), first),
         FolderEntry("e-$second", identity(second), second),
@@ -43,10 +43,9 @@ class CachedPoolRepositoryPairMigrationTest {
                 mapOf(
                     HomeLayoutDeviceClass.PHONE to
                         PlacedItemPool(
-                            items =
-                                listOf(app("mail"), pair("p1", "notes", "maps"), pair("p2", "maps", "chat"))
-                                    .associateBy { it.id },
-                            dock = PoolDock(pins = listOf("app:mail", "p1", "p2").map(::PoolItemId)),
+                            items = listOf(app("mail")).associateBy { it.id },
+                            dock = PoolDock(pins = listOf(PoolItemId("app:mail"))),
+                            legacyPairs = listOf(pair("p1", "notes", "maps"), pair("p2", "maps", "chat")),
                         ),
                 ),
         )
@@ -71,7 +70,7 @@ class CachedPoolRepositoryPairMigrationTest {
             )
             val pool = repository.pool(HomeLayoutDeviceClass.PHONE)!!
             assertEquals(listOf("app:mail"), pool.dock?.pins?.map { it.value })
-            assertTrue(store.stored!!.pools.values.none { p -> p.items.values.any { it is PoolAppPair } })
+            assertTrue(store.stored!!.pools.values.all { it.legacyPairs.isEmpty() })
         }
 
     @Test
@@ -95,7 +94,7 @@ class CachedPoolRepositoryPairMigrationTest {
 
             CachedPoolRepository(store, legacyPairs = { error("full") }).initialize(set)
 
-            assertTrue(store.stored!!.pools.values.any { p -> p.items.values.any { it is PoolAppPair } })
+            assertTrue(store.stored!!.pools.values.any { it.legacyPairs.isNotEmpty() })
         }
 
     @Test
@@ -110,7 +109,7 @@ class CachedPoolRepositoryPairMigrationTest {
 
             assertEquals(2, received.single().size)
             assertFalse(
-                repository.pool(HomeLayoutDeviceClass.PHONE)!!.items.values.any { it is PoolAppPair },
+                repository.pool(HomeLayoutDeviceClass.PHONE)!!.legacyPairs.isNotEmpty(),
             )
         }
 }

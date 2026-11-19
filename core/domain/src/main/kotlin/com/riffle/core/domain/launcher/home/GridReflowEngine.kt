@@ -111,7 +111,7 @@ private fun LauncherItem.spanCandidatesFor(grid: GridDimensions): List<GridSpan>
                 .placementCandidates(resizeConstraints)
                 .filter { span -> span.columns <= grid.columns && span.rows <= grid.rows }
 
-        is AppShortcutItem, is FolderItem, is AppPairItem -> listOf(GridSpan())
+        is AppShortcutItem, is FolderItem -> listOf(GridSpan())
     }
 
 /**

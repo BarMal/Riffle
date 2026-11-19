@@ -472,7 +472,6 @@ class MainActivity : ComponentActivity() {
                                     searchWeb = { action -> webSearchLauncher.launch(action.query) },
                                     openAppInfo = { action -> appLauncher.openAppInfo(action.identity) },
                                     uninstallApp = { action -> appLauncher.uninstall(action.identity) },
-                                    launchAppPair = { action -> dependencies.pairLauncher.launch(action.pair) },
                                 ),
                             addAppToHome = { action -> shellViewModel.onAddAppToHome(action.app) },
                             requestAddWidget = ::handleWidgetAddRequest,

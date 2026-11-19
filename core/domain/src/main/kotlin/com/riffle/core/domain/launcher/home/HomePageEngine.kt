@@ -270,7 +270,6 @@ private fun LauncherItem.duplicate(itemIdProvider: () -> LauncherItemId): Launch
                 items = items.map { shortcut -> shortcut.copy(id = itemIdProvider()) },
             )
         is WidgetItem -> error("Widget items cannot be duplicated with page copies.")
-        is AppPairItem -> error("App pairs live in the Dock and are never on a page.")
     }
 
 private fun List<LauncherPage>.withPageInsertedAt(

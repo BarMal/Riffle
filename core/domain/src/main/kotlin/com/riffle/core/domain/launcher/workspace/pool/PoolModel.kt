@@ -63,16 +63,15 @@ data class PoolWidget(
 ) : PoolItem
 
 /**
- * Two apps pinned as one Dock item ("App pairs are Dock items", ADR 0003). [first] is the start (left) pane. Dock
- * only: no arrangement places one. Only the two apps and their order are stored.
+ * An app pair as an older build stored it in the Dock (kind "pair"). Pairs are layouts now (ADR 0003, Amendment 7):
+ * this is only what decoding reads of old data and backups, held in [PlacedItemPool.legacyPairs] until
+ * [LegacyDockPairs] turns it into layouts. Nothing creates one and nothing writes one.
  */
-data class PoolAppPair(
-    override val id: PoolItemId,
+data class LegacyAppPair(
+    val id: PoolItemId,
     val first: FolderEntry,
     val second: FolderEntry,
-) : PoolItem {
-    override val label: String get() = "${first.label} and ${second.label}"
-}
+)
 
 /** One reference: "this item sits here". */
 data class Placement(
@@ -116,6 +115,8 @@ data class PlacedItemPool(
     val items: Map<PoolItemId, PoolItem> = emptyMap(),
     val arrangements: Map<WorkspaceId, Arrangement> = emptyMap(),
     val dock: PoolDock? = null,
+    /** Dock pairs an older build stored, in Dock order, read once and moved to layouts (see [LegacyDockPairs]). */
+    val legacyPairs: List<LegacyAppPair> = emptyList(),
 ) {
-    val isEmpty: Boolean get() = items.isEmpty() && arrangements.isEmpty() && dock == null
+    val isEmpty: Boolean get() = items.isEmpty() && arrangements.isEmpty() && dock == null && legacyPairs.isEmpty()
 }

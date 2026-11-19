@@ -196,7 +196,6 @@ object PoolHomeProjection {
         when (item) {
             is PoolApp -> item.copy(id = id)
             is PoolFolder -> item.copy(id = id)
-            is PoolAppPair -> item.copy(id = id)
             is PoolWidget -> item
         }
 

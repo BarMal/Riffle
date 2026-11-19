@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -87,5 +86,4 @@ private val LauncherItem.previewCellKind: PagePreviewCellKind
             is AppShortcutItem -> PagePreviewCellKind.APP
             is FolderItem -> PagePreviewCellKind.FOLDER
             is WidgetItem -> PagePreviewCellKind.WIDGET
-            is AppPairItem -> PagePreviewCellKind.APP
         }

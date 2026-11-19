@@ -1,7 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
 import com.riffle.core.domain.launcher.apps.AppProfile
-import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -128,7 +127,6 @@ class PoolHomeSyncTest {
             is AppShortcutItem -> copy(id = LauncherItemId(id.value.legacyId()))
             is FolderItem -> copy(id = LauncherItemId(id.value.legacyId()))
             is WidgetItem -> copy(id = LauncherItemId(id.value.legacyId()))
-            is AppPairItem -> copy(id = LauncherItemId(id.value.legacyId()))
         }
 
     private fun HomeLayout.legacy(): HomeLayout =

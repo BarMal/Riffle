@@ -189,9 +189,6 @@ fun LauncherShellContent(
     stream: StreamHost? = null,
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
-    val pairView = rememberDockPairView(state)
-    val dockOnAction =
-        remember(pairView.hiddenItemIds, onAction) { dockPairAwareActions(pairView.hiddenItemIds, onAction) }
 
     LauncherShellBackHandling(state = state, onAction = onAction)
 
@@ -222,23 +219,21 @@ fun LauncherShellContent(
         Box(
             modifier = rootModifier,
         ) {
-            CompositionLocalProvider(LocalDockPairs provides DockPairs(pairView.available, state.installedApps)) {
-                LauncherDestination(
-                    state = pairView.state,
-                    settingsState =
-                        state.settingsSurfaceState(
-                            appVersionLabel = appInfo.versionLabel,
-                            appBuildIdentityLabel = appInfo.buildIdentityLabel,
-                            viewModeAvailability = viewModeAvailability,
-                        ),
-                    appIconLoader = appIconLoader,
-                    widgetRenderers = widgetRenderers,
-                    adaptiveStageWindowLayout = adaptiveStageWindowLayout,
-                    haptics = haptics,
-                    onAction = dockOnAction,
-                    stream = stream,
-                )
-            }
+            LauncherDestination(
+                state = state,
+                settingsState =
+                    state.settingsSurfaceState(
+                        appVersionLabel = appInfo.versionLabel,
+                        appBuildIdentityLabel = appInfo.buildIdentityLabel,
+                        viewModeAvailability = viewModeAvailability,
+                    ),
+                appIconLoader = appIconLoader,
+                widgetRenderers = widgetRenderers,
+                adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                haptics = haptics,
+                onAction = onAction,
+                stream = stream,
+            )
             if (state.destination == ShellDestination.HOME && state.shouldShowSetupCard) {
                 PreviewSetupCard(
                     modifier =
@@ -328,7 +323,6 @@ internal fun dockEditRejectionMessage(reason: DockEditRejectionReason): String =
         DockEditRejectionReason.NO_AVAILABLE_HOME_CELL -> "The selected Home page has no available cells."
         DockEditRejectionReason.INVALID_HOME_PLACEMENT -> "That Home cell is unavailable. Choose another cell."
         DockEditRejectionReason.HOME_PAGE_NOT_FOUND -> "That Home page is no longer available."
-        DockEditRejectionReason.SAME_APP -> "An app cannot be paired with itself."
         else -> "Could not update Dock. Try again."
     }
 

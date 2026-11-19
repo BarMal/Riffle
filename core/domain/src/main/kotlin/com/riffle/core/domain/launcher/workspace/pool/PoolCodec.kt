@@ -45,13 +45,17 @@ object PoolCodec {
             root.array("items").mapNotNull {
                 (it as? StoredValue.Obj)?.let(PoolItemDecoding::decodeItem)
             }.distinctBy { it.id }
+        val pairs = root.array("items").mapNotNull { (it as? StoredValue.Obj)?.let(PoolItemDecoding::decodeLegacyPair) }
         val arrangements =
             root.array("arrangements")
                 .mapNotNull { (it as? StoredValue.Obj)?.let(::decodeArrangement) }
                 .distinctBy { it.first }
         val dock = root.obj("dock")?.let { guarded { PoolDockCodec.decode(it) } }
         val repaired = PoolValidation.repair(PlacedItemPool(items.associateBy { it.id }, arrangements.toMap(), dock))
-        return PoolDecodeResult(repaired.pool, repaired.issues)
+        // Old data may hold app pairs in its Dock; they are kept apart, in Dock order, for the move to layouts.
+        val pinOrder = dock?.pins.orEmpty().withIndex().associate { (index, id) -> id to index }
+        val legacy = pairs.distinctBy { it.id }.sortedBy { pinOrder[it.id] ?: Int.MAX_VALUE }
+        return PoolDecodeResult(repaired.pool.copy(legacyPairs = legacy), repaired.issues)
     }
 
     private fun encodeArrangement(

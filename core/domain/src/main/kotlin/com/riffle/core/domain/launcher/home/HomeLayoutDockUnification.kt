@@ -182,7 +182,6 @@ private fun LauncherItem.identities(): List<Any> =
     when (this) {
         is AppShortcutItem -> listOf(identity)
         is FolderItem -> items.map { app -> app.identity }
-        is AppPairItem -> listOf(this)
         is WidgetItem -> listOf(appWidgetId)
     }
 
@@ -288,7 +287,7 @@ private fun LauncherItem.spanCandidatesOn(grid: GridDimensions): List<GridSpan> 
                 .placementCandidates(resizeConstraints)
                 .filter { span -> span.columns <= grid.columns && span.rows <= grid.rows }
 
-        is AppShortcutItem, is FolderItem, is AppPairItem -> listOf(GridSpan())
+        is AppShortcutItem, is FolderItem -> listOf(GridSpan())
     }
 
 /**
@@ -306,12 +305,6 @@ private fun LauncherItem.withIdsUniqueIn(layout: HomeLayout): LauncherItem {
     return when (this) {
         is AppShortcutItem -> copy(id = id.claimUniqueIn(used))
         is WidgetItem -> copy(id = id.claimUniqueIn(used))
-        is AppPairItem ->
-            copy(
-                id = id.claimUniqueIn(used),
-                first = first.copy(id = first.id.claimUniqueIn(used)),
-                second = second.copy(id = second.id.claimUniqueIn(used)),
-            )
         is FolderItem ->
             copy(
                 id = id.claimUniqueIn(used),

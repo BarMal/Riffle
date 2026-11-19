@@ -1,7 +1,6 @@
 package com.riffle.core.domain.launcher.workspace.pool
 
 import com.riffle.core.domain.launcher.glance.GlanceWidgets
-import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -91,10 +90,6 @@ object ArrangementIngest {
                 existing.copy(
                     resizeConstraints = edited.resizeConstraints,
                 )
-            existing is PoolAppPair && edited is AppPairItem -> create(existing.id, edited)
-            // A pair that lost an app is edited into the remaining single app (and the reverse) under the same id.
-            existing is PoolAppPair && edited is AppShortcutItem -> create(existing.id, edited)
-            existing is PoolApp && edited is AppPairItem -> create(existing.id, edited)
             existing is PoolApp && edited is AppShortcutItem -> existing.copy(label = edited.label)
             else -> existing
         }
@@ -106,8 +101,6 @@ object ArrangementIngest {
         when (item) {
             is AppShortcutItem -> PoolApp(id, item.appIdentity, item.label, item.appShortcutId)
             is FolderItem -> PoolFolder(id, item.label, ArrangementAdapter.entriesOf(item))
-            is AppPairItem ->
-                PoolAppPair(id, ArrangementAdapter.entryOf(item.first), ArrangementAdapter.entryOf(item.second))
             is WidgetItem ->
                 PoolWidget(
                     id = id,

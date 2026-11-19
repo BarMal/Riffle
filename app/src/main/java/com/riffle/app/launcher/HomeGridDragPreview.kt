@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -91,7 +90,6 @@ private fun LauncherItem.withPreviewCell(cell: GridCell): LauncherItem? =
             is AppShortcutItem -> copy(placement = previewPlacement)
             is FolderItem -> copy(placement = previewPlacement)
             is WidgetItem -> copy(placement = previewPlacement)
-            is AppPairItem -> copy(placement = previewPlacement)
         }
     }
 

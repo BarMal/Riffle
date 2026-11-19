@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.apps.AppShortcut
-import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -331,8 +330,6 @@ private fun HomeGridItem(
                 presentation = presentation,
                 actions = actions,
             )
-
-        is AppPairItem -> Unit // A pair is Dock-only; it is never placed on a page.
     }
 }
 

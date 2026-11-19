@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
-import com.riffle.core.domain.launcher.home.AppPairItem
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -21,6 +20,5 @@ internal fun List<AppNotificationGroup>.notificationCountFor(item: LauncherItem)
     when (item) {
         is AppShortcutItem -> notificationCountFor(item.appIdentity)
         is FolderItem -> item.items.sumOf { shortcut -> notificationCountFor(shortcut.appIdentity) }
-        is AppPairItem -> notificationCountFor(item.first.appIdentity) + notificationCountFor(item.second.appIdentity)
         is WidgetItem -> 0
     }

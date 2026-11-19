@@ -88,10 +88,6 @@ private fun LauncherShellAction.isDockEditAction(): Boolean =
         is LauncherShellAction.MoveDockShortcutToIndex,
         is LauncherShellAction.MoveHomeItemToDock,
         is LauncherShellAction.MoveDockItemToHome,
-        is LauncherShellAction.PairDockApps,
-        is LauncherShellAction.PairDockAppWith,
-        is LauncherShellAction.UnpairDockItem,
-        is LauncherShellAction.SwapDockPair,
         -> true
 
         else -> false

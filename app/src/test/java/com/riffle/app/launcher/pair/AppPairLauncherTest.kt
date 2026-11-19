@@ -7,9 +7,8 @@ import com.riffle.app.launcher.diagnostics.pair.TrampolineRequest
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
-import com.riffle.core.domain.launcher.home.AppPairItem
-import com.riffle.core.domain.launcher.home.AppShortcutItem
-import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.dock.PairApp
+import com.riffle.core.domain.launcher.dock.PairLaunch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -26,13 +25,12 @@ class AppPairLauncherTest {
     private val adjacentNewTask = Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT or Intent.FLAG_ACTIVITY_NEW_TASK
 
     private fun app(name: String) =
-        AppShortcutItem(
-            id = LauncherItemId("dock:$name"),
-            appIdentity = AppIdentity(AppPackageName("com.riffle.$name"), AppActivityName(".Main")),
+        PairApp(
+            identity = AppIdentity(AppPackageName("com.riffle.$name"), AppActivityName(".Main")),
             label = name.replaceFirstChar { it.uppercase() },
         )
 
-    private val pair = AppPairItem(LauncherItemId("dock-pair:1"), app("notes"), app("maps"))
+    private val pair = PairLaunch(app("notes"), app("maps"))
 
     /** Records each start with the virtual time it was made at; can fail chosen packages. */
     private class FakeStarter(

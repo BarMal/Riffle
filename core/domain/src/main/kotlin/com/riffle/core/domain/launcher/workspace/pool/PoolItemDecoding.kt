@@ -38,7 +38,6 @@ internal object PoolItemDecoding {
                         root.array("entries").mapNotNull { (it as? StoredValue.Obj)?.let(::decodeEntry) },
                     )
                 root.string("kind") == "widget" -> decodeWidget(id, label, root)
-                root.string("kind") == "pair" -> decodePair(id, root)
                 else -> null
             }
         }
@@ -56,14 +55,19 @@ internal object PoolItemDecoding {
             hostedId = root.int("host")?.let(::HostedWidgetId),
         )
 
-    private fun decodePair(
-        id: PoolItemId,
-        root: StoredValue.Obj,
-    ): PoolAppPair? {
-        val first = root.obj("first")?.let(::decodeEntry)
-        val second = root.obj("second")?.let(::decodeEntry)
-        return if (first == null || second == null) null else PoolAppPair(id, first, second)
-    }
+    /** An app pair an older build stored (kind "pair"), or null when it is not one or a side cannot be read. */
+    internal fun decodeLegacyPair(root: StoredValue.Obj): LegacyAppPair? =
+        guarded {
+            val id = root.string("id")?.let(::PoolItemId)
+            val first = root.obj("first")?.let(::decodeEntry)
+            val second = root.obj("second")?.let(::decodeEntry)
+            val sides = if (first != null && second != null) first to second else null
+            if (root.string("kind") == "pair" && id != null && sides != null) {
+                LegacyAppPair(id, sides.first, sides.second)
+            } else {
+                null
+            }
+        }
 
     private fun decodeEntry(root: StoredValue.Obj): FolderEntry? {
         val id = root.string("id")
