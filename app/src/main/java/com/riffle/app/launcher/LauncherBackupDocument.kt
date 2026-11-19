@@ -9,6 +9,8 @@ import com.riffle.app.launcher.stream.decodeStreamLayouts
 import com.riffle.app.launcher.stream.encodeStreamLayouts
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.layouts.AppLayout
+import com.riffle.core.domain.launcher.layouts.AppLayoutsCodec
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.stream.StreamLayoutBackup
 import com.riffle.core.domain.launcher.stream.StreamLayouts
@@ -45,6 +47,8 @@ data class LauncherBackupDocument(
      * so this is only ever written to the backup file the user exports. Absent in older backups.
      */
     val calendarFeeds: IcsFeedSettings? = null,
+    /** The Layouts stack (two apps and their order each, never windows). Absent in backups written before it. */
+    val layouts: List<AppLayout>? = null,
 )
 
 fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
@@ -66,6 +70,11 @@ fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
                 ?.let { layouts -> json.put("stream", JSONObject(encodeStreamLayouts(layouts))) }
             document.calendarFeeds?.takeIf { it.feeds.isNotEmpty() }
                 ?.let { feeds -> json.put("calendarFeeds", JSONObject(IcsJsonCodecs.encodeSettings(feeds))) }
+            document.layouts?.takeIf { it.isNotEmpty() }
+                ?.let {
+                        layouts ->
+                    json.put("layouts", JSONObject(AppLayoutsCodec.encode(layouts).toJson().toString()))
+                }
             if (document.homeFromPool) json.put("homeFromPool", true)
         }
         .toString()
@@ -100,6 +109,7 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
             homeFromPool = json.optBoolean("homeFromPool", false),
             stream = json.optStream(),
             calendarFeeds = json.optCalendarFeeds(),
+            layouts = json.optLayouts(),
         )
     }.getOrElse { error ->
         when (error) {
@@ -143,6 +153,11 @@ private fun JSONObject.optStream(): StreamLayouts? =
         optJSONObject("stream")
             ?.let { decodeStreamLayouts(it.toString()) }
             ?.let(StreamLayoutBackup::restore)
+    }.getOrNull()
+
+private fun JSONObject.optLayouts(): List<AppLayout>? =
+    runCatching {
+        optJSONObject("layouts")?.let { AppLayoutsCodec.decode(it.toStoredValue()) }?.takeIf { it.isNotEmpty() }
     }.getOrNull()
 
 private fun JSONObject.optCalendarFeeds(): IcsFeedSettings? =

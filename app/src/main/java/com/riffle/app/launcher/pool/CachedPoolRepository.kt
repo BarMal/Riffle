@@ -3,7 +3,9 @@ package com.riffle.app.launcher.pool
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.layouts.AppLayout
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import com.riffle.core.domain.launcher.workspace.pool.LegacyDockPairs
 import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.PoolCutover
 import com.riffle.core.domain.launcher.workspace.pool.PoolLayoutFold
@@ -58,6 +60,11 @@ internal class UndecodablePoolException : Exception("The stored pool cannot be d
 @Suppress("TooManyFunctions") // Load, cutover, edit, flush and backup paths of one small store.
 internal class CachedPoolRepository(
     private val store: PoolStorePort,
+    /**
+     * Takes the Dock's former app pairs, as layouts, the first time a pool that holds some is read (ADR 0003,
+     * Amendment 7; [LegacyDockPairs]). The pairs leave the pool only once this has returned; null keeps them.
+     */
+    private val legacyPairs: ((List<AppLayout>) -> Unit)? = null,
 ) {
     @Volatile
     private var cached: PoolStoreState? = null
@@ -176,7 +183,22 @@ internal class CachedPoolRepository(
         } else if (failure != null) {
             persistenceEnabled = false
         }
-        return read.getOrNull()
+        return read.getOrNull()?.let { migratePairs(it) }
+    }
+
+    /**
+     * [read] without the Dock's app pairs, which became layouts ([legacyPairs]); written back at once when it changed.
+     * A sink that fails leaves the pairs where they are, to be migrated at the next start.
+     */
+    private suspend fun migratePairs(read: PoolStoreState): PoolStoreState {
+        val sink = legacyPairs
+        val extraction = LegacyDockPairs.extract(read)
+        val migrated = sink != null && extraction.changed && runCatching { sink(extraction.layouts) }.isSuccess
+        if (!migrated) return read
+        if (persistenceEnabled) {
+            runCatching { store.write(extraction.state) }.onFailure { if (it is CancellationException) throw it }
+        }
+        return extraction.state
     }
 
     /**
@@ -279,7 +301,7 @@ internal class CachedPoolRepository(
      */
     suspend fun replaceFromBackup(state: PoolStoreState) =
         lock.withLock {
-            val folded = PoolLayoutFold.fold(state)
+            val folded = PoolLayoutFold.fold(migratePairs(state))
             if (cached != null) {
                 synchronized(stateLock) {
                     cached = folded

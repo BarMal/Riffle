@@ -48,6 +48,7 @@ import com.riffle.app.launcher.ics.ICS_MAX_RESPONSE_BYTES
 import com.riffle.app.launcher.ics.IcsFeedsController
 import com.riffle.app.launcher.ics.IcsRefreshCoordinator
 import com.riffle.app.launcher.ics.defaultIcsEngine
+import com.riffle.app.launcher.layouts.AppLayoutsRepositories
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
@@ -154,6 +155,9 @@ internal class MainActivityDependencies(
         )
     }
     val exclusionRepository by lazy { CachedExclusionRepository(DataStoreExclusionStore(activity)) }
+
+    /** The Layouts stack's two apps per layout; the Stream, the backup and the Dock's pair migration share it. */
+    val appLayoutsRepository by lazy { AppLayoutsRepositories.get(activity) }
 
     /** How the Stream is arranged per posture; the backup and the Stream both go through this one repository. */
     val streamLayoutRepository by lazy { CachedStreamLayoutRepository(DataStoreStreamLayoutStore(activity)) }
@@ -565,6 +569,7 @@ internal class MainActivityDependencies(
             scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
             stream = streamLayoutRepository,
             calendarFeeds = icsFeedRepository,
+            layouts = appLayoutsRepository,
             poolOwnsHome = { homeLayoutRuntime.poolHome != null },
         )
     }
