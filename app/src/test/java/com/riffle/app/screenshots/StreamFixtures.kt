@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.stream.RecentAppAction
 import com.riffle.core.domain.launcher.stream.RecentAppContent
 import com.riffle.core.domain.launcher.stream.StreamAppRef
 import com.riffle.core.domain.launcher.stream.StreamContent
+import com.riffle.core.domain.launcher.stream.RelativeAge
 import com.riffle.core.domain.launcher.stream.StreamContentId
 import com.riffle.core.domain.launcher.stream.StreamGroup
 import com.riffle.core.domain.launcher.stream.StreamGroupKeys
@@ -47,7 +48,16 @@ internal class FixedStreamFormats(private val nowEpochMillis: Long = StreamFixtu
 
     override fun now(): Long = nowEpochMillis
 
-    override fun age(epochMillis: Long): String = "${(nowEpochMillis - epochMillis) / MINUTE} min. ago"
+    override fun age(epochMillis: Long): String {
+        val age = RelativeAge.of(nowEpochMillis - epochMillis)
+        val unit =
+            when (age.unit) {
+                RelativeAge.Unit.MINUTES -> "min."
+                RelativeAge.Unit.HOURS -> "h."
+                RelativeAge.Unit.DAYS -> "d."
+            }
+        return "${age.count} $unit ago"
+    }
 
     override fun time(epochMillis: Long): String =
         DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneOffset.UTC).format(Instant.ofEpochMilli(epochMillis))
@@ -57,10 +67,6 @@ internal class FixedStreamFormats(private val nowEpochMillis: Long = StreamFixtu
     override fun today(): LocalDate = Instant.ofEpochMilli(nowEpochMillis).atZone(ZoneOffset.UTC).toLocalDate()
 
     override fun zone(): java.time.ZoneId = ZoneOffset.UTC
-
-    private companion object {
-        const val MINUTE = 60_000L
-    }
 }
 
 /**
