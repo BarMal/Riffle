@@ -11,6 +11,7 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.stream.STREAM_SURFACE_TEST_TAG
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
@@ -57,7 +58,10 @@ class DockPullScreenshotTest {
     @Test
     fun libraryPullMidReducedMotion() {
         val reduced =
-            LauncherSettings(motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON))
+            LauncherSettings(
+                features = FeatureSettings(library = true),
+                motion = MotionSettings(reducedMotionPreference = ReducedMotionPreference.ON),
+            )
         render(ScreenshotFixtures.homeState().copy(launcherSettings = reduced))
         pull(fraction = 0.35f, release = false)
         composeRule.captureScreen()
