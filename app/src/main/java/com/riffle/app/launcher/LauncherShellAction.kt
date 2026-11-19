@@ -112,6 +112,12 @@ sealed interface LauncherShellAction {
 
     data object RequestImportLauncherBackup : LauncherShellAction
 
+    /** Settings > Backup > Undo last import: re-imports the copy kept before the last import, through the same path. */
+    data object UndoLastBackupImport : LauncherShellAction
+
+    /** Settings > Backup > Dismiss: deletes the copy kept before the last import. */
+    data object DismissLastBackupImportUndo : LauncherShellAction
+
     data class ImportLauncherBackup(val document: LauncherBackupDocument) : LauncherShellAction
 
     data object EnterHomeEditMode : LauncherShellAction

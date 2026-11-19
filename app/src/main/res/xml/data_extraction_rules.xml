@@ -14,6 +14,9 @@
   The encrypted Todoist token (SharedPreferences "riffle_todoist_token") is bound to this device's Keystore and is
   excluded from both so a token is never backed up or transferred.
 
+  The copy kept before the last backup import (files/before_import_backup.json) is this install's way back from that
+  import and holds the whole set-up; it is excluded from both.
+
   The onboarding state (SharedPreferences "riffle_onboarding") describes this install only (whether the
   first-time walkthrough ran here), so it is not carried to another device either.
 
@@ -24,6 +27,7 @@
     <cloud-backup>
         <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
         <exclude domain="file" path="datastore/riffle_ics_feeds.preferences_pb" />
+        <exclude domain="file" path="before_import_backup.json" />
         <exclude domain="sharedpref" path="riffle_onboarding.xml" />
         <exclude domain="sharedpref" path="riffle_after_update.xml" />
         <exclude domain="sharedpref" path="riffle_todoist_token.xml" />
@@ -31,6 +35,7 @@
     <device-transfer>
         <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
         <exclude domain="file" path="datastore/riffle_ics_feeds.preferences_pb" />
+        <exclude domain="file" path="before_import_backup.json" />
         <exclude domain="sharedpref" path="riffle_onboarding.xml" />
         <exclude domain="sharedpref" path="riffle_after_update.xml" />
         <exclude domain="sharedpref" path="riffle_todoist_token.xml" />

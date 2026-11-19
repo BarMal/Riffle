@@ -482,6 +482,16 @@ enum class SettingKey(
     ),
     BACKUP_EXPORT(SettingsPage.BACKUP, R.string.setting_backup_export, R.string.setting_backup_export_keywords),
     BACKUP_IMPORT(SettingsPage.BACKUP, R.string.setting_backup_import, R.string.setting_backup_import_keywords),
+    BACKUP_UNDO_IMPORT(
+        SettingsPage.BACKUP,
+        R.string.settings_backup_undo_import,
+        R.string.setting_backup_undo_import_keywords,
+    ),
+    BACKUP_DISMISS_UNDO(
+        SettingsPage.BACKUP,
+        R.string.settings_backup_dismiss_undo,
+        R.string.setting_backup_dismiss_undo_keywords,
+    ),
     LAYOUT_FOLDED_DOCK_EDGE(
         SettingsPage.POSTURE_LAYOUT,
         R.string.setting_layout_folded_dock_edge,

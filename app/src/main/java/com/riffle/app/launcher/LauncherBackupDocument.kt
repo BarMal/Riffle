@@ -184,5 +184,5 @@ private fun JSONObject.optHiddenAppIdentities(): Set<AppIdentity> =
         else -> emptySet()
     }
 
-private const val LAUNCHER_BACKUP_DOCUMENT_TYPE = "riffleLauncherBackup"
-private const val LAUNCHER_BACKUP_DOCUMENT_VERSION = 1
+internal const val LAUNCHER_BACKUP_DOCUMENT_TYPE = "riffleLauncherBackup"
+internal const val LAUNCHER_BACKUP_DOCUMENT_VERSION = 1

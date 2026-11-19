@@ -121,6 +121,7 @@ fun SettingsSurface(
                     },
                 )
             }
+            BackupImportAnnouncer(snackbar = snackbarHostState, onAction = onAction)
             // Takes no room until a page announces something (the Workspaces page's confirmations and Undo).
             SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.CenterHorizontally))
         }

@@ -72,6 +72,7 @@ fun LauncherShell(
     sources: SourcesHost? = null,
     onboarding: OnboardingHost? = null,
     stream: StreamHost? = null,
+    beforeImport: BeforeImportCopies? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val storedState by viewModel.state.collectAsState()
@@ -97,6 +98,7 @@ fun LauncherShell(
             LocalWalkthroughLauncher provides onboarding?.controller?.let { controller -> controller::rerun },
             LocalHintsHost provides remember(onboarding) { onboarding?.controller?.let(HintsHost::of) },
             LocalSavedHomeLayouts provides viewModel.savedHomeLayouts,
+            LocalBeforeImportCopies provides beforeImport,
         ) {
             LauncherShellContent(
                 state = state,

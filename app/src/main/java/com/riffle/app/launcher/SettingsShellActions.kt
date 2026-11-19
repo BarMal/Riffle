@@ -44,6 +44,16 @@ internal class DefaultLauncherSettingsActionHandler(
                 true
             }
 
+            LauncherSettingsActionRoute.UndoImportBackup -> {
+                callbacks.undoImportBackup()
+                true
+            }
+
+            LauncherSettingsActionRoute.DismissImportUndo -> {
+                callbacks.dismissImportUndo()
+                true
+            }
+
             null -> false
         }
 }
@@ -55,6 +65,8 @@ internal data class LauncherSettingsActionCallbacks(
     val changeWallpaper: () -> Unit,
     val exportBackup: () -> Unit,
     val importBackup: () -> Unit,
+    val undoImportBackup: () -> Unit = {},
+    val dismissImportUndo: () -> Unit = {},
     /** Explicit, user-initiated only: launches the system dialog or app settings per the calendar policy. */
     val requestCalendarAccess: () -> Unit = {},
 )
@@ -75,8 +87,13 @@ internal sealed interface LauncherSettingsActionRoute {
     data object ExportBackup : LauncherSettingsActionRoute
 
     data object RequestImportBackup : LauncherSettingsActionRoute
+
+    data object UndoImportBackup : LauncherSettingsActionRoute
+
+    data object DismissImportUndo : LauncherSettingsActionRoute
 }
 
+@Suppress("LongMethod") // One branch list: every settings action and where it goes.
 internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettingsActionRoute? =
     when (this) {
         is LauncherShellAction.SelectWallpaperSource,
@@ -156,5 +173,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         LauncherShellAction.ChangeWallpaper -> LauncherSettingsActionRoute.ChangeWallpaper
         LauncherShellAction.ExportLauncherBackup -> LauncherSettingsActionRoute.ExportBackup
         LauncherShellAction.RequestImportLauncherBackup -> LauncherSettingsActionRoute.RequestImportBackup
+        LauncherShellAction.UndoLastBackupImport -> LauncherSettingsActionRoute.UndoImportBackup
+        LauncherShellAction.DismissLastBackupImportUndo -> LauncherSettingsActionRoute.DismissImportUndo
         else -> null
     }

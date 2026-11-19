@@ -1303,4 +1303,24 @@
     <string name="home_layout_apps_loading_message">Apps are still loading. Try again in a moment.</string>
     <string name="home_layout_failed_message">That didn\u2019t work. Home is unchanged.</string>
     <string name="widget_not_set_up">Not set up. Add it again from Widgets.</string>
+
+    <!-- Backup messages -->
+    <string name="backup_message_exported">Backup exported</string>
+    <string name="backup_message_export_failed">Backup export failed</string>
+    <string name="backup_message_imported">Backup imported</string>
+    <string name="backup_message_import_failed">Backup import failed. The file could not be read.</string>
+    <string name="backup_message_import_not_a_backup">That file is not a Riffle backup.</string>
+    <string name="backup_message_import_newer_version">That backup was made by a newer version of Riffle. Update Riffle to import it.</string>
+    <string name="backup_message_import_damaged">That backup is damaged, so nothing was changed.</string>
+    <string name="backup_message_import_not_kept">Your current set-up could not be saved first, so nothing was changed.</string>
+    <string name="settings_backup_undo_import">Undo last import</string>
+    <string name="settings_backup_undo_import_subtitle">Put back what the import on %1$s replaced</string>
+    <string name="settings_backup_undo_import_action">Undo</string>
+    <string name="settings_backup_dismiss_undo">Dismiss</string>
+    <string name="settings_backup_dismiss_undo_subtitle">Delete the copy kept before the import</string>
+    <string name="settings_backup_dismiss_undo_action">Dismiss</string>
+    <string name="setting_backup_undo_import_keywords">undo import backup restore previous before</string>
+    <string name="setting_backup_dismiss_undo_keywords">dismiss delete copy before import</string>
+    <string name="backup_imported_snackbar">Backup imported</string>
+    <string name="backup_import_undone_snackbar">Import undone</string>
 </resources>
