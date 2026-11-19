@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
+import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherFeature
@@ -497,23 +498,12 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
-    fun dismissingTheDockPressHintStoresItAsSeen() {
-        val repository = FakeLauncherSettingsRepository()
-        assertEquals(false, LauncherShellState().launcherSettings.hints.dockPressSeen)
-
-        val dismissed =
-            reducer(launcherSettingsRepository = repository)
-                .reduce(LauncherShellState(), LauncherShellAction.DismissDockPressHint)
-
-        assertEquals(true, dismissed.launcherSettings.hints.dockPressSeen)
-        assertEquals(dismissed.launcherSettings, repository.savedSettings)
-    }
-
-    @Test
     fun showingHintsAgainClearsTheStoredPressHintFlag() {
         val repository = FakeLauncherSettingsRepository()
         val reducer = reducer(launcherSettingsRepository = repository)
-        val dismissed = reducer.reduce(LauncherShellState(), LauncherShellAction.DismissDockPressHint)
+        // The flag is only ever read from storage now: nothing sets it any more.
+        val dismissed =
+            LauncherShellState(launcherSettings = LauncherSettings(hints = HintSettings(dockPressSeen = true)))
 
         val again = reducer.reduce(dismissed, LauncherShellAction.ShowHintsAgain)
 

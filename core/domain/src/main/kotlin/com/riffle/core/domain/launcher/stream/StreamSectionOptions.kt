@@ -17,7 +17,7 @@ data class StreamSectionOptions(
 )
 
 /**
- * Now is media only (ADR 0003, Amendment 5). The next event and the alarm that older layouts stored options for
+ * Now is media only (ADR 0003, Amendment 4). The next event and the alarm that older layouts stored options for
  * (`showNextEvent`, `showAlarm`) belong to Today now; those stored keys, and the old `maxMedia` (which was one), are
  * ignored when decoding.
  */

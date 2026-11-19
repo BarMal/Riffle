@@ -98,7 +98,7 @@ class ProbeResult(
 
 /** The labels of the long-click actions of a surface's own background, which are not items. */
 internal val backgroundLongClickLabels =
-    setOf("Show home actions", "Show panel actions", "Show options for the Library", "Show as")
+    setOf("Show Home actions", "Show panel actions", "Show options for the Library", "Show as")
 
 /** The labels of the click actions of a surface's own scrim, which is not an item either. */
 internal val backgroundClickLabels = setOf("Close Library")

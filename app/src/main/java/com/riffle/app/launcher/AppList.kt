@@ -306,13 +306,17 @@ private fun AppDrawerMainMenuItems(
         )
     }
     AppDrawerRowMenuItem(
-        text = if (state.isOnHome) "Added to home" else "Add to home",
+        text =
+            stringResource(if (state.isOnHome) R.string.menu_added_to_home else R.string.menu_add_to_home),
         enabled = !state.isOnHome,
         onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
         onExpandedChange = onExpandedChange,
     )
     AppDrawerRowMenuItem(
-        text = if (state.dockItemId == null) "Pin to Dock" else "Unpin from Dock",
+        text =
+            stringResource(
+                if (state.dockItemId == null) R.string.menu_add_to_dock else R.string.menu_remove_from_dock,
+            ),
         onClick = {
             when (state.dockItemId) {
                 null -> onAction(LauncherShellAction.AddAppToDock(state.app))
@@ -322,7 +326,14 @@ private fun AppDrawerMainMenuItems(
         onExpandedChange = onExpandedChange,
     )
     AppDrawerRowMenuItem(
-        text = if (state.floatingDockItemId == null) "Add to floating dock" else "Remove from floating dock",
+        text =
+            stringResource(
+                if (state.floatingDockItemId == null) {
+                    R.string.menu_add_to_floating_dock
+                } else {
+                    R.string.menu_remove_from_floating_dock
+                },
+            ),
         onClick = {
             when (state.floatingDockItemId) {
                 null -> onAction(LauncherShellAction.AddAppToFloatingDock(state.app))
@@ -332,17 +343,17 @@ private fun AppDrawerMainMenuItems(
         onExpandedChange = onExpandedChange,
     )
     AppDrawerRowMenuItem(
-        text = "App info",
+        text = stringResource(R.string.menu_app_info),
         onClick = { onAction(LauncherShellAction.OpenAppInfo(state.app.identity)) },
         onExpandedChange = onExpandedChange,
     )
     AppDrawerRowMenuItem(
-        text = "Hide",
+        text = stringResource(R.string.menu_hide_app),
         onClick = { onAction(LauncherShellAction.HideApp(state.app.identity)) },
         onExpandedChange = onExpandedChange,
     )
     AppDrawerRowMenuItem(
-        text = "Uninstall",
+        text = stringResource(R.string.menu_uninstall),
         onClick = { onAction(LauncherShellAction.UninstallApp(state.app.identity)) },
         onExpandedChange = onExpandedChange,
     )
@@ -356,7 +367,7 @@ private fun AppDrawerShortcutMenuItems(
     onExpandedChange: (Boolean) -> Unit,
 ) {
     DropdownMenuItem(
-        text = { Text(text = "Back") },
+        text = { Text(text = stringResource(R.string.menu_back)) },
         onClick = onBack,
     )
     items.forEach { item ->

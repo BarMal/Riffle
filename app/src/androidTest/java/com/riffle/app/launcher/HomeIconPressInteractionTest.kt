@@ -142,7 +142,7 @@ class HomeIconPressInteractionTest {
 
         composeRule.onNodeWithText(shortcut.label).performTouchInput { longClick() }
 
-        composeRule.onNodeWithText("Remove from home").assertExists()
+        composeRule.onNodeWithText("Remove from Home").assertExists()
     }
 
     private fun verifyFolderPressInteractions(reducedMotion: Boolean) {
@@ -164,7 +164,7 @@ class HomeIconPressInteractionTest {
 
         composeRule.onNodeWithText(folder.label).performTouchInput { longClick() }
 
-        composeRule.onNodeWithText("Remove from home").assertExists()
+        composeRule.onNodeWithText("Remove from Home").assertExists()
     }
 
     private fun setContent(

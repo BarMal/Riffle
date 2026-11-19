@@ -49,7 +49,8 @@ class HomeWidgetPlaceholderContextMenuTest {
                 placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
             )
 
-        val items = widgetPlaceholderContextMenuItems(widget, GridDimensions(columns = 3, rows = 3))
+        val items =
+            widgetPlaceholderContextMenuItems(widget, GridDimensions(columns = 3, rows = 3), text = SettingsTestText)
 
         assertEquals(true, items.single { item -> item.label == "Make wider" }.enabled)
         assertEquals(false, items.single { item -> item.label == "Make taller" }.enabled)
@@ -65,7 +66,7 @@ class HomeWidgetPlaceholderContextMenuTest {
                 placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
             )
 
-        val items = widgetPlaceholderContextMenuItems(widget)
+        val items = widgetPlaceholderContextMenuItems(widget, text = SettingsTestText)
 
         assertEquals(
             listOf(
@@ -104,7 +105,7 @@ class HomeWidgetPlaceholderContextMenuTest {
                     enabled = false,
                 ),
                 ShortcutContextMenuItem(
-                    label = "Remove from home",
+                    label = "Remove from Home",
                     action = LauncherShellAction.RemoveHomeShortcut(widget.id),
                 ),
             ),
@@ -126,7 +127,8 @@ class HomeWidgetPlaceholderContextMenuTest {
                     ),
             )
 
-        val items = widgetPlaceholderContextMenuItems(widget, GridDimensions(columns = 3, rows = 3))
+        val items =
+            widgetPlaceholderContextMenuItems(widget, GridDimensions(columns = 3, rows = 3), text = SettingsTestText)
 
         assertEquals(false, items.single { item -> item.label == "Make wider" }.enabled)
         assertEquals(true, items.single { item -> item.label == "Make narrower" }.enabled)
@@ -156,6 +158,7 @@ class HomeWidgetPlaceholderContextMenuTest {
                 widget = widget,
                 grid = GridDimensions(columns = 3, rows = 3),
                 pageItems = listOf(widget, blocker),
+                text = SettingsTestText,
             )
 
         assertEquals(false, items.single { item -> item.label == "Make wider" }.enabled)
@@ -183,6 +186,7 @@ class HomeWidgetPlaceholderContextMenuTest {
                 widget = widget,
                 grid = GridDimensions(columns = 3, rows = 3),
                 pageItems = listOf(widget, blocker),
+                text = SettingsTestText,
             )
 
         assertEquals(false, items.single { item -> item.label == "Make taller" }.enabled)

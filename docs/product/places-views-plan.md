@@ -159,7 +159,7 @@ state), removal of the old lens pages and adaptive stage surface (P8).
 
 ### P7. The Library
 
-**Outcome:** done (#1448). Categories, A-Z and Grid, search at the top, one hidden-apps list. Left out: drag from the Library onto Home (Add to Home and Pin to Dock are the equivalents); the Personal and Work split is a filter in the Library, not a stored setting.
+**Outcome:** done (#1448). Categories, A-Z and Grid, search at the top, one hidden-apps list. Left out: drag from the Library onto Home (Add to Home and Add to Dock are the equivalents); the Personal and Work split is a filter in the Library, not a stored setting.
 
 - Views: Categories (iOS-style tiles, the default), A–Z list, Grid, from the existing `CATEGORIES`,
   `ALPHA_LIST` and `ICON_GRID` expressions; "Show as" by long-press on the header and in Settings.
@@ -357,7 +357,7 @@ An investigation aid for "the swipe-up-to-home gesture stops reaching the launch
 mode is toggled" (no confirmed cause). The manifest declares on the Home activity `android:clearTaskOnLaunch`,
 `android:stateNotNeeded` and `android:resumeWhilePausing`, as AOSP's Launcher3 does; the LAUNCHER intent filter is
 unchanged. The first process start after the version code or the last-update time changes records one entry
-(`AfterUpdateLog`, kept to the last ten, newest first; see Settings > About > Diagnostics > After-update starts). The work
+(`AfterUpdateLog`, kept to the last ten, newest first; see Settings > About > After-update starts). The work
 runs on its own thread, adds no receiver, background start or permission, and a failure there never reaches the launcher.
 Without a stored earlier version (this build's first start) an update is recorded with the old version unknown; a fresh
 install records nothing. The five-minute window for Home intents is wall-clock time since the start.
@@ -365,7 +365,7 @@ install records nothing. The five-minute window for Home intents is wall-clock t
 ## Home drag
 
 The rules are in `gestures.md`, "Dragging on Home"; the rule is `HomeDragPush` (`:core:domain`) and its numbers
-`HomeDragTuning`, set in Settings > About > Diagnostics > Drag tuning.
+`HomeDragTuning`, set in Settings > About > Developer options > Drag tuning.
 
 | Number | Default | Range |
 | --- | --- | --- |

@@ -18,7 +18,6 @@ class LauncherNotificationActionRouteTest {
 
     @Test
     fun ignoresNonNotificationActions() {
-        assertNull(LauncherShellAction.OpenNotifications.launcherNotificationActionRoute())
         assertNull(LauncherShellAction.RequestNotificationAccess.launcherNotificationActionRoute())
         assertNull(LauncherShellAction.RefreshInstalledApps.launcherNotificationActionRoute())
     }

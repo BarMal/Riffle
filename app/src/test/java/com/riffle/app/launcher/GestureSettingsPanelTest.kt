@@ -22,6 +22,7 @@ class GestureSettingsPanelTest {
             LauncherGestureAction.LAUNCH_APP.targetLabel(
                 target = LauncherGestureLaunchTarget.App(mail.identity),
                 installedApps = listOf(mail),
+                text = SettingsTestText,
             ),
         )
     }
@@ -36,6 +37,7 @@ class GestureSettingsPanelTest {
             LauncherGestureAction.LAUNCH_APP.targetLabel(
                 target = LauncherGestureLaunchTarget.App(workMail.identity),
                 installedApps = listOf(personalMail, workMail),
+                text = SettingsTestText,
             ),
         )
     }
@@ -50,6 +52,7 @@ class GestureSettingsPanelTest {
             LauncherGestureAction.LAUNCH_APP.targetLabel(
                 target = LauncherGestureLaunchTarget.App(secondaryMail.identity),
                 installedApps = listOf(primaryMail, secondaryMail),
+                text = SettingsTestText,
             ),
         )
     }
@@ -63,6 +66,7 @@ class GestureSettingsPanelTest {
             LauncherGestureAction.LAUNCH_APP.targetLabel(
                 target = LauncherGestureLaunchTarget.App(mail.identity),
                 installedApps = emptyList(),
+                text = SettingsTestText,
             ),
         )
     }

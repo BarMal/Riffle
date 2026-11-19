@@ -16,6 +16,7 @@ internal fun LauncherShellState.searchSettingsResults(query: String): List<Launc
                         notificationAccessStatus = notificationAccessStatus,
                         overlayDockPermissionStatus = overlayDockPermissionStatus,
                         hiddenAppCount = hiddenApps.size,
+                        developerVisibility = launcherSettings.diagnostics.developerVisibility(),
                     ),
                 ),
         )

@@ -23,11 +23,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
 import com.riffle.app.launcher.onboarding.LocalWalkthroughLauncher
 import com.riffle.app.launcher.onboarding.OnboardingHost
@@ -290,7 +292,7 @@ private fun DockEditRejectionMessage(
                 text = dockEditRejectionMessage(reason),
                 style = MaterialTheme.typography.bodyMedium,
             )
-            TextButton(onClick = onDismissRequest) { Text("Dismiss") }
+            TextButton(onClick = onDismissRequest) { Text(stringResource(R.string.action_dismiss)) }
         }
     }
 }
@@ -372,20 +374,6 @@ private fun LauncherDestination(
                 onAction = settingsPageActionRouter.onAction,
                 // The hints wait for the set-up card to be done with.
                 hints = LocalHintsHost.current.takeUnless { state.shouldShowSetupCard },
-            )
-
-        ShellDestination.NOTIFICATIONS ->
-            NotificationOverviewSurface(
-                groups = state.notificationGroupsByApp,
-                categoryCounts = state.notificationCountsByCategory,
-                notificationAccessStatus = state.notificationAccessStatus,
-                presentation =
-                    NotificationOverviewPresentation(
-                        apps = state.installedApps,
-                        appIconLoader = appIconLoader,
-                        reducedMotion = state.launcherSettings.motion.reducedMotion,
-                    ),
-                onAction = settingsPageActionRouter.onAction,
             )
 
         ShellDestination.SETTINGS ->

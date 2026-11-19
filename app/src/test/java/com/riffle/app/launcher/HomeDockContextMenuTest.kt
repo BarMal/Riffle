@@ -73,6 +73,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 1,
                 shortcutCount = 3,
+                text = SettingsTestText,
             )
 
         assertEquals(
@@ -104,8 +105,8 @@ class HomeDockContextMenuTest {
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
-                ShortcutContextMenuItem("Move to home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
-                ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
+                ShortcutContextMenuItem("Move to Home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
+                ShortcutContextMenuItem("Remove from Dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
             ),
             items,
         )
@@ -118,7 +119,12 @@ class HomeDockContextMenuTest {
         val shortcut = shortcut()
         val showStage = ShortcutContextMenuItem("Show stage", LauncherShellAction.OpenSettings)
 
-        val items = dockShortcutContextMenuItems(shortcut = shortcut, modeItems = listOf(showStage))
+        val items =
+            dockShortcutContextMenuItems(
+                shortcut = shortcut,
+                modeItems = listOf(showStage),
+                text = SettingsTestText,
+            )
 
         assertEquals(showStage, items.first())
         assertEquals(false, items.any { item -> item.label == "Open" })
@@ -131,6 +137,7 @@ class HomeDockContextMenuTest {
                 shortcut = shortcut(),
                 isEditing = true,
                 modeItems = listOf(ShortcutContextMenuItem("Show stage", LauncherShellAction.OpenSettings)),
+                text = SettingsTestText,
             )
 
         assertEquals(false, items.any { item -> item.label == "Show stage" })
@@ -146,6 +153,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 0,
                 shortcutCount = 2,
+                text = SettingsTestText,
             )
         val lastItems =
             dockShortcutContextMenuItems(
@@ -153,6 +161,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 1,
                 shortcutCount = 2,
+                text = SettingsTestText,
             )
 
         assertEquals(false, firstItems.first { it.label == "Move left" }.enabled)
@@ -172,11 +181,11 @@ class HomeDockContextMenuTest {
         assertEquals(
             listOf(
                 ShortcutContextMenuItem(
-                    label = "Remove from dock",
+                    label = "Remove from Dock",
                     action = LauncherShellAction.RemoveDockShortcut(widget.id),
                 ),
             ),
-            dockWidgetContextMenuItems(widget),
+            dockWidgetContextMenuItems(widget, text = SettingsTestText),
         )
     }
 
@@ -211,7 +220,7 @@ class HomeDockContextMenuTest {
                     action = LauncherShellAction.MoveDockShortcutToIndex(widget.id, targetIndex = 2),
                 ),
                 ShortcutContextMenuItem(
-                    label = "Remove from dock",
+                    label = "Remove from Dock",
                     action = LauncherShellAction.RemoveDockShortcut(widget.id),
                 ),
             ),
@@ -220,6 +229,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 1,
                 shortcutCount = 3,
+                text = SettingsTestText,
             ),
         )
     }
@@ -247,11 +257,11 @@ class HomeDockContextMenuTest {
                     action = LauncherShellAction.MoveDockShortcutToIndex(folder.id, targetIndex = 2),
                 ),
                 ShortcutContextMenuItem(
-                    label = "Move to home",
+                    label = "Move to Home",
                     action = LauncherShellAction.MoveDockItemToHome(folder.id),
                 ),
                 ShortcutContextMenuItem(
-                    label = "Remove from dock",
+                    label = "Remove from Dock",
                     action = LauncherShellAction.RemoveDockShortcut(folder.id),
                 ),
             ),
@@ -260,6 +270,7 @@ class HomeDockContextMenuTest {
                 isEditing = true,
                 shortcutIndex = 1,
                 shortcutCount = 3,
+                text = SettingsTestText,
             ),
         )
     }

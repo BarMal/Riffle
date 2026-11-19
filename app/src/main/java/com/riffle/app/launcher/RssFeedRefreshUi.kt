@@ -12,9 +12,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import com.riffle.app.R
 import com.riffle.app.launcher.rss.FeedRefreshCoordinator
 import com.riffle.app.launcher.rss.label
 import com.riffle.app.launcher.rss.summary
@@ -48,7 +50,7 @@ internal fun RssRefreshAllSetting(
     val refreshing = remember(tick) { coordinator.isRefreshing }
     SettingsListRow(
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        title = "Refresh feeds",
+        title = stringResource(R.string.feeds_refresh_title),
         subtitle =
             when {
                 refreshing -> "Refreshing…"
@@ -62,7 +64,7 @@ internal fun RssRefreshAllSetting(
                     coordinator.refresh(FeedRefreshScope.All) { report -> message = report.summary() }
                 },
             ) {
-                SettingsButtonText(text = "Refresh")
+                SettingsButtonText(text = stringResource(R.string.action_refresh))
             }
         },
     )

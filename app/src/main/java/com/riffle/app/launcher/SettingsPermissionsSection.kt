@@ -132,7 +132,7 @@ private fun permissionSetting(
             modifier = modifier,
             title = title,
             subtitle = status,
-            trailingContent = { SettingsButtonText(text = "Allowed") },
+            trailingContent = { SettingsButtonText(text = stringResource(R.string.access_allowed)) },
         )
     } else {
         SettingsClickableRow(

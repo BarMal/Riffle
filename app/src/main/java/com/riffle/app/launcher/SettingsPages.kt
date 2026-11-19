@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.settings.DiagnosticsSettings
 
 /**
  * Every page of Settings, as a tree (docs/product/settings.md). [parent] is where Back leads and where the page is
@@ -130,26 +131,32 @@ enum class SettingsPage(
         R.string.settings_page_version_summary,
         R.string.settings_page_version_keywords,
     ),
-    APP_PUBLISH(
+    DEVELOPER_OPTIONS(
         VERSION,
+        R.string.settings_page_developer_options,
+        R.string.settings_page_developer_options_summary,
+        R.string.settings_page_developer_options_keywords,
+    ),
+    APP_PUBLISH(
+        DEVELOPER_OPTIONS,
         R.string.settings_page_app_publish,
         R.string.settings_page_app_publish_summary,
         R.string.settings_page_app_publish_keywords,
     ),
     APP_PAIR(
-        VERSION,
+        DEVELOPER_OPTIONS,
         R.string.settings_page_app_pair,
         R.string.settings_page_app_pair_summary,
         R.string.settings_page_app_pair_keywords,
     ),
     PAIR_RECIPE(
-        VERSION,
+        DEVELOPER_OPTIONS,
         R.string.settings_page_pair_recipe,
         R.string.settings_page_pair_recipe_summary,
         R.string.settings_page_pair_recipe_keywords,
     ),
     DRAG_TUNING(
-        VERSION,
+        DEVELOPER_OPTIONS,
         R.string.settings_page_drag_tuning,
         R.string.settings_page_drag_tuning_summary,
         R.string.settings_page_drag_tuning_keywords,
@@ -161,6 +168,36 @@ enum class SettingsPage(
         R.string.settings_page_after_update_keywords,
     ),
 }
+
+/**
+ * Whether the developer tools of About are offered: [HIDDEN] until the Version row was tapped seven times, [REVEALED]
+ * once the "Developer options" switch is there, [ENABLED] while it is on. Only [ENABLED] shows the Developer options
+ * page, and only then do search results lead into it. "After-update starts" is not a developer tool: it is always on.
+ */
+internal enum class DeveloperVisibility {
+    HIDDEN,
+    REVEALED,
+    ENABLED,
+}
+
+internal fun DiagnosticsSettings.developerVisibility(): DeveloperVisibility =
+    when {
+        developerOptions -> DeveloperVisibility.ENABLED
+        developerOptionsRevealed -> DeveloperVisibility.REVEALED
+        else -> DeveloperVisibility.HIDDEN
+    }
+
+/** The Developer options page and the diagnostics pages below it. */
+internal val SettingsPage.isDeveloperPage: Boolean get() = SettingsPage.DEVELOPER_OPTIONS in ancestry()
+
+/** Whether [page] may be listed in search (and offered by the launcher's search) at [visibility]. */
+internal fun SettingsPage.isOffered(visibility: DeveloperVisibility): Boolean =
+    !isDeveloperPage || visibility == DeveloperVisibility.ENABLED
+
+/** Whether the setting [key] may be listed in search at [visibility]. */
+internal fun SettingKey.isOffered(visibility: DeveloperVisibility): Boolean =
+    page.isOffered(visibility) &&
+        (this != SettingKey.ABOUT_DEVELOPER_OPTIONS || visibility != DeveloperVisibility.HIDDEN)
 
 /** The rows of the main page, in order: the places Settings is organised by. */
 internal val settingsMainPageRows: List<SettingsPage> =
@@ -193,6 +230,7 @@ internal data class SettingsOverviewStatus(
     val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
     val overlayDockPermissionStatus: OverlayDockPermissionStatus = OverlayDockPermissionStatus.UNKNOWN,
     val hiddenAppCount: Int = 0,
+    val developerVisibility: DeveloperVisibility = DeveloperVisibility.HIDDEN,
 )
 
 internal fun SettingsSurfaceState.settingsOverviewStatus(): SettingsOverviewStatus =
@@ -201,6 +239,7 @@ internal fun SettingsSurfaceState.settingsOverviewStatus(): SettingsOverviewStat
         notificationAccessStatus = notificationAccessStatus,
         overlayDockPermissionStatus = overlayDockPermissionStatus,
         hiddenAppCount = hiddenApps.size,
+        developerVisibility = settings.diagnostics.developerVisibility(),
     )
 
 internal fun settingsSearchSummaryText(

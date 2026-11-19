@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.MAX_HOME_ICON_SIZE_DP
@@ -73,7 +75,12 @@ private fun HomeLabelVisibilitySetting(
     SettingsSwitchRow(
         modifier = Modifier.settingAnchor(SettingKey.HOME_SHOW_LABELS),
         title = SettingKey.HOME_SHOW_LABELS.label(),
-        subtitle = if (settings.showText) "Labels visible on home" else "Icon-only home",
+        subtitle =
+            if (settings.showText) {
+                stringResource(R.string.settings_labels_visible_subtitle)
+            } else {
+                stringResource(R.string.settings_labels_hidden_subtitle)
+            },
         checked = settings.showText,
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectHomeLabelTextVisible(value)) },
     )
@@ -97,7 +104,7 @@ private fun HomeLabelBackgroundSetting(
         )
         if (settings.showBackground) {
             DiscreteSettingSlider(
-                title = "Label background strength",
+                title = stringResource(R.string.settings_label_background_strength),
                 value = settings.backgroundAlphaPercent,
                 valueRange = MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT..MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
                 valueLabel = { "$it%" },

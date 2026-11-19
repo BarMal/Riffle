@@ -22,11 +22,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import com.riffle.app.R
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.ics.IcsAddResult
 import com.riffle.app.launcher.ics.IcsFeedRow
@@ -68,7 +70,7 @@ internal fun SettingsIcsFeedsPageContent() {
                 onToggle = controller::setEnabled,
                 onRemove = controller::remove,
             )
-            SettingsSection(title = "Add a feed") {
+            SettingsSection(title = stringResource(R.string.calendar_feeds_add_section)) {
                 Column(modifier = Modifier.settingAnchor(SettingKey.CALENDAR_FEEDS_ADD)) {
                     IcsAddFeedForm(onAdd = controller::add)
                 }
@@ -120,7 +122,7 @@ internal fun IcsRefreshRow(
     val summary = IcsFeedsText.summary(state.lastReport)
     SettingsListRow(
         modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite }.testTag(ICS_FEEDS_SUMMARY_TEST_TAG),
-        title = "Refresh calendar feeds",
+        title = stringResource(R.string.calendar_feeds_refresh_title),
         subtitle =
             when {
                 state.refreshing -> "Refreshing…"
@@ -132,7 +134,7 @@ internal fun IcsRefreshRow(
                 enabled = !state.refreshing && state.rows.any(IcsFeedRow::enabled),
                 onClick = onRefresh,
             ) {
-                SettingsButtonText(text = "Refresh")
+                SettingsButtonText(text = stringResource(R.string.action_refresh))
             }
         },
     )
@@ -147,7 +149,7 @@ private fun IcsFeedRowItem(
     SettingsListRow(
         modifier = Modifier.testTag(icsFeedRowTestTag(row.id)),
         title = row.name,
-        subtitle = "${row.host}. ${icsFeedStatus(row)}",
+        subtitle = stringResource(R.string.calendar_feed_row_description, row.host, icsFeedStatus(row)),
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Switch(
@@ -155,7 +157,9 @@ private fun IcsFeedRowItem(
                     checked = row.enabled,
                     onCheckedChange = { enabled -> onToggle(row.id, enabled) },
                 )
-                TextButton(onClick = { onRemove(row.id) }) { SettingsButtonText(text = "Remove") }
+                TextButton(onClick = { onRemove(row.id) }) {
+                    SettingsButtonText(text = stringResource(R.string.action_remove))
+                }
             }
         },
     )
@@ -187,7 +191,7 @@ private fun IcsAddFeedForm(onAdd: (String, String) -> IcsAddResult) {
             modifier = Modifier.fillMaxWidth(),
             value = name,
             onValueChange = { name = it },
-            label = { Text("Name (optional)") },
+            label = { Text(stringResource(R.string.calendar_feed_name_label)) },
             singleLine = true,
         )
         OutlinedTextField(
@@ -197,7 +201,7 @@ private fun IcsAddFeedForm(onAdd: (String, String) -> IcsAddResult) {
                 url = it
                 error = null
             },
-            label = { Text("Calendar link (https .ics)") },
+            label = { Text(stringResource(R.string.calendar_feed_link_label)) },
             isError = error != null,
             supportingText = { error?.let { message -> Text(message) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -214,7 +218,7 @@ private fun IcsAddFeedForm(onAdd: (String, String) -> IcsAddResult) {
                     }
                 },
             ) {
-                SettingsButtonText(text = "Add feed")
+                SettingsButtonText(text = stringResource(R.string.action_add_feed))
             }
         }
     }

@@ -11,6 +11,14 @@ installing. Entries are in the order they were built; where a later one changes 
 
 ### Changed
 
+- Release hygiene ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 13): the diagnostics pages (What
+  apps publish, App pair experiment, Pair recipe, Drag tuning) moved under a "Developer options" page in About, shown
+  only after the Version row is tapped seven times and the switch is turned on; "After-update starts" stays in About. One
+  name per action in every menu (Add to Home, Add to Dock, Add to Floating dock, Remove from Home, Hide app) and the
+  strings of those menus, the Home page controls and the gesture names are resources. The "System" typeface, the same as
+  "Standard", is no longer offered (a stored one reads as Standard). The one-finger swipe rows in Settings > Gestures say
+  when Home's own pages already use the swipe. Unreachable code (the Notifications surface, the shared card stack, the
+  card stage selector, the generated page planner) was removed.
 - One flat glass, lit at the edge, lighter and more see-through: every glass surface is a flat, even translucent tint
   with its light at the edges, after the owner's desktop bar. A 1 dp border is brightest along the top (55%) and faint at
   the bottom, with an inner top hairline; a surface with a colour shows it as thin strips of light along its top and

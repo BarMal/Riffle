@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 /**
  * How a pair is started: the intent flags of each app's start, the wait between them, and whether both are started by
  * one `startActivities` call ([oneCall]). The one small thing to change when the device says the recipe is wrong
- * (docs/product/dock-modes-plan.md, "Pairs"); the owner picks it in Settings > About > Diagnostics > Pair recipe.
+ * (docs/product/dock-modes-plan.md, "Pairs"); the owner picks it in Settings > About > Developer options > Pair recipe.
  * Never `MULTIPLE_TASK` (it pulled the wrong windows into a pane and left duplicate tasks) and never `CLEAR_TASK` (it
  * restarts the apps).
  */

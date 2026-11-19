@@ -3,7 +3,7 @@ package com.riffle.app.launcher.diagnostics.pair
 import android.content.Intent
 
 /*
- * The "App pair experiment" under Settings > About > Diagnostics: does launching two apps as a split-screen pair
+ * The "App pair experiment" under Settings > About > Developer options: does launching two apps as a split-screen pair
  * work on this phone? Plain Kotlin so every method can be tested with a fake [PairStarter]; the platform side is
  * AndroidPairStarter and PairTrampolineActivity. Nothing here is a feature: it only starts activities and records what
  * the calls returned.

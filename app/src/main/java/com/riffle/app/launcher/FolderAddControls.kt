@@ -6,7 +6,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
@@ -24,7 +26,7 @@ internal fun FolderAddControls(
         AppSearchField(
             query = query,
             onQueryChanged = onQueryChanged,
-            label = "Add app",
+            label = stringResource(R.string.folder_add_app),
         )
         AppProfileFilterChips(
             selectedFilter = selectedProfileFilter,
@@ -59,6 +61,6 @@ private fun FolderAddClearFiltersButton(
     if (!shouldShowFolderAddClearFilters(query = query, profileFilter = profileFilter)) return
 
     TextButton(onClick = onClick) {
-        Text(text = "Clear filters")
+        Text(text = stringResource(R.string.filter_clear))
     }
 }

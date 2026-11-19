@@ -34,7 +34,6 @@ private fun LauncherShellAction.navigationAction(): ShellNavigationAction? =
         LauncherShellAction.OpenHome -> ShellNavigationAction.OpenHome
         LauncherShellAction.OpenAppDrawer -> ShellNavigationAction.OpenAppDrawer
         LauncherShellAction.OpenSearch -> ShellNavigationAction.OpenSearch
-        LauncherShellAction.OpenNotifications -> ShellNavigationAction.OpenNotifications
         LauncherShellAction.OpenSettings -> ShellNavigationAction.OpenSettings
         LauncherShellAction.OpenStream -> ShellNavigationAction.OpenStream
         is LauncherShellAction.OpenSettingsPage -> ShellNavigationAction.OpenSettings

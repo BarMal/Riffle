@@ -74,9 +74,9 @@ workspaces stop being user-facing.
 | Place | Holds | Arranged by the user? | Reached by |
 | --- | --- | --- | --- |
 | **Home** | Apps, folders and widgets the user placed; the standard Android launcher model | Yes, by hand | It is the start page; swipe between its pages |
-| **Dock** | Pinned favourites on one side; on the other, live apps and the Stream button | Pins by hand; the dynamic side fills itself | Always visible, on every surface |
+| **Dock** | Pinned favourites on one side; on the other, live apps, now playing and one tile per Stream page | Pins by hand; the dynamic side fills itself | Always visible, on every surface |
 | **Library** | Every installed app, and search | No, it sorts itself | Pull up on the Dock's pinned side; swipe down on Home opens it with search focused |
-| **Stream** | The actions centre: now playing and its queue, notifications, recent apps, events, to-dos, feeds | No; only which sections, their order and their view | Pull up on the Dock's dynamic side, or tap its Stream button; swiping up on a live app lands on that app's stack |
+| **Stream** | The actions centre: now playing and its queue, notifications, recent apps, events, to-dos, feeds | No; only which sections, their order and their view | Press the Dock down and let go (a press that starts on a live app lands on that app's stack; hold, then slide, chooses a tile); the chevron beside the Dock on Home |
 
 Home press returns to the start page. Back closes the Library or collapses a focused card.
 
@@ -91,16 +91,17 @@ Each side of the Dock opens its own world: the pinned side the static one, the d
 | --- | --- |
 | Tap a pinned app | Launches it |
 | Pull up on the pinned side | Library |
-| Pull up on the dynamic side | Stream, tracking the finger; unfolded, stopping partway leaves a split |
-| Tap the Stream button | Switches to the Stream, and back to Home from it |
+| Press the Dock down and let go | Stream; the same press again goes back to Home |
+| Press down on a live app and let go | Stream, landed on that app's stack |
+| Hold, then slide along the Dock | Chooses a tile; the Stream lands on its page (Amendment 9) |
+| Tap the chevron beside the Dock (Home) | Stream (Amendment 12) |
 | Tap a live app | Launches the app |
-| Swipe up on a live app | Stream, landed on that app's stack, tracking the finger |
-| Tap now playing / swipe up on it | Launches the player / Stream, landed on Now |
+| Tap now playing | Launches the player |
 
 - The dynamic side holds apps with something new, plus one entry for now playing while media is active.
   Events, to-dos and feeds get no entry, because they are always present.
-- The Stream button is always the last entry on the dynamic side, so the handle exists when nothing is live.
-  It is also the accessibility equivalent of the pull, alongside Dock custom actions "Open Stream" and
+- There is no Stream button on the Dock (Amendment 1 removed it). The handle exists when nothing is live because the
+  press works anywhere on the Dock; its accessibility equivalent is the Dock's custom actions "Open Stream" and
   "Open Library".
 - There is no other trigger. Home's pager holds only Home pages; there is no sideways swipe into the Stream.
   This keeps the lesson of the 2026-09-25 revision: overlapping triggers made switching unpredictable.
@@ -112,7 +113,7 @@ Each side of the Dock opens its own world: the pinned side the static one, the d
   never shrink. The bar is one icon plus its chrome tall. When the pins do not fit, the gap between them gives
   first, down to 8 dp (or the user's own smaller spacing), and then the pinned run scrolls at full size, fading
   through the glass at the edge that has more. The dynamic side takes only what its entries need (compact 48 dp
-  tiles, up to the live-app-slot limit, plus now playing and the Stream button) and leaves the pinned run at least
+  tiles, up to the live-app-slot limit, plus now playing and the Stream page tiles) and leaves the pinned run at least
   three icons; it scrolls on its own when it has more entries than room.
 
 ### Views
@@ -121,23 +122,24 @@ Each side of the Dock opens its own world: the pinned side the static one, the d
 | --- | --- | --- |
 | Home | Grid (only) | Grid size, icons and labels, return behaviour |
 | Dock | Icon row (only) | Edge, size |
-| Library | Categories (iOS-style, the default), A–Z list, Grid | Personal and work split |
+| Library | Categories (iOS-style, the default), A–Z list, Grid, Pages (an icon grid on horizontal pages) | Personal and work split |
 | Stream | Stack or List, chosen per section; on an unfolded posture, Pages or Stage for the whole Stream | Which sections are on, and their order |
 
 The Stream's sections are fixed: **Now** (media only: the players, then the recent players; the alarm is on Today,
-Amendment 4), **Notifications**, **Recents**, **Agenda**, **Tasks**, **Feeds**. Each draws as a Stack of cards or a List of rows.
+Amendment 4), **Notifications**, **Recents**, **Today** (the next event, the checklist, later events and tomorrow, where
+Agenda and Tasks were two sections), **Feeds** and **Pairs** (Amendment 7). Each draws as a Stack of cards or a List of rows.
 
 **The Stream is pages of vertical stacks** (decision 12). The Stream is a horizontal pager of pages, and each page is
 one vertically scrolling stack of cards or list of rows, the way Calm lays out its chapters. A page is one section's
 content, except that Notifications is **one page per app** that has notifications (newest app first) and Feeds is one
-page per feed with unread items; Now, Recents, Agenda and Tasks are one page each, and a section that has nothing to show
+page per feed with unread items; Now, Recents, Today and Pairs are one page each, and a section that has nothing to show
 or cannot show it (empty, no access, not connected, unavailable, off) is one page holding that state and its action.
 Pages follow the user's section order and carry stable keys, so a new notification never jumps the pager and a vanished
 page hands over to its nearest neighbour. Each page has a header (the app's icon or the section's glyph, its name and
 count), and a Thin-glass **spine** above it, a strip of page markers that scrolls with the pager and jumps on a tap, is
 the page indicator. A Stack is a vertical pile of overlapping cards in Calm's proportions (168 dp cards, 56 dp apart,
 the focused one in front) moved by the existing card-stack physics, so a sideways swipe changes page and a vertical
-one moves the stack. Recents is the exception: its Stack is a wrapping grid of app tiles, and Tasks is one card
+one moves the stack. Recents is the exception: its Stack is a wrapping grid of app tiles, and the Today page's task checklist is one card
 under the quick-add row. "Show as" applies to a page's whole section. Rationale: the first Stream laid every section on one
 scrolling page with horizontal card stacks, which is the opposite of the model Calm proves (pages you swipe, piles you
 scroll) and of the vertical stack physics the project already had.
@@ -161,16 +163,16 @@ Source ids are those in `core/domain/.../launcher/workspace/`.
 | --- | --- | --- | --- | --- |
 | Placed app, folder, widget (the pool, `home.grid`, `apps.favourite`) | Home | Icon grid, in pages | Tap launches; long-press enters edit; drag moves or makes a folder | Pins in the Dock |
 | Dock pins (`PoolDock`) | Dock, pinned side | Icon row | Tap launches; drag to reorder or out to Home | None |
-| All apps (`apps.all`) | Library | Categories, A–Z or Grid | Tap launches; long-press for shortcuts, Add to Home, Pin to Dock, Hide (no drag out to Home) | None |
+| All apps (`apps.all`) | Library | Categories, A–Z, Grid or Pages | Tap launches; long-press for shortcuts, Add to Home, Add to Dock, Hide app (no drag out to Home) | None |
 | Recent and frequent apps (`apps.recent`, `apps.frequent`) | Stream, Recents | Icon row, or rows with last-used time | Tap launches | None |
 | App shortcuts (`shortcuts`) | No Place: the long-press menu of any app icon | Menu rows | Tap runs it; drag a row out to place it on Home | A placed shortcut is a Home item |
 | Search (`search`) | Library | The search field; results replace the app list | Type; Enter launches the top hit | Swipe down on Home |
 | Notifications (`notifications`) | Stream, Notifications | One page per app, each a vertical stack or rows | Tap opens; Dismiss and Snooze buttons; expand to reply; Hide in the card's menu | Dock dynamic side, icon badges |
 | Media (`media`) | Stream, Now | One card | Play, pause, skip, scrub; expand for the queue; tap opens the player | Dock dynamic entry while playing; glance widget |
-| Calendar and calendar feeds (`calendar`, `ics`) | Stream, Now (next event) and Agenda (by day) | Card or rows | Tap opens the event; expand for details | Glance widget |
+| Calendar and calendar feeds (`calendar`, `ics`) | Stream, Today (next event, later events by day) | Card or rows | Tap opens the event; expand for details | Glance widget |
 | News feeds (`rss`) | Stream, Feeds | One page per feed, each a vertical stack or headlines | Tap opens the article; Mark read action | Glance widget (top story) |
 | Alarm (`AlarmManager.getNextAlarmClock()`, wired in P3b) | Stream, Today | A card after the next event | Tap opens the clock app | None |
-| To-do (Todoist, P10) | Stream, Tasks | Card of today's items, or rows | Tap ticks it off; tap the title to open; quick-add at the top | None |
+| To-do (Todoist, P10) | Stream, Today (the checklist) | Card of today's items, or rows | Tap ticks it off; tap the title to open; quick-add at the top | None |
 | Widgets as cards (`WIDGET_PROVIDER`, #1219) | Parked: widgets live on Home only | | | |
 
 Favourites are not a Stream section: the owner's favourites are what Home and the Dock's pinned side are.
@@ -265,7 +267,7 @@ Packages are under `launcher/` in `core/domain` and `app`.
 | `workspace/sources`, shared source streams | Keep | Internal plumbing; each source emits its own type | Kept; the Stream's typed sources and mappers read through them |
 | `workspace/pool` | Keep | The Home and Dock model | Kept; the only Home and Dock model |
 | `workspace/dock` (presentation), `dockpull` | Keep | The Dock; the pull opens the Library or the Stream by side | `dockpull` kept; the workspace dock presentation was deleted, the Dock is `PoolDock` |
-| `cards` (stack physics, travel, magnet) | Keep | The Stream's Stack view | Physics kept and used; the adaptive stage planners, templates and `LauncherSettings.cards` are left in place, read by no surface, not deleted |
+| `cards` (stack physics, travel, magnet) | Keep | The Stream's Stack view | The Stream's Stack has its own physics (`stream/StackMotion`). The old shared `CardStack` composable and its domain policies, the stage selector and `LauncherSettings.cards` are deleted (Amendment 13); the stage model (`AppStage`, its planner, the adaptive templates) stays, read by the feed cache and the Dock model |
 | `expressions` | Keep | The Views, each bound to its Place | Kept (Library views, Stream rendering) |
 | `workspace/exclusions`, privacy redaction | Keep | Per-type Hide rules | Kept |
 | `designsystem` | Keep and extend | The glass material and tokens | Done |
@@ -376,7 +378,7 @@ the code at acceptance.
 - **Custom dock, label and background colours were removed and not restored**; only a custom accent remains.
 - **Per-workspace dock and gesture overrides are no longer applied.** The only trace is the one-time restore of the
   Dock's icon size and edge from the stored workspaces, never over a size set since.
-- **No drag from the Library onto Home**; Add to Home and Pin to Dock in the long-press menu are the equivalents.
+- **No drag from the Library onto Home**; Add to Home and Add to Dock in the long-press menu are the equivalents.
 - **No swipe to dismiss or mark read** on Stream cards; those are buttons and menu actions.
 - **"Show as" is on headers and their option buttons** (and in Settings), not on a Place's empty background.
 - **Settings not built:** "Show now playing" (it always shows while media is active), "New apps go to Home or
@@ -805,6 +807,27 @@ other visible routes, each switchable off or retiring.
 - **App shortcuts lead the app menu,** up to four as rows of their own and a "More" row for the rest.
 
 Details: `gestures.md`, "Hints and visible routes"; `settings.md`, "Visible ways in".
+
+## Amendment 13 (owner, 2026-11-19): release hygiene
+
+No behaviour changes except the first item. The rest of Amendments 1 to 12 stands.
+
+- **Developer options.** Settings > About keeps Version, Build and After-update starts (a user needs the last to report a
+  bug). The diagnostics pages (What apps publish, App pair experiment, Pair recipe, Drag tuning) moved under one
+  Developer options page, offered only while the "Developer options" switch is on; the switch shows after the Version row
+  is tapped seven times and can be turned off. Both flags are stored with the diagnostics settings (`DiagnosticsSettings`,
+  data written before them reads as off). Search and the launcher's search leave those pages out while the switch is off.
+  What the pages store (the pair recipe, the drag tuning) keeps working while they are hidden.
+- **Removed as unreachable.** The Notifications shell destination (`ShellDestination.NOTIFICATIONS`, `OpenNotifications`) and
+  its surface; the shared `CardStack` composable with its domain policies; the card stage selector; the generated page
+  content planner; and the `DismissDockPressHint` action (the stored flag still decodes). The Dock shelf behind
+  `DockShelfExpansion.enabled = false` and the stage model were left: they are woven into live code and tests.
+- **Wording.** One name per action in every menu (`settings.md`, "Wording"); strings of the menus, Home page controls and
+  gesture names are resources.
+- **One standard typeface.** The "System" typeface was the same as "Standard" and is no longer offered; a stored one is
+  read as Standard.
+- **Counts.** `AGENTS.md` counts eight typed kinds of Stream content (notification, media, event, article, task, recent
+  app, app shortcut, app pair); the Typed content table above lists the original six.
 
 ## Superseded documents
 

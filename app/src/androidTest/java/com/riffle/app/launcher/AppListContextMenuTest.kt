@@ -59,7 +59,7 @@ class AppListContextMenuTest {
         composeRule.onNodeWithText("Compose message").performClick()
         composeRule.onNodeWithText("Back").assertDoesNotExist()
         composeRule.onNodeWithText("...").performClick()
-        composeRule.onNodeWithText("Add to home").assertExists()
+        composeRule.onNodeWithText("Add to Home").assertExists()
     }
 
     @Test
@@ -84,7 +84,7 @@ class AppListContextMenuTest {
 
         composeRule.onNodeWithTag(APP_DRAWER_ICON_GRID_TEST_TAG).assertExists()
         composeRule.onNodeWithText(camera.label).performTouchInput { longClick() }
-        composeRule.onNodeWithText("Add to home").assertExists()
+        composeRule.onNodeWithText("Add to Home").assertExists()
     }
 
     private companion object {

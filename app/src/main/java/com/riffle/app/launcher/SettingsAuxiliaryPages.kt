@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -7,9 +9,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,43 +36,77 @@ internal fun SettingsHiddenAppsPageContent(
     }
 }
 
+/** Taps on the Version row that reveal the "Developer options" switch, the conventional way. */
+internal const val DEVELOPER_OPTIONS_REVEAL_TAPS = 7
+
+internal const val VERSION_ROW_TEST_TAG = "settings-version-row"
+
 @Composable
 internal fun SettingsVersionPageContent(
     state: SettingsSurfaceState,
     onPageSelected: (SettingsPage) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
 ) {
+    val diagnostics = state.settings.diagnostics
+    val context = LocalContext.current
+    val taps = remember { mutableIntStateOf(0) }
+    val revealedMessage = stringResource(R.string.settings_developer_options_revealed)
+    val alreadyMessage = stringResource(R.string.settings_developer_options_already)
     SettingsSection(title = stringResource(R.string.settings_page_version)) {
         VersionInformationSetting(
             appVersionLabel = state.appVersionLabel,
             appBuildIdentityLabel = state.appBuildIdentityLabel,
+            onVersionTapped = {
+                taps.intValue += 1
+                if (taps.intValue >= DEVELOPER_OPTIONS_REVEAL_TAPS) {
+                    taps.intValue = 0
+                    val message = if (diagnostics.developerOptionsRevealed) alreadyMessage else revealedMessage
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    if (!diagnostics.developerOptionsRevealed) {
+                        onAction(LauncherShellAction.RevealDeveloperOptions)
+                    }
+                }
+            },
         )
     }
-    SettingsSection(title = stringResource(R.string.settings_section_diagnostics)) {
-        SettingsClickableRow(
-            title = stringResource(R.string.settings_page_app_publish),
-            subtitle = stringResource(R.string.settings_page_app_publish_summary),
-            onClick = { onPageSelected(SettingsPage.APP_PUBLISH) },
-        )
-        SettingsClickableRow(
-            title = stringResource(R.string.settings_page_app_pair),
-            subtitle = stringResource(R.string.settings_page_app_pair_summary),
-            onClick = { onPageSelected(SettingsPage.APP_PAIR) },
-        )
-        SettingsClickableRow(
-            title = stringResource(R.string.settings_page_pair_recipe),
-            subtitle = stringResource(R.string.settings_page_pair_recipe_summary),
-            onClick = { onPageSelected(SettingsPage.PAIR_RECIPE) },
-        )
-        SettingsClickableRow(
-            title = stringResource(R.string.settings_page_drag_tuning),
-            subtitle = stringResource(R.string.settings_page_drag_tuning_summary),
-            onClick = { onPageSelected(SettingsPage.DRAG_TUNING) },
-        )
+    SettingsSection(title = stringResource(R.string.settings_section_support)) {
         SettingsClickableRow(
             title = stringResource(R.string.settings_page_after_update),
             subtitle = stringResource(R.string.settings_page_after_update_summary),
             onClick = { onPageSelected(SettingsPage.AFTER_UPDATE) },
         )
+    }
+    if (diagnostics.developerOptionsRevealed) {
+        SettingsSection(title = stringResource(R.string.settings_section_developer)) {
+            SettingsSwitchRow(
+                modifier = Modifier.settingAnchor(SettingKey.ABOUT_DEVELOPER_OPTIONS),
+                title = SettingKey.ABOUT_DEVELOPER_OPTIONS.label(),
+                subtitle = stringResource(R.string.setting_about_developer_options_summary),
+                checked = diagnostics.developerOptions,
+                onCheckedChange = { enabled -> onAction(LauncherShellAction.SetDeveloperOptions(enabled)) },
+            )
+            if (diagnostics.developerOptions) {
+                SettingsClickableRow(
+                    title = stringResource(R.string.settings_page_developer_options),
+                    subtitle = stringResource(R.string.settings_page_developer_options_summary),
+                    onClick = { onPageSelected(SettingsPage.DEVELOPER_OPTIONS) },
+                )
+            }
+        }
+    }
+}
+
+/** Settings > About > Developer options: the diagnostics pages, offered only while the switch is on. */
+@Composable
+internal fun SettingsDeveloperOptionsPageContent(onPageSelected: (SettingsPage) -> Unit) {
+    SettingsSection(title = stringResource(R.string.settings_page_developer_options)) {
+        SettingsPage.DEVELOPER_OPTIONS.children().forEach { page ->
+            SettingsClickableRow(
+                title = stringResource(page.titleRes),
+                subtitle = stringResource(page.summaryRes),
+                onClick = { onPageSelected(page) },
+            )
+        }
     }
 }
 
@@ -75,14 +114,16 @@ internal fun SettingsVersionPageContent(
 private fun VersionInformationSetting(
     appVersionLabel: String,
     appBuildIdentityLabel: String,
+    onVersionTapped: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SettingsTextColumn(
-            title = "Version",
+            modifier = Modifier.testTag(VERSION_ROW_TEST_TAG).clickable(onClick = onVersionTapped),
+            title = stringResource(R.string.settings_version_row),
             subtitle = appVersionLabel,
         )
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            SettingsPrimaryText(text = "Build")
+            SettingsPrimaryText(text = stringResource(R.string.settings_build_row))
             Text(
                 text = appBuildIdentityLabel,
                 maxLines = 3,
@@ -128,7 +169,7 @@ private fun HiddenAppsSetting(
             modifier = Modifier.fillMaxWidth(),
             query = query.value,
             onQueryChanged = { value -> query.value = value },
-            label = "Search hidden apps",
+            label = stringResource(R.string.settings_hidden_apps_search),
         )
         AppProfileFilterChips(
             selectedFilter = profileFilter.value,
@@ -153,7 +194,7 @@ private fun HiddenAppsSetting(
                     profileFilter.value = AppDrawerProfileFilter.ALL
                 },
             ) {
-                Text(text = "Clear filters")
+                Text(text = stringResource(R.string.filter_clear))
             }
         }
         if (filteredApps.isEmpty()) {
@@ -188,7 +229,7 @@ private fun HiddenAppRow(
         subtitle = app.drawerSubtitle(),
         onClick = { onAction(LauncherShellAction.UnhideApp(app.identity)) },
         trailingContent = {
-            SettingsButtonText(text = "Unhide")
+            SettingsButtonText(text = stringResource(R.string.action_unhide))
         },
     )
 }
