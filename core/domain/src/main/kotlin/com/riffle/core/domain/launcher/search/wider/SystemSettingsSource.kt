@@ -10,7 +10,7 @@ data class SystemSettingEntry(
 
 /** The system's own settings screens, found by title and keyword. Answers from memory, so it is not debounced. */
 class SystemSettingsSource(
-    private val entries: () -> List<SystemSettingEntry>,
+    private val entries: suspend () -> List<SystemSettingEntry>,
     override val maxResults: Int = SearchSource.DEFAULT_MAX_RESULTS,
 ) : SearchSource {
     override val id: SearchSourceId = SearchSourceId.SYSTEM_SETTINGS
