@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.onboarding
 
+import com.riffle.core.domain.launcher.home.HomeStart
 import com.riffle.core.domain.launcher.onboarding.Onboarding
 import com.riffle.core.domain.launcher.onboarding.OnboardingPrompt
 import com.riffle.core.domain.launcher.onboarding.OnboardingState
@@ -37,6 +38,14 @@ internal class OnboardingController(
 
     val surface: StateFlow<OnboardingSurface> = mutableSurface.asStateFlow()
 
+    private val mutableAskHomeStart = MutableStateFlow(false)
+
+    /**
+     * Whether the set-up on screen opens with "How should Home start?": only the set-up a fresh install runs by
+     * itself, until the question is answered once (an interrupted run asks again; a re-run from Settings never does).
+     */
+    val askHomeStart: StateFlow<Boolean> = mutableAskHomeStart.asStateFlow()
+
     /** The state as last read or written; null before the first read. */
     val current: OnboardingState? get() = state
 
@@ -53,6 +62,7 @@ internal class OnboardingController(
         state = next
         // A set-up opened meanwhile from Settings wins; nothing is shown over it.
         if (prompt == OnboardingPrompt.RUN && mutableSurface.value == OnboardingSurface.None) {
+            mutableAskHomeStart.value = !next.homeStartChosen
             mutableSurface.value = OnboardingSurface.SetUp
         }
         return prompt
@@ -61,13 +71,27 @@ internal class OnboardingController(
     /** Settings > Set up Riffle again: always allowed; it changes nothing the user placed. */
     fun rerun() {
         update(Onboarding::rerun)
+        mutableAskHomeStart.value = false
         mutableSurface.value = OnboardingSurface.SetUp
     }
 
-    /** The set-up closed before the last step ("Skip", Back from the first step). */
-    fun cancelled() {
+    /** "How should Home start?" was answered: remembered, so nothing asks or seeds Home again. */
+    fun homeStartChosen() {
+        update(Onboarding::homeStartChosen)
+        mutableAskHomeStart.value = false
+    }
+
+    /**
+     * The set-up closed before the last step ("Skip", Back from the first step). Returns [HomeStart.ALL_APPS] when
+     * the Home question was still open, so skipping never leaves an empty screen silently; the caller seeds Home with
+     * it. Null when the question was answered earlier or was never asked.
+     */
+    fun cancelled(): HomeStart? {
+        val unanswered = mutableAskHomeStart.value
+        if (unanswered) homeStartChosen()
         update(Onboarding::skipped)
         mutableSurface.value = OnboardingSurface.None
+        return HomeStart.ALL_APPS.takeIf { unanswered }
     }
 
     /** The last step was finished. */

@@ -33,8 +33,10 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.HomeSeeding
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
+import com.riffle.core.domain.launcher.home.HomeStart
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -180,6 +182,7 @@ class LauncherShellViewModel(
                 if (state.installedApps !== previousState.installedApps) placePendingInstalls()
                 retireLibraryViewMode()
                 migrateAppLibraryHome()
+                applyPendingHomeSeed()
             },
             refreshCoordinator = refreshCoordinator,
         )
@@ -400,6 +403,42 @@ class LauncherShellViewModel(
             state.launcherSettings.copy(home = state.launcherSettings.home.copy(mode = HomeMode.PlacedItems))
         mutableState.value =
             state.withHomeLayout(filled, homeLayoutRepository).copy(launcherSettings = settings)
+        launcherSettingsRepository.saveLauncherSettings(settings)
+    }
+
+    /**
+     * First run (`places-views-plan.md`, "First run"): the set-up's answer to "How should Home start?" (or "Skip
+     * set-up", which is [HomeStart.ALL_APPS]). Applied once the app list and the workspaces have loaded; a Home that
+     * already holds anything is never touched ([HomeSeeding.isFresh]). Never run by a refresh, a restart or a
+     * restore, which is what keeps a removed app removed. The empty-Home hint is not shown after a seed.
+     */
+    fun seedHome(start: HomeStart) {
+        pendingHomeStart = start
+        applyPendingHomeSeed()
+    }
+
+    private var pendingHomeStart: HomeStart? = null
+
+    private fun applyPendingHomeSeed() {
+        val start = pendingHomeStart ?: return
+        val state = mutableState.value
+        val poolHome = homeLayoutRepository as? PoolHomeLayoutRepository
+        // Waits for the app list and, on the pool home, for the workspaces: a seed is never dropped for being early.
+        if (state.installedApps.isEmpty() || (poolHome != null && !poolHome.isReadyForEdits())) return
+        pendingHomeStart = null
+        val seeded =
+            HomeSeeding.seed(
+                layout = state.homeLayout,
+                apps = state.installedApps,
+                dockPackages = platformDependencies.dockDefaultsResolver.resolve(),
+                start = start,
+                compact = state.launcherSettings.home.compactArrange,
+            )
+        val settings =
+            state.launcherSettings.copy(home = state.launcherSettings.home.copy(emptyHomeHintDismissed = true))
+        mutableState.value =
+            (if (seeded == state.homeLayout) state else state.withHomeLayout(seeded, homeLayoutRepository))
+                .copy(launcherSettings = settings)
         launcherSettingsRepository.saveLauncherSettings(settings)
     }
 

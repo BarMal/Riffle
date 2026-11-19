@@ -43,7 +43,16 @@ class OnboardingStoreTest {
     @Test
     fun itHoldsNoItemContent() {
         val text = encodeOnboardingState(OnboardingState(origin = OnboardingOrigin.FRESH_INSTALL, completedRuns = 1))
-        assertEquals(setOf("version", "origin", "walkthrough", "completedRuns"), keysOf(text))
+        // Changed on purpose: "homeStartChosen" (the Home question was answered) joins the stored keys.
+        assertEquals(setOf("version", "origin", "walkthrough", "completedRuns", "homeStartChosen"), keysOf(text))
+    }
+
+    @Test
+    fun theHomeStartAnswerSurvivesTheRoundTripAndAnOlderStateReadsAsNotAnswered() {
+        val answered = OnboardingState(origin = OnboardingOrigin.FRESH_INSTALL, homeStartChosen = true)
+        assertEquals(answered, decodeOnboardingState(encodeOnboardingState(answered)))
+        val older = """{"version":1,"origin":"FRESH_INSTALL","walkthrough":"STARTED","completedRuns":0}"""
+        assertEquals(false, decodeOnboardingState(older).homeStartChosen)
     }
 
     @Test

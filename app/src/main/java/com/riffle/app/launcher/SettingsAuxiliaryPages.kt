@@ -63,6 +63,11 @@ internal fun SettingsVersionPageContent(
             subtitle = stringResource(R.string.settings_page_drag_tuning_summary),
             onClick = { onPageSelected(SettingsPage.DRAG_TUNING) },
         )
+        SettingsClickableRow(
+            title = stringResource(R.string.settings_page_after_update),
+            subtitle = stringResource(R.string.settings_page_after_update_summary),
+            onClick = { onPageSelected(SettingsPage.AFTER_UPDATE) },
+        )
     }
 }
 

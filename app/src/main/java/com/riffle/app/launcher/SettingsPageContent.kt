@@ -81,6 +81,7 @@ internal fun SettingsPageContent(
             SettingsPage.APP_PAIR -> SettingsAppPairPageContent(state = state)
             SettingsPage.PAIR_RECIPE -> SettingsPairRecipePageContent(state = state, onAction = onAction)
             SettingsPage.DRAG_TUNING -> SettingsDragTuningPageContent(state = state, onAction = onAction)
+            SettingsPage.AFTER_UPDATE -> SettingsAfterUpdatePageContent()
         }
     }
 }
@@ -119,6 +120,7 @@ private fun SettingsHomePageContent(
         onAction = onAction,
     )
     SettingsDeviceConfigurationTabs(state = state, onAction = onAction)
+    SettingsHomeFillSection(state = state, onAction = onAction)
     SettingsSection(title = stringResource(R.string.settings_section_grid)) {
         HomeGridSetting(
             grid = state.homeLayout.settings.grid,

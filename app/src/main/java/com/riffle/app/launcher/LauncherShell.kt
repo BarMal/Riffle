@@ -4,19 +4,13 @@ package com.riffle.app.launcher
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,8 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -112,6 +104,9 @@ fun LauncherShell(
                 onAction = onAction,
                 onSetupCardDismissed = viewModel::onSetupCardDismissed,
                 onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
+                onHomeHeldAnItem = {
+                    viewModel.onLauncherSettingsActionSelected(LauncherShellAction.DismissEmptyHomeHint)
+                },
                 stream = stream,
             )
         }
@@ -121,7 +116,13 @@ fun LauncherShell(
         }
         // The first-run set-up, after the Home-role card (see OnboardingLayer).
         if (onboarding != null) {
-            OnboardingLayer(onboarding, state, workspacesLoaded = !workspacesLoading, onAction = onAction)
+            OnboardingLayer(
+                onboarding,
+                state,
+                workspacesLoaded = !workspacesLoading,
+                onAction = onAction,
+                onSeedHome = viewModel::seedHome,
+            )
         }
     }
 }
@@ -185,6 +186,8 @@ fun LauncherShellContent(
     onAction: (LauncherShellAction) -> Unit,
     onSetupCardDismissed: () -> Unit = {},
     onDockEditFeedbackDismissed: () -> Unit = {},
+    /** Home holds an item: the empty-Home hint is never shown again (recorded directly, not as an action). */
+    onHomeHeldAnItem: () -> Unit = {},
     /** The Stream's content, layouts and actions; null draws Home even when the Stream is the destination. */
     stream: StreamHost? = null,
 ) {
@@ -236,6 +239,7 @@ fun LauncherShellContent(
             )
             if (state.destination == ShellDestination.HOME && state.shouldShowSetupCard) {
                 PreviewSetupCard(
+                    requestDeclined = state.homeRoleRequestDeclined,
                     modifier =
                         Modifier
                             .align(Alignment.TopCenter)
@@ -247,6 +251,7 @@ fun LauncherShellContent(
                     onDismiss = onSetupCardDismissed,
                 )
             }
+            HomeFillOverlay(state = state, onAction = onAction, onHomeHeldAnItem = onHomeHeldAnItem)
             state.dockEditRejectionReason?.let { reason ->
                 DockEditRejectionMessage(
                     reason = reason,
@@ -329,116 +334,6 @@ internal fun dockEditRejectionMessage(reason: DockEditRejectionReason): String =
 data class LauncherShellAppInfo(
     val versionLabel: String = "",
     val buildIdentityLabel: String = "",
-)
-
-@Composable
-private fun PreviewSetupCard(
-    modifier: Modifier = Modifier,
-    homeRoleStatus: HomeRoleStatus,
-    firstRunStatus: FirstRunStatus,
-    onSetHome: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    BoxWithConstraints(modifier = modifier) {
-        Surface(
-            modifier = Modifier.heightIn(max = maxHeight),
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            tonalElevation = 6.dp,
-        ) {
-            Column(
-                modifier =
-                    Modifier
-                        .verticalScroll(rememberScrollState())
-                        .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                val presentation =
-                    if (firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE) {
-                        PreviewHomeSetupPresentation(
-                            statusMessage = "Checking whether Riffle is your Home app.",
-                            detailMessage =
-                                "Riffle is checking the result of your Home app request. " +
-                                    "You can keep exploring while this updates.",
-                        )
-                    } else {
-                        when (homeRoleStatus) {
-                            HomeRoleStatus.DEFAULT_HOME ->
-                                PreviewHomeSetupPresentation(
-                                    statusMessage = "Riffle is your Home app.",
-                                    actionLabel = "Open Home settings",
-                                )
-                            HomeRoleStatus.NOT_DEFAULT_HOME ->
-                                PreviewHomeSetupPresentation(
-                                    statusMessage = "Riffle is not your Home app yet.",
-                                    actionLabel = "Set as Home app",
-                                )
-                            HomeRoleStatus.UNKNOWN ->
-                                PreviewHomeSetupPresentation(
-                                    statusMessage = "Home app status is unavailable right now.",
-                                    actionLabel = "Try again",
-                                )
-                        }
-                    }
-                Text(
-                    text = "Set up Riffle",
-                    modifier = Modifier.semantics { heading() },
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Text(
-                    text =
-                        presentation.detailMessage
-                            ?: "Explore your apps and settings first. While previewing, pressing your device " +
-                            "Home button may return to your current default launcher.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                PreviewSetupStatusRow(
-                    label = "Home app",
-                    status = presentation.statusMessage,
-                )
-                Text(
-                    text = "Set Riffle as your Home app to open it when you press the device Home button.",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Text(
-                    text = "Optional features ask for access only when you turn them on.",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                presentation.actionLabel?.let { actionLabel ->
-                    Button(onClick = onSetHome) {
-                        Text(text = actionLabel)
-                    }
-                }
-                TextButton(onClick = onDismiss) {
-                    Text(text = "Not now")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PreviewSetupStatusRow(
-    label: String,
-    status: String,
-) {
-    Column(
-        modifier =
-            Modifier.semantics(mergeDescendants = true) {
-                contentDescription = "$label: $status"
-            },
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(text = label, style = MaterialTheme.typography.labelLarge)
-        Text(text = status, style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-private data class PreviewHomeSetupPresentation(
-    val statusMessage: String,
-    val actionLabel: String? = null,
-    val detailMessage: String? = null,
 )
 
 @Suppress("LongMethod")

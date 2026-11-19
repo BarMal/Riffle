@@ -16,18 +16,23 @@
 
   The onboarding state (SharedPreferences "riffle_onboarding") describes this install only (whether the
   first-time walkthrough ran here), so it is not carried to another device either.
+
+  The after-update diagnostics (SharedPreferences "riffle_after_update") describe this install's updates only and are
+  excluded from both as well.
 -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
         <exclude domain="file" path="datastore/riffle_ics_feeds.preferences_pb" />
         <exclude domain="sharedpref" path="riffle_onboarding.xml" />
+        <exclude domain="sharedpref" path="riffle_after_update.xml" />
         <exclude domain="sharedpref" path="riffle_todoist_token.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
         <exclude domain="file" path="datastore/riffle_ics_feeds.preferences_pb" />
         <exclude domain="sharedpref" path="riffle_onboarding.xml" />
+        <exclude domain="sharedpref" path="riffle_after_update.xml" />
         <exclude domain="sharedpref" path="riffle_todoist_token.xml" />
     </device-transfer>
 </data-extraction-rules>

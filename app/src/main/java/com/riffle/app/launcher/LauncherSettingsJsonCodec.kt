@@ -202,6 +202,8 @@ private fun encodeHomeBehaviour(settings: HomeBehaviourSettings): JSONObject =
         .put("returnBehavior", settings.returnBehavior.name)
         .put("mode", settings.mode.storedId)
         .put("addNewApps", settings.addNewApps)
+        .put("compactArrange", settings.compactArrange)
+        .put("emptyHomeHintDismissed", settings.emptyHomeHintDismissed)
         .put("dragTuning", encodeDragTuning(settings.dragTuning))
 
 /*
@@ -300,6 +302,8 @@ private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBeh
         // Absent (settings saved before Home mode) or a name this build does not know: Placed items.
         mode = HomeMode.fromStoredId(optString("mode").takeIf(String::isNotEmpty)) ?: defaults.mode,
         addNewApps = (opt("addNewApps") as? Boolean) ?: defaults.addNewApps,
+        compactArrange = (opt("compactArrange") as? Boolean) ?: defaults.compactArrange,
+        emptyHomeHintDismissed = (opt("emptyHomeHintDismissed") as? Boolean) ?: defaults.emptyHomeHintDismissed,
         dragTuning = optJSONObject("dragTuning")?.toDragTuning(defaults.dragTuning) ?: defaults.dragTuning,
     )
 

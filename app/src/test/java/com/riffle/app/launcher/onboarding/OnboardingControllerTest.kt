@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.onboarding
 
+import com.riffle.core.domain.launcher.home.HomeStart
 import com.riffle.core.domain.launcher.onboarding.OnboardingOrigin
 import com.riffle.core.domain.launcher.onboarding.OnboardingProgress
 import com.riffle.core.domain.launcher.onboarding.OnboardingPrompt
@@ -110,5 +111,47 @@ class OnboardingControllerTest {
         process().launch(fresh = false)
         assertEquals(writes, store.writes)
         assertNull(process().current)
+    }
+
+    @Test
+    fun aFreshInstallAsksHowHomeShouldStartAndSkippingAnswersWithAllApps() {
+        val controller = process()
+        controller.launch(fresh = true)
+        assertEquals(true, controller.askHomeStart.value)
+
+        assertEquals(HomeStart.ALL_APPS, controller.cancelled())
+
+        assertEquals(false, controller.askHomeStart.value)
+        assertEquals(true, store.stored?.homeStartChosen)
+        // The answer is remembered: a later cancel seeds nothing.
+        assertNull(controller.cancelled())
+    }
+
+    @Test
+    fun anAnswerIsStoredSoALaterRunOfAnInterruptedSetUpDoesNotAskOrSeedAgain() {
+        val controller = process()
+        controller.launch(fresh = true)
+        controller.homeStartChosen()
+        assertEquals(false, controller.askHomeStart.value)
+
+        // The app is closed mid-way: the set-up comes back, but without the question.
+        val next = process()
+        assertEquals(OnboardingPrompt.RUN, next.launch(fresh = false))
+        assertEquals(false, next.askHomeStart.value)
+        assertNull(next.cancelled())
+    }
+
+    @Test
+    fun existingUsersAndRerunsAreNeverAsked() {
+        val existing = process()
+        existing.launch(fresh = false)
+        existing.rerun()
+        assertEquals(false, existing.askHomeStart.value)
+        assertNull(existing.cancelled())
+
+        val fresh = process()
+        fresh.launch(fresh = true)
+        fresh.rerun()
+        assertEquals(false, fresh.askHomeStart.value)
     }
 }

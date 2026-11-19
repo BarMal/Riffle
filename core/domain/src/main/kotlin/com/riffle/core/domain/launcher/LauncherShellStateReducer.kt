@@ -15,6 +15,8 @@ class LauncherShellStateReducer {
                 ),
             hasRecoveredHomeRoleRequest = false,
             homeRoleStatus = homeRoleStatus,
+            homeRoleRequestDeclined =
+                currentState.homeRoleRequestDeclined && homeRoleStatus != HomeRoleStatus.DEFAULT_HOME,
         )
     }
 
@@ -22,19 +24,23 @@ class LauncherShellStateReducer {
         currentState.copy(
             firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE,
             hasRecoveredHomeRoleRequest = false,
+            homeRoleRequestDeclined = false,
         )
 
     fun defaultHomeRequestLaunchFailed(currentState: LauncherShellState): LauncherShellState =
         currentState.copy(
             firstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
             hasRecoveredHomeRoleRequest = false,
+            homeRoleRequestDeclined = true,
         )
 
     fun defaultHomeRequestReturned(currentState: LauncherShellState): LauncherShellState =
         if (currentState.firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE) {
+            // The role check that follows clears this at once when the user did choose Riffle.
             currentState.copy(
                 firstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
                 hasRecoveredHomeRoleRequest = false,
+                homeRoleRequestDeclined = currentState.homeRoleStatus != HomeRoleStatus.DEFAULT_HOME,
             )
         } else {
             currentState.copy(hasRecoveredHomeRoleRequest = false)
