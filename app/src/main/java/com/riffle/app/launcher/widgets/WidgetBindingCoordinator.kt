@@ -5,7 +5,6 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.WidgetAddTarget
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
 class WidgetBindingCoordinator(
@@ -52,17 +51,13 @@ class WidgetBindingCoordinator(
                 availableHeightDp = availableHeightDp,
             )
         val resizeConstraints =
-            if (action.supportsHorizontalResize == null && action.supportsVerticalResize == null) {
-                WidgetResizeConstraints()
-            } else {
-                action.dimensions.resizeConstraints(
-                    grid = grid,
-                    availableWidthDp = availableWidthDp,
-                    availableHeightDp = availableHeightDp,
-                    supportsHorizontalResize = action.supportsHorizontalResize == true,
-                    supportsVerticalResize = action.supportsVerticalResize == true,
-                )
-            }
+            action.dimensions.resizeConstraintsFor(
+                supportsHorizontalResize = action.supportsHorizontalResize,
+                supportsVerticalResize = action.supportsVerticalResize,
+                grid = grid,
+                availableWidthDp = availableWidthDp,
+                availableHeightDp = availableHeightDp,
+            )
 
         return when (widgetHostGateway.bindHostedWidget(hostedWidgetId, action.provider)) {
             WidgetBindingResult.Bound -> {
@@ -77,6 +72,7 @@ class WidgetBindingCoordinator(
                         targetPageId = action.targetPageId,
                         targetCell = action.targetCell,
                         dockIndex = action.dockIndex,
+                        targetStackId = action.targetStackId,
                         step = PendingWidgetAddStep.CONFIGURATION,
                         createdAtEpochMillis = epochMillisProvider(),
                     )
@@ -110,6 +106,7 @@ class WidgetBindingCoordinator(
                         targetPageId = action.targetPageId,
                         targetCell = action.targetCell,
                         dockIndex = action.dockIndex,
+                        targetStackId = action.targetStackId,
                         step = PendingWidgetAddStep.PERMISSION,
                         createdAtEpochMillis = epochMillisProvider(),
                     ),
@@ -244,6 +241,21 @@ class WidgetBindingCoordinator(
                     resizeConstraints = resizeConstraints,
                     targetPageId = targetPageId,
                     targetCell = targetCell,
+                )
+
+            WidgetAddTarget.HOME_STACK ->
+                targetStackId?.let { stackId ->
+                    LauncherShellAction.AddHostedWidgetToStack(
+                        itemId = stackId,
+                        hostedWidgetId = hostedWidgetId,
+                        label = label,
+                        resizeConstraints = resizeConstraints,
+                    )
+                } ?: LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = hostedWidgetId,
+                    label = label,
+                    preferredSpan = preferredSpan,
+                    resizeConstraints = resizeConstraints,
                 )
 
             WidgetAddTarget.DOCK ->

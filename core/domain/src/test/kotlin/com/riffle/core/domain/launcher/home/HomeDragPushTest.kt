@@ -196,4 +196,55 @@ class HomeDragPushTest {
         assertEquals(HomeDragTuning(1.2f, 0.15f, 100, 1000, 300), wild)
         assertTrue(HomeDragTuning().asText().contains("ring=0.75"))
     }
+
+    private fun hostedWidget(
+        name: String,
+        host: Int,
+        column: Int,
+        row: Int,
+        columns: Int = 2,
+        rows: Int = 2,
+    ) = widget(name, column, row, columns, rows).copy(appWidgetId = HostedWidgetId(host))
+
+    @Test
+    fun aWidgetHeldInTheMiddleOfAWidgetOfTheSameSpanIsDroppedOnItAndNothingIsPushed() {
+        val dragged = hostedWidget("a", 1, 0, 0)
+        val target = hostedWidget("b", 2, 2, 0)
+        val result = plan(page(dragged, target), dragged, 3.0f, 1.0f)
+        assertEquals(target.id, result.dropOn)
+        assertEquals(GridCell(2, 0), result.landing)
+        assertTrue(result.pushed.isEmpty())
+    }
+
+    @Test
+    fun aWidgetPassingOverTheEdgeOfAWidgetOfTheSameSpanStillPushesIt() {
+        val dragged = hostedWidget("a", 1, 0, 0)
+        val target = hostedWidget("b", 2, 2, 0)
+        // Inside the target, but within the dead-zone radius of its edge: the ring pushes, no stack is offered.
+        val result = plan(page(dragged, target), dragged, 2.1f, 1.0f)
+        assertNull(result.dropOn)
+    }
+
+    @Test
+    fun aWidgetOverAWidgetOfAnotherSpanIsNeverDroppedOnIt() {
+        val dragged = hostedWidget("a", 1, 0, 0)
+        val target = hostedWidget("b", 2, 2, 0, columns = 2, rows = 1)
+        assertNull(plan(page(dragged, target), dragged, 3.0f, 0.5f).dropOn)
+    }
+
+    @Test
+    fun aWidgetOverAnExistingStackOfTheSameSpanIsDroppedOnIt() {
+        val dragged = hostedWidget("a", 1, 0, 0)
+        val stack =
+            hostedWidget("s", 2, 2, 0)
+                .restacked(listOf(StackedWidget(HostedWidgetId(2), "S"), StackedWidget(HostedWidgetId(3), "T")), 0)
+        assertEquals(stack.id, plan(page(dragged, stack), dragged, 3.0f, 1.0f).dropOn)
+    }
+
+    @Test
+    fun anAppOverAWidgetIsStillPushedNotDroppedOn() {
+        val dragged = app("a", 0, 0)
+        val target = hostedWidget("b", 2, 2, 0)
+        assertNull(plan(page(dragged, target), dragged, 3.0f, 1.0f).dropOn)
+    }
 }

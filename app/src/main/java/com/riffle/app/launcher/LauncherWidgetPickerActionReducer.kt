@@ -11,6 +11,11 @@ internal class LauncherWidgetPickerActionReducer {
             LauncherShellAction.OpenWidgetPicker,
             LauncherShellAction.OpenWidgetPickerForDockPanel,
             LauncherShellAction.CloseWidgetPicker,
+            is LauncherShellAction.OpenWidgetPickerForStack,
+            is LauncherShellAction.OpenWidgetStackEditor,
+            LauncherShellAction.CloseWidgetStackEditor,
+            is LauncherShellAction.ConfirmRemoveWidgetStack,
+            LauncherShellAction.DismissRemoveWidgetStack,
             -> state.withWidgetPickerAction(action)
 
             else -> null

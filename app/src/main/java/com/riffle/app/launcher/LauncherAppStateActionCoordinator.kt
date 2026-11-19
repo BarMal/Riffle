@@ -50,4 +50,6 @@ internal class LauncherAppStateActionCoordinator(
 
 /** Both picker-opening actions need the provider catalog refreshed; only the aim differs. */
 private fun LauncherShellAction.opensWidgetPicker(): Boolean =
-    this == LauncherShellAction.OpenWidgetPicker || this == LauncherShellAction.OpenWidgetPickerForDockPanel
+    this == LauncherShellAction.OpenWidgetPicker ||
+        this == LauncherShellAction.OpenWidgetPickerForDockPanel ||
+        this is LauncherShellAction.OpenWidgetPickerForStack

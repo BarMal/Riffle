@@ -202,6 +202,9 @@ private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
 internal const val HOME_WORKSPACE_GRID_TEST_TAG = "home-workspace-grid"
 internal const val HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG = "home-workspace-grid-overflow"
 
+/** How much of an app's "will make a folder" shrink a widget "will make a stack" takes (the rest is the outline). */
+private const val WIDGET_WILL_STACK_EASE = 0.2f
+
 /** How far, in cells, an item still settles to its cell; further it lands (another page). */
 private const val SETTLE_MAX_CELLS = 4f
 
@@ -280,10 +283,26 @@ private fun RowScope.HomeGridCell(
                         modifier =
                             Modifier
                                 .graphicsLayer {
-                                    scaleX = folderState.scale
-                                    scaleY = folderState.scale
+                                    // A widget over a widget eases a fifth as far as an app over an app.
+                                    val scale =
+                                        if (item is WidgetItem) {
+                                            1f - (1f - folderState.scale) * WIDGET_WILL_STACK_EASE
+                                        } else {
+                                            folderState.scale
+                                        }
+                                    scaleX = scale
+                                    scaleY = scale
                                 }
-                                .folderWillFormOutline(folderState.armed, presentation.labelSettings.iconSizeDp)
+                                .then(
+                                    if (item is WidgetItem) {
+                                        Modifier
+                                    } else {
+                                        Modifier.folderWillFormOutline(
+                                            folderState.armed,
+                                            presentation.labelSettings.iconSizeDp,
+                                        )
+                                    },
+                                )
                                 .homeItemSettle(
                                     id = item.id,
                                     isDragSource = isDragSource,
@@ -304,6 +323,7 @@ private fun RowScope.HomeGridCell(
                                     pageItems = page.items,
                                     isEditing = isEditing,
                                     isDragSource = isDragSource,
+                                    willStack = willMakeFolder && folderState.armed,
                                 ),
                             presentation = presentation,
                             appIconLoader = appIconLoader,
@@ -444,8 +464,14 @@ private fun HomeGridWidget(
                     ),
                 workspaceActions = actions,
                 onAction = actions.onAction,
+                stackPresentation =
+                    WidgetStackPresentation(
+                        pagesScrollVertically = presentation.pagesScrollVertically,
+                        reducedMotion = presentation.reducedMotion,
+                    ),
             )
         }
+        if (state.willStack) WidgetStackDropOutline(modifier = Modifier.matchParentSize())
     }
 }
 
@@ -571,6 +597,8 @@ internal data class HomeGridItemState(
     val isEditing: Boolean,
     /** Whether this item is the one lifted: it stays where it was (as a ghost); the lifted icon is drawn above. */
     val isDragSource: Boolean,
+    /** Whether a widget held over this one would make a stack with it, after the hold: it wears the outline. */
+    val willStack: Boolean = false,
 ) {
     val dragSourceModifier: Modifier = Modifier
 }

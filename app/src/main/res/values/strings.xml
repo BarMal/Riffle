@@ -1152,6 +1152,27 @@
     <string name="widget_make_narrower_description">Make %1$s narrower</string>
     <string name="widget_make_taller_description">Make %1$s taller</string>
     <string name="widget_make_shorter_description">Make %1$s shorter</string>
+    <!-- Widget stacks (ADR 0003, Amendment 14) -->
+    <string name="menu_add_widget_to_stack">Add widget to stack</string>
+    <string name="menu_edit_stack">Edit stack</string>
+    <string name="widget_stack_next">Next widget</string>
+    <string name="widget_stack_previous">Previous widget</string>
+    <string name="widget_stack_state">Widget %1$d of %2$d, %3$s</string>
+    <string name="widget_stack_dots_description">Widgets in this stack</string>
+    <string name="widget_stack_edit_title">Edit stack</string>
+    <string name="widget_stack_edit_summary">%1$d of %2$d widgets. The first is the one the stack opens on.</string>
+    <string name="widget_stack_row_position">%1$d of %2$d</string>
+    <string name="widget_stack_move_up_description">Move %1$s up</string>
+    <string name="widget_stack_move_down_description">Move %1$s down</string>
+    <string name="widget_stack_remove_description">Remove %1$s from the stack</string>
+    <string name="widget_stack_move_out_description">Move %1$s out to Home</string>
+    <string name="widget_stack_move_out">Move out to Home</string>
+    <string name="widget_stack_no_room">No room on this page to move it out.</string>
+    <string name="widget_stack_full">This stack is full.</string>
+    <string name="widget_stack_remove_title">Remove this stack?</string>
+    <string name="widget_stack_remove_message">The %1$d widgets in it are removed from Home.</string>
+    <string name="widget_stack_picker_hint">Choose a widget to add to this stack.</string>
+    <string name="widget_stack_picker_add_description">Add %1$s to the stack</string>
     <string name="home_overflow_more_apps">More apps (%1$d more)</string>
     <string name="gesture_action_none">None</string>
     <string name="gesture_action_open_search">Open search</string>

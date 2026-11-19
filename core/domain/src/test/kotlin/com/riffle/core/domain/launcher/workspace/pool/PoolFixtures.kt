@@ -117,7 +117,7 @@ internal fun assertInvariants(pool: PlacedItemPool) {
     pool.items.values.forEach { item ->
         assertTrue((refs[item.id] ?: 0) >= 1, "orphan ${item.id}")
     }
-    val hosts = pool.items.values.mapNotNull { (it as? PoolWidget)?.hostedId }
+    val hosts = pool.items.values.flatMap { (it as? PoolWidget)?.hostIds.orEmpty() }
     assertEquals(hosts.size, hosts.toSet().size, "host ids held by one widget")
 }
 

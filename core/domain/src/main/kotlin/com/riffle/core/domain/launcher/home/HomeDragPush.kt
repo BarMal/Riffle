@@ -58,7 +58,7 @@ data class HomeDragTuning(
  * What a drag over a page would do right now. [landing] is where the dragged item would go (null: nowhere valid, so a
  * drop cancels and the item returns). [pushed] are the items that move out of the way, to the cell they would take;
  * nothing is committed until the drop. [dropOn] is the app or folder whose dead zone the pointer is in (a drop there
- * makes or fills a folder; [landing] is then that item's own cell and [pushed] is empty).
+ * makes or fills a folder, or makes or extends a stack; [landing] is then that item's own cell and [pushed] is empty).
  */
 data class HomeDragPlan(
     val landing: GridCell?,
@@ -73,7 +73,8 @@ data class HomeDragPlan(
  * whole folder icon) is where a drop lands on top. Pure; never throws; nothing here mutates the page.
  *
  * Rules, in the order they apply:
- * 1. A dragged app inside another app's dead zone (or over a folder's icon): [HomeDragPlan.dropOn], nothing pushed.
+ * 1. A dragged app inside another app's dead zone (or over a folder's icon), or a dragged widget inside the dead
+ *    zone of a widget or stack of the same span: [HomeDragPlan.dropOn], nothing pushed.
  * 2. Otherwise every other item whose centre (a widget: the nearest point of its span) is inside the ring is pushed,
  *    closest first, plus every item that stands where the dragged item would land. An item already pushed by the
  *    previous plan stays pushed out to the ring plus [HomeDragTuning.HYSTERESIS] (no jitter at the boundary).
@@ -139,6 +140,7 @@ object HomeDragPush {
         y: Float,
         tuning: HomeDragTuning,
     ): LauncherItem? {
+        if (dragged is WidgetItem) return stackTarget(others, dragged, x, y, tuning)
         if (dragged !is AppShortcutItem) return null
         return others.firstOrNull { item ->
             val cell = item.placement?.cell ?: return@firstOrNull false
@@ -150,6 +152,29 @@ object HomeDragPush {
             }
         }
     }
+
+    /**
+     * The widget of the same span whose dead zone the pointer is in: its span inset by the dead-zone radius on every
+     * side (the centre of its area, as an app's dead zone is the centre of its cell), so a drag only passing over it
+     * still pushes it. A widget of another span never stacks; it is pushed as before.
+     */
+    private fun stackTarget(
+        others: List<LauncherItem>,
+        dragged: WidgetItem,
+        x: Float,
+        y: Float,
+        tuning: HomeDragTuning,
+    ): LauncherItem? =
+        others.firstOrNull { item ->
+            val placement = item.placement
+            item is WidgetItem && placement != null && stacks.canStack(item, dragged) &&
+                abs(x - (placement.cell.column + placement.span.columns / 2f)) <=
+                maxOf(placement.span.columns / 2f - tuning.deadZoneRadius, tuning.deadZoneRadius) &&
+                abs(y - (placement.cell.row + placement.span.rows / 2f)) <=
+                maxOf(placement.span.rows / 2f - tuning.deadZoneRadius, tuning.deadZoneRadius)
+        }
+
+    private val stacks = WidgetStackEngine()
 
     private fun freeCellAway(
         item: LauncherItem,

@@ -411,8 +411,22 @@ internal fun StandardHome(
         val riffleGlance = rememberRiffleGlanceProviders()
         // Riffle's own widgets belong to the personal profile, which is always usable.
         val riffleGlanceProfileVisibility = mapOf(AppProfile.personal().id to AppProfileContentVisibility.VISIBLE)
+        // Opened for a stack: only the widgets that can take its span, and a tap adds to it.
+        val fillingStack = visibleLayout.widgetStack(presentation.widgetPicker.stackItemId)
+        val stackSpan = fillingStack?.placement?.span
+        val allProviders = riffleGlance + presentation.widgetPicker.providers
         WidgetPickerSurface(
-            providers = riffleGlance + presentation.widgetPicker.providers,
+            providers =
+                if (stackSpan == null) {
+                    allProviders
+                } else {
+                    allProviders.takingStackSpan(
+                        span = stackSpan,
+                        grid = visibleLayout.selectedPage.grid,
+                        availableWidthDp = workspaceGridBounds.value?.width?.div(density)?.roundToInt() ?: 0,
+                        availableHeightDp = workspaceGridBounds.value?.height?.div(density)?.roundToInt() ?: 0,
+                    )
+                },
             profileContentVisibility =
                 riffleGlanceProfileVisibility + presentation.widgetPicker.profileContentVisibility,
             catalogStatus = presentation.widgetPicker.catalogStatus,
@@ -420,7 +434,12 @@ internal fun StandardHome(
             accessiblePlacement = accessibleWidgetPlacement.value,
             hasDockPanel = visibleLayout.dock.panel != null,
             guidedPlacementTarget =
-                WidgetAddTarget.DOCK_PANEL.takeIf { presentation.widgetPicker.isTargetingDockPanel },
+                if (fillingStack != null) {
+                    WidgetAddTarget.HOME_STACK
+                } else {
+                    WidgetAddTarget.DOCK_PANEL.takeIf { presentation.widgetPicker.isTargetingDockPanel }
+                },
+            isFillingStack = fillingStack != null,
             isDragHandoffActive = widgetPickerDragInProgress.value,
             onWidgetDragStarted = {
                 cancelAccessibleWidgetPlacement()
@@ -470,6 +489,14 @@ internal fun StandardHome(
                 finishWidgetPickerDrag(true)
             },
             onAccessiblePlacementRequested = { provider, target ->
+                if (target == WidgetAddTarget.HOME_STACK) {
+                    // One destination, no cell to choose: the pick joins the stack and the picker closes.
+                    fillingStack?.let { stack ->
+                        onAction(provider.requestAddToStack(stack.id))
+                        onAction(LauncherShellAction.CloseWidgetPicker)
+                    }
+                    return@WidgetPickerSurface
+                }
                 accessibleWidgetPlacement.value =
                     accessibleWidgetPlacementFor(
                         provider = provider,
@@ -570,6 +597,31 @@ internal fun StandardHome(
             onDismiss = { openedFolderId.value = null },
             onAction = onAction,
             editTitleOnOpen = renameOpenedFolder.value,
+        )
+    }
+    // The sheet that edits a stack; a stack left with one widget (or removed) is not one any more, so it closes.
+    val editedStack = visibleLayout.widgetStack(presentation.widgetPicker.stackEditorItemId)?.takeIf { it.isStack }
+    val editorOpen = presentation.widgetPicker.stackEditorItemId != null
+    LaunchedEffect(editorOpen, editedStack == null) {
+        if (editorOpen && editedStack == null) onAction(LauncherShellAction.CloseWidgetStackEditor)
+    }
+    editedStack?.let { stack ->
+        WidgetStackEditorSurface(
+            stack = stack,
+            layout = visibleLayout,
+            icons = rememberSystemStackMemberIcons(),
+            onAction = onAction,
+            onDismiss = { onAction(LauncherShellAction.CloseWidgetStackEditor) },
+        )
+    }
+    visibleLayout.widgetStack(presentation.widgetPicker.stackRemovalItemId)?.let { stack ->
+        ConfirmRemoveWidgetStackDialog(
+            widgetCount = stack.members.size,
+            onConfirm = {
+                onAction(LauncherShellAction.DismissRemoveWidgetStack)
+                onAction(LauncherShellAction.RemoveHomeShortcut(stack.id))
+            },
+            onDismiss = { onAction(LauncherShellAction.DismissRemoveWidgetStack) },
         )
     }
 }
@@ -1136,6 +1188,7 @@ private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspace
         appShortcutsByApp = presentation.appShortcutsByApp,
         labelSettings = layout.settings.labels,
         reducedMotion = presentation.reducedMotion,
+        pagesScrollVertically = presentation.layout.pageScroll == PageScrollDirection.VERTICAL,
         widgetViewFactory = presentation.widgetViewFactory,
         libraryEnabled = presentation.libraryEnabled,
         dragTuning = presentation.dragTuning,
@@ -1210,6 +1263,12 @@ internal data class StandardHomeWidgetPickerState(
     val isOpen: Boolean = false,
     /** Whether this picker is placing onto the dock's panel rather than onto home or the dock. */
     val isTargetingDockPanel: Boolean = false,
+    /** The widget stack the open picker is filling: only widgets that can take its span are listed. */
+    val stackItemId: LauncherItemId? = null,
+    /** The stack whose widgets the editor sheet edits. */
+    val stackEditorItemId: LauncherItemId? = null,
+    /** The stack waiting for the person to confirm its removal. */
+    val stackRemovalItemId: LauncherItemId? = null,
 )
 
 internal data class HomeInsetPolicy(
@@ -1257,6 +1316,8 @@ internal data class HomeGridPresentation(
     val appShortcutsByApp: AppShortcutsByApp,
     val labelSettings: HomeLabelSettings,
     val reducedMotion: Boolean = false,
+    /** Whether Home's pages scroll up and down: a widget stack then swipes sideways (never along the pager). */
+    val pagesScrollVertically: Boolean = false,
     val widgetViewFactory: HomeWidgetViewFactory,
     val generatedPage: GeneratedPagePresentation = GeneratedPagePresentation(),
     /** Whether the Library is on, for a generated page's "More apps" button (search stands in while it is off). */
@@ -1446,6 +1507,7 @@ private fun homeGridPresentationFor(
         appShortcutsByApp = presentation.appShortcutsByApp,
         labelSettings = layout.settings.labels,
         reducedMotion = presentation.reducedMotion,
+        pagesScrollVertically = presentation.layout.pageScroll == PageScrollDirection.VERTICAL,
         widgetViewFactory = presentation.widgetViewFactory,
         libraryEnabled = presentation.libraryEnabled,
         dragTuning = presentation.dragTuning,

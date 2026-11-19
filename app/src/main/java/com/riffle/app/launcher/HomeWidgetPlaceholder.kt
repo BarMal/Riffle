@@ -45,9 +45,11 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.PlaceLauncherItemResult
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.WidgetStackEngine
 import kotlin.math.roundToInt
 
 @Composable
+@Suppress("LongParameterList")
 @OptIn(ExperimentalFoundationApi::class)
 internal fun HomeWidgetPlaceholder(
     widget: WidgetItem,
@@ -57,9 +59,21 @@ internal fun HomeWidgetPlaceholder(
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     dragState: HomeItemDragState? = null,
     workspaceActions: HomeWorkspaceActions? = null,
+    stackPresentation: WidgetStackPresentation = WidgetStackPresentation(),
 ) {
     val glance = widget.glance
-    if (glance != null) {
+    if (widget.isStack) {
+        HomeWidgetStack(
+            widget = widget,
+            isEditing = isEditing,
+            onAction = onAction,
+            contextSurface = contextSurface,
+            widgetViewFactory = widgetViewFactory,
+            dragState = dragState,
+            workspaceActions = workspaceActions,
+            presentation = stackPresentation,
+        )
+    } else if (glance != null) {
         GlanceHomeWidget(
             widget = widget,
             kind = glance,
@@ -93,12 +107,57 @@ private fun HostedHomeWidget(
     dragState: HomeItemDragState?,
     workspaceActions: HomeWorkspaceActions?,
 ) {
+    val isContextMenuExpanded = remember(widget.id) { mutableStateOf(false) }
+
+    HostedWidgetFrame(widget = widget, widgetViewFactory = widgetViewFactory) {
+        WidgetGestureLayer(
+            widget = widget,
+            dragState = dragState,
+            workspaceActions = workspaceActions,
+            onStationaryLongPress = { isContextMenuExpanded.value = true },
+            onMenuDismiss = { isContextMenuExpanded.value = false },
+        )
+        if (isEditing) {
+            WidgetEditHandles(
+                widget = widget,
+                grid = dragState?.grid,
+                pageItems = dragState?.pageItems ?: listOf(widget),
+                contextSurface = contextSurface,
+                onAction = onAction,
+            )
+        }
+        ShortcutContextMenu(
+            expanded = isContextMenuExpanded.value,
+            items =
+                widgetPlaceholderContextMenuItems(
+                    widget = widget,
+                    grid = dragState?.grid,
+                    pageItems = dragState?.pageItems ?: listOf(widget),
+                    contextSurface = contextSurface,
+                    text = rememberSettingsText(),
+                ),
+            onDismissRequest = { isContextMenuExpanded.value = false },
+            onAction = onAction,
+        )
+    }
+}
+
+/**
+ * A platform widget in the launcher's glass frame: its host view, sized to the frame, or its name where it has none.
+ * [overlay] draws inside the frame, over the widget (a lone widget's gestures, handles and menu). A stack draws one of
+ * these for each of the widgets it holds.
+ */
+@Composable
+internal fun HostedWidgetFrame(
+    widget: WidgetItem,
+    widgetViewFactory: HomeWidgetViewFactory,
+    overlay: @Composable BoxScope.() -> Unit = {},
+) {
     val context = LocalContext.current
     val hostedWidgetView =
         remember(context, widget.appWidgetId, widgetViewFactory) {
             widgetViewFactory.createHostedWidgetView(context, widget)
         }
-    val isContextMenuExpanded = remember(widget.id) { mutableStateOf(false) }
 
     DisposableEffect(hostedWidgetView) {
         onDispose {
@@ -138,35 +197,7 @@ private fun HostedHomeWidget(
                     },
                 )
             }
-            WidgetGestureLayer(
-                widget = widget,
-                dragState = dragState,
-                workspaceActions = workspaceActions,
-                onStationaryLongPress = { isContextMenuExpanded.value = true },
-                onMenuDismiss = { isContextMenuExpanded.value = false },
-            )
-            if (isEditing) {
-                WidgetEditHandles(
-                    widget = widget,
-                    grid = dragState?.grid,
-                    pageItems = dragState?.pageItems ?: listOf(widget),
-                    contextSurface = contextSurface,
-                    onAction = onAction,
-                )
-            }
-            ShortcutContextMenu(
-                expanded = isContextMenuExpanded.value,
-                items =
-                    widgetPlaceholderContextMenuItems(
-                        widget = widget,
-                        grid = dragState?.grid,
-                        pageItems = dragState?.pageItems ?: listOf(widget),
-                        contextSurface = contextSurface,
-                        text = rememberSettingsText(),
-                    ),
-                onDismissRequest = { isContextMenuExpanded.value = false },
-                onAction = onAction,
-            )
+            overlay()
         }
     }
 }
@@ -306,33 +337,58 @@ internal fun widgetPlaceholderContextMenuItems(
     contextSurface: ShortcutContextSurface = ShortcutContextSurface.HOME,
     text: SettingsText,
 ): List<ShortcutContextMenuItem> {
-    return listOf(
-        ShortcutContextMenuItem(
-            label = text.text(R.string.menu_make_wider),
-            action = widget.resizeAction(columnsDelta = 1, rowsDelta = 0),
-            enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
-        ),
-        ShortcutContextMenuItem(
-            label = text.text(R.string.menu_make_narrower),
-            action = widget.resizeAction(columnsDelta = -1, rowsDelta = 0),
-            enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
-        ),
-        ShortcutContextMenuItem(
-            label = text.text(R.string.menu_make_taller),
-            action = widget.resizeAction(columnsDelta = 0, rowsDelta = 1),
-            enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
-        ),
-        ShortcutContextMenuItem(
-            label = text.text(R.string.menu_make_shorter),
-            action = widget.resizeAction(columnsDelta = 0, rowsDelta = -1),
-            enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
-        ),
-        ShortcutContextMenuItem(
-            label = contextSurface.widgetRemoveLabel(text),
-            action = widget.removeActionFor(contextSurface),
-        ),
-    )
+    return widget.stackMenuItems(contextSurface, text) +
+        listOf(
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_make_wider),
+                action = widget.resizeAction(columnsDelta = 1, rowsDelta = 0),
+                enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
+            ),
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_make_narrower),
+                action = widget.resizeAction(columnsDelta = -1, rowsDelta = 0),
+                enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
+            ),
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_make_taller),
+                action = widget.resizeAction(columnsDelta = 0, rowsDelta = 1),
+                enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
+            ),
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_make_shorter),
+                action = widget.resizeAction(columnsDelta = 0, rowsDelta = -1),
+                enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
+            ),
+            ShortcutContextMenuItem(
+                label = contextSurface.widgetRemoveLabel(text),
+                action = widget.removeActionFor(contextSurface),
+            ),
+        )
 }
+
+/**
+ * The stack entries of a widget's menu (Home only: the Dock and its panel never hold a stack): "Edit stack" for a
+ * stack, and "Add widget to stack" for any widget while the stack has room.
+ */
+private fun WidgetItem.stackMenuItems(
+    surface: ShortcutContextSurface,
+    text: SettingsText,
+): List<ShortcutContextMenuItem> =
+    if (surface != ShortcutContextSurface.HOME) {
+        emptyList()
+    } else {
+        listOfNotNull(
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_edit_stack),
+                action = LauncherShellAction.OpenWidgetStackEditor(id),
+            ).takeIf { isStack },
+            ShortcutContextMenuItem(
+                label = text.text(R.string.menu_add_widget_to_stack),
+                action = LauncherShellAction.OpenWidgetPickerForStack(id),
+                enabled = members.size < WidgetStackEngine.MAX_MEMBERS,
+            ),
+        )
+    }
 
 private fun WidgetItem.resizeAction(
     columnsDelta: Int,

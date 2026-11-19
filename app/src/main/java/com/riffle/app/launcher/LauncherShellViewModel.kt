@@ -46,6 +46,7 @@ import com.riffle.core.domain.launcher.home.LibraryViewRetirement
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WidgetEditResult
 import com.riffle.core.domain.launcher.home.WidgetEngine
+import com.riffle.core.domain.launcher.home.WidgetStackEngine
 import com.riffle.core.domain.launcher.library.LibraryCategories
 import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
@@ -565,7 +566,7 @@ class LauncherShellViewModel(
 
     fun onHomeShortcutEdited(action: LauncherShellAction) {
         val previousState = mutableState.value
-        val removedHostedWidgetId = previousState.removedHomeHostedWidgetId(action)
+        val removedHostedWidgetIds = previousState.removedHomeHostedWidgetIds(action)
 
         mutableState.value =
             reduceHomeShortcutEdit(
@@ -579,10 +580,9 @@ class LauncherShellViewModel(
             )
 
         deleteRemovedHomeHostedWidget(
-            action = action,
             previousState = previousState,
             currentState = mutableState.value,
-            removedHostedWidgetId = removedHostedWidgetId,
+            removedHostedWidgetIds = removedHostedWidgetIds,
             deleteHostedWidgetId = platformDependencies.deleteHostedWidgetId,
         )
     }
@@ -688,7 +688,7 @@ private fun LauncherShellState.withGlanceWidgetAdded(
         is WidgetEditResult.Rejected -> this
     }
 
-@Suppress("CyclomaticComplexMethod")
+@Suppress("CyclomaticComplexMethod", "LongMethod")
 private fun reduceHomeShortcutEdit(
     previousState: LauncherShellState,
     action: LauncherShellAction,
@@ -730,6 +730,14 @@ private fun reduceHomeShortcutEdit(
 
         is LauncherShellAction.AddGlanceWidgetToHome ->
             previousState.withGlanceWidgetAdded(action, widgetEngine, homeLayoutRepository)
+
+        is LauncherShellAction.ShowStackedWidget,
+        is LauncherShellAction.MoveStackedWidget,
+        is LauncherShellAction.RemoveStackedWidget,
+        is LauncherShellAction.MoveStackedWidgetOut,
+        is LauncherShellAction.AddHostedWidgetToStack,
+        is LauncherShellAction.AddGlanceWidgetToStack,
+        -> previousState.withWidgetStackEdit(action, WidgetStackEngine(), homeLayoutRepository)
 
         is LauncherShellAction.AddHostedWidgetToDockPanel ->
             when (
@@ -783,23 +791,15 @@ private fun reduceHomeShortcutEdit(
     }
 
 private fun deleteRemovedHomeHostedWidget(
-    action: LauncherShellAction,
     previousState: LauncherShellState,
     currentState: LauncherShellState,
-    removedHostedWidgetId: HostedWidgetId?,
+    removedHostedWidgetIds: List<HostedWidgetId>,
     deleteHostedWidgetId: (HostedWidgetId) -> Unit,
 ) {
-    if (action is LauncherShellAction.RemoveHomeShortcut && currentState != previousState) {
-        removedHostedWidgetId?.let(deleteHostedWidgetId)
+    if (currentState != previousState) {
+        removedHostedWidgetIds.forEach(deleteHostedWidgetId)
     }
 }
-
-private fun LauncherShellState.removedHomeHostedWidgetId(action: LauncherShellAction) =
-    when (action) {
-        is LauncherShellAction.RemoveHomeShortcut ->
-            homeLayout.selectedPageHostedWidgetIdForItem(action.itemId)
-        else -> null
-    }
 
 private fun LauncherShellState.removedDockHostedWidgetId(action: LauncherShellAction) =
     when (action) {

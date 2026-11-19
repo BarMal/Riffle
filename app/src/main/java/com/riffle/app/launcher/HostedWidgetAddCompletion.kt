@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import com.riffle.app.launcher.widgets.fitWidgetPreferredSpan
@@ -15,7 +17,43 @@ internal fun LauncherShellViewModel.completeWidgetAdd(action: HostedWidgetAddAct
         is LauncherShellAction.AddHostedWidgetToHome -> completeHomeWidgetAdd(action)
         is LauncherShellAction.AddHostedWidgetToDock -> completeDockWidgetAdd(action)
         is LauncherShellAction.AddHostedWidgetToDockPanel -> completeDockPanelWidgetAdd(action)
+        is LauncherShellAction.AddHostedWidgetToStack -> completeStackWidgetAdd(action)
     }
+
+/**
+ * Joins a platform widget to a stack (the picker was opened for it). The engine refuses a full stack, a widget that
+ * cannot take the stack's span and one the layout already hosts; then the caller deletes the host id it allocated.
+ */
+private fun LauncherShellViewModel.completeStackWidgetAdd(
+    action: LauncherShellAction.AddHostedWidgetToStack,
+): HostedWidgetAddCompletionResult {
+    val hadHostedWidgetBeforeAdd = state.value.homeLayout.hostsWidget(action.hostedWidgetId)
+    onHomeShortcutEdited(action)
+    val wasPlaced = !hadHostedWidgetBeforeAdd && state.value.homeLayout.hostsWidget(action.hostedWidgetId)
+    onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
+    return if (wasPlaced) {
+        HostedWidgetAddCompletionResult.Placed(message = null)
+    } else {
+        HostedWidgetAddCompletionResult.Rejected
+    }
+}
+
+/** Joins one of Riffle's own widgets to a stack: nothing to bind, so this is the whole add. */
+internal fun LauncherShellViewModel.completeGlanceStackAdd(
+    action: LauncherShellAction.AddGlanceWidgetToStack,
+): HostedWidgetAddCompletionResult {
+    fun countOf(layout: HomeLayout) =
+        layout.pages.flatMap { it.items }.filterIsInstance<WidgetItem>()
+            .firstOrNull { it.id == action.itemId }?.members?.size ?: 0
+    val before = countOf(state.value.homeLayout)
+    onHomeShortcutEdited(action)
+    onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
+    return if (countOf(state.value.homeLayout) > before) {
+        HostedWidgetAddCompletionResult.Placed(message = null)
+    } else {
+        HostedWidgetAddCompletionResult.Rejected
+    }
+}
 
 /**
  * Places a glance widget. Unlike a platform widget there is nothing to bind or configure, so this is the whole add:

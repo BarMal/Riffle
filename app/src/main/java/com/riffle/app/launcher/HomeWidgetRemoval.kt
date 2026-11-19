@@ -19,11 +19,18 @@ internal fun HomeLayout.dockHostedWidgetIdForItem(itemId: LauncherItemId): Hoste
         ?.takeIf { widget -> widget.glance == null }
         ?.appWidgetId
 
+/** Every host id the item holds (one per platform widget of a stack), for its removal. */
+internal fun HomeLayout.selectedPageHostedWidgetIdsForItem(itemId: LauncherItemId): List<HostedWidgetId> =
+    selectedPage.items
+        .filterIsInstance<WidgetItem>()
+        .firstOrNull { widget -> widget.id == itemId }
+        ?.hostIds
+        .orEmpty()
+
 internal fun HomeLayout.selectedPageHostedWidgetIds(): List<HostedWidgetId> =
     selectedPage.items
         .filterIsInstance<WidgetItem>()
-        .filter { widget -> widget.glance == null }
-        .map { widget -> widget.appWidgetId }
+        .flatMap { widget -> widget.hostIds }
 
 internal fun HomeLayout.hostedWidgetIdForItem(itemId: LauncherItemId): HostedWidgetId? =
     selectedPageHostedWidgetIdForItem(itemId)

@@ -22,10 +22,10 @@ object PoolPlacement {
         at: GridPlacement? = null,
         span: GridSpan = GridSpan(),
     ): PoolResult {
-        val hostId = (item as? PoolWidget)?.hostedId
+        val hostIds = (item as? PoolWidget)?.hostIds.orEmpty()
         return when {
             item.id in pool.items -> rejected(PoolRejection.ITEM_ID_IN_USE)
-            hostId != null && hostId in PoolReferences.hostIds(pool) -> rejected(PoolRejection.HOST_ID_IN_USE)
+            hostIds.any { it in PoolReferences.hostIds(pool) } -> rejected(PoolRejection.HOST_ID_IN_USE)
             else ->
                 PoolPages.place(
                     pool.copy(items = pool.items + (item.id to item)),

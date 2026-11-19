@@ -11,7 +11,22 @@ internal fun LauncherShellState.withWidgetPickerAction(action: LauncherShellActi
             copy(isWidgetPickerOpen = true, isWidgetPickerTargetingDockPanel = true)
 
         LauncherShellAction.CloseWidgetPicker ->
-            copy(isWidgetPickerOpen = false, isWidgetPickerTargetingDockPanel = false)
+            copy(isWidgetPickerOpen = false, isWidgetPickerTargetingDockPanel = false, widgetPickerStackItemId = null)
+
+        is LauncherShellAction.OpenWidgetPickerForStack ->
+            copy(
+                isWidgetPickerOpen = true,
+                isWidgetPickerTargetingDockPanel = false,
+                widgetPickerStackItemId = action.itemId,
+            )
+
+        is LauncherShellAction.OpenWidgetStackEditor -> copy(widgetStackEditorItemId = action.itemId)
+
+        LauncherShellAction.CloseWidgetStackEditor -> copy(widgetStackEditorItemId = null)
+
+        is LauncherShellAction.ConfirmRemoveWidgetStack -> copy(widgetStackRemovalItemId = action.itemId)
+
+        LauncherShellAction.DismissRemoveWidgetStack -> copy(widgetStackRemovalItemId = null)
 
         else -> this
     }

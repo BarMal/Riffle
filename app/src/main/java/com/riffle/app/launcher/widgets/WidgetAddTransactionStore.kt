@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
@@ -26,6 +27,8 @@ data class PendingWidgetAddTransaction(
     val targetPageId: LauncherPageId? = null,
     val targetCell: GridCell? = null,
     val dockIndex: Int? = null,
+    /** With [WidgetAddTarget.HOME_STACK]: the stack the widget joins. */
+    val targetStackId: LauncherItemId? = null,
     val step: PendingWidgetAddStep,
     val createdAtEpochMillis: Long,
     val version: Int = CURRENT_WIDGET_ADD_TRANSACTION_VERSION,
@@ -114,6 +117,7 @@ internal fun encodeWidgetAddTransaction(transaction: PendingWidgetAddTransaction
         .put("targetColumn", transaction.targetCell?.column)
         .put("targetRow", transaction.targetCell?.row)
         .put("dockIndex", transaction.dockIndex)
+        .put("targetStackId", transaction.targetStackId?.value)
         .put("step", transaction.step.name)
         .put("createdAtEpochMillis", transaction.createdAtEpochMillis)
         .toString()
@@ -158,6 +162,7 @@ internal fun decodeWidgetAddTransaction(value: String): PendingWidgetAddTransact
                         null
                     },
                 dockIndex = json.optInt("dockIndex", -1).takeIf { it >= 0 },
+                targetStackId = json.optString("targetStackId").takeIf(String::isNotBlank)?.let(::LauncherItemId),
                 step = PendingWidgetAddStep.valueOf(json.getString("step")),
                 createdAtEpochMillis = json.getLong("createdAtEpochMillis").also { require(it >= 0) },
                 version = json.getInt("version").also { require(it in 1..CURRENT_WIDGET_ADD_TRANSACTION_VERSION) },
