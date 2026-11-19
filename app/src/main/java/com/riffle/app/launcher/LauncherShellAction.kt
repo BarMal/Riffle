@@ -115,6 +115,17 @@ sealed interface LauncherShellAction {
     /** Settings > Backup > Undo last import: re-imports the copy kept before the last import, through the same path. */
     data object UndoLastBackupImport : LauncherShellAction
 
+    /**
+     * Settings > About > Reset settings (confirmed first): every setting back to its default, keeping Home, the Dock,
+     * saved Home layouts, hidden apps and the feeds and tokens (`SettingsReset`).
+     */
+    data object ResetSettings : LauncherShellAction
+
+    /** Undo of [ResetSettings]: puts [before] back exactly. */
+    data class RestoreSettings(
+        val before: com.riffle.core.domain.launcher.settings.LauncherSettings,
+    ) : LauncherShellAction
+
     /** Settings > Backup > Dismiss: deletes the copy kept before the last import. */
     data object DismissLastBackupImportUndo : LauncherShellAction
 

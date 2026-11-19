@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.HintSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.LayoutSettings
+import com.riffle.core.domain.launcher.settings.SettingsReset
 import com.riffle.core.domain.launcher.settings.StreamSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.with
@@ -205,6 +206,18 @@ internal class LauncherSettingsStateReducer(
                             state.launcherSettings.copy(
                                 home = state.launcherSettings.home.copy(addNewApps = action.enabled),
                             ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                LauncherShellAction.ResetSettings ->
+                    state.withLauncherSettings(
+                        settings = SettingsReset.reset(state.launcherSettings),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.RestoreSettings ->
+                    state.withLauncherSettings(
+                        settings = action.before,
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 

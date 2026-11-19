@@ -136,6 +136,8 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectOpenCardPlacement,
         is LauncherShellAction.SelectCardActionsPlacement,
         is LauncherShellAction.SetDockMotion,
+        LauncherShellAction.ResetSettings,
+        is LauncherShellAction.RestoreSettings,
         is LauncherShellAction.SetAddNewApps,
         LauncherShellAction.AddAllAppsToHome,
         LauncherShellAction.ArrangeHomeAtoZ,
