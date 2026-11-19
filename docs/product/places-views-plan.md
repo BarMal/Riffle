@@ -316,6 +316,52 @@ header; with Undo) and in Settings > Stream. A phone always shows Pages.
 
 Not built: dragging a stage out of the rail to reorder it, and a thumbnail that shows the actual card scaled down.
 
+## First run: Home starts with something on it
+
+ADR 0003, Amendment 8 said apps present at the first run are not placed, which left a fresh install with an empty Home and
+an empty Dock. That is replaced (Amendment 11). Existing installs are never touched.
+
+**The set-up asks "How should Home start?"** as its first step, on a fresh install only (origin `FRESH_INSTALL`, until it
+is answered once; a re-run from Settings and an existing user never see it). Two small previews: **All my apps**
+(recommended, preselected: every visible app A to Z by the Arrange rule with the stored Compact choice) and **Start empty**
+(one empty page; the apps live in the Library). Next applies the choice. "Skip set-up" while the question is open applies
+All my apps (the button's supporting text says "Skip: start with all apps on Home"), so skipping never leaves an empty
+screen silently.
+
+**Rules (`HomeSeeding`, `LauncherShellViewModel.seedHome`).**
+
+- A seed only runs on a Home that is fresh (no item on any page, nothing in the Dock); otherwise it does nothing.
+- The Dock is seeded in both cases with up to four apps resolved by role or intent, in this order: the default dialer
+  (`ACTION_DIAL`), the default SMS app, the default browser (`ACTION_VIEW` of an https address) and the camera
+  (`INTENT_ACTION_STILL_IMAGE_CAMERA`, then `ACTION_IMAGE_CAPTURE`). A role that resolves to nothing, to the system chooser
+  or to an app that is not launchable is skipped silently. Resolution is behind `DockDefaultsResolver`
+  (`AndroidDockDefaultsResolver` on the device, a fake in tests); the matching `<queries>` entries are in the manifest.
+  No package names are listed anywhere.
+- An app that the seed puts in the Dock is not also placed on Home.
+- The seed waits for the app list (and the workspaces); it runs once. That the answer is stored
+  (`OnboardingState.homeStartChosen`) and that nothing else seeds is what keeps a removed app removed after a refresh or a
+  restart. The One Home and library-view migrations run for existing data only; a fresh install has nothing to migrate.
+- Either choice marks the empty-Home hint as dismissed.
+
+**The empty-Home hint.** An existing user whose Home has nothing on any page, who has apps to add, sees one line on Home:
+"Home is empty." with an "Add all apps" button (and Undo afterwards) and a dismiss button. It is never shown again once
+dismissed, once Home has held an item (the shell records that), in Simple mode or while the Home-role card is up.
+
+**The set-up card** ("Set up Riffle", before the tour) is one sentence of purpose, "Set as Home app" and "Not now". The
+caveat that the Home button may still open the current launcher appears only after the role request was declined
+(`LauncherShellState.homeRoleRequestDeclined`).
+
+## After-update starts
+
+An investigation aid for "the swipe-up-to-home gesture stops reaching the launcher after an update until the navigation
+mode is toggled" (no confirmed cause). The manifest declares on the Home activity `android:clearTaskOnLaunch`,
+`android:stateNotNeeded` and `android:resumeWhilePausing`, as AOSP's Launcher3 does; the LAUNCHER intent filter is
+unchanged. The first process start after the version code or the last-update time changes records one entry
+(`AfterUpdateLog`, kept to the last ten, newest first; see Settings > About > Diagnostics > After-update starts). The work
+runs on its own thread, adds no receiver, background start or permission, and a failure there never reaches the launcher.
+Without a stored earlier version (this build's first start) an update is recorded with the old version unknown; a fresh
+install records nothing. The five-minute window for Home intents is wall-clock time since the start.
+
 ## Home drag
 
 The rules are in `gestures.md`, "Dragging on Home"; the rule is `HomeDragPush` (`:core:domain`) and its numbers
