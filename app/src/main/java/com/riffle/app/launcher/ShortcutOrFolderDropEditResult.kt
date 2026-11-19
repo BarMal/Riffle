@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.FolderEditResult
 import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -11,6 +12,7 @@ internal fun applyShortcutOrFolderDropEdit(
     layout: HomeLayout,
     shortcutEngine: HomeShortcutEngine,
     folderEngine: FolderEngine,
+    installedApps: List<InstalledApp> = emptyList(),
 ): ShortcutOrFolderDropEditResult =
     when (action) {
         is LauncherShellAction.MoveHomeShortcutToCell ->
@@ -19,6 +21,7 @@ internal fun applyShortcutOrFolderDropEdit(
                     layout = layout,
                     sourceItemId = action.itemId,
                     targetCell = action.cell,
+                    installedApps = installedApps,
                 )
                 ?.toShortcutOrFolderDropEditResult()
                 ?: shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()

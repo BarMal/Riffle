@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,11 +28,19 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -138,6 +148,13 @@ internal fun HomeFolderContextMenu(
             },
         )
         DropdownMenuItem(
+            text = { Text(text = "Rename") },
+            onClick = {
+                onDismissRequest()
+                actions.onFolderRename(folder)
+            },
+        )
+        DropdownMenuItem(
             text = { Text(text = "Move to dock") },
             onClick = {
                 onDismissRequest()
@@ -168,11 +185,11 @@ fun FolderSurface(
     appIconLoader: AppIconLoader,
     onDismiss: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
+    /** Opens with the title in edit mode, keyboard up, text selected (a new folder, or "Rename" in its menu). */
+    editTitleOnOpen: Boolean = false,
 ) {
-    val folderName = remember(folder.id, folder.label) { mutableStateOf(folder.label) }
     val addAppQuery = remember(folder.id) { mutableStateOf("") }
     val addAppProfileFilter = remember(folder.id) { mutableStateOf(AppDrawerProfileFilter.ALL) }
-    val trimmedFolderName = folderName.value.trim()
     val addableApps = installedApps.filterFolderAddCandidates(layout)
     val visibleAddableApps =
         addableApps
@@ -206,7 +223,7 @@ fun FolderSurface(
         ) {
             FolderSurfaceHeader(
                 folder = folder,
-                trimmedFolderName = trimmedFolderName,
+                editTitleOnOpen = editTitleOnOpen,
                 onDismiss = onDismiss,
                 onAction = onAction,
             )
@@ -214,13 +231,6 @@ fun FolderSurface(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = folderName.value,
-                    onValueChange = { value -> folderName.value = value },
-                    singleLine = true,
-                    label = { Text(text = "Name") },
-                )
                 FolderAddControls(
                     query = addAppQuery.value,
                     onQueryChanged = { value -> addAppQuery.value = value },
@@ -252,7 +262,7 @@ internal const val FOLDER_SURFACE_ROOT_TEST_TAG = "folder-surface-root"
 @Composable
 private fun FolderSurfaceHeader(
     folder: FolderItem,
-    trimmedFolderName: String,
+    editTitleOnOpen: Boolean,
     onDismiss: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -261,28 +271,60 @@ private fun FolderSurfaceHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        FolderTitle(
+            modifier = Modifier.weight(1f),
+            folder = folder,
+            editOnOpen = editTitleOnOpen,
+            onRename = { label -> onAction(LauncherShellAction.RenameHomeFolder(itemId = folder.id, label = label)) },
+        )
+        TextButton(onClick = onDismiss) {
+            Text(text = "Close")
+        }
+    }
+}
+
+internal const val FOLDER_TITLE_FIELD_TEST_TAG = "folder-title-field"
+internal const val FOLDER_TITLE_TEXT_TEST_TAG = "folder-title-text"
+
+/**
+ * The folder's title: tapping it edits it in place (the keyboard's Done commits; an empty name reverts). With
+ * [editOnOpen] it starts in edit mode with the keyboard up and the whole name selected.
+ */
+@Composable
+private fun FolderTitle(
+    folder: FolderItem,
+    editOnOpen: Boolean,
+    onRename: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var editing by remember(folder.id) { mutableStateOf(editOnOpen) }
+    var field by remember(folder.id, editing) {
+        mutableStateOf(TextFieldValue(folder.label, TextRange(0, folder.label.length)))
+    }
+
+    fun commit() {
+        val name = field.text.trim()
+        if (name.isNotEmpty() && name != folder.label) onRename(name)
+        editing = false
+    }
+    if (editing) {
+        val focus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { focus.requestFocus() }
+        OutlinedTextField(
+            modifier = modifier.fillMaxWidth().focusRequester(focus).testTag(FOLDER_TITLE_FIELD_TEST_TAG),
+            value = field,
+            onValueChange = { field = it },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.headlineMedium,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { commit() }),
+        )
+    } else {
         Text(
+            modifier = modifier.testTag(FOLDER_TITLE_TEXT_TEST_TAG).clickable { editing = true },
             text = folder.label,
             style = MaterialTheme.typography.headlineMedium,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onDismiss) {
-                Text(text = "Close")
-            }
-            TextButton(
-                enabled = trimmedFolderName.isNotEmpty() && trimmedFolderName != folder.label,
-                onClick = {
-                    onAction(
-                        LauncherShellAction.RenameHomeFolder(
-                            itemId = folder.id,
-                            label = trimmedFolderName,
-                        ),
-                    )
-                },
-            ) {
-                Text(text = "Save")
-            }
-        }
     }
 }
 

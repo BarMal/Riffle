@@ -667,6 +667,7 @@ private fun reduceHomeShortcutEdit(
                         layout = previousState.homeLayout,
                         shortcutEngine = shortcutEngine,
                         folderEngine = folderEngine,
+                        installedApps = previousState.installedApps,
                     )
             ) {
                 is ShortcutOrFolderDropEditResult.Updated ->

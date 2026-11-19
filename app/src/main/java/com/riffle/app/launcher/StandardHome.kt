@@ -136,6 +136,18 @@ internal fun StandardHome(
     val dockPosition =
         dockEdge ?: resolveDockPosition(visibleLayout.dock.position, deviceClass.templateDockPosition)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
+    val renameOpenedFolder = remember { mutableStateOf(false) }
+    // A drop that makes a folder opens it with its name in edit mode: the folders before the drop are remembered, and
+    // the first folder beyond them is the new one.
+    val foldersBeforeDrop = remember { mutableStateOf<Set<LauncherItemId>?>(null) }
+    val folderIds = layout.pages.flatMap { it.items }.filterIsInstance<FolderItem>().map { it.id }.toSet()
+    LaunchedEffect(folderIds) {
+        val before = foldersBeforeDrop.value ?: return@LaunchedEffect
+        val created = (folderIds - before).firstOrNull() ?: return@LaunchedEffect
+        foldersBeforeDrop.value = null
+        renameOpenedFolder.value = true
+        openedFolderId.value = created
+    }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     // Read by the dock host as well as here, so they live in its state rather than this frame's.
     val widgetPickerDragInProgress = dockHostState.isWidgetDragInProgress
@@ -244,7 +256,14 @@ internal fun StandardHome(
     }
     val actions =
         HomeWorkspaceActions(
-            onFolderOpen = { folder -> openedFolderId.value = folder.id },
+            onFolderOpen = { folder ->
+                renameOpenedFolder.value = false
+                openedFolderId.value = folder.id
+            },
+            onFolderRename = { folder ->
+                renameOpenedFolder.value = true
+                openedFolderId.value = folder.id
+            },
             onDragSessionChanged = { session ->
                 val planned = session?.planned(visibleLayout, workspaceGridBounds.value, presentation.dragTuning)
                 if (planned?.plan?.pushed?.keys != homeDragSession.value?.plan?.pushed?.keys &&
@@ -265,7 +284,10 @@ internal fun StandardHome(
                 }
             },
             onBackgroundClick = dockHostState::dismissShelf,
-            onAction = onAction,
+            onAction = { action ->
+                if (action is LauncherShellAction.MoveHomeShortcutToCell) foldersBeforeDrop.value = folderIds
+                onAction(action)
+            },
         )
 
     StandardHomeColumn(
@@ -466,6 +488,7 @@ internal fun StandardHome(
             appIconLoader = appIconLoader,
             onDismiss = { openedFolderId.value = null },
             onAction = onAction,
+            editTitleOnOpen = renameOpenedFolder.value,
         )
     }
 }
@@ -1175,6 +1198,8 @@ internal data class HomeItemDragState(
 
 internal data class HomeWorkspaceActions(
     val onFolderOpen: (FolderItem) -> Unit,
+    /** Opens the folder with its title in edit mode (a new folder; "Rename" in its menu). */
+    val onFolderRename: (FolderItem) -> Unit = onFolderOpen,
     val onDragSessionChanged: (HomeDragSession?) -> Unit,
     val currentDragSession: () -> HomeDragSession? = { null },
     val haptics: LauncherHaptics,

@@ -1,8 +1,10 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderEditResult
 import com.riffle.core.domain.launcher.home.FolderEngine
+import com.riffle.core.domain.launcher.home.FolderNaming
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -12,6 +14,7 @@ internal fun FolderEngine.createFolderFromDropOnSelectedPage(
     layout: HomeLayout,
     sourceItemId: LauncherItemId,
     targetCell: GridCell,
+    installedApps: List<InstalledApp> = emptyList(),
 ): FolderEditResult? =
     layout.selectedPage
         .folderDropShortcutPair(sourceItemId = sourceItemId, targetCell = targetCell)
@@ -19,7 +22,12 @@ internal fun FolderEngine.createFolderFromDropOnSelectedPage(
             createFolderOnSelectedPage(
                 layout = layout,
                 folderId = layout.nextFolderId(),
-                label = DROP_FOLDER_LABEL,
+                label =
+                    FolderNaming.suggested(
+                        installedApps.firstOrNull { it.identity == pair.target.appIdentity },
+                        installedApps.firstOrNull { it.identity == pair.source.appIdentity },
+                        DROP_FOLDER_LABEL,
+                    ),
                 itemIds = listOf(pair.target.id, pair.source.id),
             )
         }
