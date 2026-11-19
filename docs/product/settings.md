@@ -23,12 +23,14 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | --- | --- | --- |
 | **Home** | Home screen | Simple mode (the locked-down Home: every app A to Z, not arrangeable; it overrides the Stream, live apps and the Library) and Add new apps to Home (a switch, on by default: a new app is placed after the last item, off keeps it in the Library only). There is no "Home shows" choice any more (ADR 0003, Amendment 8) |
 | | Fill Home | Add all apps to Home (a button; its subtitle says what it will do now: "Adds 23 apps that aren't on Home yet", or "Every app is already on Home" and disabled), Arrange Home A to Z (a button, after a confirmation) and Compact: fill each page completely (a switch, on by default). Both buttons act on the layout of the posture tab Settings shows and are off in Simple mode. See "Fill Home" below |
+| | Home layouts | A row opening the Home layouts sub-page, with how many are saved on the tab's device class |
 | | Grid | Columns, rows (a stepper), horizontal margin, vertical margin (per device class) |
 | | Icons and labels | Icon size, show labels, label background (with its strength while it is on), label text size, label width, label sizing, label lines |
 | | Behaviour | Returning to Home (restore, first page, start page) |
 | | Wallpaper | Wallpaper (system, solid), wallpaper motion, change wallpaper |
 | | Full screen | Hide status bar, hide navigation bar |
 | | Set up | Set up Riffle again; Show hints again (brings back the Dock's one-time tips; the row shows where the launcher runs the set-up) |
+| Home layouts (under Home) | Save, Saved layouts | Per device class (the tabs): **Save current Home** (a name, default "Home layout N", twelve at most) and the saved layouts, each with its page and item count and a menu (Activate, Rename, Replace with current Home, Delete). Off in Simple mode. See "Home > Home layouts" below |
 | **Dock** | Dock | Show the Dock, Dock position, icon size, pinned icons, Dock width, Dock alignment (along the top or bottom edge: left, middle, right; down a side: top, middle, bottom), Dock corner radius, Dock background strength, spacing to the grid (per device class) |
 | | Live apps | Show live apps (a switch), Number of live apps |
 | | Stream handle | Show Stream handle (a switch, on by default; off in Simple mode and without the Stream): the small chevron beside the Dock on Home that opens the Stream with a tap (touch and hold: Open Library, Hide this handle). A feature switch like Show live apps, stored in `FeatureSettings.dockStreamHandle` |
@@ -63,8 +65,8 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | | Dock and Stream | Opening speed (also the grid fade under the stack, the Home entrance and a swiped card), Dock bounce, Card stack coasting, Card snapping, Hold time to choose, Light ticks |
 | **Privacy and access** | Access | Default home app, notification access, usage access, calendar, floating dock access, each with its state and a way to change it |
 | | Privacy | Hide launcher content in screenshots and recents; how much the Stream shows (content level) for each source that can show private content |
-| **Backup** | | Export, import. Includes calendar feeds and which Stream sections are on. Never content, never any token |
-| **About** | | Version and build (tap the Version row seven times and a "Developer options" switch appears; default off, stored with the diagnostics settings). **After-update starts** stays here, always (see below). While the switch is on, a **Developer options** sub-page holds the diagnostics: **What apps publish** (a read-only list of what each app exposes to a launcher: shortcuts, notification shapes, media session, widgets, with a redacted Copy report; never notification text or contact names), **App pair experiment**, **Pair recipe** and **Drag tuning**. Search leaves those pages out while the switch is off; what they store (the pair recipe, the drag tuning) keeps working while they are hidden |
+| **Backup** | | Export, import, and while a copy is kept, **Undo last import** (with the date) and **Dismiss**. Includes calendar feeds, which Stream sections are on and the saved Home layouts. Never content, never any token. See "Backup > Undo last import" below |
+| **About** | | Version and build (tap the Version row seven times and a "Developer options" switch appears; default off, stored with the diagnostics settings). **Reset settings** (after a confirmation that lists what is kept; "Settings reset" with Undo) sits here too. **After-update starts** stays here, always (see below). While the switch is on, a **Developer options** sub-page holds the diagnostics: **What apps publish** (a read-only list of what each app exposes to a launcher: shortcuts, notification shapes, media session, widgets, with a redacted Copy report; never notification text or contact names), **App pair experiment**, **Pair recipe** and **Drag tuning**. Search leaves those pages out while the switch is off; what they store (the pair recipe, the drag tuning) keeps working while they are hidden |
 
 Removed rows: "Show the Stream as" (Pages or Stage; removed with the split in dock modes U2), "Open notifications" as a Gestures action, "Grows out of the Dock" as an open card position. Removed pages: Workspaces, Sources and its nine source detail pages, Saved lenses, Contextual, Cards appearance
 (redirect), RSS feeds and Calendar feeds as top-level pages, Permissions and Privacy as two pages (merged), the
@@ -297,3 +299,50 @@ edge hold (200 to 1000 ms, default 500), page repeat (300 to 1500 ms, default 70
 40 dp, default 12: how far a held Library app moves before its menu becomes a Home drag; data stored before it existed
 reads as the default). Stored in `LauncherSettings.home`
 (`HomeBehaviourSettings.dragTuning`, held to its ranges when decoded and when saved).
+
+## Home > Home layouts
+
+Settings > Home > Home layouts (the page `HOME_LAYOUTS`, under Home; ADR 0003, Amendment 17). Shows the device tabs; a
+saved layout belongs to the device class it was saved on.
+
+- **What is saved:** the pages of Home (grids, apps, folders, widgets and widget stacks). Not the Dock, settings or Stream.
+  It is a snapshot: "Changes to Home don't change a saved layout." Widgets are saved as unbound descriptions (provider,
+  span constraints, stack order, glance kind); a layout never holds a widget host id.
+- **Save current Home:** asks for a name (default "Home layout N", the next free number; at most 40 characters). Twelve
+  per device class; the row says so when full. The one automatic layout does not count.
+- **Row menu** (a button on the row, nothing needs a long press): **Activate**, **Rename**, **Replace with current Home**
+  (confirmed), **Delete** (confirmed, with Undo). Renaming the automatic copy keeps it as a saved layout (needs room).
+- **Activate** asks ("Home will be replaced... your current Home is kept as a saved layout named "Before <name>""),
+  keeps the current Home as that **automatic** layout (one per device class, replaced by the next activation), replaces
+  Home and offers Undo, which puts the previous Home back exactly. The rule that makes a saved layout valid today
+  (`SavedHomeReconciler`, `:core:domain`): apps no longer installed, hidden apps and apps now in the Dock are dropped
+  (a folder keeps what is left, as after an uninstall, and an emptied folder is removed); apps installed since are not
+  added (Add all apps does that; Add new apps to Home applies later as always); items are fitted to today's grid, never
+  overlap, and the misfits go to the first free cell, else a new page; pages the rule emptied and trailing empty pages
+  go, one page stays (a pinned page stays too). Every item gets a new id.
+- **Widgets.** A live widget with the same provider at the same page, cell and span keeps its host id. The others are
+  bound again, with a new host id, only when Android needs no permission prompt and the provider needs no
+  configuration screen; anything else is a placeholder that says "Not set up. Add it again from Widgets." The ids of
+  widgets that leave Home are kept until the Undo window (the snackbar) closes.
+- **Storage:** its own DataStore file `riffle_saved_home_layouts`, one versioned JSON document (version 1; each layout's
+  pages and items are a pool value, so the pool's safe decoding applies; malformed entries are skipped; a newer version
+  is read as far as it is understood and kept once). Included in backup export and import (`savedHomeLayouts`), and in
+  Android's backup the same way the Home layout is.
+
+## Backup > Undo last import
+
+Before an import replaces anything, the current set-up is written, durably, as the export document to
+`files/before_import_backup.json` (one copy; excluded from Android's backup and device transfer); if that cannot be
+written the import does not happen. After an import, Settings shows "Backup imported" with Undo, and the Backup page
+keeps **Undo last import** (with the date) and **Dismiss** until the next import or Dismiss. Undo re-imports the copy
+through the same validated path and deletes it. Widget host ids Home let go of are kept only while the snackbar is
+shown: Undo from the row later brings the widgets back as placeholders. A failed import says why: not a Riffle backup,
+made by a newer version, or damaged; a file that cannot be read keeps the generic message.
+
+## About > Reset settings
+
+`SettingsReset` (`:core:domain`): every `LauncherSettings` value returns to its default, including Developer options
+(hidden again), Simple mode and the hints seen. Kept: the feed list and the Floating dock's apps (inside
+`LauncherSettings`), and everything stored elsewhere: Home, the Dock, saved Home layouts, hidden apps, calendar feeds,
+the Tasks token and the Stream's sections. The confirmation lists these exactly; "Settings reset" offers Undo, which
+saves the previous settings back unchanged.

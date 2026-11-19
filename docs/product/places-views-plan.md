@@ -519,3 +519,21 @@ arrangement, the settings-level migration afterwards does not double-place), `La
 (through the shell, from the stored form of the library layout including the oldest format without page types: convert once,
 removal, move, refresh, restart, new install, Simple mode on and off, a second device class) and
 `LibraryViewRetirementCodecTest` (every stored page type decodes and becomes what the table says).
+
+## Saved Home layouts, import undo and Reset settings
+
+ADR 0003, Amendment 17. Three slices, in this order:
+
+1. **Saved Home layouts** (`core/domain/.../home/saved/`, `app/.../savedhome/`, `SettingsHomeLayoutsPage.kt`):
+   `SavedHomeLayouts` (the list rules and the cap), `SavedHomeCapture` (Home pages to an unbound snapshot),
+   `SavedHomeReconciler` (the pure rule applied on activation), `SavedHomeLayoutsCodec` (versioned, safe decode), the
+   store, and `SavedHomeLayoutsController` (the only code that replaces Home from a layout). Order of writes: the
+   automatic copy is durable first, then Home is replaced, so a crash at any point leaves the previous Home recoverable.
+   `HomeLayoutRepository.holdWidgetIdReleases` keeps widget host ids until the Undo window closes.
+2. **Undo for backup import** (`BeforeImportCopies`, `LauncherBackupDocumentHandler`): the copy is written before
+   anything is replaced; failures carry a reason.
+3. **Reset settings** (`SettingsReset`).
+
+Not built: re-binding a widget that needs a permission prompt or a configuration screen (it stays a placeholder), a
+tap-to-set-up action on the placeholder, resetting the Stream's sections, and keeping widget ids past the Undo window
+for an import. Nothing here has run on a device.

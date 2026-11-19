@@ -91,6 +91,7 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
+@Suppress("TooManyFunctions") // The activity owns the platform callbacks the launcher shell asks for.
 class MainActivity : ComponentActivity() {
     private var adaptiveStageWindowLayout by mutableStateOf<AdaptiveStageWindowLayout?>(null)
     private val dependencies by lazy { MainActivityDependencies(this) }
@@ -461,6 +462,8 @@ class MainActivity : ComponentActivity() {
                                 createBackupDocument.launch(BACKUP_DOCUMENT_NAME)
                             },
                             importBackup = { openBackupDocument.launch(BACKUP_DOCUMENT_OPEN_MIME_TYPES) },
+                            undoImportBackup = ::undoLastImport,
+                            dismissImportUndo = { dependencies.beforeImportCopies.clear() },
                         ),
                 ),
             appActionHandler =
@@ -495,8 +498,7 @@ class MainActivity : ComponentActivity() {
                 backupDocumentHandler
                     .exportBackup { contentResolver.openOutputStream(selectedUri) }
                     .message
-                    .text
-                    .let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
+                    .let { message -> Toast.makeText(this, message.textRes, Toast.LENGTH_SHORT).show() }
             }
         }
 
@@ -509,20 +511,41 @@ class MainActivity : ComponentActivity() {
                     backupDocumentHandler.importBackup {
                         contentResolver.openInputStream(selectedUri)
                     }
-
-                when (result) {
-                    is LauncherBackupImportHandlingResult.Imported -> {
-                        shellViewModel.onLauncherSettingsActionSelected(result.action)
-                        wallpaperController.applySource(
-                            shellViewModel.state.value.launcherSettings.appearance.wallpaper.source,
-                        )
-                    }
-
-                    is LauncherBackupImportHandlingResult.Failure -> Unit
+                if (applyImport(result)) {
+                    // "Backup imported" with Undo is shown by Settings (the Undo window).
+                    dependencies.beforeImportCopies.announceImport()
+                } else {
+                    Toast.makeText(this, result.message.textRes, Toast.LENGTH_SHORT).show()
                 }
-                Toast.makeText(this, result.message.text, Toast.LENGTH_SHORT).show()
             }
         }
+
+    /** Applies an imported document to the shell; false (and nothing changed) when the import did not happen. */
+    private fun applyImport(result: LauncherBackupImportHandlingResult): Boolean =
+        when (result) {
+            is LauncherBackupImportHandlingResult.Imported -> {
+                shellViewModel.onLauncherSettingsActionSelected(result.action)
+                wallpaperController.applySource(
+                    shellViewModel.state.value.launcherSettings.appearance.wallpaper.source,
+                )
+                syncOverlayDockService()
+                true
+            }
+
+            is LauncherBackupImportHandlingResult.Failure -> false
+        }
+
+    /** Undo last import: the copy kept before it goes back through the same validated import, then is forgotten. */
+    private fun undoLastImport() {
+        val copies = dependencies.beforeImportCopies
+        val result = backupDocumentHandler.importBackup(keepCopy = false) { copies.open() }
+        if (applyImport(result)) {
+            copies.clear()
+            Toast.makeText(this, R.string.backup_import_undone_snackbar, Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, result.message.textRes, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // The launcher's own search offers every setting; its reducers have no context, so it reads text from here.
@@ -576,6 +599,7 @@ class MainActivity : ComponentActivity() {
                             sources = sourcesHost,
                             onboarding = onboardingHost,
                             stream = streamHost,
+                            beforeImport = dependencies.beforeImportCopies,
                             onAction = launcherActionRouter::handle,
                         )
                     }

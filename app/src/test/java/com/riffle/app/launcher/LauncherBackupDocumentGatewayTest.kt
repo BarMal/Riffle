@@ -61,7 +61,7 @@ class LauncherBackupDocumentGatewayTest {
 
         val result = gateway.importDocument { input }
 
-        assertEquals(LauncherBackupImportResult.Failure, result)
+        assertEquals(LauncherBackupImportResult.Rejected(LauncherBackupImportFailure.NOT_A_BACKUP), result)
     }
 
     @Test
@@ -71,7 +71,7 @@ class LauncherBackupDocumentGatewayTest {
 
         val result = gateway.importDocument { input }
 
-        assertEquals(LauncherBackupImportResult.Failure, result)
+        assertEquals(LauncherBackupImportResult.Rejected(LauncherBackupImportFailure.NOT_A_BACKUP), result)
     }
 
     @Test

@@ -127,6 +127,18 @@ internal class PoolHomeLayoutRepository(
         }
     }
 
+    private var releaseHolds = 0
+
+    /** Undo windows open now ([holdWidgetIdReleases]); while any is open no host id is deleted. */
+    override fun holdWidgetIdReleases() {
+        synchronized(lock) { releaseHolds++ }
+    }
+
+    override fun resumeWidgetIdReleases() {
+        val resumed = synchronized(lock) { (releaseHolds > 0).also { if (it) releaseHolds-- } && releaseHolds == 0 }
+        if (resumed) releaseHostIds()
+    }
+
     /** Deletes host ids nothing references any more; set by the platform wiring (it hops to the main thread). */
     @Volatile
     var hostIdReleaser: ((Set<HostedWidgetId>) -> Unit)? = null
@@ -337,6 +349,8 @@ internal class PoolHomeLayoutRepository(
         val releaser = hostIdReleaser ?: return
         val pending =
             synchronized(lock) {
+                // Held for an Undo window: the ids stay pending and are looked at again when it ends.
+                if (releaseHolds > 0) return
                 releasedPending.also { releasedPending = emptySet() }
             }
         val deletable = pending.filterNot(::isHostIdReferenced).toSet()

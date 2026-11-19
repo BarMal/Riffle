@@ -30,4 +30,14 @@ interface HomeLayoutRepository {
         packageName: AppPackageName,
         profile: AppProfile,
     ): HomeLayoutSet = layoutSet
+
+    /**
+     * Starts an Undo window: until the matching [resumeWidgetIdReleases], widget host ids the Home lets go of are kept
+     * (not deleted), so putting the previous Home back brings its widgets back exactly. Calls nest. A plain store
+     * holds no host ids and ignores it.
+     */
+    fun holdWidgetIdReleases() = Unit
+
+    /** Ends one [holdWidgetIdReleases]; the last one lets the held ids that nothing references be deleted. */
+    fun resumeWidgetIdReleases() = Unit
 }

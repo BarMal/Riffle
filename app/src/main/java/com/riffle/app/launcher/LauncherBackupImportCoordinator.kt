@@ -14,6 +14,7 @@ class LauncherBackupImportCoordinator {
                 }
 
             LauncherBackupImportResult.Failure -> LauncherBackupImportOutcome.Failure
+            is LauncherBackupImportResult.Rejected -> LauncherBackupImportOutcome.Failure
         }
 }
 
