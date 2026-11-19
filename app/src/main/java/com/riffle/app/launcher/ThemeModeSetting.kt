@@ -63,8 +63,8 @@ internal fun ThemeTypographySetting(
     SettingsChoiceRow(
         modifier = Modifier.settingAnchor(SettingKey.APPEARANCE_TYPOGRAPHY),
         title = SettingKey.APPEARANCE_TYPOGRAPHY.label(),
-        options = LauncherThemeTypography.entries,
-        selected = selectedTypography,
+        options = LauncherThemeTypography.offered,
+        selected = selectedTypography.canonical,
         onSelect = { typography -> onAction(LauncherShellAction.SelectLauncherThemeTypography(typography)) },
         label = { typography -> typographyLabel(typography) },
     )
@@ -74,7 +74,7 @@ internal fun ThemeTypographySetting(
 internal fun cornerStyleLabel(style: LauncherThemeCornerStyle): String =
     if (style == LauncherThemeCornerStyle.PRESET) "Standard" else themeOptionLabel(style.name, isSelected = false)
 
-/** "Preset" is the standard typeface, the same as System; only System is offered by name. */
+/** "Preset" is the standard typeface; the old "System" choice was the same and is no longer offered. */
 internal fun typographyLabel(typography: LauncherThemeTypography): String =
     if (typography == LauncherThemeTypography.PRESET) {
         "Standard"

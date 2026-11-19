@@ -186,10 +186,21 @@ enum class LauncherThemeCornerStyle {
 
 /** Optional typography override applied through the shared launcher theme. */
 enum class LauncherThemeTypography {
-    /** The standard typeface; the same as [SYSTEM]. */
+    /** The standard typeface: the system's. */
     PRESET,
+
+    /** Not offered any more: it was the same typeface as [PRESET]. Kept so stored data decodes; read as [PRESET]. */
     SYSTEM,
     MONOSPACE,
+    ;
+
+    /** The choice this one is shown and stored as: [SYSTEM] was a second name for [PRESET]. */
+    val canonical: LauncherThemeTypography get() = if (this == SYSTEM) PRESET else this
+
+    companion object {
+        /** What Settings offers: the standard typeface and monospace. */
+        val offered: List<LauncherThemeTypography> = listOf(PRESET, MONOSPACE)
+    }
 }
 
 data class GestureSettings(

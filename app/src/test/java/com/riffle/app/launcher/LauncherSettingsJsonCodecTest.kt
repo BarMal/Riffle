@@ -397,6 +397,22 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun aStoredSystemTypographyIsReadAsTheStandardOne() {
+        // "System" was the same typeface as "Standard" and is no longer offered; old data and backups still decode.
+        val read = { json: String -> decodeLauncherSettings(json).appearance.themeTypography }
+        assertEquals(LauncherThemeTypography.PRESET, read("{\"appearance\": {\"themeTypography\": \"SYSTEM\"}}"))
+        assertEquals(LauncherThemeTypography.PRESET, read("{\"appearance\": {\"themeTypography\": \"PRESET\"}}"))
+        assertEquals(
+            LauncherThemeTypography.MONOSPACE,
+            read("{\"appearance\": {\"themeTypography\": \"MONOSPACE\"}}"),
+        )
+        assertEquals(
+            listOf(LauncherThemeTypography.PRESET, LauncherThemeTypography.MONOSPACE),
+            LauncherThemeTypography.offered,
+        )
+    }
+
+    @Test
     fun defaultsMissingOrInvalidThemeTokenOverrides() {
         val missing = decodeLauncherSettings("{\"appearance\": {}}").appearance
         val invalid =

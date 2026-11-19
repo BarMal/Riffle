@@ -57,7 +57,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | Feeds (under Stream) | | The feeds source (on or off), background refresh, only on Wi-Fi, only while charging, refresh now, the feed list, add a feed |
 | **Appearance** | Colour | Colour mode, accent, custom accent |
 | | Glass | Reduced transparency, spotlight flow (reduced transparency is read by every glass surface) |
-| | Shape and type | Corners (standard, compact, rounded), typography (standard, system, monospace) |
+| | Shape and type | Corners (standard, compact, rounded), typography (standard, monospace; the old "System" choice was the same typeface as standard, and a stored one reads as standard) |
 | **Gestures** | One finger, Two fingers, Pinch, Three fingers | The 14 swipe and pinch bindings on Home. Actions: None, Open search, Open Library, Open Stream, Open settings, Edit Home, Page overview, Full-screen Home, Next page, Previous page, Launch app, Launch shortcut. Reset |
 | **Motion and haptics** | Motion | Animation performance, reduced motion, feedback strength (all choice rows) |
 | | Dock and Stream | Opening speed (also the grid fade under the stack, the Home entrance and a swiped card), Dock bounce, Card stack coasting, Card snapping, Hold time to choose, Light ticks |

@@ -399,7 +399,7 @@ private fun JSONObject.toAppearance(
                 runCatching { LauncherThemeCornerStyle.valueOf(optString("themeCornerStyle")) }
                     .getOrDefault(defaults.themeCornerStyle),
             themeTypography =
-                runCatching { LauncherThemeTypography.valueOf(optString("themeTypography")) }
+                runCatching { LauncherThemeTypography.valueOf(optString("themeTypography")).canonical }
                     .getOrDefault(defaults.themeTypography),
             themeColors = optJSONObject("themeColors")?.toThemeColors(defaults.themeColors) ?: defaults.themeColors,
             wallpaper = optJSONObject("wallpaper")?.toWallpaper(defaults.wallpaper) ?: defaults.wallpaper,
