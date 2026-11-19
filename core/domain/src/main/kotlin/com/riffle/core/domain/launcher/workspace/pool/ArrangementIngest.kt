@@ -86,13 +86,45 @@ object ArrangementIngest {
         when {
             existing is PoolFolder && edited is FolderItem ->
                 existing.copy(label = edited.label, entries = ArrangementAdapter.entriesOf(edited))
-            existing is PoolWidget && edited is WidgetItem ->
-                existing.copy(
-                    resizeConstraints = edited.resizeConstraints,
-                )
+            existing is PoolWidget && edited is WidgetItem -> updateWidget(existing, edited)
             existing is PoolApp && edited is AppShortcutItem -> existing.copy(label = edited.label)
             else -> existing
         }
+
+    /**
+     * A plain widget keeps what it was (only its constraints may change). A stack, or a widget that was one, is
+     * rewritten from the edited item's members: each keeps the provider the pool already knew for it (matched by host
+     * id), the first member becomes the pool widget's own fields.
+     */
+    private fun updateWidget(
+        existing: PoolWidget,
+        edited: WidgetItem,
+    ): PoolWidget {
+        if (!edited.isStack && existing.stack.isEmpty()) {
+            return existing.copy(resizeConstraints = edited.resizeConstraints)
+        }
+        val known =
+            existing.stack.ifEmpty {
+                listOf(
+                    PoolStackMember(existing.label, existing.resizeConstraints, existing.provider, existing.hostedId),
+                )
+            }
+        val members =
+            edited.members.map { member ->
+                val host = ArrangementAdapter.hostedIdOrNull(member.appWidgetId)
+                val old = known.firstOrNull { host != null && it.hostedId == host }
+                ArrangementAdapter.toStackMember(member).let { it.copy(provider = it.provider ?: old?.provider) }
+            }
+        val lead = members.first()
+        return existing.copy(
+            label = lead.label,
+            resizeConstraints = edited.resizeConstraints,
+            provider = lead.provider,
+            hostedId = lead.hostedId,
+            stack = if (members.size > 1) members else emptyList(),
+            shown = if (members.size > 1) edited.shownIndex.coerceIn(0, members.lastIndex) else 0,
+        )
+    }
 
     internal fun create(
         id: PoolItemId,
@@ -108,6 +140,8 @@ object ArrangementIngest {
                     resizeConstraints = item.resizeConstraints,
                     provider = item.glance?.let(GlanceWidgets::identity),
                     hostedId = ArrangementAdapter.hostedIdOrNull(item.appWidgetId),
+                    stack = item.stack.takeIf { it.size > 1 }?.map(ArrangementAdapter::toStackMember).orEmpty(),
+                    shown = if (item.isStack) item.shownIndex else 0,
                 )
         }
 

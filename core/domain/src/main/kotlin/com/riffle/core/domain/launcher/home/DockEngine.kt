@@ -287,7 +287,7 @@ class DockEngine {
                 .flatMap { page -> page.items } + dock.items
         )
             .filterIsInstance<WidgetItem>()
-            .any { widget -> widget.appWidgetId == hostedWidgetId }
+            .any { widget -> hostedWidgetId in widget.hostIds || widget.appWidgetId == hostedWidgetId }
 }
 
 private const val DEFAULT_WIDGET_LABEL = "Widget"

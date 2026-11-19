@@ -41,9 +41,47 @@ data class WidgetItem(
     override val placement: GridPlacement? = null,
     /** Set for one of Riffle's own glance widgets: drawn by the app, never bound through the widget host. */
     val glance: GlanceWidgetKind? = null,
+    /**
+     * A stack (ADR 0003, Amendment 14): every widget that shares this item's slot, in order, the first being this item's
+     * own widget. Empty for a plain widget; otherwise two or more members ([WidgetStackEngine] keeps it so). The item's
+     * own [appWidgetId], [label] and [glance] are the first member's and [resizeConstraints] is what every member
+     * permits, so code that does not know about stacks still reads a consistent widget.
+     */
+    val stack: List<StackedWidget> = emptyList(),
+    /** The member a stack shows (the last one shown), an index into [members]. Not stored for a plain widget. */
+    val shownIndex: Int = 0,
 ) : LauncherItem {
     override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
+
+    val isStack: Boolean get() = stack.size > 1
+
+    /** This item's widgets in stack order: itself alone when it is a plain widget. */
+    val members: List<StackedWidget>
+        get() =
+            if (isStack) {
+                stack
+            } else {
+                listOf(StackedWidget(appWidgetId, label, resizeConstraints, glance))
+            }
+
+    /** The member a stack shows now ([shownIndex] kept in range). */
+    val shownMember: StackedWidget get() = members.let { it[shownIndex.coerceIn(0, it.lastIndex)] }
+
+    /** Every host id the item holds (one per bound platform widget; none for a glance widget). */
+    val hostIds: List<HostedWidgetId>
+        get() = members.filter { it.glance == null && it.appWidgetId.value != 0 }.map { it.appWidgetId }
 }
+
+/**
+ * One widget of a stack: what a [WidgetItem] holds of a single widget, without the slot (id and placement belong to the
+ * stack). A glance widget has no host id ([appWidgetId] unbound) and a [glance] kind.
+ */
+data class StackedWidget(
+    val appWidgetId: HostedWidgetId,
+    val label: String,
+    val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
+    val glance: GlanceWidgetKind? = null,
+)
 
 @JvmInline
 value class HostedWidgetId(val value: Int)

@@ -35,8 +35,18 @@ internal object PoolItemEncoding {
                     "constraints" to encodeConstraints(item.resizeConstraints),
                     "provider" to item.provider?.let(::encodeProvider),
                     "host" to item.hostedId?.let { num(it.value) },
+                    "stack" to item.stack.takeIf { it.isNotEmpty() }?.let { arr(it.map(::encodeMember)) },
+                    "shown" to item.stack.takeIf { it.isNotEmpty() }?.let { num(item.shown) },
                 )
         }
+
+    private fun encodeMember(member: PoolStackMember): StoredValue.Obj =
+        obj(
+            "label" to str(member.label),
+            "constraints" to encodeConstraints(member.resizeConstraints),
+            "provider" to member.provider?.let(::encodeProvider),
+            "host" to member.hostedId?.let { num(it.value) },
+        )
 
     private fun encodeEntry(entry: FolderEntry): StoredValue.Obj =
         obj(

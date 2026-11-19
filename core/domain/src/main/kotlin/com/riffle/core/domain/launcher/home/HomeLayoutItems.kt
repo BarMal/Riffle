@@ -16,7 +16,7 @@ fun HomeLayout.allItems(): List<LauncherItem> {
 fun HomeLayout.hostsWidget(hostedWidgetId: HostedWidgetId): Boolean =
     allItems()
         .filterIsInstance<WidgetItem>()
-        .any { widget -> widget.appWidgetId == hostedWidgetId }
+        .any { widget -> hostedWidgetId in widget.hostIds || widget.appWidgetId == hostedWidgetId }
 
 /**
  * Whether anything in the set hosts [hostedWidgetId]: any stored layout, or any device class's shared
@@ -27,5 +27,7 @@ fun HomeLayoutSet.hostsWidget(hostedWidgetId: HostedWidgetId): Boolean =
     layouts.values.any { layout -> layout.hostsWidget(hostedWidgetId) } ||
         docks.values.any { dock ->
             (dock.items + dock.panel?.items.orEmpty())
-                .any { item -> item is WidgetItem && item.appWidgetId == hostedWidgetId }
+                .any { item ->
+                    item is WidgetItem && (hostedWidgetId in item.hostIds || item.appWidgetId == hostedWidgetId)
+                }
         }

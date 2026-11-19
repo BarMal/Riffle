@@ -60,7 +60,37 @@ data class PoolWidget(
     val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
     val provider: WidgetProviderIdentity? = null,
     val hostedId: HostedWidgetId? = null,
-) : PoolItem
+    /**
+     * A stack (ADR 0003, Amendment 14): every member in order, the first mirroring this widget's own [label],
+     * [provider], [hostedId] and constraints (which are then what every member permits). Empty for a plain widget, so
+     * data written before stacks decodes unchanged; otherwise two or more members, each holding its own host id.
+     */
+    val stack: List<PoolStackMember> = emptyList(),
+    /** The member a stack shows (the last one shown); not stored for a plain widget. */
+    val shown: Int = 0,
+) : PoolItem {
+    /** Every host id this widget holds: its own and those of the other members of a stack. */
+    val hostIds: Set<HostedWidgetId>
+        get() = (listOfNotNull(hostedId) + stack.mapNotNull { it.hostedId }).toSet()
+
+    /** This widget with every host id dropped (a copy or a restore: the instances are not shared). */
+    fun withoutHosts(): PoolWidget = copy(hostedId = null, stack = stack.map { it.copy(hostedId = null) })
+
+    /** This widget with its own (first member's) host id set, the stack's first member kept in step. */
+    fun withLeadHost(host: HostedWidgetId?): PoolWidget =
+        copy(
+            hostedId = host,
+            stack = stack.mapIndexed { i, member -> if (i == 0) member.copy(hostedId = host) else member },
+        )
+}
+
+/** One widget of a stack: what a [PoolWidget] holds of a single platform or glance widget. */
+data class PoolStackMember(
+    val label: String,
+    val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
+    val provider: WidgetProviderIdentity? = null,
+    val hostedId: HostedWidgetId? = null,
+)
 
 /**
  * An app pair as an older build stored it in the Dock (kind "pair"). Pairs are layouts now (ADR 0003, Amendment 7):

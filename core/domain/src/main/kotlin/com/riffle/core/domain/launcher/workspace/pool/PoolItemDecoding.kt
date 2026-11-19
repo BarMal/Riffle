@@ -53,6 +53,24 @@ internal object PoolItemDecoding {
             resizeConstraints = root.obj("constraints")?.let(::decodeConstraints) ?: WidgetResizeConstraints(),
             provider = root.obj("provider")?.let(::decodeProvider),
             hostedId = root.int("host")?.let(::HostedWidgetId),
+        ).withStackFrom(root)
+
+    /** The stack of a widget written since stacks (two or more members); anything less is a plain widget. */
+    private fun PoolWidget.withStackFrom(root: StoredValue.Obj): PoolWidget {
+        val members = root.array("stack").mapNotNull { (it as? StoredValue.Obj)?.let(::decodeMember) }
+        return if (members.size < 2) {
+            this
+        } else {
+            copy(stack = members, shown = (root.int("shown") ?: 0).coerceIn(0, members.lastIndex))
+        }
+    }
+
+    private fun decodeMember(root: StoredValue.Obj): PoolStackMember =
+        PoolStackMember(
+            label = root.string("label").orEmpty(),
+            resizeConstraints = root.obj("constraints")?.let(::decodeConstraints) ?: WidgetResizeConstraints(),
+            provider = root.obj("provider")?.let(::decodeProvider),
+            hostedId = root.int("host")?.let(::HostedWidgetId),
         )
 
     /** An app pair an older build stored (kind "pair"), or null when it is not one or a side cannot be read. */
