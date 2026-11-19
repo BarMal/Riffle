@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -177,7 +178,8 @@ class DockPullInteractionTest {
 
     private fun setContent(
         position: DockPosition = DockPosition.BOTTOM,
-        launcherSettings: LauncherSettings = LauncherSettings(),
+        // The Library is off by default; these tests are about its pull, so they turn it on.
+        launcherSettings: LauncherSettings = LauncherSettings(features = FeatureSettings(library = true)),
     ): MutableList<LauncherShellAction> {
         val actions = mutableListOf<LauncherShellAction>()
         val layout =

@@ -22,6 +22,8 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.settings.FeatureSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
@@ -165,6 +167,8 @@ class DockPressInteractionTest {
             LauncherShellState(
                 homeLayout = layout,
                 installedApps = docked.map { item -> InstalledApp(identity = item.appIdentity, label = item.label) },
+                // The Library is off by default; the action lists asserted here include it.
+                launcherSettings = LauncherSettings(features = FeatureSettings(library = true)),
             )
         val host = streamHost()
         composeRule.setContent {
