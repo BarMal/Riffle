@@ -1,6 +1,6 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.layouts.AppLayout
+import com.riffle.core.domain.launcher.pairs.AppPair
 import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
@@ -28,7 +28,7 @@ interface WorkspaceBackupPort {
     fun currentStreamLayouts(): StreamLayouts? = null
 
     /** The Layouts stack, or null where there is none. */
-    fun currentLayouts(): List<AppLayout>? = null
+    fun currentPairs(): List<AppPair>? = null
 
     /** The calendar feed list (links included, never events); null when none is stored, so the section is omitted. */
     fun currentCalendarFeeds(): IcsFeedSettings? = null
@@ -41,7 +41,7 @@ interface WorkspaceBackupPort {
 
     fun restoreStreamLayouts(layouts: StreamLayouts) = Unit
 
-    fun restoreLayouts(layouts: List<AppLayout>) = Unit
+    fun restorePairs(layouts: List<AppPair>) = Unit
 
     fun restoreCalendarFeeds(feeds: IcsFeedSettings) = Unit
 }

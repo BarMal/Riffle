@@ -16,16 +16,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.riffle.app.R
 import com.riffle.app.launcher.AppIconLoader
+import com.riffle.app.launcher.currentSplitFacts
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
 import com.riffle.app.launcher.expressions.LocalItemHider
+import com.riffle.app.launcher.pairs.AppPairsRepository
 import com.riffle.app.launcher.stream.todoist.TasksSettingsController
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.dock.PairAvailability
+import com.riffle.core.domain.launcher.dock.PairLauncher
 import com.riffle.core.domain.launcher.home.DEFAULT_DOCK_LIVE_APP_SLOTS
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.StreamSettings
+import com.riffle.core.domain.launcher.stream.AppPairContent
+import com.riffle.core.domain.launcher.stream.PairSide
+import com.riffle.core.domain.launcher.stream.PairsSection
 import com.riffle.core.domain.launcher.stream.PinnedApp
 import com.riffle.core.domain.launcher.stream.StreamActionGateway
 import com.riffle.core.domain.launcher.stream.StreamActionResult
@@ -34,6 +44,7 @@ import com.riffle.core.domain.launcher.stream.StreamContentProvider
 import com.riffle.core.domain.launcher.stream.StreamFocusTarget
 import com.riffle.core.domain.launcher.stream.StreamHideItems
 import com.riffle.core.domain.launcher.stream.StreamLayoutAction
+import com.riffle.core.domain.launcher.stream.StreamPagePlanner
 import com.riffle.core.domain.launcher.stream.StreamSection
 import com.riffle.core.domain.launcher.stream.StreamSectionResult
 import com.riffle.core.domain.launcher.stream.StreamShortcutPages
@@ -41,11 +52,13 @@ import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.stream.TaskActionOutcome
 import com.riffle.core.domain.launcher.stream.TaskActions
 import com.riffle.core.domain.launcher.workspace.SourceId
+import com.riffle.core.domain.launcher.workspace.sources.ItemImageKeys
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -78,6 +91,10 @@ class StreamHost internal constructor(
     internal val pages: StreamPageMemory = StreamPageMemory(),
     /** What the Stream and the Dock's contextual mode tell each other: the pages, the open one, page options. */
     internal val dock: StreamDockLink = StreamDockLink(),
+    /** The pairs of the Pairs stack; null where there is none (tests, previews: the page then has no pairs). */
+    internal val appPairs: AppPairsRepository? = null,
+    /** Opens a layout's two apps side by side; null where nothing can (tests that do not launch). */
+    internal val pairLauncher: PairLauncher? = null,
 )
 
 /**
@@ -163,9 +180,15 @@ internal fun StreamDestination(
     SideEffect { host.posture.deviceClass = deviceClass }
     val layouts by host.layouts.layouts.collectAsState()
     val layout = layouts.forPosture(deviceClass)
-    val enabledSections = layout.enabledSections.map { it.section }
+    // The sections the provider reads: the Pairs stack is the launcher's own list, not a source (see below).
+    val enabledSections = layout.enabledSections.map { it.section }.filter { it != StreamSection.PAIRS }
     val attempts = remember(host) { mutableStateMapOf<StreamSection, Int>() }
-    val results = rememberStreamSectionResults(host.provider, enabledSections, attempts)
+    val sourceResults = rememberStreamSectionResults(host.provider, enabledSections, attempts)
+    val splitAvailable =
+        PairAvailability.available(streamSettings.showPairs, currentSplitFacts().canSplit)
+    val pairsController = remember(host) { PairsController(host.appPairs, host.pairLauncher) }
+    val results =
+        rememberPairsResults(sourceResults, host.appPairs, pairsController, installedApps, splitAvailable)
     val scope = rememberCoroutineScope()
     val failures =
         remember(
@@ -174,19 +197,19 @@ internal fun StreamDestination(
     val hider = LocalItemHider.current
     val callbacks =
         StreamCallbacks(
+            onPairEdit = pairsController::edit,
             onAction = { content, action ->
-                scope.launch(Dispatchers.Default) {
-                    val outcome =
-                        runCatching {
-                            host.actions.perform(
-                                content,
-                                action,
-                            )
-                        }.getOrDefault(StreamActionResult.Failed)
-                    if (outcome == StreamActionResult.Failed || outcome == StreamActionResult.Unavailable) {
-                        failures.tryEmit(
-                            Unit,
-                        )
+                // A pair is the launcher's own: it is opened and removed here, not by the gateway.
+                if (content is AppPairContent) {
+                    pairsController.perform(content, action)
+                } else {
+                    scope.launch(Dispatchers.Default) {
+                        val outcome =
+                            runCatching { host.actions.perform(content, action) }
+                                .getOrDefault(StreamActionResult.Failed)
+                        if (outcome == StreamActionResult.Failed || outcome == StreamActionResult.Unavailable) {
+                            failures.tryEmit(Unit)
+                        }
                     }
                 }
             },
@@ -246,7 +269,14 @@ internal fun StreamDestination(
         focusRequest = host.focus.pending,
         onFocusHandled = host.focus::handled,
         initialPageKey = remember(host, deviceClass) { host.pages.last(deviceClass) },
-        onPageChanged = { key -> host.pages.remember(deviceClass, key) },
+        onPageChanged = { key ->
+            host.pages.remember(deviceClass, key)
+            // A half-made pair is dropped when its page is left.
+            if (key != StreamPagePlanner.keyOf(StreamSection.PAIRS)) pairsController.leave()
+        },
+        splitAvailable = splitAvailable,
+        removedPair = pairsController.removed,
+        onRestorePair = pairsController::restore,
         liveAppSlots = liveAppSlots,
         dockLink = host.dock,
         shortcutPages = shortcutPages,
@@ -257,6 +287,61 @@ internal fun StreamDestination(
         pageBounds = pageBounds,
         onEmptyTap = onEmptyTap,
     )
+    PairAppPickerHost(pairsController, installedApps, appIconLoader)
+}
+
+/** The app picker of the Pairs page while it is asked for (the draft's half, a saved pair's side). */
+@Composable
+private fun PairAppPickerHost(
+    controller: PairsController,
+    installedApps: List<InstalledApp>,
+    appIconLoader: AppIconLoader,
+) {
+    val pick = controller.picker ?: return
+    PairAppPicker(
+        title =
+            stringResource(
+                if (pick.secondHalf) R.string.stream_pair_choose_second else R.string.stream_pair_choose_first,
+            ),
+        exclude = pick.exclude,
+        apps = installedApps,
+        iconLoader = appIconLoader,
+        onPick = { app -> controller.pick(app.identity) },
+        onDismiss = controller::dismissPicker,
+    )
+}
+
+/**
+ * The results the Stream draws: what the sources gave, and the Pairs page from the stored pairs and the draft
+ * ([PairsSection]; a pair whose apps are no longer installed is removed first). Nothing is read for it from a source.
+ */
+@Composable
+private fun rememberPairsResults(
+    sourceResults: Map<StreamSection, StreamSectionResult>,
+    repository: AppPairsRepository?,
+    controller: PairsController,
+    installedApps: List<InstalledApp>,
+    splitAvailable: Boolean,
+): Map<StreamSection, StreamSectionResult> {
+    val stored = repository?.pairs?.collectAsState()?.value.orEmpty()
+    LaunchedEffect(repository) { withContext(Dispatchers.IO) { repository?.ensureLoaded() } }
+    // An app that is uninstalled takes its layouts away. Until the apps are known nothing is removed.
+    LaunchedEffect(repository, installedApps) {
+        if (installedApps.isNotEmpty()) repository?.pruneUninstalled(installedApps.mapTo(HashSet()) { it.identity })
+    }
+    // The page is not built while a split is not possible (the planner hides it too): nothing to read, nothing drawn.
+    val draft = controller.draft
+    return remember(sourceResults, stored, draft, installedApps, splitAvailable) {
+        if (!splitAvailable) {
+            sourceResults
+        } else {
+            val byIdentity = installedApps.associateBy { it.identity }
+            val resolve: (AppIdentity) -> PairSide? = { identity ->
+                byIdentity[identity]?.let { PairSide(identity, it.label, ItemImageKeys.appIcon(identity)) }
+            }
+            sourceResults + (StreamSection.PAIRS to PairsSection.result(stored, draft, resolve))
+        }
+    }
 }
 
 /**

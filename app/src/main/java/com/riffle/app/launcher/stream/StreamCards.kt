@@ -89,6 +89,12 @@ internal object StreamCardHeights {
     /** Tomorrow's summary. */
     val summary: Dp = 144.dp
 
+    /**
+     * A pair: its two apps' large icons and names and the one-line hint (the mock's 150 dp content area and the
+     * hint). A card behind another shows its header only.
+     */
+    val pair: Dp = 184.dp
+
     /** A notice: one honest sentence and its action. */
     val notice: Dp = 144.dp
 }

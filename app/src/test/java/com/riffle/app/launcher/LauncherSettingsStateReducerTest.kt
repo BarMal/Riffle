@@ -75,21 +75,21 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
-    fun persistsTheAppPairsMode() {
+    fun persistsTheShowPairsMode() {
         val repository = FakeLauncherSettingsRepository()
 
         val updatedState =
             reducer(launcherSettingsRepository = repository).reduce(
                 state = LauncherShellState(),
                 action =
-                    LauncherShellAction.SelectAppPairsMode(
-                        com.riffle.core.domain.launcher.settings.AppPairsMode.OFF,
+                    LauncherShellAction.SelectPairsMode(
+                        com.riffle.core.domain.launcher.settings.PairsMode.OFF,
                     ),
             )
 
         assertEquals(
-            com.riffle.core.domain.launcher.settings.AppPairsMode.OFF,
-            updatedState.launcherSettings.dock.appPairs,
+            com.riffle.core.domain.launcher.settings.PairsMode.OFF,
+            updatedState.launcherSettings.stream.showPairs,
         )
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }

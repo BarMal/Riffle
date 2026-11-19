@@ -1,12 +1,12 @@
 package com.riffle.core.domain.launcher.dock
 
-import com.riffle.core.domain.launcher.settings.AppPairsMode
+import com.riffle.core.domain.launcher.settings.PairsMode
 
 /**
- * Where an app pair can be launched as a split ("App pairs are Dock items", ADR 0003; docs/product/dock-modes-plan.md,
- * App pairs). A launcher can only start a split from Android SDK 37 (on SDK 36 the same launch split nothing on the
- * device that was tested), and only when its own window is wide enough for two panes and is not itself one pane of a
- * split. Where it cannot, the pair is hidden from the Dock, not removed.
+ * Where a pair can be launched as a split (ADR 0003, Amendment 7; docs/product/dock-modes-plan.md, Pairs). A
+ * launcher can only start a split from Android SDK 37 (on SDK 36 the same launch split nothing on the device that was
+ * tested), and only when its own window is wide enough for two panes and is not itself one pane of a split. Where it
+ * cannot, the Pairs stack and its Dock tile are hidden; the stored pairs are kept.
  */
 object PairAvailability {
     const val MIN_SDK_INT = 37
@@ -18,14 +18,14 @@ object PairAvailability {
         inMultiWindow: Boolean,
     ): Boolean = sdkInt >= MIN_SDK_INT && windowWidthDp >= MIN_WINDOW_WIDTH_DP && !inMultiWindow
 
-    /** Whether pairs show (and may be made and launched) under [mode], given what [canSplit] said. */
+    /** Whether the Pairs stack shows (and pairs may be made and launched) under [mode], given [canSplit]. */
     fun available(
-        mode: AppPairsMode,
+        mode: PairsMode,
         canSplit: Boolean,
     ): Boolean =
         when (mode) {
-            AppPairsMode.AUTOMATIC -> canSplit
-            AppPairsMode.ALWAYS_SHOW -> true
-            AppPairsMode.OFF -> false
+            PairsMode.AUTOMATIC -> canSplit
+            PairsMode.ALWAYS_SHOW -> true
+            PairsMode.OFF -> false
         }
 }

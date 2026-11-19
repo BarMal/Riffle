@@ -18,11 +18,9 @@ import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
-import com.riffle.core.domain.launcher.settings.AppPairsMode
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
-import com.riffle.core.domain.launcher.settings.DockBehaviourSettings
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
@@ -44,6 +42,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
 import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.PrivacySettings
 import com.riffle.core.domain.launcher.settings.RssSettings
@@ -64,7 +63,6 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("version", LAUNCHER_SETTINGS_JSON_VERSION)
         .put("appDrawer", encodeAppDrawerSettings(settings.appDrawer))
         .put("appearance", encodeAppearance(settings.appearance))
-        .put("dock", encodeDockBehaviour(settings.dock))
         .put("features", encodeFeatures(settings.features))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
@@ -113,7 +111,6 @@ private fun decodeLauncherSections(
     return defaults.copy(
         appDrawer = json.guarded("appDrawer", defaults.appDrawer, JSONObject::toAppDrawerSettings),
         appearance = json.guarded("appearance", defaults.appearance) { toAppearance(it, version) },
-        dock = json.guarded("dock", defaults.dock, JSONObject::toDockBehaviour),
         features = json.guarded("features", defaults.features, JSONObject::toFeatures),
         gestures = json.guarded("gestures", defaults.gestures, JSONObject::toGestures),
         haptics = json.guarded("haptics", defaults.haptics, JSONObject::toHaptics),
@@ -128,7 +125,7 @@ private fun decodeLauncherSections(
         privacy = json.guarded("privacy", defaults.privacy, JSONObject::toPrivacy),
         rss = json.guarded("rss", defaults.rss, JSONObject::toRssSettings),
         search = json.guarded("search", defaults.search, JSONObject::toSearchSettings),
-        stream = json.guarded("stream", defaults.stream, JSONObject::toStreamSettings),
+        stream = json.decodeStreamSettings(defaults.stream),
     )
 }
 
@@ -286,17 +283,17 @@ private fun JSONObject.toPrivacy(defaults: PrivacySettings): PrivacySettings =
         protectScreenContent = (opt("protectScreenContent") as? Boolean) ?: defaults.protectScreenContent,
     )
 
-private fun encodeDockBehaviour(settings: DockBehaviourSettings): JSONObject =
-    JSONObject().put("appPairs", settings.appPairs.name)
+private fun JSONObject.decodeStreamSettings(defaults: StreamSettings): StreamSettings {
+    val legacy = legacyAppPairsMode()
+    val decoded = guarded("stream", defaults) { toStreamSettings(it, legacy) }
+    return if (optJSONObject("stream") == null && legacy != null) decoded.copy(showPairs = legacy) else decoded
+}
 
-private fun JSONObject.toDockBehaviour(defaults: DockBehaviourSettings): DockBehaviourSettings =
-    DockBehaviourSettings(
-        appPairs =
-            optString("appPairs")
-                .takeIf(String::isNotEmpty)
-                ?.let { name -> AppPairsMode.entries.firstOrNull { it.name == name } }
-                ?: defaults.appPairs,
-    )
+/** The value Settings > Dock > "App pairs" stored before it became Settings > Stream > Pairs > "Show pairs". */
+private fun JSONObject.legacyAppPairsMode(): PairsMode? =
+    runCatching { pairsModeOf(optJSONObject("dock")?.optString("appPairs")) }.getOrNull()
+
+private fun pairsModeOf(name: String?): PairsMode? = PairsMode.entries.firstOrNull { it.name == name }
 
 private fun encodeSearchSettings(settings: SearchSettings): JSONObject =
     JSONObject().put("resultPresentation", settings.resultPresentation.name)
@@ -593,9 +590,14 @@ private fun encodeStreamSettings(settings: StreamSettings): JSONObject =
         .put("cardTopGlow", settings.cardTopGlow)
         .put("openCardPlacement", settings.openCardPlacement.name)
         .put("cardActionsPlacement", settings.cardActionsPlacement.name)
+        .put("showPairs", settings.showPairs.name)
 
 // A stored name this build does not know (a newer build's placement) reads as the default; the tint is held to its range.
-private fun JSONObject.toStreamSettings(defaults: StreamSettings): StreamSettings =
+// A missing "showPairs" reads the old Dock "App pairs" value ([legacy]), else the default.
+private fun JSONObject.toStreamSettings(
+    defaults: StreamSettings,
+    legacy: PairsMode?,
+): StreamSettings =
     StreamSettings(
         cardTintPercent = optInt("cardTintPercent", defaults.cardTintPercent),
         cardTopGlow = optBoolean("cardTopGlow", defaults.cardTopGlow),
@@ -603,4 +605,5 @@ private fun JSONObject.toStreamSettings(defaults: StreamSettings): StreamSetting
         cardActionsPlacement =
             runCatching { CardActionsPlacement.valueOf(optString("cardActionsPlacement")) }
                 .getOrDefault(defaults.cardActionsPlacement),
+        showPairs = pairsModeOf(optString("showPairs")) ?: legacy ?: defaults.showPairs,
     ).coerced()

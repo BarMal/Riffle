@@ -10,6 +10,7 @@ import com.riffle.app.launcher.workspace.ParsedImageKey
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.stream.AppPairContent
 import com.riffle.core.domain.launcher.stream.AppShortcutContent
 import com.riffle.core.domain.launcher.stream.ArticleContent
 import com.riffle.core.domain.launcher.stream.EventContent
@@ -74,6 +75,8 @@ internal class AndroidStreamActionGateway(
             is RecentAppContent -> launchApp(content)
             is AppShortcutContent -> appShortcut(content)
             is TaskContent -> task(content, action)
+            // A layout is opened and removed by the Stream itself (it owns the layouts, see `StreamDestination`).
+            is AppPairContent -> StreamActionResult.NotOffered
         }
 
     private fun notification(

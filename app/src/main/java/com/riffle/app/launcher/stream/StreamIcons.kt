@@ -96,6 +96,34 @@ internal object StreamIcons {
         )
     }
 
+    /** Two rounded panes side by side: Pairs. */
+    val Pairs: ImageVector by lazy {
+        glyph("StreamPairs") {
+            roundedPane(left = 3f, right = 11f)
+            roundedPane(left = 13f, right = 21f)
+        }
+    }
+
+    /** A filled pane [left] to [right] wide, from y 5 to 19, with corners of 2. */
+    private fun androidx.compose.ui.graphics.vector.PathBuilder.roundedPane(
+        left: Float,
+        right: Float,
+    ) {
+        val top = 5f
+        val bottom = 19f
+        val r = 2f
+        moveTo(left + r, top)
+        horizontalLineTo(right - r)
+        arcTo(r, r, 0f, false, true, right, top + r)
+        verticalLineTo(bottom - r)
+        arcTo(r, r, 0f, false, true, right - r, bottom)
+        horizontalLineTo(left + r)
+        arcTo(r, r, 0f, false, true, left, bottom - r)
+        verticalLineTo(top + r)
+        arcTo(r, r, 0f, false, true, left + r, top)
+        close()
+    }
+
     private fun pathGlyph(
         name: String,
         pathData: String,

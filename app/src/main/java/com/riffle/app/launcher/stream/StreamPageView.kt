@@ -85,6 +85,7 @@ internal fun StreamSection.titleRes(): Int =
         StreamSection.RECENTS -> R.string.stream_section_recents
         StreamSection.TODAY -> R.string.stream_section_today
         StreamSection.FEEDS -> R.string.stream_section_feeds
+        StreamSection.PAIRS -> R.string.stream_section_pairs
         StreamSection.SHORTCUTS -> R.string.stream_section_shortcuts
     }
 
@@ -96,6 +97,7 @@ private fun StreamSection.emptyRes(): Int =
         StreamSection.RECENTS -> R.string.stream_empty_recents
         StreamSection.TODAY -> R.string.stream_empty_today
         StreamSection.FEEDS -> R.string.stream_empty_feeds
+        StreamSection.PAIRS -> R.string.stream_empty_pairs
         StreamSection.SHORTCUTS -> R.string.stream_empty_shortcuts
     }
 
@@ -114,6 +116,7 @@ internal fun StreamSection.glyph(): ImageVector =
         StreamSection.RECENTS -> StreamIcons.Recents
         StreamSection.TODAY -> StreamIcons.Agenda
         StreamSection.FEEDS -> StreamIcons.Feeds
+        StreamSection.PAIRS -> StreamIcons.Pairs
         StreamSection.SHORTCUTS -> Icons.Filled.CheckCircle
     }
 
@@ -547,7 +550,9 @@ private fun groupLabel(
         StreamSection.TODAY -> runCatching { LocalDate.parse(group.key) }.getOrNull()?.let { dayLabel(it, env) }
         StreamSection.RECENTS ->
             if (group.key == StreamGroupKeys.FREQUENT) stringResource(R.string.stream_recents_frequent) else null
-        StreamSection.NOTIFICATIONS, StreamSection.FEEDS, StreamSection.NOW, StreamSection.SHORTCUTS -> null
+        StreamSection.NOTIFICATIONS, StreamSection.FEEDS, StreamSection.NOW, StreamSection.SHORTCUTS,
+        StreamSection.PAIRS,
+        -> null
     }
 
 @Composable

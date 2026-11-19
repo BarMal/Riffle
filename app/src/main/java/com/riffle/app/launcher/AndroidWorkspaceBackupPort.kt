@@ -2,10 +2,10 @@ package com.riffle.app.launcher
 
 import com.riffle.app.launcher.exclusions.CachedExclusionRepository
 import com.riffle.app.launcher.ics.CachedIcsFeedRepository
-import com.riffle.app.launcher.layouts.AppLayoutsRepository
+import com.riffle.app.launcher.pairs.AppPairsRepository
 import com.riffle.app.launcher.pool.CachedPoolRepository
 import com.riffle.app.launcher.stream.CachedStreamLayoutRepository
-import com.riffle.core.domain.launcher.layouts.AppLayout
+import com.riffle.core.domain.launcher.pairs.AppPair
 import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
 import com.riffle.core.domain.launcher.workspace.exclusions.LayoutExclusionRules
@@ -31,7 +31,7 @@ internal class AndroidWorkspaceBackupPort(
     private val scope: CoroutineScope,
     private val stream: CachedStreamLayoutRepository? = null,
     private val calendarFeeds: CachedIcsFeedRepository? = null,
-    private val layouts: AppLayoutsRepository? = null,
+    private val pairs: AppPairsRepository? = null,
     /**
      * True once the standard home renders from the pool (S4): the pool section is then restored together with the
      * backup's home layouts by the home's own restore (`withImportedBackup`), never on its own here.
@@ -82,12 +82,12 @@ internal class AndroidWorkspaceBackupPort(
             it.byPosture.isNotEmpty()
         } ?: storedStream
 
-    override fun currentLayouts(): List<AppLayout>? = layouts?.current()?.takeIf { it.isNotEmpty() }
+    override fun currentPairs(): List<AppPair>? = pairs?.current()?.takeIf { it.isNotEmpty() }
 
-    override fun restoreLayouts(layouts: List<AppLayout>) {
-        val repository = this.layouts ?: return
+    override fun restorePairs(pairs: List<AppPair>) {
+        val repository = this.pairs ?: return
         scope.launch {
-            runCatching { repository.replaceFromBackup(layouts) }
+            runCatching { repository.replaceFromBackup(pairs) }
                 .onFailure { if (it is CancellationException) throw it }
         }
     }

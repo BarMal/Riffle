@@ -92,7 +92,6 @@ enum class SettingKey(
         R.string.setting_dock_corner_radius,
         R.string.setting_dock_corner_radius_keywords,
     ),
-    DOCK_APP_PAIRS(SettingsPage.DOCK, R.string.setting_dock_app_pairs, R.string.setting_dock_app_pairs_keywords),
     DOCK_BACKGROUND(SettingsPage.DOCK, R.string.setting_dock_background, R.string.setting_dock_background_keywords),
     DOCK_GRID_SPACING(
         SettingsPage.DOCK,
@@ -207,6 +206,16 @@ enum class SettingKey(
         SettingsPage.STREAM,
         R.string.setting_stream_section_feeds,
         R.string.setting_stream_section_feeds_keywords,
+    ),
+    STREAM_SECTION_PAIRS(
+        SettingsPage.STREAM,
+        R.string.setting_stream_section_pairs,
+        R.string.setting_stream_section_pairs_keywords,
+    ),
+    STREAM_SHOW_PAIRS(
+        SettingsPage.STREAM,
+        R.string.setting_stream_show_pairs,
+        R.string.setting_stream_show_pairs_keywords,
     ),
     NOTIFICATIONS_SOURCE(
         SettingsPage.STREAM_NOTIFICATIONS,

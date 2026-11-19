@@ -49,13 +49,14 @@ object StreamCardActions {
     /**
      * Whether tapping the front card of [content] opens it in place: a conversation, the player with its queue, an
      * event's detail, a task. A recent app and a launcher shortcut have no further content (their card is their
-     * action: a tap launches them), and an article card already shows what it has (its tap opens the article).
+     * action: a tap launches them), and an article card already shows what it has (its tap opens the article). A layout
+     * is the same: a tap on it opens its two apps side by side, never an open card.
      */
     fun opensInPlace(content: StreamContent): Boolean =
         when (content) {
             is MediaContent -> !content.source
             is NotificationContent, is EventContent, is TaskContent -> true
-            is ArticleContent, is RecentAppContent, is AppShortcutContent -> false
+            is ArticleContent, is RecentAppContent, is AppShortcutContent, is AppPairContent -> false
         }
 
     /**
@@ -75,7 +76,7 @@ object StreamCardActions {
                 )
             is TaskContent ->
                 listOfNotNull(CardAction.Complete.takeIf { StreamActionPolicy.offers(content, StreamAction.Complete) })
-            is ArticleContent, is RecentAppContent, is AppShortcutContent -> emptyList()
+            is ArticleContent, is RecentAppContent, is AppShortcutContent, is AppPairContent -> emptyList()
         }
 
     /**

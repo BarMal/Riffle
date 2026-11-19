@@ -6,7 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
-import com.riffle.core.domain.launcher.layouts.AppLayout
+import com.riffle.core.domain.launcher.pairs.AppPair
 import com.riffle.core.domain.launcher.workspace.pool.FolderEntry
 import com.riffle.core.domain.launcher.workspace.pool.LegacyAppPair
 import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
@@ -20,7 +20,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The Dock's former app pairs become layouts the first time the pool is read (ADR 0003, Amendment 7). */
+/** The Dock's former app pairs become pairs the first time the pool is read (ADR 0003, Amendment 7). */
 class CachedPoolRepositoryPairMigrationTest {
     private fun identity(pkg: String) = AppIdentity(AppPackageName(pkg), AppActivityName("$pkg.Main"))
 
@@ -50,19 +50,19 @@ class CachedPoolRepositoryPairMigrationTest {
                 ),
         )
 
-    private fun layoutSet() = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
+    private fun pairSet() = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
 
-    private val received = mutableListOf<List<AppLayout>>()
+    private val received = mutableListOf<List<AppPair>>()
 
     private fun repository(store: DiskPoolStore) = CachedPoolRepository(store, legacyPairs = { received += it })
 
     @Test
-    fun pairsAmongAppsBecomeLayoutsInDockOrderAndLeaveTheDockAndTheStore() =
+    fun pairsAmongAppsBecomePairsInDockOrderAndLeaveTheDockAndTheStore() =
         runBlocking {
             val store = DiskPoolStore(stored = withPairs)
 
             val repository = repository(store)
-            repository.initialize(layoutSet())
+            repository.initialize(pairSet())
 
             assertEquals(
                 listOf("notes" to "maps", "maps" to "chat"),
@@ -77,7 +77,7 @@ class CachedPoolRepositoryPairMigrationTest {
     fun aSecondStartMigratesNothingAndWritesNoPair() =
         runBlocking {
             val store = DiskPoolStore(stored = withPairs)
-            val set = layoutSet()
+            val set = pairSet()
             repository(store).initialize(set)
             received.clear()
 
@@ -90,7 +90,7 @@ class CachedPoolRepositoryPairMigrationTest {
     fun aSinkThatFailsKeepsThePairsForTheNextStart() =
         runBlocking {
             val store = DiskPoolStore(stored = withPairs)
-            val set = layoutSet()
+            val set = pairSet()
 
             CachedPoolRepository(store, legacyPairs = { error("full") }).initialize(set)
 
@@ -102,7 +102,7 @@ class CachedPoolRepositoryPairMigrationTest {
         runBlocking {
             val store = DiskPoolStore()
             val repository = repository(store)
-            repository.initialize(layoutSet())
+            repository.initialize(pairSet())
             received.clear()
 
             repository.replaceFromBackup(withPairs)

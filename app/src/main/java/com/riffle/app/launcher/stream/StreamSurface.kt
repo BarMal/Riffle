@@ -148,6 +148,11 @@ internal fun StreamSurface(
     pageBounds: (() -> StreamColumnRect?)? = null,
     /** A tap on the Stream's own empty space (no card, no control) closes the Stream; null leaves it to do nothing. */
     onEmptyTap: (() -> Unit)? = null,
+    /** Whether two apps can open side by side now: without it the Pairs page (and its Dock tile) is not planned. */
+    splitAvailable: Boolean = true,
+    /** The layout the owner just removed: the Stream says so, with Undo ([onRestorePair]). */
+    removedPair: RemovedPair? = null,
+    onRestorePair: (RemovedPair) -> Unit = {},
 ) {
     val openCards = dockLink?.openCards ?: remember { OpenCardHolder() }
     // The one motion of the open card (its growth, the column's and the grid's fade follow it), run here.
@@ -174,6 +179,13 @@ internal fun StreamSurface(
             val outcome = snackbar.showSnackbar(message, actionLabel = undo, duration = SnackbarDuration.Long)
             if (outcome == SnackbarResult.ActionPerformed) callbacks.onLayoutAction(StreamLayoutAction.Restore(before))
         }
+    }
+    val removedMessage = stringResource(R.string.stream_pair_removed)
+    LaunchedEffect(removedPair?.serial) {
+        val removal = removedPair ?: return@LaunchedEffect
+        snackbar.currentSnackbarData?.dismiss()
+        val outcome = snackbar.showSnackbar(removedMessage, actionLabel = undo, duration = SnackbarDuration.Long)
+        if (outcome == SnackbarResult.ActionPerformed) onRestorePair(removal)
     }
     val onShowAs: (StreamSection, StreamView) -> Unit = { section, view ->
         val before = latestLayout
@@ -209,9 +221,13 @@ internal fun StreamSurface(
             results.dockLiveEntries(liveAppSlots, pinnedGroupKeys.toSet())
         }
     val pages =
-        remember(layout, results, dockEntries, shortcutPages, pinnedGroupKeys) {
+        remember(layout, results, dockEntries, shortcutPages, pinnedGroupKeys, splitAvailable) {
             DockPageOrder.order(
-                pages = StreamShortcutPages.merge(StreamPagePlanner.plan(layout, results), shortcutPages),
+                pages =
+                    StreamShortcutPages.merge(
+                        StreamPagePlanner.plan(layout, results, splitAvailable),
+                        shortcutPages,
+                    ),
                 liveGroupKeys = DockPageOrder.liveGroupKeys(dockEntries),
                 nowPlaying = dockEntries.any { entry -> entry is DockDynamicSideEntry.NowPlaying },
                 pinnedGroupKeys = pinnedGroupKeys,

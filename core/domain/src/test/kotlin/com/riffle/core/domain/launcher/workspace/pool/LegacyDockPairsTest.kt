@@ -55,9 +55,9 @@ class LegacyDockPairsTest {
     /** [plain] as an older build stored it, with [pairs] pinned among its two apps: a, the pairs, b. */
     private fun storedWithPairs(vararg pairs: StoredValue.Obj): StoredValue.Obj {
         val encoded = PoolStoreCodec.encode(plain)
-        val layouts =
-            (encoded.fields.getValue("layouts") as StoredValue.Arr).items.map { layout ->
-                val pool = (layout as StoredValue.Obj).fields.getValue("pool") as StoredValue.Obj
+        val pairs =
+            (encoded.fields.getValue("layouts") as StoredValue.Arr).items.map { pair ->
+                val pool = (pair as StoredValue.Obj).fields.getValue("pool") as StoredValue.Obj
                 val items = (pool.fields.getValue("items") as StoredValue.Arr).items
                 val dock = pool.fields.getValue("dock") as StoredValue.Obj
                 val pins = (dock.fields.getValue("pins") as StoredValue.Arr).items
@@ -70,9 +70,9 @@ class LegacyDockPairsTest {
                     pool.copy(
                         fields = pool.fields + ("items" to StoredValue.Arr(items + pairs)) + ("dock" to withPins),
                     )
-                layout.copy(fields = layout.fields + ("pool" to withItems))
+                pair.copy(fields = pair.fields + ("pool" to withItems))
             }
-        return encoded.copy(fields = encoded.fields + ("layouts" to StoredValue.Arr(layouts)))
+        return encoded.copy(fields = encoded.fields + ("layouts" to StoredValue.Arr(pairs)))
     }
 
     private val old = storedWithPairs(oldPair("p", "notes", "maps"), oldPair("q", "maps", "notes"))
@@ -89,13 +89,13 @@ class LegacyDockPairsTest {
     }
 
     @Test
-    fun everyPairBecomesALayoutInDockOrderAndLeavesThePool() {
+    fun everyPairBecomesAPairInDockOrderAndLeavesThePool() {
         val extraction = LegacyDockPairs.extract(PoolStoreCodec.decode(old).state!!)
 
-        assertEquals(listOf("p", "q"), extraction.layouts.map { it.id })
+        assertEquals(listOf("p", "q"), extraction.pairs.map { it.id })
         assertEquals(
             listOf("notes" to "maps", "maps" to "notes"),
-            extraction.layouts.map { it.first.packageName.value to it.second.packageName.value },
+            extraction.pairs.map { it.first.packageName.value to it.second.packageName.value },
         )
         assertTrue(extraction.state.pools.values.all { it.legacyPairs.isEmpty() })
     }
@@ -112,7 +112,7 @@ class LegacyDockPairsTest {
         val first = LegacyDockPairs.extract(PoolStoreCodec.decode(old).state!!)
         val second = LegacyDockPairs.extract(first.state)
 
-        assertEquals(emptyList(), second.layouts)
+        assertEquals(emptyList(), second.pairs)
         assertFalse(second.changed)
         assertSame(first.state, second.state)
     }
@@ -122,7 +122,7 @@ class LegacyDockPairsTest {
         val decoded = PoolStoreCodec.decode(PoolStoreCodec.encode(plain)).state!!
 
         assertEquals(plain, decoded)
-        assertEquals(emptyList(), LegacyDockPairs.extract(decoded).layouts)
+        assertEquals(emptyList(), LegacyDockPairs.extract(decoded).pairs)
     }
 
     @Test
@@ -146,7 +146,7 @@ class LegacyDockPairsTest {
     }
 
     @Test
-    fun theSamePairOnTwoDevicesDocksIsOneLayout() {
+    fun theSamePairOnTwoDevicesDocksIsOnePair() {
         val pair =
             LegacyAppPair(
                 PoolItemId("p"),
@@ -163,6 +163,6 @@ class LegacyDockPairsTest {
                 ),
             )
 
-        assertEquals(1, LegacyDockPairs.extract(twice).layouts.size)
+        assertEquals(1, LegacyDockPairs.extract(twice).pairs.size)
     }
 }

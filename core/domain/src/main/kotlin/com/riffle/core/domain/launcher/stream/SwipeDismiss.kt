@@ -40,11 +40,12 @@ object SwipeDismiss {
     enum class Outcome { DISMISS, SETTLE }
 
     /**
-     * Whether [content] can be dismissed by a swipe: a notification that the policy offers Dismiss for, and a recent
-     * player's source card (it removes it from the list). An active player's card never: it resists.
+     * Whether [content] can be dismissed by a swipe: a notification that the policy offers Dismiss for, a recent
+     * player's source card (it removes it from the list) and a saved layout (it removes it, with Undo). An active
+     * player's card never: it resists.
      */
     fun offers(content: StreamContent): Boolean =
-        (content is NotificationContent || (content is MediaContent && content.source)) &&
+        (content is NotificationContent || content is AppPairContent || (content is MediaContent && content.source)) &&
             StreamActionPolicy.offers(content, StreamAction.Dismiss)
 
     /** Who a horizontal drag belongs to. */

@@ -64,6 +64,13 @@ enum class StreamSection(
 
     FEEDS("feeds", listOf(SourceIds.RSS)),
 
+    /**
+     * The Layouts stack (ADR 0003, Amendment 7): the owner's layouts, each two apps that open side by side. It reads no
+     * source: its content is the stored list of layouts ([com.riffle.core.domain.launcher.pairs.AppPairs]), put on
+     * its page by the Stream ([PairsSection]). Its page and tile are hidden where a split is not possible.
+     */
+    PAIRS("layouts", emptyList()),
+
     /** A pinned app's shortcuts (one page per pinned app with nothing live). Derived; never in a layout. */
     SHORTCUTS("shortcuts", emptyList()),
     ;

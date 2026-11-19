@@ -418,6 +418,8 @@ internal object StreamFixtures {
         StreamSectionResult.Ready(
             when (section) {
                 StreamSection.NOW -> listOf(group(StreamGroupKeys.NOW, null, listOf(media)))
+                // The Pairs page is built from the stored pairs, not delivered by a source.
+                StreamSection.PAIRS -> emptyList()
                 StreamSection.NOTIFICATIONS ->
                     listOf(
                         group("chat:personal", "Chat", listOf(chatNotification, chatNotificationTwo), total = 5),

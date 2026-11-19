@@ -78,6 +78,7 @@ class StreamPagesTest {
                         StreamGroup("f2", "Two", listOf(article("2", feed = "f2"))),
                     ),
                 ),
+            StreamSection.PAIRS to ready("layouts", task("l")),
         )
 
     @Test
@@ -93,6 +94,7 @@ class StreamPagesTest {
                 "today",
                 "feeds/f1",
                 "feeds/f2",
+                "layouts",
             ),
             keys,
         )
@@ -169,7 +171,9 @@ class StreamPagesTest {
         )
         val oneRead = StreamGroup("f1", "One", listOf(article("1", read = true, feed = "f1")))
         val allRead = StreamSectionResult.Ready(listOf(oneRead))
-        val page = StreamPagePlanner.plan(StreamLayout.DEFAULT, everything + (StreamSection.FEEDS to allRead)).last()
+        val page =
+            StreamPagePlanner.plan(StreamLayout.DEFAULT, everything + (StreamSection.FEEDS to allRead))
+                .first { it.section == StreamSection.FEEDS }
         assertEquals("feeds", page.key)
         assertEquals(StreamPageBody.State(StreamSectionResult.Empty), page.body)
     }
@@ -264,5 +268,29 @@ class StreamPagesTest {
         assertTrue(geometry.frame(1f).topDp > front.topDp)
         assertTrue(geometry.frame(-0.5f).topDp < front.topDp)
         assertEquals(56f, geometry.frame(1f).topDp - front.topDp)
+    }
+
+    @Test
+    fun theLayoutsPageIsOnePageAndLastByDefault() {
+        val pages = StreamPagePlanner.plan(StreamLayout.DEFAULT, everything)
+
+        assertEquals("layouts", pages.last().key)
+        assertEquals(1, pages.count { it.section == StreamSection.PAIRS })
+        assertEquals(StreamSection.layoutSections.last(), StreamSection.PAIRS)
+    }
+
+    @Test
+    fun theLayoutsPageIsHiddenWhereASplitIsNotPossibleAndComesBackWhenItIs() {
+        val folded = StreamPagePlanner.plan(StreamLayout.DEFAULT, everything, splitAvailable = false)
+
+        assertTrue(folded.none { it.section == StreamSection.PAIRS })
+        assertEquals(
+            StreamPagePlanner.plan(StreamLayout.DEFAULT, everything).filter { it.section != StreamSection.PAIRS },
+            folded,
+        )
+        assertTrue(
+            StreamPagePlanner.plan(StreamLayout.DEFAULT, everything, splitAvailable = true)
+                .any { it.section == StreamSection.PAIRS },
+        )
     }
 }

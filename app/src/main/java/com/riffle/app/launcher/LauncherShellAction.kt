@@ -38,7 +38,6 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
-import com.riffle.core.domain.launcher.settings.AppPairsMode
 import com.riffle.core.domain.launcher.settings.AppsBehindCards
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
@@ -62,6 +61,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
 import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
@@ -309,8 +309,8 @@ sealed interface LauncherShellAction {
         val targetIndex: Int,
     ) : LauncherShellAction
 
-    /** Settings > Dock > App pairs. */
-    data class SelectAppPairsMode(val mode: AppPairsMode) : LauncherShellAction
+    /** Settings > Stream > Pairs > Show pairs. */
+    data class SelectPairsMode(val mode: PairsMode) : LauncherShellAction
 
     data class MoveHomeItemToDock(
         val itemId: LauncherItemId,
