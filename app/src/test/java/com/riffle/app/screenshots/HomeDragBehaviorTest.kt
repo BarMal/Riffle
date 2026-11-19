@@ -221,9 +221,12 @@ class HomeDragBehaviorTest {
     private fun com.riffle.core.domain.launcher.LauncherShellState.answeringPages(
         action: LauncherShellAction,
     ): com.riffle.core.domain.launcher.LauncherShellState {
-        if (action !is LauncherShellAction.AddHomePage && action !is LauncherShellAction.DiscardEmptyHomePage) return this
+        val isPageAction =
+            action is LauncherShellAction.AddHomePage || action is LauncherShellAction.DiscardEmptyHomePage
+        if (!isPageAction) return this
         val result = com.riffle.core.domain.launcher.home.HomePageEngine().applyEdit(action, homeLayout)
-        val updated = (result as? com.riffle.core.domain.launcher.home.HomePageEditResult.Updated)?.layout ?: return this
+        val updated =
+            (result as? com.riffle.core.domain.launcher.home.HomePageEditResult.Updated)?.layout ?: return this
         return copy(homeLayout = updated, homeLayoutSet = homeLayoutSet.withActiveLayout(updated))
     }
 
