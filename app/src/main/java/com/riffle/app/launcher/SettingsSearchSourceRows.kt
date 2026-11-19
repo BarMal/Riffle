@@ -84,7 +84,25 @@ internal fun SettingsSearchSourceRows(
         checked = settings.webHandoff,
         tag = "web",
     ) { change(settings.copy(webHandoff = it)) }
-    // The heading row and the three group rows are one setting: search scrolls to the group of them.
+    SearchOrderRows(settings = settings, change = ::change)
+    SettingsChoiceRow(
+        modifier = Modifier.settingAnchor(SettingKey.LIBRARY_SEARCH_PER_GROUP),
+        title = SettingKey.LIBRARY_SEARCH_PER_GROUP.label(),
+        subtitle = stringResource(R.string.settings_search_per_group_subtitle),
+        options = RESULTS_PER_GROUP_OPTIONS,
+        selected = settings.resultsPerGroup,
+        onSelect = { count -> change(settings.copy(resultsPerGroup = count)) },
+        label = { count -> count.toString() },
+        optionTag = { count -> "$SEARCH_PER_GROUP_TEST_TAG_PREFIX$count" },
+    )
+}
+
+/** The heading row and the group rows are one setting: search scrolls to the group of them. */
+@Composable
+private fun SearchOrderRows(
+    settings: SearchSettings,
+    change: (SearchSettings) -> Unit,
+) {
     Column(modifier = Modifier.settingAnchor(SettingKey.LIBRARY_SEARCH_ORDER)) {
         SettingsListRow(
             title = SettingKey.LIBRARY_SEARCH_ORDER.label(),
@@ -111,16 +129,6 @@ internal fun SettingsSearchSourceRows(
             )
         }
     }
-    SettingsChoiceRow(
-        modifier = Modifier.settingAnchor(SettingKey.LIBRARY_SEARCH_PER_GROUP),
-        title = SettingKey.LIBRARY_SEARCH_PER_GROUP.label(),
-        subtitle = stringResource(R.string.settings_search_per_group_subtitle),
-        options = RESULTS_PER_GROUP_OPTIONS,
-        selected = settings.resultsPerGroup,
-        onSelect = { count -> change(settings.copy(resultsPerGroup = count)) },
-        label = { count -> count.toString() },
-        optionTag = { count -> "$SEARCH_PER_GROUP_TEST_TAG_PREFIX$count" },
-    )
 }
 
 @Composable
