@@ -37,6 +37,10 @@ data class FeatureSettings(
     val dockLiveApps: Boolean = true,
     val library: Boolean = true,
     val simpleMode: Boolean = false,
+    /** The small handle on the Dock that opens the Stream with a tap (ADR 0003, Amendment 12). Needs the Stream. */
+    val dockStreamHandle: Boolean = true,
+    /** The small "Show as" button on the Stream's page (a visible way to the menu a long-press of a tile opens). */
+    val streamViewButton: Boolean = true,
 ) {
     /** What is actually on, given the stored Home mode. */
     fun effective(homeMode: HomeMode): EffectiveFeatures =
@@ -47,6 +51,8 @@ data class FeatureSettings(
                 library = false,
                 homeMode = HomeMode.AppLibrary,
                 simpleMode = true,
+                dockStreamHandle = false,
+                streamViewButton = false,
             )
         } else {
             EffectiveFeatures(
@@ -55,15 +61,19 @@ data class FeatureSettings(
                 library = library,
                 homeMode = homeMode,
                 simpleMode = false,
+                dockStreamHandle = dockStreamHandle && stream,
+                streamViewButton = streamViewButton && stream,
             )
         }
 }
 
-/** The three switches Settings offers one by one. */
+/** The switches Settings offers one by one. */
 enum class LauncherFeature {
     STREAM,
     DOCK_LIVE_APPS,
     LIBRARY,
+    DOCK_STREAM_HANDLE,
+    STREAM_VIEW_BUTTON,
 }
 
 /** These switches with [feature] set to [enabled]. */
@@ -75,6 +85,8 @@ fun FeatureSettings.with(
         LauncherFeature.STREAM -> copy(stream = enabled)
         LauncherFeature.DOCK_LIVE_APPS -> copy(dockLiveApps = enabled)
         LauncherFeature.LIBRARY -> copy(library = enabled)
+        LauncherFeature.DOCK_STREAM_HANDLE -> copy(dockStreamHandle = enabled)
+        LauncherFeature.STREAM_VIEW_BUTTON -> copy(streamViewButton = enabled)
     }
 
 /** The switches as the surfaces read them: Simple mode already applied. */
@@ -87,6 +99,10 @@ data class EffectiveFeatures(
     val library: Boolean = true,
     val homeMode: HomeMode = HomeMode.PlacedItems,
     val simpleMode: Boolean = false,
+    /** The Stream handle draws on the Dock. */
+    val dockStreamHandle: Boolean = true,
+    /** The "Show as" button draws on the Stream's page. */
+    val streamViewButton: Boolean = true,
 )
 
 /** The switches in effect for these settings (Simple mode applied). */

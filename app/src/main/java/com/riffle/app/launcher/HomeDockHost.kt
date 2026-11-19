@@ -108,6 +108,9 @@ internal class HomeDockHostState {
     /** Where a widget dragged out of the picker would land in the dock, if it is over it. */
     val widgetDropPreview: MutableState<WidgetPickerDockPlacementPreview?> = mutableStateOf(null)
 
+    /** Whether a Home item is being dragged (the hints keep quiet while it is). */
+    val isHomeDragInProgress: MutableState<Boolean> = mutableStateOf(false)
+
     /** Whether a widget is being dragged out of the picker. */
     val isWidgetDragInProgress: MutableState<Boolean> = mutableStateOf(false)
 
@@ -126,6 +129,7 @@ internal class HomeDockHostState {
         isDropTargetHighlighted.value = false
         widgetDropPreview.value = null
         isWidgetDragInProgress.value = false
+        isHomeDragInProgress.value = false
     }
 }
 

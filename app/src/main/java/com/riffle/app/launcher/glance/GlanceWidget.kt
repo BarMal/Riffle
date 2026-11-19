@@ -28,6 +28,7 @@ import com.riffle.app.launcher.stream.eventCountdownText
 import com.riffle.app.launcher.stream.eventSpanText
 import com.riffle.app.launcher.stream.eventTitle
 import com.riffle.app.launcher.stream.hiddenText
+import com.riffle.app.launcher.stream.permissionMessage
 import com.riffle.app.launcher.stream.withLiveClock
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.glance.GlanceLayout
@@ -276,7 +277,7 @@ internal fun glanceSummary(
         is GlanceState.Showing -> contentSummary(state.content, env)
         GlanceState.Loading -> stringResource(R.string.stream_loading)
         GlanceState.Empty -> stringResource(kind.emptyRes())
-        is GlanceState.PermissionRequired -> stringResource(R.string.stream_permission_message)
+        is GlanceState.PermissionRequired -> permissionMessage(state.sources)
         GlanceState.Off -> stringResource(R.string.stream_off_message)
         GlanceState.Unavailable -> stringResource(R.string.stream_unavailable)
     }

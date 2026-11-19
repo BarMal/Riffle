@@ -1,6 +1,7 @@
 package com.riffle.app.screenshots
 
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.riffle.app.launcher.HintsHost
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -48,7 +49,7 @@ class HomeHandleScreenshotTest {
                     state = pages,
                     appIconLoader = SolidColorAppIconLoader(),
                     stream = emptyStreamHost(),
-                    onDockPressHintSeen = {},
+                    hints = HintsHost.inMemory(),
                     onAction = {},
                 )
             }

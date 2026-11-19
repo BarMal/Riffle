@@ -8,9 +8,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -32,6 +34,7 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.dockDynamicSectionTileTestTag
 import com.riffle.app.launcher.dockItemTestTag
 import com.riffle.app.launcher.stream.STREAM_SURFACE_TEST_TAG
+import com.riffle.app.launcher.stream.STREAM_VIEW_BUTTON_TEST_TAG
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.stream.glyph
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
@@ -285,6 +288,53 @@ class DockContextualModeTest {
         composeRule.onNodeWithText("Undo").performClick()
         composeRule.waitForIdle()
         assertEquals(StreamView.STACK, layout.viewOf(StreamSection.RECENTS))
+    }
+
+    @Test
+    fun theViewButtonOpensTheSamePageOptionsAsALongPressWithA48DpTarget() {
+        showStream()
+
+        composeRule.onNodeWithTag(STREAM_VIEW_BUTTON_TEST_TAG)
+            .assertIsDisplayed()
+            .assertHeightIsAtLeast(48.dp)
+            .assertWidthIsAtLeast(48.dp)
+            .performClick()
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Show as List").assertIsDisplayed()
+        composeRule.onNodeWithText("Hide section").assertIsDisplayed()
+        composeRule.onNodeWithText("Show as List").performClick()
+        composeRule.waitForIdle()
+        assertEquals(StreamView.LIST, layout.viewOf(StreamSection.NOW))
+    }
+
+    @Test
+    fun theViewButtonIsNotDrawnWhenItsSwitchIsOff() {
+        host = realWiringStreamHost(executor = executor)
+        composeRule.setContent {
+            ScreenshotBackdrop {
+                HomeDestination(
+                    state =
+                        ScreenshotFixtures.homeState().let { shell ->
+                            shell.copy(
+                                launcherSettings =
+                                    shell.launcherSettings.copy(
+                                        features = shell.launcherSettings.features.copy(streamViewButton = false),
+                                    ),
+                            )
+                        },
+                    appIconLoader = SolidColorAppIconLoader(),
+                    stream = host,
+                    streamShown = true,
+                    onAction = {},
+                )
+            }
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(dockDynamicSectionTileTestTag("Recents")).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        composeRule.onNodeWithTag(STREAM_VIEW_BUTTON_TEST_TAG).assertDoesNotExist()
     }
 
     @Test

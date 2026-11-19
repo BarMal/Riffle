@@ -93,6 +93,7 @@ fun LauncherShell(
             LocalWorkspaceSettingsHost provides settingsHost,
             LocalHomeSelectionRequests provides viewModel.homeSelectionRequests,
             LocalWalkthroughLauncher provides onboarding?.controller?.let { controller -> controller::rerun },
+            LocalHintsHost provides remember(onboarding) { onboarding?.controller?.let(HintsHost::of) },
         ) {
             LauncherShellContent(
                 state = state,
@@ -369,13 +370,8 @@ private fun LauncherDestination(
                                 (state.destination.isLibrary && state.libraryOverStream)
                         ),
                 onAction = settingsPageActionRouter.onAction,
-                // The first-run hint waits for the setup card to be done with; once seen it is never shown again.
-                onDockPressHintSeen =
-                    if (state.shouldShowSetupCard) {
-                        null
-                    } else {
-                        { settingsPageActionRouter.onAction(LauncherShellAction.DismissDockPressHint) }
-                    },
+                // The hints wait for the set-up card to be done with.
+                hints = LocalHintsHost.current.takeUnless { state.shouldShowSetupCard },
             )
 
         ShellDestination.NOTIFICATIONS ->

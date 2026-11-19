@@ -248,6 +248,30 @@ class LibraryScreenshotTest {
     }
 
     @Test
+    fun theHeaderHasAVisibleGearThatOpensSettingsWithA48DpTarget() {
+        render(libraryState(LibraryView.Categories))
+
+        composeRule.onNodeWithContentDescription("Riffle settings")
+            .assertIsDisplayed()
+            .assertHeightIsAtLeast(48.dp)
+            .assertWidthIsAtLeast(48.dp)
+            .performClick()
+
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenSettings), actions)
+        composeRule.captureScreen()
+    }
+
+    @Test
+    fun theLongPressMenuOffersSettingsUnderTheViews() {
+        render(libraryState(LibraryView.AlphaList))
+
+        composeRule.onNodeWithContentDescription("Library options").performClick()
+        composeRule.onNodeWithText("Riffle settings").assertIsDisplayed().performClick()
+
+        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenSettings), actions)
+    }
+
+    @Test
     fun theLibrarysOwnSearchFieldStillTakesTheQueryWhileTheLibraryIsOpen() {
         render(libraryState(LibraryView.Categories))
 

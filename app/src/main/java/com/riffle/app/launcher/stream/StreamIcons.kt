@@ -76,6 +76,14 @@ internal object StreamIcons {
         )
     }
 
+    /** Four panes: the views a "Show as" menu chooses between. */
+    val Views: ImageVector by lazy {
+        pathGlyph(
+            "StreamViews",
+            "M4,4h7v7H4zM13,4h7v7h-7zM4,13h7v7H4zM13,13h7v7h-7z",
+        )
+    }
+
     /** A calendar page: Agenda. */
     val Agenda: ImageVector by lazy {
         pathGlyph(

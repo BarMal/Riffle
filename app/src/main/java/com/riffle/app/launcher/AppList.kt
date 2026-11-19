@@ -24,8 +24,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.riffle.app.R
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
@@ -286,6 +288,23 @@ private fun AppDrawerMainMenuItems(
     onOpenShortcuts: () -> Unit,
     onExpandedChange: (Boolean) -> Unit,
 ) {
+    // The app's own shortcuts lead the menu, up to four of them as rows of their own. The row after them holds the
+    // rest and what each shortcut can be added to (Home, the floating Dock), so no action is lost.
+    state.shortcutItems.take(INLINE_APP_SHORTCUT_LIMIT).forEach { item ->
+        AppDrawerRowMenuItem(
+            text = item.shortcut.menuLabel,
+            enabled = item.shortcut.enabled,
+            onClick = { onAction(LauncherShellAction.LaunchAppShortcut(item.shortcut)) },
+            onExpandedChange = onExpandedChange,
+        )
+    }
+    if (state.shortcutItems.isNotEmpty()) {
+        DropdownMenuItem(
+            text = { Text(text = stringResource(R.string.menu_more_shortcut_actions)) },
+            trailingIcon = { Text(text = "›") },
+            onClick = onOpenShortcuts,
+        )
+    }
     AppDrawerRowMenuItem(
         text = if (state.isOnHome) "Added to home" else "Add to home",
         enabled = !state.isOnHome,
@@ -312,13 +331,6 @@ private fun AppDrawerMainMenuItems(
         },
         onExpandedChange = onExpandedChange,
     )
-    if (state.shortcutItems.isNotEmpty()) {
-        DropdownMenuItem(
-            text = { Text(text = "App shortcuts (${state.shortcutItems.size})") },
-            trailingIcon = { Text(text = "›") },
-            onClick = onOpenShortcuts,
-        )
-    }
     AppDrawerRowMenuItem(
         text = "App info",
         onClick = { onAction(LauncherShellAction.OpenAppInfo(state.app.identity)) },

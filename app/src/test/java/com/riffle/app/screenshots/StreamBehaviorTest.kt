@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -479,9 +480,34 @@ class StreamBehaviorTest {
                 ),
             initialPageKey = "notifications",
         )
-        composeRule.onNodeWithText("Allow access to show this").assertIsDisplayed()
-        composeRule.onNodeWithText("Allow access").performClick()
+        composeRule.onNodeWithText("Allow notification access to see and act on your notifications here.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Allow").assertHeightIsAtLeast(48.dp).performClick()
         assertEquals(listOf(listOf(SourceIds.NOTIFICATIONS)), accessRequests)
+    }
+
+    @Test
+    fun theRecentsSectionSaysWhatUsageAccessGainsWithTheSameAllowButton() {
+        show(
+            defaultResults() +
+                (StreamSection.RECENTS to StreamSectionResult.PermissionRequired(listOf(SourceIds.RECENT_APPS))),
+            initialPageKey = "recents",
+        )
+        composeRule.onNodeWithText("Allow usage access to list the apps you used lately here.").assertIsDisplayed()
+        composeRule.onNodeWithText("Allow").performClick()
+        assertEquals(listOf(listOf(SourceIds.RECENT_APPS)), accessRequests)
+    }
+
+    @Test
+    fun theNowSectionSaysWhatNotificationAccessGainsForMedia() {
+        show(
+            defaultResults() + (StreamSection.NOW to StreamSectionResult.PermissionRequired(listOf(SourceIds.MEDIA))),
+            initialPageKey = "now",
+        )
+        composeRule.onNodeWithText("Allow notification access to see what is playing here and control it.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Allow").performClick()
+        assertEquals(listOf(listOf(SourceIds.MEDIA)), accessRequests)
     }
 
     @Test

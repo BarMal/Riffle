@@ -412,7 +412,7 @@ internal fun noticeText(notice: Notice): String =
         Notice.ShortcutsNeedHome -> stringResource(R.string.stream_shortcuts_need_home)
         is Notice.Today ->
             when (val today = notice.notice) {
-                is TodayNotice.Permission -> stringResource(R.string.stream_permission_message)
+                is TodayNotice.Permission -> permissionMessage(today.sources)
                 is TodayNotice.TasksNotConnected -> tasksNotConnectedMessage(today.reason)
                 TodayNotice.TasksUnavailable -> stringResource(R.string.stream_tasks_unavailable)
             }

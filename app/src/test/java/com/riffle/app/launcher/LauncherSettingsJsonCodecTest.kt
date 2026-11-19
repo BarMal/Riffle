@@ -1522,6 +1522,20 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun theVisibleCueSwitchesRoundTripAndAreOnInBlobsWrittenBeforeThem() {
+        val features = FeatureSettings(dockStreamHandle = false, streamViewButton = false)
+        val settings = LauncherSettings(features = features)
+        assertEquals(features, decodeLauncherSettings(encodeLauncherSettings(settings)).features)
+        // Written before the cues existed (the same blob as the switches' own): both are on.
+        val old = decodeLauncherSettings("""{"features": {"stream": true, "library": false, "simpleMode": false}}""")
+        assertEquals(true, old.features.dockStreamHandle)
+        assertEquals(true, old.features.streamViewButton)
+        val handle = { value: String -> decodeLauncherSettings("""{"features": {"dockStreamHandle": $value}}""") }
+        assertEquals(false, handle("false").features.dockStreamHandle)
+        assertEquals(true, handle("\"no\"").features.dockStreamHandle)
+    }
+
+    @Test
     fun theLibrarySwitchKeepsAStoredChoiceAndAMissingOneIsOn() {
         // The Library holds every app, so it defaults on again (it was off for one release; a stored value is kept).
         val stored = { library: String -> decodeLauncherSettings("""{"features": {"library": $library}}""").features }

@@ -84,7 +84,7 @@ class DockDynamicSideEntriesTest {
 
         assertEquals("Open in Stream", entry.openInStreamMenuLabel)
         assertEquals(
-            listOf("App shortcuts (1)", "App info", "Hide app"),
+            listOf("New message", "App info", "Hide app"),
             entry.appMenu.map { it.label },
         )
         assertEquals(

@@ -262,6 +262,12 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.ShowHintsAgain ->
+                    state.withLauncherSettings(
+                        settings = state.launcherSettings.copy(hints = HintSettings()),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectOverlayDockEnabled,
                 is LauncherShellAction.SelectOverlayDockEdge,
                 is LauncherShellAction.SelectOverlayDockHandleThickness,

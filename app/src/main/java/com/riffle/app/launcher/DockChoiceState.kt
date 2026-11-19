@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -118,6 +119,15 @@ internal class DockChoiceState {
      */
     var menuDismissals: Int by mutableStateOf(0)
         private set
+
+    /** How many Dock menus have been opened (a hold on an item or a tile): the menu hint retires on the first. */
+    var menuOpenings: Int by mutableIntStateOf(0)
+        private set
+
+    /** A menu of the Dock opened. */
+    fun menuOpened() {
+        menuOpenings += 1
+    }
 
     /** Closes the menu the hold opened: the finger moved. */
     fun dismissMenus() {

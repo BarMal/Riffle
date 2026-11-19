@@ -779,6 +779,33 @@ first run or restored are not placed."
 
 Details: `places-views-plan.md`, "First run"; `settings.md`, "Home > Fill Home".
 
+## Amendment 12 (owner, 2026-11-19): the Dock's gestures are taught once and have something to tap
+
+A new user had to know hidden gestures to reach the Stream, the Library, Settings and "Show as". The rest of Amendments 1
+to 11 stands. Amendment 6 made the Dock the handle for the stacks but drew nothing to find it by; this adds that and a few
+other visible routes, each switchable off or retiring.
+
+- **Hints are one small system.** The press hint grew into four, one per Dock gesture (press, long-press for the menu, pull
+  for the Library, hold then slide to change stack). `Hints` in `:core:domain` is the pure rule: which hint is due given
+  what the person has done and seen and what is on screen, at most one at a time, each retired for good once its gesture is
+  performed or it is dismissed. None shows in Simple mode, over the set-up card or the tour, while something is dragged, or
+  while the Dock moves. The state (retired hints, Home visits, whether the Library was opened another way) is stored with
+  the onboarding state, device local and outside the backup, and decodes data written before it as "nothing seen".
+  Settings > Home > Show hints again resets it.
+- **One Stream handle.** A small chevron beside the Dock on Home opens the Stream on a tap and offers the Library and
+  hiding itself on a long-press. Amendment 6's Dock "handle" is the Dock itself; this is its visible affordance, and the
+  Library gets no second one. Settings > Dock > Show Stream handle (on by default) turns it off.
+- **Settings and "Show as" can be seen.** A gear in the Library header, "Riffle settings" in the Library's menu and at the
+  top of the search for it; a view button on the Library header and on the Stream's page for the menu a long-press opens.
+  The long-presses stay. Settings > Stream > Show view button turns the Stream's off.
+- **The tour shows the gesture.** Its Dock, Library and Stream steps draw a looped picture of the gesture (a finger on a
+  small Dock) in Compose, in the draw phase, and a still frame under reduced motion.
+- **A section that lacks its permission says what allowing it gains,** in one sentence with the same inline "Allow" button
+  wherever it shows (a page, a Today notice, a Glance widget). Nothing is asked at launch.
+- **App shortcuts lead the app menu,** up to four as rows of their own and a "More" row for the rest.
+
+Details: `gestures.md`, "Hints and visible routes"; `settings.md`, "Visible ways in".
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

@@ -520,8 +520,14 @@ sealed interface LauncherShellAction {
         val enabled: Boolean,
     ) : LauncherShellAction
 
-    /** The first-run hint for pressing the Dock down was shown and dismissed; it is not shown again. */
+    /**
+     * The press hint's old stored flag: set by builds before the hint system (read as "retired" still), no longer
+     * sent by anything. Kept so what was stored and the action's handling stay as they were.
+     */
     data object DismissDockPressHint : LauncherShellAction
+
+    /** Settings > Home > Show hints again: the stored press-hint flag is cleared (the other hints are onboarding's). */
+    data object ShowHintsAgain : LauncherShellAction
 
     /** Settings > Privacy: hide launcher content in screenshots and recents (off by default). */
     data class SetScreenContentProtection(

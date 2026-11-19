@@ -23,7 +23,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -87,6 +88,7 @@ import com.riffle.app.launcher.launcherPanelSurfaceColor
 import com.riffle.app.launcher.pressMenu
 import com.riffle.app.launcher.searchEmptyText
 import com.riffle.app.launcher.searchWebPreview
+import com.riffle.app.launcher.stream.StreamIcons
 import com.riffle.core.domain.launcher.designsystem.GlassWeight
 import com.riffle.core.domain.launcher.dockpull.DockPullDirection
 import com.riffle.core.domain.launcher.dockpull.DockPullThresholds
@@ -221,7 +223,12 @@ internal fun LibrarySheet(
         ) {
             if (paged) {
                 // No sheet: the pages are drawn straight over the wallpaper, Home's grid and Home's handle.
-                val actions = libraryAccessibilityActions(onClose = onClose, onShowAs = onShowAs)
+                val actions =
+                    libraryAccessibilityActions(
+                        onClose = onClose,
+                        onShowAs = onShowAs,
+                        onOpenSettings = { onAction(LauncherShellAction.OpenSettings) },
+                    )
                 LibraryPagedView(
                     state = state,
                     context = context,
@@ -246,6 +253,10 @@ internal fun LibrarySheet(
                             onShowAs(option)
                         },
                     )
+                    LibrarySettingsMenuItem(onClick = {
+                        dismiss()
+                        onAction(LauncherShellAction.OpenSettings)
+                    })
                 }
             } else {
                 // A long-press on the sheet where nothing else takes it (the room between the rows and the tiles, the
@@ -262,6 +273,7 @@ internal fun LibrarySheet(
                     Column(modifier = Modifier.fillMaxSize().padding(horizontal = RiffleSpacing.l)) {
                         LibraryHeader(
                             onShowAs = onShowAs,
+                            onOpenSettings = { onAction(LauncherShellAction.OpenSettings) },
                             onClose = onClose,
                             menu = menu,
                             haptics = context.haptics,
@@ -303,6 +315,10 @@ internal fun LibrarySheet(
                                 onShowAs(option)
                             },
                         )
+                        LibrarySettingsMenuItem(onClick = {
+                            menu.dismiss()
+                            onAction(LauncherShellAction.OpenSettings)
+                        })
                     }
                 }
             }
@@ -425,6 +441,7 @@ private fun LibrarySearchRow(
 @Composable
 private fun LibraryHeader(
     onShowAs: (LibraryView) -> Unit,
+    onOpenSettings: () -> Unit,
     onClose: () -> Unit,
     menu: PressMenuState,
     haptics: LauncherHaptics,
@@ -432,7 +449,8 @@ private fun LibraryHeader(
 ) {
     val title = stringResource(R.string.library_title)
     val resources = LocalContext.current.resources
-    val accessibilityActions = libraryAccessibilityActions(onClose = onClose, onShowAs = onShowAs)
+    val accessibilityActions =
+        libraryAccessibilityActions(onClose = onClose, onShowAs = onShowAs, onOpenSettings = onOpenSettings)
     var optionsButton by remember { mutableStateOf<LayoutCoordinates?>(null) }
     Column(
         modifier =
@@ -460,27 +478,46 @@ private fun LibraryHeader(
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(vertical = RiffleSpacing.s).semantics { heading() },
             )
-            IconButton(
-                onClick = { menu.show(optionsButton?.centreInRoot() ?: Offset.Zero) },
-                modifier = Modifier.size(LibraryMinTarget).onGloballyPositioned { optionsButton = it },
-            ) {
-                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.library_options))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // The "Show as" menu a long-press of the header opens, as a visible control.
+                IconButton(
+                    onClick = { menu.show(optionsButton?.centreInRoot() ?: Offset.Zero) },
+                    modifier = Modifier.size(LibraryMinTarget).onGloballyPositioned { optionsButton = it },
+                ) {
+                    Icon(StreamIcons.Views, contentDescription = stringResource(R.string.library_options))
+                }
+                // A way into Settings that needs no gesture.
+                IconButton(onClick = onOpenSettings, modifier = Modifier.size(LibraryMinTarget)) {
+                    Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_open_title))
+                }
             }
         }
     }
 }
 
-/** "Close Library" and "Show as <view>" for each view: the non-gesture routes of the header or the pages. */
+/** "Riffle settings" under the "Show as" views of the Library's menu: Settings, reachable without a gesture. */
+@Composable
+private fun LibrarySettingsMenuItem(onClick: () -> Unit) {
+    DropdownMenuItem(text = { Text(stringResource(R.string.settings_open_title)) }, onClick = onClick)
+}
+
+/** "Close Library", "Riffle settings" and "Show as <view>" for each: the non-gesture routes of the header or pages. */
 @Composable
 private fun libraryAccessibilityActions(
     onClose: () -> Unit,
     onShowAs: (LibraryView) -> Unit,
+    onOpenSettings: () -> Unit,
 ): List<CustomAccessibilityAction> {
     val close = stringResource(R.string.library_close_action)
+    val settings = stringResource(R.string.settings_open_title)
     val resources = LocalContext.current.resources
     return listOf(
         CustomAccessibilityAction(close) {
             onClose()
+            true
+        },
+        CustomAccessibilityAction(settings) {
+            onOpenSettings()
             true
         },
     ) +

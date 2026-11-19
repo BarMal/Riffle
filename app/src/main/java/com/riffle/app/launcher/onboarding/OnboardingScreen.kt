@@ -58,6 +58,7 @@ internal fun interface PermissionGranted {
  * step, and "Skip set-up", leave without finishing; neither changes anything the user placed.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun OnboardingScreen(
     granted: PermissionGranted,
     onAllow: (SourcePermission) -> Unit,
@@ -66,6 +67,8 @@ internal fun OnboardingScreen(
     modifier: Modifier = Modifier,
     askHomeStart: Boolean = false,
     onHomeStart: (HomeStart) -> Unit = {},
+    /** The launcher's resolved reduced motion: the tour's pictures then stand still. */
+    reducedMotion: Boolean = false,
 ) {
     var stepName by rememberSaveable { mutableStateOf(OnboardingStep.HOME.name) }
     val step = OnboardingStep.valueOf(stepName)
@@ -103,6 +106,7 @@ internal fun OnboardingScreen(
                 onStartChoice = { choice = it.name },
                 granted = granted,
                 onAllow = onAllow,
+                reducedMotion = reducedMotion,
             )
             OnboardingButtons(
                 step = step,
@@ -124,6 +128,7 @@ internal fun OnboardingScreen(
 
 /** The step's text (or the Home question when [startChoice] is not null) in a scrolling column. */
 @Composable
+@Suppress("LongParameterList")
 private fun OnboardingContent(
     progress: String,
     step: OnboardingStep,
@@ -131,6 +136,7 @@ private fun OnboardingContent(
     onStartChoice: (HomeStart) -> Unit,
     granted: PermissionGranted,
     onAllow: (SourcePermission) -> Unit,
+    reducedMotion: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val title =
@@ -163,6 +169,13 @@ private fun OnboardingContent(
         if (startChoice != null) {
             HomeStartChoice(selected = startChoice, onSelect = onStartChoice)
         } else {
+            TourGesture.of(step)?.let { gesture ->
+                TourIllustration(
+                    gesture = gesture,
+                    reducedMotion = reducedMotion,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+            }
             Text(text = OnboardingText.body(step), style = MaterialTheme.typography.bodyLarge)
             if (step == OnboardingStep.STREAM) PermissionRows(granted = granted, onAllow = onAllow)
         }

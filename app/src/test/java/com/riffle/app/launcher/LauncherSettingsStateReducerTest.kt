@@ -509,6 +509,18 @@ class LauncherSettingsStateReducerTest {
         assertEquals(dismissed.launcherSettings, repository.savedSettings)
     }
 
+    @Test
+    fun showingHintsAgainClearsTheStoredPressHintFlag() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val dismissed = reducer.reduce(LauncherShellState(), LauncherShellAction.DismissDockPressHint)
+
+        val again = reducer.reduce(dismissed, LauncherShellAction.ShowHintsAgain)
+
+        assertEquals(false, again.launcherSettings.hints.dockPressSeen)
+        assertEquals(again.launcherSettings, repository.savedSettings)
+    }
+
     private fun reducer(
         launcherSettingsRepository: LauncherSettingsRepository = FakeLauncherSettingsRepository(),
         feedArticleCacheRepository: FeedArticleCacheRepository = FakeFeedArticleCacheRepository(),

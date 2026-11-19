@@ -425,6 +425,7 @@ class LauncherActionDomainTest {
                 ),
                 settings("SetSimpleMode", LauncherShellAction.SetSimpleMode(enabled = true)),
                 settings("DismissDockPressHint", LauncherShellAction.DismissDockPressHint),
+                settings("ShowHintsAgain", LauncherShellAction.ShowHintsAgain),
                 settings(
                     "SetScreenContentProtection",
                     LauncherShellAction.SetScreenContentProtection(enabled = true),
