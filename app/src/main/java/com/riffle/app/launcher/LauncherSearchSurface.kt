@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -47,6 +48,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
+import com.riffle.app.launcher.search.wider.WiderAnswerPanel
+import com.riffle.app.launcher.search.wider.WiderGroupsPanel
+import com.riffle.app.launcher.search.wider.WiderSearchModel
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
@@ -209,6 +213,11 @@ internal fun SearchResultList(
      * panel fills what it is given and the first result is at the top.
      */
     growsUp: Boolean = false,
+    /**
+     * The wider search (calculator answer, system settings, contacts, files) for this query, drawn around the apps:
+     * the answer first, the groups after them. Null draws apps alone, as before the sources existed.
+     */
+    wider: WiderSearchModel<*>? = null,
 ) {
     Column(
         modifier =
@@ -216,103 +225,31 @@ internal fun SearchResultList(
                 .widthIn(max = SEARCH_GRID_MAX_WIDTH_DP.dp)
                 .fillMaxWidth(),
     ) {
-        val panelModifier = if (growsUp) Modifier.weight(1f, fill = false) else Modifier.weight(1f)
-        if (results.isEmpty()) {
-            if (growsUp) {
-                GlassSurface(
-                    modifier = Modifier.fillMaxWidth(),
-                    weight = GlassWeight.Thick,
-                    shape = LocalLauncherCardShape.current,
-                    tint = launcherPanelSurfaceColor(),
-                    contentColor = launcherPanelContentColor(),
-                ) {
-                    // The empty answer and the way on to the web are one surface, directly above the field.
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = emptyText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
-                        )
-                        webPreview?.let { preview ->
-                            SearchWebPanel(
-                                preview = preview,
-                                onAction = appListContext.onAction,
-                                modifier = Modifier.padding(bottom = 8.dp),
-                            )
-                        }
-                    }
+        val widerShown = wider?.hasAnything == true
+        // Growing up the groups stand above the apps and the answer under them, nearest the field; otherwise the
+        // answer leads and the groups follow.
+        WiderBeforeApps(wider, growsUp)
+        when {
+            // Something else answered: "No results" would be untrue; the way on to the web stays.
+            results.isEmpty() && widerShown ->
+                if (growsUp) {
+                    webPreview?.let { preview -> SearchWebOnGlass(preview, appListContext.onAction) }
+                } else {
+                    Box(modifier = Modifier.weight(1f))
                 }
-            } else {
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = emptyText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        } else {
-            // The results panel: one glass surface lit by the colours of the apps it lists.
-            GlassSurface(
-                modifier = panelModifier.fillMaxWidth(),
-                // Results are a list of text rows: Thick, as above.
-                weight = GlassWeight.Thick,
-                shape = LocalLauncherCardShape.current,
-                tint = launcherPanelSurfaceColor(),
-                contentColor = launcherPanelContentColor(),
-                spotlight = true,
-            ) {
-                Column {
-                    when (presentation) {
-                        // The card stack is the Dock's search (`SearchResultStack`); a list that is asked to show it
-                        // (the Library's own search field) draws the icon grid, as it did before the stack existed.
-                        SearchResultPresentation.STACK,
-                        SearchResultPresentation.ICONS,
-                        ->
-                            SearchResultIconGrid(
-                                results = results,
-                                appListContext = appListContext,
-                                gridColumns = gridColumns,
-                                reverse = growsUp,
-                                modifier =
-                                    if (growsUp) {
-                                        Modifier.fillMaxWidth().weight(
-                                            1f,
-                                            fill = false,
-                                        )
-                                    } else {
-                                        Modifier.fillMaxSize()
-                                    },
-                            )
-
-                        SearchResultPresentation.LIST ->
-                            SearchResultListItems(
-                                results = results,
-                                appListContext = appListContext,
-                                reverse = growsUp,
-                                modifier =
-                                    if (growsUp) {
-                                        Modifier.fillMaxWidth().weight(
-                                            1f,
-                                            fill = false,
-                                        )
-                                    } else {
-                                        Modifier.fillMaxSize()
-                                    },
-                            )
-                    }
-                    // Growing up, the way on to the web is the results' own footer: one surface above the field.
-                    if (growsUp) {
-                        webPreview?.let { preview ->
-                            SearchWebPanel(preview = preview, onAction = appListContext.onAction)
-                        }
-                    }
-                }
-            }
+            results.isEmpty() -> SearchEmptyAnswer(growsUp, emptyText, webPreview, appListContext.onAction)
+            else ->
+                SearchAppsPanel(
+                    results = results,
+                    appListContext = appListContext,
+                    presentation = presentation,
+                    gridColumns = gridColumns,
+                    webPreview = webPreview,
+                    growsUp = growsUp,
+                    modifier = if (growsUp) Modifier.weight(1f, fill = false) else Modifier.weight(1f),
+                )
         }
+        WiderAfterApps(wider, growsUp)
         // Growing up, the action is inside the results surface (above); otherwise it stands under the results.
         if (!growsUp) {
             webPreview?.let { preview ->
@@ -321,6 +258,139 @@ internal fun SearchResultList(
                     onAction = appListContext.onAction,
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+        }
+    }
+}
+
+/** Growing up the groups stand above the apps; otherwise the answer leads. */
+@Composable
+private fun WiderBeforeApps(
+    wider: WiderSearchModel<*>?,
+    growsUp: Boolean,
+) {
+    if (wider == null) return
+    if (growsUp) WiderGroupsPanel(wider, reverse = true) else WiderAnswerPanel(wider)
+}
+
+/** Growing up the answer stands under the apps, nearest the field; otherwise the groups follow them. */
+@Composable
+private fun WiderAfterApps(
+    wider: WiderSearchModel<*>?,
+    growsUp: Boolean,
+) {
+    if (wider == null) return
+    if (growsUp) WiderAnswerPanel(wider) else WiderGroupsPanel(wider, reverse = false)
+}
+
+/** The way on to the web on its own Thick glass, directly above the field (nothing else to stand it on). */
+@Composable
+private fun SearchWebOnGlass(
+    preview: SearchWebPreview,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    GlassSurface(
+        modifier = Modifier.fillMaxWidth(),
+        weight = GlassWeight.Thick,
+        shape = LocalLauncherCardShape.current,
+        tint = launcherPanelSurfaceColor(),
+        contentColor = launcherPanelContentColor(),
+    ) {
+        SearchWebPanel(preview = preview, onAction = onAction, modifier = Modifier.padding(vertical = 8.dp))
+    }
+}
+
+/** "No results", with the way on to the web: on its own glass growing up, centred otherwise. */
+@Composable
+private fun ColumnScope.SearchEmptyAnswer(
+    growsUp: Boolean,
+    emptyText: String,
+    webPreview: SearchWebPreview?,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    if (growsUp) {
+        GlassSurface(
+            modifier = Modifier.fillMaxWidth(),
+            weight = GlassWeight.Thick,
+            shape = LocalLauncherCardShape.current,
+            tint = launcherPanelSurfaceColor(),
+            contentColor = launcherPanelContentColor(),
+        ) {
+            // The empty answer and the way on to the web are one surface, directly above the field.
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = emptyText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                )
+                webPreview?.let { preview ->
+                    SearchWebPanel(preview = preview, onAction = onAction, modifier = Modifier.padding(bottom = 8.dp))
+                }
+            }
+        }
+    } else {
+        Box(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = emptyText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** The results panel: one glass surface lit by the colours of the apps it lists. */
+@Composable
+@Suppress("LongParameterList")
+private fun SearchAppsPanel(
+    results: List<SearchGridResult>,
+    appListContext: AppListContext,
+    presentation: SearchResultPresentation,
+    gridColumns: Int,
+    webPreview: SearchWebPreview?,
+    growsUp: Boolean,
+    modifier: Modifier,
+) {
+    GlassSurface(
+        modifier = modifier.fillMaxWidth(),
+        // Results are a list of text rows: Thick, as above.
+        weight = GlassWeight.Thick,
+        shape = LocalLauncherCardShape.current,
+        tint = launcherPanelSurfaceColor(),
+        contentColor = launcherPanelContentColor(),
+        spotlight = true,
+    ) {
+        Column {
+            val bodyModifier =
+                if (growsUp) Modifier.fillMaxWidth().weight(1f, fill = false) else Modifier.fillMaxSize()
+            when (presentation) {
+                // The card stack is the Dock's search (`SearchResultStack`); a list that is asked to show it
+                // (the Library's own search field) draws the icon grid, as it did before the stack existed.
+                SearchResultPresentation.STACK,
+                SearchResultPresentation.ICONS,
+                ->
+                    SearchResultIconGrid(
+                        results = results,
+                        appListContext = appListContext,
+                        gridColumns = gridColumns,
+                        reverse = growsUp,
+                        modifier = bodyModifier,
+                    )
+
+                SearchResultPresentation.LIST ->
+                    SearchResultListItems(
+                        results = results,
+                        appListContext = appListContext,
+                        reverse = growsUp,
+                        modifier = bodyModifier,
+                    )
+            }
+            // Growing up, the way on to the web is the results' own footer: one surface above the field.
+            if (growsUp) {
+                webPreview?.let { preview -> SearchWebPanel(preview = preview, onAction = appListContext.onAction) }
             }
         }
     }

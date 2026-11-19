@@ -139,6 +139,12 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SetSearchSettings ->
+                    state.withLauncherSettings(
+                        settings = state.launcherSettings.copy(search = action.settings),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectStreamCardTint ->
                     state.withStreamSettings(launcherSettingsRepository) { it.copy(cardTintPercent = action.percent) }
 

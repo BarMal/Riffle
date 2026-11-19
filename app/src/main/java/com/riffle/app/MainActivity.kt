@@ -67,6 +67,8 @@ import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.rss.startFeedBackgroundSync
+import com.riffle.app.launcher.search.wider.LocalWiderSearchHost
+import com.riffle.app.launcher.search.wider.WiderSearchAccess
 import com.riffle.app.launcher.startScreenContentProtectionSync
 import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.startWallpaperOffsetSync
@@ -246,6 +248,9 @@ class MainActivity : ComponentActivity() {
         ) {
             refreshPlatformStatuses()
         }
+
+    /** Wider search: the optional contacts and media permissions, asked only from the inline "Allow" row. */
+    private val widerSearch = WiderSearchAccess(this)
 
     /** Only ever launched from an explicit user action via [calendarAccessCoordinator]; never at startup. */
     private val requestCalendarPermission =
@@ -588,6 +593,7 @@ class MainActivity : ComponentActivity() {
                 setContent {
                     CompositionLocalProvider(
                         LocalFeedRefreshCoordinator provides dependencies.feedRefreshCoordinator,
+                        LocalWiderSearchHost provides widerSearch.host,
                     ) {
                         LauncherShell(
                             viewModel = shellViewModel,
@@ -652,6 +658,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshPlatformStatuses() {
+        // The person may have changed contacts or media access in system settings.
+        widerSearch.host.onAccessMayHaveChanged()
         val notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus()
         val notificationAccessWasRevoked =
             shellViewModel.state.value.notificationAccessStatus == NotificationAccessStatus.REVOKED

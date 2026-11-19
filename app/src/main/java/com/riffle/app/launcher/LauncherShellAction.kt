@@ -69,6 +69,7 @@ import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
@@ -576,6 +577,11 @@ sealed interface LauncherShellAction {
 
     data class SelectSearchResultPresentation(
         val presentation: SearchResultPresentation,
+    ) : LauncherShellAction
+
+    /** Settings > Library > Search: which sources are in search, their order and the results per group. */
+    data class SetSearchSettings(
+        val settings: SearchSettings,
     ) : LauncherShellAction
 
     /** Settings > Stream (a later slice): how much of its app's colour a card's fill takes, in percent. */

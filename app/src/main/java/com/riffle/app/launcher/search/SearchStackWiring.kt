@@ -10,6 +10,7 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.expressions.NoExpressionImageLoader
 import com.riffle.app.launcher.library.LibraryState
 import com.riffle.app.launcher.library.toGridResult
+import com.riffle.app.launcher.search.wider.WiderSearchModel
 import com.riffle.app.launcher.stream.StreamEnvironment
 import com.riffle.app.launcher.stream.StreamHost
 import com.riffle.app.launcher.stream.StreamStackState
@@ -50,13 +51,37 @@ internal fun rememberSearchStackWiring(
     stream: StreamHost?,
     motion: DockSearchMotionState,
     asStack: Boolean,
+    wider: WiderSearchModel<*>? = null,
 ): SearchStackWiring {
     val stackState = remember(state.query) { StreamStackState() }
     val notifications = rememberSearchStackNotifications(stream, context, enabled = asStack && state.isSearching)
     val cards =
-        remember(asStack, state.query, state.hits, context.appShortcutsByApp, notifications) {
+        remember(
+            asStack,
+            state.query,
+            state.hits,
+            context.appShortcutsByApp,
+            notifications,
+            state.search.webHandoff,
+            wider?.hasWiderResults,
+        ) {
             if (asStack) {
-                SearchStack.plan(state.query, state.hits, context.appShortcutsByApp, notifications)
+                SearchStack.plan(
+                    state.query,
+                    state.hits,
+                    context.appShortcutsByApp,
+                    notifications,
+                    webSearch = state.search.webHandoff,
+                ).map { card ->
+                    // Another source answered: the web card must not say nothing matched.
+                    if (card is SearchStackCard.Web && wider?.hasWiderResults == true) {
+                        card.copy(
+                            noResults = false,
+                        )
+                    } else {
+                        card
+                    }
+                }
             } else {
                 emptyList()
             }

@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.library.LibrarySearch
 import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.StreamSettings
 
 /**
@@ -53,6 +54,8 @@ internal data class LibraryState(
     val dock: DockModel? = null,
     /** How the Stream's cards are tinted and lit: the search stack's cards are drawn the same way. */
     val cardSettings: StreamSettings = StreamSettings(),
+    /** Which sources are in search, their order and the results per group (Settings > Library > Search). */
+    val search: SearchSettings = SearchSettings(),
 ) {
     val isSearching: Boolean get() = query.isNotBlank()
 }
@@ -86,4 +89,5 @@ internal fun LauncherShellState.libraryState(): LibraryState =
         pagedLayout = launcherSettings.layout.forDeviceClass(homeLayoutSet.activeKey.deviceClass),
         dock = homeLayout.dock,
         cardSettings = launcherSettings.stream,
+        search = launcherSettings.search,
     )

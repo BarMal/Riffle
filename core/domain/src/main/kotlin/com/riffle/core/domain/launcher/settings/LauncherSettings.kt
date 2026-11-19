@@ -8,6 +8,8 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.icons.IconStyleSettings
 import com.riffle.core.domain.launcher.library.LibraryView
+import com.riffle.core.domain.launcher.search.wider.SearchSourceId
+import com.riffle.core.domain.launcher.search.wider.WiderSearchMerger
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
 
@@ -120,10 +122,65 @@ const val DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS = 4
 fun AppDrawerSettings.coerced(): AppDrawerSettings =
     copy(iconGridColumns = iconGridColumns.coerceIn(MIN_APP_DRAWER_ICON_GRID_COLUMNS, MAX_APP_DRAWER_ICON_GRID_COLUMNS))
 
-/** Durable presentation preference for launcher search results. */
+/**
+ * Durable preferences for launcher search: how the results read and which sources are in it. Apps and app shortcuts
+ * are always searched. A settings blob stored before the sources existed reads as these defaults.
+ */
 data class SearchSettings(
     val resultPresentation: SearchResultPresentation = SearchResultPresentation.STACK,
-)
+    /** The launcher's own settings pages among the results. */
+    val launcherSettings: Boolean = true,
+    val calculator: Boolean = true,
+    val systemSettings: Boolean = true,
+    /** Needs the optional contacts permission; off until the person turns it on. */
+    val contacts: Boolean = false,
+    /** Needs an optional media permission for what it can list; off until the person turns it on. */
+    val files: Boolean = false,
+    /** The "Search the web" hand-off row. */
+    val webHandoff: Boolean = true,
+    /** The order of the groups below the apps. */
+    val groupOrder: List<SearchSourceId> = SearchSourceId.DEFAULT_GROUP_ORDER,
+    val resultsPerGroup: Int = DEFAULT_RESULTS_PER_GROUP,
+) {
+    /** The wider sources that are switched on. */
+    val enabledSources: Set<SearchSourceId>
+        get() =
+            buildSet {
+                if (calculator) add(SearchSourceId.CALCULATOR)
+                if (systemSettings) add(SearchSourceId.SYSTEM_SETTINGS)
+                if (contacts) add(SearchSourceId.CONTACTS)
+                if (files) add(SearchSourceId.FILES)
+            }
+
+    /** [source] switched on or off. */
+    fun withSource(
+        source: SearchSourceId,
+        enabled: Boolean,
+    ): SearchSettings =
+        when (source) {
+            SearchSourceId.CALCULATOR -> copy(calculator = enabled)
+            SearchSourceId.SYSTEM_SETTINGS -> copy(systemSettings = enabled)
+            SearchSourceId.CONTACTS -> copy(contacts = enabled)
+            SearchSourceId.FILES -> copy(files = enabled)
+        }
+
+    /** [source] one place earlier ([delta] -1) or later (1) among the groups; at the end it stays. */
+    fun movedGroup(
+        source: SearchSourceId,
+        delta: Int,
+    ): SearchSettings {
+        val order = WiderSearchMerger.completeOrder(groupOrder).toMutableList()
+        val from = order.indexOf(source)
+        val to = from + delta
+        if (from < 0 || to !in order.indices) return this
+        order.add(to, order.removeAt(from))
+        return copy(groupOrder = order)
+    }
+}
+
+/** Results per group offered in Settings; the default is the middle one. */
+val RESULTS_PER_GROUP_OPTIONS: List<Int> = listOf(3, 5, 8)
+const val DEFAULT_RESULTS_PER_GROUP = 5
 
 /**
  * How the Dock's search shows its results. [STACK] (the default for new installs and for settings saved before the

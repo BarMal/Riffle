@@ -18,6 +18,8 @@ import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.search.wider.SearchSourceId
+import com.riffle.core.domain.launcher.search.wider.WiderSearchMerger
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppsBehindCards
@@ -48,6 +50,7 @@ import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.PostureLayoutSettings
 import com.riffle.core.domain.launcher.settings.PrivacySettings
+import com.riffle.core.domain.launcher.settings.RESULTS_PER_GROUP_OPTIONS
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
@@ -348,7 +351,16 @@ private fun JSONObject.legacyAppPairsMode(): PairsMode? =
 private fun pairsModeOf(name: String?): PairsMode? = PairsMode.entries.firstOrNull { it.name == name }
 
 private fun encodeSearchSettings(settings: SearchSettings): JSONObject =
-    JSONObject().put("resultPresentation", settings.resultPresentation.name)
+    JSONObject()
+        .put("resultPresentation", settings.resultPresentation.name)
+        .put("launcherSettings", settings.launcherSettings)
+        .put("calculator", settings.calculator)
+        .put("systemSettings", settings.systemSettings)
+        .put("contacts", settings.contacts)
+        .put("files", settings.files)
+        .put("webHandoff", settings.webHandoff)
+        .put("groupOrder", JSONArray(settings.groupOrder.map { source -> source.name }))
+        .put("resultsPerGroup", settings.resultsPerGroup)
 
 private fun JSONObject.toSearchSettings(defaults: SearchSettings): SearchSettings =
     SearchSettings(
@@ -357,7 +369,28 @@ private fun JSONObject.toSearchSettings(defaults: SearchSettings): SearchSetting
                 .takeIf(String::isNotEmpty)
                 ?.let { name -> SearchResultPresentation.entries.firstOrNull { it.name == name } }
                 ?: defaults.resultPresentation,
+        launcherSettings = optBoolean("launcherSettings", defaults.launcherSettings),
+        calculator = optBoolean("calculator", defaults.calculator),
+        systemSettings = optBoolean("systemSettings", defaults.systemSettings),
+        contacts = optBoolean("contacts", defaults.contacts),
+        files = optBoolean("files", defaults.files),
+        webHandoff = optBoolean("webHandoff", defaults.webHandoff),
+        groupOrder = searchGroupOrder(optJSONArray("groupOrder")) ?: defaults.groupOrder,
+        resultsPerGroup =
+            optInt("resultsPerGroup", defaults.resultsPerGroup)
+                .takeIf { value -> value in RESULTS_PER_GROUP_OPTIONS }
+                ?: defaults.resultsPerGroup,
     )
+
+/** A stored order read back: unknown names are dropped and a group it lacks goes in at its default place. */
+private fun searchGroupOrder(array: JSONArray?): List<SearchSourceId>? =
+    array?.let {
+        WiderSearchMerger.completeOrder(
+            (0 until it.length()).mapNotNull { index ->
+                SearchSourceId.entries.firstOrNull { source -> source.name == it.optString(index) }
+            },
+        )
+    }
 
 private inline fun <reified T : Enum<T>> JSONObject?.enumOrDefault(
     name: String,

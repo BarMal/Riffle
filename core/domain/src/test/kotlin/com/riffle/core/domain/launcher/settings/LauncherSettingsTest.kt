@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.library.LibraryView
+import com.riffle.core.domain.launcher.search.wider.SearchSourceId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -264,4 +265,34 @@ class LauncherSettingsTest {
             packageName = AppPackageName("com.riffle.$name"),
             activityName = AppActivityName("com.riffle.$name.MainActivity"),
         )
+
+    @Test
+    fun searchSourcesDefaultToTheDocumentedSwitchesAndOrder() {
+        val search = LauncherSettings().search
+        assertEquals(true, search.launcherSettings)
+        assertEquals(true, search.calculator)
+        assertEquals(true, search.systemSettings)
+        assertEquals(false, search.contacts)
+        assertEquals(false, search.files)
+        assertEquals(true, search.webHandoff)
+        assertEquals(5, search.resultsPerGroup)
+        assertEquals(
+            setOf(
+                SearchSourceId.CALCULATOR,
+                SearchSourceId.SYSTEM_SETTINGS,
+            ),
+            search.enabledSources,
+        )
+    }
+
+    @Test
+    fun aGroupMovesOnePlaceAndStaysAtTheEnds() {
+        val search = SearchSettings()
+        assertEquals(
+            listOf(SearchSourceId.SYSTEM_SETTINGS, SearchSourceId.FILES, SearchSourceId.CONTACTS),
+            search.movedGroup(SearchSourceId.FILES, -1).groupOrder,
+        )
+        assertEquals(search, search.movedGroup(SearchSourceId.SYSTEM_SETTINGS, -1))
+        assertEquals(search, search.movedGroup(SearchSourceId.FILES, 1))
+    }
 }
