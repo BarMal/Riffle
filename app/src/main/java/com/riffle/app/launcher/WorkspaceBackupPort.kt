@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.saved.SavedHomeLayouts
 import com.riffle.core.domain.launcher.pairs.AppPair
 import com.riffle.core.domain.launcher.stream.StreamLayouts
 import com.riffle.core.domain.launcher.workspace.WorkspaceSet
@@ -33,6 +34,9 @@ interface WorkspaceBackupPort {
     /** The calendar feed list (links included, never events); null when none is stored, so the section is omitted. */
     fun currentCalendarFeeds(): IcsFeedSettings? = null
 
+    /** The saved Home layouts (unbound widget descriptions, never a host id); null when there are none. */
+    fun currentSavedHomeLayouts(): SavedHomeLayouts? = null
+
     fun restoreWorkspaceSet(set: WorkspaceSet)
 
     fun restoreExclusions(rules: LayoutExclusionRules)
@@ -44,4 +48,6 @@ interface WorkspaceBackupPort {
     fun restorePairs(layouts: List<AppPair>) = Unit
 
     fun restoreCalendarFeeds(feeds: IcsFeedSettings) = Unit
+
+    fun restoreSavedHomeLayouts(layouts: SavedHomeLayouts) = Unit
 }

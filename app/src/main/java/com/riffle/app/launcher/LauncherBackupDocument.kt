@@ -5,10 +5,13 @@ import com.riffle.app.launcher.exclusions.encodeExclusionRules
 import com.riffle.app.launcher.ics.IcsJsonCodecs
 import com.riffle.app.launcher.pool.decodePoolStore
 import com.riffle.app.launcher.pool.encodePoolStore
+import com.riffle.app.launcher.savedhome.encodeSavedHomeLayouts
+import com.riffle.app.launcher.savedhome.optSavedHomeLayouts
 import com.riffle.app.launcher.stream.decodeStreamLayouts
 import com.riffle.app.launcher.stream.encodeStreamLayouts
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.saved.SavedHomeLayouts
 import com.riffle.core.domain.launcher.pairs.AppPair
 import com.riffle.core.domain.launcher.pairs.AppPairsCodec
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -49,6 +52,8 @@ data class LauncherBackupDocument(
     val calendarFeeds: IcsFeedSettings? = null,
     /** The Pairs stack (two apps and their order each, never windows). Absent in backups written before it. */
     val pairs: List<AppPair>? = null,
+    /** The saved Home layouts (Settings > Home > Home layouts): widget descriptions only. Absent in older backups. */
+    val savedHomeLayouts: SavedHomeLayouts? = null,
 )
 
 fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
@@ -75,6 +80,8 @@ fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
                         pairs ->
                     json.put("pairs", JSONObject(AppPairsCodec.encode(pairs).toJson().toString()))
                 }
+            document.savedHomeLayouts?.takeIf { !it.isEmpty }
+                ?.let { saved -> json.put("savedHomeLayouts", JSONObject(encodeSavedHomeLayouts(saved))) }
             if (document.homeFromPool) json.put("homeFromPool", true)
         }
         .toString()
@@ -110,6 +117,7 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
             stream = json.optStream(),
             calendarFeeds = json.optCalendarFeeds(),
             pairs = json.optPairs(),
+            savedHomeLayouts = json.optSavedHomeLayouts(),
         )
     }.getOrElse { error ->
         when (error) {

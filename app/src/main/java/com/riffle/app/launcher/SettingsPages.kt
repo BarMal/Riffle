@@ -22,6 +22,12 @@ enum class SettingsPage(
 ) {
     MAIN(null, R.string.settings_page_main, R.string.settings_page_main_summary, R.string.settings_page_main_keywords),
     HOME(MAIN, R.string.settings_page_home, R.string.settings_page_home_summary, R.string.settings_page_home_keywords),
+    HOME_LAYOUTS(
+        HOME,
+        R.string.settings_page_home_layouts,
+        R.string.settings_page_home_layouts_summary,
+        R.string.settings_page_home_layouts_keywords,
+    ),
     DOCK(MAIN, R.string.settings_page_dock, R.string.settings_page_dock_summary, R.string.settings_page_dock_keywords),
     FLOATING_DOCK(
         DOCK,

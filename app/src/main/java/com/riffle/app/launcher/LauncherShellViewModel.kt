@@ -6,6 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.riffle.app.launcher.pool.PoolHomeLayoutRepository
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
+import com.riffle.app.launcher.savedhome.SavedHomeAccess
+import com.riffle.app.launcher.savedhome.SavedHomeEnvironment
+import com.riffle.app.launcher.savedhome.SavedHomeLayoutsController
 import com.riffle.app.launcher.workspace.WorkspaceBootstrap
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -19,6 +22,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
+import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
@@ -65,6 +69,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 class LauncherShellViewModel(
     private val firstRunRepository: FirstRunRepository,
@@ -635,6 +640,41 @@ class LauncherShellViewModel(
         if (action is LauncherShellAction.RemoveDockShortcut && mutableState.value != previousState) {
             removedHostedWidgetId?.let(platformDependencies.deleteHostedWidgetId)
         }
+    }
+
+    /** The saved Home layouts' actions; acts on the device class tab Settings shows. */
+    internal val savedHomeLayouts: SavedHomeLayoutsController by lazy {
+        SavedHomeLayoutsController(
+            store = platformDependencies.savedHomeLayouts,
+            access = SavedHomeShellAccess(),
+            providerOf = platformDependencies.widgetProviderOf,
+            binder = platformDependencies.savedHomeWidgetBinder,
+            nowEpochMillis = platformDependencies.epochMillisProvider::nowEpochMillis,
+            newId = { UUID.randomUUID().toString() },
+        )
+    }
+
+    private inner class SavedHomeShellAccess : SavedHomeAccess {
+        override fun environment(): SavedHomeEnvironment {
+            val current = mutableState.value
+            val apps = current.installedApps
+            return SavedHomeEnvironment(
+                deviceClass = current.settingsLayoutDeviceClass,
+                layout = current.settingsTargetLayout,
+                installed = apps.filter { it.enabled }.map { it.identity }.toSet(),
+                hidden = apps.filter { it.visibility == AppVisibility.HIDDEN }.map { it.identity }.toSet(),
+                appsLoaded = apps.isNotEmpty(),
+                simpleMode = current.launcherSettings.features.simpleMode,
+            )
+        }
+
+        override fun applyHome(layout: HomeLayout) {
+            mutableState.value = mutableState.value.withSettingsTargetLayout(layout, homeLayoutRepository)
+        }
+
+        override fun holdWidgetIdReleases() = homeLayoutRepository.holdWidgetIdReleases()
+
+        override fun resumeWidgetIdReleases() = homeLayoutRepository.resumeWidgetIdReleases()
     }
 
     fun onLauncherSettingsActionSelected(action: LauncherShellAction) {

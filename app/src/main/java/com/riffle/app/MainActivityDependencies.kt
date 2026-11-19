@@ -67,6 +67,9 @@ import com.riffle.app.launcher.rss.FeedBackgroundRefreshScheduler
 import com.riffle.app.launcher.rss.FeedRefreshCoordinator
 import com.riffle.app.launcher.rss.RepositoryFeedArtworkLoader
 import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
+import com.riffle.app.launcher.savedhome.DataStoreSavedHomeLayoutsStore
+import com.riffle.app.launcher.savedhome.SavedHomeLayoutsStore
+import com.riffle.app.launcher.savedhome.SavedHomeWidgetBinder
 import com.riffle.app.launcher.sources.AndroidPackageLabels
 import com.riffle.app.launcher.sources.ContentSourceDependencies
 import com.riffle.app.launcher.sources.FeedSourceDependencies
@@ -103,6 +106,7 @@ import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
 import com.riffle.app.launcher.widgets.HostedWidgetIdReferenceState
 import com.riffle.app.launcher.widgets.PersistentWidgetAddTransactionStore
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
+import com.riffle.app.launcher.widgets.WidgetBindingResult
 import com.riffle.app.launcher.workspace.AndroidItemLaunchPort
 import com.riffle.app.launcher.workspace.SharedPreferencesContentLevelStore
 import com.riffle.app.launcher.workspace.SharedPreferencesDisabledSourcesStore
@@ -269,7 +273,34 @@ internal class MainActivityDependencies(
             feedArticleCacheRepository = feedArticleCacheRepository,
             workspaceRepository = workspaceRepository,
             dockDefaultsResolver = AndroidDockDefaultsResolver(activity),
+            savedHomeLayouts = savedHomeLayoutsStore,
+            widgetProviderOf = widgetHostGateway::hostedWidgetProvider,
+            savedHomeWidgetBinder = savedHomeWidgetBinder,
         )
+    }
+
+    /** The saved Home layouts: one store for Settings and the backup. */
+    val savedHomeLayoutsStore: SavedHomeLayoutsStore by lazy { DataStoreSavedHomeLayoutsStore(activity) }
+
+    /**
+     * Binds a saved widget again: a fresh host id bound to its provider, only when that needs no permission prompt
+     * and no configuration screen. Anything else is given back and the widget stays a placeholder.
+     */
+    private val savedHomeWidgetBinder by lazy {
+        SavedHomeWidgetBinder { provider ->
+            val id = widgetHostGateway.allocateHostedWidgetId()
+            val ready =
+                runCatching {
+                    widgetHostGateway.bindHostedWidget(id, provider) == WidgetBindingResult.Bound &&
+                        !widgetHostGateway.hostedWidgetRequiresConfiguration(id)
+                }.getOrDefault(false)
+            if (ready) {
+                id
+            } else {
+                runCatching { widgetHostGateway.deleteHostedWidgetId(id) }
+                null
+            }
+        }
     }
 
     /** Every widget host id delete of the process goes through these checks (see [HostIdDeletion]). */
@@ -580,6 +611,7 @@ internal class MainActivityDependencies(
             calendarFeeds = icsFeedRepository,
             pairs = appPairsRepository,
             poolOwnsHome = { homeLayoutRuntime.poolHome != null },
+            savedHomeLayouts = savedHomeLayoutsStore,
         )
     }
 

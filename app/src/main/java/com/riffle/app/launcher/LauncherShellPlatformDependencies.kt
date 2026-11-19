@@ -2,6 +2,9 @@ package com.riffle.app.launcher
 
 import com.riffle.app.launcher.rss.FeedArticleCacheRepository
 import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
+import com.riffle.app.launcher.savedhome.InMemorySavedHomeLayoutsStore
+import com.riffle.app.launcher.savedhome.SavedHomeLayoutsStore
+import com.riffle.app.launcher.savedhome.SavedHomeWidgetBinder
 import com.riffle.core.domain.launcher.home.DockDefaultsResolver
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -11,6 +14,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationReposit
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
 import com.riffle.core.domain.launcher.widgets.WidgetProviderCatalog
+import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
 data class LauncherShellPlatformDependencies(
     val notificationRepository: LauncherNotificationRepository = LauncherNotificationRepository { emptyList() },
@@ -25,6 +29,12 @@ data class LauncherShellPlatformDependencies(
     val workspaceRepository: CachedWorkspaceRepository? = null,
     /** The apps the Dock starts with on a fresh install, by role (dialer, SMS, browser, camera); none by default. */
     val dockDefaultsResolver: DockDefaultsResolver = DockDefaultsResolver { emptyList() },
+    /** The saved Home layouts (Settings > Home > Home layouts); in memory by default. */
+    val savedHomeLayouts: SavedHomeLayoutsStore = InMemorySavedHomeLayoutsStore(),
+    /** The provider a bound widget host id belongs to; what a saved layout records instead of the id. */
+    val widgetProviderOf: (HostedWidgetId) -> WidgetProviderIdentity? = { null },
+    /** Binds a saved widget again when a saved layout is activated; none by default (every widget is a placeholder). */
+    val savedHomeWidgetBinder: SavedHomeWidgetBinder = SavedHomeWidgetBinder { null },
 ) {
     fun installedWidgetProviders(catalog: WidgetProviderCatalog): List<InstalledWidgetProvider> =
         catalog.sortedProviders(widgetProviderRepository.installedWidgetProviders())

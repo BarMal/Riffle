@@ -54,6 +54,7 @@ class LauncherBackupDocumentHandler(
         document.stream?.let { layouts -> runCatching { port.restoreStreamLayouts(layouts) } }
         document.calendarFeeds?.let { feeds -> runCatching { port.restoreCalendarFeeds(feeds) } }
         document.pairs?.let { pairs -> runCatching { port.restorePairs(pairs) } }
+        document.savedHomeLayouts?.let { saved -> runCatching { port.restoreSavedHomeLayouts(saved) } }
     }
 }
 

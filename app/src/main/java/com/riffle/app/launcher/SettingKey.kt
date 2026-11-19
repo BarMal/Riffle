@@ -26,6 +26,16 @@ enum class SettingKey(
         R.string.setting_home_arrange_compact,
         R.string.setting_home_arrange_compact_keywords,
     ),
+    HOME_LAYOUTS_SAVE(
+        SettingsPage.HOME_LAYOUTS,
+        R.string.setting_home_layouts_save,
+        R.string.setting_home_layouts_save_keywords,
+    ),
+    HOME_LAYOUTS_LIST(
+        SettingsPage.HOME_LAYOUTS,
+        R.string.setting_home_layouts_list,
+        R.string.setting_home_layouts_list_keywords,
+    ),
     HOME_GRID_COLUMNS(
         SettingsPage.HOME,
         R.string.setting_home_grid_columns,
