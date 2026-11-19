@@ -296,6 +296,7 @@ private fun encodeDragTuning(tuning: HomeDragTuning): JSONObject =
         .put("folderHold", tuning.folderHoldMillis)
         .put("edgeHold", tuning.edgeHoldMillis)
         .put("pageRepeat", tuning.pageRepeatMillis)
+        .put("librarySlop", tuning.libraryDragSlopDp)
 
 // A missing or malformed value keeps its default; every value is held to its range.
 private fun JSONObject.toDragTuning(defaults: HomeDragTuning): HomeDragTuning =
@@ -305,6 +306,7 @@ private fun JSONObject.toDragTuning(defaults: HomeDragTuning): HomeDragTuning =
         folderHoldMillis = (opt("folderHold") as? Number)?.toInt() ?: defaults.folderHoldMillis,
         edgeHoldMillis = (opt("edgeHold") as? Number)?.toInt() ?: defaults.edgeHoldMillis,
         pageRepeatMillis = (opt("pageRepeat") as? Number)?.toInt() ?: defaults.pageRepeatMillis,
+        libraryDragSlopDp = (opt("librarySlop") as? Number)?.toInt() ?: defaults.libraryDragSlopDp,
     ).coerced()
 
 private fun JSONObject.toHomeBehaviour(defaults: HomeBehaviourSettings): HomeBehaviourSettings =

@@ -135,6 +135,21 @@ class HomeDragPushTest {
     }
 
     @Test
+    fun aBlockerThatCannotMoveNamesTheCellTheDropWouldSpillFrom() {
+        val dragged = app("a", 0, 0).copy(placement = null)
+        val full = widget("w", 0, 0, 4, 3)
+        val result = plan(page(full), dragged, 1.5f, 1.5f)
+        assertNull(result.landing)
+        assertEquals(GridCell(1, 1), result.spillLanding)
+    }
+
+    @Test
+    fun aPlanWithALandingHasNothingToSpill() {
+        val dragged = app("a", 0, 0)
+        assertNull(plan(page(dragged), dragged, 2.5f, 1.5f).spillLanding)
+    }
+
+    @Test
     fun aFullPageRefusesThePushAndKeepsItsItems() {
         val dragged = app("drag", 0, 0)
         val items = (0 until 12).filter { it != 0 }.map { app("i$it", it % 4, it / 4) }

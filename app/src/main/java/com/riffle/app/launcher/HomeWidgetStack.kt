@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.LayoutDirection
@@ -109,6 +110,25 @@ internal fun HomeWidgetStack(
         } else {
             Modifier
         }
+    // A platform widget keeps its taps and its own scrolls: the stack watches from above it (never over it) and the
+    // long press, held still, lifts the stack and opens its menu. The strip's lift is this one.
+    val platformShown = !ownWidgetShown && !isEditing
+    val platformMenuLabel =
+        if (platformShown) stringResource(R.string.widget_actions_description, shownMember.label) else null
+    val platformLift =
+        if (platformShown && dragState != null && workspaceActions != null) {
+            Modifier.homeItemDrag(
+                enabled = true,
+                item = widget,
+                dragState = dragState,
+                actions = workspaceActions,
+                onStationaryLongPress = { isContextMenuExpanded.value = true },
+                onMenuDismiss = { isContextMenuExpanded.value = false },
+                passive = true,
+            )
+        } else {
+            Modifier
+        }
 
     Box(
         modifier =
@@ -116,9 +136,16 @@ internal fun HomeWidgetStack(
                 .fillMaxSize()
                 .testTag(HOME_WIDGET_STACK_TEST_TAG)
                 .clipToBounds()
+                .then(platformLift)
                 .semantics {
                     contentDescription = shownMember.label
                     stateDescription = stateText
+                    if (platformMenuLabel != null) {
+                        onLongClick(label = platformMenuLabel) {
+                            isContextMenuExpanded.value = true
+                            true
+                        }
+                    }
                     customActions =
                         listOf(
                             CustomAccessibilityAction(nextLabel) { swipe.step(1) },
@@ -159,8 +186,8 @@ internal fun HomeWidgetStack(
                 }
             }
         }
-        // A platform widget is under Home's gesture layer (as a lone one is); an edit covers either kind.
-        if (!ownWidgetShown || isEditing) {
+        // An edit covers either kind with the gesture layer; a platform widget otherwise keeps its touches.
+        if (isEditing) {
             WidgetGestureLayer(
                 widget = widget,
                 dragState = dragState,
@@ -188,7 +215,7 @@ internal fun HomeWidgetStack(
             // only drawn and a touch goes through to the widget.
             takesTouches = !ownWidgetShown && !isEditing,
             reverse = !acrossPager && rtl,
-            dragModifier = if (!isEditing) dragModifier else Modifier,
+            dragModifier = if (!isEditing && ownWidgetShown) dragModifier else Modifier,
             modifier = Modifier.align(if (acrossPager) Alignment.CenterEnd else Alignment.BottomCenter),
         )
         ShortcutContextMenu(

@@ -23,6 +23,7 @@
     <string name="stream_move_down">Move down</string>
     <string name="stream_hide_section">Hide section</string>
     <string name="stream_section_hidden">%1$s hidden</string>
+    <string name="widget_actions_description">Show %1$s actions</string>
     <string name="stream_show_hidden_section">Show %1$s</string>
     <string name="stream_current_view">Currently %1$s</string>
 
@@ -382,6 +383,7 @@
     <string name="drag_tuning_folder_hold">Folder hold</string>
     <string name="drag_tuning_edge_hold">Edge hold</string>
     <string name="drag_tuning_page_repeat">Page repeat</string>
+    <string name="drag_tuning_library_slop">Library drag distance</string>
     <string name="drag_tuning_reset">Reset</string>
     <string name="drag_tuning_values_title">Current values</string>
     <string name="settings_page_app_pair">App pair experiment</string>
@@ -1040,6 +1042,25 @@
     <string name="menu_app_info">App info</string>
     <string name="menu_hide_app">Hide app</string>
     <string name="menu_uninstall">Uninstall</string>
+    <string name="home_remove_target">Remove</string>
+    <string name="home_selection_selected">Selected</string>
+    <string name="home_selection_not_selected">Not selected</string>
+    <string name="home_selection_select_action">Select</string>
+    <string name="home_selection_deselect_action">Deselect</string>
+    <string name="home_selection_count">%1$d selected</string>
+    <string name="home_selection_select_all">Select all on this page</string>
+    <string name="home_selection_clear">Clear</string>
+    <string name="home_selection_make_folder">Make a folder</string>
+    <string name="home_selection_remove_title">Remove from Home?</string>
+    <plurals name="home_selection_remove_message">
+        <item quantity="one">%1$d item will be taken off Home. Apps stay installed.</item>
+        <item quantity="other">%1$d items will be taken off Home. Apps stay installed.</item>
+    </plurals>
+    <plurals name="home_selection_removed">
+        <item quantity="one">Removed %1$d item</item>
+        <item quantity="other">Removed %1$d items</item>
+    </plurals>
+    <string name="home_selection_group_description">%1$d items</string>
     <string name="menu_remove_from_home">Remove from Home</string>
     <string name="menu_remove_from_dock">Remove from Dock</string>
     <string name="menu_remove_from_panel">Remove from panel</string>

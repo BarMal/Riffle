@@ -56,7 +56,7 @@ internal fun LauncherShellState.withWidgetStackEdit(
 /** The host ids a Home action is about to give up: every widget of a removed item, or the removed stack member. */
 internal fun LauncherShellState.removedHomeHostedWidgetIds(action: LauncherShellAction): List<HostedWidgetId> =
     when (action) {
-        is LauncherShellAction.RemoveHomeShortcut -> homeLayout.selectedPageHostedWidgetIdsForItem(action.itemId)
+        is LauncherShellAction.RemoveHomeShortcut -> homeLayout.hostedWidgetIdsForItem(action.itemId)
         is LauncherShellAction.RemoveStackedWidget ->
             homeLayout.selectedPage.items
                 .filterIsInstance<WidgetItem>()

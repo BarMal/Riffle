@@ -56,12 +56,14 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 
 @Composable
+@Suppress("LongParameterList")
 @OptIn(ExperimentalFoundationApi::class)
 internal fun HomeFolder(
     folder: FolderItem,
     dragState: HomeItemDragState,
     isEditing: Boolean,
     presentation: HomeFolderPresentation,
+    isSelected: Boolean = false,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
     /** The folder is the item a drag lifted: its icon is the desaturated ghost it left (the lifted one is above). */
@@ -78,6 +80,7 @@ internal fun HomeFolder(
             isEditing = isEditing,
             onShowContextMenu = { isContextMenuExpanded.value = true },
             onOpenFolder = { actions.onFolderOpen(folder) },
+            onToggleSelection = { actions.onAction(LauncherShellAction.ToggleHomeSelection(folder.id)) },
         )
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -90,11 +93,13 @@ internal fun HomeFolder(
                         interactionSource = pressInteractionSource,
                         policy = pressMotionPolicy,
                     )
+                    .selectionSemantics(isEditing, isSelected)
                     .combinedClickable(
                         enabled = true,
                         interactionSource = pressInteractionSource,
                         indication = pressIndication,
                         onClick = pressHandlers.onTap,
+                        onClickLabel = selectionClickLabel(isEditing, isSelected),
                     )
                     .homeItemDrag(
                         enabled = true,
@@ -126,6 +131,8 @@ internal fun HomeFolder(
                         count = presentation.notificationCount,
                         modifier = Modifier.align(Alignment.TopEnd),
                     )
+                } else if (isSelected) {
+                    SelectionBadge(modifier = Modifier.align(Alignment.TopEnd))
                 }
             }
             WallpaperReadableLabel(

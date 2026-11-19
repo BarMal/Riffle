@@ -124,6 +124,8 @@ are not, except the product's own nouns, which are always capitalised as the pro
 | Take an item off the Dock | Remove from Dock | "Unpin from Dock", "Remove from dock" |
 | Put an app in the Floating dock | Add to Floating dock, Remove from Floating dock | "Add to floating dock" |
 | Take an item off Home | Remove from Home | "Remove from home" |
+| The drop target that takes a lifted item off Home | Remove (its spoken name is Remove from Home) | "Delete", "Trash" |
+| Edit page, several items | N selected, Select all on this page, Clear, Make a folder | "Select all", "Group" |
 | Move an item between Home and the Dock | Move to Home, Move to Dock | "Move to home", "Move to dock" |
 | Take an app out of a folder | Remove from folder | |
 | Hide an app from the Library and Home | Hide app (undo from Hidden apps: Unhide) | a bare "Hide" |
@@ -291,5 +293,7 @@ device-local (`riffle_after_update`, outside the launcher settings, the backup d
 
 Sliders for the numbers a Home drag reads at runtime, with Reset and the current values as text to copy: push ring radius
 (0.5 to 1.2 cell, default 0.75), dead-zone radius (0.15 to 0.45, default 0.30), folder hold (100 to 600 ms, default 250),
-edge hold (200 to 1000 ms, default 500) and page repeat (300 to 1500 ms, default 700). Stored in `LauncherSettings.home`
+edge hold (200 to 1000 ms, default 500), page repeat (300 to 1500 ms, default 700) and the Library drag distance (6 to
+40 dp, default 12: how far a held Library app moves before its menu becomes a Home drag; data stored before it existed
+reads as the default). Stored in `LauncherSettings.home`
 (`HomeBehaviourSettings.dragTuning`, held to its ranges when decoded and when saved).

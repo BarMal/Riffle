@@ -106,6 +106,10 @@ class WidgetStackDropTest {
             moveTo(end)
         }
         composeRule.mainClock.advanceTimeBy(HOLD_PAST_FOLDER_HOLD_MILLIS)
+        // A hosted widget no longer carries a pressable layer, so nothing keeps a frame coming while the finger rests:
+        // the lift is composed on the first frame and the folder hold runs from there.
+        composeRule.waitForIdle()
+        composeRule.mainClock.advanceTimeBy(HOLD_PAST_FOLDER_HOLD_MILLIS)
         composeRule.waitForIdle()
     }
 

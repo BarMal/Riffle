@@ -62,6 +62,13 @@ internal fun SettingsDragTuningPageContent(
             valueLabel = { "$it ms" },
             onValueChange = { set(tuning.copy(pageRepeatMillis = it)) },
         )
+        DiscreteSettingSlider(
+            title = stringResource(R.string.drag_tuning_library_slop),
+            value = tuning.libraryDragSlopDp,
+            valueRange = HomeDragTuning.LIBRARY_DRAG_SLOP_RANGE,
+            valueLabel = { "$it dp" },
+            onValueChange = { set(tuning.copy(libraryDragSlopDp = it)) },
+        )
         TextButton(
             modifier = Modifier.testTag(DRAG_TUNING_RESET_TEST_TAG),
             onClick = { set(HomeDragTuning()) },

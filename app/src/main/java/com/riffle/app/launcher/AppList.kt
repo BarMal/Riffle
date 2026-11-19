@@ -124,6 +124,7 @@ internal fun AppDrawerRow(
             Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 56.dp)
+                .libraryHomeDrag(app, state.homeDrag) { isMenuExpanded.value = false }
                 .combinedClickable(
                     onClick = { onAction(LauncherShellAction.LaunchApp(app.identity)) },
                     onLongClick = {
@@ -458,4 +459,6 @@ internal data class AppDrawerRowState(
     val shortcutItems: List<AppDrawerShortcutMenuItem>,
     val showInlineActions: Boolean,
     val haptics: LauncherHaptics,
+    /** The Library's drag to Home for this app: null when it is not offered or the app is on Home already. */
+    val homeDrag: LibraryHomeDrag? = null,
 )

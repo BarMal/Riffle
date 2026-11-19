@@ -95,45 +95,50 @@ fun PageEditControls(
     pageCount: Int,
     selectedPageIndex: Int,
     onAction: (LauncherShellAction) -> Unit,
+    selectedCount: Int = 0,
+    canMakeFolder: Boolean = false,
 ) {
     val isPageMenuExpanded = remember { mutableStateOf(false) }
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextButton(
-            enabled = selectedPageIndex > 0,
-            onClick = { onAction(LauncherShellAction.SelectPreviousHomePage) },
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        HomeSelectionBar(selectedCount = selectedCount, canMakeFolder = canMakeFolder, onAction = onAction)
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = stringResource(R.string.page_previous))
-        }
-        TextButton(onClick = { isPageMenuExpanded.value = true }) {
-            Text(text = stringResource(R.string.home_pages_position, selectedPageIndex + 1, pageCount))
-        }
-        ShortcutContextMenu(
-            expanded = isPageMenuExpanded.value,
-            items =
-                pageManagementMenuItems(
-                    pageCount = pageCount,
-                    selectedPageIndex = selectedPageIndex,
-                    text = rememberSettingsText(),
-                ),
-            onDismissRequest = { isPageMenuExpanded.value = false },
-            onAction = onAction,
-        )
-        TextButton(
-            enabled = selectedPageIndex < pageCount - 1,
-            onClick = { onAction(LauncherShellAction.SelectNextHomePage) },
-        ) {
-            Text(text = stringResource(R.string.page_next))
-        }
-        TextButton(onClick = { onAction(LauncherShellAction.ExitHomeEditMode) }) {
-            Text(text = stringResource(R.string.action_done))
+            TextButton(
+                enabled = selectedPageIndex > 0,
+                onClick = { onAction(LauncherShellAction.SelectPreviousHomePage) },
+            ) {
+                Text(text = stringResource(R.string.page_previous))
+            }
+            TextButton(onClick = { isPageMenuExpanded.value = true }) {
+                Text(text = stringResource(R.string.home_pages_position, selectedPageIndex + 1, pageCount))
+            }
+            ShortcutContextMenu(
+                expanded = isPageMenuExpanded.value,
+                items =
+                    pageManagementMenuItems(
+                        pageCount = pageCount,
+                        selectedPageIndex = selectedPageIndex,
+                        text = rememberSettingsText(),
+                    ),
+                onDismissRequest = { isPageMenuExpanded.value = false },
+                onAction = onAction,
+            )
+            TextButton(
+                enabled = selectedPageIndex < pageCount - 1,
+                onClick = { onAction(LauncherShellAction.SelectNextHomePage) },
+            ) {
+                Text(text = stringResource(R.string.page_next))
+            }
+            TextButton(onClick = { onAction(LauncherShellAction.ExitHomeEditMode) }) {
+                Text(text = stringResource(R.string.action_done))
+            }
         }
     }
 }

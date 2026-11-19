@@ -998,6 +998,24 @@ private fun persistSetupCardDismissal(
     }
 }
 
+/** The removal on the page the item stands on (the selected one, or the one the action names, or the first with it). */
+private fun HomeShortcutEngine.removeFromItsPage(
+    layout: HomeLayout,
+    action: LauncherShellAction.RemoveHomeShortcut,
+): HomeShortcutResult {
+    val owner =
+        layout.pages.firstOrNull { page -> page.id == action.pageId && page.items.any { it.id == action.itemId } }
+            ?: layout.selectedPage.takeIf { page -> page.items.any { it.id == action.itemId } }
+            ?: layout.pages.firstOrNull { page -> page.items.any { it.id == action.itemId } }
+            ?: return HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+    val result = removeShortcutFromSelectedPage(layout.copy(selectedPageId = owner.id), action.itemId)
+    return if (result is HomeShortcutResult.Updated) {
+        HomeShortcutResult.Updated(result.layout.copy(selectedPageId = layout.selectedPageId))
+    } else {
+        result
+    }
+}
+
 internal fun HomeShortcutEngine.applyEdit(
     action: LauncherShellAction,
     layout: HomeLayout,
@@ -1009,11 +1027,7 @@ internal fun HomeShortcutEngine.applyEdit(
                 shortcut = action.shortcut,
             )
 
-        is LauncherShellAction.RemoveHomeShortcut ->
-            removeShortcutFromSelectedPage(
-                layout = layout,
-                itemId = action.itemId,
-            )
+        is LauncherShellAction.RemoveHomeShortcut -> removeFromItsPage(layout, action)
 
         is LauncherShellAction.MoveHomeShortcutToCell ->
             moveShortcutToCellOnSelectedPage(

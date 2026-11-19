@@ -826,6 +826,8 @@ internal data class DockDragState(
     val itemId: LauncherItemId,
     val originIndex: Int,
     val targetIndex: Int,
+    /** Home has taken the drag on as a Home drag (the lifted item, the push ring); the slot wears its ghost. */
+    val external: Boolean = false,
 )
 
 private data class DockDragViewport(
@@ -925,6 +927,11 @@ private fun DockSlot(
             onDragStateChanged = onDragStateChanged,
             onDragDroppedAction = onDragDroppedAction,
         )
+    val shortcut = (state.item as? DockSlotItemState.Shortcut)?.shortcut
+    // Carried by Home, the pinned app is the lifted icon on the finger: its slot shows the ghost of the app (the
+    // outline where it would land in the Dock, the dimmed icon while the finger is away). The icon stays composed,
+    // unseen, to keep the gesture it started.
+    val ghosting = shortcut != null && dragState?.itemId == shortcut.id && dragState.external
     Box(
         modifier =
             dockSlotModifier(
@@ -935,8 +942,18 @@ private fun DockSlot(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        CompositionLocalProvider(LocalDockSlotDrag provides slotDrag) {
-            DockSlotContent(state, presentation, appIconLoader)
+        Box(modifier = Modifier.graphicsLayer { alpha = if (ghosting) 0f else 1f }) {
+            CompositionLocalProvider(LocalDockSlotDrag provides slotDrag) {
+                DockSlotContent(state, presentation, appIconLoader)
+            }
+        }
+        if (ghosting && shortcut != null) {
+            HomeGhostIcon(
+                identity = shortcut.appIdentity,
+                iconLoader = appIconLoader,
+                outline = LocalDockExternalOverDock.current(),
+                modifier = Modifier.requiredSize(state.iconSizeDp.dp),
+            )
         }
     }
 }
@@ -1007,7 +1024,7 @@ private fun dockSlotModifier(
     val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
     val lift =
         dockDragLift(
-            isBeingDragged = dragState?.itemId == state.item?.id,
+            isBeingDragged = dragState?.itemId == state.item?.id && dragState?.external != true,
             reducedMotion = presentation.interactions.reducedMotion,
         )
     return modifier
@@ -1043,6 +1060,7 @@ private fun dockSlotDragModifier(
     val contextual = LocalDockPinnedStream.current?.contextual == true
     val choice = LocalDockChoice.current
     val homeDropAt = LocalDockHomeDropAt.current
+    val externalDrag = LocalDockExternalDrag.current
     val coordinates = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val slotBoundsSink = LocalDockPinnedSlotBoundsSink.current
     val itemId = state.item?.id
@@ -1062,6 +1080,7 @@ private fun dockSlotDragModifier(
                     toRoot = { local -> coordinates[0]?.takeIf { it.isAttached }?.localToRoot(local) ?: local },
                     dropAt = { homeDropAt() },
                     onHoldMoved = { choice?.dismissMenus() },
+                    externalDrag = { externalDrag() },
                 ),
             slotSizeDp = state.iconSizeDp,
             itemSpacingDp = state.itemSpacingDp,
@@ -1095,7 +1114,7 @@ private fun dockDragLift(
     return DockDragLift(scale, elevation)
 }
 
-@Suppress("LongParameterList", "CyclomaticComplexMethod")
+@Suppress("LongParameterList", "CyclomaticComplexMethod", "LongMethod")
 private fun Modifier.dockItemDrag(
     state: DockSlotState,
     enabled: Boolean,
@@ -1121,6 +1140,9 @@ private fun Modifier.dockItemDrag(
                     var autoScrollJob: Job? = null
                     var moved = false
                     var lastLocal = Offset.Zero
+                    // Once the hold has moved, Home carries the drag too: the lifted item, the push ring on Home's
+                    // pages, the Remove target. Over the Dock the Dock's own reorder stays what a release does.
+                    var external: HomeExternalDrag? = null
 
                     fun updateCandidate(slotSizePx: Float) {
                         targetIndex =
@@ -1133,7 +1155,7 @@ private fun Modifier.dockItemDrag(
                                 slotWidthPx = slotSizePx,
                                 itemCount = state.shortcutCount,
                             )
-                        onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex))
+                        onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex, external != null))
                     }
 
                     fun updateEdgeAutoScroll(slotSizePx: Float) {
@@ -1162,6 +1184,7 @@ private fun Modifier.dockItemDrag(
                             initialScrollOffset = dragViewport.scrollState.value
                             edgeAutoScrollDelta = 0f
                             moved = false
+                            external = null
                             haptics.longPress()
                             onDragStateChanged(DockDragState(itemId, state.shortcutIndex, state.shortcutIndex))
                         },
@@ -1174,7 +1197,12 @@ private fun Modifier.dockItemDrag(
                             if (!moved && HoldMenuRule.leavesMenu(dragXPx, dragYPx, viewConfiguration.touchSlop)) {
                                 moved = true
                                 home.onHoldMoved()
+                                external =
+                                    home.externalDrag()?.takeIf {
+                                        it.start(ExternalHomeDragSource.Dock(itemId), home.toRoot(change.position))
+                                    }
                             }
+                            if (moved) external?.move(home.toRoot(change.position))
                             val slotSizePx = density * (slotSizeDp + itemSpacingDp)
                             val viewportSizePx = density * dragViewport.contentViewportMainAxisDp
                             val pointerAlongRunPx =
@@ -1192,7 +1220,14 @@ private fun Modifier.dockItemDrag(
                         onDragEnd = {
                             autoScrollJob?.cancel()
                             // A hold that never moved is the menu, not a drag: nothing to drop.
-                            if (moved) {
+                            val carried = external
+                            if (carried != null) {
+                                // Home does what the release means on its side; over the Dock it is a reorder.
+                                external = null
+                                if (carried.end() && targetIndex != state.shortcutIndex) {
+                                    onAction(LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex))
+                                }
+                            } else if (moved) {
                                 dockDragDropAction(
                                     itemId = itemId,
                                     originIndex = state.shortcutIndex,
@@ -1207,6 +1242,8 @@ private fun Modifier.dockItemDrag(
                         },
                         onDragCancel = {
                             autoScrollJob?.cancel()
+                            external?.cancel()
+                            external = null
                             onDragStateChanged(null)
                         },
                     )
@@ -1222,6 +1259,8 @@ private class DockDragHome(
     val dropAt: () -> ((Offset) -> HomeDropTarget?)?,
     /** The hold's menu closes: the finger moved past slop. */
     val onHoldMoved: () -> Unit,
+    /** What Home offers to carry the drag on as a Home drag, or null while no Home stands beside the Dock. */
+    val externalDrag: () -> HomeExternalDrag?,
 )
 
 /** The Home cell a Dock item dropped at a finger would land in. */
@@ -1231,6 +1270,12 @@ internal data class HomeDropTarget(
     /** Whether no item stands there: otherwise the first free cell of the page takes it. */
     val free: Boolean,
 )
+
+/** What Home offers a Dock drag to go on as a Home drag; set by the Home surface, read by the Dock's drag. */
+internal val LocalDockExternalDrag = staticCompositionLocalOf<() -> HomeExternalDrag?> { { null } }
+
+/** Whether a Dock drag Home carries is over the Dock now (its slot wears the outline) or away from it (the ghost). */
+internal val LocalDockExternalOverDock = staticCompositionLocalOf<() -> Boolean> { { true } }
 
 /** Where Home takes a Dock item dropped in the root: set by the Home surface, read by the Dock's drag. */
 internal val LocalDockHomeDropAt =
