@@ -2578,3 +2578,58 @@ from the installed-apps snapshot, which omits such apps. The name is now the sna
 Media resumption against real apps (which apps let a launcher connect, and how long they take), the Dock tile's mark
 at the size of the real tile, and the swipe on a source card are verified by code and Robolectric tests only; the
 screenshots are in `app/src/test/screenshots` (`MediaCentreScreenshotTest`, `MediaCentreUnfoldedScreenshotTest`).
+
+## The Dock as the stack handle (design canvas round 12)
+
+The owner's decisions: the Dock itself is the handle for moving between card stacks (option "HA"); a sideways swipe on a
+card only dismisses; the Library pull defaults to off. ADR 0003, Amendment 6.
+
+### Slide along the Dock
+
+While the Stream shows, a drag that starts on the Dock's contextual row and leads along the Dock's run, past touch slop,
+scrubs (`DockScrub.claims` in `:core:domain`, decided on the Initial pass of the Dock's one pointer loop, `dockPullInput`, so
+the row's own scroll does not take it first). It uses the hold-to-choose selection (`DockChoiceState`) in a scrubbing mode
+rather than a second detector.
+
+- **Which tile.** `DockScrub.tileAt`: the selectable tile under the finger becomes current as the finger enters it. The
+  current tile keeps the finger until it is more than 6 dp past its extent, so a finger resting on a boundary does not
+  flicker. A gap between tiles, a pair tile (it is not a Dock entry) and a pinned app with no page (not in the Stream's pages)
+  are passed over: the ring stays, there is no tick.
+- **The page.** Each tile entered asks the Stream to land on its page, exactly as a tap on the tile does (the same
+  focus request; not the tap's "second tap on the ringed app opens it"). The Stream's pager animates one page switch at a
+  time and a new request restarts it, so a quick scrub across several tiles coalesces to the latest target. Under reduced
+  motion the switch is the same cross-fade a tile tap makes.
+- **Tick.** One `DETENT` per tile entered, through the tick wrapper ("Light ticks" applies). Nothing at the release.
+- **The row holds more tiles than fit.** The row does not follow the finger while scrubbing. Within 24 dp of its leading or
+  trailing end, while tiles are hidden toward that end, it scrolls toward it at the hold-to-choose pace (300 dp/s,
+  `DockChoice.edgeScrollDp`), a frame at a time, and the tiles that pass under the finger keep becoming current. A lift with
+  velocity (more than 100 dp/s) flings the row by the platform's fling without changing the page past the tile last entered;
+  the ring arriving on that tile does not scroll the row back (`DockChoiceState.consumeScrubbed`).
+- **What is unchanged.** A tap on a tile jumps to its page; a long-press opens its menu; a drag across the run is the press
+  or the pull (and hold to choose, from Home or sliding after a press); the accessibility actions "Previous page" and "Next
+  page", the focusable tiles and their click actions. No two-finger drag. Nothing is gesture-only.
+- **Draw-phase only.** The choice mark (the ring and the 14% growth) is drawn in the draw phase from a derived state, and while
+  scrubbing the open page's own ring gives way to it, so a scrub recomposes no tile
+  (`DockScrubTest.scrubbingAcrossThreeTilesRecomposesNoTile`, `DockResizeMotionTest`).
+
+### A sideways swipe on a card only dismisses
+
+The Stream's pager has `userScrollEnabled = false`. A sideways drag on the dismissible front card dismisses it; on a card that
+cannot be dismissed, or a strip, it resists with the existing lock cue; in the empty room it does nothing, and it is not a
+tap either (the room's tap that closes the Stream and `pressMenu`'s tap now ignore a finger that left touch slop). Vertical
+drags still move through a stack's cards. Programmatic page changes (the Dock, the pager's actions) still animate. Unfolded,
+likewise. Settings > Layout's "App pages scroll" and page dots describe Home's pages and the paged Library; they never
+affected the Stream, and the Stream has no page indicator of its own (the Dock's ring is it).
+
+### The Library pull defaults to off
+
+`FeatureSettings.library` defaults to false. A stored true or false is kept; a missing value decodes to false. With it off the
+Dock pull claims nothing (the drag falls through to what is underneath; the slide along the Dock is unaffected), "Open Library"
+is not offered, and a gesture bound to it is unbound; search stays (`OpenSearch` opens the search destination whether or not
+the Library is on).
+
+### What a device must confirm
+
+The feel of the scrub: the hysteresis width, the edge pace and whether 24 dp is easy to reach with a thumb, the fling's
+inertia against the scrub, how the page transition keeps up with a fast slide, and the double ring that shows for the frame or
+two before the pager passes halfway are verified by Robolectric tests with injected touches only.
