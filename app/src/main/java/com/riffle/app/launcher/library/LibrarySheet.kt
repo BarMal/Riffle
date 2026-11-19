@@ -86,6 +86,8 @@ import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.launcherPanelContentColor
 import com.riffle.app.launcher.launcherPanelSurfaceColor
 import com.riffle.app.launcher.pressMenu
+import com.riffle.app.launcher.search.wider.WiderSearchModel
+import com.riffle.app.launcher.search.wider.rememberWiderSearch
 import com.riffle.app.launcher.searchEmptyText
 import com.riffle.app.launcher.searchWebPreview
 import com.riffle.app.launcher.stream.StreamIcons
@@ -143,6 +145,7 @@ internal fun LibrarySheet(
     val categories = remember(state.apps) { LibraryCategories.from(state.apps) }
     val openCategory = categories.firstOrNull { category -> category.key == openCategoryKey }
     val onAction = context.onAction
+    val wider = rememberWiderSearch(state.query, state.search, state.hits)
 
     BackHandler(enabled = state.isSearching) { onAction(LauncherShellAction.SearchQueryChanged("")) }
     BackHandler(enabled = openCategory != null && !state.isSearching) { openCategoryKey = null }
@@ -279,7 +282,7 @@ internal fun LibrarySheet(
                             haptics = context.haptics,
                             modifier = dismissDrag,
                         )
-                        LibrarySearchRow(state = state, onAction = onAction)
+                        LibrarySearchRow(state = state, wider = wider, onAction = onAction)
                         if (!state.isSearching && openCategory == null) {
                             AppProfileFilterChips(
                                 selectedFilter = state.profileFilter,
@@ -293,6 +296,7 @@ internal fun LibrarySheet(
                         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                             LibraryBody(
                                 state = state,
+                                wider = wider,
                                 context = context,
                                 categories = categories,
                                 openCategory = openCategory,
@@ -333,6 +337,7 @@ internal fun LibrarySheet(
 @Composable
 private fun LibraryBody(
     state: LibraryState,
+    wider: WiderSearchModel<LibraryHit>,
     context: AppListContext,
     categories: List<com.riffle.core.domain.launcher.library.LibraryCategory>,
     openCategory: com.riffle.core.domain.launcher.library.LibraryCategory?,
@@ -349,7 +354,8 @@ private fun LibraryBody(
                 emptyText = searchEmptyText(state.query, state.filters),
                 presentation = state.searchPresentation,
                 gridColumns = state.searchGridColumns,
-                webPreview = searchWebPreview(state.query),
+                webPreview = searchWebPreview(state.query).takeIf { state.search.webHandoff },
+                wider = wider,
                 modifier = Modifier.fillMaxSize(),
             )
 
@@ -413,6 +419,7 @@ internal fun LibraryHit.toGridResult(): SearchGridResult =
 @Composable
 private fun LibrarySearchRow(
     state: LibraryState,
+    wider: WiderSearchModel<LibraryHit>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -424,12 +431,16 @@ private fun LibrarySearchRow(
         }
     }
     val latestHits by rememberUpdatedState(state.hits)
+    val latestWider by rememberUpdatedState(wider)
     AppSearchField(
         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester).testTag(LIBRARY_SEARCH_FIELD_TEST_TAG),
         query = state.query,
         onQueryChanged = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
         label = stringResource(R.string.library_search_label),
-        onSearch = { latestHits.firstOrNull()?.toGridResult()?.action?.let(onAction) },
+        onSearch = {
+            // The calculator's answer is copied; otherwise the top app (or, with none, the top wider row) opens.
+            if (!latestWider.enter()) latestHits.firstOrNull()?.toGridResult()?.action?.let(onAction)
+        },
     )
 }
 

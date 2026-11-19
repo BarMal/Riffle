@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -83,30 +84,32 @@ internal fun SettingsSearchSourceRows(
         checked = settings.webHandoff,
         tag = "web",
     ) { change(settings.copy(webHandoff = it)) }
-    SettingsListRow(
-        modifier = Modifier.settingAnchor(SettingKey.LIBRARY_SEARCH_ORDER),
-        title = SettingKey.LIBRARY_SEARCH_ORDER.label(),
-        subtitle = stringResource(R.string.settings_search_order_subtitle),
-    )
-    val order = WiderSearchMerger.completeOrder(settings.groupOrder)
-    order.forEachIndexed { index, source ->
-        val name = stringResource(source.groupNameRes())
+    // The heading row and the three group rows are one setting: search scrolls to the group of them.
+    Column(modifier = Modifier.settingAnchor(SettingKey.LIBRARY_SEARCH_ORDER)) {
         SettingsListRow(
-            title = name,
-            trailingContent = {
-                Row {
-                    MoveButton(
-                        source,
-                        name,
-                        delta = -1,
-                        enabled = index > 0,
-                    ) { change(settings.movedGroup(source, -1)) }
-                    MoveButton(source, name, delta = 1, enabled = index < order.lastIndex) {
-                        change(settings.movedGroup(source, 1))
-                    }
-                }
-            },
+            title = SettingKey.LIBRARY_SEARCH_ORDER.label(),
+            subtitle = stringResource(R.string.settings_search_order_subtitle),
         )
+        val order = WiderSearchMerger.completeOrder(settings.groupOrder)
+        order.forEachIndexed { index, source ->
+            val name = stringResource(source.groupNameRes())
+            SettingsListRow(
+                title = name,
+                trailingContent = {
+                    Row {
+                        MoveButton(
+                            source,
+                            name,
+                            delta = -1,
+                            enabled = index > 0,
+                        ) { change(settings.movedGroup(source, -1)) }
+                        MoveButton(source, name, delta = 1, enabled = index < order.lastIndex) {
+                            change(settings.movedGroup(source, 1))
+                        }
+                    }
+                },
+            )
+        }
     }
     SettingsChoiceRow(
         modifier = Modifier.settingAnchor(SettingKey.LIBRARY_SEARCH_PER_GROUP),

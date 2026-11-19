@@ -56,9 +56,13 @@ object WiderSearchMerger {
                 .take(1)
         val groups =
             completeOrder(order).mapNotNull { source ->
+                val shown = group(source, snapshot.results[source].orEmpty(), cap, source in expanded)
                 when {
-                    source in needsPermission -> SearchGroup(source, emptyList(), needsPermission = true)
-                    else -> group(source, snapshot.results[source].orEmpty(), cap, source in expanded)
+                    source !in needsPermission -> shown
+                    // A source that can still offer something without the permission (the Files app row) keeps it.
+                    else ->
+                        shown?.copy(needsPermission = true)
+                            ?: SearchGroup(source, emptyList(), needsPermission = true)
                 }
             }
         return MergedSearch(answers = answers, primary = primary, groups = groups)

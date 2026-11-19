@@ -160,6 +160,21 @@ class WiderSearchMergerTest {
     }
 
     @Test
+    fun aSourceThatStillOffersARowKeepsItBesideTheAllowRow() {
+        val merged =
+            WiderSearchMerger.merge(
+                primary = emptyList<String>(),
+                snapshot = snapshot(SearchSourceId.FILES to listOf(ScoredResult(WiderSearchResult.FilesApp("q"), 0))),
+                order = order,
+                perGroup = 5,
+                needsPermission = setOf(SearchSourceId.FILES),
+            )
+        val files = merged.groups.single()
+        assertTrue(files.needsPermission)
+        assertTrue(files.rows.single() is WiderSearchResult.FilesApp)
+    }
+
+    @Test
     fun headersShowOnlyWhenMoreThanOneGroupHasResults() {
         fun merged(
             primary: List<String>,

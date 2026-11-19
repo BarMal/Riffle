@@ -49,6 +49,9 @@ import com.riffle.app.launcher.launcherPanelContentColor
 import com.riffle.app.launcher.launcherPanelSurfaceColor
 import com.riffle.app.launcher.library.LibraryState
 import com.riffle.app.launcher.library.toGridResult
+import com.riffle.app.launcher.search.wider.WiderAnswerPanel
+import com.riffle.app.launcher.search.wider.WiderGroupsPanel
+import com.riffle.app.launcher.search.wider.rememberWiderSearch
 import com.riffle.app.launcher.searchEmptyText
 import com.riffle.app.launcher.searchWebPreview
 import com.riffle.app.launcher.stream.ProvideStreamCardSizes
@@ -106,7 +109,8 @@ internal fun DockSearchSurface(
     val onAction = context.onAction
     val closeLabel = stringResource(R.string.dock_search_close_action)
     val asStack = state.searchPresentation == SearchResultPresentation.STACK
-    val stack = rememberSearchStackWiring(state, context, reducedMotion, stream, motion, asStack)
+    val wider = rememberWiderSearch(state.query, state.search, state.hits)
+    val stack = rememberSearchStackWiring(state, context, reducedMotion, stream, motion, asStack, wider)
 
     BackHandler(enabled = state.isSearching) { onAction(LauncherShellAction.SearchQueryChanged("")) }
     BackHandler(enabled = !state.isSearching) { motion.close() }
@@ -166,8 +170,10 @@ internal fun DockSearchSurface(
                     },
             verticalArrangement = Arrangement.Bottom,
         ) {
-            if (state.isSearching && asStack) {
+            if (state.isSearching && asStack && stack.cards.isNotEmpty()) {
                 // Unfolded the Stream's bigger cards and more strips; folded its three of 56 dp.
+                WiderGroupsPanel(wider, reverse = true)
+                if (wider.hasAnything) Spacer(modifier = Modifier.height(RiffleSpacing.xs))
                 ProvideStreamCardSizes(StreamCardSizes.forPosture(unfolded = column != null)) {
                     SearchResultStack(
                         cards = stack.cards,
@@ -179,6 +185,11 @@ internal fun DockSearchSurface(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                 }
+                if (wider.merged.answers.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(RiffleSpacing.xs))
+                    WiderAnswerPanel(wider)
+                    Spacer(modifier = Modifier.height(RiffleSpacing.xs))
+                }
             } else if (state.isSearching) {
                 SearchResultList(
                     results = state.hits.map { hit -> hit.toGridResult() },
@@ -186,8 +197,9 @@ internal fun DockSearchSurface(
                     emptyText = searchEmptyText(state.query, state.filters),
                     presentation = state.searchPresentation,
                     gridColumns = state.searchGridColumns,
-                    webPreview = searchWebPreview(state.query),
+                    webPreview = searchWebPreview(state.query).takeIf { state.search.webHandoff },
                     growsUp = true,
+                    wider = wider,
                     modifier = Modifier.weight(1f, fill = false),
                 )
                 Spacer(modifier = Modifier.height(RiffleSpacing.xs))
@@ -197,7 +209,7 @@ internal fun DockSearchSurface(
                 onAction = onAction,
                 closeLabel = closeLabel,
                 onClose = motion::close,
-                onSearch = stack.openFront,
+                onSearch = { if (!wider.enter()) stack.openFront() },
             )
         }
     }

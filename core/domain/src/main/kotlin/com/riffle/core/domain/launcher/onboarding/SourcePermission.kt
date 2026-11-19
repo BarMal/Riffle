@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.onboarding
 
+import com.riffle.core.domain.launcher.search.wider.SearchSourceId
 import com.riffle.core.domain.launcher.stream.StreamSourceIds
 import com.riffle.core.domain.launcher.workspace.SourceId
 import com.riffle.core.domain.launcher.workspace.SourceIds
@@ -36,6 +37,12 @@ enum class PermissionGain {
 
     /** Calendar access: today's events. */
     CALENDAR,
+
+    /** Contacts permission: people by name in search. */
+    CONTACTS,
+
+    /** Media permission: photos, videos and audio by name in search. */
+    FILES,
     GENERIC,
     ;
 
@@ -43,6 +50,14 @@ enum class PermissionGain {
         /** The gain of the first of [sources] this knows, or [GENERIC]. */
         fun of(sources: List<SourceId>): PermissionGain =
             sources.firstNotNullOfOrNull { source -> forSource(source) } ?: GENERIC
+
+        /** The gain of allowing the access a wider search source waits for, or [GENERIC] for one that needs none. */
+        fun of(source: SearchSourceId): PermissionGain =
+            when (source) {
+                SearchSourceId.CONTACTS -> CONTACTS
+                SearchSourceId.FILES -> FILES
+                else -> GENERIC
+            }
 
         private fun forSource(source: SourceId): PermissionGain? =
             when (source) {
