@@ -435,7 +435,7 @@ unfolded layout.
   card going away (`OpenCardReducer`, pure and tested). Reduced motion: no growth, an 80 ms fade.
 - **Actions in the Dock** (`DockActionsRow`, `CardActionControls`, `StreamCardActions`). While a card is open the Dock gains a
   Thick-glass row above its icons (below them on a top Dock): a reply field with send, Dismiss and Snooze for a
-  conversation; previous, play or pause, next and the queue control for the player; "Open in calendar" for an event;
+  conversation; previous, play or pause and next for the player, with "Open player" (see "One stack per player"); "Open in calendar" for an event;
   Complete for a task. The row is part of the Dock's area, so the Dock grows upward and the room the Stream sees shrinks with
   it; it follows the window insets, so it and the open card stay above the keyboard. The same controls are the open card's
   accessibility actions. "On the card" puts them under the content (also the fallback where the Dock cannot hold the row).
@@ -467,8 +467,8 @@ unfolded layout.
   are unchanged for the Dock, folders, Library tiles and search; a card's content still reports its colour to a spotlit
   surface it sits in. The optional top glow is the edge's tint strip along the top edge only.
 - **Browse cards lost their buttons.** A notification's Reply, Dismiss and Snooze, and its thread toggle, are on the open card
-  (the Dock's row, or the card); the player keeps its transport and scrubber on the browse card and gains the queue on the
-  open one. Tests that clicked those buttons now open the card first (see the report of this slice).
+  (the Dock's row, or the card); the player keeps its transport and scrubber on the browse card and gains the large artwork on the
+  open one (its queue was listed there until "One stack per player"; it is cards behind the player now). Tests that clicked those buttons now open the card first (see the report of this slice).
 - **Not every kind opens.** A recent app and a launcher shortcut have nothing more to show (a tap launches them) and an
   article card already shows what it has (a tap opens the article); Today's next event keeps its inline actions. A
   notification's tap used to launch the app; the open card has an "Open" button for that.
@@ -478,7 +478,7 @@ unfolded layout.
 
 - **"Grows out of the Dock"** is stored and drawn as just above the Dock.
 - **The media session's custom actions** ("where published") are not plumbed through the session snapshot, the item and the
-  action gateway, so the player's row has the transport and the queue only.
+  action gateway, so the player's row has the transport and Open player only.
 - **A side Dock** (left or right) holds no row, and neither does the unfolded split: the actions are on the card there.
   A row along a side Dock's inner edge needs its own layout.
 - **A person icon per message** (a thread with several senders' photos) and the conversation's own icon: the newest
@@ -2601,6 +2601,74 @@ from the installed-apps snapshot, which omits such apps. The name is now the sna
 Media resumption against real apps (which apps let a launcher connect, and how long they take), the Dock tile's mark
 at the size of the real tile, and the swipe on a source card are verified by code and Robolectric tests only; the
 screenshots are in `app/src/test/screenshots` (`MediaCentreScreenshotTest`, `MediaCentreUnfoldedScreenshotTest`).
+
+## One stack per player
+
+Device feedback on a folded phone with a music app playing: the open player listed eight "Up next" tracks inside the card,
+the Dock's row packed previous, pause, next and a chevron to the left with "Open player" alone under them, and "Open
+player" did nothing. ADR 0003, Amendment 16.
+
+### The actions row
+
+- **One arrangement** (`MediaActionRow`, rule in `ActionRowFit`, `:core:domain`). The transport (previous, play or
+  pause, next) is a group centred on the row: 48 dp targets at an 8 dp gap, play and pause 56 dp and tonal as the
+  primary. "Open player" sits at the start of the same row when the group stays truly centred beside it
+  (`centredFits`: the wider side's room is reserved on both sides). When it does not (the 320 dp compact width, and
+  most folded phones with the row's own padding) the transport keeps the first row and the secondary actions take a
+  second, spread evenly (`evenlySpread`: equal space before, between and after, so a lone action is centred), not
+  packed to the left. The row's padding and the 48 dp targets are the quick actions' own (`QuickActionsRow`); only the
+  distribution differs, because the transport is a fixed trio and not a list of chips. The same row is the card's own
+  where a side Dock leaves the actions on the card (unfolded). The queue control (the chevron) is gone with the list.
+  Goldens: `MediaActionRowTest` (folded light and dark, the narrowest screen), `MediaActionRowUnfoldedTest`.
+
+### Open player
+
+- **Cause.** The player's action sent the session's `sessionActivity` PendingIntent with no options. From Android 14 the
+  platform drops a start from a PendingIntent the sender has not opted in for, without an error: the send "succeeded",
+  the gateway counted it as done, and no fallback ran. (The wiring from the Dock's row to the gateway was sound.)
+- **Now**, in order (`AndroidStreamActionGateway.openPlayer`): (a) the live session's own activity, resolved from the
+  controller at the time of the action (never held in the content), sent with
+  `setPendingIntentBackgroundActivityStartMode(MODE_BACKGROUND_ACTIVITY_START_ALLOWED)` on API 34 and above
+  (`SessionActivitySender`); (b) the package's launcher entry; (c) the leanback launch intent, else any exported main
+  activity (`ItemLaunchPort.launchAnyMainActivity`; the manifest's `<queries>` make both visible); (d) otherwise the
+  action fails and the Stream says "Couldn't open <app>". A recent player's Open takes (b) to (d) too.
+  Tests: `MediaOpenPlayerTest` (each fallback with fakes), `SessionActivitySenderTest` (the opt-in on 34 and none on 33,
+  a cancelled intent is a failure).
+
+### The queue is cards
+
+- **Model.** A queue card is a `MediaContent` with a `queueItem` (the platform queue id and its position after the track
+  playing), not a ninth kind (the eight kinds stand): same app, same privacy rules, one action `PLAY_QUEUE_ITEM`, the new
+  typed `StreamAction.PlayQueueItem(queueId)`, never Open. It does not open in place, cannot be swiped away and has no
+  open-card controls. The media source emits one `Item` per upcoming track after the player's own
+  (`MediaSessionItems.enrich`; ext `media.queue_id`, `media.queue_position`; the player's group and target), so Hide
+  rules, profile visibility and content levels reach them as they reach the player; a sensitive player has none, and a
+  source set to hide body or text maps them to nothing (as the old in-card list followed the body level).
+- **Which tracks.** Only those after `PlaybackState.activeQueueItemId` (an unknown active id: from the top), at most 10,
+  in queue order, only when the session offers `ACTION_SKIP_TO_QUEUE_ITEM` (a queue that cannot be skipped into would
+  be cards that do nothing) and the entry has a platform id and a title. Thumbnails: the `MediaDescription` bitmap, else
+  a `content:` or `android.resource:` icon URI read through the content resolver and scaled to 256 px (never the
+  network), kept in memory with the session's artwork (`media-art:<package>/q/<id>`), small cache, nothing on disk.
+- **One page, one stack, per player.** Now's section result is a group per active player (`player:<package>:<profile>`:
+  the player's card, then its queue cards) and one group of the recent players (key `now`). `StreamPagePlanner` makes
+  each player group a page (`now/player:<package>:<profile>`); the recent players stay together as the page with the
+  section's own key (`now`, which is also the "Nothing playing" page). Pages of a section are reached as a feed's are:
+  the Dock's tile, the pager actions, the slide along the Dock. The Dock's Now tile and the focus target `Now` bring the
+  first active player's page.
+- **Stable identity.** The page key depends on the app and profile only, and the front card is the player's own card
+  (the notification's id), so a track change updates the front card in place; the card of the track that is now playing
+  leaves the queue and the others keep their ids (`MediaQueueCardsTest`). The stack's position is its index, as for
+  every stack, so one browsed to a queue card sees the cards close up when the track advances.
+- **Updates.** Queue callbacks are coalesced as before and the media source now publishes a reload only when it read
+  something different from what it last published (`RefreshingUpstream`, `distinct`); the read stays off the main
+  thread with the rest of the media read.
+- **Settings > Stream > Now > Show up next** (default on) turns the cards off; the card of the open player lost its list.
+
+### What a device must confirm
+
+That the owner's player offers `ACTION_SKIP_TO_QUEUE_ITEM` (else it shows no queue cards), that the PendingIntent now
+opens it from the Dock's row (and what it does for a player with no `sessionActivity`), thumbnails from real apps'
+icon URIs, and how the stack feels when its tracks advance while a queue card is in front.
 
 ## The Dock as the stack handle (design canvas round 12)
 
