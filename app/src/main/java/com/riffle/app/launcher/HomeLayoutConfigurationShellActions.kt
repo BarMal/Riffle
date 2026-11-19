@@ -8,7 +8,6 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomePageEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.MAX_HOME_GRID_MARGIN_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
@@ -28,13 +27,6 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
     layout: HomeLayout,
 ): HomePageEditResult =
     when (action) {
-        is LauncherShellAction.SelectSelectedHomePageType ->
-            updatePageType(
-                layout = layout,
-                pageId = layout.selectedPageId,
-                type = action.type,
-            )
-
         is LauncherShellAction.SelectSelectedHomePageGridDimensions ->
             updatePageGridDimensions(
                 layout = layout,
@@ -44,7 +36,7 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
 
         is LauncherShellAction.SelectHomeGridDimensions ->
             updateGridDimensions(
-                layout = layout.layoutForGridDimensionUpdate(),
+                layout = layout,
                 dimensions = action.dimensions,
             )
 
@@ -82,9 +74,6 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
                         ),
                 ),
             )
-
-        is LauncherShellAction.SelectLibraryPageCompaction ->
-            HomePageEditResult.Updated(layout.withLibraryPageCompaction(action.enabled))
 
         is LauncherShellAction.SelectHomeLabelBackgroundAlpha ->
             layout.withHomeLabelBackgroundAlpha(action.alphaPercent)
@@ -200,19 +189,3 @@ private fun HomeLayout.withHomeLabelTextSize(textSizeSp: Int): HomePageEditResul
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
     }
-
-private fun HomeLayout.layoutForGridDimensionUpdate(): HomeLayout =
-    when {
-        viewMode == LauncherViewMode.HOME_SCREEN_LIBRARY && settings.grid.compactLibraryPages ->
-            withoutHomeScreenLibraryApps().copy(viewMode = viewMode)
-
-        else -> this
-    }
-
-private fun HomeLayout.withLibraryPageCompaction(enabled: Boolean): HomeLayout =
-    copy(
-        settings =
-            settings.copy(
-                grid = settings.grid.copy(compactLibraryPages = enabled),
-            ),
-    )

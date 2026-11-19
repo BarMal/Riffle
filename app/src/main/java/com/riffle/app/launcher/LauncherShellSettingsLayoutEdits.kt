@@ -25,7 +25,7 @@ internal fun LauncherShellState.withSettingsHomePageEdit(
     ) {
         is HomePageEditResult.Updated ->
             withSettingsTargetLayout(
-                layout = result.layout.withHomeScreenLibraryApps(installedApps),
+                layout = result.layout,
                 homeLayoutRepository = homeLayoutRepository,
             )
 
@@ -40,13 +40,7 @@ internal fun LauncherShellState.withSettingsDockEdit(
     dockEngine: DockEngine,
     homeLayoutRepository: HomeLayoutRepository,
 ): LauncherShellState {
-    val layout = settingsTargetLayout
-    val result =
-        if (action is LauncherShellAction.SelectDockPosition && layout.usesCompactLibraryPacking) {
-            layout.repackedForDockPosition(action.position, installedApps)
-        } else {
-            dockEngine.applyEdit(action = action, layout = layout)
-        }
+    val result = dockEngine.applyEdit(action = action, layout = settingsTargetLayout)
 
     return when (result) {
         is DockEditResult.Updated ->

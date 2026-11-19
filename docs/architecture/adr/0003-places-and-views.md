@@ -713,6 +713,54 @@ except what is said here about the Home mode and the Library default.
 - Details: `dock-modes-plan.md`, "The Dock as the stack handle"; `gestures.md`, "Hold, then slide along the Dock" and
   "Pinned items"; `places-views-plan.md`, "Home drag".
 
+## Amendment 10 (owner, 2026-11-19): the library view mode is retired
+
+Amendment 8 made one Home and retired the app-library Home *mode* (the setting, `HomeMode.AppLibrary`). A second, older
+representation of the same idea was left behind and is retired here: a layout's **view mode**
+`LauncherViewMode.HOME_SCREEN_LIBRARY`. The rest of Amendments 1 to 9 stands.
+
+**What was true.** The view mode is a stored key of the layout set (`HomeLayoutKey(viewMode, deviceClass)`), the mode the
+shell shows (`activeKey`, `preferredModesByDeviceClass`), and, through `ws:<layout class>:<mode>`, the id of the
+workspace and of the pool arrangement a layout shows. In the library mode `withHomeScreenLibraryApps` ran after every
+refresh, edit, restore and mode change: it put every installed app missing from the layout in the first free cell (or
+compacted and re-sorted all of them A to Z when the layout's `compactLibraryPages` was set), on the Home pages and on
+generated `library:n` pages that the pool never held (they lived only in the `HomeLayoutSet` store). So an item the user
+removed or moved reappeared or was re-sorted. The One Home migration rewrote only the settings-level mode; a workspace
+migrated from the library mode brought the view mode back through `WorkspaceHome.homeModeFor`.
+
+**The rule.** There is no code that fills, sorts or compacts a Home the user can arrange. The only automatic placement is
+"Add new apps to Home" (Amendment 8). Simple mode stays the one generated, locked Home (A to Z) and never writes into the
+stored arrangement.
+
+**Converting what is stored (`LibraryViewRetirement`, once, idempotent).**
+
+- A device class whose current mode is the library mode, or whose active workspace brings it back, has its library layout
+  converted: the content it has now (the apps the auto-layout had filled in, in the same order, on the same pages) becomes
+  ordinary placed items, its view mode becomes Standard, it is stored under the Standard key of the same device class (the
+  library key is removed) and `compactLibraryPages` is cleared. Settings and page order stay. Done for every device class
+  of the stored set (phone, landscape phone, foldable, tablet, desktop), each the first time the shell shows it, and for the
+  arrangement of whichever workspace the layout shows (the pool can only say which arrangement an edit belongs to for the
+  layout on screen; a class not shown yet is left as stored, and nothing fills it any more). A dormant library layout of a device class that shows Standard is left as it is.
+- **Workspace ids are not changed.** `ws:<layout class>:home_screen_library` stays a valid, stored id: it is read as "the
+  workspace migrated from the library mode" and shown by the Standard key (`WorkspaceHome.shown`, `homeModeFor`), so no
+  stored workspace, arrangement, fork or backup is orphaned. `legacyHomeModeFor` keeps the old derivation for the
+  conversion to read.
+- **Pages of retired types.** The Home pager draws placed pages only, so every type but the placed one is converted or
+  dropped, each by the rules of the Places table: "All apps" and the generated App, Category, Work, Personal, Favourites and
+  Frequent pages hold apps the user saw and may have kept, so they become ordinary placed pages with the items they hold
+  now (an empty one is dropped); Today (recent apps) and Cards (notification groups) are Stream sections now (Recents,
+  Notifications) and hold nothing the user arranged, so they are dropped. The "Page type" chooser in the page overview is
+  removed, with the actions behind it; the domain types stay so stored data decodes.
+- **The old layout is kept**, unused, the way Amendment 8 keeps the pre-migration Home: the whole layout set as it was
+  goes to the stored `home_layout_before_one_home` copy, written once, never over a copy that is already there. The Standard
+  arrangement that a converted library layout replaces also stays in the pool under its own workspace id.
+- **Both migrations.** If the settings-level mode is still `app_library` as well, the library layout is converted first and
+  Amendment 8's A to Z fill then replaces the placed items as it always did, so no app is placed twice.
+- A restore of a backup made in the library mode is converted the same way after it is read (the conversion runs on every
+  state change until nothing is left to convert).
+
+Details: `places-views-plan.md`, "The library view mode is retired".
+
 ## Superseded documents
 
 These describe the workspace model or its UI and are superseded by this ADR. They stay in the repository as

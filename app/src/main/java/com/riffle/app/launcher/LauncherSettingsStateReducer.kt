@@ -278,7 +278,6 @@ internal class LauncherSettingsStateReducer(
                             appVisibilityRepository = appVisibilityRepository,
                         )
                         .withoutUnavailableApps(homeLayoutRepository)
-                        .withHomeScreenLibraryApps(homeLayoutRepository)
 
                 else -> state
             }

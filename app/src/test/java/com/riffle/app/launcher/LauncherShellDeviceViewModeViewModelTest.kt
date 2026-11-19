@@ -84,8 +84,18 @@ class LauncherShellDeviceViewModeViewModelTest {
             ),
         )
 
-        assertEquals(foldableLibraryKey, viewModel.state.value.homeLayoutSet.activeKey)
-        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
+        // The foldable's library layout is converted the first time it is on screen (ADR 0003, Amendment 10).
+        assertEquals(
+            HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.FOLDABLE),
+            viewModel.state.value.homeLayoutSet.activeKey,
+        )
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, viewModel.state.value.homeLayout.viewMode)
+        assertEquals(
+            phoneStandardKey,
+            viewModel.state.value.homeLayoutSet.layouts.keys.single {
+                it.deviceClass == HomeLayoutDeviceClass.PHONE
+            },
+        )
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {

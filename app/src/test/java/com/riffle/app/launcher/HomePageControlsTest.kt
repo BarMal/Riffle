@@ -331,25 +331,6 @@ class HomePageControlsTest {
     }
 
     @Test
-    fun pageTypeOptionsExposeClassicLibraryAndGeneratedPages() {
-        assertEquals(
-            listOf(
-                PageTypeOption("Classic", LauncherPageType.Home),
-                PageTypeOption("All apps", LauncherPageType.AllApps),
-                PageTypeOption("Today", LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY)),
-                PageTypeOption("Category", LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY)),
-                PageTypeOption("App", LauncherPageType.Generated(GeneratedLauncherPageKind.APP)),
-                PageTypeOption("Work", LauncherPageType.Generated(GeneratedLauncherPageKind.WORK)),
-                PageTypeOption("Personal", LauncherPageType.Generated(GeneratedLauncherPageKind.PERSONAL)),
-                PageTypeOption("Favourites", LauncherPageType.Generated(GeneratedLauncherPageKind.FAVOURITES)),
-                PageTypeOption("Frequent", LauncherPageType.Generated(GeneratedLauncherPageKind.FREQUENTLY_USED)),
-                PageTypeOption("Cards", LauncherPageType.Generated(GeneratedLauncherPageKind.NOTIFICATION_CARDS)),
-            ),
-            pageTypeOptions,
-        )
-    }
-
-    @Test
     fun pageTypeLabelsAreUserFacing() {
         assertEquals("Classic", LauncherPageType.Home.pageOverviewTypeLabel)
         assertEquals("All apps", LauncherPageType.AllApps.pageOverviewTypeLabel)
