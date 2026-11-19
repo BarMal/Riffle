@@ -4,11 +4,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.cancel
 import androidx.compose.ui.test.down
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.moveTo
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
@@ -16,8 +18,10 @@ import androidx.compose.ui.test.up
 import com.riffle.app.launcher.HOME_GRID_CELL_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
+import com.riffle.app.launcher.applyEdit
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -46,7 +50,7 @@ class HomeDragBehaviorTest {
                     stream = emptyStreamHost(),
                     onAction = { action ->
                         actions += action
-                        shell = shell.answering(action)
+                        shell = shell.answering(action).answeringPages(action)
                     },
                 )
             }
@@ -167,7 +171,8 @@ class HomeDragBehaviorTest {
             moveTo(Offset(rootRight - 6f, start.y))
             moveBy(Offset(1f, 0f))
         }
-        composeRule.mainClock.advanceTimeBy(1_500)
+        // Past the edge hold (500 ms) and before the next repeat (a new page is offered while still held on the last).
+        composeRule.mainClock.advanceTimeBy(900)
         composeRule.waitForIdle()
         val screen = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
         // The first cell (column 0, row 0) of the page now on screen: the centre of its icon cell is the dead zone.
@@ -210,6 +215,68 @@ class HomeDragBehaviorTest {
 
         val drop = actions.filterIsInstance<LauncherShellAction.DropHomeItem>().singleOrNull()
         assertTrue(first.id.value + " " + actions, drop != null && drop.targetPageId != drop.sourcePageId)
+    }
+
+    /** The page actions a drag sends, answered by the real page engine. */
+    private fun com.riffle.core.domain.launcher.LauncherShellState.answeringPages(
+        action: LauncherShellAction,
+    ): com.riffle.core.domain.launcher.LauncherShellState {
+        if (action !is LauncherShellAction.AddHomePage && action !is LauncherShellAction.DiscardEmptyHomePage) return this
+        val result = com.riffle.core.domain.launcher.home.HomePageEngine().applyEdit(action, homeLayout)
+        val updated = (result as? com.riffle.core.domain.launcher.home.HomePageEditResult.Updated)?.layout ?: return this
+        return copy(homeLayout = updated, homeLayoutSet = homeLayoutSet.withActiveLayout(updated))
+    }
+
+    private fun holdAtTheTrailingEdge() {
+        val rootRight = composeRule.onRoot().fetchSemanticsNode().boundsInRoot.right
+        val name = labels().first()
+        val start = composeRule.onNodeWithText(name).fetchSemanticsNode().boundsInRoot.center
+        composeRule.onRoot().performTouchInput {
+            down(start)
+            advanceEventTime(700)
+            moveBy(Offset(10f, 0f))
+            moveTo(Offset(rootRight - 6f, start.y))
+            moveBy(Offset(1f, 0f))
+        }
+        composeRule.mainClock.advanceTimeBy(2_500)
+        composeRule.waitForIdle()
+    }
+
+    private fun pageSelectorState() =
+        composeRule.onNodeWithContentDescription("Page selector").fetchSemanticsNode()
+            .config[androidx.compose.ui.semantics.SemanticsProperties.StateDescription]
+
+    @Test
+    fun heldAtTheTrailingEdgeOfTheLastPageOffersANewPageThatTheDropKeepsAndTheDotsShow() {
+        show()
+        val pagesBefore = shell.homeLayout.pages.size
+        holdAtTheTrailingEdge()
+        assertTrue(actions.toString(), actions.any { it is LauncherShellAction.AddHomePage })
+        assertEquals(pagesBefore + 1, shell.homeLayout.pages.size)
+        assertEquals(
+            "the dots show the new page as the target",
+            "Page ${pagesBefore + 1} of ${pagesBefore + 1}",
+            pageSelectorState(),
+        )
+
+        composeRule.onRoot().performTouchInput { up() }
+        composeRule.waitForIdle()
+        val drop = actions.filterIsInstance<LauncherShellAction.DropHomeItem>().singleOrNull()
+        assertTrue(actions.toString(), drop != null && drop.targetPageId == shell.homeLayout.pages.last().id)
+        assertTrue(actions.toString(), actions.none { it is LauncherShellAction.DiscardEmptyHomePage })
+    }
+
+    @Test
+    fun aCancelledDragDiscardsTheOfferedPage() {
+        show()
+        val pagesBefore = shell.homeLayout.pages.size
+        holdAtTheTrailingEdge()
+        assertEquals(pagesBefore + 1, shell.homeLayout.pages.size)
+
+        composeRule.onRoot().performTouchInput { cancel() }
+        composeRule.waitForIdle()
+        assertTrue(actions.toString(), actions.any { it is LauncherShellAction.DiscardEmptyHomePage })
+        assertEquals(pagesBefore, shell.homeLayout.pages.size)
     }
 
     private fun LauncherShellAction.isHomeDrop() =

@@ -79,6 +79,7 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HandleAxis
 import com.riffle.core.domain.launcher.home.HandleStrip
+import com.riffle.core.domain.launcher.home.HomeDragPages
 import com.riffle.core.domain.launcher.home.HomeDragPlan
 import com.riffle.core.domain.launcher.home.HomeDragPush
 import com.riffle.core.domain.launcher.home.HomeDragTuning
@@ -150,6 +151,23 @@ internal fun StandardHome(
         openedFolderId.value = created
     }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
+    // The page a drag offers past the last one: asked for (the pages before it noted), then found in the layout, kept
+    // when the drag ends on it and discarded otherwise.
+    val pagesBeforeCandidate = remember { mutableStateOf<Set<LauncherPageId>?>(null) }
+    val candidatePageId = remember { mutableStateOf<LauncherPageId?>(null) }
+    val discardCandidate = remember { mutableStateOf<LauncherPageId?>(null) }
+    LaunchedEffect(discardCandidate.value) {
+        val candidate = discardCandidate.value ?: return@LaunchedEffect
+        discardCandidate.value = null
+        onAction(LauncherShellAction.DiscardEmptyHomePage(candidate))
+    }
+    LaunchedEffect(layout.pages) {
+        val before = pagesBeforeCandidate.value ?: return@LaunchedEffect
+        layout.pages.firstOrNull { it.id !in before }?.let { added ->
+            candidatePageId.value = added.id
+            pagesBeforeCandidate.value = null
+        }
+    }
     // Read by the dock host as well as here, so they live in its state rather than this frame's.
     val widgetPickerDragInProgress = dockHostState.isWidgetDragInProgress
     val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
@@ -273,7 +291,20 @@ internal fun StandardHome(
                 renameOpenedFolder.value = true
                 openedFolderId.value = folder.id
             },
+            onDragNewPage = {
+                if (candidatePageId.value == null && pagesBeforeCandidate.value == null) {
+                    pagesBeforeCandidate.value = layout.pages.map { it.id }.toSet()
+                    onAction(LauncherShellAction.AddHomePage)
+                }
+            },
             onDragSessionChanged = { session ->
+                if (session == null) {
+                    // The drop's own action follows this at once and keeps the page it lands on; whatever is still
+                    // pending after it (a cancel, a drop elsewhere) is discarded.
+                    discardCandidate.value = candidatePageId.value
+                    candidatePageId.value = null
+                    pagesBeforeCandidate.value = null
+                }
                 val planned = session?.planned(visibleLayout, workspaceGridBounds.value, presentation.dragTuning)
                 if (planned?.plan?.pushed?.keys != homeDragSession.value?.plan?.pushed?.keys &&
                     planned?.plan?.pushed?.isNotEmpty() == true
@@ -305,6 +336,11 @@ internal fun StandardHome(
             },
             onBackgroundClick = dockHostState::dismissShelf,
             onAction = { action ->
+                if (action is LauncherShellAction.DropHomeItem &&
+                    discardCandidate.value?.let { HomeDragPages.keepsCandidate(it, action.targetPageId) } == true
+                ) {
+                    discardCandidate.value = null
+                }
                 if (action is LauncherShellAction.MoveHomeShortcutToCell ||
                     (action is LauncherShellAction.DropHomeItem && action.dropOnItemId != null)
                 ) {
@@ -769,6 +805,7 @@ private fun StandardHomeColumn(
             actions = actions,
             vertical = layoutSettings.pageScroll == PageScrollDirection.VERTICAL,
             activeDragSession = state.dragSession,
+            onDragNewPage = actions.onDragNewPage,
             onDragPageTargetChanged = { pageId ->
                 actions.currentDragSession()?.let { session ->
                     if (session.targetPageId != pageId) {
@@ -1236,6 +1273,8 @@ internal data class HomeWorkspaceActions(
     val onWorkspaceGridBoundsChanged: (LauncherPageId, Rect) -> Unit = { _, _ -> },
     val onDockBoundsChanged: (Rect) -> Unit = {},
     val onBackgroundClick: () -> Unit = {},
+    /** A drag held at the trailing edge on the last page: offer a new empty page (see [HomeDragPages]). */
+    val onDragNewPage: () -> Unit = {},
     val onAction: (LauncherShellAction) -> Unit,
 )
 

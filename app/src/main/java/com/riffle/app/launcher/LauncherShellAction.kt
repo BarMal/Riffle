@@ -124,6 +124,9 @@ sealed interface LauncherShellAction {
 
     data object AddHomePage : LauncherShellAction
 
+    /** A drag's candidate page that was not dropped on: removed when it is still empty, else left alone. */
+    data class DiscardEmptyHomePage(val pageId: LauncherPageId) : LauncherShellAction
+
     data object DuplicateSelectedHomePage : LauncherShellAction
 
     data class SelectHomePage(val pageId: LauncherPageId) : LauncherShellAction

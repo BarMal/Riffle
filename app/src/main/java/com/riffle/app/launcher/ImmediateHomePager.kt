@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
+import com.riffle.core.domain.launcher.home.HomeDragPages
 import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -166,6 +167,8 @@ internal fun ImmediateWorkspacePager(
     actions: HomeWorkspaceActions,
     activeDragSession: HomeDragSession? = null,
     onDragPageTargetChanged: (com.riffle.core.domain.launcher.home.LauncherPageId) -> Unit = {},
+    /** Held at the trailing edge on the last page: a new empty page past it is offered (created for the drag). */
+    onDragNewPage: () -> Unit = {},
     modifier: Modifier = Modifier,
     /** Pages scroll up and down (the platform's vertical pager) rather than sideways (ADR 0003, Amendment 2). */
     vertical: Boolean = false,
@@ -193,6 +196,7 @@ internal fun ImmediateWorkspacePager(
         val latestSession by rememberUpdatedState(activeDragSession)
         val latestLayout by rememberUpdatedState(layout)
         val latestTarget by rememberUpdatedState(onDragPageTargetChanged)
+        val latestNewPage by rememberUpdatedState(onDragNewPage)
         val edgePx = with(density) { HomeDragTuning.EDGE_ZONE_DP.dp.toPx() }
         val edgeSide =
             dragEdgeSide(
@@ -208,7 +212,16 @@ internal fun ImmediateWorkspacePager(
             while (true) {
                 val pages = latestLayout.pages
                 val current = pages.indexOfFirst { it.id == latestSession?.targetPageId }
-                val page = pages.getOrNull(current + edgeSide)?.takeIf { current >= 0 } ?: break
+                val page = pages.getOrNull(current + edgeSide)?.takeIf { current >= 0 }
+                if (page == null) {
+                    // Past the last page: offer a new one (the layout then has it, and the next turn goes there).
+                    if (edgeSide > 0 && current >= 0 && HomeDragPages.offersNewPage(pages, current)) {
+                        latestNewPage()
+                        delay(tuning.pageRepeatMillis.toLong())
+                        continue
+                    }
+                    break
+                }
                 latestTarget(page.id)
                 delay(tuning.pageRepeatMillis.toLong())
             }

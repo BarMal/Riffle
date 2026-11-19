@@ -27,6 +27,13 @@ fun HomePageEngine.applyEdit(
         LauncherShellAction.DuplicateSelectedHomePage ->
             applyPageCreationEdit(action = action, layout = layout)
 
+        is LauncherShellAction.DiscardEmptyHomePage ->
+            if (layout.pages.firstOrNull { it.id == action.pageId }?.items?.isEmpty() == true) {
+                deletePage(layout = layout, pageId = action.pageId)
+            } else {
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
+            }
+
         LauncherShellAction.SelectPreviousHomePage ->
             applyPageSelectionEdit(action = action, layout = layout)
 
