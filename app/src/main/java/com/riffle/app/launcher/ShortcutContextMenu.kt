@@ -67,6 +67,10 @@ internal fun shortcutContextMenuItems(
                 action = shortcut.openAppInfoAction(),
             ),
             ShortcutContextMenuItem(
+                label = text.text(R.string.menu_change_icon),
+                action = LauncherShellAction.OpenChangeIcon(shortcut.appIdentity, shortcut.label),
+            ),
+            ShortcutContextMenuItem(
                 label = text.text(R.string.menu_hide_app),
                 action = LauncherShellAction.HideApp(shortcut.appIdentity),
             ),

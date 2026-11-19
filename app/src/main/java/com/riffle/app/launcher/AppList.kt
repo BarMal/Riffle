@@ -349,6 +349,11 @@ private fun AppDrawerMainMenuItems(
         onExpandedChange = onExpandedChange,
     )
     AppDrawerRowMenuItem(
+        text = stringResource(R.string.menu_change_icon),
+        onClick = { onAction(LauncherShellAction.OpenChangeIcon(state.app.identity, state.app.label)) },
+        onExpandedChange = onExpandedChange,
+    )
+    AppDrawerRowMenuItem(
         text = stringResource(R.string.menu_hide_app),
         onClick = { onAction(LauncherShellAction.HideApp(state.app.identity)) },
         onExpandedChange = onExpandedChange,

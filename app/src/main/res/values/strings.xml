@@ -1045,6 +1045,7 @@
     <string name="menu_more_shortcut_actions">More shortcut actions</string>
     <string name="menu_app_info">App info</string>
     <string name="menu_hide_app">Hide app</string>
+    <string name="menu_change_icon">Change icon</string>
     <string name="menu_uninstall">Uninstall</string>
     <string name="home_remove_target">Remove</string>
     <string name="home_selection_selected">Selected</string>
@@ -1398,4 +1399,11 @@
     <string name="settings_icons_reset_dialog_confirm">Reset</string>
     <string name="settings_icons_reset_dialog_cancel">Cancel</string>
     <string name="settings_icons_reset_done">Icon changes reset</string>
+    <string name="change_icon_title">Change icon: %1$s</string>
+    <string name="change_icon_name">Name</string>
+    <string name="change_icon_reset_name">Reset name</string>
+    <string name="change_icon_search">Search icons</string>
+    <string name="change_icon_no_icons">No icons match</string>
+    <string name="change_icon_reset">Reset to default</string>
+    <string name="change_icon_choice_description">Use the icon %1$s</string>
 </resources>

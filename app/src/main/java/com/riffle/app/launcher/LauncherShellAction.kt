@@ -721,6 +721,9 @@ sealed interface LauncherShellAction {
     /** A custom name for one app, or null to go back to its own. */
     data class SetAppLabelOverride(val identity: AppIdentity, val label: String?) : LauncherShellAction
 
+    /** The app's long-press menu > "Change icon": the shell opens the sheet that changes this app's icon and name. */
+    data class OpenChangeIcon(val identity: AppIdentity, val label: String) : LauncherShellAction
+
     /** Undo of "Reset icon changes": the per-app choices as they were. */
     data class RestoreIconOverrides(val overrides: Map<AppIdentity, AppIconOverride>) : LauncherShellAction
 

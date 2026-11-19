@@ -577,6 +577,15 @@ private fun SearchResultContextMenu(
                         appListContext.onAction(LauncherShellAction.OpenAppInfo(result.app.identity))
                     },
                 )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.menu_change_icon)) },
+                    onClick = {
+                        onExpandedChange(false)
+                        appListContext.onAction(
+                            LauncherShellAction.OpenChangeIcon(result.app.identity, result.app.label),
+                        )
+                    },
+                )
             }
 
             is SearchGridResult.Shortcut ->
