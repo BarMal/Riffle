@@ -340,6 +340,15 @@
     <string name="settings_page_version">About</string>
     <string name="settings_page_version_summary">Version and build</string>
     <string name="settings_page_version_keywords">about version build</string>
+    <string name="settings_page_pair_recipe">Pair recipe</string>
+    <string name="settings_page_pair_recipe_summary">How the Pairs stack starts the two apps</string>
+    <string name="settings_page_pair_recipe_keywords">diagnostics pair recipe split screen side by side start activities one call two starts plain then adjacent</string>
+    <string name="pair_recipe_one_call">One call</string>
+    <string name="pair_recipe_one_call_summary">One start-activities call: the first app, then the second beside it, as if started by the first.</string>
+    <string name="pair_recipe_two_starts">Two starts</string>
+    <string name="pair_recipe_two_starts_summary">Both apps started beside the launcher, 600 ms apart (the first recipe).</string>
+    <string name="pair_recipe_plain_then_adjacent">Plain, then beside</string>
+    <string name="pair_recipe_plain_then_adjacent_summary">The first app plain, then 600 ms later the second beside it.</string>
     <string name="settings_page_drag_tuning">Drag tuning</string>
     <string name="settings_page_drag_tuning_summary">The ring, dead zone and holds of a Home drag</string>
     <string name="settings_page_drag_tuning_keywords">diagnostics drag drop home ring dead zone folder hold edge page repeat push magnetism tuning</string>

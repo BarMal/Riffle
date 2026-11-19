@@ -27,6 +27,33 @@ data class LauncherSettings(
     val rss: RssSettings = RssSettings(),
     val search: SearchSettings = SearchSettings(),
     val stream: StreamSettings = StreamSettings(),
+    val diagnostics: DiagnosticsSettings = DiagnosticsSettings(),
+)
+
+/** How a pair is started (Settings > About > Diagnostics > Pair recipe). [storedId] is a stored contract. */
+enum class PairRecipeKind(
+    val storedId: String,
+) {
+    /** One `startActivities` call: the first `NEW_TASK`, the second `LAUNCH_ADJACENT | NEW_TASK`. */
+    ONE_CALL("one_call"),
+
+    /** Two starts from the launcher, both `LAUNCH_ADJACENT | NEW_TASK`, 600 ms apart (the first recipe). */
+    TWO_STARTS("two_starts"),
+
+    /** The first start `NEW_TASK`, then 600 ms later the second `LAUNCH_ADJACENT | NEW_TASK`. */
+    PLAIN_THEN_ADJACENT("plain_then_adjacent"),
+    ;
+
+    companion object {
+        val DEFAULT: PairRecipeKind = ONE_CALL
+
+        fun decode(stored: String?): PairRecipeKind = entries.firstOrNull { it.storedId == stored } ?: DEFAULT
+    }
+}
+
+/** Diagnostics the owner can switch on the device without a new build. */
+data class DiagnosticsSettings(
+    val pairRecipe: PairRecipeKind = PairRecipeKind.DEFAULT,
 )
 
 /**

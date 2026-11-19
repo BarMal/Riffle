@@ -61,6 +61,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
 import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
@@ -463,6 +464,11 @@ sealed interface LauncherShellAction {
     /** Settings > About > Diagnostics > Drag tuning: the numbers of a Home drag (held to their ranges). */
     data class SetDragTuning(
         val tuning: HomeDragTuning,
+    ) : LauncherShellAction
+
+    /** Settings > About > Diagnostics > Pair recipe: how the Pairs stack starts a pair. */
+    data class SetPairRecipe(
+        val recipe: PairRecipeKind,
     ) : LauncherShellAction
 
     /** Settings > Home > "Add new apps to Home": a newly installed app is placed on Home, or only in the Library. */

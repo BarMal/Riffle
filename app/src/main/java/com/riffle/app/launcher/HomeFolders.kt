@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions") // The folder on Home: icon, menu, open surface and its title.
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi

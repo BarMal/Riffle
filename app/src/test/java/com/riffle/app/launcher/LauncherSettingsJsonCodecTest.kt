@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.DiagnosticsSettings
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
@@ -58,6 +59,7 @@ import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PrivacySettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
@@ -1558,6 +1560,18 @@ class LauncherSettingsJsonCodecTest {
         val custom = HomeDragTuning(0.9f, 0.2f, 300, 400, 900)
         val settings = LauncherSettings(home = HomeBehaviourSettings(dragTuning = custom))
         assertEquals(custom, decodeLauncherSettings(encodeLauncherSettings(settings)).home.dragTuning)
+    }
+
+    @Test
+    fun thePairRecipeDefaultsToOneCallRoundTripsAndUnknownIdsFallBack() {
+        val recipe = { json: String -> decodeLauncherSettings(json).diagnostics.pairRecipe }
+        assertEquals(PairRecipeKind.ONE_CALL, recipe("""{"version": 11}"""))
+        assertEquals(PairRecipeKind.ONE_CALL, recipe("""{"diagnostics": {"pairRecipe": "bogus"}}"""))
+        assertEquals(PairRecipeKind.TWO_STARTS, recipe("""{"diagnostics": {"pairRecipe": "two_starts"}}"""))
+        PairRecipeKind.entries.forEach { kind ->
+            val settings = LauncherSettings(diagnostics = DiagnosticsSettings(kind))
+            assertEquals(kind, decodeLauncherSettings(encodeLauncherSettings(settings)).diagnostics.pairRecipe)
+        }
     }
 
     @Test

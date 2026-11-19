@@ -61,6 +61,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.PageIndicatorPlacement
 import com.riffle.core.domain.launcher.settings.PageScrollDirection
+import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PairsMode
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
@@ -406,6 +407,7 @@ class LauncherActionDomainTest {
                 settings("SetDockMotion", LauncherShellAction.SetDockMotion(DockMotionSettings(speedMillis = 300))),
                 settings("SetAddNewApps", LauncherShellAction.SetAddNewApps(enabled = false)),
                 settings("SetDragTuning", LauncherShellAction.SetDragTuning(HomeDragTuning())),
+                settings("SetPairRecipe", LauncherShellAction.SetPairRecipe(PairRecipeKind.TWO_STARTS)),
                 settings(
                     "SelectPageScroll",
                     LauncherShellAction.SelectPageScroll(LayoutPosture.FOLDED, PageScrollDirection.VERTICAL),

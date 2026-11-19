@@ -155,6 +155,15 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SetPairRecipe ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                diagnostics = state.launcherSettings.diagnostics.copy(pairRecipe = action.recipe),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SetDragTuning ->
                     state.withLauncherSettings(
                         settings =

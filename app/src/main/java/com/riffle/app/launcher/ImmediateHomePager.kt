@@ -4,7 +4,7 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -171,7 +171,7 @@ internal fun ImmediateWorkspacePager(
     vertical: Boolean = false,
 ) {
     var pagerBounds by remember { mutableStateOf<Rect?>(null) }
-    BoxWithConstraints(
+    Box(
         modifier =
             modifier.fillMaxSize().onGloballyPositioned { coordinates ->
                 // The screen's edges along the way the pages scroll, not the pager's inset (its margins are not room).
