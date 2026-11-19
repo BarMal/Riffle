@@ -11,6 +11,17 @@ installing. Entries are in the order they were built; where a later one changes 
 
 ### Added
 
+- Follow-ups from the last batches ([ADR 0003](docs/architecture/adr/0003-places-and-views.md), Amendment 18):
+  **a widget that could not be bound can be set up from its placeholder** (tap it, "Set up widget" in its menu, an
+  accessibility action, or its row in Edit stack): it runs the widget picker's own bind, permission and configure flow
+  and becomes the live widget in the same cell, span and stack position; a placeholder with no known provider or whose
+  app is gone says so and can only be removed. **Reset settings also resets the Stream's sections** (on or off, order,
+  view and options), with Undo. **A group of apps dropped on an app makes a folder** of both. The Remove target keeps
+  its label clear of the lifted icon, and the Edit page bar has the count at the start and the actions at the end.
+  **A player that cannot skip to a track still shows its queue** as read-only "Up next" cards, and **a media stack stays
+  on the same card when the track advances** (the card that became the playing one lands on the front). The Stream's
+  view button is no longer drawn over a List or a stack that reaches its corner. Not run on a device: the widget
+  prompts, the queue of a real player and the drag need one.
 - Saved Home layouts, undo for backup import and Reset settings ([ADR 0003](docs/architecture/adr/0003-places-and-views.md),
   Amendment 17). **Settings > Home > Home layouts** saves, renames, activates, replaces and deletes arrangements of
   Home (pages, grids, apps, folders, widgets and widget stacks; not the Dock, settings or Stream) per device class,
