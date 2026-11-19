@@ -1,6 +1,5 @@
 package com.riffle.app.launcher.overlay
 
-import android.content.ComponentName
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -17,15 +16,44 @@ import android.widget.TextView
 import androidx.core.view.setPadding
 import com.riffle.app.R
 import com.riffle.app.launcher.apps.AndroidAppLauncher
+import com.riffle.app.launcher.icons.AppIconBitmaps
+import com.riffle.app.launcher.icons.AppIconPipeline
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+@Suppress("TooManyFunctions")
 internal class OverlayDockViewFactory(
     private val context: Context,
     private val appLauncher: AndroidAppLauncher,
+    /** The one icon pipeline: the Floating dock draws app icons in the chosen style like every other surface. */
+    private val icons: AppIconBitmaps = AppIconPipeline.shared(context),
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /** Stops the icon loads still running; the views are gone. */
+    fun release() = scope.cancel()
+
+    // Resolved off the main thread; the button shows nothing for a moment and then the icon.
+    private fun loadAppIcon(
+        button: ImageButton,
+        identity: AppIdentity,
+        sizePx: Int,
+    ) {
+        scope.launch {
+            val bitmap = runCatching { icons.forActivity(identity, sizePx.coerceAtLeast(1)) }.getOrNull()
+            withContext(Dispatchers.Main) { bitmap?.let(button::setImageBitmap) }
+        }
+    }
+
     fun collapsedHandleView(
         settings: OverlayDockSettings,
         onExpand: () -> Unit,
@@ -110,19 +138,10 @@ internal class OverlayDockViewFactory(
         val labelWidthDp = iconSizeDp + 16
         val iconButton =
             ImageButton(context).apply {
-                val icon =
-                    runCatching {
-                        context.packageManager.getActivityIcon(
-                            ComponentName(
-                                shortcut.appIdentity.packageName.value,
-                                shortcut.appIdentity.activityName.value,
-                            ),
-                        )
-                    }.getOrNull()
-                setImageDrawable(icon)
+                loadAppIcon(this, shortcut.appIdentity, (context.dp(iconSizeDp) - 2 * context.dp(ICON_PADDING_DP)))
                 background = context.transparentRoundedBackground()
                 contentDescription = shortcut.label
-                setPadding(context.dp(8))
+                setPadding(context.dp(ICON_PADDING_DP))
                 layoutParams = LinearLayout.LayoutParams(context.dp(iconSizeDp), context.dp(iconSizeDp))
                 setOnClickListener {
                     shortcut.appShortcutId

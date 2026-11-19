@@ -32,6 +32,7 @@ import com.riffle.app.launcher.BoundedCache
 import com.riffle.app.launcher.apps.ShortcutIconKey
 import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
+import com.riffle.app.launcher.icons.AppIconBitmaps
 import com.riffle.app.launcher.notifications.NotificationCustomContentStore
 import com.riffle.app.launcher.notifications.NotificationImageStore
 import com.riffle.app.launcher.workspace.ItemImageKeyParser
@@ -52,6 +53,7 @@ import kotlinx.coroutines.withContext
  * [ioDispatcher], never on the main thread; a handle that cannot be resolved reads as null and the card draws without
  * an image.
  */
+@Suppress("LongParameterList")
 internal class AndroidStreamImageLoader(
     private val packageManager: PackageManager,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -66,8 +68,12 @@ internal class AndroidStreamImageLoader(
     private val notificationBitmap: (String) -> android.graphics.Bitmap? = { key ->
         NotificationImageStore.bitmapFor(key) ?: NotificationCustomContentStore.bitmapFor(key)
     },
+    /** The icon pipeline: app icons come from it, in the chosen style. Null draws the platform's icons as they are. */
+    private val appIcons: AppIconBitmaps? = null,
 ) : ExpressionImageLoader {
     private val cache = BoundedCache<String, ImageBitmap>(MAX_CACHED_IMAGES)
+
+    override val styleVersion: Int get() = appIcons?.styleVersion ?: 0
 
     override suspend fun load(
         handle: ItemImageHandle,
@@ -91,7 +97,8 @@ internal class AndroidStreamImageLoader(
         handle: ItemImageHandle,
         size: Int,
     ): ImageBitmap? {
-        val cacheKey = "${handle.key}@$size"
+        // The style version is part of the key: an app icon drawn in an earlier style is never served again.
+        val cacheKey = "${handle.key}@$size@$styleVersion"
         return cache[cacheKey]
             ?: withContext(ioDispatcher) {
                 when {
@@ -114,7 +121,7 @@ internal class AndroidStreamImageLoader(
             (
                 shortcutIcon(handle)
                     ?: ShortcutIconKey.parse(handle)?.let { (_, packageName, _) ->
-                        packageManager.getApplicationIcon(packageName)
+                        return@runCatching appPackageIcon(packageName, size)
                     }
             )?.toBitmap(size, size)?.asImageBitmap()
         }.onFailure { if (it is CancellationException) throw it }.getOrNull()
@@ -155,9 +162,24 @@ internal class AndroidStreamImageLoader(
         handle: ItemImageHandle,
         size: Int,
     ): ImageBitmap? =
-        runCatching { drawableFor(ItemImageKeyParser.parse(handle))?.toBitmap(size, size)?.asImageBitmap() }
-            .onFailure { if (it is CancellationException) throw it }
-            .getOrNull()
+        runCatching {
+            val key = ItemImageKeyParser.parse(handle)
+            val pipeline = appIcons
+            when {
+                pipeline != null && key is ParsedImageKey.ActivityIcon ->
+                    pipeline.forActivity(key.identity, size)?.asImageBitmap()
+                pipeline != null && key is ParsedImageKey.PackageIcon ->
+                    pipeline.forPackage(key.packageName, size)?.asImageBitmap()
+                else -> drawableFor(key)?.toBitmap(size, size)?.asImageBitmap()
+            }
+        }.onFailure { if (it is CancellationException) throw it }.getOrNull()
+
+    private fun appPackageIcon(
+        packageName: String,
+        size: Int,
+    ): ImageBitmap? =
+        appIcons?.forPackage(packageName, size)?.asImageBitmap()
+            ?: packageManager.getApplicationIcon(packageName).toBitmap(size, size).asImageBitmap()
 
     private fun drawableFor(key: ParsedImageKey): Drawable? =
         when (key) {
@@ -231,9 +253,11 @@ internal fun rememberStreamImage(
     size: Dp,
 ): androidx.compose.runtime.State<ImageBitmap?> {
     val sizePx = with(LocalDensity.current) { size.roundToPx() }
+    // The style version re-keys the load, and the icon shown stays until its replacement has loaded.
+    val styleVersion = loader.styleVersion
     val state = remember(handle, loader, sizePx) { mutableStateOf<ImageBitmap?>(null) }
     var image by state
-    LaunchedEffect(handle, loader, sizePx) {
+    LaunchedEffect(handle, loader, sizePx, styleVersion) {
         image = handle?.let { loader.load(it, sizePx) }
     }
     return state

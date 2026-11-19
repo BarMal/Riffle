@@ -31,6 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.app.R
 import com.riffle.app.launcher.exclusions.ExclusionsSettingsController
+import com.riffle.app.launcher.icons.LocalAppIconLoader
 import com.riffle.app.launcher.onboarding.LocalWalkthroughLauncher
 import com.riffle.app.launcher.onboarding.OnboardingHost
 import com.riffle.app.launcher.onboarding.OnboardingLayer
@@ -98,6 +99,7 @@ fun LauncherShell(
             LocalWalkthroughLauncher provides onboarding?.controller?.let { controller -> controller::rerun },
             LocalHintsHost provides remember(onboarding) { onboarding?.controller?.let(HintsHost::of) },
             LocalSavedHomeLayouts provides viewModel.savedHomeLayouts,
+            LocalAppIconLoader provides appIconLoader,
             LocalBeforeImportCopies provides beforeImport,
         ) {
             LauncherShellContent(
@@ -201,11 +203,6 @@ fun LauncherShellContent(
 
     LauncherShellBackHandling(state = state, onAction = onAction)
 
-    PreloadLauncherAppIcons(
-        identities = state.appIconPreloadIdentities(),
-        iconLoader = appIconLoader,
-    )
-
     RiffleLauncherTheme(
         themeMode = state.launcherSettings.appearance.themeMode,
         themeAccent = state.launcherSettings.appearance.themeAccent,
@@ -215,6 +212,11 @@ fun LauncherShellContent(
         reducedTransparency = state.launcherSettings.appearance.reducedTransparency,
         liquidGlass = state.launcherSettings.resolveLiquidGlass(),
     ) {
+        SyncIconStyle(iconLoader = appIconLoader, style = state.launcherSettings.icons)
+        PreloadLauncherAppIcons(
+            identities = state.appIconPreloadIdentities(),
+            iconLoader = appIconLoader,
+        )
         val usesSystemWallpaper = state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM
         val rootModifier =
             if (usesSystemWallpaper) {

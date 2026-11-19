@@ -28,3 +28,42 @@ internal class BoundedCache<Key : Any, Value : Any>(maxEntries: Int) {
     val size: Int
         get() = delegate.size()
 }
+
+/**
+ * The same cache bounded by the bytes its values hold ([sizeOf] each), not by their count: an icon bitmap's size
+ * depends on the screen density and the cache must not grow with the number of styles drawn. Least recently used
+ * entries are evicted first; a value larger than the whole bound is not kept.
+ */
+internal class ByteBoundedCache<Key : Any, Value : Any>(
+    maxBytes: Int,
+    private val sizeOf: (Value) -> Int,
+) {
+    private val delegate =
+        object : LruCache<Key, Value>(maxBytes) {
+            override fun sizeOf(
+                key: Key,
+                value: Value,
+            ): Int = this@ByteBoundedCache.sizeOf(value).coerceAtLeast(1)
+        }
+
+    operator fun get(key: Key): Value? = delegate.get(key)
+
+    operator fun set(
+        key: Key,
+        value: Value,
+    ) {
+        delegate.put(key, value)
+    }
+
+    fun evictAll() = delegate.evictAll()
+
+    /** The bytes held now (the sum of [sizeOf]): never above [maxBytes]. */
+    val bytes: Int
+        get() = delegate.size()
+
+    val entryCount: Int
+        get() = delegate.snapshot().size
+
+    val maxBytes: Int
+        get() = delegate.maxSize()
+}

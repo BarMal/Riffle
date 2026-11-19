@@ -40,6 +40,9 @@ interface ExpressionImageLoader {
         handle: ItemImageHandle,
         sizePx: Int,
     ): ImageBitmap?
+
+    /** Changes when the app icon style does: a loader that draws app icons returns the icon pipeline's version. */
+    val styleVersion: Int get() = 0
 }
 
 /** Loads nothing, so every image draws its placeholder. The default until a real loader is injected. */

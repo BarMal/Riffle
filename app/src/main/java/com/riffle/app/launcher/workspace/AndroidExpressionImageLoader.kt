@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import com.riffle.app.launcher.BoundedCache
 import com.riffle.app.launcher.expressions.ExpressionImageLoader
+import com.riffle.app.launcher.icons.AppIconBitmaps
 import com.riffle.core.domain.launcher.workspace.ItemImageHandle
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -24,15 +25,19 @@ import kotlinx.coroutines.withContext
 internal class AndroidExpressionImageLoader(
     private val packageManager: PackageManager,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    /** The icon pipeline: app icons come from it, in the chosen style. Null draws the platform's icons as they are. */
+    private val appIcons: AppIconBitmaps? = null,
 ) : ExpressionImageLoader {
     private val cache = BoundedCache<String, ImageBitmap>(MAX_CACHED_IMAGES)
+
+    override val styleVersion: Int get() = appIcons?.styleVersion ?: 0
 
     override suspend fun load(
         handle: ItemImageHandle,
         sizePx: Int,
     ): ImageBitmap? {
         val size = sizePx.coerceIn(MIN_SIZE_PX, MAX_SIZE_PX)
-        val cacheKey = "${handle.key}@$size"
+        val cacheKey = "${handle.key}@$size@$styleVersion"
         return cache[cacheKey]
             ?: withContext(ioDispatcher) { decode(handle, size) }?.also { cache[cacheKey] = it }
     }
@@ -41,9 +46,17 @@ internal class AndroidExpressionImageLoader(
         handle: ItemImageHandle,
         size: Int,
     ): ImageBitmap? =
-        runCatching { drawableFor(ItemImageKeyParser.parse(handle))?.toBitmap(size, size)?.asImageBitmap() }
-            .onFailure { if (it is CancellationException) throw it }
-            .getOrNull()
+        runCatching {
+            val key = ItemImageKeyParser.parse(handle)
+            val pipeline = appIcons
+            when {
+                pipeline != null && key is ParsedImageKey.ActivityIcon ->
+                    pipeline.forActivity(key.identity, size)?.asImageBitmap()
+                pipeline != null && key is ParsedImageKey.PackageIcon ->
+                    pipeline.forPackage(key.packageName, size)?.asImageBitmap()
+                else -> drawableFor(key)?.toBitmap(size, size)?.asImageBitmap()
+            }
+        }.onFailure { if (it is CancellationException) throw it }.getOrNull()
 
     private fun drawableFor(key: ParsedImageKey): Drawable? =
         when (key) {

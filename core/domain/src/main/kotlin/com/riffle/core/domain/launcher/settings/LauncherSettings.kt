@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperSettings
+import com.riffle.core.domain.launcher.icons.IconStyleSettings
 import com.riffle.core.domain.launcher.library.LibraryView
 import com.riffle.core.domain.launcher.workspace.ReturnBehavior
 import com.riffle.core.domain.launcher.workspace.workspaceLayoutClass
@@ -18,6 +19,7 @@ data class LauncherSettings(
     val haptics: HapticSettings = HapticSettings(),
     val hints: HintSettings = HintSettings(),
     val home: HomeBehaviourSettings = HomeBehaviourSettings(),
+    val icons: IconStyleSettings = IconStyleSettings(),
     val layout: LayoutSettings = LayoutSettings(),
     val liquidGlass: LiquidGlassSettings = LiquidGlassSettings(),
     val motion: MotionSettings = MotionSettings(),
