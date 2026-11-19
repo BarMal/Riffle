@@ -64,7 +64,7 @@ The Dock has two gestures along the axis across its run, in opposite directions 
 
 | Gesture | Direction | Result |
 | --- | --- | --- |
-| **Pull** | Away from the edge (a bottom dock pulls up, a top dock down, a left dock right, a right dock left) | The Library, tracking the finger, from anywhere on the Dock and from Home or the Stream. **Only while the Library switch is on: it defaults off** (Settings > Features), and with it off the pull claims nothing, so the drag falls through to what is underneath |
+| **Pull** | Away from the edge (a bottom dock pulls up, a top dock down, a left dock right, a right dock left) | The Library, tracking the finger, from anywhere on the Dock and from Home or the Stream. **Only while the Library switch is on** (Settings > Library; it is on by default, and a stored choice is kept), and with it off the pull claims nothing, so the drag falls through to what is underneath |
 | **Hold, then slide** | Press and hold the contextual row (the long-press timeout), then slide along the Dock's run (sideways on a top or bottom Dock, up and down on a side Dock), with the Stream showing | Changes the stack: the tile under the finger becomes the open page as the finger enters it. A plain drag along the row only scrolls it. See "Hold, then slide along the Dock" below |
 | **Press** | Toward the edge (a bottom dock is pressed down), then release | Toggles Home and the contextual mode (the Stream): opens the Stream on the last page, or on the page of the live app / now playing icon the press started on; from the Stream returns Home |
 
@@ -167,6 +167,38 @@ The Dock has two gestures along the axis across its run, in opposite directions 
 - **Library pull (P7).** Unchanged: the sheet rises from the Dock's edge as the finger moves, 1:1, while what is under it
   fades; it commits by `DockPullThresholds` (30% of the travel or 600 dp/s toward the interior), can be caught mid-settle,
   and under reduced motion fades in. While the Library shows neither the pull nor the press is claimed.
+
+## Hints and visible routes (ADR 0003, Amendment 12)
+
+The Dock's gestures are taught once each, when they first matter, and each has something to tap that needs no gesture.
+
+**Hints.** One small Thick glass pill beside the Dock with a "Got it" button. At most one shows at a time, in this order:
+
+| Hint | Due when | Retires when |
+| --- | --- | --- |
+| Press the Dock down to see what's live | Home, with a Stream | the Stream opens by any route (the press, the handle, an accessibility action) or "Got it" |
+| Touch and hold an app on the Dock for its menu | Home, the Dock holds an item; a later Home visit than the last hint's | any Dock menu opens or "Got it" |
+| Pull the Dock up for the Library | Home, the Library is on, and the Library was opened some other way or Home was visited 4 times | the Library opens by the Dock's pull or "Got it" |
+| Hold the Dock, then slide along it to change stack | the Stream shows with two or more stacks | a hold and slide changes the stack or "Got it" |
+
+None shows in Simple mode, while the set-up card or the tour is up, while a Home item or widget is dragged, or while the
+Dock moves, presses, chooses or scrubs; none shows over the Library. The rule is `Hints` in `:core:domain` (pure, tested);
+what was seen and done is stored with the onboarding state (`OnboardingState.hints`: retired hints, Home visits, whether
+the Library was opened another way). A hint does not move, so reduced motion changes nothing about it. Settings > Home >
+Show hints again clears all of it. The old press hint's flag (`HintSettings.dockPressSeen`) still counts as retired.
+
+**Visible routes.**
+
+- **Stream handle.** A 48 dp target with a 32 dp Thin glass chevron at the far end of the Dock, on the side the Dock is
+  pulled toward (above a bottom Dock, in the strip the Home handle stands in; beside a side Dock). A tap opens the Stream
+  (what the press does); touch and hold: Open Library, Hide this handle. Shown on Home only, and not while the Dock moves,
+  a drag runs, or anything covers Home. Settings > Dock > Show Stream handle turns it off. Accessibility: a button
+  "Open the Stream" with custom actions "Open Library" and "Hide this handle". It is the only handle: the Library has no
+  second one (its routes are the Dock pull, "Open Library", the handle's menu and search).
+- **Settings.** A gear in the Library header and an item in the Library's menu, and "Riffle settings" in search.
+- **Show as.** The Library header's view button (it was a "more" glyph) and, on the Stream, a small view button at the top
+  end of the page that opens the page options (Show as, Move, Hide) a tile's long-press opens. Settings > Stream > Show
+  view button turns the Stream's off. The long-presses stay.
 
 ### History: the Dock pull by side (P5, superseded)
 

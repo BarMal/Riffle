@@ -28,10 +28,11 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | | Behaviour | Returning to Home (restore, first page, start page) |
 | | Wallpaper | Wallpaper (system, solid), wallpaper motion, change wallpaper |
 | | Full screen | Hide status bar, hide navigation bar |
-| | Set up | Set up Riffle again |
+| | Set up | Set up Riffle again; Show hints again (brings back the Dock's one-time tips; the row shows where the launcher runs the set-up) |
 | **Dock** | Dock | Show the Dock, Dock position, icon size, pinned icons, Dock width, Dock alignment (along the top or bottom edge: left, middle, right; down a side: top, middle, bottom), Dock corner radius, Dock background strength, spacing to the grid (per device class) |
 | | Pairs | Show pairs (Automatic, Always show, Off): whether the Pairs stack (two apps that open side by side) and its Dock tile show. Automatic shows them where the system can split (SDK 37 or later, a window at least 600 dp wide, the launcher not in multi-window mode); Always show is for a device the rule gets wrong; Off hides them (the stored pairs are kept). Stored in `StreamSettings.showPairs`, reduced by `SelectPairsMode`; it replaces Settings > Dock > "App pairs", whose stored value (`dock.appPairs`) is read as it. One row in the Pairs section of Settings > Stream, beside the section's on and off and its order (the Pairs stack has no "Show as": it is a stack). See [dock-modes-plan.md](dock-modes-plan.md), "Pairs" |
 | | Live apps | Show live apps (a switch), Number of live apps |
+| | Stream handle | Show Stream handle (a switch, on by default; off in Simple mode and without the Stream): the small chevron beside the Dock on Home that opens the Stream with a tap (touch and hold: Open Library, Hide this handle). A feature switch like Show live apps, stored in `FeatureSettings.dockStreamHandle` |
 | | Floating dock | Opens the sub-page |
 | Floating dock (under Dock) | | Floating dock on or off, apps, edge, handle thickness, size, position, opacity, expanded icon size, orientation, labels |
 | **Layout** | Folded, Unfolded | Per posture (a tablet and a desktop window use Unfolded): Dock position (Bottom, Left, Right), App pages scroll (Sideways, Up and down; the pages of Home and of the paged Library, not the Stream, whose stacks change from the Dock), Page dots (Beside the Dock, Off), Drag the dots to scroll (a switch, disabled while the dots are off) and Show apps behind the cards (a switch). Defaults: folded Bottom, Sideways, apps behind the cards off; unfolded Right, Up and down, apps behind the cards on; dots beside the Dock and quick scroll on in both. The Dock position and Show apps behind the cards are the same rows, with the same wording, as on the Dock page and the Stream cards page, and one stored value each. Stored in `LauncherSettings.layout` (`LayoutSettings`), reduced by `SelectPageScroll`, `SelectPageIndicator`, `SetQuickScroll` and `SelectPostureDockEdge`. See [dock-modes-plan.md](dock-modes-plan.md), "U1" |
@@ -40,7 +41,7 @@ settings (label, path or keyword); a result opens its page scrolled to that sett
 | | Search | Search results as a card stack (the default), icons or a list. The stack is the Dock's search; the Library's own search field draws the stack's choice as icons |
 | | Apps | Hidden apps (opens the sub-page), refresh installed apps |
 | Hidden apps (under Library) | | The one list of hidden apps |
-| **Stream** | Features | Stream (a switch; off in Simple mode) |
+| **Stream** | Features | Stream (a switch; off in Simple mode); Show view button (a switch, on by default): the small button on the Stream that opens the page options a Dock tile's long-press opens (Show as, Move, Hide). Stored in `FeatureSettings.streamViewButton` |
 | | Look | Opens the Stream cards sub-page |
 | | each of Now, Notifications, Recents, Today, Feeds | On or off, order (move up, move down), Show as (Stack, List: it applies to every page of the section); a row opening each of the section's sub-pages where it has them (Today has two: Agenda and Tasks). The whole section is the search target of its setting |
 | | Now: Recent players, Clear recent players | Under Now, whose description reads "Now playing and your recent players". **Recent players** is a switch (on by default; stored with the Stream layout as `NowOptions.recentPlayers`, per posture): off, Now shows only the active sessions and its "Nothing playing" card. **Clear recent players** forgets the list Now keeps (package, profile and last-played time; nothing else is stored). Both are searchable ("recent players", "now playing") and are one row each: Settings is the only place they live. See [dock-modes-plan.md](dock-modes-plan.md), "Media centre" |
@@ -206,6 +207,15 @@ so the links are included and the Backup page and the feed page say to keep the 
 - **Gestures.** The Gestures page keeps the four groups of the old panel (one finger, two, pinch, three), each row a
   menu, plus a Reset.
 - **Backup of calendar feeds.** See Backup above.
+
+## Visible ways in (ADR 0003, Amendment 12)
+
+- **Settings without a gesture.** The Library's header has a gear ("Riffle settings"), the Library's "Show as" menu ends
+  with the same item (the paged Library, which has no header, has it in that menu and as a custom action), and
+  "Riffle settings" is a search result that leads the settings that match as well as it does: it opens the main page of
+  Settings. The Home long-press menu's "Settings" and the two-finger swipe stay.
+- **Hints.** One-time tips for the Dock's gestures; Show hints again (Home > Set up) resets them. They are stored with the
+  onboarding state, not in Settings or the backup.
 
 ## Home > Fill Home
 
