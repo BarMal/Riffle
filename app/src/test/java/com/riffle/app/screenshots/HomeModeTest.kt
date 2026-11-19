@@ -28,8 +28,6 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.HomeMode
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -70,10 +68,12 @@ class HomeModeTest {
         composeRule.waitForIdle()
     }
 
-    private fun appLibraryHome() = ScreenshotFixtures.homeState().withManyApps().withHomeMode(HomeMode.AppLibrary)
+    // Simple mode is how Home shows the app library now (the stored app-library Home mode is migrated away).
+    private fun appLibraryHome() =
+        ScreenshotFixtures.homeState().withManyApps().withFeatures(FeatureSettings(simpleMode = true))
 
     @Test
-    fun placedItemsIsTodaysHomeAndTheDefault() {
+    fun anArrangedHomeIsTheDefault() {
         assertEquals(HomeMode.PlacedItems, shell.launcherSettings.home.mode)
         show()
 
@@ -123,48 +123,6 @@ class HomeModeTest {
         composeRule.onNodeWithContentDescription("Search").performClick()
 
         assertEquals(listOf<LauncherShellAction>(LauncherShellAction.OpenSearch), actions)
-    }
-
-    @Test
-    fun switchingBackToPlacedItemsBringsTheUntouchedLayoutBack() {
-        val placed = ScreenshotFixtures.homeState().withManyApps()
-        show(appLibraryHome())
-        // The placed layout is kept under the app library, not deleted or rebuilt.
-        assertSame(placed.homeLayout.pages.size, shell.homeLayout.pages.size)
-        assertEquals(placed.homeLayout, shell.homeLayout)
-
-        composeRule.longPressEmptySpace("${LIBRARY_PAGE_TEST_TAG_PREFIX}0")
-        composeRule.onNodeWithText("Show placed items").assertIsDisplayed().performClick()
-        composeRule.waitForIdle()
-
-        assertEquals(listOf<LauncherShellAction>(LauncherShellAction.SelectHomeMode(HomeMode.PlacedItems)), actions)
-        composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(LIBRARY_PAGED_TEST_TAG).assertDoesNotExist()
-        assertEquals(placed.homeLayout, shell.homeLayout)
-        // What was placed is there again, where it was.
-        composeRule.onNodeWithText("Calendar").assertIsDisplayed()
-    }
-
-    @Test
-    fun switchingToTheAppLibraryReplacesTheGridInPlace() {
-        show()
-        composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_TEST_TAG).assertIsDisplayed()
-
-        shell = shell.answering(LauncherShellAction.SelectHomeMode(HomeMode.AppLibrary))
-        composeRule.waitForIdle()
-
-        composeRule.onNodeWithTag(LIBRARY_PAGED_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_TEST_TAG).assertDoesNotExist()
-    }
-
-    @Test
-    fun theBackgroundOffersSettingsAndAWayBackAsCustomActionsToo() {
-        show(appLibraryHome())
-
-        val labels =
-            composeRule.onNodeWithTag(LIBRARY_PAGED_TEST_TAG).fetchSemanticsNode()
-                .config[SemanticsActions.CustomActions].map { it.label }
-        assertTrue(labels.toString(), "Show placed items" in labels && "Settings" in labels)
     }
 
     @Test

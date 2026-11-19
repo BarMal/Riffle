@@ -164,6 +164,64 @@ class HomeShortcutEngine(
         }
     }
 
+    /**
+     * The drop of a Home drag (see [HomeDragPush]): [itemId] leaves [sourcePageId] and lands at [cell] on
+     * [targetPageId] (the same page or another), after the items in [pushed] (on the target page) moved to their new
+     * cells. All or nothing: any collision, out-of-bounds cell or missing item rejects the whole drop and the layout is
+     * unchanged. Generated pages take nothing.
+     */
+    @Suppress("ReturnCount", "LongParameterList", "CyclomaticComplexMethod")
+    fun dropWithPush(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        sourcePageId: LauncherPageId,
+        targetPageId: LauncherPageId,
+        cell: GridCell,
+        pushed: Map<LauncherItemId, GridCell>,
+    ): HomeShortcutResult {
+        val missing = HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+        val source = layout.pages.firstOrNull { it.id == sourcePageId } ?: return missing
+        val target = layout.pages.firstOrNull { it.id == targetPageId } ?: return missing
+        if (source.type is LauncherPageType.Generated || target.type is LauncherPageType.Generated) {
+            return HomeShortcutResult.Rejected(PlacementRejectionReason.GENERATED_PAGE)
+        }
+        val item = source.items.firstOrNull { it.id == itemId } ?: return missing
+        val placement = item.placement ?: return HomeShortcutResult.Rejected(PlacementRejectionReason.MISSING_PLACEMENT)
+        val sourceWithout = gridPlacementEngine.removeItem(source, itemId)
+        val base = if (sourcePageId == targetPageId) sourceWithout else target
+        val movers = base.items.filter { it.id in pushed }
+        if (movers.size != pushed.size) return missing
+        var working = movers.fold(base) { page, mover -> gridPlacementEngine.removeItem(page, mover.id) }
+        for (mover in movers) {
+            val moved = mover.withPlacement(mover.placement!!.copy(cell = pushed.getValue(mover.id)))
+            working = (gridPlacementEngine.placeItem(working, moved) as? PlaceLauncherItemResult.Placed)?.page
+                ?: return HomeShortcutResult.Rejected(PlacementRejectionReason.COLLISION)
+        }
+        val landed =
+            when (
+                val result =
+                    gridPlacementEngine.placeItem(
+                        working,
+                        item.withPlacement(placement.copy(cell = cell)),
+                    )
+            ) {
+                is PlaceLauncherItemResult.Placed -> result.page
+                is PlaceLauncherItemResult.Rejected -> return HomeShortcutResult.Rejected(result.reason)
+            }
+        return HomeShortcutResult.Updated(
+            layout.copy(
+                pages =
+                    layout.pages.map { page ->
+                        when (page.id) {
+                            targetPageId -> landed
+                            sourcePageId -> sourceWithout
+                            else -> page
+                        }
+                    },
+            ),
+        )
+    }
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,

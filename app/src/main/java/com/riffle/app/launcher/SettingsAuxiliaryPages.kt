@@ -53,6 +53,16 @@ internal fun SettingsVersionPageContent(
             subtitle = stringResource(R.string.settings_page_app_pair_summary),
             onClick = { onPageSelected(SettingsPage.APP_PAIR) },
         )
+        SettingsClickableRow(
+            title = stringResource(R.string.settings_page_pair_recipe),
+            subtitle = stringResource(R.string.settings_page_pair_recipe_summary),
+            onClick = { onPageSelected(SettingsPage.PAIR_RECIPE) },
+        )
+        SettingsClickableRow(
+            title = stringResource(R.string.settings_page_drag_tuning),
+            subtitle = stringResource(R.string.settings_page_drag_tuning_summary),
+            onClick = { onPageSelected(SettingsPage.DRAG_TUNING) },
+        )
     }
 }
 

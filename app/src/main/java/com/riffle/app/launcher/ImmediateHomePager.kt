@@ -4,7 +4,7 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,18 +20,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
@@ -144,7 +155,7 @@ internal class ImmediateHomePagerState(
     }
 }
 
-@Suppress("LongParameterList", "CyclomaticComplexMethod")
+@Suppress("LongParameterList", "CyclomaticComplexMethod", "LongMethod")
 @Composable
 internal fun ImmediateWorkspacePager(
     layout: HomeLayout,
@@ -159,38 +170,55 @@ internal fun ImmediateWorkspacePager(
     /** Pages scroll up and down (the platform's vertical pager) rather than sideways (ADR 0003, Amendment 2). */
     vertical: Boolean = false,
 ) {
-    BoxWithConstraints(
-        modifier = modifier.fillMaxSize(),
+    var pagerBounds by remember { mutableStateOf<Rect?>(null) }
+    Box(
+        modifier =
+            modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+                // The screen's edges along the way the pages scroll, not the pager's inset (its margins are not room).
+                val own = coordinates.boundsInRoot()
+                val root = coordinates.findRootCoordinates().size
+                pagerBounds =
+                    if (vertical) {
+                        Rect(own.left, 0f, own.right, root.height.toFloat())
+                    } else {
+                        Rect(0f, own.top, root.width.toFloat(), own.bottom)
+                    }
+            },
     ) {
-        // The page's extent along the way the pages scroll: a drag held toward its far ends turns the page.
-        val pageExtentPx = with(LocalDensity.current) { (if (vertical) maxHeight else maxWidth).toPx() }
-
-        val sourcePageIndex =
-            activeDragSession?.let { session -> layout.pages.indexOfFirst { it.id == session.originPageId } }
-                ?: -1
-        val nextTargetIndex =
-            if (activeDragSession != null && sourcePageIndex >= 0) {
-                val dragOffset = if (vertical) activeDragSession.dragOffsetY else activeDragSession.dragOffsetX
-                when {
-                    dragOffset <= -(pageExtentPx * DRAG_PAGE_EDGE_FRACTION) -> sourcePageIndex + 1
-                    dragOffset >= pageExtentPx * DRAG_PAGE_EDGE_FRACTION -> sourcePageIndex - 1
-                    else -> -1
-                }
-            } else {
-                -1
-            }
-        LaunchedEffect(activeDragSession?.originPageId, activeDragSession?.targetPageId, nextTargetIndex) {
-            if (activeDragSession != null &&
-                activeDragSession.targetPageId == activeDragSession.originPageId &&
-                nextTargetIndex in layout.pages.indices
-            ) {
-                delay(DRAG_PAGE_EDGE_HOVER_MILLIS)
-                layout.pages.getOrNull(nextTargetIndex)?.let { page -> onDragPageTargetChanged(page.id) }
+        // A drag held within 24 dp of the leading or trailing edge of the pager (top or bottom when the pages scroll
+        // up and down) for the edge hold turns the page, and keeps turning at the repeat rate while it is held.
+        val density = LocalDensity.current
+        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+        val tuning = presentation.dragTuning.coerced()
+        val latestSession by rememberUpdatedState(activeDragSession)
+        val latestLayout by rememberUpdatedState(layout)
+        val latestTarget by rememberUpdatedState(onDragPageTargetChanged)
+        val edgePx = with(density) { HomeDragTuning.EDGE_ZONE_DP.dp.toPx() }
+        val edgeSide =
+            dragEdgeSide(
+                pointer = activeDragSession?.pointerInRoot ?: Offset.Unspecified,
+                bounds = pagerBounds,
+                edgePx = edgePx,
+                vertical = vertical,
+                rtl = isRtl,
+            )
+        LaunchedEffect(edgeSide, activeDragSession != null) {
+            if (edgeSide == 0 || latestSession == null) return@LaunchedEffect
+            delay(tuning.edgeHoldMillis.toLong())
+            while (true) {
+                val pages = latestLayout.pages
+                val current = pages.indexOfFirst { it.id == latestSession?.targetPageId }
+                val page = pages.getOrNull(current + edgeSide)?.takeIf { current >= 0 } ?: break
+                latestTarget(page.id)
+                delay(tuning.pageRepeatMillis.toLong())
             }
         }
 
         val pagerModifier = Modifier.fillMaxSize()
         val userScrollEnabled = layout.pages.size > 1 && activeDragSession == null
+        // While a page is lifted from, every page stays composed: the pager would otherwise drop the one the drag
+        // started on after a turn, and the gesture would die with it.
+        val keepPages = if (activeDragSession != null) layout.pages.size else 0
         val flingBehavior =
             PagerDefaults.flingBehavior(
                 state = pagerState.foundationPagerState,
@@ -223,6 +251,7 @@ internal fun ImmediateWorkspacePager(
                 modifier = pagerModifier,
                 userScrollEnabled = userScrollEnabled,
                 flingBehavior = flingBehavior,
+                beyondViewportPageCount = keepPages,
                 key = pageKey,
             ) { index -> pageContent(index) }
         } else {
@@ -231,10 +260,36 @@ internal fun ImmediateWorkspacePager(
                 modifier = pagerModifier,
                 userScrollEnabled = userScrollEnabled,
                 flingBehavior = flingBehavior,
+                beyondViewportPageCount = keepPages,
                 key = pageKey,
             ) { index -> pageContent(index) }
         }
     }
+}
+
+/**
+ * Which edge of the pager a drag is held at: +1 the trailing one (the next page), -1 the leading one (the previous), 0
+ * neither. The zone is [edgePx] wide along the way the pages scroll (top and bottom when [vertical]); in a
+ * right-to-left layout the next page is at the left.
+ */
+internal fun dragEdgeSide(
+    pointer: Offset,
+    bounds: Rect?,
+    edgePx: Float,
+    vertical: Boolean,
+    rtl: Boolean,
+): Int {
+    if (bounds == null || pointer == Offset.Unspecified || !bounds.contains(pointer)) return 0
+    val position = if (vertical) pointer.y else pointer.x
+    val start = if (vertical) bounds.top else bounds.left
+    val end = if (vertical) bounds.bottom else bounds.right
+    val side =
+        when {
+            position <= start + edgePx -> -1
+            position >= end - edgePx -> 1
+            else -> 0
+        }
+    return if (rtl && !vertical) -side else side
 }
 
 /**
@@ -279,8 +334,6 @@ internal enum class HomePageSettleMotionPolicy {
 internal const val REDUCED_MOTION_PAGE_SETTLE_DURATION_MILLIS = 80
 
 private const val PAGE_CHANGE_DISTANCE_THRESHOLD = 0.22f
-private const val DRAG_PAGE_EDGE_FRACTION = 0.42f
-private const val DRAG_PAGE_EDGE_HOVER_MILLIS = 180L
 
 /** What an old notification-cards page shows now that the Stream has the notifications. */
 @Composable

@@ -34,7 +34,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
@@ -170,12 +169,16 @@ private fun GeneratedContentOverflowButton(
 private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
     get() = type is LauncherPageType.Generated && generatedContentOverflowCount > 0
 
+/** How dim the item a drag lifted stays where it was (folders and widgets; an app is a baked ghost). */
+private const val DRAG_SOURCE_DIM = 0.3f
+
 internal const val HOME_WORKSPACE_GRID_TEST_TAG = "home-workspace-grid"
 internal const val HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG = "home-workspace-grid-overflow"
 
 /** One cell of Home's placed grid (every cell, filled or not), for a test to measure the grid by. */
 internal const val HOME_GRID_CELL_TEST_TAG = "home-grid-cell"
 
+@Suppress("LongMethod")
 @Composable
 private fun RowScope.HomeGridCell(
     state: HomeGridCellState,
@@ -208,7 +211,10 @@ private fun RowScope.HomeGridCell(
                     .gridFade(fade),
             contentAlignment = Alignment.Center,
         ) {
-            if (activeDragSession?.projectedCell == state.cell) {
+            if (activeDragSession?.projectedCell == state.cell &&
+                activeDragSession.targetPageId == state.page.id &&
+                activeDragSession.plan?.dropOn == null
+            ) {
                 state.dragPlaceholderAtProjectedCell(activeDragSession)?.let { placeholder ->
                     HomeDragPlaceholder(
                         span = placeholder.span,
@@ -216,29 +222,53 @@ private fun RowScope.HomeGridCell(
                         cellSizePx = state.cellSizePx,
                         fillSpan = placeholder.fillSpan,
                         iconSizeDp = presentation.labelSettings.iconSizeDp,
+                        ghostOf = (activeDragSession.item as? AppShortcutItem)?.appIdentity,
+                        appIconLoader = appIconLoader,
                     )
                 }
             }
 
+            val willMakeFolder = activeDragSession?.plan?.dropOn.let { it != null && it == visibleItem?.id }
+            val folderState =
+                rememberFolderWillForm(
+                    active = willMakeFolder,
+                    holdMillis = presentation.dragTuning.folderHoldMillis,
+                    reducedMotion = presentation.reducedMotion,
+                )
             visibleItem?.let { item ->
                 key(item.id.value) {
-                    HomeGridItem(
-                        item = item,
-                        state =
-                            HomeGridItemState(
-                                cell = state.cell,
-                                cellSize = state.cellSize,
-                                cellSizePx = state.cellSizePx,
-                                grid = state.page.grid,
-                                pageId = state.page.id,
-                                pageItems = state.page.items,
-                                isEditing = state.gridState.isEditing,
-                                activeDragSession = activeDragSession?.takeIf { session -> session.item.id == item.id },
-                            ),
-                        presentation = presentation,
-                        appIconLoader = appIconLoader,
-                        actions = actions,
-                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .graphicsLayer {
+                                    scaleX = folderState.scale
+                                    scaleY = folderState.scale
+                                }
+                                .folderWillFormOutline(folderState.armed, presentation.labelSettings.iconSizeDp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        HomeGridItem(
+                            item = item,
+                            state =
+                                HomeGridItemState(
+                                    cell = state.cell,
+                                    cellSize = state.cellSize,
+                                    cellSizePx = state.cellSizePx,
+                                    grid = state.page.grid,
+                                    pageId = state.page.id,
+                                    pageItems = state.page.items,
+                                    isEditing = state.gridState.isEditing,
+                                    activeDragSession =
+                                        activeDragSession?.takeIf {
+                                                session ->
+                                            session.item.id == item.id
+                                        },
+                                ),
+                            presentation = presentation,
+                            appIconLoader = appIconLoader,
+                            actions = actions,
+                        )
+                    }
                 }
             }
 
@@ -286,6 +316,7 @@ private fun HomeGridItem(
                         pageItems = state.pageItems,
                     ),
                 isEditing = state.isEditing,
+                isDragSource = state.isDragSource,
                 modifier = state.dragSourceModifier,
                 presentation =
                     HomeShortcutPresentation(
@@ -300,7 +331,11 @@ private fun HomeGridItem(
             )
 
         is FolderItem ->
-            Box(modifier = state.dragSourceModifier.fillMaxSize()) {
+            Box(
+                modifier =
+                    state.dragSourceModifier.fillMaxSize()
+                        .graphicsLayer { alpha = if (state.isDragSource) DRAG_SOURCE_DIM else 1f },
+            ) {
                 HomeFolder(
                     folder = item,
                     dragState =
@@ -349,6 +384,7 @@ private fun HomeGridWidget(
                 .requiredWidth(state.cellSize * span.columns)
                 .requiredHeight(state.cellSize * span.rows)
                 .graphicsLayer {
+                    alpha = if (state.isDragSource) DRAG_SOURCE_DIM else 1f
                     translationX = ((span.columns - 1) * state.cellSizePx) / 2f
                     translationY = ((span.rows - 1) * state.cellSizePx) / 2f
                 },
@@ -372,12 +408,14 @@ private fun HomeGridWidget(
     }
 }
 
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun HomeShortcut(
     shortcut: AppShortcutItem,
     dragState: HomeItemDragState,
     isEditing: Boolean,
+    isDragSource: Boolean,
     modifier: Modifier,
     presentation: HomeShortcutPresentation,
     appIconLoader: AppIconLoader,
@@ -425,17 +463,28 @@ private fun HomeShortcut(
                         dragState = dragState,
                         actions = actions,
                         onStationaryLongPress = pressHandlers.onLongPress,
+                        onMenuDismiss = { isContextMenuExpanded.value = false },
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Box(modifier = Modifier.size(presentation.labelSettings.iconSizeDp.dp)) {
-                LauncherAppIcon(
-                    identity = shortcut.appIdentity,
-                    label = shortcut.label,
-                    iconLoader = appIconLoader,
-                    modifier = Modifier.size(presentation.labelSettings.iconSizeDp.dp),
-                )
+                if (isDragSource) {
+                    // The lifted icon is drawn above everything; this is the desaturated, dimmed ghost it left.
+                    HomeGhostIcon(
+                        identity = shortcut.appIdentity,
+                        iconLoader = appIconLoader,
+                        outline = false,
+                        modifier = Modifier.size(presentation.labelSettings.iconSizeDp.dp),
+                    )
+                } else {
+                    LauncherAppIcon(
+                        identity = shortcut.appIdentity,
+                        label = shortcut.label,
+                        iconLoader = appIconLoader,
+                        modifier = Modifier.size(presentation.labelSettings.iconSizeDp.dp),
+                    )
+                }
                 if (!isEditing) {
                     NotificationCountBadge(
                         count = presentation.notificationCount,
@@ -480,18 +529,10 @@ internal data class HomeGridItemState(
     val isEditing: Boolean,
     val activeDragSession: HomeDragSession?,
 ) {
-    val dragSourceModifier: Modifier =
-        activeDragSession
-            ?.let { session ->
-                Modifier
-                    .zIndex(DRAGGED_GRID_ITEM_Z_INDEX)
-                    .graphicsLayer {
-                        translationX = session.dragOffsetX
-                        translationY = session.dragOffsetY
-                        shadowElevation = DRAGGED_GRID_ITEM_ELEVATION
-                    }
-            }
-            ?: Modifier
+    /** Whether this item is the one lifted: it stays where it was (as a ghost); the lifted icon is drawn above. */
+    val isDragSource: Boolean = activeDragSession != null
+
+    val dragSourceModifier: Modifier = Modifier
 }
 
 private data class HomeShortcutPresentation(
@@ -501,6 +542,3 @@ private data class HomeShortcutPresentation(
     val reducedMotion: Boolean,
     val contextSurface: ShortcutContextSurface,
 )
-
-private const val DRAGGED_GRID_ITEM_Z_INDEX = 1f
-private const val DRAGGED_GRID_ITEM_ELEVATION = 12f

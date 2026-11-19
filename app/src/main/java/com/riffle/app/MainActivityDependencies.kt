@@ -113,6 +113,7 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.stream.RecentPlayersTracker
 import com.riffle.core.domain.launcher.stream.StreamContentProvider
 import com.riffle.core.domain.launcher.stream.StreamContext
@@ -223,7 +224,11 @@ internal class MainActivityDependencies(
     val recentAppRepository by lazy { AndroidRecentAppRepository(activity) }
     val homeRoleGateway by lazy { AndroidHomeRoleGateway(activity) }
     val appLauncher by lazy { AndroidAppLauncher(activity) }
-    val pairLauncher by lazy { AndroidPairLaunchers.create(activity) }
+    val pairLauncher by lazy {
+        AndroidPairLaunchers.create(activity) {
+            launcherSettingsRepository.loadLauncherSettings()?.diagnostics?.pairRecipe ?: PairRecipeKind.DEFAULT
+        }
+    }
     val webSearchLauncher by lazy { AndroidWebSearchLauncher(activity) }
     val appIconLoader by lazy { PackageManagerAppIconLoader(activity.packageManager) }
     val wallpaperController by lazy { AndroidLauncherWallpaperController(activity.window) }

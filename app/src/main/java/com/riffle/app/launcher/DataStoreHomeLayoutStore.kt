@@ -97,6 +97,16 @@ internal class DataStoreHomeLayoutStore(context: Context) : HomeLayoutCutoverSto
         }
     }
 
+    /** Keeps [snapshot] (the Home before the one-time app-library migration) unless one is kept already. */
+    suspend fun writeBeforeOneHomeOnce(snapshot: HomeLayoutSet) {
+        val encoded = encodeHomeLayoutSet(snapshot)
+        dataStore.edit { preferences ->
+            if (preferences[HomeLayoutDataStoreKeys.beforeOneHome] == null) {
+                preferences[HomeLayoutDataStoreKeys.beforeOneHome] = encoded
+            }
+        }
+    }
+
     /** One DataStore transaction: a start can never find the snapshot beside a set that still has the old ids. */
     override suspend fun writeCutover(
         stored: HomeLayoutSet,
@@ -197,6 +207,7 @@ internal object HomeLayoutRepositories {
                     scope = scope,
                     providerOf = providerOf,
                     writeSnapshot = { snapshot -> store.writePrePoolSnapshot(snapshot) },
+                    writeBeforeOneHome = { snapshot -> store.writeBeforeOneHomeOnce(snapshot) },
                 ).also { repository -> repository.open(opening.stored) }
             } else {
                 null
@@ -252,6 +263,7 @@ private object HomeLayoutDataStoreKeys {
     const val PREFERENCES_NAME = "riffle_home_layout"
     val homeLayout = stringPreferencesKey("home_layout")
     val prePoolSnapshot = stringPreferencesKey("home_layout_pre_pool")
+    val beforeOneHome = stringPreferencesKey("home_layout_before_one_home")
     val prePoolSnapshotCorrupt = stringPreferencesKey("home_layout_pre_pool_corrupt")
     val homeLayoutCorrupt = stringPreferencesKey("home_layout_corrupt")
 }

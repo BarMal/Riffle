@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.designsystem.CardTint
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
@@ -20,6 +21,7 @@ import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardActionsPlacement
+import com.riffle.core.domain.launcher.settings.DiagnosticsSettings
 import com.riffle.core.domain.launcher.settings.DockMotionSettings
 import com.riffle.core.domain.launcher.settings.FeatureSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
@@ -57,6 +59,7 @@ import com.riffle.core.domain.launcher.settings.OpenCardPlacement
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import com.riffle.core.domain.launcher.settings.PrivacySettings
 import com.riffle.core.domain.launcher.settings.ReducedMotionPreference
 import com.riffle.core.domain.launcher.settings.RssSettings
@@ -1505,7 +1508,7 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsTheFeatureSwitchesAndOldBlobsDecodeToTheDefaults() {
+    fun roundTripsTheFeatureSwitchesAndOldBlobsDecodeToTodaysBehaviour() {
         val features = FeatureSettings(stream = false, dockLiveApps = false, library = false, simpleMode = true)
         val settings = LauncherSettings(features = features)
         assertEquals(features, decodeLauncherSettings(encodeLauncherSettings(settings)).features)
@@ -1519,17 +1522,56 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun theLibrarySwitchKeepsAStoredChoiceAndAMissingOneIsOff() {
-        // Changed on purpose: a missing value used to decode to on; the Library now defaults off.
+    fun theLibrarySwitchKeepsAStoredChoiceAndAMissingOneIsOn() {
+        // The Library holds every app, so it defaults on again (it was off for one release; a stored value is kept).
         val stored = { library: String -> decodeLauncherSettings("""{"features": {"library": $library}}""").features }
         assertEquals(true, stored("true").library)
         assertEquals(false, stored("false").library)
-        assertEquals(false, decodeLauncherSettings("""{"features": {"stream": true}}""").features.library)
-        assertEquals(false, decodeLauncherSettings("""{"version": 11}""").features.library)
-        assertEquals(false, decodeLauncherSettings("""{"features": {"library": "yes"}}""").features.library)
-        // A stored true survives the round trip of the whole settings.
-        val on = LauncherSettings(features = FeatureSettings(library = true))
-        assertEquals(true, decodeLauncherSettings(encodeLauncherSettings(on)).features.library)
+        assertEquals(true, decodeLauncherSettings("""{"features": {"stream": true}}""").features.library)
+        assertEquals(true, decodeLauncherSettings("""{"version": 11}""").features.library)
+        assertEquals(true, decodeLauncherSettings("""{"features": {"library": "yes"}}""").features.library)
+        val off = LauncherSettings(features = FeatureSettings(library = false))
+        assertEquals(false, decodeLauncherSettings(encodeLauncherSettings(off)).features.library)
+    }
+
+    @Test
+    fun addNewAppsDefaultsOnKeepsAStoredChoiceAndAnOldAppLibraryModeStillDecodes() {
+        val home = { json: String -> decodeLauncherSettings(json).home }
+        assertEquals(true, home("""{"version": 11}""").addNewApps)
+        assertEquals(true, home("""{"home": {"returnBehavior": "RESTORE", "mode": "placed_items"}}""").addNewApps)
+        assertEquals(false, home("""{"home": {"addNewApps": false}}""").addNewApps)
+        assertEquals(true, home("""{"home": {"addNewApps": "no"}}""").addNewApps)
+        // A blob written while the Home mode was a choice still decodes; the migration reads it.
+        assertEquals(HomeMode.AppLibrary, home("""{"home": {"mode": "app_library"}}""").mode)
+        val off = LauncherSettings(home = HomeBehaviourSettings(addNewApps = false))
+        assertEquals(off.home, decodeLauncherSettings(encodeLauncherSettings(off)).home)
+    }
+
+    @Test
+    fun theDragTuningRoundTripsDefaultsWhenMissingAndIsHeldToItsRanges() {
+        val home = { json: String -> decodeLauncherSettings(json).home.dragTuning }
+        assertEquals(HomeDragTuning(), home("""{"version": 11}"""))
+        assertEquals(HomeDragTuning(), home("""{"home": {"mode": "app_library"}}"""))
+        assertEquals(HomeDragTuning(), home("""{"home": {"dragTuning": "x"}}"""))
+        assertEquals(
+            HomeDragTuning(ringRadius = 1.2f, deadZoneRadius = 0.15f, folderHoldMillis = 600, edgeHoldMillis = 200),
+            home("""{"home": {"dragTuning": {"ring": 9, "deadZone": 0, "folderHold": 5000, "edgeHold": 1}}}"""),
+        )
+        val custom = HomeDragTuning(0.9f, 0.2f, 300, 400, 900)
+        val settings = LauncherSettings(home = HomeBehaviourSettings(dragTuning = custom))
+        assertEquals(custom, decodeLauncherSettings(encodeLauncherSettings(settings)).home.dragTuning)
+    }
+
+    @Test
+    fun thePairRecipeDefaultsToOneCallRoundTripsAndUnknownIdsFallBack() {
+        val recipe = { json: String -> decodeLauncherSettings(json).diagnostics.pairRecipe }
+        assertEquals(PairRecipeKind.ONE_CALL, recipe("""{"version": 11}"""))
+        assertEquals(PairRecipeKind.ONE_CALL, recipe("""{"diagnostics": {"pairRecipe": "bogus"}}"""))
+        assertEquals(PairRecipeKind.TWO_STARTS, recipe("""{"diagnostics": {"pairRecipe": "two_starts"}}"""))
+        PairRecipeKind.entries.forEach { kind ->
+            val settings = LauncherSettings(diagnostics = DiagnosticsSettings(kind))
+            assertEquals(kind, decodeLauncherSettings(encodeLauncherSettings(settings)).diagnostics.pairRecipe)
+        }
     }
 
     @Test

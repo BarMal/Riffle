@@ -48,6 +48,7 @@ internal fun GlanceHomeWidget(
                 dragState = dragState,
                 actions = workspaceActions,
                 onStationaryLongPress = { isContextMenuExpanded.value = true },
+                onMenuDismiss = { isContextMenuExpanded.value = false },
             )
         } else {
             Modifier

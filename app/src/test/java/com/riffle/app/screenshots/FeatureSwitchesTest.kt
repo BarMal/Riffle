@@ -13,7 +13,6 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import com.riffle.app.launcher.DOCK_PRESS_HINT_TEST_TAG
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
-import com.riffle.app.launcher.HOME_SURFACE_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.dockDynamicSectionTileTestTag
@@ -66,8 +65,7 @@ class FeatureSwitchesTest {
     }
 
     private fun show(
-        // The Library defaults off; most of these tests are about the sheet it opens, so they set it on explicitly.
-        features: FeatureSettings = FeatureSettings(library = true),
+        features: FeatureSettings = FeatureSettings(),
         withNotifications: Boolean = false,
         edit: (LauncherShellState) -> LauncherShellState = { it },
     ) {
@@ -139,7 +137,7 @@ class FeatureSwitchesTest {
 
     @Test
     fun withTheStreamOffThereIsNoPressNoActionAndNoHint() {
-        show(FeatureSettings(stream = false, library = true))
+        show(FeatureSettings(stream = false))
 
         val labels = composeRule.dockActionLabels()
         assertFalse(labels.toString(), "Show live pages" in labels)
@@ -185,19 +183,6 @@ class FeatureSwitchesTest {
     }
 
     // The Library
-
-    @Test
-    fun withNothingSetTheLibraryIsOffSearchStaysAndTheSlideAlongTheDockIsUntouched() {
-        show(FeatureSettings())
-
-        val labels = composeRule.dockActionLabels()
-        assertFalse(labels.toString(), "Open Library" in labels)
-        assertTrue(labels.toString(), "Search" in labels)
-        pullUp()
-        assertTrue("the pull claimed something: $actions", LauncherShellAction.OpenAppDrawer !in actions)
-        // The pull claims nothing: nothing runs, so the drag fell through (Home stays as it was).
-        composeRule.onNodeWithTag(HOME_SURFACE_TEST_TAG).assertExists()
-    }
 
     @Test
     fun withTheLibraryOffThePullAndTheDockActionAreGoneButSearchStays() {
@@ -254,7 +239,7 @@ class FeatureSwitchesTest {
 
     @Test
     fun simpleModeLeavesTheAppLibraryAsHomeAndTheDockWithoutTheStreamTheLibraryOrTheHint() {
-        show(FeatureSettings(library = true, simpleMode = true))
+        show(FeatureSettings(simpleMode = true))
 
         composeRule.onNodeWithTag(LIBRARY_PAGED_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(com.riffle.app.launcher.HOME_DOCK_TEST_TAG).assertIsDisplayed()
@@ -274,7 +259,7 @@ class FeatureSwitchesTest {
 
     @Test
     fun turningSimpleModeOffGivesEverythingBack() {
-        show(FeatureSettings(library = true, simpleMode = true))
+        show(FeatureSettings(simpleMode = true))
         shell = shell.answering(LauncherShellAction.SetSimpleMode(false))
         composeRule.waitForIdle()
 

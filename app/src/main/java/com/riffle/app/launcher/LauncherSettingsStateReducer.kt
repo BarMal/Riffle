@@ -155,11 +155,29 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectHomeMode ->
+                is LauncherShellAction.SetPairRecipe ->
                     state.withLauncherSettings(
                         settings =
                             state.launcherSettings.copy(
-                                home = state.launcherSettings.home.copy(mode = action.mode),
+                                diagnostics = state.launcherSettings.diagnostics.copy(pairRecipe = action.recipe),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SetDragTuning ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                home = state.launcherSettings.home.copy(dragTuning = action.tuning.coerced()),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SetAddNewApps ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                home = state.launcherSettings.home.copy(addNewApps = action.enabled),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )

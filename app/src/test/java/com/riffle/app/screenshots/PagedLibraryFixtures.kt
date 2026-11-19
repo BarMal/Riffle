@@ -76,7 +76,6 @@ internal fun LauncherShellState.answering(action: LauncherShellAction): Launcher
                     ),
             )
 
-        is LauncherShellAction.SelectHomeMode -> withHomeMode(action.mode)
         is LauncherShellAction.SetSimpleMode ->
             withFeatures(launcherSettings.features.copy(simpleMode = action.enabled))
 

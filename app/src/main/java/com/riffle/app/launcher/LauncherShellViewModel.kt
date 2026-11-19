@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.apps.withHiddenApps
 import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.FolderEngine
+import com.riffle.core.domain.launcher.home.HomeAppPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -41,10 +42,12 @@ import com.riffle.core.domain.launcher.home.LibraryExitTrigger
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WidgetEditResult
 import com.riffle.core.domain.launcher.home.WidgetEngine
+import com.riffle.core.domain.launcher.library.LibraryCategories
 import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
+import com.riffle.core.domain.launcher.settings.HomeMode
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.workspace.WorkspaceHome
@@ -173,6 +176,7 @@ class LauncherShellViewModel(
                     launcherSettingsRepository.saveLauncherSettings(state.launcherSettings)
                 }
                 if (state.installedApps !== previousState.installedApps) placePendingInstalls()
+                migrateAppLibraryHome()
             },
             refreshCoordinator = refreshCoordinator,
         )
@@ -292,20 +296,47 @@ class LauncherShellViewModel(
         val state = mutableState.value
         val arrived = pendingInstalls.arrived(state.installedApps)
         if (arrived.isEmpty()) return
+        // Kept queued while the pool home cannot say which arrangement an edit belongs to (the workspaces have not
+        // loaded): an install is never dropped for being early.
         val poolHome = homeLayoutRepository as? PoolHomeLayoutRepository
-        val workspaces = platformDependencies.workspaceRepository?.load()
-        when {
-            poolHome == null -> pendingInstalls.done(arrived)
-            workspaces == null || poolHome.awaitingWorkspaces -> Unit
-            else -> {
-                val placed =
-                    arrived.fold(state.homeLayoutSet.withActiveLayout(state.homeLayout)) { set, app ->
-                        poolHome.placeNewApp(set, app.identity, app.label, workspaces)
-                    }
-                pendingInstalls.done(arrived)
-                mutableState.value = state.copy(homeLayout = placed.activeLayout, homeLayoutSet = placed)
-            }
+        if (poolHome != null && !poolHome.isReadyForEdits()) return
+        pendingInstalls.done(arrived)
+        // One Home (ADR 0003, Amendment 8): "Add new apps to Home" decides, for every layout, and the app is placed
+        // after the last item (a new page if needed); off leaves it in the Library only. The per-workspace New apps
+        // setting is no longer read here.
+        if (state.launcherSettings.home.addNewApps && !state.launcherSettings.features.simpleMode) {
+            mutableState.value =
+                arrived.fold(state) { current, app ->
+                    HomeAppPlacement.appendApp(current.homeLayout, app)
+                        ?.let { current.withHomeLayout(it, homeLayoutRepository) }
+                        ?: current
+                }
         }
+    }
+
+    /**
+     * One Home (ADR 0003, Amendment 8): a stored app-library Home mode (and a restore of a backup made in it) gets a
+     * placed Home built once from the apps the user sees (visible apps in the Library's A to Z order, pages filled
+     * fully), the stored mode is then written back as placed items, which makes this idempotent. The Home the user
+     * had arranged is NOT merged in; it is kept, unused, as a separate stored copy (see
+     * [PoolHomeLayoutRepository.keepBeforeOneHome]). Waits for the app list (and for the workspaces on the pool home).
+     */
+    private fun PoolHomeLayoutRepository.isReadyForEdits(): Boolean =
+        platformDependencies.workspaceRepository?.load() != null && !awaitingWorkspaces
+
+    private fun migrateAppLibraryHome() {
+        val state = mutableState.value
+        if (state.launcherSettings.home.mode != HomeMode.AppLibrary || state.installedApps.isEmpty()) return
+        val poolHome = homeLayoutRepository as? PoolHomeLayoutRepository
+        if (poolHome != null && !poolHome.isReadyForEdits()) return
+        poolHome?.keepBeforeOneHome(state.homeLayoutSet.withActiveLayout(state.homeLayout))
+        val filled =
+            HomeAppPlacement.filledWith(state.homeLayout, state.installedApps.sortedWith(LibraryCategories.appOrder))
+        val settings =
+            state.launcherSettings.copy(home = state.launcherSettings.home.copy(mode = HomeMode.PlacedItems))
+        mutableState.value =
+            state.withHomeLayout(filled, homeLayoutRepository).copy(launcherSettings = settings)
+        launcherSettingsRepository.saveLauncherSettings(settings)
     }
 
     fun onConfirmedPackageRemoved(
@@ -424,13 +455,11 @@ class LauncherShellViewModel(
     }
 
     fun onAddAppToHome(app: InstalledApp) {
+        // "Add to Home" (the Library's menu): the first free cell after the last occupied one, a new page if needed.
+        val state = mutableState.value
         mutableState.value =
-            when (val result = shortcutEngine.addAppToSelectedPage(mutableState.value.homeLayout, app)) {
-                is HomeShortcutResult.Updated ->
-                    mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
-
-                is HomeShortcutResult.Rejected -> mutableState.value
-            }
+            HomeAppPlacement.appendApp(state.homeLayout, app)?.let { state.withHomeLayout(it, homeLayoutRepository) }
+                ?: state
     }
 
     fun onHomeShortcutEdited(action: LauncherShellAction) {
@@ -506,6 +535,7 @@ class LauncherShellViewModel(
 
     fun onLauncherSettingsActionSelected(action: LauncherShellAction) {
         mutableState.value = settingsStateReducer.reduce(mutableState.value, action)
+        migrateAppLibraryHome()
     }
 
     private object NoopHomeLayoutRepository : HomeLayoutRepository {
@@ -637,6 +667,7 @@ private fun reduceHomeShortcutEdit(
                         layout = previousState.homeLayout,
                         shortcutEngine = shortcutEngine,
                         folderEngine = folderEngine,
+                        installedApps = previousState.installedApps,
                     )
             ) {
                 is ShortcutOrFolderDropEditResult.Updated ->

@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.HomeDragTuning
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.library.LibraryView
@@ -26,6 +27,33 @@ data class LauncherSettings(
     val rss: RssSettings = RssSettings(),
     val search: SearchSettings = SearchSettings(),
     val stream: StreamSettings = StreamSettings(),
+    val diagnostics: DiagnosticsSettings = DiagnosticsSettings(),
+)
+
+/** How a pair is started (Settings > About > Diagnostics > Pair recipe). [storedId] is a stored contract. */
+enum class PairRecipeKind(
+    val storedId: String,
+) {
+    /** One `startActivities` call: the first `NEW_TASK`, the second `LAUNCH_ADJACENT | NEW_TASK`. */
+    ONE_CALL("one_call"),
+
+    /** Two starts from the launcher, both `LAUNCH_ADJACENT | NEW_TASK`, 600 ms apart (the first recipe). */
+    TWO_STARTS("two_starts"),
+
+    /** The first start `NEW_TASK`, then 600 ms later the second `LAUNCH_ADJACENT | NEW_TASK`. */
+    PLAIN_THEN_ADJACENT("plain_then_adjacent"),
+    ;
+
+    companion object {
+        val DEFAULT: PairRecipeKind = ONE_CALL
+
+        fun decode(stored: String?): PairRecipeKind = entries.firstOrNull { it.storedId == stored } ?: DEFAULT
+    }
+}
+
+/** Diagnostics the owner can switch on the device without a new build. */
+data class DiagnosticsSettings(
+    val pairRecipe: PairRecipeKind = PairRecipeKind.DEFAULT,
 )
 
 /**
@@ -34,8 +62,15 @@ data class LauncherSettings(
  */
 data class HomeBehaviourSettings(
     val returnBehavior: ReturnBehavior = ReturnBehavior.RESTORE,
-    /** What Home shows: the placed items (the default) or the app library pages. The placed layout is kept. */
+    /**
+     * Retired as a choice (ADR 0003, Amendment 8: one Home). Only read to migrate: a stored [HomeMode.AppLibrary]
+     * gets a placed Home built once from the apps, after which this is written back as [HomeMode.PlacedItems].
+     */
     val mode: HomeMode = HomeMode.DEFAULT,
+    /** Settings > Home > "Add new apps to Home": a new app is placed after the last item (on by default). */
+    val addNewApps: Boolean = true,
+    /** The numbers of a Home drag (Settings > About > Diagnostics > Drag tuning). Held to their ranges. */
+    val dragTuning: HomeDragTuning = HomeDragTuning(),
 )
 
 /**

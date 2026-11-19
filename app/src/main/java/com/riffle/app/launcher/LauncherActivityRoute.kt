@@ -53,6 +53,7 @@ private fun LauncherShellAction.isHomeShortcutEditAction(): Boolean =
         is LauncherShellAction.MoveAppOutOfFolder,
         is LauncherShellAction.MoveHomeShortcutToCell,
         is LauncherShellAction.MoveHomeItemToPage,
+        is LauncherShellAction.DropHomeItem,
         is LauncherShellAction.AddAppShortcutToHome,
         is LauncherShellAction.AddHostedWidgetToHome,
         is LauncherShellAction.AddGlanceWidgetToHome,

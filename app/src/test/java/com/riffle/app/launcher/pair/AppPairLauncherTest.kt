@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.dock.PairApp
 import com.riffle.core.domain.launcher.dock.PairLaunch
+import com.riffle.core.domain.launcher.settings.PairRecipeKind
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -44,7 +45,13 @@ class AppPairLauncherTest {
             if (start.target.packageName in failing) throw SecurityException("blocked")
         }
 
-        override fun startAll(starts: List<PairStart>) = error("not used")
+        val calls = mutableListOf<Pair<List<PairStart>, Long>>()
+        var failAll = false
+
+        override fun startAll(starts: List<PairStart>) {
+            calls += starts to clock()
+            if (failAll) throw SecurityException("blocked")
+        }
 
         override fun startTrampoline(request: TrampolineRequest) = error("not used")
     }
@@ -52,16 +59,18 @@ class AppPairLauncherTest {
     private class Fixture(
         scope: TestScope,
         failing: Set<String> = emptySet(),
-        recipe: PairRecipe = PairRecipe.DEFAULT,
+        recipe: PairRecipe = PairRecipe.forKind(PairRecipeKind.TWO_STARTS),
     ) {
         val starter = FakeStarter({ scope.currentTime }, failing)
         val problems = mutableListOf<String>()
+        val records = mutableListOf<PairLaunchRecord>()
         val launcher =
             AppPairLauncher(
                 starter = { starter },
                 scope = scope,
                 onProblem = { problems += it },
-                recipe = recipe,
+                recipe = { recipe },
+                record = { records += it },
             )
     }
 
@@ -91,12 +100,16 @@ class AppPairLauncherTest {
 
     @Test
     fun theRecipeNeverForcesNewTasksOrClearsThem() {
-        val flags = listOf(PairRecipe.DEFAULT.firstFlags, PairRecipe.DEFAULT.secondFlags)
-        flags.forEach { flag ->
-            assertEquals(0, flag and Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-            assertEquals(0, flag and Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        PairRecipeKind.entries.map(PairRecipe::forKind).forEach { recipe ->
+            listOf(recipe.firstFlags, recipe.secondFlags).forEach { flag ->
+                assertEquals(0, flag and Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                assertEquals(0, flag and Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
         }
-        assertEquals(600L, PairRecipe.DEFAULT.delayMillis)
+        // Changed on purpose: the default is the one-call recipe now (it was the two starts, 600 ms apart).
+        assertEquals(PairRecipe.forKind(PairRecipeKind.ONE_CALL), PairRecipe.DEFAULT)
+        assertEquals(600L, PairRecipe.forKind(PairRecipeKind.TWO_STARTS).delayMillis)
+        assertEquals(600L, PairRecipe.forKind(PairRecipeKind.PLAIN_THEN_ADJACENT).delayMillis)
     }
 
     @Test
@@ -205,5 +218,83 @@ class AppPairLauncherTest {
                 listOf(Intent.FLAG_ACTIVITY_NEW_TASK to 0L, adjacentNewTask to 250L),
                 f.starter.starts.map { it.second to it.third },
             )
+        }
+
+    @Test
+    fun theOneCallRecipeMakesExactlyOneStartAllWithTheTwoIntentsInOrder() =
+        runTest {
+            val f = Fixture(this, recipe = PairRecipe.forKind(PairRecipeKind.ONE_CALL))
+
+            f.launcher.launch(pair)
+            runCurrent()
+
+            assertEquals(emptyList<Triple<String, Int, Long>>(), f.starter.starts)
+            val (starts, at) = f.starter.calls.single()
+            assertEquals(0L, at)
+            assertEquals(listOf("com.riffle.notes", "com.riffle.maps"), starts.map { it.target.packageName })
+            assertEquals(listOf(Intent.FLAG_ACTIVITY_NEW_TASK, adjacentNewTask), starts.map { it.flags })
+            assertEquals(listOf("ONE_CALL"), f.records.map { it.recipe })
+            assertEquals(null, f.records.single().error)
+        }
+
+    @Test
+    fun theOneCallGuardHoldsForAboutASecondAndSwapReversesTheOrder() =
+        runTest {
+            val f = Fixture(this, recipe = PairRecipe.forKind(PairRecipeKind.ONE_CALL))
+            f.launcher.launch(pair.copy(first = pair.second, second = pair.first))
+            runCurrent()
+            advanceTimeBy(900)
+
+            assertTrue(f.launcher.isInFlight)
+            assertFalse(f.launcher.launch(pair))
+            advanceTimeBy(100)
+            runCurrent()
+
+            assertFalse(f.launcher.isInFlight)
+            assertEquals(
+                listOf("com.riffle.maps", "com.riffle.notes"),
+                f.starter.calls.single().first.map { it.target.packageName },
+            )
+        }
+
+    @Test
+    fun aFailedOneCallIsToldLoggedAndFallsBackToTwoPlainStarts() =
+        runTest {
+            val f = Fixture(this, recipe = PairRecipe.forKind(PairRecipeKind.ONE_CALL))
+            f.starter.failAll = true
+
+            f.launcher.launch(pair)
+            runCurrent()
+
+            assertEquals(listOf("Couldn't open Notes and Maps together"), f.problems)
+            assertEquals("SecurityException", f.records.single().error)
+            assertEquals(listOf("com.riffle.notes", "com.riffle.maps"), f.starter.starts.map { it.first })
+        }
+
+    @Test
+    fun thePlainThenAdjacentRecipeStartsPlainThenBesideAfter600Ms() =
+        runTest {
+            val f = Fixture(this, recipe = PairRecipe.forKind(PairRecipeKind.PLAIN_THEN_ADJACENT))
+
+            f.launcher.launch(pair)
+            advanceTimeBy(600)
+            runCurrent()
+
+            assertEquals(
+                listOf(Intent.FLAG_ACTIVITY_NEW_TASK to 0L, adjacentNewTask to 600L),
+                f.starter.starts.map { it.second to it.third },
+            )
+        }
+
+    @Test
+    fun everyLaunchAddsOneLineToTheLog() =
+        runTest {
+            val f = Fixture(this)
+
+            f.launcher.launch(pair)
+            advanceTimeBy(600)
+            runCurrent()
+
+            assertEquals(listOf("TWO_STARTS"), f.records.map { it.recipe })
         }
 }

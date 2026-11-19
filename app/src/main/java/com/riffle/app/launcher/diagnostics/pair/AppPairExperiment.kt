@@ -151,6 +151,33 @@ class AppPairExperiment(
         return id
     }
 
+    /** Adds one line for a launch the Pairs stack made: the recipe, the two apps' flags and ok or the exception. */
+    fun record(launch: com.riffle.app.launcher.pair.PairLaunchRecord) {
+        val outcomes =
+            listOf(launch.first, launch.second).map { start ->
+                StartOutcome(
+                    step = "${launch.recipe} ${start.target.packageName} ${PairFlags.describe(start.flags)}",
+                    error = launch.error,
+                )
+            }
+        val facts = PairFacts(0, "", "", null, "", "", "", emptyList(), listOf("Pairs stack"))
+        entries.update {
+            listOf(
+                PairLogEntry(
+                    nextId++,
+                    clock(),
+                    PairMethod.SEQUENTIAL,
+                    0,
+                    launch.first.target.packageName,
+                    launch.second.target.packageName,
+                    outcomes,
+                    facts,
+                    scenario = "Pairs stack: ${launch.recipe}",
+                ),
+            ) + it
+        }
+    }
+
     /** Called by the trampoline activity with the outcomes of its own starts. */
     fun onTrampolineReport(outcomes: List<StartOutcome>) {
         val id = waitingForTrampoline ?: return

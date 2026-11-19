@@ -51,7 +51,10 @@ internal const val POOL_HOME_WRITE_DEBOUNCE_MILLIS = 250L
  * Before [pool] has loaded, every call falls through to [legacy] unchanged. Main thread, like the shell's reducers.
  * Nothing here logs or stores item content.
  */
-@Suppress("TooManyFunctions") // The repository contract plus the cutover's restore, reprojection and host-id calls.
+@Suppress(
+    "TooManyFunctions",
+    "LongParameterList",
+) // The repository contract plus the cutover's restore, reprojection and host-id calls.
 internal class PoolHomeLayoutRepository(
     private val legacy: HomeLayoutRepository,
     private val pool: CachedPoolRepository,
@@ -61,6 +64,8 @@ internal class PoolHomeLayoutRepository(
     private val debounceMillis: Long = POOL_HOME_WRITE_DEBOUNCE_MILLIS,
     /** Keeps the recovery snapshot recent: the full projected set, written after the pool's own writes. */
     private val writeSnapshot: suspend (HomeLayoutSet) -> Unit = {},
+    /** Keeps the Home as it was before the one-time app-library migration (once; never overwritten, never read). */
+    private val writeBeforeOneHome: suspend (HomeLayoutSet) -> Unit = {},
 ) : HomeLayoutRepository,
     BackupRestoringHomeLayouts {
     private val lock = Any()
@@ -110,6 +115,17 @@ internal class PoolHomeLayoutRepository(
     /** The placed items of [deviceClass]'s Workspaces layout as they are now, or null while the pool is not loaded. */
     fun poolFor(deviceClass: HomeLayoutDeviceClass): PlacedItemPool? =
         pool.current()?.pools?.get(deviceClass.workspaceLayoutClass())
+
+    /**
+     * One Home (ADR 0003, Amendment 8): the app-library migration replaces the placed items, so the Home the user had
+     * arranged is kept as [layoutSet] in a separate stored copy (written behind; the recovery snapshot cannot serve,
+     * it follows every pool write). Nothing reads the copy; it exists for a manual recovery.
+     */
+    fun keepBeforeOneHome(layoutSet: HomeLayoutSet) {
+        scope.launch {
+            runCatching { writeBeforeOneHome(layoutSet) }.onFailure { if (it is CancellationException) throw it }
+        }
+    }
 
     /** Deletes host ids nothing references any more; set by the platform wiring (it hops to the main thread). */
     @Volatile

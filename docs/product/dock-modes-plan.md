@@ -2060,6 +2060,26 @@ the app's own scope; one launch is in flight at a time and a second tap meanwhil
 haptic. If a start throws, "Couldn't open <app>" is shown and the other app is still opened. On a successful start the
 pair's last opened time is updated (it comes to the front).
 
+### Pair recipe (what starts a pair)
+
+Symptom (owner, Android SDK 37 foldable): opening side by side works, but the apps are inconsistent, "a different app in
+a pane": one side shows an app that is not in the pair. Hypothesis, **unproven** (from the experiment's evidence, not
+confirmed on a device): the first start is adjacent to nothing of ours, so the system pairs it with whatever task it last
+had on the other side; the second start, again from the launcher, then replaces one side, not necessarily the stray one.
+`Context.startActivities` starts each activity as if by the previous one, so the second is adjacent to the first.
+
+Three recipes are kept behind `PairLauncher` (`PairRecipeKind`, `PairRecipe`):
+
+| Recipe | Starts | Default |
+| --- | --- | --- |
+| One call (`ONE_CALL`) | one `startActivities`: first `NEW_TASK`, second `LAUNCH_ADJACENT \| NEW_TASK` | yes |
+| Two starts (`TWO_STARTS`) | both `LAUNCH_ADJACENT \| NEW_TASK` from the launcher, 600 ms apart (the earlier recipe) | |
+| Plain, then beside (`PLAIN_THEN_ADJACENT`) | first `NEW_TASK`, 600 ms later second `LAUNCH_ADJACENT \| NEW_TASK` | |
+
+Never `MULTIPLE_TASK`, never `CLEAR_TASK`. Switch on the device in Settings > About > Diagnostics > Pair recipe; the Pairs
+stack reads it at each launch. Each launch adds one line to the App pair experiment log (recipe, the two packages' flags,
+ok or the exception, scenario "Pairs stack: <recipe>"). Only the device can confirm which recipe is right.
+
 ### When pairs show
 
 `PairAvailability.canSplit(sdkInt, windowWidthDp, inMultiWindow)` is true on SDK 37 or later in a window at least 600 dp
