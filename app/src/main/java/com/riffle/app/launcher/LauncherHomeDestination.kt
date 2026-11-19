@@ -52,6 +52,7 @@ import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.dock.DockMotionTuning
 import com.riffle.core.domain.launcher.dock.DockRing
+import com.riffle.core.domain.launcher.hints.HintContext
 import com.riffle.core.domain.launcher.dockpull.pullDirection
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeEditMode
@@ -94,10 +95,10 @@ fun HomeDestination(
     stream: StreamHost? = null,
     streamShown: Boolean = false,
     /**
-     * Where the first-run hint ("press the Dock down to see what's live") tells the shell it is done with, by its
-     * button or by the Stream having opened by any route. Null where the host shows no hint (the hint is not drawn).
+     * The one-time Dock hints (ADR 0003, Amendment 12): what they have seen, and where this reports what the person
+     * does. Null where the host shows no hints (a preview, a test).
      */
-    onDockPressHintSeen: (() -> Unit)? = null,
+    hints: HintsHost? = LocalHintsHost.current,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val streamOn = state.launcherSettings.effectiveFeatures().stream
@@ -109,7 +110,7 @@ fun HomeDestination(
         adaptiveStageWindowLayout = adaptiveStageWindowLayout,
         stream = stream.takeIf { streamOn },
         streamShown = streamShown && streamOn,
-        onDockPressHintSeen = onDockPressHintSeen,
+        hints = hints,
         onAction = onAction,
     )
 }
@@ -126,10 +127,10 @@ private fun HomeDestinationContent(
     stream: StreamHost? = null,
     streamShown: Boolean = false,
     /**
-     * Where the first-run hint ("press the Dock down to see what's live") tells the shell it is done with, by its
-     * button or by the Stream having opened by any route. Null where the host shows no hint (the hint is not drawn).
+     * The one-time Dock hints (ADR 0003, Amendment 12): what they have seen, and where this reports what the person
+     * does. Null where the host shows no hints (a preview, a test).
      */
-    onDockPressHintSeen: (() -> Unit)? = null,
+    hints: HintsHost? = LocalHintsHost.current,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     // The feature switches (Simple mode applied): a feature that is off is not offered, so it has no entry point left.
@@ -292,21 +293,6 @@ private fun HomeDestinationContent(
     val shownLibraryNow by rememberUpdatedState(shownLibrary)
     // Search is its own surface, opened from the Dock: it is the Library's destination but not its sheet.
     val searchOpen = state.destination == ShellDestination.SEARCH
-    val hintSeen = state.launcherSettings.hints.dockPressSeen
-    val hintShown =
-        shouldShowDockPressHint(
-            seen = hintSeen,
-            streamAvailable = stream != null && onDockPressHintSeen != null,
-            streamShown = shownStream,
-            libraryShown = showLibrary,
-            motionRunning = motion.running,
-            choosing = choice.choosing,
-            simpleMode = features.simpleMode,
-        )
-    // The Stream opening by any route (the press, a tap on a live app, an accessibility action) means it was found.
-    LaunchedEffect(shownStream, hintSeen) {
-        if (shownStream && !hintSeen) onDockPressHintSeen?.invoke()
-    }
     // Once the Library's sheet covers Home or the Stream they are invisible, so assistive technology skips them too.
     val covered = shownLibrary && !pull.isLibraryTransitioning
     val coveredSemantics = if (covered) Modifier.clearAndSetSemantics {} else Modifier
@@ -498,27 +484,53 @@ private fun HomeDestinationContent(
                         onAction = onAction,
                     )
                 }
-                // The first-run hint: shown once on Home, gone for good once dismissed or once the Stream has opened.
-                if (hintShown) {
-                    DockPressHint(
-                        dockBounds = dockHost.bounds.value,
-                        pull = plan.dockEdge.pullDirection,
-                        onDismiss = { onDockPressHintSeen?.invoke() },
-                        // The Home handle stands just above a bottom Dock; the hint sits above the handle.
-                        clearance =
-                            if (plan.dockEdge == DockPosition.BOTTOM) {
-                                val layout = state.postureLayout()
-                                HomeHandleLayout.reservedDp(
-                                    DockPosition.BOTTOM,
-                                    layout.pageScroll.handleAxis,
-                                    state.homeLayout.pages.size,
-                                    layout.showsDots && HomeHandle.showsDots(state.homeLayout.pages.size),
-                                ).dp
-                            } else {
-                                0.dp
+                // The one-time Dock hints: at most one at a time, each retired once its gesture is performed.
+                DockHintLayer(
+                    hints = hints,
+                    legacyPressSeen = state.launcherSettings.hints.dockPressSeen,
+                    onPressRetired = { onAction(LauncherShellAction.DismissDockPressHint) },
+                    facts =
+                        HintContext(
+                            simpleMode = features.simpleMode,
+                            setUpShowing = state.shouldShowSetupCard,
+                            streamAvailable = stream != null,
+                            streamShown = shownStream,
+                            libraryAvailable = features.library,
+                            libraryShown = showLibrary,
+                            dockHasItems = state.homeLayout.dock.items.isNotEmpty(),
+                        ),
+                    live =
+                        HintLiveInputs(
+                            dragging = { dockHost.isHomeDragInProgress.value || dockHost.isWidgetDragInProgress.value },
+                            dockBusy = {
+                                motion.running || choice.choosing || choice.scrubbing || dockPull.running
                             },
-                    )
-                }
+                            stackCount = { stream?.dock?.pages?.size ?: 0 },
+                        ),
+                    dockBounds = dockHost.bounds.value,
+                    pull = plan.dockEdge.pullDirection,
+                    // The Home handle stands just above a bottom Dock; the hint sits above the handle.
+                    clearance =
+                        if (plan.dockEdge == DockPosition.BOTTOM) {
+                            val layout = state.postureLayout()
+                            HomeHandleLayout.reservedDp(
+                                DockPosition.BOTTOM,
+                                layout.pageScroll.handleAxis,
+                                state.homeLayout.pages.size,
+                                layout.showsDots && HomeHandle.showsDots(state.homeLayout.pages.size),
+                            ).dp
+                        } else {
+                            0.dp
+                        },
+                )
+                DockHintEvents(
+                    hints = hints,
+                    atHome = state.destination == ShellDestination.HOME,
+                    streamShown = shownStream,
+                    libraryShown = shownLibrary,
+                    dockPull = dockPull,
+                    choice = choice,
+                )
             }
         }
     }

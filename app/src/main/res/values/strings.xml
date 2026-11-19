@@ -249,6 +249,9 @@
     <string name="dock_live_app_open_action">Open %1$s</string>
     <string name="dock_press_hint">Press the Dock down to see what\'s live</string>
     <string name="dock_press_hint_dismiss">Got it</string>
+    <string name="dock_menu_hint">Touch and hold an app on the Dock for its menu</string>
+    <string name="dock_pull_hint">Pull the Dock up for the Library</string>
+    <string name="dock_scrub_hint">Hold the Dock, then slide along it to change stack</string>
     <string name="dock_live_app_show_in_stream_action">Show %1$s in Stream</string>
     <string name="dock_live_app_open_in_stream_menu">Open in Stream</string>
     <string name="dock_live_app_show_action">Show %1$s</string>
@@ -580,6 +583,9 @@
     <string name="setting_home_hide_navigation_bar_keywords">full screen navigation bar system bars</string>
     <string name="setting_home_set_up_again">Set up Riffle again</string>
     <string name="setting_home_set_up_again_keywords">set up walkthrough onboarding tour first-time</string>
+    <string name="setting_home_show_hints_again">Show hints again</string>
+    <string name="setting_home_show_hints_again_keywords">hints tips tutorial gestures dock help reset teach</string>
+    <string name="settings_show_hints_again_subtitle">Brings back the short tips about the Dock\'s gestures.</string>
     <string name="setting_dock_show">Show the Dock</string>
     <string name="setting_dock_show_keywords">dock visible hide</string>
     <string name="setting_layout_folded_dock_edge">Dock position, folded</string>

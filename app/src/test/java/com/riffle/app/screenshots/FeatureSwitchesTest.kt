@@ -11,7 +11,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
-import com.riffle.app.launcher.DOCK_PRESS_HINT_TEST_TAG
+import com.riffle.app.launcher.DOCK_HINT_TEST_TAG
+import com.riffle.app.launcher.HintsHost
 import com.riffle.app.launcher.HOME_DOCK_PULL_TEST_TAG
 import com.riffle.app.launcher.HomeDestination
 import com.riffle.app.launcher.LauncherShellAction
@@ -88,7 +89,7 @@ class FeatureSwitchesTest {
                     appIconLoader = SolidColorAppIconLoader(),
                     stream = host,
                     // The first-run hint is asked for, as the shell does: it is the switches that keep it away.
-                    onDockPressHintSeen = {},
+                    hints = HintsHost.inMemory(),
                     onAction = { action ->
                         actions += action
                         shell = shell.answering(action)
@@ -130,7 +131,7 @@ class FeatureSwitchesTest {
         assertTrue(labels.toString(), "Open Library" in labels)
         assertTrue(labels.toString(), "Show live pages" in labels)
         assertTrue(labels.toString(), "Search" in labels)
-        composeRule.onNodeWithTag(DOCK_PRESS_HINT_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertIsDisplayed()
     }
 
     // The Stream
@@ -142,7 +143,7 @@ class FeatureSwitchesTest {
         val labels = composeRule.dockActionLabels()
         assertFalse(labels.toString(), "Show live pages" in labels)
         assertTrue(labels.toString(), "Open Library" in labels)
-        composeRule.onNodeWithTag(DOCK_PRESS_HINT_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertDoesNotExist()
 
         composeRule.pressDock(distancePx = 150f)
         assertTrue("pressing the Dock opens nothing: $actions", LauncherShellAction.OpenStream !in actions)
@@ -245,7 +246,7 @@ class FeatureSwitchesTest {
         composeRule.onNodeWithTag(com.riffle.app.launcher.HOME_DOCK_TEST_TAG).assertIsDisplayed()
         val labels = composeRule.dockActionLabels()
         assertEquals(listOf("Search"), labels)
-        composeRule.onNodeWithTag(DOCK_PRESS_HINT_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertDoesNotExist()
 
         composeRule.pressDock(distancePx = 150f)
         pullUp()

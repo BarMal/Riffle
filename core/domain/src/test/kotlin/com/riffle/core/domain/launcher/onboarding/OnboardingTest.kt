@@ -1,7 +1,11 @@
 package com.riffle.core.domain.launcher.onboarding
 
+import com.riffle.core.domain.launcher.hints.Hint
+import com.riffle.core.domain.launcher.hints.HintEvent
+import com.riffle.core.domain.launcher.hints.HintProgress
 import com.riffle.core.domain.launcher.workspace.SourceIds
 import com.riffle.core.domain.launcher.workspace.StoredValue
+import com.riffle.core.domain.launcher.workspace.arr
 import com.riffle.core.domain.launcher.workspace.num
 import com.riffle.core.domain.launcher.workspace.obj
 import com.riffle.core.domain.launcher.workspace.str
@@ -83,6 +87,59 @@ class OnboardingTest {
         assertEquals(true, Onboarding.skipped(chosen).homeStartChosen)
         assertEquals(true, Onboarding.completed(chosen).homeStartChosen)
         assertEquals(true, Onboarding.rerun(chosen).homeStartChosen)
+    }
+
+    @Test
+    fun hintsAreAbsentInDataWrittenBeforeThemAndNothingIsRetired() {
+        val old =
+            obj(
+                "version" to num(1),
+                "origin" to str("EXISTING_USER"),
+                "walkthrough" to str("COMPLETED"),
+                "completedRuns" to num(1),
+                "homeStartChosen" to StoredValue.Bool(true),
+            )
+        val decoded = OnboardingCodec.decode(old)
+        assertEquals(HintProgress(), decoded.hints)
+        assertEquals(true, decoded.homeStartChosen)
+    }
+
+    @Test
+    fun hintsRoundTripAndUnknownOrMalformedPartsReadAsDefaults() {
+        val hints =
+            HintProgress(
+                retired = setOf(Hint.DOCK_PRESS, Hint.DOCK_SCRUB),
+                homeVisits = 3,
+                libraryOpenedElsewhere = true,
+                lastRetiredVisit = 2,
+            )
+        val state = OnboardingState(OnboardingOrigin.FRESH_INSTALL, hints = hints)
+        assertEquals(hints, OnboardingCodec.decode(OnboardingCodec.encode(state)).hints)
+
+        val odd =
+            obj(
+                "hints" to
+                    obj(
+                        "retired" to arr(listOf(str("dockPress"), str("fromTheFuture"), num(7))),
+                        "homeVisits" to str("many"),
+                        "lastRetiredVisit" to num(-4),
+                    ),
+            )
+        assertEquals(
+            HintProgress(retired = setOf(Hint.DOCK_PRESS), lastRetiredVisit = 0),
+            OnboardingCodec.decode(odd).hints,
+        )
+        assertEquals(HintProgress(), OnboardingCodec.decode(obj("hints" to str("nope"))).hints)
+    }
+
+    @Test
+    fun hintEventsAndShowHintsAgainChangeOnlyTheHints() {
+        val state = Onboarding.completed(OnboardingState(OnboardingOrigin.FRESH_INSTALL))
+        val retired = Onboarding.hintEvent(state, HintEvent.Dismissed(Hint.DOCK_MENU))
+        assertEquals(setOf(Hint.DOCK_MENU), retired.hints.retired)
+        assertEquals(state.progress, retired.progress)
+        assertEquals(state, Onboarding.hintEvent(state, HintEvent.StackScrubbed).copy(hints = state.hints))
+        assertEquals(state, Onboarding.showHintsAgain(retired))
     }
 
     @Test

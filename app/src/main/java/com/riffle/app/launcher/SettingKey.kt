@@ -88,6 +88,11 @@ enum class SettingKey(
         R.string.setting_home_set_up_again,
         R.string.setting_home_set_up_again_keywords,
     ),
+    HOME_SHOW_HINTS_AGAIN(
+        SettingsPage.HOME,
+        R.string.setting_home_show_hints_again,
+        R.string.setting_home_show_hints_again_keywords,
+    ),
     DOCK_SHOW(SettingsPage.DOCK, R.string.setting_dock_show, R.string.setting_dock_show_keywords),
     DOCK_POSITION(SettingsPage.DOCK, R.string.setting_dock_position, R.string.setting_dock_position_keywords),
     DOCK_ICON_SIZE(SettingsPage.DOCK, R.string.setting_dock_icon_size, R.string.setting_dock_icon_size_keywords),

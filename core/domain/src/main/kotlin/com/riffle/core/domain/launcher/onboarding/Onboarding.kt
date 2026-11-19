@@ -1,6 +1,12 @@
 package com.riffle.core.domain.launcher.onboarding
 
+import com.riffle.core.domain.launcher.hints.Hint
+import com.riffle.core.domain.launcher.hints.HintEvent
+import com.riffle.core.domain.launcher.hints.HintProgress
+import com.riffle.core.domain.launcher.hints.Hints
 import com.riffle.core.domain.launcher.workspace.StoredValue
+import com.riffle.core.domain.launcher.workspace.arr
+import com.riffle.core.domain.launcher.workspace.array
 import com.riffle.core.domain.launcher.workspace.bool
 import com.riffle.core.domain.launcher.workspace.enumOrNull
 import com.riffle.core.domain.launcher.workspace.long
@@ -71,6 +77,8 @@ data class OnboardingState(
      * once and never again, whatever happens to the set-up later (`places-views-plan.md`, "First run").
      */
     val homeStartChosen: Boolean = false,
+    /** What the one-time Dock hints have been shown and what has been done (ADR 0003, Amendment 12). */
+    val hints: HintProgress = HintProgress(),
 )
 
 /**
@@ -108,6 +116,18 @@ object Onboarding {
     /** Home was seeded (or the choice was made): the set-up never asks, and nothing seeds, again. */
     fun homeStartChosen(state: OnboardingState): OnboardingState = state.copy(homeStartChosen = true)
 
+    /** Something the one-time hints care about happened. */
+    fun hintEvent(
+        state: OnboardingState,
+        event: HintEvent,
+    ): OnboardingState {
+        val next = Hints.reduce(state.hints, event)
+        return if (next == state.hints) state else state.copy(hints = next)
+    }
+
+    /** Settings > About > Show hints again: every hint is due again. */
+    fun showHintsAgain(state: OnboardingState): OnboardingState = state.copy(hints = Hints.reset())
+
     /** Closed without finishing. A re-run from Settings that is cancelled keeps an earlier completion. */
     fun skipped(state: OnboardingState): OnboardingState =
         if (state.progress == OnboardingProgress.COMPLETED) state else state.copy(progress = OnboardingProgress.SKIPPED)
@@ -135,6 +155,7 @@ object OnboardingCodec {
             "walkthrough" to str(state.progress.name),
             "completedRuns" to num(state.completedRuns),
             "homeStartChosen" to StoredValue.Bool(state.homeStartChosen),
+            "hints" to encodeHints(state.hints),
         )
 
     fun decode(value: StoredValue?): OnboardingState {
@@ -144,8 +165,35 @@ object OnboardingCodec {
             progress = enumOrNull<OnboardingProgress>(root.string("walkthrough")) ?: legacyCompleted(root),
             completedRuns = root.long("completedRuns")?.coerceIn(0, Int.MAX_VALUE.toLong())?.toInt() ?: 0,
             homeStartChosen = root.bool("homeStartChosen") ?: false,
+            hints = decodeHints(root.obj("hints")),
         )
     }
+
+    private fun encodeHints(hints: HintProgress): StoredValue.Obj =
+        obj(
+            "retired" to arr(hints.retired.map { str(it.storedId) }),
+            "homeVisits" to num(hints.homeVisits),
+            "libraryOpenedElsewhere" to StoredValue.Bool(hints.libraryOpenedElsewhere),
+            "lastRetiredVisit" to hints.lastRetiredVisit?.let { num(it) },
+        )
+
+    /** Absent in everything written before the hints: nothing retired, no visits counted. Unknown ids are dropped. */
+    private fun decodeHints(root: StoredValue.Obj?): HintProgress =
+        if (root == null) {
+            HintProgress()
+        } else {
+            HintProgress(
+                retired =
+                    root.array("retired")
+                        .mapNotNull { Hint.fromStoredId((it as? StoredValue.Str)?.value) }
+                        .toSet(),
+                homeVisits = root.long("homeVisits")?.coerceIn(0, MAX_STORED_VISITS)?.toInt() ?: 0,
+                libraryOpenedElsewhere = root.bool("libraryOpenedElsewhere") ?: false,
+                lastRetiredVisit = root.long("lastRetiredVisit")?.coerceIn(0, MAX_STORED_VISITS)?.toInt(),
+            )
+        }
+
+    private const val MAX_STORED_VISITS = 100_000L
 
     /** A hand-written or future value may carry only a `completed` flag; honour it rather than re-running. */
     private fun legacyCompleted(root: StoredValue.Obj): OnboardingProgress =

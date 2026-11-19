@@ -156,6 +156,9 @@ internal fun RiffleContextMenu(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     CloseWhenTheHoldMoves(expanded = expanded, onDismissRequest = onDismissRequest)
+    // A menu opened inside the Dock is a Dock gesture performed: the hint for it retires.
+    val dock = LocalDockChoice.current
+    LaunchedEffect(expanded) { if (expanded) dock?.menuOpened() }
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,

@@ -38,9 +38,9 @@ class DockPressHintInteractionTest {
             }
         }
 
-        composeRule.onNodeWithTag(DOCK_PRESS_HINT_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(DOCK_PRESS_HINT_DISMISS_TEST_TAG).assertHasClickAction().performClick()
+        composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(DOCK_HINT_DISMISS_TEST_TAG).assertHasClickAction().performClick()
 
-        composeRule.onNodeWithTag(DOCK_PRESS_HINT_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(DOCK_HINT_TEST_TAG).assertDoesNotExist()
     }
 }

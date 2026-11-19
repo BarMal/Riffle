@@ -185,14 +185,29 @@ private fun SettingsHomePageContent(
             },
         )
     }
-    LocalWalkthroughLauncher.current?.let { runSetup ->
+    val runSetup = LocalWalkthroughLauncher.current
+    val hints = LocalHintsHost.current
+    if (runSetup != null || hints != null) {
         SettingsSection(title = stringResource(R.string.settings_section_set_up)) {
-            SettingsClickableRow(
-                modifier = Modifier.settingAnchor(SettingKey.HOME_SET_UP_AGAIN),
-                title = OnboardingText.SETTINGS_ROW,
-                subtitle = OnboardingText.SETTINGS_ROW_SUBTITLE,
-                onClick = runSetup,
-            )
+            if (runSetup != null) {
+                SettingsClickableRow(
+                    modifier = Modifier.settingAnchor(SettingKey.HOME_SET_UP_AGAIN),
+                    title = OnboardingText.SETTINGS_ROW,
+                    subtitle = OnboardingText.SETTINGS_ROW_SUBTITLE,
+                    onClick = runSetup,
+                )
+            }
+            if (hints != null) {
+                SettingsClickableRow(
+                    modifier = Modifier.settingAnchor(SettingKey.HOME_SHOW_HINTS_AGAIN),
+                    title = SettingKey.HOME_SHOW_HINTS_AGAIN.label(),
+                    subtitle = stringResource(R.string.settings_show_hints_again_subtitle),
+                    onClick = {
+                        hints.showAgain()
+                        onAction(LauncherShellAction.ShowHintsAgain)
+                    },
+                )
+            }
         }
     }
 }
