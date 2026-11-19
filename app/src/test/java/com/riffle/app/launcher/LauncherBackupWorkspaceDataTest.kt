@@ -14,7 +14,11 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.StackedWidget
+import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.restacked
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -27,6 +31,7 @@ import com.riffle.core.domain.launcher.workspace.pool.ArrangementPage
 import com.riffle.core.domain.launcher.workspace.pool.PlacedItemPool
 import com.riffle.core.domain.launcher.workspace.pool.Placement
 import com.riffle.core.domain.launcher.workspace.pool.PoolItemId
+import com.riffle.core.domain.launcher.workspace.pool.PoolStackMember
 import com.riffle.core.domain.launcher.workspace.pool.PoolStoreState
 import com.riffle.core.domain.launcher.workspace.pool.PoolWidget
 import org.json.JSONArray
@@ -128,6 +133,56 @@ class LauncherBackupWorkspaceDataTest {
         assertTrue(pool.migrated)
         assertEquals(workspaceSet(), decoded.workspaceSet)
         assertEquals(exclusions(), decoded.exclusions)
+    }
+
+    @Test
+    fun aWidgetStackSurvivesTheBackupWithItsMembersAndNoHostIds() {
+        val withStack = poolWithWidget().let { state ->
+            val deviceClass = state.pools.keys.single()
+            val pool = state.pools.getValue(deviceClass)
+            val widget = pool.items.getValue(PoolItemId("widget-1")) as PoolWidget
+            val provider = widget.provider
+            val stacked =
+                widget.copy(
+                    stack =
+                        listOf(
+                            PoolStackMember("Clock", provider = provider, hostedId = HostedWidgetId(77)),
+                            PoolStackMember("Timer", provider = provider, hostedId = HostedWidgetId(78)),
+                        ),
+                    shown = 1,
+                )
+            state.copy(pools = mapOf(deviceClass to pool.copy(items = mapOf(stacked.id to stacked))))
+        }
+
+        val json = exportWith(FakePort(set = workspaceSet(), rules = exclusions(), pool = withStack))
+        assertFalse(JSONObject(json).getJSONObject("pool").toString().contains("\"host\""))
+
+        val restored =
+            decodeLauncherBackupDocument(json).pool!!.pools.values.single().items.values.single() as PoolWidget
+        assertEquals(listOf("Clock", "Timer"), restored.stack.map { it.label })
+        assertEquals(1, restored.shown)
+        assertEquals(emptySet<HostedWidgetId>(), restored.hostIds)
+    }
+
+    @Test
+    fun aStackInTheBackedUpLayoutsKeepsItsMembersAndHostIds() {
+        val layout = HomeLayoutDefaults.standard()
+        val stack =
+            WidgetItem(
+                id = LauncherItemId("widget:1"),
+                appWidgetId = HostedWidgetId(1),
+                label = "One",
+                placement = GridPlacement(GridCell(0, 0), GridSpan(2, 2)),
+            ).restacked(listOf(StackedWidget(HostedWidgetId(1), "One"), StackedWidget(HostedWidgetId(2), "Two")), 1)
+        val document =
+            base.copy(
+                homeLayoutSet =
+                    HomeLayoutSet.fromLayout(layout.copy(pages = listOf(layout.selectedPage.copy(items = listOf(stack))))),
+            )
+
+        val decoded = decodeLauncherBackupDocument(encodeLauncherBackupDocument(document))
+
+        assertEquals(stack, decoded.homeLayoutSet.activeLayout.selectedPage.items.single())
     }
 
     @Test

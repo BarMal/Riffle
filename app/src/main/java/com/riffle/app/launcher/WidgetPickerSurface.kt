@@ -97,6 +97,11 @@ fun WidgetPickerSurface(
      * shelf -- the choice is already made, and a tap on a provider goes straight to placement.
      */
     guidedPlacementTarget: WidgetAddTarget? = null,
+    /**
+     * The picker was opened to fill a widget stack (ADR 0003, Amendment 14): a tap on a widget adds it to the stack,
+     * and nothing is dragged out (a stack is filled from here, not by where a widget lands).
+     */
+    isFillingStack: Boolean = false,
     isDragHandoffActive: Boolean = false,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit = {},
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit = { _, _, _ -> },
@@ -197,10 +202,10 @@ fun WidgetPickerSurface(
                     )
                     Text(
                         text =
-                            if (isDragHandoffActive) {
-                                "Release on Home or Dock to place this widget"
-                            } else {
-                                "Long-press a widget to drag it to Home or Dock"
+                            when {
+                                isFillingStack -> stringResource(R.string.widget_stack_picker_hint)
+                                isDragHandoffActive -> "Release on Home or Dock to place this widget"
+                                else -> "Long-press a widget to drag it to Home or Dock"
                             },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -230,6 +235,7 @@ fun WidgetPickerSurface(
                         onWidgetDropped = onWidgetDropped,
                         hasDockPanel = hasDockPanel,
                         guidedPlacementTarget = guidedPlacementTarget,
+                        isFillingStack = isFillingStack,
                         onAccessiblePlacementRequested = { provider, target ->
                             pendingProviderFocusKey = provider.widgetPickerKey
                             onAccessiblePlacementRequested(provider, target)
@@ -272,6 +278,7 @@ private fun WidgetPickerContent(
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     hasDockPanel: Boolean,
     guidedPlacementTarget: WidgetAddTarget?,
+    isFillingStack: Boolean,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     providerFocusRequesters: MutableMap<String, FocusRequester>,
     rootCoordinates: LayoutCoordinates?,
@@ -347,6 +354,7 @@ private fun WidgetPickerContent(
                                 onWidgetDropped = onWidgetDropped,
                                 hasDockPanel = hasDockPanel,
                                 guidedPlacementTarget = guidedPlacementTarget,
+                                isFillingStack = isFillingStack,
                                 onAccessiblePlacementRequested = onAccessiblePlacementRequested,
                                 rootCoordinates = rootCoordinates,
                             )
@@ -446,11 +454,13 @@ private fun WidgetProviderTile(
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     hasDockPanel: Boolean,
     guidedPlacementTarget: WidgetAddTarget?,
+    isFillingStack: Boolean,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     rootCoordinates: LayoutCoordinates?,
 ) {
     val isAvailable = contentVisibility == AppProfileContentVisibility.VISIBLE
     val summary = provider.widgetPickerSummary()
+    val stackActionLabel = stringResource(R.string.widget_stack_picker_add_description, provider.label)
     val currentOnWidgetDragStarted by rememberUpdatedState(onWidgetDragStarted)
     val currentOnWidgetDragMoved by rememberUpdatedState(onWidgetDragMoved)
     val currentOnWidgetDragCancelled by rememberUpdatedState(onWidgetDragCancelled)
@@ -479,7 +489,15 @@ private fun WidgetProviderTile(
                 )
                 .semantics {
                     role = Role.Image
-                    if (isAvailable) {
+                    if (isAvailable && isFillingStack) {
+                        customActions =
+                            listOf(
+                                CustomAccessibilityAction(stackActionLabel) {
+                                    onAccessiblePlacementRequested(provider, WidgetAddTarget.HOME_STACK)
+                                    true
+                                },
+                            )
+                    } else if (isAvailable) {
                         customActions =
                             provider.widgetPickerPlacementActions(
                                 hasDockPanel = hasDockPanel,
@@ -490,8 +508,8 @@ private fun WidgetProviderTile(
                     }
                 }
                 .onGloballyPositioned { layoutCoordinates -> coordinates = layoutCoordinates }
-                .pointerInput(provider.widgetPickerKey, isAvailable) {
-                    if (!isAvailable) return@pointerInput
+                .pointerInput(provider.widgetPickerKey, isAvailable, isFillingStack) {
+                    if (!isAvailable || isFillingStack) return@pointerInput
                     detectDragGesturesAfterLongPress(
                         onDragStart = { offset ->
                             dropPosition = offset
@@ -556,6 +574,7 @@ private fun WidgetProviderTile(
             provider = provider,
             enabled = isAvailable,
             focusRequester = addFocusRequester,
+            isFillingStack = isFillingStack,
             onAccessiblePlacementRequested = onAccessiblePlacementRequested,
         )
     }
@@ -723,6 +742,7 @@ private fun WidgetProviderAddMenu(
     provider: InstalledWidgetProvider,
     enabled: Boolean,
     focusRequester: FocusRequester,
+    isFillingStack: Boolean,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -733,13 +753,20 @@ private fun WidgetProviderAddMenu(
                 Modifier
                     .focusRequester(focusRequester)
                     .focusable(),
-            onClick = { menuExpanded = true },
+            // A stack's picker has one destination: the button adds to it.
+            onClick = {
+                if (isFillingStack) {
+                    onAccessiblePlacementRequested(provider, WidgetAddTarget.HOME_STACK)
+                } else {
+                    menuExpanded = true
+                }
+            },
             enabled = enabled,
         ) {
             Text(text = stringResource(R.string.widgets_add_named, provider.label))
         }
         RiffleContextMenu(
-            expanded = menuExpanded,
+            expanded = menuExpanded && !isFillingStack,
             onDismissRequest = { menuExpanded = false },
         ) {
             DropdownMenuItem(

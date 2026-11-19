@@ -69,6 +69,29 @@ fun WidgetProviderDimensions.resizeConstraints(
     )
 }
 
+/**
+ * What a provider's resize information makes of its widget on [grid]: no information (neither direction known) is no
+ * limit. The one rule the add flow, and the picker that lists what can join a stack, share.
+ */
+fun WidgetProviderDimensions.resizeConstraintsFor(
+    supportsHorizontalResize: Boolean?,
+    supportsVerticalResize: Boolean?,
+    grid: GridDimensions,
+    availableWidthDp: Int,
+    availableHeightDp: Int,
+): WidgetResizeConstraints =
+    if (supportsHorizontalResize == null && supportsVerticalResize == null) {
+        WidgetResizeConstraints()
+    } else {
+        resizeConstraints(
+            grid = grid,
+            availableWidthDp = availableWidthDp,
+            availableHeightDp = availableHeightDp,
+            supportsHorizontalResize = supportsHorizontalResize == true,
+            supportsVerticalResize = supportsVerticalResize == true,
+        )
+    }
+
 fun GridSpan.fitWidgetPreferredSpan(grid: GridDimensions): GridSpan =
     GridSpan(
         columns = columns.coerceIn(1, grid.columns.validGridCells()),

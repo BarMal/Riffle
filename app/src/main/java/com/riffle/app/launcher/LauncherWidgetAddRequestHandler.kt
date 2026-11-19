@@ -16,6 +16,8 @@ class LauncherWidgetAddRequestHandler(
     private val deleteHostedWidgetId: (HostedWidgetId) -> Unit,
     private val completeGlanceAdd: (LauncherShellAction.AddGlanceWidgetToHome) -> HostedWidgetAddCompletionResult =
         { HostedWidgetAddCompletionResult.Rejected },
+    private val completeGlanceStackAdd: (LauncherShellAction.AddGlanceWidgetToStack) -> HostedWidgetAddCompletionResult =
+        { HostedWidgetAddCompletionResult.Rejected },
 ) {
     fun handle(action: LauncherShellAction.RequestAddWidget): LauncherWidgetAddHandlingResult {
         GlanceWidgets.kindOf(action.provider)?.let { kind -> return handleGlance(kind, action) }
@@ -63,7 +65,21 @@ class LauncherWidgetAddRequestHandler(
         kind: GlanceWidgetKind,
         action: LauncherShellAction.RequestAddWidget,
     ): LauncherWidgetAddHandlingResult =
-        if (action.target != WidgetAddTarget.HOME) {
+        if (action.target == WidgetAddTarget.HOME_STACK && action.targetStackId != null) {
+            completeGlanceStackAdd(
+                LauncherShellAction.AddGlanceWidgetToStack(
+                    itemId = action.targetStackId,
+                    kind = kind,
+                    label = action.label,
+                ),
+            ).let { result ->
+                when (result) {
+                    is HostedWidgetAddCompletionResult.Placed ->
+                        LauncherWidgetAddHandlingResult.Completed(result.message)
+                    HostedWidgetAddCompletionResult.Rejected -> LauncherWidgetAddHandlingResult.Cancelled
+                }
+            }
+        } else if (action.target != WidgetAddTarget.HOME) {
             LauncherWidgetAddHandlingResult.Completed(message = GLANCE_HOME_ONLY_MESSAGE)
         } else {
             completeGlanceAdd(

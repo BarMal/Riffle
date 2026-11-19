@@ -6,8 +6,10 @@ import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.StackedWidget
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
+import com.riffle.core.domain.launcher.home.restacked
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -70,6 +72,10 @@ class HomeWidgetPlaceholderContextMenuTest {
 
         assertEquals(
             listOf(
+                ShortcutContextMenuItem(
+                    label = "Add widget to stack",
+                    action = LauncherShellAction.OpenWidgetPickerForStack(widget.id),
+                ),
                 ShortcutContextMenuItem(
                     label = "Make wider",
                     action =
@@ -190,5 +196,62 @@ class HomeWidgetPlaceholderContextMenuTest {
             )
 
         assertEquals(false, items.single { item -> item.label == "Make taller" }.enabled)
+    }
+
+    private fun stackOf(count: Int): WidgetItem =
+        WidgetItem(
+            id = LauncherItemId("stack"),
+            appWidgetId = HostedWidgetId(1),
+            label = "Widget 1",
+            placement = GridPlacement(cell = GridCell(column = 0, row = 0), span = GridSpan(columns = 2, rows = 2)),
+        ).restacked((1..count).map { StackedWidget(HostedWidgetId(it), "Widget $it") }, shown = 0)
+
+    @Test
+    fun aStacksMenuLeadsWithEditStackAndAddWidgetToStackAndRemovesAfterAsking() {
+        val stack = stackOf(3)
+
+        val items = widgetPlaceholderContextMenuItems(stack, text = SettingsTestText)
+
+        assertEquals(
+            listOf("Edit stack", "Add widget to stack"),
+            items.take(2).map { item -> item.label },
+        )
+        assertEquals(LauncherShellAction.OpenWidgetStackEditor(stack.id), items.first().action)
+        assertEquals(
+            LauncherShellAction.ConfirmRemoveWidgetStack(stack.id),
+            items.single { item -> item.label == "Remove from Home" }.action,
+        )
+    }
+
+    @Test
+    fun aFullStackCannotTakeAnotherWidget() {
+        val items = widgetPlaceholderContextMenuItems(stackOf(10), text = SettingsTestText)
+
+        assertEquals(false, items.single { item -> item.label == "Add widget to stack" }.enabled)
+    }
+
+    @Test
+    fun theDockAndItsPanelNeverOfferAStack() {
+        listOf(ShortcutContextSurface.DOCK, ShortcutContextSurface.DOCK_PANEL).forEach { surface ->
+            val labels =
+                widgetPlaceholderContextMenuItems(stackOf(2), contextSurface = surface, text = SettingsTestText)
+                    .map { item -> item.label }
+
+            assertEquals(false, "Edit stack" in labels)
+            assertEquals(false, "Add widget to stack" in labels)
+        }
+    }
+
+    @Test
+    fun aStacksResizeMenuFollowsWhatEveryMemberSupports() {
+        val stack = stackOf(2)
+
+        val items = widgetPlaceholderContextMenuItems(stack, GridDimensions(4, 4), text = SettingsTestText)
+
+        assertEquals(true, items.single { item -> item.label == "Make wider" }.enabled)
+        assertEquals(
+            LauncherShellAction.ResizeHomeWidget(stack.id, GridSpan(3, 2)),
+            items.single { item -> item.label == "Make wider" }.action,
+        )
     }
 }

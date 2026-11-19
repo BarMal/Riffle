@@ -587,6 +587,8 @@ internal class MainActivityDependencies(
         selectedGrid: () -> GridDimensions,
         completeWidgetAdd: (HostedWidgetAddAction) -> HostedWidgetAddCompletionResult,
         completeGlanceAdd: (LauncherShellAction.AddGlanceWidgetToHome) -> HostedWidgetAddCompletionResult,
+        completeGlanceStackAdd: (LauncherShellAction.AddGlanceWidgetToStack) -> HostedWidgetAddCompletionResult =
+            { HostedWidgetAddCompletionResult.Rejected },
     ): LauncherWidgetAddRequestHandler =
         LauncherWidgetAddRequestHandler(
             widgetBindingCoordinator = widgetBindingCoordinator,
@@ -595,6 +597,7 @@ internal class MainActivityDependencies(
             completeWidgetAdd = completeWidgetAdd,
             deleteHostedWidgetId = hostIdDeletion::ifAllowed,
             completeGlanceAdd = completeGlanceAdd,
+            completeGlanceStackAdd = completeGlanceStackAdd,
         )
 }
 

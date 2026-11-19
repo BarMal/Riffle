@@ -135,6 +135,26 @@ internal fun WidgetSpanOutline(modifier: Modifier = Modifier) {
 }
 
 /**
+ * The "will make a stack" state of a widget a widget is held over (after the folder hold, as a folder is): the outline
+ * of its span in the primary colour, over the widget. Stroke only, drawn in the draw phase.
+ */
+@Composable
+internal fun WidgetStackDropOutline(modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.primary
+    val shape = LocalLauncherCardShape.current
+    Box(
+        modifier =
+            modifier.testTag(HOME_DRAG_STACK_OUTLINE_TEST_TAG).drawBehind {
+                drawOutline(
+                    outline = shape.createOutline(size, layoutDirection, this),
+                    color = color,
+                    style = Stroke(width = (DRAG_PLACEHOLDER_STROKE_WIDTH_DP * 2).dp.toPx()),
+                )
+            },
+    )
+}
+
+/**
  * The icon of an app as one of the two ghosts of a drag: the desaturated, dimmed icon (where it was) or the outline of
  * its silhouette (where it would land). Both are baked once per icon by [HomeDragGhosts]; this only draws a bitmap.
  */
@@ -538,6 +558,9 @@ private val LauncherItem.dragLabel: String
 
 /** The outline of a widget's span a drag leaves (where it was) and shows (where it would land). */
 internal const val HOME_DRAG_WIDGET_OUTLINE_TEST_TAG = "home-drag-widget-outline"
+
+/** The outline a widget wears while another widget held over it would make a stack with it. */
+internal const val HOME_DRAG_STACK_OUTLINE_TEST_TAG = "home-drag-stack-outline"
 
 private const val DRAG_PLACEHOLDER_STROKE_WIDTH_DP = 2
 private const val DRAG_PLACEHOLDER_CORNER_RADIUS_DP = 12

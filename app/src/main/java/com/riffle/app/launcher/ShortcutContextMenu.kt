@@ -210,7 +210,14 @@ private fun ShortcutContextSurface.removeAction(shortcut: AppShortcutItem): Laun
 internal fun WidgetItem.removeActionFor(surface: ShortcutContextSurface): LauncherShellAction =
     when (surface) {
         ShortcutContextSurface.DOCK_PANEL -> LauncherShellAction.RemoveDockPanelItem(id)
-        ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> LauncherShellAction.RemoveHomeShortcut(id)
+        // A stack asks first: removing it removes every widget in it.
+        ShortcutContextSurface.HOME ->
+            if (isStack) {
+                LauncherShellAction.ConfirmRemoveWidgetStack(id)
+            } else {
+                LauncherShellAction.RemoveHomeShortcut(id)
+            }
+        ShortcutContextSurface.DOCK -> LauncherShellAction.RemoveHomeShortcut(id)
     }
 
 internal fun ShortcutContextSurface.widgetRemoveLabel(text: SettingsText): String =
