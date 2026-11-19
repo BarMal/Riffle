@@ -416,6 +416,8 @@ internal fun homeDropAction(
 ): LauncherShellAction? {
     val plan = session?.plan
     return when {
+        // Over the Remove target: the item goes off Home as its menu's "Remove from Home" does (a stack asks first).
+        session != null && session.isOverRemove -> removeFromHomeAction(item, dragState.pageId)
         // Over the Dock there is no plan (nothing is pushed): the item is pinned where the finger hovers.
         session != null && session.isOverDock && item.isDockTransferable ->
             LauncherShellAction.MoveHomeItemToDock(item.id, targetIndex = session.dockIndex, pageId = dragState.pageId)
@@ -454,6 +456,16 @@ internal fun homeDropAction(
             )
     }
 }
+
+internal fun removeFromHomeAction(
+    item: LauncherItem,
+    pageId: com.riffle.core.domain.launcher.home.LauncherPageId,
+): LauncherShellAction =
+    if (item is WidgetItem && item.isStack) {
+        LauncherShellAction.ConfirmRemoveWidgetStack(item.id)
+    } else {
+        LauncherShellAction.RemoveHomeShortcut(item.id, pageId)
+    }
 
 internal fun homeDragSessionForUpdate(
     previousSession: HomeDragSession?,

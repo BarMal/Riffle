@@ -258,7 +258,11 @@ sealed interface LauncherShellAction {
         val filter: AppDrawerProfileFilter,
     ) : LauncherShellAction
 
-    data class RemoveHomeShortcut(val itemId: LauncherItemId) : LauncherShellAction
+    /** Takes the item off Home; [pageId] names its page when it is not the selected one (a drop on Remove). */
+    data class RemoveHomeShortcut(
+        val itemId: LauncherItemId,
+        val pageId: LauncherPageId? = null,
+    ) : LauncherShellAction
 
     data class CreateEmptyHomeFolder(
         val label: String,
@@ -345,6 +349,20 @@ sealed interface LauncherShellAction {
         val folderLabel: String? = null,
         /** The page is full and the push cannot make room: the displaced item goes to the next page (HomeSpill). */
         val spill: Boolean = false,
+    ) : LauncherShellAction
+
+    /**
+     * The drop of a Home drag that began outside the pages: [source] (an app of the Library, which is added as a new
+     * item, or an item of the Dock, which moves) lands at [cell] on [targetPageId] after [pushed] neighbours moved
+     * aside, spilling to the next page when the page is full, or (with [dropOnItemId]) joins that item in a folder.
+     */
+    data class DropExternalHomeItem(
+        val source: ExternalHomeDragSource,
+        val targetPageId: LauncherPageId,
+        val cell: GridCell,
+        val pushed: Map<LauncherItemId, GridCell> = emptyMap(),
+        val dropOnItemId: LauncherItemId? = null,
+        val folderLabel: String? = null,
     ) : LauncherShellAction
 
     data class MoveHomeItemToPage(

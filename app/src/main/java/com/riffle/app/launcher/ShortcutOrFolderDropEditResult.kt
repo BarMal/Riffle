@@ -1,13 +1,19 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderEditResult
 import com.riffle.core.domain.launcher.home.FolderEngine
+import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.HomeAppPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeSpill
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.containsHomeApp
 import com.riffle.core.domain.launcher.home.WidgetStackEngine
 import com.riffle.core.domain.launcher.home.WidgetStackResult
 
@@ -66,8 +72,62 @@ internal fun applyShortcutOrFolderDropEdit(
                     ).toShortcutOrFolderDropEditResult()
             }
 
+        is LauncherShellAction.DropExternalHomeItem ->
+            dropExternalItem(action, layout, shortcutEngine, folderEngine, installedApps)
+
         else -> shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
     }
+
+/**
+ * A drop of an item that is not on a page yet: an app of the Library becomes a new Home item (rejected when Home
+ * shows the app already, as "Add to Home" is), an item of the Dock moves to Home. It lands with the push and the
+ * spill rule ([HomeSpill]), or, dropped on top of an app or folder, joins it in a folder there.
+ */
+private fun dropExternalItem(
+    action: LauncherShellAction.DropExternalHomeItem,
+    layout: HomeLayout,
+    shortcutEngine: HomeShortcutEngine,
+    folderEngine: FolderEngine,
+    installedApps: List<InstalledApp>,
+): ShortcutOrFolderDropEditResult {
+    val rejected = ShortcutOrFolderDropEditResult.Rejected
+    val (base, item) =
+        when (val source = action.source) {
+            is ExternalHomeDragSource.Library -> {
+                if (layout.containsHomeApp(source.app.identity)) return rejected
+                layout to HomeAppPlacement.itemFor(layout, source.app)
+            }
+
+            is ExternalHomeDragSource.Dock -> {
+                val pinned = layout.dock.items.firstOrNull { it.id == source.itemId } ?: return rejected
+                if (pinned !is AppShortcutItem && pinned !is FolderItem) return rejected
+                layout.copy(dock = layout.dock.copy(items = layout.dock.items.filterNot { it.id == pinned.id })) to
+                    pinned.withPlacement(GridPlacement(action.cell))
+            }
+        }
+    if (action.dropOnItemId == null) {
+        return HomeSpill
+            .drop(base, item.withPlacement(GridPlacement(action.cell)), action.targetPageId, action.cell, action.pushed)
+            .toShortcutOrFolderDropEditResult()
+    }
+    val target =
+        base.pages.firstOrNull { it.id == action.targetPageId }
+            ?.items?.firstOrNull { it.id == action.dropOnItemId }?.placement?.cell ?: return rejected
+    val placed =
+        (HomeSpill.dropGroup(base, listOf(item), action.targetPageId, GridCell(0, 0)) as? HomeShortcutResult.Updated)
+            ?.layout ?: return rejected
+    // The item joins the folder only when it found room on that page; otherwise it simply landed, nothing lost.
+    if (placed.pages.first { it.id == action.targetPageId }.items.none { it.id == item.id }) {
+        return ShortcutOrFolderDropEditResult.Updated(placed)
+    }
+    return applyShortcutOrFolderDropEdit(
+        action = LauncherShellAction.MoveHomeShortcutToCell(item.id, target, action.folderLabel),
+        layout = placed.copy(selectedPageId = action.targetPageId),
+        shortcutEngine = shortcutEngine,
+        folderEngine = folderEngine,
+        installedApps = installedApps,
+    )
+}
 
 /**
  * A widget dropped on top of a widget (or a stack) of the same span: it joins the stack and the stack shows it. Null

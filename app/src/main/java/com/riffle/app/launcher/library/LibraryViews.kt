@@ -47,6 +47,7 @@ import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.app.launcher.designsystem.RiffleSpacing
 import com.riffle.app.launcher.drawerKey
 import com.riffle.app.launcher.drawerRowState
+import com.riffle.app.launcher.libraryHomeDrag
 import com.riffle.app.launcher.expressions.AlphaScrubber
 import com.riffle.app.launcher.glassSpotlightSource
 import com.riffle.app.launcher.launcherIconSize
@@ -163,6 +164,7 @@ private fun LibraryTileIcon(
                     key = app.drawerKey,
                     color = rememberGlassSpotlightColor(app.identity, context.appIconLoader),
                 )
+                .libraryHomeDrag(app, state.homeDrag) { menuOpen.value = false }
                 .combinedClickable(
                     onClick = { context.onAction(LauncherShellAction.LaunchApp(app.identity)) },
                     onLongClick = {

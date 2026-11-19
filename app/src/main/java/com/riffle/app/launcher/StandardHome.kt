@@ -79,6 +79,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.HomeAppPlacement
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -99,6 +100,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.containsHomeApp
 import com.riffle.core.domain.launcher.home.handleAxis
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -156,6 +158,7 @@ internal fun StandardHome(
         openedFolderId.value = created
     }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
+    val removeBounds = remember { mutableStateOf<Rect?>(null) }
     // What composition sees of the drag: everything but where the finger is. The finger moves every frame; the lifted
     // icon and the edge hold read it in the layout phase and from the latest session, so composition (and every cell
     // of every page) only changes when the drag does: a new landing cell, a new push, a page turn.
@@ -311,7 +314,18 @@ internal fun StandardHome(
                     onAction(LauncherShellAction.AddHomePage)
                 }
             },
-            onDragSessionChanged = { session ->
+            onDragSessionChanged = { rawSession ->
+                // Over the Remove target the item is dropped to be removed; the target is only there for what can be.
+                val session =
+                    rawSession?.let { raw ->
+                        val over =
+                            raw.pointerInRoot != Offset.Unspecified && raw.canBeRemoved() &&
+                                removeBounds.value?.contains(raw.pointerInRoot) == true
+                        if (over == raw.isOverRemove) raw else raw.copy(isOverRemove = over)
+                    }
+                if (session?.isOverRemove == true && homeDragSession.value?.isOverRemove != true) {
+                    interactions.haptics.perform(LauncherHapticEvent.DETENT)
+                }
                 if (session == null) {
                     homeDragSession.value?.let { ended -> itemMotion.letGo(ended.item.id, ended.pointerInRoot) }
                     // The drop's own action follows this at once and keeps the page it lands on; whatever is still
@@ -338,7 +352,9 @@ internal fun StandardHome(
                         }
                     }
                 homeDragSession.value = planned?.copy(dockIndex = hovered)
-                dockHostState.isDropTargetHighlighted.value = planned?.isOverDock == true
+                dockHostState.isDropTargetHighlighted.value =
+                    planned?.isOverDock == true && planned.external !is ExternalHomeDragSource.Dock
+                dockHostState.isExternalDragOverDock.value = planned?.isOverDock == true
                 dockHostState.isHomeDragInProgress.value = planned != null
             },
             currentDragSession = { homeDragSession.value },
@@ -352,13 +368,17 @@ internal fun StandardHome(
             },
             onBackgroundClick = dockHostState::dismissShelf,
             onAction = { action ->
-                if (action is LauncherShellAction.DropHomeItem &&
-                    discardCandidate.value?.let { HomeDragPages.keepsCandidate(it, action.targetPageId) } == true
+                val droppedOn =
+                    (action as? LauncherShellAction.DropHomeItem)?.targetPageId
+                        ?: (action as? LauncherShellAction.DropExternalHomeItem)?.targetPageId
+                if (droppedOn != null &&
+                    discardCandidate.value?.let { HomeDragPages.keepsCandidate(it, droppedOn) } == true
                 ) {
                     discardCandidate.value = null
                 }
                 if (action is LauncherShellAction.MoveHomeShortcutToCell ||
-                    (action is LauncherShellAction.DropHomeItem && action.dropOnItemId != null)
+                    (action is LauncherShellAction.DropHomeItem && action.dropOnItemId != null) ||
+                    (action is LauncherShellAction.DropExternalHomeItem && action.dropOnItemId != null)
                 ) {
                     foldersBeforeDrop.value = folderIds
                 }
@@ -368,6 +388,62 @@ internal fun StandardHome(
     // One instance for the life of the surface, which hands every call to the latest: the cells compare what they are
     // given, and a fresh bundle of lambdas at every recomposition would make every cell recompose with it.
     val actions = rememberStableWorkspaceActions(freshActions)
+    // A drag that starts in the Library or the Dock goes on here as a Home drag (the lifted item, the push ring, the
+    // folder hold, the page turns, the Remove target).
+    val latestVisibleLayout = rememberUpdatedState(visibleLayout)
+    val externalFolderLabel = stringResource(R.string.home_folder_default_name)
+    DisposableEffect(dockHostState, actions) {
+        dockHostState.externalDrag =
+            object : HomeExternalDrag {
+                private fun overDock(point: Offset) = dockBounds.value?.contains(point) == true
+
+                override fun start(
+                    source: ExternalHomeDragSource,
+                    pointerInRoot: Offset,
+                ): Boolean {
+                    val current = latestVisibleLayout.value
+                    val item: LauncherItem =
+                        when (source) {
+                            is ExternalHomeDragSource.Library ->
+                                HomeAppPlacement.itemFor(current, source.app).takeUnless {
+                                    current.containsHomeApp(source.app.identity)
+                                }
+                            is ExternalHomeDragSource.Dock -> current.dock.items.firstOrNull { it.id == source.itemId }
+                        } ?: return false
+                    actions.onDragSessionChanged(
+                        externalDragSession(item, source, current.selectedPageId, pointerInRoot)
+                            .copy(isOverDock = overDock(pointerInRoot)),
+                    )
+                    return true
+                }
+
+                override fun move(pointerInRoot: Offset) {
+                    val session = actions.currentDragSession() ?: return
+                    actions.onDragSessionChanged(
+                        session.copy(pointerInRoot = pointerInRoot, isOverDock = overDock(pointerInRoot)),
+                    )
+                }
+
+                override fun end(): Boolean {
+                    val session = actions.currentDragSession() ?: return false
+                    actions.onDragSessionChanged(null)
+                    // Released over no target (outside the grid, the Dock and Remove) adds and moves nothing.
+                    val onATarget =
+                        session.isOverDock || session.isOverRemove ||
+                            workspaceGridBounds.value?.contains(session.pointerInRoot) == true
+                    if (onATarget) externalDropAction(session, externalFolderLabel)?.let(actions.onAction)
+                    return session.isOverDock && session.external is ExternalHomeDragSource.Dock
+                }
+
+                override fun cancel() {
+                    if (actions.currentDragSession()?.external != null) actions.onDragSessionChanged(null)
+                }
+            }
+        onDispose {
+            dockHostState.externalDrag?.cancel()
+            dockHostState.externalDrag = null
+        }
+    }
 
     CompositionLocalProvider(LocalHomeItemMotion provides itemMotion) {
         StandardHomeColumn(
@@ -385,6 +461,17 @@ internal fun StandardHome(
             actions = actions,
             modifier = surfaceModifier,
         )
+    }
+    // The Remove target while something that can be removed is lifted (not a Library app, which is not on Home yet).
+    if (composedDragSession.value?.canBeRemoved() == true) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            HomeRemoveTarget(
+                session = { homeDragSession.value },
+                atBottom = dockPosition == DockPosition.TOP,
+                reducedMotion = presentation.reducedMotion,
+                onBoundsChanged = { removeBounds.value = it },
+            )
+        }
     }
     // The lifted icon above the pager (and so above a page turn), read in the layout phase.
     if (composedDragSession.value != null) {
@@ -1222,6 +1309,10 @@ internal data class HomeDragSession(
     val pointerInRoot: Offset = Offset.Unspecified,
     /** What dropping now would do on the target page (the push ring and dead zone); null: not planned. */
     val plan: HomeDragPlan? = null,
+    /** Set when the drag did not start on a Home page (the Library, the Dock): where it comes from. */
+    val external: ExternalHomeDragSource? = null,
+    /** Whether releasing right now would drop [item] on the Remove target (which removes it from Home). */
+    val isOverRemove: Boolean = false,
 )
 
 internal data class StandardHomeInteractions(
@@ -1486,7 +1577,7 @@ internal fun HomeDragSession.planned(
     tuning: HomeDragTuning,
 ): HomeDragSession {
     val page = layout.pages.firstOrNull { it.id == targetPageId }
-    if (gridBounds == null || pointerInRoot == Offset.Unspecified || page == null || isOverDock) {
+    if (gridBounds == null || pointerInRoot == Offset.Unspecified || page == null || isOverDock || isOverRemove) {
         return copy(plan = null)
     }
     val x = (pointerInRoot.x - gridBounds.left) / (gridBounds.width / page.grid.columns)
