@@ -32,6 +32,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -302,6 +304,8 @@ internal fun Modifier.homeItemDrag(
     actions: HomeWorkspaceActions,
     onStationaryLongPress: (() -> Unit)? = null,
     onMenuDismiss: (() -> Unit)? = null,
+    /** Watch from the initial pass without covering what is beneath (a hosted platform widget keeps its touches). */
+    passive: Boolean = false,
 ): Modifier =
     if (!enabled) {
         this
@@ -324,7 +328,8 @@ internal fun Modifier.homeItemDrag(
                     var dragY = 0f
                     var local = Offset.Zero
                     var moved = false
-                    detectDragGesturesAfterLongPress(
+                    detectHomeLongPressDrag(
+                        passive = passive,
                         onDragStart = { down ->
                             dragX = 0f
                             dragY = 0f
@@ -375,6 +380,25 @@ internal fun Modifier.homeItemDrag(
                 }
         }
     }
+
+private suspend fun PointerInputScope.detectHomeLongPressDrag(
+    passive: Boolean,
+    onDragStart: (Offset) -> Unit,
+    onDrag: (PointerInputChange, Offset) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
+) {
+    if (passive) {
+        detectDragAfterLongPressPassively(onDragStart, onDrag, onDragEnd, onDragCancel)
+    } else {
+        detectDragGesturesAfterLongPress(
+            onDragStart = onDragStart,
+            onDrag = onDrag,
+            onDragEnd = onDragEnd,
+            onDragCancel = onDragCancel,
+        )
+    }
+}
 
 /**
  * What releasing a Home drag does: over the Dock, pin it; on a planned page, drop on top (a folder) inside a dead zone

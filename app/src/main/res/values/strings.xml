@@ -23,6 +23,7 @@
     <string name="stream_move_down">Move down</string>
     <string name="stream_hide_section">Hide section</string>
     <string name="stream_section_hidden">%1$s hidden</string>
+    <string name="widget_actions_description">Show %1$s actions</string>
     <string name="stream_show_hidden_section">Show %1$s</string>
     <string name="stream_current_view">Currently %1$s</string>
 
